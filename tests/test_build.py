@@ -31,6 +31,23 @@ class BuildPlan(unittest.TestCase):
         self.assertIn('--mode=onefile',build_nuitka.make_command('python.exe','onefile'))
         self.assertIn('--msvc=latest',build_nuitka.make_command('python.exe',compiler='msvc'))
         self.assertIn('--mingw64',build_nuitka.make_command('python.exe',compiler='mingw64'))
+    def test_msvc_bypasses_mbcs_compiler_cache_in_both_modes(self):
+        for mode in ('standalone', 'onefile'):
+            command = build_nuitka.make_command('python.exe', mode, compiler='msvc')
+            self.assertIn('--msvc=latest', command)
+            self.assertIn('--disable-cache=ccache', command)
+            self.assertNotIn('--disable-cache=all', command)
+        self.assertNotIn('--disable-cache=ccache',
+                         build_nuitka.make_command('python.exe', compiler='mingw64'))
+
+    def test_compiler_language_and_utf8_are_explicit_without_mutating_parent(self):
+        source = {'VSLANG': '1028', 'PYTHONUTF8': '0', 'PYTHONIOENCODING': 'cp950'}
+        env = build_nuitka.build_environment(source)
+        self.assertEqual(env['VSLANG'], '1033')
+        self.assertEqual(env['PYTHONUTF8'], '1')
+        self.assertEqual(env['PYTHONIOENCODING'], 'utf-8')
+        self.assertEqual(source['VSLANG'], '1028')
+
     def test_dry_run_does_not_install_or_compile(self):
         with patch.object(build_nuitka,'run_logged') as run,contextlib.redirect_stdout(io.StringIO()) as output:
             self.assertEqual(build_nuitka.main(['--dry-run']),0)

@@ -34,6 +34,10 @@ def make_command(python,mode='standalone',root=ROOT,compiler='auto'):
              '--file-description=飄流Re:LaLa  =By赤寧=',
              '--file-version='+__version__+'.0','--product-version='+__version__+'.0']
     if compiler!='auto':command.append('--msvc=latest' if compiler=='msvc' else '--mingw64')
+    # Nuitka 4.3's inline MSVC clcache decodes compiler output using mbcs.
+    # This can raise UnicodeDecodeError before the real compiler diagnostics
+    # reach the log. Invoke MSVC directly; keep dependency caching unchanged.
+    if compiler=='msvc':command.append('--disable-cache=ccache')
     command.extend('--include-data-files='+str(p)+'='+p.relative_to(root).as_posix() for p in data_files(root))
     command.append(str(root/'WLRE_Client.py'))
     return command
@@ -44,7 +48,7 @@ def build_environment(environ=None, library_dir=None):
     env.pop('PYTHONPATH',None);env.pop('PYTHONHOME',None)
     if library_dir is not None:
         env['LIB']=str(library_dir)+(os.pathsep+env['LIB'] if env.get('LIB') else '')
-    env.update(PYTHONUTF8='1',PYTHONIOENCODING='utf-8',PYTHONUNBUFFERED='1')
+    env.update(PYTHONUTF8='1',PYTHONIOENCODING='utf-8',PYTHONUNBUFFERED='1',VSLANG='1033')
     return env
 
 
@@ -158,6 +162,8 @@ def main(argv=None):
         library,header=development_files()
         compiler=select_compiler(args.compiler)
         print('使用 Python '+sys.version.split()[0]+'（64 位元）／'+compiler,flush=True)
+        if compiler=='msvc':
+            print('MSVC：停用 clcache，避免 mbcs 解碼錯誤遮蔽編譯診斷。',flush=True)
         with log.open('a',encoding='utf8') as stream:stream.write('Python: '+sys.version+'\nExecutable: '+sys.executable+'\nCompiler: '+compiler+'\n')
         environment=ROOT/'.nuitka-env'/('py'+'.'.join(map(str,sys.version_info[:2])))
         python=prepare_environment(environment,log)
