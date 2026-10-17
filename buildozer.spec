@@ -14,6 +14,7 @@ services = Connections:android_app/service.py:foreground:foregroundServiceType=d
 android.allow_backup = False
 android.add_src = android_app/java
 android.service_class_name = org.lala.client.ConnectionService
+p4a.branch = develop
 p4a.commit = 8ef9d1dbbf769d2c14681dbc3c116c85e2e93bae
 android.api = 35
 android.minapi = 24
