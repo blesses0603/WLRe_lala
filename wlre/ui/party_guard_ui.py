@@ -1,4 +1,4 @@
-"""Compact required-party editor directly under the Lua AI controls."""
+"""Required-party editor on the team page."""
 import tkinter as tk
 from tkinter import ttk,messagebox
 from wlre.ui.theme import GlassGroup as LabelFrame

@@ -43,7 +43,7 @@ class ChatPanel(ttk.Frame):
         ttk.Label(self.quote_bar,textvariable=self.quote_text,style='Muted.TLabel',wraplength=540).pack(side='left',fill='x',expand=True)
         ttk.Button(self.quote_bar,text='取消引用',command=self.cancel_quote).pack(side='right')
         body=self.body=ttk.Frame(box);body.pack(fill='both',expand=True)
-        self.view=tk.Text(body,height=5,state='disabled',wrap='word',font=('Microsoft JhengHei UI' if os.name=='nt' else 'WenQuanYi Micro Hei',-16),background='#142638',foreground='#eff7ff',relief='flat',cursor='arrow')
+        self.view=tk.Text(body,height=5,state='disabled',wrap='word',font=('Microsoft JhengHei UI' if os.name=='nt' else 'WenQuanYi Micro Hei',-14),background='#142638',foreground='#eff7ff',relief='flat',cursor='arrow')
         bar=ttk.Scrollbar(body,orient='vertical',command=self.view.yview)
         self.view.configure(yscrollcommand=bar.set);bar.pack(side='right',fill='y');self.view.pack(fill='both',expand=True)
         self.view.bind('<Double-Button-1>',self.reply)

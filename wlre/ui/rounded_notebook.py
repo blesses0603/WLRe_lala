@@ -8,7 +8,7 @@ class RoundedNotebook(ttk.Frame):
         style = ttk.Style(self)
         style.configure('PillBody.TNotebook', borderwidth=0, tabmargins=0)
         style.layout('PillBody.TNotebook.Tab', [])
-        style.configure('Pill.Tab.TButton', padding=(12, 6))
+        style.configure('Pill.Tab.TButton', padding=(10, 4))
         style.map('Pill.Tab.TButton', foreground=[('selected', '#ffffff')])
         self.bar = ttk.Frame(self, padding=(0, 2, 0, 6))
         self.bar.pack(fill='x')

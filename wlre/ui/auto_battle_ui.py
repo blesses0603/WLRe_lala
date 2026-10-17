@@ -105,7 +105,7 @@ class ActionEditor:
         body.columnconfigure(0,weight=1);body.columnconfigure(1,weight=0,minsize=270);body.rowconfigure(0,weight=1)
         area=ttk.Frame(body);area.grid(row=0,column=0,sticky='nsew',padx=(0,12))
         options=ttk.Frame(body,width=270);options.grid(row=0,column=1,sticky='nsew')
-        self.list=tk.Listbox(area,exportselection=False,height=10,font=('Microsoft JhengHei UI' if os.name=='nt' else 'WenQuanYi Micro Hei',-16),selectborderwidth=2);self.list.pack(side='left',fill='both',expand=True)
+        self.list=tk.Listbox(area,exportselection=False,height=10,font=('Microsoft JhengHei UI' if os.name=='nt' else 'WenQuanYi Micro Hei',-14),selectborderwidth=2);self.list.pack(side='left',fill='both',expand=True)
         scroll=ttk.Scrollbar(area,orient='vertical',command=self.list.yview);scroll.pack(side='right',fill='y');self.list.configure(yscrollcommand=scroll.set)
         self.chosen=row['id'];self.selection=tk.StringVar(value=confirmed_action_label(row,self.snapshot,who))
         ttk.Label(options,textvariable=self.selection,wraplength=260).pack(anchor='w')
@@ -252,7 +252,7 @@ class SettingsEditor:
         display=('orderAction','repeatAction','roundAction','misc')
         for who,title in (('player','角色規則'),('partner','夥伴規則')):
             panel=ttk.Frame(tabs);tabs.add(panel,text=title)
-            menu=tk.Listbox(panel,exportselection=False,width=10,height=8,activestyle='none',font=('Microsoft JhengHei UI' if os.name=='nt' else 'WenQuanYi Micro Hei',-16),selectborderwidth=2)
+            menu=tk.Listbox(panel,exportselection=False,width=10,height=8,activestyle='none',font=('Microsoft JhengHei UI' if os.name=='nt' else 'WenQuanYi Micro Hei',-14),selectborderwidth=2)
             menu.pack(side='left',fill='y',padx=(0,10))
             for label in ('順序行動','循環行動','指定回合','雜項設定'):menu.insert('end',label)
             menu.selection_set(0)

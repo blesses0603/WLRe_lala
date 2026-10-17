@@ -79,17 +79,17 @@ class GlassTheme:
         s = self.style
         s.theme_use('clam')
         for name in ('TkDefaultFont','TkTextFont','TkMenuFont','TkHeadingFont','TkSmallCaptionFont'):
-            tkfont.nametofont(name,root=self.root).configure(family=self.font,size=-16)
-        s.configure('.', font=(self.font, -16), background=PANEL, foreground=TEXT,
+            tkfont.nametofont(name,root=self.root).configure(family=self.font,size=-14)
+        s.configure('.', font=(self.font, -14), background=PANEL, foreground=TEXT,
                     bordercolor='#397c98', lightcolor=PANEL, darkcolor=PANEL,
                     troughcolor=BG, selectbackground='#32617e', selectforeground=TEXT)
         s.configure('TFrame', background=PANEL)
         s.configure('TLabel', background=PANEL, foreground=TEXT)
-        s.configure('Title.TLabel', font=(self.font, -24, 'bold'), foreground=TEXT)
-        s.configure('Heading.TLabel', font=(self.font, -18, 'bold'), foreground='#c5f1ff')
-        s.configure('Section.TLabel', font=(self.font, -16, 'bold'), foreground='#c5f1ff')
-        s.configure('Muted.TLabel', foreground=MUTED, font=(self.font, -16))
-        s.configure('TButton', padding=(9, 5), borderwidth=0, foreground=TEXT,
+        s.configure('Title.TLabel', font=(self.font, -22, 'bold'), foreground=TEXT)
+        s.configure('Heading.TLabel', font=(self.font, -16, 'bold'), foreground='#c5f1ff')
+        s.configure('Section.TLabel', font=(self.font, -14, 'bold'), foreground='#c5f1ff')
+        s.configure('Muted.TLabel', foreground=MUTED, font=(self.font, -14))
+        s.configure('TButton', padding=(7, 4), borderwidth=0, foreground=TEXT,
                     background='#233d52', focuscolor=CYAN)
         s.map('TButton', foreground=[('disabled', '#7292a4')],
               background=[('pressed', '#142638'), ('active', '#365770')])
@@ -97,7 +97,7 @@ class GlassTheme:
                     insertcolor=TEXT, bordercolor='#3b9db9', padding=4)
         s.configure('TSpinbox', fieldbackground='#16364b', foreground=TEXT,
                     insertcolor=TEXT, arrowsize=13, padding=3)
-        s.configure('TCombobox', font=(self.font, -18), fieldbackground=PANEL, foreground=TEXT,
+        s.configure('TCombobox', font=(self.font, -16), fieldbackground=PANEL, foreground=TEXT,
                     background='#233d52', arrowcolor=CYAN, padding=4)
         s.map('TCombobox', fieldbackground=[('readonly', PANEL), ('disabled', BG)],
               foreground=[('disabled', '#7292a4'), ('readonly', TEXT)],
@@ -110,15 +110,15 @@ class GlassTheme:
                   indicatorbackground=[('selected', '#398aab'), ('disabled', '#203446')])
         s.configure('TLabelframe', background=PANEL, borderwidth=1, relief='flat')
         s.configure('TLabelframe.Label', background=PANEL, foreground='#c5f1ff',
-                    font=(self.font, -16, 'bold'))
+                    font=(self.font, -14, 'bold'))
         s.configure('TNotebook', background=BG, borderwidth=0, tabmargins=(3, 3, 3, 4))
         s.configure('TNotebook.Tab', padding=(12, 6), background='#162f44', foreground=MUTED)
         s.map('TNotebook.Tab', background=[('selected', '#275972'), ('active', '#24465e')],
               foreground=[('selected', TEXT), ('active', TEXT)])
         s.configure('Treeview', background=PANEL, fieldbackground=PANEL, foreground=TEXT,
-                    borderwidth=0, rowheight=30, font=(self.font, -16))
+                    borderwidth=0, rowheight=26, font=(self.font, -14))
         s.configure('Treeview.Heading', background='#243d52', foreground='#c5f1ff',
-                    padding=6, font=(self.font, -16, 'bold'), relief='flat')
+                    padding=6, font=(self.font, -14, 'bold'), relief='flat')
         s.map('Treeview', background=[('selected', '#32617e')], foreground=[('selected', TEXT)])
         s.map('Treeview.Heading', background=[('active', '#365770')])
         for name in ('Vertical.TScrollbar', 'Horizontal.TScrollbar'):
@@ -127,11 +127,11 @@ class GlassTheme:
             s.map(name, background=[('active', '#398aa7'), ('pressed', '#62c9e0')])
         s.configure('TPanedwindow', background=BG, sashwidth=6)
         for pattern, value in {
-            '*Menu.font': (self.font, -16),
-            '*TCombobox.font': (self.font, -18),
-            '*TEntry.font': (self.font, -16),
-            '*TSpinbox.font': (self.font, -16),
-            '*TCombobox*Listbox.font': (self.font, -18),
+            '*Menu.font': (self.font, -14),
+            '*TCombobox.font': (self.font, -16),
+            '*TEntry.font': (self.font, -14),
+            '*TSpinbox.font': (self.font, -14),
+            '*TCombobox*Listbox.font': (self.font, -16),
             '*TCombobox*Listbox.background': PANEL,
             '*TCombobox*Listbox.foreground': TEXT,
             '*TCombobox*Listbox.selectBackground': '#32617e',

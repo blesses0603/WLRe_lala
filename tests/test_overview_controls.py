@@ -86,6 +86,14 @@ class OverviewControls(unittest.TestCase):
             self.assertLessEqual(after.call_args.args[0],16)
         button.job=None
 
+    def test_supply_settings_still_open_after_removing_battle_tab(self):
+        from unittest.mock import Mock
+        editor=Mock();editor.recovery_pages={'hp':'fixture-hp-page'}
+        with patch('wlre.ui.auto_battle_ui.open_settings',return_value=editor) as settings:
+            self.panel.actions['supply'].invoke()
+            settings.assert_called_once_with(self.app)
+            editor.tabs.select.assert_called_once_with('fixture-hp-page')
+
     def test_settings_entry_title_map_header_and_button_bounds(self):
         with patch('wlre.ui.auto_battle_ui.open_settings') as settings:
             self.panel.ai_settings_button.invoke();settings.assert_called_once_with(self.app)

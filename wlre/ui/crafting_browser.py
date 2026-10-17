@@ -79,7 +79,7 @@ class CraftingBrowser:
         for i in range(self.page_size):
             cell=ttk.Frame(self.grid,padding=3);cell.grid(row=i//columns,column=i%columns,sticky='nsew',padx=2,pady=2)
             self.grid.columnconfigure(i%columns,weight=1,uniform='cards');self.grid.rowconfigure(i//columns,weight=1,uniform='cards')
-            favorite=ttk.Label(cell,text='♡',cursor='hand2',anchor='e',font=('Microsoft JhengHei UI',-16))
+            favorite=ttk.Label(cell,text='♡',cursor='hand2',anchor='e',font=('Microsoft JhengHei UI',-14))
             if embedded:favorite.place(relx=1,x=-3,y=1,anchor='ne')
             else:favorite.pack(anchor='e')
             favorite.bind('<Button-1>',lambda e,n=i:self.toggle_favorite(n))

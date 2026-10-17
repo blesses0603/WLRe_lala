@@ -147,13 +147,9 @@ class OverviewPanel(ttk.Frame):
         else:self.app.start_roaming()
 
     def open_panel(self,name,settings=False):
-        if name in ('ai_page','roam_page'):
-            self.app.left_tabs.select(self.app.battle_page)
-            self.app.battle_tabs.select(getattr(self.app,name))
-            if settings:
-                from wlre.ui.auto_battle_ui import open_settings
-                editor=open_settings(self.app)
-                editor.tabs.select(editor.recovery_pages['hp'])
+        if settings:
+            editor=self.open_ai_settings()
+            editor.tabs.select(editor.recovery_pages['hp'])
         else:self.app.left_tabs.select(getattr(self.app,name))
 
     def update_state(self,state):

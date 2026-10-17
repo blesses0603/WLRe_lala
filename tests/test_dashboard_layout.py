@@ -68,26 +68,31 @@ class DashboardLayout(unittest.TestCase):
                 self.assertEqual(tuple(self.root.tk.call(str(image),'get',4,middle)),background.getpixel((x+4,y+middle)))
         self.app.left_tabs.select(self.app.overview_panel.master);self.root.update()
 
-    def test_battle_subpages_each_have_one_content_border(self):
-        theme=self.app.theme
-        self.app.left_tabs.select(self.app.battle_page)
-        self.assertFalse(getattr(self.app.battle_page,'_section_outline',False))
-        for page in (self.app.formation,self.app.roam_page,self.app.ai_page):
-            self.app.battle_tabs.select(page);self.root.update()
-            self.assertTrue(page.winfo_ismapped())
-            data=theme.windows[str(self.root)];data['signature']=None;theme.paint(self.root)
-            image=data['widgets'][str(page)]['images'][0]
-            x=page.winfo_rootx()-self.root.winfo_rootx();y=page.winfo_rooty()-self.root.winfo_rooty()
-            middle=image.height()//2;backing=data['background'].convert('RGB')
-            self.assertNotEqual(tuple(self.root.tk.call(str(image),'get',1,middle)),backing.getpixel((x+1,y+middle)))
-            self.assertEqual(tuple(self.root.tk.call(str(image),'get',4,middle)),backing.getpixel((x+4,y+middle)))
+    def test_right_tabs_map_size_and_party_settings(self):
+        self.assertEqual([self.app.left_tabs.tab(t,'text') for t in self.app.left_tabs.tabs()],
+                         ['主頁','組隊','煉金','製作','經驗效率'])
+        self.assertEqual([self.app.activity_tabs.tab(t,'text') for t in self.app.activity_tabs.tabs()],['事件紀錄','戰場陣形'])
+        self.assertEqual((self.app.home_map.winfo_width(),self.app.home_map.winfo_height()),(380,320))
+        self.assertTrue(self.app.home_map.portal_list.winfo_ismapped())
+        self.app.write('fixture-before-switch')
+        self.app.activity_tabs.select(self.app.formation);self.root.update()
+        self.app.write('fixture-while-battle-visible')
+        self.assertTrue(self.app.formation.winfo_ismapped());self.assertTrue(self.app.chat_panel.winfo_ismapped())
+        self.assertTrue(self.app.home_map.winfo_ismapped())
+        self.app.left_tabs.select(self.app.party_panel);self.root.update()
+        self.assertTrue(self.app.party_guard_panel.winfo_ismapped())
+        self.assertLessEqual(self.app.party_guard_panel.winfo_rooty()+self.app.party_guard_panel.winfo_height(),self.app.party_panel.winfo_rooty()+self.app.party_panel.winfo_height())
+        self.assertEqual(tkfont.nametofont('TkDefaultFont',root=self.root).cget('size'),-14)
+        self.app.activity_tabs.select(self.app.logs_frame)
+        self.assertIn('fixture-before-switch',self.app.log.get('1.0','end'))
+        self.assertIn('fixture-while-battle-visible',self.app.log.get('1.0','end'))
         self.app.left_tabs.select(self.app.overview_panel.master);self.root.update()
 
     def test_all_navigation_actions_still_work(self):
         panel=self.app.overview_panel
         for key,destination in (('party','party_panel'),('alchemy','alchemy_panel'),('crafting','crafting_panel'),('efficiency','efficiency_panel')):
             panel.actions[key].invoke();self.root.update()
-            expected=self.app.battle_page if destination in ('ai_page','roam_page') else getattr(self.app,destination)
+            expected=getattr(self.app,destination)
             self.assertEqual(self.app.left_tabs.select(),str(expected))
         self.app.left_tabs.select(panel.master);self.root.update()
         self.assertFalse(self.errors,self.errors)
