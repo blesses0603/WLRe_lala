@@ -90,6 +90,33 @@ def select_compiler(requested='auto',version=None,msvc_available=None):
     return 'msvc' if msvc_available else 'mingw64'
 
 
+def prepare_environment(environment, log):
+    """Repair only the disposable build venv, using the base Python's ensurepip."""
+    python = environment / 'Scripts/python.exe'
+    probe = [str(python), '-m', 'pip', '--version']
+    if python.exists():
+        try:
+            run_logged(probe, log)
+            return python
+        except (OSError, RuntimeError):
+            message = '打包環境的 Python／pip 無法啟動，重新建立專用環境：' + str(environment)
+            print(message, flush=True)
+            with log.open('a', encoding='utf8') as stream:
+                stream.write('\n' + message + '\n')
+            # Reinstalling pip with the broken pip cannot repair its imports.
+            # clear=True also removes stale dependencies and their cache marker.
+            venv.EnvBuilder(with_pip=True, clear=True).create(environment)
+    else:
+        venv.EnvBuilder(with_pip=True).create(environment)
+    # One repair attempt only. Do not proceed to downloads or compilation if
+    # the bundled pip still fails (for example, a broken base installation).
+    try:
+        run_logged(probe, log)
+    except (OSError, RuntimeError) as exc:
+        raise RuntimeError('重建打包環境後 pip 仍無法啟動；請查看 build.log，並修復基礎 Python 安裝（含 pip／venv），再重試。') from exc
+    return python
+
+
 def prepare_dependencies(python,environment,log,upgrade=False):
     """Reuse validated build dependencies; retry whenever validation fails."""
     requirements=ROOT/'requirements-build.txt'
@@ -133,8 +160,7 @@ def main(argv=None):
         print('使用 Python '+sys.version.split()[0]+'（64 位元）／'+compiler,flush=True)
         with log.open('a',encoding='utf8') as stream:stream.write('Python: '+sys.version+'\nExecutable: '+sys.executable+'\nCompiler: '+compiler+'\n')
         environment=ROOT/'.nuitka-env'/('py'+'.'.join(map(str,sys.version_info[:2])))
-        python=environment/'Scripts/python.exe'
-        if not python.exists():venv.EnvBuilder(with_pip=True).create(environment)
+        python=prepare_environment(environment,log)
         staged=stage_library(library,environment)
         print('Python import library: '+str(library),flush=True)
         with log.open('a',encoding='utf8') as stream:
@@ -147,7 +173,7 @@ def main(argv=None):
         print('\n打包及資源自檢完成：'+str(executable),flush=True)
         if args.mode=='standalone':print('分享時請複製整個 WLRE_Client.dist 資料夾。',flush=True)
         return 0
-    except (OSError,RuntimeError) as exc:
+    except (OSError,RuntimeError,subprocess.SubprocessError) as exc:
         with log.open('a',encoding='utf8') as stream:stream.write('\nERROR: '+str(exc)+'\n')
         print('\n打包失敗：'+str(exc)+'\n記錄：'+str(log),file=sys.stderr);return 1
 

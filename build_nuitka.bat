@@ -37,6 +37,7 @@ pause
 exit /b 1
 :failed
 echo.
-echo BUILD FAILED. See dist_nuitka for build.log and compilation-report.xml.
+echo BUILD FAILED. See dist_nuitka for build.log.
+echo compilation-report.xml is available only if Nuitka compilation started.
 pause
 exit /b 1
