@@ -97,7 +97,7 @@
 ## 自動發布 Windows Releases
 
 已加入 [Windows Nuitka Release](https://github.com/blesses0603/WLRe_lala/actions/workflows/release-windows.yml) 工作流程。
-推送 `v` 開頭的版本標籤後，GitHub Actions 會在 Windows 2022 使用 Python 3.12 x64／MSVC 執行測試、Nuitka standalone 編譯及 EXE 資源自檢，再封裝整個程式資料夾、重新開啟 ZIP 驗證 CRC，最後上傳 ZIP 與 `SHA256SUMS.txt` 至 Releases。
+推送 `v` 開頭的版本標籤後，GitHub Actions 會在 Windows 2022 使用 Python 3.12 x64／MSVC 執行測試、略過 C 編譯快取並保留詳細紀錄的 Nuitka standalone 編譯及 EXE 資源自檢，再封裝整個程式資料夾、重新開啟 ZIP 驗證 CRC，最後上傳 ZIP 與 `SHA256SUMS.txt` 至 Releases。
 
 1. 先更新 `wlre/__init__.py` 的 `__version__` 並提交至 GitHub。
 2. 建立並推送與程式版本完全一致的標籤。例如版本為 `0.4.20` 時：
@@ -122,4 +122,4 @@
 .\build_nuitka.bat --compiler msvc --diagnose-compiler
 ```
 
-本次會傳入 `--disable-cache=ccache` 與 `--show-scons`，略過 C 編譯快取並將 SCons 詳細指令與錯誤堆疊寫入 `dist_nuitka/standalone/build.log`。一般打包與 Releases 的預設快取行為維持不變；這是診斷模式，不代表已確認根因或保證編譯成功。如果仍失敗，請提供這次重新產生的完整 `build.log`。不必刪除專案或打包環境。
+本次會傳入 `--disable-cache=ccache` 與 `--show-scons`，略過 C 編譯快取並將 SCons 詳細指令與錯誤堆疊寫入 `dist_nuitka/standalone/build.log`。一般本機打包的預設快取行為維持不變；Releases 工作流程明確使用此模式，沿用已在 Windows 成功打包的略過快取方式。這是診斷模式，不代表已確認根因或保證編譯成功。如果仍失敗，請提供這次重新產生的完整 `build.log`。不必刪除專案或打包環境。

@@ -2,6 +2,8 @@
 
 ## 2026-10-17 優化工作區
 
+- Releases 編譯改用已在使用者 Windows 成功的 `--diagnose-compiler` 方式；28 項打包／診斷／發行封裝測試與 actionlint 檢查通過。GitHub 雲端編譯與發布結果以 Actions 實際執行為準。
+
 - 可選編譯診斷模式：162 項測試中 161 通過、1 項 Windows DPAPI 略過；驗證預設保留快取、standalone／onefile 診斷模式僅新增 `--disable-cache=ccache` 與 `--show-scons`、CLI dry-run 正確轉傳且不編譯。核對 Nuitka 4.3 的 `--show-scons` 會啟用 SCons `--debug=stacktrace`；資源自檢與 diff 檢查通過。尚未在使用者 Windows Python 3.14.8／MSVC 14.5 實測，根因仍需新的診斷紀錄確認。
 
 - 打包 pip 自動修復：159 項測試中 158 通過、1 項 Windows DPAPI 略過；新增健康環境沿用、pip 匯入失敗後重建／再驗證、修復仍失敗即停止及新環境建立測試。資源自檢、打包 dry-run 及 diff 檢查通過；尚未在使用者 Windows Python 3.14.8 環境實際重建及編譯。

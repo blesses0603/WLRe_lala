@@ -42,7 +42,7 @@ jobs:
         run: python -m unittest discover -s tests -q
       # Call the BAT's Python entry point directly to avoid its interactive pause.
       - name: Compile and self-test Windows EXE
-        run: python -m tools.build.build_nuitka --mode standalone --compiler msvc
+        run: python -m tools.build.build_nuitka --mode standalone --compiler msvc --diagnose-compiler
       - name: Package and verify ZIP
         run: python -m tools.build.release_nuitka --tag "$env:RELEASE_TAG"
       - uses: actions/upload-artifact@v4
