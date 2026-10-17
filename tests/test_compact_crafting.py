@@ -18,20 +18,32 @@ class CompactCrafting(unittest.TestCase):
         for job in self.root.tk.call('after','info'):self.root.tk.call('after','cancel',job)
         self.root.destroy()
 
-    def test_embedded_catalog_keeps_map_chat_and_six_icons_visible(self):
+    def test_embedded_catalog_keeps_map_chat_and_twelve_icons_visible(self):
         self.assertTrue(self.browser.embedded)
         self.assertNotIsInstance(self.browser.window,tk.Toplevel)
         self.assertTrue(self.app.home_map.winfo_ismapped())
         self.assertTrue(self.app.chat_panel.winfo_ismapped())
-        self.assertEqual(len(self.browser.cards),6)
-        ids=[card['id'] for card in self.browser.cards]
-        self.browser.change_page(1);self.root.update()
-        self.assertNotEqual(ids,[card['id'] for card in self.browser.cards])
+        self.assertEqual(len(self.browser.cards),12)
+        self.assertEqual(self.browser.page_size,12)
+        self.assertEqual(len({card['frame'].grid_info()['column'] for card in self.browser.cards}),4)
+        self.assertEqual(len({card['frame'].grid_info()['row'] for card in self.browser.cards}),3)
         for card in self.browser.cards:
             self.assertTrue(card['button'].winfo_ismapped())
-            self.assertGreaterEqual(card['button'].winfo_height(),56)
+            self.assertGreaterEqual(card['button'].winfo_height(),50)
             self.assertEqual(card['image'].width(),32)
         self.assertFalse(self.errors,self.errors)
+
+    def test_twelve_item_pagination_keeps_order_and_search_resets_page(self):
+        with patch('wlre.ui.crafting_browser.confirmed_unlocked',return_value=True):
+            self.browser.refresh_grid(force=True)
+            expected=[r['item_id'] for r in self.browser.rows]
+            self.assertGreater(len(expected),12)
+            self.assertEqual([card['id'] for card in self.browser.cards],expected[:12])
+            self.browser.change_page(1)
+            self.assertEqual([card['id'] for card in self.browser.cards if card['id'] is not None],expected[12:24])
+            self.browser.search.set(str(expected[0]));self.browser.search_now()
+            self.assertEqual(self.browser.page,0)
+            self.assertEqual(self.browser.cards[0]['id'],expected[0])
 
     def test_selection_is_shared_by_detail_and_custom_plan(self):
         self.browser.change_page(1)

@@ -40,7 +40,7 @@ class CraftingBrowser:
     def __init__(self,panel,embedded=False):
         self.panel=panel;self.app=panel.app;self.state=panel.state;self.page=0;self.rows=[];self.selected=None;self.filter_key='all';self.grid_key=None;self.detail_key=None;self.tool_key=None;self.search_job=None;self.refresh_job=None;self.state_key=None
         self.favorite_store=Favorites();self.icons=None;self.closed=False
-        self.embedded=embedded;self.page_size=6 if embedded else 12
+        self.embedded=embedded;self.page_size=12
         if embedded:
             w=self.window=ttk.Frame(panel);w.pack(fill='both',expand=True)
         else:
@@ -75,7 +75,7 @@ class CraftingBrowser:
         ttk.Button(nav,text='下一頁',command=lambda:self.change_page(1)).pack(side='right')
         self.grid=ttk.Frame(middle);self.grid.pack(fill='both',expand=True)
         self.cards=[]
-        columns=3 if embedded else 4
+        columns=4
         for i in range(self.page_size):
             cell=ttk.Frame(self.grid,padding=3);cell.grid(row=i//columns,column=i%columns,sticky='nsew',padx=2,pady=2)
             self.grid.columnconfigure(i%columns,weight=1,uniform='cards');self.grid.rowconfigure(i//columns,weight=1,uniform='cards')
