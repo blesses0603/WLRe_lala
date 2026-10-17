@@ -17,7 +17,7 @@ def alive(name):
 
 def main():
     apk = next(Path('bin').glob('*.apk'))
-    subprocess.run(['adb', 'install', '-r', str(apk)], check=True)
+    subprocess.run(['adb', 'install', '-r', '-g', str(apk)], check=True)
     adb('logcat', '-c')
     adb('shell', 'am', 'start', '-W', '-n', PACKAGE + '/org.kivy.android.PythonActivity')
     try:

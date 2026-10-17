@@ -48,7 +48,19 @@ class LaLaApp(App):
     def on_start(self):
         print('WLRE_ANDROID_UI_READY', flush=True)
         if platform == 'android':
-            Clock.schedule_once(self.initialize_android, 0.5)
+            Clock.schedule_once(self.prepare_android, 0.5)
+
+    def prepare_android(self, *_):
+        try:
+            from jnius import autoclass
+            from android.permissions import check_permission, request_permissions
+            permission = 'android.permission.POST_NOTIFICATIONS'
+            if autoclass('android.os.Build$VERSION').SDK_INT >= 33 and not check_permission(permission):
+                request_permissions([permission], lambda *_: Clock.schedule_once(self.initialize_android, 0.5))
+                return
+        except Exception:
+            self.message.text = '通知權限請由系統設定開啟（A05）'
+        self.initialize_android()
 
     def initialize_android(self, *_):
         if self.android_initializing: return
@@ -168,12 +180,6 @@ class LaLaApp(App):
         scroll.height = dp(300)
         outer = ScrollView(do_scroll_x=False)
         outer.add_widget(base)
-        if platform == 'android':
-            from android.permissions import request_permissions
-            from jnius import autoclass
-            if autoclass('android.os.Build$VERSION').SDK_INT >= 33:
-                try: request_permissions(['android.permission.POST_NOTIFICATIONS'])
-                except Exception: self.message.text = '通知權限請由系統設定開啟（A05）'
         return outer
 
     def connect_account(self, *_):
