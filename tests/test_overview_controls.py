@@ -5,6 +5,7 @@ from unittest.mock import patch
 from wlre.core.state import State
 from wlre.ui.gui import App
 from wlre.ui.auto_battle_ui import SettingsEditor
+from wlre.ui.halo_button import edge_points
 
 
 @unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt','Requires a desktop')
@@ -83,6 +84,19 @@ class OverviewControls(unittest.TestCase):
         self.assertEqual(pixel(width//2,1),base.getpixel((width//2,1)))
         self.assertFalse(button.halo_visible)
 
+    def test_animation_uses_elapsed_time_and_does_not_restart_on_state_refresh(self):
+        button=self.panel.actions['ai']
+        with patch('wlre.ui.halo_button.time.monotonic',return_value=100):button.set_active(True)
+        origin=button.started
+        with patch('wlre.ui.halo_button.time.monotonic',return_value=101):button.set_active(True)
+        self.assertEqual(button.started,origin)
+        button.pause()
+        with patch('wlre.ui.halo_button.time.monotonic',return_value=101.5),patch.object(button,'after',return_value='fixture') as after:
+            button.animate()
+            self.assertAlmostEqual(button.phase,.5)
+            self.assertLessEqual(after.call_args.args[0],16)
+        button.job=None
+
     def test_settings_entry_title_map_header_and_button_bounds(self):
         with patch('wlre.ui.auto_battle_ui.open_settings') as settings:
             self.panel.ai_settings_button.invoke();settings.assert_called_once_with(self.app)
@@ -98,3 +112,13 @@ class OverviewControls(unittest.TestCase):
             button=self.panel.actions[key];frame=self.panel.cards[key]
             self.assertLessEqual(button.winfo_x()+button.winfo_width(),frame.winfo_width())
             self.assertLessEqual(button.winfo_y()+button.winfo_height(),frame.winfo_height())
+
+
+class EdgeSampling(unittest.TestCase):
+    def test_straights_and_corners_have_even_color_spacing(self):
+        import math
+        points=edge_points(52,20)
+        lengths=[math.dist(point,points[(i+1)%len(points)][0]) for i,(point,_) in enumerate(points)]
+        self.assertLessEqual(max(lengths),.76)
+        self.assertGreater(min(lengths),.5)
+        self.assertIs(points,edge_points(52,20))

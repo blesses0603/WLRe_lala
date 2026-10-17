@@ -1,17 +1,49 @@
 """Compact action button with an animated rainbow border while enabled."""
 import colorsys
 import math
+import time
+from functools import lru_cache
 import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageDraw, ImageTk
 from wlre.ui.theme import BG
 
 
+@lru_cache(maxsize=8)
+def edge_points(width,height):
+    """Sample straight edges and corners at comparable distances."""
+    radius=min(9,(width-3)/2,(height-3)/2)
+    corners=((width-2-radius,1+radius,270),(width-2-radius,height-2-radius,0),
+             (1+radius,height-2-radius,90),(1+radius,1+radius,180))
+    points=[]
+    for index,(cx,cy,start) in enumerate(corners):
+        steps=max(1,math.ceil(math.pi*radius/2/.75))
+        for step in range(steps+1):
+            angle=math.radians(start+90*step/steps)
+            points.append((cx+radius*math.cos(angle),cy+radius*math.sin(angle)))
+        nx,ny,angle=corners[(index+1)%4]
+        target=(nx+radius*math.cos(math.radians(angle)),ny+radius*math.sin(math.radians(angle)))
+        origin=points[-1];distance=math.dist(origin,target)
+        for step in range(1,max(1,math.ceil(distance/.75))):
+            fraction=step/max(1,math.ceil(distance/.75))
+            points.append(tuple(a+(b-a)*fraction for a,b in zip(origin,target)))
+    distinct=[]
+    for point in points:
+        if not distinct or math.dist(distinct[-1],point)>1e-8:distinct.append(point)
+    if math.dist(distinct[-1],distinct[0])<1e-8:distinct.pop()
+    points=distinct
+    distances=[math.dist(point,points[(i+1)%len(points)]) for i,point in enumerate(points)]
+    total=sum(distances);position=0;result=[]
+    for point,distance in zip(points,distances):
+        result.append((point,position/total));position+=distance
+    return tuple(result)
+
+
 class HaloButton(tk.Canvas):
     def __init__(self,parent,command):
         super().__init__(parent,width=60,height=26,highlightthickness=0,bg=BG,bd=0)
         self.background_photo=None;self.background_item=None
-        self.active=False;self.phase=0;self.job=None
+        self.active=False;self.phase=0;self.job=None;self.started=None
         self.button=ttk.Button(self,text='啟動',width=4,padding=(2,0),command=command)
         self.button.halo_owner=self
         self.surfaces=[];self.photos=[];self.halo_visible=False
@@ -31,7 +63,10 @@ class HaloButton(tk.Canvas):
     def invoke(self):return self.button.invoke()
 
     def set_active(self,active):
-        self.active=bool(active)
+        active=bool(active)
+        if active==self.active:return
+        self.active=active
+        if active:self.started=time.monotonic()
         self.button.configure(text='關閉' if self.active else '啟動')
         if self.active:self.animate()
         else:
@@ -42,9 +77,10 @@ class HaloButton(tk.Canvas):
 
     def animate(self,event=None):
         if not self.active or not self.winfo_ismapped() or self.job is not None:return
+        self.phase=((time.monotonic()-self.started)/3)%1
+        started=time.perf_counter()
         self.paint_edge()
-        self.phase=(self.phase+0.035)%1
-        self.job=self.after(100,self.advance)
+        self.job=self.after(max(1,16-round((time.perf_counter()-started)*1000)),self.advance)
 
     def set_button_surfaces(self,surfaces,photos):
         self.surfaces=surfaces;self.photos=photos
@@ -58,17 +94,11 @@ class HaloButton(tk.Canvas):
             scale=3
             overlay=Image.new('RGBA',(width*scale,height*scale))
             draw=ImageDraw.Draw(overlay)
-            radius=min(9,(width-3)/2,(height-3)/2)
-            points=[]
-            # Follow the same inset and corner radius as the glass button skin.
-            for cx,cy,start in ((width-2-radius,1+radius,270),(width-2-radius,height-2-radius,0),
-                                (1+radius,height-2-radius,90),(1+radius,1+radius,180)):
-                for step in range(17):
-                    angle=math.radians(start+90*step/16)
-                    points.append(((cx+radius*math.cos(angle))*scale,(cy+radius*math.sin(angle))*scale))
-            for index,point in enumerate(points):
-                color=tuple(round(v*255) for v in colorsys.hsv_to_rgb((index/len(points)+self.phase)%1,.85,1))+(255,)
-                draw.line((point,points[(index+1)%len(points)]),fill=color,width=4)
+            points=edge_points(width,height)
+            for index,(point,position) in enumerate(points):
+                color=tuple(round(v*255) for v in colorsys.hsv_to_rgb((position+self.phase)%1,.85,1))+(255,)
+                end=points[(index+1)%len(points)][0]
+                draw.line((tuple(v*scale for v in point),tuple(v*scale for v in end)),fill=color,width=4)
             overlay=overlay.resize((width,height),Image.Resampling.LANCZOS)
         for surface,photo in zip(self.surfaces,self.photos):
             photo.paste(Image.alpha_composite(surface,overlay) if overlay is not None else surface)
