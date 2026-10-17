@@ -68,6 +68,17 @@ jobs:
         run: python -m pip install -r requirements-ui.txt
       - name: Run tests
         run: python -m unittest discover -s tests -q
+      # Restore compiler object cache across fresh Windows runners.
+      # Cache is scoped to the release tag's source revision and shared with
+      # later releases through restore-keys.
+      - name: Restore Nuitka C compiler cache
+        uses: actions/cache@v4
+        with:
+          path: ~\\AppData\\Local\\Nuitka\\Nuitka\\Cache\\clcache
+          key: nuitka-clcache-windows2022-py312-msvc-${{ hashFiles('requirements-build.txt', 'requirements-ui.txt') }}-${{ github.sha }}
+          restore-keys: |
+            nuitka-clcache-windows2022-py312-msvc-${{ hashFiles('requirements-build.txt', 'requirements-ui.txt') }}-
+            nuitka-clcache-windows2022-py312-msvc-
       # Call the BAT's Python entry point directly to avoid its interactive pause.
       - name: Compile and self-test Windows EXE
         run: python -m tools.build.build_nuitka --mode standalone --compiler msvc
