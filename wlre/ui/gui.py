@@ -37,11 +37,11 @@ class App:
         self.login_window=None
         self.entered_world=False
         root.title(f'飄流Re:LaLa  =By赤寧= · {__version__}')
-        # Fit smaller desktops while keeping the larger layout on full-HD screens.
-        width=min(1600,max(1,root.winfo_screenwidth()-32))
-        height=min(900,max(1,root.winfo_screenheight()-72))
+        # Keep the main dashboard at the fixed supported window size.
+        width,height=1280,800
         root.geometry(f'{width}x{height}+{max(0,(root.winfo_screenwidth()-width)//2)}+{max(0,(root.winfo_screenheight()-height)//2)}')
-        root.minsize(min(1280,width),min(800,height))
+        root.minsize(width,height)
+        root.maxsize(width,height)
         root.resizable(False,False)
         self.theme=install_theme(root)
         self.events,self.commands=queue.Queue(),queue.Queue()

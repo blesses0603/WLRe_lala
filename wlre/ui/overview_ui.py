@@ -1,8 +1,7 @@
 """Read-only overview of the current session; commands stay in their own panels."""
 import time
 import tkinter as tk
-from tkinter import ttk
-from wlre.ui.theme import group
+from tkinter import ttk, font as tkfont
 from wlre.core.efficiency import rates, progress, forecast
 from wlre.services.battle.auto_battle import summary as ai_summary
 from wlre.services.battle.party import own_team, player_name
@@ -85,30 +84,43 @@ def summarize(state, live, guard, now=None):
 class OverviewPanel(ttk.Frame):
     def __init__(self,parent,app):
         super().__init__(parent);self.app=app;self.values={};self.signature=None
-        canvas=tk.Canvas(self,highlightthickness=0,borderwidth=0)
-        scroll=ttk.Scrollbar(self,orient='vertical',command=canvas.yview)
-        canvas.configure(yscrollcommand=scroll.set)
-        scroll.pack(side='right',fill='y');canvas.pack(side='left',fill='both',expand=True)
-        body=ttk.Frame(canvas,padding=8)
-        item=canvas.create_window(0,0,window=body,anchor='nw')
-        canvas.bind('<Configure>',lambda e:canvas.itemconfigure(item,width=e.width))
-        body.bind('<Configure>',lambda e:canvas.configure(scrollregion=canvas.bbox('all')))
-        ttk.Label(body,text='狀態總覽',style='Heading.TLabel').pack(anchor='w',pady=(0,6))
-        for key,title,destination in (
-            ('role','角色與夥伴',None),('activity','目前活動',None),
-            ('ai','自動戰鬥','ai_page'),('roaming','自動徘徊','roam_page'),
-            ('supply','補給紀錄',None),('alchemy','自動煉金','alchemy_panel'),
-            ('crafting','家具製作','crafting_panel'),('party','隊伍與必要隊員','party_panel'),
-            ('efficiency','經驗效率','efficiency_panel')):
-            frame=group(body,text=title,padding=(8,5));frame.pack(fill='x',pady=(0,5))
+        self.labels={};self.full_values={};self.cards={}
+        self.columnconfigure(0,weight=1,uniform='overview')
+        self.columnconfigure(1,weight=1,uniform='overview')
+        for row,weight in enumerate((2,1,1,1,1,1)):
+            self.rowconfigure(row,weight=weight,uniform='overview_rows')
+        layout=(
+            ('role','角色與夥伴',None,0,0,2,3),
+            ('activity','目前活動',None,1,0,2,2),
+            ('ai','自動戰鬥','ai_page',2,0,1,2),
+            ('roaming','自動徘徊','roam_page',2,1,1,2),
+            ('supply','補給紀錄',None,3,0,1,2),
+            ('alchemy','自動煉金','alchemy_panel',3,1,1,2),
+            ('crafting','家具製作','crafting_panel',4,0,1,2),
+            ('party','隊伍與必要隊員','party_panel',4,1,1,2),
+            ('efficiency','經驗效率','efficiency_panel',5,0,2,2),
+        )
+        for key,title,destination,row,column,span,lines in layout:
+            frame=ttk.Frame(self,padding=(6,2))
+            frame.grid(row=row,column=column,columnspan=span,sticky='nsew',padx=2,pady=2)
+            frame.grid_propagate(False)
+            frame.columnconfigure(0,weight=1)
+            frame.rowconfigure(1,weight=1)
+            self.cards[key]=frame
+            ttk.Label(frame,text=title,style='Section.TLabel').grid(row=0,column=0,sticky='w')
             value=tk.StringVar();self.values[key]=value
-            label=ttk.Label(frame,textvariable=value,justify='left',wraplength=450)
-            label.pack(side='left',fill='x',expand=True)
-            label.bind('<Configure>',lambda e,w=label:w.configure(wraplength=max(80,e.width)))
+            label=ttk.Label(frame,textvariable=value,justify='left',anchor='nw')
+            label.grid(row=1,column=0,columnspan=2,sticky='nsew')
+            self.labels[key]=(label,lines)
+            label.bind('<Configure>',lambda e,k=key:self.fit_value(k))
+            label.bind('<Double-1>',lambda e,k=key:self.show_detail(k))
             if destination:
-                ttk.Button(frame,text='查看',command=lambda d=destination:self.open_panel(d)).pack(side='right',padx=(6,0))
-            elif key in ('role','supply'):
-                ttk.Button(frame,text='包包／特技' if key=='role' else '補給設定',command=app.open_resources if key=='role' else lambda:self.open_panel('ai_page',settings=True)).pack(side='right',padx=(6,0))
+                callback=lambda d=destination:self.open_panel(d)
+                text='查看'
+            elif key=='role':callback=app.open_resources;text='包包／特技'
+            elif key=='supply':callback=lambda:self.open_panel('ai_page',settings=True);text='設定'
+            else:callback=lambda k=key:self.show_detail(k);text='詳情'
+            ttk.Button(frame,text=text,command=callback).grid(row=0,column=1,sticky='e',padx=(4,0))
         self.after(1000,self.tick)
 
     def open_panel(self,name,settings=False):
@@ -128,7 +140,45 @@ class OverviewPanel(ttk.Frame):
         values=summarize(getattr(self,'state',{}),self.app.live_active,self.app.ai_settings.get('party_guard',{}))
         if values!=self.signature:
             self.signature=values
-            for key,value in values.items():self.values[key].set(value)
+            self.full_values=values
+            for key in values:self.fit_value(key)
+
+    def fit_value(self,key):
+        label,limit=self.labels[key]
+        text=self.full_values.get(key,'等待同步')
+        lines=text.splitlines()
+        if len(lines)>limit:
+            lines=lines[:limit-1]+['｜'.join(lines[limit-1:])]
+        font=tkfont.Font(font=label.cget('font') or 'TkDefaultFont')
+        width=max(1,label.winfo_width()-4)
+        height=max(1,label.winfo_height())
+        visible=max(1,min(limit,height//max(1,font.metrics('linespace'))))
+        lines=lines[:visible-1]+['｜'.join(lines[visible-1:])] if len(lines)>visible else lines
+        fitted=[]
+        for line in lines:
+            if font.measure(line)>width:
+                low,high=0,len(line)
+                while low<high:
+                    middle=(low+high+1)//2
+                    if font.measure(line[:middle]+'…')<=width:low=middle
+                    else:high=middle-1
+                line=line[:low]+'…'
+            fitted.append(line)
+        self.values[key].set('\n'.join(fitted))
+
+    def show_detail(self,key):
+        window=tk.Toplevel(self)
+        window.title('狀態詳情')
+        window.geometry('640x420')
+        body=ttk.Frame(window)
+        body.pack(fill='both',expand=True)
+        body.columnconfigure(0,weight=1);body.rowconfigure(0,weight=1)
+        # A read-only detail window keeps the dashboard itself fixed in size.
+        text=tk.Text(body,wrap='word',font='TkDefaultFont',padx=12,pady=12)
+        text.grid(row=0,column=0,sticky='nsew')
+        text.insert('1.0',self.full_values.get(key,'等待同步'));text.configure(state='disabled')
+        ttk.Button(body,text='關閉',command=window.destroy).grid(row=1,column=0,pady=8)
+        self.app.theme.attach(window)
 
     def tick(self):
         if self.winfo_exists():
