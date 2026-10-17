@@ -90,7 +90,7 @@ class SessionManager:
                     run_client(session.host, session.port, load_default_profile(), emit,
                                account=account, password=password, verify_first=True, duration=None,
                                stop_event=session.stop_event, commands=session.commands,
-                               on_state=on_state, snapshot_interval=0.5)
+                               on_state=on_state, snapshot_interval=0.5, tcp_keepalive=True)
                 except Exception as exc:
                     # Exception text may contain escaped/encoded credentials, so
                     # replacing literal strings is insufficient. Expose type only.

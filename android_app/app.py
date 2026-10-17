@@ -14,6 +14,8 @@ from kivy.uix.label import Label
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.spinner import Spinner
 from kivy.uix.textinput import TextInput
+from kivy.uix.checkbox import CheckBox
+from kivy.utils import platform
 
 from android_app.sessions import SessionManager
 from android_app.version import ANDROID_VERSION
@@ -37,6 +39,26 @@ class LaLaApp(App):
         self.manager = SessionManager()
         self.cards = {}
         self.lines = []
+        self.vault = None
+        self.saved_accounts = []
+        self.vault_error = False
+        if platform == 'android':
+            from jnius import autoclass
+            from android_app.runtime import ServiceManager
+            from android_app.vault import AndroidCipher, AccountVault
+            activity = autoclass('org.kivy.android.PythonActivity').mActivity
+            directory = Path(str(activity.getNoBackupFilesDir().getAbsolutePath()))
+            self.android_service = autoclass('org.lala.client.wlrelala.ServiceConnections')
+            self.android_activity = activity
+            self.android_service.start(activity, '')
+            self.manager = ServiceManager(directory / 'runtime/sessions.sock')
+            try:
+                self.vault = AccountVault(directory / 'accounts.enc', AndroidCipher())
+                self.saved_accounts = self.vault.load()
+            except Exception:
+                self.vault_error = True
+                self.vault = None  # Never overwrite ciphertext after decryption failure.
+
 
     def build(self):
         self.title = "WLRe_LaLa Android v" + ANDROID_VERSION
@@ -46,9 +68,17 @@ class LaLaApp(App):
         base = BoxLayout(orientation="vertical", padding=dp(12), spacing=dp(8))
         base.add_widget(Label(text="WLRe_LaLa  Android  v" + ANDROID_VERSION,
                               size_hint_y=None, height=dp(52), font_size="21sp"))
-        base.add_widget(Label(text="測試版：單機多連線｜暫不支援鎖屏背景作業",
+        base.add_widget(Label(text="多帳號獨立連線｜背景服務需允許通知",
                               size_hint_y=None, height=dp(30), font_size="13sp"))
 
+        saved_row = BoxLayout(size_hint_y=None, height=dp(48), spacing=dp(6))
+        self.saved = Spinner(text='已保存帳號', values=self.saved_names())
+        self.saved.bind(text=self.switch_saved)
+        saved_row.add_widget(self.saved)
+        delete = Button(text='刪除帳號', size_hint_x=.45)
+        delete.bind(on_release=self.delete_saved)
+        saved_row.add_widget(delete)
+        base.add_widget(saved_row)
         # Only bundled official endpoints are selectable, no user-defined host input.
         from wlre.storage.server_lines import load
         self.lines = load()
@@ -60,17 +90,36 @@ class LaLaApp(App):
         self.account = TextInput(hint_text="遊戲帳號", multiline=False,
                                  size_hint_y=None, height=dp(48))
         base.add_widget(self.account)
-        self.password = TextInput(hint_text="密碼（只使用於此次連線）", multiline=False,
+        self.password = TextInput(hint_text="密碼", multiline=False,
                                   password=True, size_hint_y=None, height=dp(48))
         base.add_widget(self.password)
 
+        remember_row = BoxLayout(size_hint_y=None, height=dp(36))
+        self.remember = CheckBox(active=False, size_hint_x=None, width=dp(48), disabled=self.vault is None)
+        remember_row.add_widget(self.remember)
+        remember_row.add_widget(Label(text='使用 Keystore 加密保存帳密'))
+        base.add_widget(remember_row)
         button = Button(text="新增連線並登入", size_hint_y=None, height=dp(52))
         button.bind(on_release=self.connect_account)
         base.add_widget(button)
 
         self.message = Label(text="尚未登入。正式伺服器相容性仍待實機驗證。",
                              size_hint_y=None, height=dp(46))
+        if self.vault_error: self.message.text = '帳密解密失敗；原資料已保留，請重新輸入登入'
         base.add_widget(self.message)
+        self.resources = Label(text='資源監控：等待服務取樣', size_hint_y=None, height=dp(84), font_size='12sp')
+        self.resources.bind(size=lambda view, size: setattr(view, 'text_size', (size[0], None)))
+        self.message.bind(size=lambda view, size: setattr(view, 'text_size', (size[0], None)))
+        base.add_widget(self.resources)
+        if platform == 'android':
+            service_row = BoxLayout(size_hint_y=None, height=dp(44), spacing=dp(6))
+            restart = Button(text='啟動背景服務')
+            restart.bind(on_release=lambda *_: self.android_service.start(self.android_activity, ''))
+            stop_service = Button(text='停止全部連線與服務')
+            stop_service.bind(on_release=lambda *_: self.android_service.stop(self.android_activity))
+            service_row.add_widget(restart)
+            service_row.add_widget(stop_service)
+            base.add_widget(service_row)
         base.add_widget(Label(text="帳號連線列表（不限固定數量）",
                               size_hint_y=None, height=dp(34)))
 
@@ -81,7 +130,17 @@ class LaLaApp(App):
         scroll.add_widget(self.list_box)
         base.add_widget(scroll)
         Clock.schedule_interval(self.drain_events, 0.25)
-        return base
+        # Entire form scrolls on small phones and when the keyboard is visible.
+        base.size_hint_y = None
+        base.bind(minimum_height=base.setter('height'))
+        scroll.size_hint_y = None
+        scroll.height = dp(300)
+        outer = ScrollView(do_scroll_x=False)
+        outer.add_widget(base)
+        if platform == 'android':
+            from android.permissions import request_permissions
+            request_permissions(['android.permission.POST_NOTIFICATIONS'])
+        return outer
 
     def connect_account(self, *_):
         record = self.lookup.get(self.server.text)
@@ -91,6 +150,16 @@ class LaLaApp(App):
             self.message.text = "請選擇分流並輸入帳號、密碼"
             return
         self.password.text = ""
+        if self.remember.active and self.vault:
+            records = [r for r in self.saved_accounts if (r['server'], r['account']) != (self.server.text, account)]
+            records.append(dict(server=self.server.text, account=account, password=password))
+            try:
+                self.vault.save(records)
+                self.saved_accounts = records
+                self.saved.values = self.saved_names()
+            except Exception:
+                self.message.text = '安全保存失敗，未建立連線'
+                return
         try:
             session = self.manager.start(
                 label=self.server.text, host=record["host"], port=record["port"],
@@ -99,6 +168,10 @@ class LaLaApp(App):
             self.message.text = str(exc)
             return
         self.message.text = "已建立新連線；可繼續新增其他帳號"
+        if session is not None: self.add_card(session)
+
+    def add_card(self, session):
+        account = session.account
         card = BoxLayout(orientation="vertical", spacing=dp(4), padding=dp(6),
                          size_hint_y=None, height=dp(230))
         title = Label(text=account + " | " + session.label,
@@ -123,6 +196,30 @@ class LaLaApp(App):
         self.list_box.add_widget(card)
         self.cards[session.session_id] = (status, choices, title, stop, card)
 
+    def saved_names(self):
+        return [r['account'] + ' | ' + r['server'] for r in self.saved_accounts]
+
+    def switch_saved(self, _spinner, name):
+        for record, label in zip(self.saved_accounts, self.saved_names()):
+            if label == name:
+                self.account.text = record['account']
+                self.server.text = record['server']
+                self.password.text = record['password']
+                return
+
+    def delete_saved(self, *_):
+        if not self.vault: return
+        records = [r for r, label in zip(self.saved_accounts, self.saved_names()) if label != self.saved.text]
+        try: self.vault.save(records)
+        except Exception:
+            self.message.text = '安全刪除失敗，原資料已保留'
+            return
+        self.saved_accounts = records
+        self.saved.values = self.saved_names()
+        self.saved.text = '已保存帳號'
+        self.password.text = ''
+        self.message.text = '已刪除保存的帳密；既有連線可個別停止'
+
     def choose_role(self, session_id, index):
         if self.manager.select_role(session_id, index):
             record = self.cards.get(session_id)
@@ -136,23 +233,48 @@ class LaLaApp(App):
             if record: self.list_box.remove_widget(record[4])
 
     def drain_events(self, *_):
+        if getattr(self.manager, 'background', False):
+            for session in list(self.manager.sessions.values()):
+                if session.session_id not in self.cards: self.add_card(session)
+            metrics = self.manager.metrics
+            if not self.manager.available:
+                self.resources.text = '服務無回應／已停止；連線狀態未知，請重啟服務'
+                for record in self.cards.values():
+                    record[0].text = '服務無回應；連線狀態未知'
+                    for button in record[1].values(): button.disabled = True
+            elif metrics:
+                import time
+                from jnius import autoclass
+                memory = autoclass('android.os.Debug$MemoryInfo')()
+                autoclass('android.os.Debug').getMemoryInfo(memory)
+                self.resources.text = ('在線 {online}／活動連線 {active}｜服務 PSS {service_pss_kib} KiB'.format(**metrics)
+                    + '\n畫面 PSS ' + str(memory.getTotalPss()) + ' KiB｜裝置電量 ' + str(metrics.get('battery_percent', '未知'))
+                    + '%｜裝置溫度 ' + str(metrics.get('device_temperature_c')) + '°C｜App 耗電未知｜' + time.strftime('%H:%M:%S', time.localtime(metrics['sample_time'])))
         for _ in range(80):
             try:
                 sid, kind, value = self.manager.events.get_nowait()
             except queue.Empty:
                 break
+            if kind == 'error':
+                self.message.text = value
+                continue
+            if kind == 'removed':
+                record = self.cards.pop(sid, None)
+                if record: self.list_box.remove_widget(record[4])
+                continue
             record = self.cards.get(sid)
             if not record:
                 continue
+            session = self.manager.sessions.get(sid)
+            if session is None: continue
             status, choices, title, stop, card = record
             if kind == "status":
                 status.text = value
-                if self.manager.sessions[sid].stop_event.is_set():
+                if session.stop_event.is_set():
                     for button in choices.values(): button.disabled = True
             elif kind == "roles":
                 for index, button in choices.items():
                     role = next((r for r in value if r["index"] == index), None)
-                    session = self.manager.sessions[sid]
                     button.disabled = (role is None or bool(role.get("locked")) or not session.active
                         or session.stop_event.is_set() or session.selection_pending
                         or session.phase != "role_selection")
@@ -179,9 +301,9 @@ class LaLaApp(App):
 
     def on_pause(self):
         self.password.text = ""
-        self.manager.stop_all()
+        if not getattr(self.manager, 'background', False): self.manager.stop_all()
         return True
 
     def on_stop(self):
         self.password.text = ""
-        self.manager.stop_all()
+        if not getattr(self.manager, 'background', False): self.manager.stop_all()

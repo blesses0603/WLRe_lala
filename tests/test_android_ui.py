@@ -69,3 +69,26 @@ class AndroidUI(unittest.TestCase):
         self.assertTrue(self.session.stop_event.is_set())
         self.roles()
         self.assertTrue(all(button.disabled for button in self.buttons.values()))
+
+    def test_android_pause_keeps_service_sessions(self):
+        self.app.manager.background = True
+        self.app.password.text = 'temporary'
+        self.assertTrue(self.app.on_pause())
+        self.app.on_stop()
+        self.assertEqual(self.app.password.text, '')
+        self.assertFalse(self.session.stop_event.is_set())
+
+    def test_switch_and_delete_saved_account_preserves_other_account(self):
+        records = [dict(server=self.app.server.text, account=name, password=name + '-secret')
+                   for name in ('A', 'B')]
+        class Vault:
+            def save(self, value): self.records = value
+        self.app.vault = Vault()
+        self.app.saved_accounts = records
+        self.app.saved.values = self.app.saved_names()
+        self.app.saved.text = self.app.saved_names()[0]
+        self.assertEqual(self.app.account.text, 'A')
+        self.app.delete_saved()
+        self.assertEqual([r['account'] for r in self.app.vault.records], ['B'])
+        self.assertEqual(self.app.password.text, '')
+        self.assertFalse(self.session.stop_event.is_set())

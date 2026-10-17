@@ -359,7 +359,7 @@ class SessionLogic:
 def run_client(host, port, profile, emit, *, account=None, password=None,
                login_kind=2, platform=None, language=None, role_index=None,
                duration=15, timeout=5, verify_first=False, stop_event=None,
-               commands=None, on_state=None, snapshot_interval=0):
+               commands=None, on_state=None, snapshot_interval=0, tcp_keepalive=False):
     if duration is not None and duration <= 0 or timeout <= 0:
         raise ProtocolError('duration and timeout must be positive')
     if snapshot_interval<0:raise ProtocolError('snapshot_interval must not be negative')
@@ -391,6 +391,13 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
     deadline = time.monotonic() + duration if duration is not None else float('inf')
     try:
         with socket.create_connection((host, port), timeout=timeout) as connection:
+            if tcp_keepalive:
+                connection.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+                for name, value in (('TCP_KEEPIDLE', 60), ('TCP_KEEPINTVL', 15), ('TCP_KEEPCNT', 4)):
+                    option = getattr(socket, name, None)
+                    if option is not None:
+                        try: connection.setsockopt(socket.IPPROTO_TCP, option, value)
+                        except OSError: pass  # OS may not expose adjustable intervals.
             connection.settimeout(0.05)
             state.phase = 'connected'
             emit({'type': 'connected', 'server_compatibility_verified': False,

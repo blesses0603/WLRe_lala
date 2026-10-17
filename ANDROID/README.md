@@ -1,62 +1,33 @@
-# 飄流 RE:LaLa Android v0.0.1（實驗測試版）
+# WLRe_LaLa Android v0.0.2（實驗版）
 
-此分支的 Android 版本從 **v0.0.1** 獨立編號，與 Windows／macOS 的版本分離。
+沿用 Kivy 直式介面與 Python 協議核心。所有 Android 修改位於 `android-development`；版本與桌面版分開。
 
-## 目前包含
+## 本版功能
 
-- Kivy 直式手機登入介面與預設分流選單。
-- 使用既有 Python 網路客戶端，各帳號建立獨立連線執行緒和指令佇列。
-- 角色 1／2 的選角按鈕保留鎖定狀態，選角待回覆時不可重複送出。
-- 顯示角色 HP／SP、等級、地圖及伺服器確認的位置；未同步資料不補造數值。
-- 每條連線可獨立停止，結束後保留錯誤原因並可移除卡片釋放記憶體。
-- 內附 Noto Sans TC 中文字型，避免手機使用預設 Roboto 時中文缺字。
-- 密碼僅在本次連線時使用，不寫入本機設定、程式庫或事件紀錄。
-- GitHub Actions 測試用 APK 工作流程。
+- 每個帳號使用獨立連線、停止旗標、選角佇列及狀態；沒有固定帳號數量上限。
+- 連線移至獨立 Python 前景服務程序，畫面暫停或重建不停止服務；重新開啟可取回帳號卡片及目前狀態。
+- 常駐通知可以返回畫面或停止全部連線；畫面也提供停止及重新啟動服務。
+- 活動連線期間以有時限的 partial wake lock 保持 CPU，連線結束即釋放；TCP keepalive 協助偵測無回應的網路。
+- 自願勾選保存時，用 Android Keystore AES-256-GCM 加密整份帳號資料；金鑰不可匯出，密文放在不備份的 App 私有目錄。可切換已保存帳號、刪除保存資料；刪除保存資料不會關閉其他既有連線。未勾選時不保存密碼。
+- 畫面與服務透過私有 Unix socket 溝通，沒有 TCP 控制埠；密碼不寫入 IPC 檔案、參數、日誌或事件。
+- 顯示帳號登入／選角／角色資訊與各自斷線狀態；服務失聯顯示未知，不能繼續顯示在線。
+- 顯示活動連線、在線數、畫面／服務 PSS 記憶體、取樣時間、裝置電量及溫度。App 精確耗電無可靠公共 API，目前明確顯示未知，不把裝置掉電當作本 App 耗電。
+- 整個表單及帳號清單可捲動，包含 Noto Sans TC 中文字型（OFL 授權附於 assets/fonts）。
 
-## 尚未完成或確認
+## 背景限制與待驗收
 
-- **正式伺服器登入尚未實機驗證**。封包解析基於既有研究，不能保證 Android 可登入。
-- **鎖定螢幕／切換 App 後持續作業尚未支援**。本版切換背景會要求停止全部連線，並清空密碼欄；回到 App 不會自動重連。需要 Android Foreground Service、常駐通知與實機省電測試。
-- 目前沒有 Android Keystore 的「記住密碼」功能；**請勿將私人帳密、密鑰加入 Git 儲存庫**。
-- 目前沒有保證任意數量帳號都能保持連線，實際受裝置 RAM、散熱、網路與 Android 政策限制。
-- 自動戰鬥、徘徊等為現有 Python 核心的研究功能，尚未完成 Android UI 與持續運作的整合驗證。
+Android 15 對 `dataSync` 前景服務有背景累計時限（通常為每 24 小時 6 小時）；時限到達會停止服務，回到前景後可手動重啟。通知、前景服務與 wake lock 不能保證繞過 Doze、廠商省電或無網路。系統停止服務後，不會偷偷自動重新登入。
 
-## 從 GitHub 取得 Android APK
+手機安裝、Keystore 真正加解密、正式服登入、切換 App 與 15／30／60 分鐘鎖屏仍須實機驗收。桌面測試不能代替這些結果。請參閱 [驗收表](ACCEPTANCE.md) 與 [驗證紀錄](VALIDATION.md)。
 
-1. 開啟本儲存庫的 [Actions](https://github.com/blesses0603/WLRe_lala/actions)。
-2. 選擇 **Android v0.0.1 Test APK** 工作流程，確認執行分支為 `android-development`。
-3. 若沒有自動開始，等待分支推送觸發；或使用 **Run workflow** 手動執行（若介面提供）。
-4. 等待工作流程變綠後，進入該次執行頁，從 **Artifacts** 下載 `WLRe_LaLa-Android-v0.0.1-debug`。
-5. 解壓 ZIP，將其中的 APK 複製到 Android 手機，再依手機提示允許安裝該來源的應用程式。
+## APK 與開發測試
 
-**注意：** 目前不能聲稱 APK 已經編譯成功。必須等 Actions 工作流程真正成功並顯示 Artifact，才有可安裝的成品。
-
-## 手機驗收順序
-
-1. 首先只開 App，確認直式介面、地球／水星分流下拉選單可以操作，不要急著輸入主要遊戲帳密。
-2. 再由使用者自主決定是否使用專門的測試帳號測試正式登入，觀察是否取得選角清單。
-3. 驗證單一帳號停止不影響其他連線；接著才測試兩個帳號並行。
-4. 目前不把鎖屏後仍在線視為通過；背景服務是下一階段。
-
-## 開發與隔離
-
-原有 Windows／macOS 程式碼保留；新入口為 `main.py`，Android 專用程式位於 `android_app/`。打包設定是根目錄的 `buildozer.spec`。所有修改只提交至 `android-development`。
-
-
-## 開發驗證
-
-橋接測試不連線正式伺服器：
+在 [Actions](https://github.com/blesses0603/WLRe_lala/actions) 選 **Android v0.0.2 Test APK**；綠燈後才有 `WLRe_LaLa-Android-v0.0.2-debug` Artifact，內含 APK 與 SHA256SUMS。打包成功不等於實機登入驗收通過。
 
 ```bash
-python -m unittest discover -s tests -p test_android_sessions.py -q
+pip install kivy==2.3.1 Pillow cryptography
+KIVY_NO_ARGS=1 xvfb-run -a python -m unittest discover -s tests -p 'test_android*.py' -q
+buildozer -v android debug
 ```
 
-Kivy 控制項與中文字型測試需要 Kivy 2.3.1、Pillow 及桌面顯示，Linux CI 使用 `xvfb-run`：
-
-```bash
-KIVY_NO_ARGS=1 xvfb-run -a python -m unittest discover -s tests -p test_android_ui.py -q
-```
-
-Actions 先執行這兩組測試，再進行 Buildozer 編譯。下載 ZIP 同時附 APK 的 SHA256 校驗檔；建置成功不代表已完成手機或正式服登入驗證。
-
-中文字型來自 Google Fonts 的 Noto Sans TC（OFL 1.1），依變動字重來源產生 400 Regular，授權文字位於 `android_app/assets/fonts/OFL.txt`。
+服務入口 `android_app/service.py`；IPC `runtime.py`；密文帳號庫 `vault.py`；Android 通知／超時處理位於 `android_app/java/`。Buildozer 固定 python-for-android revision，並固定 charset-normalizer 3.4.2，避免 Linux 主機 pip 拒收新 Android 專用 wheel 的跨編譯問題。
