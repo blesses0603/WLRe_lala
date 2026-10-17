@@ -3,6 +3,7 @@ from wlre.paths import RESOURCE_ROOT
 import io,json,zipfile,math
 from collections import OrderedDict
 import tkinter as tk
+from wlre.ui.window_layout import configure_dialog
 from tkinter import ttk
 from PIL import Image,ImageTk
 from wlre.ui.theme import group
@@ -38,7 +39,7 @@ class CraftingBrowser:
     def __init__(self,panel):
         self.panel=panel;self.app=panel.app;self.state=panel.state;self.page=0;self.rows=[];self.selected=None;self.filter_key='all';self.grid_key=None;self.detail_key=None;self.tool_key=None;self.search_job=None;self.refresh_job=None;self.state_key=None
         self.favorite_store=Favorites();self.icons=None;self.closed=False
-        w=self.window=tk.Toplevel(self.app.root);w.title('家具製作');w.geometry('1120x630');w.resizable(False,False);w.protocol('WM_DELETE_WINDOW',self.close)
+        w=self.window=tk.Toplevel(self.app.root);w.title('家具製作');configure_dialog(w,1160,700);w.resizable(False,False);w.protocol('WM_DELETE_WINDOW',self.close)
         self.icons=ItemIcons(w)
         box=ttk.Frame(w,padding=12);box.pack(fill='both',expand=True)
         header=ttk.Frame(box);header.pack(fill='x',pady=(0,8))
@@ -218,7 +219,7 @@ class CraftingBrowser:
 
     def show_queue(self):
         if self.queue_window and self.queue_window.winfo_exists():self.queue_window.lift();return
-        w=self.queue_window=tk.Toplevel(self.window);w.title('製作排程');w.geometry('760x340');w.resizable(False,False)
+        w=self.queue_window=tk.Toplevel(self.window);w.title('製作排程');configure_dialog(w,820,420);w.resizable(False,False)
         body=ttk.Frame(w,padding=12);body.pack(fill='both',expand=True)
         self.queue=ttk.Treeview(body,columns=['order','name','count','time'],show='headings',height=5)
         for key,title,width in [('order','順序',55),('name','製作物',300),('count','批數',65),('time','剩餘時間',220)]:self.queue.heading(key,text=title);self.queue.column(key,width=width,anchor='center')

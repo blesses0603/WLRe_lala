@@ -1,5 +1,5 @@
 """Main-window geometry, separate from session and command handling."""
-from tkinter import ttk, messagebox
+from tkinter import ttk
 
 
 class DashboardLayout:
@@ -15,7 +15,6 @@ class DashboardLayout:
         ttk.Button(header,text='中斷連線',command=app.stop).grid(row=0,column=1,padx=(6,0))
         self.status=ttk.Label(header,textvariable=app.status,style='Muted.TLabel',width=1)
         self.status.grid(row=1,column=0,columnspan=3,sticky='ew',pady=(3,0))
-        self.status.bind('<Double-1>',lambda e:messagebox.showinfo('連線狀態',app.status.get(),parent=root))
         self.content=ttk.Frame(self.body)
         self.content.pack(fill='both',expand=True)
         self.content.columnconfigure(0,weight=0,minsize=700)

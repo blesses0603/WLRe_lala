@@ -112,13 +112,12 @@ class OverviewPanel(ttk.Frame):
             label.grid(row=0,column=1,sticky='nsew')
             self.labels[key]=(label,lines)
             label.bind('<Configure>',lambda e,k=key:self.fit_value(k))
-            label.bind('<Double-1>',lambda e,k=key:self.show_detail(k))
             if destination:
                 callback=lambda d=destination:self.open_panel(d)
                 text='開啟'
             elif key=='role':callback=app.open_resources;text='包包'
             elif key=='supply':callback=lambda:self.open_panel('ai_page',settings=True);text='設定'
-            else:callback=lambda k=key:self.show_detail(k);text='詳情'
+            else:continue
             button=ttk.Button(frame,text=text,width=4,command=callback,padding=(3,2))
             button.grid(row=0,column=2,sticky='e',padx=(6,0))
             self.actions[key]=button
@@ -166,20 +165,6 @@ class OverviewPanel(ttk.Frame):
                 line=line[:low]+'…'
             fitted.append(line)
         self.values[key].set('\n'.join(fitted))
-
-    def show_detail(self,key):
-        window=tk.Toplevel(self)
-        window.title('狀態詳情')
-        window.geometry('640x420')
-        body=ttk.Frame(window)
-        body.pack(fill='both',expand=True)
-        body.columnconfigure(0,weight=1);body.rowconfigure(0,weight=1)
-        # A read-only detail window keeps the dashboard itself fixed in size.
-        text=tk.Text(body,wrap='word',font='TkDefaultFont',padx=12,pady=12)
-        text.grid(row=0,column=0,sticky='nsew')
-        text.insert('1.0',self.full_values.get(key,'等待同步'));text.configure(state='disabled')
-        ttk.Button(body,text='關閉',command=window.destroy).grid(row=1,column=0,pady=8)
-        self.app.theme.attach(window)
 
     def tick(self):
         if self.winfo_exists():

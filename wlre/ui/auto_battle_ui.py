@@ -3,6 +3,7 @@ import copy
 import json
 from functools import lru_cache
 import tkinter as tk
+from wlre.ui.window_layout import configure_dialog
 import os
 from wlre.ui.rounded_notebook import RoundedNotebook
 from wlre.ui.theme import group as LabelFrame
@@ -88,7 +89,7 @@ class RuleDraft:
 class ActionEditor:
     def __init__(self,parent,row,snapshot,who,commit):
         self.original=copy.deepcopy(row);self.commit=commit;self.snapshot_source=snapshot if callable(snapshot) else lambda:snapshot;self.snapshot=self.snapshot_source();self.who=who
-        self.window=tk.Toplevel(parent);self.window.title('編輯行動與條件');self.window.geometry('900x600');self.window.resizable(False,False)
+        self.window=tk.Toplevel(parent);self.window.title('編輯行動與條件');configure_dialog(self.window,960,640);self.window.resizable(False,False)
         self.window.transient(parent);self.window.grab_set()
         box=ttk.Frame(self.window,padding=12);box.pack(fill='both',expand=True)
         self.kind=tk.StringVar(value='包包道具' if row['kind']==2 else '技能／基本行動')
@@ -243,7 +244,7 @@ class RuleCard:
 class SettingsEditor:
     def __init__(self,app):
         self.app=app;self.draft=RuleDraft(app.ai_settings);self.flags={};self.cards={};self.rootvars={};self.rule_views={}
-        w=self.window=tk.Toplevel(app.root);w.title('Lua 規則 AI 設定');w.geometry('1040x680');w.resizable(False,False)
+        w=self.window=tk.Toplevel(app.root);w.title('Lua 規則 AI 設定');configure_dialog(w,1080,720);w.resizable(False,False)
         box=ttk.Frame(w,padding=12);box.pack(fill='both',expand=True)
         ttk.Label(box,text='左側選擇規則，點行動名稱編輯。優先序：陣亡 → 敵HP → 低HP → 低SP → 回合 → 循環 → 順序 → 普攻。',wraplength=900).pack(anchor='w',pady=(0,8))
         tabs=self.tabs=RoundedNotebook(box);tabs.pack(fill='both',expand=True)

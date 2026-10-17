@@ -2,6 +2,7 @@
 from wlre.paths import PROJECT_ROOT
 import math
 import tkinter as tk
+from wlre.ui.window_layout import configure_dialog
 from wlre.ui.rounded_notebook import RoundedNotebook
 from tkinter import ttk
 from PIL import Image,ImageTk
@@ -214,7 +215,7 @@ class HomeMap(ttk.Frame):
         if self.audit_window and self.audit_window.winfo_exists():
             self.audit_window.lift();return
         win=tk.Toplevel(self);self.audit_window=win
-        win.title('地圖傳送點逐圖核對 · 1262');win.geometry('960x540');win.resizable(False,False)
+        win.title('地圖傳送點逐圖核對 · 1262');configure_dialog(win,1000,600);win.resizable(False,False)
         ttk.Label(win,text='雙擊地圖列可預覽。已核對數量只代表門編號與觸碰事件有效，正式服是否允許遠距觸發仍待實測。').pack(fill='x',padx=10,pady=8)
         def open_report():
             import webbrowser

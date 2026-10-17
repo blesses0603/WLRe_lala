@@ -1,6 +1,7 @@
 """Local map geometry preview. No reference to the client's command queue."""
 import json
 import tkinter as tk
+from wlre.ui.window_layout import configure_dialog
 from tkinter import ttk, filedialog, messagebox
 from wlre.ui.theme import install as install_theme
 from wlre.services.world.navigation import Repository, NavigationError
@@ -16,7 +17,7 @@ class NavigationWindow:
         install_theme(parent.winfo_toplevel())
         self.window = tk.Toplevel(parent)
         self.window.title('全場景導航 · 離線幾何預覽')
-        self.window.geometry('1080x780')
+        configure_dialog(self.window,1120,760)
         self.repository = Repository()
         self.smallmaps = SmallMaps()
         self.on_route = on_route

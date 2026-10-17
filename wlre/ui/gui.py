@@ -3,6 +3,7 @@ import json
 import queue
 import threading
 import tkinter as tk
+from wlre.ui.window_layout import configure_dialog
 from wlre.ui.rounded_notebook import RoundedNotebook
 from wlre import __version__
 from wlre.ui.theme import group as LabelFrame
@@ -178,7 +179,7 @@ class App:
         window=tk.Toplevel(self.root)
         self.login_window=window
         window.title('飄流Re:LaLa  =By赤寧= · 登入／選角')
-        window.geometry('900x560')
+        configure_dialog(window,900,580)
         window.resizable(False,False)
         window.protocol('WM_DELETE_WINDOW',self.close_login)
         self.login_tab=ttk.Frame(window,padding=12)

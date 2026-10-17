@@ -59,3 +59,56 @@ class DashboardLayout(unittest.TestCase):
             self.assertEqual(self.app.left_tabs.select(),str(expected))
         self.app.left_tabs.select(panel.master);self.root.update()
         self.assertFalse(self.errors,self.errors)
+
+    def test_utility_windows_fit_supported_desktop(self):
+        from wlre.ui.auto_battle_ui import SettingsEditor, ActionEditor
+        from wlre.ui.resource_view import ResourceView
+        from wlre.ui.recovery_ui import SupplyPicker
+        def check(window):
+            self.root.update()
+            self.assertGreaterEqual(window.winfo_x(),0)
+            self.assertGreaterEqual(window.winfo_y(),0)
+            self.assertLessEqual(window.winfo_x()+window.winfo_width(),self.root.winfo_screenwidth())
+            self.assertLessEqual(window.winfo_y()+window.winfo_height(),self.root.winfo_screenheight())
+            self.assertLessEqual(window.winfo_width(),1240)
+            self.assertLessEqual(window.winfo_height(),760)
+            def inspect(parent):
+                for child in parent.winfo_children():
+                    if isinstance(child,tk.Toplevel) or not child.winfo_ismapped():continue
+                    if child.winfo_class() in ('TButton','TEntry','TCombobox','TSpinbox'):
+                        self.assertLessEqual(child.winfo_rootx()+child.winfo_width(),window.winfo_rootx()+window.winfo_width()+2)
+                        self.assertLessEqual(child.winfo_rooty()+child.winfo_height(),window.winfo_rooty()+window.winfo_height()+2)
+                    inspect(child)
+            inspect(window)
+        resources=ResourceView(self.app)
+        try:check(resources.window)
+        finally:resources.window.destroy()
+        settings=SettingsEditor(self.app)
+        try:
+            for page in settings.tabs.tabs():
+                with self.subTest(page=settings.tabs.tab(page,'text')):
+                    settings.tabs.select(page);check(settings.window)
+            picker=SupplyPicker(settings.recovery_pages['hp'],0)
+            try:check(picker.window)
+            finally:picker.window.destroy()
+        finally:settings.window.destroy()
+        browser=self.app.crafting_panel.open_browser()
+        try:
+            check(browser.window);browser.show_queue();check(browser.queue_window)
+        finally:browser.close()
+        plan=self.app.crafting_panel.open_plan()
+        try:check(plan.window)
+        finally:plan.window.destroy()
+        self.app.open_navigation();navigation=self.app.navigation_windows[-1]
+        try:check(navigation.window)
+        finally:navigation.window.destroy()
+        self.app.home_map.show_audit()
+        try:check(self.app.home_map.audit_window)
+        finally:self.app.home_map.audit_window.destroy()
+        self.app.chat_panel.show_emoji_picker()
+        try:check(self.app.chat_panel.emoji_picker)
+        finally:self.app.chat_panel.emoji_picker.destroy()
+        action=ActionEditor(self.root,{'kind':1,'id':0,'target':1},self.app.snapshot,'player',lambda row:None)
+        try:check(action.window)
+        finally:action.window.destroy()
+        self.assertFalse(self.errors,self.errors)

@@ -1,6 +1,7 @@
 """Ten ordered supply slots and independent player/follower recovery thresholds."""
 import math
 import tkinter as tk
+from wlre.ui.window_layout import configure_dialog
 from tkinter import ttk
 from wlre.services.items.combat_resources import item_name, heal_effects, available, field_context
 from wlre.ui.crafting_browser import ItemIcons
@@ -8,7 +9,7 @@ from wlre.ui.crafting_browser import ItemIcons
 class SupplyPicker:
     def __init__(self,page,index):
         self.page=page;self.index=index;self.offset=0;self.rows=[];self.row_images=[]
-        self.window=w=tk.Toplevel(page);w.title('選擇'+page.resource.upper()+'補品');w.geometry('660x480');w.resizable(False,False)
+        self.window=w=tk.Toplevel(page);w.title('選擇'+page.resource.upper()+'補品');configure_dialog(w,720,540);w.resizable(False,False)
         box=ttk.Frame(w,padding=12);box.pack(fill='both',expand=True)
         top=ttk.Frame(box);top.pack(fill='x');ttk.Label(top,text='搜尋包包補品').pack(side='left')
         self.search=tk.StringVar();entry=ttk.Entry(top,textvariable=self.search);entry.pack(side='left',fill='x',expand=True,padx=8)

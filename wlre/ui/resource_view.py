@@ -1,5 +1,6 @@
 """Live bag contents and every confirmed learned/equipment skill, with reasons."""
 import tkinter as tk
+from wlre.ui.window_layout import configure_dialog
 from wlre.ui.rounded_notebook import RoundedNotebook
 from tkinter import ttk,messagebox
 from wlre.services.items.combat_resources import CAT, skill_rows, available, heal_effects, item_name, food_command, learned_command, field_context
@@ -8,7 +9,7 @@ from wlre.ui.crafting_browser import ItemIcons
 
 class ResourceView:
     def __init__(self,app):
-        self.app=app;self.window=tk.Toplevel(app.root);self.window.title('包包與角色／夥伴特技');self.window.geometry('1000x660')
+        self.app=app;self.window=tk.Toplevel(app.root);self.window.title('包包與角色／夥伴特技');configure_dialog(self.window,1040,700)
         self.signature=None;self.skill_map={};self.bag_map={};self.bag_images={};self.icons=ItemIcons(self.window)
         self.window.bind('<Destroy>',self.destroyed,add='+')
         bar=ttk.Frame(self.window,padding=10);bar.pack(fill='x')
