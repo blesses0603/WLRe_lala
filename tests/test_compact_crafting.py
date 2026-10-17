@@ -82,6 +82,25 @@ class CompactCrafting(unittest.TestCase):
             self.assertTrue(card['button'].winfo_ismapped())
             self.assertLessEqual(card['button'].winfo_rootx()+card['button'].winfo_width(),edge)
 
+    def test_full_height_details_can_resize_without_hiding_actions_or_resetting_selection(self):
+        detail=self.browser.detail_panel;toolbar=self.browser.toolbar
+        self.assertEqual(detail.winfo_rooty(),toolbar.winfo_rooty())
+        self.assertGreater(detail.winfo_height(),self.browser.grid.winfo_height())
+        for control in toolbar.winfo_children():
+            self.assertLessEqual(control.winfo_rootx()+control.winfo_width(),detail.winfo_rootx())
+        split=self.browser.detail_split
+        split.sashpos(0,110);self.root.update()
+        before=self.browser.material_table.winfo_height()
+        split.sashpos(0,170);self.root.update()
+        self.assertLess(self.browser.material_table.winfo_height(),before)
+        self.assertTrue(self.browser.add_button.winfo_ismapped())
+        position=split.sashpos(0)
+        self.browser.pick_card(1);self.root.update()
+        self.assertEqual(split.sashpos(0),position)
+        self.assertEqual(self.browser.selected,self.browser.cards[1]['id'])
+        self.assertTrue(self.app.home_map.winfo_ismapped())
+        self.assertTrue(self.app.chat_panel.winfo_ismapped())
+
     def test_favorite_has_separate_click_target_and_does_not_change_recipe(self):
         import tempfile
         from pathlib import Path

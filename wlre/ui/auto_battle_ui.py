@@ -249,7 +249,6 @@ class SettingsEditor:
         self.app=app;self.draft=RuleDraft(app.ai_settings);self.flags={};self.cards={};self.rootvars={};self.rule_views={}
         w=self.window=tk.Toplevel(app.root);w.title('自動戰鬥設定');configure_dialog(w,1080,720);w.resizable(False,False)
         box=ttk.Frame(w,padding=12);box.pack(fill='both',expand=True)
-        ttk.Label(box,text='左側選擇規則，點行動名稱編輯。優先序：陣亡 → 敵HP → 低HP → 低SP → 回合 → 循環 → 順序 → 普攻。',wraplength=900).pack(anchor='w',pady=(0,8))
         heading(box,'自動戰鬥設定','角色與夥伴規則、補給及停止條件；修改會先保留在草稿。')
         tabs=self.tabs=RoundedNotebook(box);tabs.pack(fill='both',expand=True)
         display=('orderAction','repeatAction','roundAction','misc')
@@ -260,6 +259,7 @@ class SettingsEditor:
             for label in ('順序行動','循環行動','指定回合','雜項設定'):menu.insert('end',label)
             menu.selection_set(0)
             area=ttk.Frame(panel);area.pack(side='left',fill='both',expand=True)
+            ttk.Label(area,text='點選行動名稱編輯。優先序：陣亡 → 敵HP → 低HP → 低SP → 回合 → 循環 → 順序 → 普攻。',style='Muted.TLabel',wraplength=850).pack(fill='x',pady=(0,8))
             inside=ttk.Frame(area);inside.pack(fill='both',expand=True)
             self.rule_views[who]={'menu':menu,'inside':inside,'display':display,'selected':None}
             menu.bind('<<ListboxSelect>>',lambda e,who=who:self.choose_rule(who))

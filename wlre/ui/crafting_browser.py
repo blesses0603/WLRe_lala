@@ -49,9 +49,10 @@ class CraftingBrowser:
         box=ttk.Frame(w,padding=6 if embedded else 12);box.pack(fill='both',expand=True)
         header=ttk.Frame(box);header.pack(fill='x',pady=(0,4))
         ttk.Label(header,text='製作',style='Heading.TLabel').pack(side='left')
-        self.queue_label=tk.StringVar();ttk.Button(header,textvariable=self.queue_label,command=self.show_queue,padding=(5,3)).pack(side='right',padx=3)
-        ttk.Button(header,text='進入自家帳篷',command=lambda:panel.command('enter'),padding=(5,3)).pack(side='right',padx=3)
-        ttk.Button(header,text='自訂清單',command=panel.open_plan,padding=(5,3)).pack(side='right',padx=3)
+        self.toolbar=header
+        ttk.Button(header,text='自訂清單',command=panel.open_plan,padding=(5,3)).pack(side='left',padx=(12,3))
+        ttk.Button(header,text='進入自家帳篷',command=lambda:panel.command('enter'),padding=(5,3)).pack(side='left',padx=3)
+        self.queue_label=tk.StringVar();ttk.Button(header,textvariable=self.queue_label,command=self.show_queue,padding=(5,3)).pack(side='left',padx=3)
         searchbar=ttk.Frame(box);searchbar.pack(fill='x',pady=(0,4))
         self.only_tools=tk.BooleanVar(value=True);ttk.Checkbutton(searchbar,text='只列小屋已有設備',variable=self.only_tools,command=lambda:self.refresh(force=True)).pack(side='left')
         ttk.Label(searchbar,text='搜尋').pack(side='left',padx=(8,4))
@@ -60,7 +61,7 @@ class CraftingBrowser:
         catalog=body
         catalog.columnconfigure(0,minsize=128 if embedded else 164,weight=0)
         catalog.columnconfigure(1,weight=1)
-        catalog.columnconfigure(2,minsize=248 if embedded else 410,weight=0)
+        catalog.columnconfigure(2,minsize=0 if embedded else 410,weight=0)
         catalog.rowconfigure(0,weight=1)
         side=group(catalog,text='工作設備',padding=6);side.grid(row=0,column=0,sticky='nsew',padx=(0,8))
         if embedded:side.configure(width=128);side.pack_propagate(False)
@@ -94,19 +95,35 @@ class CraftingBrowser:
             status=ttk.Label(footer,anchor='w',style='Muted.TLabel',width=1);status.pack(side='left',fill='x',expand=True)
             button=ttk.Button(cell,compound='top',padding=(3,2) if embedded else (9,5),command=lambda n=i:self.pick_card(n));button.pack(fill='both',expand=True)
             self.cards.append({'frame':cell,'button':button,'favorite':favorite,'status':status,'id':None,'image':None})
-        right=group(body,text='配方詳情',padding=6 if embedded else 8);right.grid(row=0,column=2,sticky='nsew')
-        self.detail_panel=right
-        if embedded:right.configure(width=248);right.pack_propagate(False)
-        title=ttk.Frame(right);title.pack(fill='x')
+        if embedded:
+            for widget in (header,searchbar,body):widget.pack_forget()
+            box.columnconfigure(0,weight=1);box.columnconfigure(1,minsize=248,weight=0)
+            box.rowconfigure(2,weight=1)
+            header.grid(row=0,column=0,sticky='ew',pady=(0,4))
+            searchbar.grid(row=1,column=0,sticky='ew',pady=(0,4))
+            body.grid(row=2,column=0,sticky='nsew')
+        right=group(box if embedded else body,text='配方詳情',padding=6 if embedded else 8)
+        right.grid(row=0,column=1 if embedded else 2,rowspan=4 if embedded else 1,sticky='nsew',padx=(6,0) if embedded else 0)
+        self.detail_panel=right;self.detail_split=None
+        if embedded:
+            right.configure(width=248);right.pack_propagate(False)
+            self.detail_split=ttk.Panedwindow(right,orient='vertical')
+            self.detail_split.pack(fill='both',expand=True)
+            summary=ttk.Frame(self.detail_split);self.detail_split.add(summary,weight=0)
+            self.detail_split.bind('<Map>',self.initialize_detail_split,add='+')
+            self.detail_split.bind('<Motion>',lambda e:self.detail_split.configure(cursor='sb_v_double_arrow' if self.detail_split.identify(e.x,e.y)!='' else ''))
+            self.detail_split.bind('<Leave>',lambda e:self.detail_split.configure(cursor=''))
+        else:summary=right
+        title=ttk.Frame(summary);title.pack(fill='x')
         self.large_image=ttk.Label(title);self.large_image.pack(side='left',padx=(0,8))
         self.name=tk.StringVar(value='請選擇製作物');ttk.Label(title,textvariable=self.name,style='Heading.TLabel',wraplength=180 if embedded else 260).pack(side='left',fill='x',expand=True)
-        self.hold=tk.StringVar();ttk.Label(right,textvariable=self.hold,wraplength=225 if embedded else 380).pack(fill='x',pady=5)
-        self.device=tk.StringVar();ttk.Label(right,textvariable=self.device,style='Muted.TLabel',wraplength=225 if embedded else 380).pack(fill='x')
-        self.time=tk.StringVar();ttk.Label(right,textvariable=self.time,style='Muted.TLabel',wraplength=225 if embedded else 380).pack(fill='x',pady=4)
+        self.hold=tk.StringVar();ttk.Label(summary,textvariable=self.hold,wraplength=225 if embedded else 380).pack(fill='x',pady=5)
+        self.device=tk.StringVar();ttk.Label(summary,textvariable=self.device,style='Muted.TLabel',wraplength=225 if embedded else 380).pack(fill='x')
+        self.time=tk.StringVar();ttk.Label(summary,textvariable=self.time,style='Muted.TLabel',wraplength=225 if embedded else 380).pack(fill='x',pady=4)
         self.material_widgets=[];self.material_table=None
         if embedded:
-            self.material_box=ttk.Frame(right)
-            self.material_box.pack(fill='both',expand=True,pady=(4,0))
+            self.material_box=ttk.Frame(self.detail_split)
+            self.detail_split.add(self.material_box,weight=1)
             table_frame,self.material_table=scroll_table(self.material_box,('name','usable','required'),('材料','可用','需求'),(90,50,50),height=3,show='tree headings')
             self.material_table.heading('#0',text='');self.material_table.column('#0',width=28,minwidth=28,stretch=False)
             table_frame.pack(fill='both',expand=True)
@@ -120,7 +137,7 @@ class CraftingBrowser:
                 icon=ttk.Label(line);icon.pack(side='left',padx=(0,5))
                 text=ttk.Label(line,wraplength=290);text.pack(side='left',fill='x',expand=True)
                 self.material_widgets.append((line,icon,text))
-        compose=ttk.Frame(right);compose.pack(side='bottom',fill='x',pady=(6,0),before=title if embedded else self.material_box)
+        compose=ttk.Frame(right);compose.pack(side='bottom',fill='x',pady=(6,0),before=self.detail_split if embedded else self.material_box)
         batch=ttk.Frame(compose) if embedded else compose
         if embedded:batch.pack(fill='x')
         ttk.Label(batch,text='批數').pack(side='left');self.count=tk.StringVar(value='1')
@@ -132,7 +149,9 @@ class CraftingBrowser:
         self.count.trace_add('write',lambda *args:self.refresh_detail(force=True))
         self.reason=tk.StringVar()
         if not embedded:ttk.Label(right,textvariable=self.reason,style='Muted.TLabel',wraplength=380).pack(side='bottom',fill='x',pady=(5,0),before=self.material_box)
-        bottom=ttk.Frame(box);bottom.pack(side='bottom',fill='x',pady=(6,0),before=body)
+        bottom=ttk.Frame(box)
+        if embedded:bottom.grid(row=3,column=0,sticky='ew',pady=(6,0))
+        else:bottom.pack(side='bottom',fill='x',pady=(6,0),before=body)
         self.favorite_count=tk.StringVar();ttk.Label(bottom,textvariable=self.favorite_count,style='Muted.TLabel').pack(side='left',padx=(0,8))
         self.message=tk.StringVar(value='自動隱藏鎖定及條件未確認項目；缺材料仍可查看')
         ttk.Label(bottom,textvariable=self.message,style='Muted.TLabel',wraplength=0 if embedded else 760,width=1 if embedded else 0).pack(side='right',fill='x',expand=True)
@@ -141,6 +160,18 @@ class CraftingBrowser:
         if self.favorite_store.load_error:self.message.set('最愛檔案無法讀取，暫以空清單開啟')
         self.tick_job=self.window.after(1000,self.tick)
         if embedded:self.window.bind('<Map>',lambda e:self.refresh() if e.widget is self.window else None)
+
+    def initialize_detail_split(self,event=None):
+        if event is not None and event.widget is not self.detail_split:return
+        if getattr(self,'_detail_split_initialized',False):return
+        self.detail_split.after_idle(self.set_initial_detail_split)
+
+    def set_initial_detail_split(self):
+        if self.closed or not self.detail_split.winfo_exists():return
+        height=self.detail_split.winfo_height()
+        if height<220:return
+        self.detail_split.sashpos(0,min(150,height-120))
+        self._detail_split_initialized=True
 
     def update_state(self,state):
         self.state=state;c=state.get('crafting',{});inv=state.get('inventory',{});room=state.get('furniture',{})
