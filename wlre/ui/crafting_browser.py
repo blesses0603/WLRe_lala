@@ -5,7 +5,6 @@ from collections import OrderedDict
 import tkinter as tk
 from wlre.ui.window_layout import configure_dialog
 from tkinter import ttk
-from wlre.ui.layout import scroll_table
 from PIL import Image,ImageDraw,ImageTk
 from wlre.ui.theme import group
 from wlre.services.items.crafting import RECIPES, recipe_plan, effective_time, elapsed, confirmed_unlocked
@@ -104,29 +103,26 @@ class CraftingBrowser:
             body.grid(row=2,column=0,sticky='nsew')
         right=group(box if embedded else body,text='配方詳情',padding=6 if embedded else 8)
         right.grid(row=0,column=1 if embedded else 2,rowspan=4 if embedded else 1,sticky='nsew',padx=(6,0) if embedded else 0)
-        self.detail_panel=right;self.detail_split=None
+        self.detail_panel=right
         if embedded:
             right.configure(width=248);right.pack_propagate(False)
-            self.detail_split=ttk.Panedwindow(right,orient='vertical')
-            self.detail_split.pack(fill='both',expand=True)
-            summary=ttk.Frame(self.detail_split);self.detail_split.add(summary,weight=0)
-            self.detail_split.bind('<Map>',self.initialize_detail_split,add='+')
-            self.detail_split.bind('<Motion>',lambda e:self.detail_split.configure(cursor='sb_v_double_arrow' if self.detail_split.identify(e.x,e.y)!='' else ''))
-            self.detail_split.bind('<Leave>',lambda e:self.detail_split.configure(cursor=''))
+            summary=ttk.Frame(right);summary.pack(fill='x')
         else:summary=right
         title=ttk.Frame(summary);title.pack(fill='x')
         self.large_image=ttk.Label(title);self.large_image.pack(side='left',padx=(0,8))
         self.name=tk.StringVar(value='請選擇製作物');ttk.Label(title,textvariable=self.name,style='Heading.TLabel',wraplength=180 if embedded else 260).pack(side='left',fill='x',expand=True)
-        self.hold=tk.StringVar();ttk.Label(summary,textvariable=self.hold,wraplength=225 if embedded else 380).pack(fill='x',pady=5)
+        self.hold=tk.StringVar();ttk.Label(summary,textvariable=self.hold,wraplength=0 if embedded else 380).pack(fill='x',pady=3)
         self.device=tk.StringVar();ttk.Label(summary,textvariable=self.device,style='Muted.TLabel',wraplength=225 if embedded else 380).pack(fill='x')
-        self.time=tk.StringVar();ttk.Label(summary,textvariable=self.time,style='Muted.TLabel',wraplength=225 if embedded else 380).pack(fill='x',pady=4)
+        self.time=tk.StringVar();ttk.Label(summary,textvariable=self.time,style='Muted.TLabel',wraplength=225 if embedded else 380).pack(fill='x',pady=2 if embedded else 4)
         self.material_widgets=[];self.material_table=None
         if embedded:
-            self.material_box=ttk.Frame(self.detail_split)
-            self.detail_split.add(self.material_box,weight=1)
-            table_frame,self.material_table=scroll_table(self.material_box,('name','usable','required'),('材料','可用','需求'),(90,50,50),height=3,show='tree headings')
+            self.material_box=ttk.Frame(right)
+            self.material_box.pack(fill='both',expand=True,pady=(2,0))
+            self.material_table=ttk.Treeview(self.material_box,columns=('name','usable','required'),height=5,show='tree headings',selectmode='browse')
+            for key,label,width in (('name','材料',76),('usable','可用',60),('required','需求',60)):
+                self.material_table.heading(key,text=label);self.material_table.column(key,width=width,minwidth=40,stretch=key!='name',anchor='w' if key=='name' else 'center')
             self.material_table.heading('#0',text='');self.material_table.column('#0',width=28,minwidth=28,stretch=False)
-            table_frame.pack(fill='both',expand=True)
+            self.material_table.pack(fill='both',expand=True)
             self.material_table.tag_configure('missing',foreground='#f2b0a8')
             self.material_table.tag_configure('ready',foreground='#a8e4c0')
         else:
@@ -137,7 +133,7 @@ class CraftingBrowser:
                 icon=ttk.Label(line);icon.pack(side='left',padx=(0,5))
                 text=ttk.Label(line,wraplength=290);text.pack(side='left',fill='x',expand=True)
                 self.material_widgets.append((line,icon,text))
-        compose=ttk.Frame(right);compose.pack(side='bottom',fill='x',pady=(6,0),before=self.detail_split if embedded else self.material_box)
+        compose=ttk.Frame(right);compose.pack(side='bottom',fill='x',pady=(6,0),before=summary if embedded else self.material_box)
         batch=ttk.Frame(compose) if embedded else compose
         if embedded:batch.pack(fill='x')
         ttk.Label(batch,text='批數').pack(side='left');self.count=tk.StringVar(value='1')
@@ -160,18 +156,6 @@ class CraftingBrowser:
         if self.favorite_store.load_error:self.message.set('最愛檔案無法讀取，暫以空清單開啟')
         self.tick_job=self.window.after(1000,self.tick)
         if embedded:self.window.bind('<Map>',lambda e:self.refresh() if e.widget is self.window else None)
-
-    def initialize_detail_split(self,event=None):
-        if event is not None and event.widget is not self.detail_split:return
-        if getattr(self,'_detail_split_initialized',False):return
-        self.detail_split.after_idle(self.set_initial_detail_split)
-
-    def set_initial_detail_split(self):
-        if self.closed or not self.detail_split.winfo_exists():return
-        height=self.detail_split.winfo_height()
-        if height<220:return
-        self.detail_split.sashpos(0,min(150,height-120))
-        self._detail_split_initialized=True
 
     def update_state(self,state):
         self.state=state;c=state.get('crafting',{});inv=state.get('inventory',{});room=state.get('furniture',{})
@@ -275,7 +259,10 @@ class CraftingBrowser:
         if not force and signature==self.detail_key:return
         self.detail_key=signature;self.name.set(item_name(self.selected));self.large_photo=self.icons.get(self.selected,32 if self.embedded else 80);self.large_image.configure(image=self.large_photo)
         fmt=lambda v:'待同步' if v is None else str(v)
-        self.hold.set(f"背包持有 {fmt(counts['bag'])}｜小屋已擺 {fmt(counts['placed'])}\n保管中 {fmt(counts['stored'])}｜排程預計產出 {counts['queued']}")
+        if self.embedded:
+            number=lambda v:'—' if v is None else str(v)
+            self.hold.set(f"背包 {number(counts['bag'])}｜小屋 {number(counts['placed'])}\n保管 {number(counts['stored'])}｜排程 {counts['queued']}")
+        else:self.hold.set(f"背包持有 {fmt(counts['bag'])}｜小屋已擺 {fmt(counts['placed'])}\n保管中 {fmt(counts['stored'])}｜排程預計產出 {counts['queued']}")
         tool=recipe['tool_id'];self.device.set(f'設備：{item_name(tool)} · {tool_status(self.state,tool)}')
         meta=ICON_MAP.get(str(self.selected),{});size=f"｜{meta['width']:.1f}×{meta['height']:.1f}" if meta.get('width') and meta.get('height') else ''
         seconds=recipe['seconds']*max(1,count);adjusted=effective_time(self.state,{'base_time':seconds})
