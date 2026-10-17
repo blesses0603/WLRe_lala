@@ -20,7 +20,7 @@
 
 1. 前往 [GitHub Actions](https://github.com/blesses0603/WLRe_lala/actions/workflows/android-apk.yml)。
 2. 選擇 **Android v0.0.1 Test APK**，並確認使用 `android-development` 分支。
-3. 工作流程成功後，打開該次執行，從 **Artifacts** 下載 `WLRE-LaLa-Android-v0.0.1-debug`。
+3. 工作流程成功後，打開該次執行，從 **Artifacts** 下載 `WLRe_LaLa-Android-v0.0.1-debug`。
 4. 解壓 ZIP，將 APK 安裝到 Android 手機，先確認 App 能開啟、直式版面與分流選單正常。
 5. 之後再以測試帳號驗證伺服器連線與選角流程。
 
@@ -42,3 +42,5 @@
 ## 🖥️ 桌面版本
 
 Windows／macOS 的版本說明及發布流程仍以 [**桌面主分支 `main`**](https://github.com/blesses0603/WLRe_lala/tree/main) 為準；本分支的 Android 版號 **v0.0.1** 不會取代桌面版號。
+
+完整目標與逐項驗收規格見 [Android 驗收規格](ANDROID/ACCEPTANCE.md)，目前測試結果見 [開發驗證](ANDROID/VALIDATION.md)。

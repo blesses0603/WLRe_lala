@@ -1,7 +1,9 @@
 """Minimal portrait, touch-operated Android login smoke-test UI."""
 import queue
+from pathlib import Path
 
 from kivy.app import App
+from kivy.core.text import LabelBase, DEFAULT_FONT
 from kivy.clock import Clock
 from kivy.core.window import Window
 from kivy.metrics import dp
@@ -17,6 +19,13 @@ from android_app.sessions import SessionManager
 from android_app.version import ANDROID_VERSION
 
 
+# SDL2's bundled Roboto does not contain Chinese glyphs. Register the included
+# OFL font for Labels, Buttons, Spinners and TextInputs before creating widgets.
+FONT = str(Path(__file__).resolve().parent / 'assets/fonts/NotoSansTC-Regular.ttf')
+LabelBase.register(DEFAULT_FONT, fn_regular=FONT, fn_bold=FONT,
+                   fn_italic=FONT, fn_bolditalic=FONT)
+
+
 def text_label(text, height=32):
     return Label(text=text, size_hint_y=None, height=dp(height),
                  halign="left", valign="middle")
@@ -30,12 +39,12 @@ class LaLaApp(App):
         self.lines = []
 
     def build(self):
-        self.title = "飄流 RE:LaLa Android v" + ANDROID_VERSION
+        self.title = "WLRe_LaLa Android v" + ANDROID_VERSION
         Window.softinput_mode = "below_target"
         Window.clearcolor = (0.05, 0.09, 0.16, 1)
 
         base = BoxLayout(orientation="vertical", padding=dp(12), spacing=dp(8))
-        base.add_widget(Label(text="飄流 RE:LaLa  Android  v" + ANDROID_VERSION,
+        base.add_widget(Label(text="WLRe_LaLa  Android  v" + ANDROID_VERSION,
                               size_hint_y=None, height=dp(52), font_size="21sp"))
         base.add_widget(Label(text="測試版：單機多連線｜暫不支援鎖屏背景作業",
                               size_hint_y=None, height=dp(30), font_size="13sp"))
@@ -91,25 +100,40 @@ class LaLaApp(App):
             return
         self.message.text = "已建立新連線；可繼續新增其他帳號"
         card = BoxLayout(orientation="vertical", spacing=dp(4), padding=dp(6),
-                         size_hint_y=None, height=dp(150))
+                         size_hint_y=None, height=dp(230))
         title = Label(text=account + " | " + session.label,
                       size_hint_y=None, height=dp(38))
-        status = Label(text="準備連線", size_hint_y=None, height=dp(35))
+        status = Label(text="準備連線", size_hint_y=None, height=dp(110))
+        status.bind(size=lambda view, size: setattr(view, "text_size", (size[0], None)))
         controls = BoxLayout(size_hint_y=None, height=dp(48), spacing=dp(6))
+        choices = {}
         for index in (1, 2):
             choice = Button(text="角色 " + str(index), disabled=True)
             choice.bind(on_release=lambda _button, sid=session.session_id, n=index:
-                        self.manager.select_role(sid, n))
+                        self.choose_role(sid, n))
             controls.add_widget(choice)
+            choices[index] = choice
         stop = Button(text="停止")
-        stop.bind(on_release=lambda _button, sid=session.session_id:
-                  self.manager.stop(sid))
+        stop._lala_stop_callback = lambda _button, sid=session.session_id: self.manager.stop(sid)
+        stop.bind(on_release=stop._lala_stop_callback)
         controls.add_widget(stop)
         card.add_widget(title)
         card.add_widget(status)
         card.add_widget(controls)
         self.list_box.add_widget(card)
-        self.cards[session.session_id] = (status, controls.children, title)
+        self.cards[session.session_id] = (status, choices, title, stop, card)
+
+    def choose_role(self, session_id, index):
+        if self.manager.select_role(session_id, index):
+            record = self.cards.get(session_id)
+            if record:
+                record[0].text = "正在登入角色"
+                for button in record[1].values(): button.disabled = True
+
+    def remove_card(self, session_id):
+        if self.manager.remove(session_id):
+            record = self.cards.pop(session_id, None)
+            if record: self.list_box.remove_widget(record[4])
 
     def drain_events(self, *_):
         for _ in range(80):
@@ -120,24 +144,44 @@ class LaLaApp(App):
             record = self.cards.get(sid)
             if not record:
                 continue
-            status, controls, title = record
+            status, choices, title, stop, card = record
             if kind == "status":
                 status.text = value
+                if self.manager.sessions[sid].stop_event.is_set():
+                    for button in choices.values(): button.disabled = True
             elif kind == "roles":
-                for button in controls:
-                    if button.text.startswith("角色 "):
-                        index = int(button.text.split()[1])
-                        role = next((r for r in value if r["index"] == index), None)
-                        button.disabled = role is None
-                        if role:
-                            button.text = "角色 " + str(index) + " Lv." + str(role["level"])
+                for index, button in choices.items():
+                    role = next((r for r in value if r["index"] == index), None)
+                    session = self.manager.sessions[sid]
+                    button.disabled = (role is None or bool(role.get("locked")) or not session.active
+                        or session.stop_event.is_set() or session.selection_pending
+                        or session.phase != "role_selection")
+                    suffix = "（無法使用）" if role and role.get("locked") else ""
+                    level = role.get("level") if role else None
+                    button.text = "角色 " + str(index) + (" Lv." + str(level) if level is not None else "") + suffix
             elif kind == "snapshot":
-                role = value["character"]
-                if role:
-                    status.text = "角色 " + role + " Lv." + str(value["level"])
+                if value["phase"] != "role_selection":
+                    for button in choices.values(): button.disabled = True
+                if value["character"]:
+                    def known(key): return str(value[key]) if value.get(key) is not None else "—"
+                    point = value.get("position")
+                    location = (point.get("label", "角色位置") + "：" + str(point["x"]) + ", " + str(point["y"])) if point else "位置待同步"
+                    status.text = ("角色 " + value["character"] + " Lv." + known("level") +
+                        "\nHP " + known("hp") + "/" + known("max_hp") + "  SP " + known("sp") + "/" + known("max_sp") +
+                        "\n地圖 " + known("scene") + "｜" + location)
             elif kind == "finished":
                 status.text = value
+                for button in choices.values(): button.disabled = True
+                stop.unbind(on_release=stop._lala_stop_callback)
+                stop.text = "移除"
+                stop.bind(on_release=lambda _button, session_id=sid: self.remove_card(session_id))
+        return True
+
+    def on_pause(self):
+        self.password.text = ""
+        self.manager.stop_all()
         return True
 
     def on_stop(self):
+        self.password.text = ""
         self.manager.stop_all()

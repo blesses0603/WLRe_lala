@@ -11,3 +11,5 @@ dist_nuitka/
 .buildozer/
 bin/
 .gradle/
+
+android-output/

@@ -1,9 +1,9 @@
 [app]
-title = 飄流 RE LaLa
+title = WLRe_LaLa
 package.name = wlrelala
 package.domain = org.lala.client
 source.dir = .
-source.include_exts = py,kv,json,zip,png,jpg,jpeg,webp,ttf,ttc
+source.include_exts = py,kv,json,zip,png,jpg,jpeg,webp,ttf,ttc,txt
 source.exclude_dirs = .git,.github,docs,tests,tools,.buildozer,bin,dist_nuitka
 version = 0.0.1
 requirements = python3,kivy==2.3.1
