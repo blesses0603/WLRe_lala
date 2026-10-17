@@ -73,7 +73,6 @@ class App:
         self.last_movement_check=None
         self.host,self.account,self.password=(tk.StringVar() for _ in range(3))
         self.port=tk.StringVar(value='16988')
-        self.verify=tk.BooleanVar(value=True)
         self.server_line=tk.StringVar(value=server_lines.CUSTOM)
         self.server_group=tk.StringVar()
         self.line_display=tk.StringVar()
@@ -126,7 +125,7 @@ class App:
         self.crafting_panel=CraftingPanel(left_tabs,self)
         left_tabs.add(self.crafting_panel,text='製作')
         self.efficiency_panel=EfficiencyPanel(left_tabs,self)
-        left_tabs.add(self.efficiency_panel,text='經驗效率')
+        left_tabs.add(self.efficiency_panel,text='經驗效率',align='right')
         self.crafting_panel.configure(padding=6)
         for page in (overview,self.party_panel,self.alchemy_panel,self.crafting_panel,self.efficiency_panel):
             page._section_outline=True
@@ -213,8 +212,7 @@ class App:
         ttk.Checkbutton(login,text='記住密碼',variable=self.remember_password,command=lambda:self.remember_login_changed('password')).grid(row=3,column=1,sticky='w',pady=(6,0))
         ttk.Button(login,text='儲存此組',command=lambda:self.save_saved_login(explicit=True)).grid(row=3,column=2,sticky='ew',padx=3,pady=(6,0))
         ttk.Button(login,text='刪除此組',command=self.delete_saved_login).grid(row=3,column=3,sticky='ew',padx=3,pady=(6,0))
-        ttk.Checkbutton(login,text='先驗證帳號，再登入',variable=self.verify).grid(row=4,column=0,columnspan=2,sticky='w',pady=(10,0))
-        self.connect_button=ttk.Button(login,text='驗證並登入',command=self.connect)
+        self.connect_button=ttk.Button(login,text='登入',command=self.connect)
         self.connect_button.grid(row=4,column=2,sticky='ew',padx=3,pady=(10,0))
         ttk.Button(login,text='中斷',command=self.stop).grid(row=4,column=3,sticky='ew',padx=3,pady=(10,0))
         choices=LabelFrame(self.login_tab,text='選擇角色',padding=8)
@@ -549,7 +547,7 @@ class App:
             messagebox.showinfo('登入','請輸入帳號與密碼。',parent=self.dialog_parent());return
         try:port=int(self.port.get())
         except ValueError:return
-        host,profile,verify=self.host.get().strip(),dict(self.profile),self.verify.get()
+        host,profile=self.host.get().strip(),dict(self.profile)
         try:self.activate_account_settings(host,port,account)
         except (OSError,ValueError,KeyError,TypeError) as exc:
             messagebox.showerror('帳號設定','設定無法載入，未覆寫原檔。'+str(exc),parent=self.dialog_parent());return
@@ -569,7 +567,7 @@ class App:
             self.live_active=True
             try:
                 run_client(host,port,profile,lambda e:self.events.put(('event',e)),
-                           account=account,password=password,verify_first=verify,duration=None,
+                           account=account,password=password,verify_first=True,duration=None,
                            stop_event=self.stop_event,commands=self.commands,
                            on_state=lambda s:self.events.put(('state',s)),snapshot_interval=0.1)
             finally:

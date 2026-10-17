@@ -20,11 +20,15 @@ class RoundedNotebook(ttk.Frame):
         self.book = ttk.Notebook(self, style=body_style)
         self.book.pack(fill='both', expand=True)
         self.buttons = {}
+        self.right_pages=set()
         self.book.bind('<<NotebookTabChanged>>', self._changed)
         self.book.enable_traversal()
 
-    def add(self, child, **kwargs):
+    def add(self, child, align='left', **kwargs):
+        if align not in ('left','right'):raise ValueError('Tab alignment must be left or right')
         self.book.add(child, **kwargs)
+        if align=='right':self.right_pages.add(str(child))
+        else:self.right_pages.discard(str(child))
         self._rebuild()
 
     def insert(self, pos, child, **kwargs):
@@ -32,6 +36,8 @@ class RoundedNotebook(ttk.Frame):
         self._rebuild()
 
     def forget(self, tab):
+        page=self.book.tabs()[self.book.index(tab)]
+        self.right_pages.discard(page)
         self.book.forget(tab)
         self._rebuild()
 
@@ -67,7 +73,8 @@ class RoundedNotebook(ttk.Frame):
                 continue
             button = ttk.Button(self.bar, text=options['text'], style='Pill.Tab.TButton',
                                 command=lambda p=page: self.select(p), takefocus=True, width=0)
-            button.pack(side='left', padx=(0, 6))
+            right=page in self.right_pages
+            button.pack(side='right' if right else 'left',padx=(6,0) if right else (0,6))
             if options['state'] == 'disabled':
                 button.state(['disabled'])
             button.bind('<Right>', lambda event, p=page: self._step(p, 1))
