@@ -1,6 +1,15 @@
 name: Android v0.0.1 Test APK
 
 on:
+  push:
+    branches:
+      - android-development
+    paths:
+      - 'android_app/**'
+      - 'main.py'
+      - 'wlre/**'
+      - 'buildozer.spec'
+      - '.github/workflows/android-apk.yml'
   workflow_dispatch:
 
 permissions:
