@@ -2,6 +2,8 @@
 
 ## 2026-10-17 優化工作區
 
+- v0.4.21 發布預檢：以假的 gh CLI 執行工作流程內的實際 Bash 步驟，驗證有效且未發布標籤可傳遞、`Ver.0.4.20`／其他錯誤格式在遠端請求前被拒絕、缺少標籤及已發布版本會提早停止。核對四項官方 Action 的指定版本皆採 Node.js 24；176 項中 174 通過、2 項原生平台略過，actionlint 與版本標籤預檢通過。
+
 - 打包更名 `WLRe_LaLa`：Windows／macOS 皆明確設定 Nuitka output-folder-name，避免資料夾仍沿用 Python 入口名稱；檢查 EXE／App、ZIP 內容根目錄與封裝路徑同步。172 項中 170 通過、2 項原生平台略過；兩平台打包 dry-run、actionlint 及 diff 檢查通過，實際產物待新版本 Actions 編譯。
 
 - macOS Actions：172 項中 170 通過、2 項略過（Windows DPAPI／原生 macOS ditto）。新增 Apple Silicon／Intel 原生架構與平台拒絕、macOS 專屬編譯參數／完整資源、plist 入口驗證、ditto 指令／ZIP CRC／獨立 SHA256、CRC 失敗保留舊檔，以及 GUI CLI 建立與清理測試。兩架構 dry-run、Linux 桌面 GUI 自檢、actionlint 1.7.12 及 diff 檢查通過。核對官方 runner-images 文件的 `macos-15` ARM64／`macos-15-intel` x64 標籤；原生 macOS 編譯、簽署驗證與 ditto 捷徑／執行權限測試仍待新版本 Actions 實跑，未宣稱 Mac 成品已驗證。
