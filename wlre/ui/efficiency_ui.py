@@ -15,16 +15,17 @@ class EfficiencyPanel(ttk.Frame):
         self.choice=ttk.Combobox(select,textvariable=self.selected,state='readonly',width=24);self.choice.pack(side='left',padx=5);self.choice.bind('<<ComboboxSelected>>',lambda e:self.render(force=True))
         ttk.Label(select,text='效率單位').pack(side='left',padx=(10,3))
         unit=ttk.Combobox(select,textvariable=self.unit,state='readonly',values=['天','時','分'],width=4);unit.pack(side='left');unit.bind('<<ComboboxSelected>>',lambda e:self.render(force=True))
-        self.info=tk.StringVar(value='等待登入角色與經驗資料');ttk.Label(self,textvariable=self.info,wraplength=620).pack(fill='x',pady=3)
-        self.total=tk.StringVar(value='首場作基準，從第二個有效樣本計算效率');ttk.Label(self,textvariable=self.total,style='Muted.TLabel',wraplength=620).pack(fill='x')
-        self.progress=ttk.Progressbar(self,maximum=100);self.progress.pack(fill='x',pady=5)
+        summary=ttk.Frame(self,padding=12);summary._surface_fill=(13,32,48,200);summary.pack(fill='x',pady=(8,10))
+        self.info=tk.StringVar(value='等待登入角色與經驗資料');ttk.Label(summary,textvariable=self.info,style='Section.TLabel',wraplength=800).pack(fill='x',pady=(0,6))
+        self.total=tk.StringVar(value='首場作基準，從第二個有效樣本計算效率');ttk.Label(summary,textvariable=self.total,style='Muted.TLabel',wraplength=800).pack(fill='x')
+        self.progress=ttk.Progressbar(summary,maximum=100);self.progress.pack(fill='x',pady=5)
         self.table=ttk.Treeview(self,columns=['mode','speed','next','target'],show='headings',height=3,selectmode='none')
         for key,title,width in [('mode','統計範圍',116),('speed','經驗／分',144),('next','升級倒數',158),('target','一轉190倒數',178)]:
             self.table.heading(key,text=title);self.table.column(key,width=width,minwidth=60,anchor='center')
-        self.table.pack(fill='x')
+        self.table.pack(fill='both',expand=True)
         for key in ('all','ten','thirty'):self.table.insert('','end',iid=key,values=('—',)*4)
         self.note=tk.StringVar(value='只統計本機角色與已確認的所屬夥伴／坐騎，首場作基準。')
-        ttk.Label(self,textvariable=self.note,style='Muted.TLabel',wraplength=620).pack(fill='x',pady=(5,0))
+        ttk.Label(self,textvariable=self.note,style='Muted.TLabel',wraplength=800).pack(fill='x',pady=(5,0))
         self.after(1000,self.tick)
 
     def reset(self):

@@ -6,6 +6,7 @@ import time
 from collections import deque
 import tkinter as tk
 from wlre.ui.window_layout import configure_dialog
+from wlre.ui.layout import heading
 from wlre.ui.rounded_notebook import RoundedNotebook
 from wlre import __version__
 from wlre.ui.theme import group as LabelFrame
@@ -117,8 +118,8 @@ class App:
         self.roaming_status=tk.StringVar(value='已停止')
         self.party_panel=PartyPanel(left_tabs,self)
         left_tabs.add(self.party_panel,text='組隊')
-        self.party_guard_panel=PartyGuardPanel(self.party_panel,self)
-        self.party_guard_panel.pack(side='bottom',fill='x',pady=(6,0))
+        self.party_guard_panel=PartyGuardPanel(self.party_panel.guard_host,self,compact=True)
+        self.party_guard_panel.pack(fill='both',expand=True)
         if self.party_guard_load_error:self.party_guard_panel.note.set('名單讀取失敗，未啟用：'+self.party_guard_load_error)
         self.alchemy_panel=AlchemyPanel(left_tabs,self)
         left_tabs.add(self.alchemy_panel,text='煉金')
@@ -181,6 +182,7 @@ class App:
         window.protocol('WM_DELETE_WINDOW',self.close_login)
         self.login_tab=ttk.Frame(window,padding=12)
         self.login_tab.pack(fill='both',expand=True)
+        heading(self.login_tab,'登入與選角','選擇帳號與分流，登入後再選取角色。')
         connection_tools=ttk.Frame(self.login_tab)
         connection_tools.pack(fill='x',pady=(0,6))
         for text,callback in [('載入設定',self.load_profile),

@@ -4,6 +4,7 @@ import tkinter as tk
 from wlre.ui.window_layout import configure_dialog
 from tkinter import ttk,messagebox,filedialog
 from pathlib import Path
+from wlre.ui.layout import heading,scroll_table
 from wlre.services.items.crafting_plan import validate_rows
 from wlre.services.items.combat_resources import item_name
 
@@ -12,12 +13,11 @@ class PlanWindow:
         self.panel=panel;self.rows=[];self.follow_revision=None;self.runtime_key=None;self.row_images={}
         self.window=tk.Toplevel(panel);self.window.title('自訂家具製作清單 · 不限項數');configure_dialog(self.window,900,580);self.window.resizable(False,False)
         box=ttk.Frame(self.window,padding=12);box.pack(fill='both',expand=True)
-        ttk.Label(box,text='從家具頁或圖示製作選取配方與批數，再按「加入自訂」。開始後會消耗材料。',wraplength=820).pack(fill='x')
-        self.table=ttk.Treeview(box,columns=['n','name','count','output'],show='tree headings',height=12,selectmode='browse')
-        for key,title,width in [('n','順序',60),('name','家具／製作物',360),('count','批數',100),('output','總產量',140)]:self.table.heading(key,text=title);self.table.column(key,width=width,anchor='center')
+        heading(box,'自訂製作清單','加入配方、調整批數與順序，再開始執行；開始後會消耗材料。')
+        table_frame,self.table=scroll_table(box,('n','name','count','output'),('順序','家具／製作物','批數','總產量'),(60,360,100,140),height=12,show='tree headings')
+        self.table.column('name',anchor='w')
         self.table.heading('#0',text='圖示');self.table.column('#0',width=42,minwidth=42,stretch=False)
-        self.table.pack(fill='both',expand=True,pady=8)
-        scrollbar=ttk.Scrollbar(self.table,orient='vertical',command=self.table.yview);scrollbar.pack(side='right',fill='y');self.table.configure(yscrollcommand=scrollbar.set)
+        table_frame.pack(fill='both',expand=True,pady=(0,8))
         line=ttk.Frame(box);line.pack(fill='x')
         for text,fn in [('加入目前配方',self.add_current),('上移',lambda:self.move(-1)),('下移',lambda:self.move(1)),('移除',self.remove),('清空',self.clear),('儲存',self.save),('載入',self.load)]:ttk.Button(line,text=text,command=fn).pack(side='left',padx=2)
         line=ttk.Frame(box);line.pack(fill='x',pady=6)

@@ -15,6 +15,7 @@
 - `crafting_plan_ui.py`
 - `crafting_ui.py`
 - `dashboard_layout.py`：主視窗幾何與區域配置
+- `layout.py`：共用標題、說明與可捲動清單版型
 - `window_layout.py`：功能視窗尺寸限制與置中配置
 - `overview_ui.py`：狀態摘要與功能入口
 - `efficiency_ui.py`

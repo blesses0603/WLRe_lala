@@ -327,14 +327,28 @@ class GlassTheme:
         # the same absolute crop; nested panels never recolor/rescale the picture.
         if data.get('background_size') != (width,height):
             background = ImageOps.fit(self.art,(width,height),method=Image.Resampling.LANCZOS)
-            background = Image.blend(background,Image.new('RGB',background.size,'#071526'),.46)
+            background = Image.blend(background,Image.new('RGB',background.size,'#071526'),.60 if window is not self.root else .46)
             backing=background.convert('RGBA')
             layer=Image.new('RGBA',backing.size)
             ImageDraw.Draw(layer).rounded_rectangle((1,1,width-2,height-2),radius=20,
                 outline=(98,201,224,200),width=1)
             data['background']=Image.alpha_composite(backing,layer)
             data['background_size'] = (width,height)
-        backing = data['background']
+        if data.get('surface_key')!=signature:
+            backing=data['background'].copy()
+            layer=Image.new('RGBA',backing.size)
+            draw=ImageDraw.Draw(layer)
+            for widget,x,y,a,b in boxes:
+                section=(getattr(widget,'_section_outline',False) or
+                         type(widget).__name__ in ('HomeMap','GlassGroup','RecoveryPage') or
+                         widget.winfo_class()=='TLabelframe')
+                fill=getattr(widget,'_surface_fill',(9,24,39,170) if section else None)
+                if fill and a>4 and b>4:
+                    draw.rounded_rectangle((x+1,y+1,x+a-2,y+b-2),radius=14,fill=fill)
+            data['surface']=Image.alpha_composite(backing,layer)
+            data['surface_key']=signature
+            data['surface_generation']=data.get('surface_generation',0)+1
+        backing = data['surface']
         new_styles = False
         for w, x, y, a, b in boxes:
             if a < 2 or b < 2:
@@ -344,7 +358,7 @@ class GlassTheme:
                 if cls == 'TLabelframe' and not hasattr(w, '_glass_label') and w.cget('text'):
                     w._glass_label = ttk.Label(w, text=w.cget('text'), style='Section.TLabel')
                     w.configure(labelwidget=w._glass_label)
-                crop_key=(width,height,x,y,a,b)
+                crop_key=(data['surface_generation'],width,height,x,y,a,b)
                 record=data['widgets'].get(str(w))
                 if record is None or record.get('crop_key')!=crop_key:
                     new_styles = self.skin(w, data, backing.crop((x, y, x+a, y+b)), cls) or new_styles

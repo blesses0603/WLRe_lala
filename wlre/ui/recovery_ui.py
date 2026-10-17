@@ -5,20 +5,20 @@ from wlre.ui.window_layout import configure_dialog
 from tkinter import ttk
 from wlre.services.items.combat_resources import item_name, heal_effects, available, field_context
 from wlre.ui.crafting_browser import ItemIcons
+from wlre.ui.layout import heading,scroll_table
 
 class SupplyPicker:
     def __init__(self,page,index):
         self.page=page;self.index=index;self.offset=0;self.rows=[];self.row_images=[]
         self.window=w=tk.Toplevel(page);w.title('選擇'+page.resource.upper()+'補品');configure_dialog(w,720,540);w.resizable(False,False)
         box=ttk.Frame(w,padding=12);box.pack(fill='both',expand=True)
+        heading(box,'選擇 '+page.resource.upper()+' 補品','搜尋或選取物品，雙擊可直接套用至此格。')
         top=ttk.Frame(box);top.pack(fill='x');ttk.Label(top,text='搜尋包包補品').pack(side='left')
         self.search=tk.StringVar();entry=ttk.Entry(top,textvariable=self.search);entry.pack(side='left',fill='x',expand=True,padx=8)
         self.search.trace_add('write',lambda *a:self.find())
-        self.table=ttk.Treeview(box,columns=('name','count','effect'),show='tree headings',height=9,selectmode='browse')
-        for k,t,width in [('name','物品名稱',300),('count','可用數量',100),('effect','回復量',140)]:
-            self.table.heading(k,text=t);self.table.column(k,width=width,anchor='center')
+        table_frame,self.table=scroll_table(box,('name','count','effect'),('物品名稱','可用數量','回復量'),(300,100,140),height=9,show='tree headings')
         self.table.heading('#0',text='圖示');self.table.column('#0',width=42,minwidth=42,stretch=False)
-        self.table.pack(fill='both',expand=True,pady=10);self.table.bind('<Double-1>',lambda e:self.choose())
+        table_frame.pack(fill='both',expand=True,pady=10);self.table.bind('<Double-1>',lambda e:self.choose())
         nav=ttk.Frame(box);nav.pack(fill='x');ttk.Button(nav,text='上一頁',command=lambda:self.move(-1)).pack(side='left')
         self.label=tk.StringVar();ttk.Label(nav,textvariable=self.label).pack(side='left',padx=12)
         ttk.Button(nav,text='下一頁',command=lambda:self.move(1)).pack(side='left')

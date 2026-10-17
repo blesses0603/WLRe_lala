@@ -6,13 +6,16 @@ from tkinter import ttk,messagebox
 from wlre.services.items.combat_resources import CAT, skill_rows, available, heal_effects, item_name, food_command, learned_command, field_context
 from wlre.services.battle.battle_commands import owned_units
 from wlre.ui.crafting_browser import ItemIcons
+from wlre.ui.layout import heading,scroll_table
 
 class ResourceView:
     def __init__(self,app):
         self.app=app;self.window=tk.Toplevel(app.root);self.window.title('包包與角色／夥伴特技');configure_dialog(self.window,1040,700)
         self.signature=None;self.skill_map={};self.bag_map={};self.bag_images={};self.icons=ItemIcons(self.window)
         self.window.bind('<Destroy>',self.destroyed,add='+')
-        bar=ttk.Frame(self.window,padding=10);bar.pack(fill='x')
+        header=ttk.Frame(self.window,padding=(12,10,12,0));header.pack(fill='x')
+        heading(header,'包包與特技','搜尋已同步物品與特技，選取後使用下方操作。')
+        bar=ttk.Frame(self.window,padding=(12,0,12,8));bar.pack(fill='x')
         ttk.Label(bar,text='搜尋名稱／ID').pack(side='left')
         self.query=tk.StringVar();ttk.Entry(bar,textvariable=self.query,width=25).pack(side='left',padx=6)
         ttk.Button(bar,text='更新顯示',command=self.refresh).pack(side='left')
@@ -36,13 +39,8 @@ class ResourceView:
 
     @staticmethod
     def table(parent,columns,labels):
-        frame=ttk.Frame(parent);frame.pack(fill='both',expand=True)
-        tree=ttk.Treeview(frame,columns=columns,show='headings',selectmode='browse')
-        for c,label in zip(columns,labels):
-            tree.heading(c,text=label);tree.column(c,width=170 if c in ('name','status','actor') else 75,minwidth=45)
-        scroll=ttk.Scrollbar(frame,orient='vertical',command=tree.yview);scroll.pack(side='right',fill='y')
-        horizontal=ttk.Scrollbar(frame,orient='horizontal',command=tree.xview);horizontal.pack(side='bottom',fill='x')
-        tree.configure(yscrollcommand=scroll.set,xscrollcommand=horizontal.set);tree.pack(fill='both',expand=True)
+        frame,tree=scroll_table(parent,columns,labels,[170 if c in ('name','status','actor') else 75 for c in columns],height=10)
+        frame.pack(fill='both',expand=True)
         return tree
 
     def refresh(self):self.signature=None;self.set_state(self.app.snapshot)

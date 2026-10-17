@@ -114,6 +114,7 @@ class CraftingBrowser:
         self.favorite_count=tk.StringVar();ttk.Label(bottom,textvariable=self.favorite_count,style='Muted.TLabel').pack(side='left',padx=(0,8))
         self.message=tk.StringVar(value='自動隱藏鎖定及條件未確認項目；缺材料仍可查看')
         ttk.Label(bottom,textvariable=self.message,style='Muted.TLabel',wraplength=0 if embedded else 760,width=1 if embedded else 0).pack(side='right',fill='x',expand=True)
+        for section in (side,right,self.material_box):section._surface_fill=(13,32,48,190)
         self.queue_window=None;self.refresh(force=True)
         if self.favorite_store.load_error:self.message.set('最愛檔案無法讀取，暫以空清單開啟')
         self.tick_job=self.window.after(1000,self.tick)

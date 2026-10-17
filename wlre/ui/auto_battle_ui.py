@@ -4,6 +4,7 @@ import json
 from functools import lru_cache
 import tkinter as tk
 from wlre.ui.window_layout import configure_dialog
+from wlre.ui.layout import heading
 import os
 from wlre.ui.rounded_notebook import RoundedNotebook
 from wlre.ui.theme import group as LabelFrame
@@ -92,6 +93,7 @@ class ActionEditor:
         self.window=tk.Toplevel(parent);self.window.title('編輯行動與條件');configure_dialog(self.window,960,640);self.window.resizable(False,False)
         self.window.transient(parent);self.window.grab_set()
         box=ttk.Frame(self.window,padding=12);box.pack(fill='both',expand=True)
+        heading(box,'編輯行動','先選擇行動，再核對目標與條件；儲存後返回規則草稿。')
         self.kind=tk.StringVar(value='包包道具' if row['kind']==2 else '技能／基本行動')
         ttk.Label(box,text='行動類型').pack(anchor='w')
         kind=ttk.Combobox(box,textvariable=self.kind,values=('技能／基本行動','包包道具'),state='readonly');kind.pack(fill='x')
@@ -99,7 +101,7 @@ class ActionEditor:
         ttk.Entry(box,textvariable=self.query).pack(fill='x')
         footer=ttk.Frame(box)
         footer.pack(side='bottom',fill='x',pady=(8,0))
-        ttk.Button(footer,text='儲存此行動',command=self.save).pack(side='left')
+        ttk.Button(footer,text='儲存此行動',command=self.save).pack(side='right',padx=(6,0))
         ttk.Button(footer,text='取消',command=self.window.destroy).pack(side='right')
         body=ttk.Frame(box);body.pack(fill='both',expand=True,pady=6)
         body.columnconfigure(0,weight=1);body.columnconfigure(1,weight=0,minsize=270);body.rowconfigure(0,weight=1)
@@ -248,6 +250,7 @@ class SettingsEditor:
         w=self.window=tk.Toplevel(app.root);w.title('自動戰鬥設定');configure_dialog(w,1080,720);w.resizable(False,False)
         box=ttk.Frame(w,padding=12);box.pack(fill='both',expand=True)
         ttk.Label(box,text='左側選擇規則，點行動名稱編輯。優先序：陣亡 → 敵HP → 低HP → 低SP → 回合 → 循環 → 順序 → 普攻。',wraplength=900).pack(anchor='w',pady=(0,8))
+        heading(box,'自動戰鬥設定','角色與夥伴規則、補給及停止條件；修改會先保留在草稿。')
         tabs=self.tabs=RoundedNotebook(box);tabs.pack(fill='both',expand=True)
         display=('orderAction','repeatAction','roundAction','misc')
         for who,title in (('player','角色規則'),('partner','夥伴規則')):
@@ -272,7 +275,8 @@ class SettingsEditor:
         note_label=ttk.Label(box,textvariable=self.note,wraplength=900)
         note_label.pack(side='bottom',anchor='w',pady=8)
         buttons=ttk.Frame(box);buttons.pack(side='bottom',fill='x')
-        for label,fn in [('套用全部設定',self.apply),('載入JSON',self.load),('匯出目前設定',self.export)]:ttk.Button(buttons,text=label,command=fn).pack(side='left',padx=4)
+        for label,fn in [('載入JSON',self.load),('匯出目前設定',self.export)]:ttk.Button(buttons,text=label,command=fn).pack(side='left',padx=(0,6))
+        ttk.Button(buttons,text='套用全部設定',command=self.apply).pack(side='right',padx=(6,0))
         ttk.Button(buttons,text='取消',command=w.destroy).pack(side='right');self.render()
         note_label.pack_forget();note_label.pack(side='bottom',anchor='w',pady=8)
         tabs.pack_forget();tabs.pack(fill='both',expand=True)

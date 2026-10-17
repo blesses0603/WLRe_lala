@@ -62,7 +62,7 @@ class DashboardLayout(unittest.TestCase):
                 image=data['widgets'][str(page)]['images'][0]
                 x=page.winfo_rootx()-self.root.winfo_rootx()
                 y=page.winfo_rooty()-self.root.winfo_rooty()
-                background=data['background'].convert('RGB')
+                background=data['surface'].convert('RGB')
                 middle=image.height()//2
                 self.assertNotEqual(tuple(self.root.tk.call(str(image),'get',1,middle)),background.getpixel((x+1,y+middle)))
                 self.assertEqual(tuple(self.root.tk.call(str(image),'get',4,middle)),background.getpixel((x+4,y+middle)))

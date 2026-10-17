@@ -6,7 +6,7 @@ from wlre.services.battle import party_guard
 
 
 class PartyGuardPanel(LabelFrame):
-    def __init__(self,parent,app):
+    def __init__(self,parent,app,compact=False):
         super().__init__(parent,text='必要隊員名單',padding=8)
         self.app=app;self.choices={};self.people={};self.combos=[];self.labels=[]
         self.enabled=tk.BooleanVar()
@@ -15,7 +15,7 @@ class PartyGuardPanel(LabelFrame):
         ttk.Checkbutton(self,text='名單未到齊時，遇戰自動逃跑',variable=self.enabled).grid(row=0,column=0,columnspan=2,sticky='w',pady=(0,3))
         for index in range(4):
             cell=ttk.Frame(self)
-            cell.grid(row=index//2+1,column=index%2,sticky='ew',padx=(0,6) if index%2==0 else (6,0),pady=2)
+            cell.grid(row=index+1 if compact else index//2+1,column=0 if compact else index%2,columnspan=2 if compact else 1,sticky='ew',padx=0 if compact else ((0,6) if index%2==0 else (6,0)),pady=4)
             cell.columnconfigure(1,weight=1)
             ttk.Label(cell,text=str(index+1)).grid(row=0,column=0,padx=(0,4))
             combo=ttk.Combobox(cell,width=15)
@@ -25,15 +25,15 @@ class PartyGuardPanel(LabelFrame):
             combo.bind('<<ComboboxSelected>>',lambda e:self.show_draft())
             combo.bind('<KeyRelease>',lambda e:self.show_draft())
             self.combos.append(combo);self.labels.append(label)
-        buttons=ttk.Frame(self);buttons.grid(row=3,column=0,columnspan=2,sticky='ew',pady=(4,2))
+        buttons=ttk.Frame(self);buttons.grid(row=5 if compact else 3,column=0,columnspan=2,sticky='ew',pady=(4,2))
         ttk.Button(buttons,text='帶入目前隊伍',command=self.use_team).pack(side='left')
         ttk.Button(buttons,text='清空',command=self.clear).pack(side='left',padx=4)
         ttk.Button(buttons,text='儲存並套用',command=self.apply).pack(side='right')
         note=ttk.Label(self,textvariable=self.note,wraplength=560)
-        note.grid(row=4,column=0,columnspan=2,sticky='ew')
+        note.grid(row=6 if compact else 4,column=0,columnspan=2,sticky='ew')
         note.bind('<Configure>',lambda e:note.configure(wraplength=max(1,e.width)))
         self.applied_status=ttk.Label(self,text='',style='Muted.TLabel',wraplength=560)
-        self.applied_status.grid(row=5,column=0,columnspan=2,sticky='ew',pady=(2,0))
+        self.applied_status.grid(row=7 if compact else 5,column=0,columnspan=2,sticky='ew',pady=(2,0))
         self.applied_status.bind('<Configure>',lambda e:self.applied_status.configure(wraplength=max(1,e.width)))
         self.set_config(app.ai_settings['party_guard'])
 

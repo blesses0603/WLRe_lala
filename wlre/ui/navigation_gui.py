@@ -2,6 +2,7 @@
 import json
 import tkinter as tk
 from wlre.ui.window_layout import configure_dialog
+from wlre.ui.layout import heading
 from tkinter import ttk, filedialog, messagebox
 from wlre.ui.theme import install as install_theme
 from wlre.services.world.navigation import Repository, NavigationError
@@ -32,6 +33,7 @@ class NavigationWindow:
         self.click_start = True
         frame = ttk.Frame(self.window,padding=10)
         frame.pack(fill='both',expand=True)
+        heading(frame,'全場景導航','離線預覽路徑；不會自動送出移動指令。')
         toolbar = ttk.Frame(frame)
         toolbar.pack(fill='x')
         ttk.Label(toolbar,text='場景模型').pack(side='left')
