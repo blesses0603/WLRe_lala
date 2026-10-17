@@ -145,7 +145,7 @@ class OverviewPanel(ttk.Frame):
     def open_panel(self,name,settings=False):
         if settings:
             editor=self.open_ai_settings()
-            editor.tabs.select(editor.recovery_pages['hp'])
+            editor.tabs.select(editor.recovery_tab)
         else:self.app.left_tabs.select(getattr(self.app,name))
 
     def update_state(self,state):

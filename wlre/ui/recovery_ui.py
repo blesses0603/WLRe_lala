@@ -52,35 +52,46 @@ class SupplyPicker:
         if selected:self.commit(int(selected[0]))
 
 class RecoveryPage(ttk.Frame):
-    def __init__(self,parent,editor,resource,master_enabled):
-        super().__init__(parent,padding=10);self.editor=editor;self.resource=resource;self.items=[0]*10;self.images=[];self.timer=None
+    def __init__(self,parent,editor,resource,master_enabled,compact=False):
+        super().__init__(parent,padding=8 if compact else 10);self.compact=compact;self.editor=editor;self.resource=resource;self.items=[0]*10;self.images=[];self.timer=None
         self.icons=ItemIcons(self);self.buttons=[];self.vars={k:tk.BooleanVar() for k in ('enabled','other_items','first','after')}
         head=ttk.Frame(self);head.pack(fill='x')
-        ttk.Checkbutton(head,text='啟用戰後補給',variable=master_enabled).pack(side='left')
+        if compact:ttk.Label(head,text=resource.upper()+' 補給',style='Heading.TLabel').pack(side='left')
+        else:ttk.Checkbutton(head,text='啟用戰後補給',variable=master_enabled).pack(side='left')
         self.balance=tk.StringVar();ttk.Label(head,textvariable=self.balance,style='Muted.TLabel').pack(side='right')
-        ttk.Checkbutton(self,text='優先使用藥水儲存槽回復'+resource.upper(),variable=self.vars['first'],command=self.first_changed).pack(anchor='w',pady=4)
-        ttk.Checkbutton(self,text='自動使用指定'+resource.upper()+'補品（由左至右、上至下）',variable=self.vars['enabled']).pack(anchor='w',pady=3)
+        ttk.Checkbutton(self,text='優先使用藥水儲存槽回復'+resource.upper(),variable=self.vars['first'],command=self.first_changed).pack(anchor='w',pady=2 if compact else 4)
+        ttk.Checkbutton(self,text='自動使用指定'+resource.upper()+'補品（由左至右、上至下）',variable=self.vars['enabled']).pack(anchor='w',pady=1 if compact else 3)
         grid=ttk.Frame(self);grid.pack(fill='x',pady=4)
+        columns=3 if compact else 5
         for i in range(10):
-            grid.columnconfigure(i%5,weight=1)
-            button=ttk.Button(grid,text=f'{i+1}　＋',compound='left',command=lambda i=i:SupplyPicker(self,i))
-            button.grid(row=i//5,column=i%5,sticky='nsew',padx=3,pady=3,ipady=5)
+            grid.columnconfigure(i%columns,weight=1,uniform='slots')
+            button=ttk.Button(grid,text=f'{i+1}　＋',compound='left',padding=(4,2) if compact else (7,4),command=lambda i=i:SupplyPicker(self,i))
+            button.grid(row=i//columns,column=i%columns,sticky='nsew',padx=3,pady=1 if compact else 3,ipady=0 if compact else 5)
             button.bind('<Button-3>',lambda e,i=i:self.clear(i));self.buttons.append(button)
-        ttk.Label(self,text='點選空格選補品；右鍵清除。缺少的物品會跳過，順序保留。',style='Muted.TLabel').pack(anchor='w')
-        ttk.Checkbutton(self,text='指定補品用完後，使用藥水儲存槽',variable=self.vars['after'],command=self.after_changed).pack(anchor='w',pady=4)
-        ttk.Checkbutton(self,text='指定補品用完後，使用包包內其他'+resource.upper()+'補品',variable=self.vars['other_items']).pack(anchor='w',pady=4)
-        self.percents={};self.amounts={}
+        ttk.Label(self,text='依序選補品；右鍵清除，缺少時跳過。' if compact else '點選空格選補品；右鍵清除。缺少的物品會跳過，順序保留。',style='Muted.TLabel',wraplength=450 if compact else 900).pack(anchor='w')
+        ttk.Checkbutton(self,text='指定補品用完後，使用藥水儲存槽',variable=self.vars['after'],command=self.after_changed).pack(anchor='w',pady=2 if compact else 4)
+        ttk.Checkbutton(self,text='指定補品用完後，使用包包內其他'+resource.upper()+'補品',variable=self.vars['other_items']).pack(anchor='w',pady=2 if compact else 4)
+        self.percents={};self.amounts={};self.scales={}
         for who,title in (('player','玩家'),('partner','夥伴')):
-            row=ttk.Frame(self);row.pack(fill='x',pady=4)
-            ttk.Label(row,text=title+resource.upper()+'低於設定時使用',width=25).pack(side='left')
+            row=ttk.Frame(self);row.pack(fill='x',pady=2 if compact else 4)
             v=tk.IntVar(value=0);self.percents[who]=v
-            ttk.Button(row,text='－',width=3,command=lambda v=v:self.step(v,-1)).pack(side='left')
-            scale=ttk.Scale(row,from_=0,to=100,command=lambda n,v=v:v.set(round(float(n))));scale.pack(side='left',fill='x',expand=True,padx=6)
-            # Keep an integer model even when ttk.Scale supplies a floating value.
-            v.trace_add('write',lambda *a,v=v,scale=scale:self.sync_scale(v,scale))
-            ttk.Button(row,text='＋',width=3,command=lambda v=v:self.step(v,1)).pack(side='left')
             amount=tk.StringVar();self.amounts[who]=amount
-            ttk.Label(row,textvariable=amount,width=25,anchor='e').pack(side='right')
+            if compact:
+                row.columnconfigure(1,weight=1)
+                ttk.Label(row,text=title+resource.upper()+' 使用門檻').grid(row=0,column=0,columnspan=2,sticky='w')
+                ttk.Label(row,textvariable=amount,anchor='e').grid(row=0,column=2,sticky='e')
+                ttk.Button(row,text='－',width=3,command=lambda v=v:self.step(v,-1)).grid(row=1,column=0)
+                scale=ttk.Scale(row,from_=0,to=100,command=lambda n,v=v:v.set(round(float(n))))
+                scale.grid(row=1,column=1,sticky='ew',padx=6)
+                ttk.Button(row,text='＋',width=3,command=lambda v=v:self.step(v,1)).grid(row=1,column=2,sticky='e')
+            else:
+                ttk.Label(row,text=title+resource.upper()+'低於設定時使用',width=25).pack(side='left')
+                ttk.Button(row,text='－',width=3,command=lambda v=v:self.step(v,-1)).pack(side='left')
+                scale=ttk.Scale(row,from_=0,to=100,command=lambda n,v=v:v.set(round(float(n))));scale.pack(side='left',fill='x',expand=True,padx=6)
+                ttk.Button(row,text='＋',width=3,command=lambda v=v:self.step(v,1)).pack(side='left')
+                ttk.Label(row,textvariable=amount,width=25,anchor='e').pack(side='right')
+            self.scales[who]=scale
+            v.trace_add('write',lambda *a,v=v,scale=scale:self.sync_scale(v,scale))
         self.bind('<Destroy>',self.destroyed,add='+');self.refresh_stats()
     def sync_scale(self,v,scale):
         if abs(scale.get()-v.get())>.01:scale.set(v.get())
@@ -95,7 +106,7 @@ class RecoveryPage(ttk.Frame):
         self.images=[]
         for i,(sid,button) in enumerate(zip(self.items,self.buttons)):
             if sid:
-                image=self.icons.get(sid,36);self.images.append(image)
+                image=self.icons.get(sid,24 if self.compact else 36);self.images.append(image)
                 button.configure(text=f'{i+1} '+item_name(sid)[:7],image=image)
             else:button.configure(text=f'{i+1}　＋',image='')
     def render(self,value):

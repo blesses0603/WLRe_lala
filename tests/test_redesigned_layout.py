@@ -48,6 +48,38 @@ class RedesignedLayout(unittest.TestCase):
         self.assertEqual(actual,data['surface'].convert('RGB').getpixel((x+2,y+2)))
         self.assertNotEqual(actual,data['background'].convert('RGB').getpixel((x+2,y+2)))
 
+    def test_combined_recovery_shows_both_columns_and_preserves_independent_settings(self):
+        from wlre.ui.auto_battle_ui import SettingsEditor
+        editor=SettingsEditor(self.app)
+        try:
+            editor.tabs.select(editor.recovery_tab);self.root.update()
+            names=[editor.tabs.tab(t,'text') for t in editor.tabs.tabs()]
+            self.assertIn('補給設定',names);self.assertNotIn('HP補給',names);self.assertNotIn('SP補給',names)
+            hp=editor.recovery_pages['hp'];sp=editor.recovery_pages['sp']
+            self.assertLessEqual(hp.winfo_rootx()+hp.winfo_width(),sp.winfo_rootx())
+            self.assertTrue(hp.winfo_ismapped());self.assertTrue(sp.winfo_ismapped())
+            from wlre.services.items.combat_resources import CAT,heal_effects
+            for page in (hp,sp):
+                sid=next(int(sid) for sid in CAT['items'] if heal_effects(int(sid)).get(page.resource))
+                page.items=[sid]*10;page.render_slots()
+            self.root.update()
+            for page in (hp,sp):
+                self.assertEqual(len(page.buttons),10)
+                for control in [*page.buttons,*page.scales.values()]:self.assertTrue(control.winfo_ismapped())
+                for widget in self.descendants(page):
+                    if widget.winfo_class() not in ('TButton','TCombobox','TScale'):continue
+                    self.assertLessEqual(widget.winfo_rootx()+widget.winfo_width(),page.winfo_rootx()+page.winfo_width()+1)
+                    self.assertLessEqual(widget.winfo_rooty()+widget.winfo_height(),page.winfo_rooty()+page.winfo_height()+1)
+            editor.rootvars['field_heal'].set(True)
+            hp.percents['player'].set(33);sp.percents['player'].set(66)
+            value=editor.collect()
+            self.assertTrue(value['field_heal'])
+            self.assertEqual(value['recovery']['hp']['player_percent'],33)
+            self.assertEqual(value['recovery']['sp']['player_percent'],66)
+            editor.draft.value=value;editor.render()
+            self.assertEqual(editor.collect()['recovery'],value['recovery'])
+        finally:editor.window.destroy()
+
     def test_compact_battle_truncates_long_name_but_inspection_keeps_full_data(self):
         self.app.activity_tabs.select(self.app.formation);self.root.update()
         battle=self.app.formation;name='非常長的測試敵方角色名稱不應蓋到鄰格'

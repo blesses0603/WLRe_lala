@@ -266,8 +266,15 @@ class SettingsEditor:
             self.show_rule(who,display[0])
         self.rootvars={'field_heal':tk.BooleanVar()}
         self.recovery_pages={}
-        for resource,title in (('hp','HP補給'),('sp','SP補給')):
-            page=RecoveryPage(tabs,self,resource,self.rootvars['field_heal']);tabs.add(page,text=title);self.recovery_pages[resource]=page
+        self.recovery_tab=ttk.Frame(tabs,padding=6);tabs.add(self.recovery_tab,text='補給設定')
+        self.recovery_tab.columnconfigure(0,weight=1,uniform='recovery')
+        self.recovery_tab.columnconfigure(1,weight=1,uniform='recovery')
+        self.recovery_tab.rowconfigure(1,weight=1)
+        ttk.Checkbutton(self.recovery_tab,text='啟用戰後補給（HP／SP 共用開關）',variable=self.rootvars['field_heal']).grid(row=0,column=0,columnspan=2,sticky='w',pady=(0,6))
+        for column,resource in enumerate(('hp','sp')):
+            page=RecoveryPage(self.recovery_tab,self,resource,self.rootvars['field_heal'],compact=True)
+            page.grid(row=1,column=column,sticky='nsew',padx=(0,4) if column==0 else (4,0))
+            self.recovery_pages[resource]=page
         general=ttk.Frame(tabs,padding=16);tabs.add(general,text='停止條件')
         for key,label in [('bPlayerDieCloseAI','角色陣亡時停止AI與徘徊'),('bNPCDieCloseAI','夥伴陣亡時停止AI與徘徊')]:
             v=tk.BooleanVar();self.rootvars[key]=v;ttk.Checkbutton(general,text=label,variable=v).pack(anchor='w',pady=8)
