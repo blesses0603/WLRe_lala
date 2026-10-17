@@ -1,4 +1,6 @@
-# WLRe_LaLa Android v0.0.2（實驗版）
+> **舊版警示：v0.0.2／v0.0.3 已重現 Keystore JNI 啟動崩潰；v0.0.4 正重新驗證，請不要安裝舊產物。**
+
+# WLRe_LaLa Android v0.0.4（實驗版）
 
 沿用 Kivy 直式介面與 Python 協議核心。所有 Android 修改位於 `android-development`；版本與桌面版分開。
 
@@ -22,7 +24,7 @@ Android 15 對 `dataSync` 前景服務有背景累計時限（通常為每 24 �
 
 ## APK 與開發測試
 
-在 [Actions](https://github.com/blesses0603/WLRe_lala/actions) 選 **Android v0.0.2 Test APK**；綠燈後才有 `WLRe_LaLa-Android-v0.0.2-debug` Artifact，內含 APK 與 SHA256SUMS。打包成功不等於實機登入驗收通過。
+在 [Actions](https://github.com/blesses0603/WLRe_lala/actions) 選 **`android-apk.yml`（手機 APK）**；綠燈後才有 `WLRe_LaLa-Android-v0.0.4-debug` Artifact，內含 APK 與 SHA256SUMS。打包成功不等於實機登入驗收通過。
 
 ```bash
 pip install kivy==2.3.1 Pillow cryptography
@@ -31,3 +33,5 @@ buildozer -v android debug
 ```
 
 服務入口 `android_app/service.py`；IPC `runtime.py`；密文帳號庫 `vault.py`；Android 通知／超時處理位於 `android_app/java/`。Buildozer 固定 python-for-android revision，並固定 charset-normalizer 3.4.2，避免 Linux 主機 pip 拒收新 Android 專用 wheel 的跨編譯問題。
+
+相容性流程 `android-smoke.yml` 以 API 31–36（Android 12／12L／13／14／15／16）測試啟動、Keystore 加解密及服務；模擬器 APK 不供手機安裝。最低 Android 版本為 12（API 31）。App 圖示由 `wlre/resources/assets/app.ico` 最大 256×256 圖層直接轉成 PNG 使用。

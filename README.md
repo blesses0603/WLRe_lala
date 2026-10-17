@@ -1,12 +1,12 @@
 # 飄流 RE:LaLa Android
 
-**Android 測試版本：v0.0.2** ｜ **開發分支：`android-development`**
+**Android 測試版本：v0.0.4** ｜ **開發分支：`android-development`**
 
 本分支用於開發《飄流 RE:LaLa》的 **Android 直式手機客戶端**，與 Windows／macOS 桌面版分開管理版本與建置流程。桌面正式版本請參閱 [`main` 分支](https://github.com/blesses0603/WLRe_lala/tree/main)。
 
-## 📱 Android v0.0.2
+## 📱 Android v0.0.4
 
-v0.0.2 加入前景服務與安全帳號管理，目前包含：
+v0.0.4 加入前景服務與安全帳號管理，目前包含：
 
 - **直式操作介面**：手機登入表單與地球／水星分流選擇。
 - **多帳號工作階段**：同一個 App 可以建立多個獨立連線，並逐一停止。
@@ -21,12 +21,12 @@ v0.0.2 加入前景服務與安全帳號管理，目前包含：
 ## 🧪 取得與測試 APK
 
 1. 前往 [GitHub Actions](https://github.com/blesses0603/WLRe_lala/actions/workflows/android-apk.yml)。
-2. 選擇 **Android v0.0.2 Test APK**，並確認使用 `android-development` 分支。
-3. 工作流程成功後，打開該次執行，從 **Artifacts** 下載 `WLRe_LaLa-Android-v0.0.2-debug`。
+2. 選擇 **`android-apk.yml`（手機 APK）**，並確認使用 `android-development` 分支。
+3. 打包及啟動相容性測試通過後，打開手機 APK 執行頁，從 **Artifacts** 下載 `WLRe_LaLa-Android-v0.0.4-debug`。
 4. 解壓 ZIP，將 APK 安裝到 Android 手機，先確認 App 能開啟、直式版面與分流選單正常。
 5. 之後再以測試帳號驗證伺服器連線與選角流程。
 
-**v0.0.2 已通過 [Actions APK 建置](https://github.com/blesses0603/WLRe_lala/actions/runs/39051241946)，[下載測試產物](https://github.com/blesses0603/WLRe_lala/actions/runs/39051241946/artifacts/12108650193)。手機登入、Keystore 與鎖屏仍待實機驗收。**
+**v0.0.2／v0.0.3 已知會在 Keystore 初始化時觸發 JNI 原生中止，請勿使用舊產物。v0.0.4 已提交修正，正在重新執行 Android 12–16 啟動測試；通過後再下載。**
 
 📖 **[完整 Android 開發狀態、安全注意事項及測試步驟](ANDROID/README.md)**
 
@@ -43,6 +43,8 @@ v0.0.2 加入前景服務與安全帳號管理，目前包含：
 
 ## 🖥️ 桌面版本
 
-Windows／macOS 的版本說明及發布流程仍以 [**桌面主分支 `main`**](https://github.com/blesses0603/WLRe_lala/tree/main) 為準；本分支的 Android 版號 **v0.0.2** 不會取代桌面版號。
+Windows／macOS 的版本說明及發布流程仍以 [**桌面主分支 `main`**](https://github.com/blesses0603/WLRe_lala/tree/main) 為準；本分支的 Android 版號 **v0.0.4** 不會取代桌面版號。
 
 完整目標與逐項驗收規格見 [Android 驗收規格](ANDROID/ACCEPTANCE.md)，目前測試結果見 [開發驗證](ANDROID/VALIDATION.md)。
+
+`android-smoke.yml` 是開發者的 Android 12–16 模擬器測試；其 `Android-emulator-apk` 是 x86_64 測試包，不是手機下載版本。
