@@ -1,5 +1,6 @@
 """No-account emulator smoke test: UI, service, Home and screen-off survival."""
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -43,7 +44,12 @@ def main():
         assert alive(service), 'Service exited after resume'
         print('Android UI + foreground service + Home + 30-second screen-off smoke passed (no accounts/network login)')
     finally:
-        Path('android-smoke-logcat.txt').write_text(adb('logcat', '-d', '-v', 'threadtime'))
+        logs = adb('logcat', '-d', '-v', 'threadtime')
+        Path('android-smoke-logcat.txt').write_text(logs)
+        if sys.exc_info()[0] is not None:
+            relevant = [line for line in logs.splitlines() if any(
+                marker in line.lower() for marker in ('python', 'androidruntime', 'linker', 'wlre', 'libc'))]
+            print('\n'.join(relevant[-500:]), flush=True)
         Path('android-smoke-services.txt').write_text(adb('shell', 'dumpsys', 'activity', 'services', PACKAGE))
 
 
