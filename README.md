@@ -44,6 +44,8 @@ python -m wlre.launcher
 
 ## 功能與操作
 
+主頁提供角色與夥伴、目前活動、AI／徘徊、補給紀錄、煉金、家具製作、隊伍與經驗效率摘要，可直接切換至對應功能；完整經驗統計位於「經驗效率」分頁。離線時保留最後收到的資料並明確標示，尚未同步的數值不會顯示為零。
+
 | 功能 | 說明 |
 | --- | --- |
 | 登入與帳號記憶 | 記憶多組帳號及分流；密碼記憶依賴 Windows DPAPI 加密，不會明文儲存。 |
@@ -85,7 +87,7 @@ python -m unittest discover -s tests -v
 
 自檢會確認 GUI 模組、必要資源、JSON、ZIP 完整性與圖示能否讀取，不會登入伺服器，也不會開啟視窗。
 
-目前 Linux 開發環境的驗證結果為 **77 項測試中 76 項通過、1 項 Windows DPAPI 測試略過**，資源自檢通過；另已使用虛擬顯示器確認登入視窗、離線導航視窗與場景載入。這些檢查不代表 Windows EXE 或正式服操作已驗證。既有版本驗證紀錄見 [VALIDATION.md](docs/VALIDATION.md)。
+目前 Linux 開發環境的驗證結果為 **83 項測試中 82 項通過、1 項 Windows DPAPI 測試略過**，資源自檢通過；另已使用虛擬顯示器確認登入視窗、離線導航視窗與場景載入。這些檢查不代表 Windows EXE 或正式服操作已驗證。既有版本驗證紀錄見 [VALIDATION.md](docs/VALIDATION.md)。
 
 ## Windows EXE 打包
 
@@ -130,6 +132,8 @@ docs/               架構、協定與驗證文件
 ```
 
 詳細目錄與資源維護約定見 [STRUCTURE.md](docs/STRUCTURE.md)；協定筆記見 [PROTOCOLS.md](docs/PROTOCOLS.md)。表情資源維護入口為 `collect_emoji_resources.bat`。
+
+更新內容見 [更新紀錄](CHANGELOG.md)。
 
 ## 已知限制
 

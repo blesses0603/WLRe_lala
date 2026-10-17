@@ -23,6 +23,7 @@ from wlre.ui.services_ui import PartyPanel, AlchemyPanel
 from wlre.ui.chat_ui import ChatPanel
 from wlre.core.event_log import lines as local_event_lines, chinese, PHASES
 from wlre.ui.efficiency_ui import EfficiencyPanel
+from wlre.ui.overview_ui import OverviewPanel
 from wlre.ui.crafting_ui import CraftingPanel
 from wlre.services.world.movement_display import movement_summary
 from wlre.services.battle import party_guard;from wlre.storage import login_memory;from wlre.storage import server_lines
@@ -105,16 +106,18 @@ class App:
         left_tabs.pack(fill='both',expand=True)
         overview=ttk.Frame(left_tabs,padding=12)
         left_tabs.add(overview,text='主頁')
-        self.efficiency_panel=EfficiencyPanel(overview,self)
-        self.efficiency_panel.pack(fill='both',expand=True)
+        self.overview_panel=OverviewPanel(overview,self)
+        self.overview_panel.pack(fill='both',expand=True)
         left_outer=ttk.Frame(left_tabs)
         left_tabs.add(left_outer,text='戰鬥/徘徊')
+        self.battle_page=left_outer
         right=ttk.Frame(panes)
         right.grid(row=0,column=1,sticky='nsew')
         battle=LabelFrame(left_outer,text='戰場',padding=8)
         battle.pack(fill='both',expand=True)
         tabs=RoundedNotebook(battle)
         tabs.pack(fill='both',expand=True)
+        self.battle_tabs=tabs
         self.formation=BattleView(tabs,self.pick_battle_unit)
         tabs.add(self.formation,text='戰場陣形')
         self.priority_target=None
@@ -123,6 +126,8 @@ class App:
         tabs.add(controls,text='自動徘徊')
         ai_page=ttk.Frame(tabs)
         tabs.add(ai_page,text='AI')
+        self.ai_page=ai_page
+        self.roam_page=controls
         # Map double-click navigation keeps its destination internally.
         self.x,self.y=tk.StringVar(),tk.StringVar()
         for var in (self.x,self.y):var.trace_add('write',lambda *args:setattr(self,'map_target_scene',None))
@@ -154,6 +159,9 @@ class App:
         left_tabs.add(self.alchemy_panel,text='自動煉金')
         self.crafting_panel=CraftingPanel(left_tabs,self)
         left_tabs.add(self.crafting_panel,text='家具製作')
+        self.efficiency_panel=EfficiencyPanel(left_tabs,self)
+        left_tabs.add(self.efficiency_panel,text='經驗效率')
+        self.overview_panel.update_state({})
         self.logs_frame=LabelFrame(right,text='事件紀錄',padding=6,height=120)
         self.logs_frame.pack(side='bottom',fill='x',pady=(8,0))
         self.logs_frame.pack_propagate(False)
@@ -551,6 +559,7 @@ class App:
         self.chat_panel.reset()
         self.log.configure(state='normal');self.log.delete('1.0','end');self.log.configure(state='disabled')
         self.efficiency_panel.update_state({})
+        self.overview_panel.update_state({})
         def work():
             self.live_active=True
             try:
@@ -589,6 +598,7 @@ class App:
         self.snapshot=state
         self.chat_panel.update_names(state)
         self.efficiency_panel.update_state(state)
+        self.overview_panel.update_state(state)
         self.party_panel.render(state)
         self.party_guard_panel.update_state(state)
         self.alchemy_panel.render(state)
