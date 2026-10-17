@@ -7,6 +7,7 @@ source.include_exts = py,kv,json,zip,png,jpg,jpeg,webp,ttf,ttc,txt
 source.exclude_dirs = .git,.github,docs,tests,tools,.buildozer,bin,dist_nuitka
 version = 0.0.3
 requirements = python3,kivy==2.3.1,pyjnius,charset-normalizer==3.4.2
+icon.filename = android_app/assets/app.png
 orientation = portrait
 fullscreen = 0
 android.permissions = INTERNET,WAKE_LOCK,FOREGROUND_SERVICE,FOREGROUND_SERVICE_DATA_SYNC,POST_NOTIFICATIONS
