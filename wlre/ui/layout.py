@@ -15,15 +15,17 @@ def heading(parent,title,subtitle=None):
     return frame
 
 
-def scroll_table(parent,columns,headings,widths,height=4,show='headings'):
+def scroll_table(parent,columns,headings,widths,height=4,show='headings',scrollbars=True):
     frame=ttk.Frame(parent)
     frame.rowconfigure(0,weight=1);frame.columnconfigure(0,weight=1)
     tree=ttk.Treeview(frame,columns=columns,show=show,height=height,selectmode='browse')
     for key,title,width in zip(columns,headings,widths):
         tree.heading(key,text=title);tree.column(key,width=width,minwidth=44)
-    vertical=ttk.Scrollbar(frame,orient='vertical',command=tree.yview)
-    horizontal=ttk.Scrollbar(frame,orient='horizontal',command=tree.xview)
-    tree.configure(yscrollcommand=vertical.set,xscrollcommand=horizontal.set)
-    tree.grid(row=0,column=0,sticky='nsew');vertical.grid(row=0,column=1,sticky='ns')
-    horizontal.grid(row=1,column=0,sticky='ew')
+    tree.grid(row=0,column=0,sticky='nsew')
+    if scrollbars:
+        vertical=ttk.Scrollbar(frame,orient='vertical',command=tree.yview)
+        horizontal=ttk.Scrollbar(frame,orient='horizontal',command=tree.xview)
+        tree.configure(yscrollcommand=vertical.set,xscrollcommand=horizontal.set)
+        vertical.grid(row=0,column=1,sticky='ns')
+        horizontal.grid(row=1,column=0,sticky='ew')
     return frame,tree
