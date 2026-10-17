@@ -40,7 +40,6 @@ class HomeMap(ttk.Frame):
         self.columnconfigure(0,weight=1)
         self.rowconfigure(3,weight=1)
         ttk.Label(header,text='小地圖',style='Heading.TLabel').pack(side='left')
-        ttk.Button(header,text='進階導航',command=on_navigation).pack(side='right')
         choose=ttk.Frame(self)
         choose.grid(row=1,column=0,sticky='ew',pady=(10,6))
         self.choice=tk.StringVar(value=map_label(12903))

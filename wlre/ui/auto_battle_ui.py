@@ -245,7 +245,7 @@ class SettingsEditor:
     def __init__(self,app):
         self.settings_key=app.settings_identity()
         self.app=app;self.draft=RuleDraft(app.ai_settings);self.flags={};self.cards={};self.rootvars={};self.rule_views={}
-        w=self.window=tk.Toplevel(app.root);w.title('Lua 規則 AI 設定');configure_dialog(w,1080,720);w.resizable(False,False)
+        w=self.window=tk.Toplevel(app.root);w.title('自動戰鬥設定');configure_dialog(w,1080,720);w.resizable(False,False)
         box=ttk.Frame(w,padding=12);box.pack(fill='both',expand=True)
         ttk.Label(box,text='左側選擇規則，點行動名稱編輯。優先序：陣亡 → 敵HP → 低HP → 低SP → 回合 → 循環 → 順序 → 普攻。',wraplength=900).pack(anchor='w',pady=(0,8))
         tabs=self.tabs=RoundedNotebook(box);tabs.pack(fill='both',expand=True)

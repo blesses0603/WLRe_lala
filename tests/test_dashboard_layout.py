@@ -54,7 +54,7 @@ class DashboardLayout(unittest.TestCase):
 
     def test_all_navigation_actions_still_work(self):
         panel=self.app.overview_panel
-        for key,destination in (('ai','ai_page'),('roaming','roam_page'),('party','party_panel'),('alchemy','alchemy_panel'),('crafting','crafting_panel'),('efficiency','efficiency_panel')):
+        for key,destination in (('party','party_panel'),('alchemy','alchemy_panel'),('crafting','crafting_panel'),('efficiency','efficiency_panel')):
             panel.actions[key].invoke();self.root.update()
             expected=self.app.battle_page if destination in ('ai_page','roam_page') else getattr(self.app,destination)
             self.assertEqual(self.app.left_tabs.select(),str(expected))

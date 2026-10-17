@@ -1,7 +1,8 @@
-"""Read-only overview of the current session; commands stay in their own panels."""
+"""Session overview with direct battle and roaming controls."""
 import time
 import tkinter as tk
 from tkinter import ttk, font as tkfont
+from wlre.ui.halo_button import HaloButton
 from wlre.core.efficiency import rates, progress, forecast
 from wlre.services.battle.auto_battle import summary as ai_summary
 from wlre.services.battle.party import own_team, player_name
@@ -112,6 +113,14 @@ class OverviewPanel(ttk.Frame):
             label.grid(row=0,column=1,sticky='nsew')
             self.labels[key]=(label,lines)
             label.bind('<Configure>',lambda e,k=key:self.fit_value(k))
+            if key in ('ai','roaming'):
+                if key=='ai':
+                    self.ai_settings_button=ttk.Button(frame,text='AI設定',width=6,padding=(3,2),command=self.open_ai_settings)
+                    self.ai_settings_button.grid(row=0,column=2,sticky='e',padx=(4,0))
+                button=HaloButton(frame,command=lambda k=key:self.toggle(k))
+                button.grid(row=0,column=3,sticky='e',padx=(4,0))
+                self.actions[key]=button
+                continue
             if destination:
                 callback=lambda d=destination:self.open_panel(d)
                 text='開啟'
@@ -122,6 +131,20 @@ class OverviewPanel(ttk.Frame):
             button.grid(row=0,column=2,sticky='e',padx=(6,0))
             self.actions[key]=button
         self.after(1000,self.tick)
+
+    def open_ai_settings(self):
+        from wlre.ui.auto_battle_ui import open_settings
+        return open_settings(self.app)
+
+    def toggle(self,key):
+        state=self.app.snapshot
+        section='auto_battle' if key=='ai' else 'roaming'
+        active=self.app.live_active and state.get(section,{}).get('enabled',False)
+        if key=='ai':
+            command={'type':'stop_auto_battle'} if active else {'type':'start_auto_battle','settings':self.app.ai_settings}
+            self.app.send(command)
+        elif active:self.app.send({'type':'stop_roaming'})
+        else:self.app.start_roaming()
 
     def open_panel(self,name,settings=False):
         if name in ('ai_page','roam_page'):
@@ -137,6 +160,9 @@ class OverviewPanel(ttk.Frame):
         self.state=state;self.refresh()
 
     def refresh(self):
+        state=getattr(self,'state',{})
+        for key,section in (('ai','auto_battle'),('roaming','roaming')):
+            self.actions[key].set_active(self.app.live_active and state.get(section,{}).get('enabled',False))
         values=summarize(getattr(self,'state',{}),self.app.live_active,self.app.ai_settings.get('party_guard',{}))
         if values!=self.signature:
             self.signature=values

@@ -125,7 +125,7 @@ class App:
         # Map double-click navigation keeps its destination internally.
         self.x,self.y=tk.StringVar(),tk.StringVar()
         for var in (self.x,self.y):var.trace_add('write',lambda *args:setattr(self,'map_target_scene',None))
-        ai=LabelFrame(ai_page,text='Lua 規則自動戰鬥',padding=8)
+        ai=LabelFrame(ai_page,text='自動戰鬥',padding=8)
         ai.pack(fill='x',pady=(10,0))
         self.ai_settings=ai_defaults()
         self.party_guard_load_error=''
