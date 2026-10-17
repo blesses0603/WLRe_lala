@@ -20,3 +20,11 @@
 - 尚無正式帳號連線、手機 Keystore、背景或鎖屏時長的實測結果；15／30／60 分鐘測試仍需手機驗收。
 
 - 後續追加暫停畫面的事件合併測試：10,000 次更新僅保留各帳號最新狀態；Android 專用 22 項全部通過。完整測試前次 198 項通過（含 2 略過），新增此項後未重跑完整套件。
+
+## APK 建置結果 — v0.0.2
+
+- GitHub Actions [39051241946](https://github.com/blesses0603/WLRe_lala/actions/runs/39051241946) 全部成功，原始碼 commit `405b1d5`，工作耗時 13 分 44 秒。
+- CI 的 22 項 Android 專用測試、compileall、Buildozer／Gradle APK 編譯及上傳全部成功。
+- 產物：[WLRe_LaLa-Android-v0.0.2-debug](https://github.com/blesses0603/WLRe_lala/actions/runs/39051241946/artifacts/12108650193)，包含 APK 與 SHA256SUMS；GitHub 回報壓縮產物大小 111,303,027 bytes。
+- 此執行環境取回 GitHub Azure Blob 產物時收到 Forbidden，因此未在本地解開 APK 檢查 manifest／校驗碼，不能宣稱已做本地產物驗證。
+- Android Keystore 實際加解密、手機安裝、正式服雙帳號、切 App、鎖屏與耗電仍待手機實測。

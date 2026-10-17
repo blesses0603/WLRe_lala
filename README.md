@@ -26,7 +26,7 @@ v0.0.2 加入前景服務與安全帳號管理，目前包含：
 4. 解壓 ZIP，將 APK 安裝到 Android 手機，先確認 App 能開啟、直式版面與分流選單正常。
 5. 之後再以測試帳號驗證伺服器連線與選角流程。
 
-**APK 必須等 GitHub Actions 編譯成功才會產生；本說明不表示已編譯成功。**
+**v0.0.2 已通過 [Actions APK 建置](https://github.com/blesses0603/WLRe_lala/actions/runs/39051241946)，[下載測試產物](https://github.com/blesses0603/WLRe_lala/actions/runs/39051241946/artifacts/12108650193)。手機登入、Keystore 與鎖屏仍待實機驗收。**
 
 📖 **[完整 Android 開發狀態、安全注意事項及測試步驟](ANDROID/README.md)**
 
