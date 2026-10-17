@@ -45,6 +45,28 @@ class OverviewControls(unittest.TestCase):
         self.app.live_active=False;self.panel.refresh()
         self.assertFalse(button.active);self.assertIsNone(button.job)
 
+    def test_halo_background_matches_artwork_and_survives_toggle_and_resize(self):
+        for key in ('ai','roaming'):
+            button=self.panel.actions[key]
+            theme=self.app.theme
+            theme.windows[str(self.root)]['signature']=None
+            theme.paint(self.root)
+            self.assertIsNotNone(button.background_photo)
+            x=button.winfo_rootx()-self.root.winfo_rootx()
+            y=button.winfo_rooty()-self.root.winfo_rooty()
+            expected=theme.windows[str(self.root)]['background'].convert('RGB').getpixel((x,y))
+            actual=self.root.tk.call(str(button.background_photo),'get',0,0)
+            self.assertEqual(tuple(actual),expected)
+            item=button.background_item
+            button.set_active(True);button.set_active(False)
+            self.assertEqual(button.background_item,item)
+            self.assertEqual(button.type(item),'image')
+            self.assertFalse(button.find_withtag('halo'))
+            button.configure(width=64);self.root.update()
+            theme.windows[str(self.root)]['signature']=None;theme.paint(self.root)
+            self.assertEqual(button.background_photo.width(),button.winfo_width())
+            self.assertEqual(button.find_all()[0],item)
+
     def test_settings_entry_title_map_header_and_button_bounds(self):
         with patch('wlre.ui.auto_battle_ui.open_settings') as settings:
             self.panel.ai_settings_button.invoke();settings.assert_called_once_with(self.app)
