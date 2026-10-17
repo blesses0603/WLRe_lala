@@ -3,7 +3,7 @@ from tkinter import ttk
 
 
 class RoundedNotebook(ttk.Frame):
-    def __init__(self, parent, **kwargs):
+    def __init__(self, parent, borderless=True, **kwargs):
         super().__init__(parent, **kwargs)
         style = ttk.Style(self)
         style.configure('PillBody.TNotebook', borderwidth=0, tabmargins=0)
@@ -12,7 +12,12 @@ class RoundedNotebook(ttk.Frame):
         style.map('Pill.Tab.TButton', foreground=[('selected', '#ffffff')])
         self.bar = ttk.Frame(self, padding=(0, 2, 0, 6))
         self.bar.pack(fill='x')
-        self.book = ttk.Notebook(self, style='PillBody.TNotebook')
+        body_style='FlatPillBody.TNotebook' if borderless else 'PillBody.TNotebook'
+        if borderless:
+            style.layout(body_style, [])
+            style.layout(body_style+'.Tab', [])
+            style.configure(body_style,borderwidth=0,tabmargins=0)
+        self.book = ttk.Notebook(self, style=body_style)
         self.book.pack(fill='both', expand=True)
         self.buttons = {}
         self.book.bind('<<NotebookTabChanged>>', self._changed)

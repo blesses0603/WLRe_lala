@@ -97,7 +97,7 @@ class App:
         self.left_panel=left_panel
         self.chat_panel=ChatPanel(left_panel,self,height=205)
         self.chat_panel.pack(side='bottom',fill='x',pady=(8,0))
-        left_tabs=RoundedNotebook(left_panel)
+        left_tabs=RoundedNotebook(left_panel,borderless=True)
         self.left_tabs=left_tabs
         left_tabs.pack(fill='both',expand=True)
         overview=ttk.Frame(left_tabs,padding=(0,4))
@@ -107,9 +107,7 @@ class App:
         left_outer=ttk.Frame(left_tabs)
         left_tabs.add(left_outer,text='戰鬥/徘徊')
         self.battle_page=left_outer
-        battle=LabelFrame(left_outer,text='戰場',padding=8)
-        battle.pack(fill='both',expand=True)
-        tabs=RoundedNotebook(battle)
+        tabs=RoundedNotebook(left_outer,borderless=True)
         tabs.pack(fill='both',expand=True)
         self.battle_tabs=tabs
         self.formation=BattleView(tabs,self.pick_battle_unit)
@@ -119,13 +117,13 @@ class App:
         controls=ttk.Frame(tabs)
         tabs.add(controls,text='自動徘徊')
         ai_page=ttk.Frame(tabs)
-        tabs.add(ai_page,text='AI')
+        tabs.add(ai_page,text='自動戰鬥')
         self.ai_page=ai_page
         self.roam_page=controls
         # Map double-click navigation keeps its destination internally.
         self.x,self.y=tk.StringVar(),tk.StringVar()
         for var in (self.x,self.y):var.trace_add('write',lambda *args:setattr(self,'map_target_scene',None))
-        ai=LabelFrame(ai_page,text='自動戰鬥',padding=8)
+        ai=ttk.Frame(ai_page,padding=8)
         ai.pack(fill='x',pady=(10,0))
         self.ai_settings=ai_defaults()
         self.party_guard_load_error=''
@@ -140,7 +138,7 @@ class App:
         self.party_guard_panel=PartyGuardPanel(ai_page,self)
         self.party_guard_panel.pack(fill='x',pady=(6,0))
         if self.party_guard_load_error:self.party_guard_panel.note.set('名單讀取失敗，未啟用：'+self.party_guard_load_error)
-        roam=LabelFrame(controls,text='自動徘徊',padding=8)
+        roam=ttk.Frame(controls,padding=8)
         roam.pack(fill='x',pady=(10,0))
         self.roaming_status=tk.StringVar(value='原版四點循環：左下、左上、右下、右上。')
         ttk.Button(roam,text='開始／重新定位',command=self.start_roaming).grid(row=0,column=0,padx=4)

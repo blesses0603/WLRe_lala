@@ -31,10 +31,12 @@ class GlassGroup(ttk.Frame):
             top = values[1] if len(values) > 1 else left
             right = values[2] if len(values) > 2 else left
             bottom = values[3] if len(values) > 3 else top
-        caption_height=tkfont.nametofont('TkDefaultFont',root=parent).metrics('linespace')
-        super().__init__(parent, padding=(left, top+caption_height+8, right, bottom), **kwargs)
-        self.caption = ttk.Label(self, text=text, style='Section.TLabel')
-        self.caption.place(x=12, y=4, bordermode='outside')
+        caption_height=tkfont.nametofont('TkDefaultFont',root=parent).metrics('linespace')+8 if text else 0
+        super().__init__(parent, padding=(left, top+caption_height, right, bottom), **kwargs)
+        self.caption = None
+        if text:
+            self.caption = ttk.Label(self, text=text, style='Section.TLabel')
+            self.caption.place(x=12, y=4, bordermode='outside')
 
 
 def group(parent, **kwargs):
@@ -390,13 +392,6 @@ class GlassTheme:
         states = ('normal', 'active', 'pressed', 'disabled') if cls == 'TButton' else ('normal',)
         for state in states:
             surface = crop.copy()
-            if cls == 'TLabelframe' or type(widget).__name__ in ('HomeMap', 'GlassGroup'):
-                overlay = Image.new('RGBA', crop.size)
-                d = ImageDraw.Draw(overlay)
-                d.rounded_rectangle((1, 5 if cls == 'TLabelframe' else 1,
-                                     crop.width-2, crop.height-2), radius=14,
-                                    outline=(98, 201, 224, 150))
-                surface = Image.alpha_composite(surface, overlay)
             if cls == 'TButton':
                 overlay = Image.new('RGBA', crop.size)
                 d = ImageDraw.Draw(overlay)
