@@ -57,11 +57,13 @@ class SessionManager:
                 self.events.put((session_id, "roles", roles))
 
         def on_state(state):
-            player = state.player or {}
+            # run_client publishes a dict snapshot, not the State object.
+            player = state.get("player") or {}
+            stats = (state.get("knowledge") or {}).get("player", {}).get("stats", {})
             self.events.put((session_id, "snapshot", {
-                "phase": state.phase,
+                "phase": state.get("phase", "未知"),
                 "character": str(player.get("name") or ""),
-                "level": player.get("level", ""),
+                "level": stats.get("level", player.get("level", "")),
             }))
 
         def work():
