@@ -2,8 +2,6 @@
 
 ## 2026-10-17 優化工作區
 
-- MSVC 編碼診斷修正：核對 Nuitka 4.3 原始碼的 clcache `CL_DEFAULT_CODEC="mbcs"` 及官方 `--disable-cache=ccache` 到 SCons 的傳遞路徑；standalone／onefile MSVC 計畫均略過編譯快取，MinGW 不受影響。驗證 VSLANG／UTF-8 子程序環境及不修改父環境。161 項測試中 160 通過、1 項 Windows DPAPI 略過；MSVC dry-run、資源自檢及 diff 檢查通過。未在 Windows MSVC 實際編譯；使用者回報未含完整 SCons traceback，若略過快取後仍有 C 編譯錯誤，須依新 build.log 診斷。
-
 - 打包 pip 自動修復：159 項測試中 158 通過、1 項 Windows DPAPI 略過；新增健康環境沿用、pip 匯入失敗後重建／再驗證、修復仍失敗即停止及新環境建立測試。資源自檢、打包 dry-run 及 diff 檢查通過；尚未在使用者 Windows Python 3.14.8 環境實際重建及編譯。
 
 - 自動 Releases：155 項測試中 154 通過、1 項 Windows DPAPI 略過；新增標籤版本不符拒絕、完整資料夾 ZIP 內容／SHA256、缺少或空 EXE 拒絕、CRC 失敗保留舊檔並清除暫存檔測試。actionlint 1.7.7、打包 dry-run、版本預檢、資源自檢及 diff 檢查通過。尚未觸發 Actions Windows 編譯或正式 Releases 發布；首次推送版本標籤後仍需確認雲端執行結果。
