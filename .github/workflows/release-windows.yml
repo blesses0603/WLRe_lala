@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Existing NEW tag matching wlre.__version__, e.g. v0.4.21 (not Ver.0.4.21)'
+        description: 'Existing NEW tag matching wlre.__version__, e.g. v0.5.0 (not Ver.0.5.0)'
         required: true
         type: string
 
@@ -33,7 +33,7 @@ jobs:
         shell: bash
         run: |
           if [[ ! "$REQUESTED_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error::Tag must use vX.Y.Z (for example v0.4.21), not Ver.X.Y.Z. Enter an existing tag."
+            echo "::error::Tag must use vX.Y.Z (for example v0.5.0), not Ver.X.Y.Z. Enter an existing tag."
             exit 1
           fi
           if ! gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$REQUESTED_TAG" >/dev/null; then
