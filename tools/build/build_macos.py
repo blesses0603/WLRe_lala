@@ -29,7 +29,7 @@ def make_command(python, root=ROOT, arch=None):
     if arch not in ('arm64', 'x64'):
         raise ValueError('macOS 架構必須為 arm64 或 x64')
     output = output_dir(root, arch)
-    command = [str(python), '-m', 'nuitka', '--mode=standalone',
+    command = [str(python), '-m', 'nuitka', 
         '--macos-create-app-bundle', '--macos-app-name=WLRe_LaLa',
         '--macos-signed-app-name=com.bychining.wlre-lala',
         '--macos-app-version=' + __version__,
