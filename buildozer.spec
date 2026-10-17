@@ -5,7 +5,7 @@ package.domain = org.lala.client
 source.dir = .
 source.include_exts = py,kv,json,zip,png,jpg,jpeg,webp,ttf,ttc,txt
 source.exclude_dirs = .git,.github,docs,tests,tools,.buildozer,bin,dist_nuitka
-version = 0.0.4
+version = 0.0.5
 requirements = python3,kivy==2.3.1,pyjnius,charset-normalizer==3.4.2
 icon.filename = android_app/assets/app.png
 orientation = portrait

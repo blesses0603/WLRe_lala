@@ -115,3 +115,40 @@ class AndroidUI(unittest.TestCase):
             self.assertTrue(self.app.drain_events())
         self.assertIn('A06', self.app.resources.text)
         self.assertNotIn('private detail', self.app.resources.text)
+
+    def test_automation_controls_follow_core_and_do_not_optimistically_enable(self):
+        from android_app.automation_ui import refresh, toggle
+        card = self.app.cards['fixture'][4]
+        refresh(self.app, 'fixture')
+        self.assertTrue(card.automation_buttons['battle'].disabled)
+        self.session.phase = 'world_ready'
+        refresh(self.app, 'fixture')
+        self.assertFalse(card.automation_buttons['battle'].disabled)
+        toggle(self.app, 'fixture', 'battle')
+        self.assertEqual(card.automation_buttons['battle'].text, '處理中')
+        self.assertFalse(self.session.automation.get('battle', {}).get('enabled', False))
+        self.session.automation_pending.clear()
+        self.session.automation = {'battle': {'enabled': True, 'status': 'armed'}}
+        refresh(self.app, 'fixture')
+        self.assertEqual(card.automation_buttons['battle'].text, '停止戰鬥')
+        self.assertIn('AI待命', card.automation_status.text)
+        self.session.active = False
+        refresh(self.app, 'fixture')
+        self.assertTrue(card.automation_buttons['battle'].disabled)
+
+    def test_ai_dialog_saves_validated_preferences(self):
+        from android_app.automation_ui import edit_settings
+        from kivy.uix.spinner import Spinner
+        from kivy.uix.button import Button
+        captured = []
+        with patch('android_app.automation_ui.Popup.open', lambda popup: captured.append(popup)):
+            edit_settings(self.app, 'fixture')
+        popup = captured[0]
+        widgets = list(popup.content.walk())
+        selectors = [w for w in widgets if isinstance(w, Spinner)]
+        self.assertEqual(len(selectors), 2)
+        for selector in selectors: selector.text = '自動選擇已知技能'
+        save = next(w for w in widgets if isinstance(w, Button) and w.text == '保存')
+        save.dispatch('on_release')
+        for profile in self.session.ai_settings['profiles'].values():
+            self.assertEqual(profile['orderAction'][0]['id'], -1)

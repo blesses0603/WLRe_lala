@@ -13,7 +13,7 @@ def main():
     power = cast('android.os.PowerManager', service.getSystemService(context.POWER_SERVICE))
     wake = power.newWakeLock(1, 'WLRe_LaLa:connections')
     wake.setReferenceCounted(False)
-    manager = SessionManager()
+    manager = SessionManager(settings_base=Path(str(service.getNoBackupFilesDir().getAbsolutePath())) / 'preferences')
     last_acquire = [0]
 
     def metrics():

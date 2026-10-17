@@ -40,6 +40,8 @@ class Runtime:
         if operation == 'start':
             session = self.manager.start(**request['args'])
             return {'id': session.session_id}
+        if operation == 'automation': return self.manager.automation_command(request['id'], request['feature'], request['enabled'])
+        if operation == 'settings': return self.manager.save_ai_settings(request['id'], request['settings'])
         if operation == 'select': return self.manager.select_role(request['id'], request['index'])
         if operation == 'stop': return self.manager.stop(request['id'])
         if operation == 'remove':
@@ -58,7 +60,8 @@ class Runtime:
                 with session.lock:
                     sessions.append(dict(id=sid, label=session.label, account=session.account,
                         active=session.active, phase=session.phase, pending=session.selection_pending,
-                        stopped=session.stop_event.is_set(), events=self.latest.get(sid, {})))
+                        stopped=session.stop_event.is_set(), ai_settings=getattr(session, 'ai_settings', {}),
+                        automation=getattr(session, 'automation', {}), automation_pending=sorted(getattr(session, 'automation_pending', set())), events=self.latest.get(sid, {})))
         return {'sessions': sessions, 'metrics': self.monitor()}
 
     def collect_events(self):
@@ -152,7 +155,9 @@ class ServiceManager:
                 try: request = self.requests.get(timeout=0.5)
                 except queue.Empty: request = None
                 if request:
-                    try: self.call(request)
+                    try:
+                        if self.call(request) is False:
+                            self.events.put(('', 'error', '操作未執行，請確認連線狀態後重試'))
                     except ValueError:
                         self.events.put(('', 'error', '操作失敗，請確認帳號或連線狀態'))
                 data = self.call({'op': 'poll'})
@@ -169,7 +174,9 @@ class ServiceManager:
                     if previous and previous.selection_pending != row['pending']:
                         self._last.pop((sid, 'roles'), None)
                     self.sessions[sid] = SimpleNamespace(session_id=sid, label=row['label'], account=row['account'],
-                        active=row['active'], phase=row['phase'], selection_pending=row['pending'], stop_event=flag)
+                        active=row['active'], phase=row['phase'], selection_pending=row['pending'], stop_event=flag,
+                        ai_settings=row.get('ai_settings', {}), automation=row.get('automation', {}),
+                        automation_pending=set(row.get('automation_pending', [])))
                     for kind, value in row['events'].items():
                         key = (sid, kind)
                         if self._last.get(key) != value:
@@ -194,6 +201,20 @@ class ServiceManager:
         if not self.available or not session or session.selection_pending: return False
         session.selection_pending = True
         self.requests.put({'op': 'select', 'id': sid, 'index': index})
+        return True
+
+    def automation_command(self, sid, feature, enabled):
+        session = self.sessions.get(sid)
+        if (not self.available or not session or not session.active or session.stop_event.is_set()
+                or session.phase != 'world_ready' or feature in session.automation_pending): return False
+        session.automation_pending.add(feature)
+        self.requests.put({'op': 'automation', 'id': sid, 'feature': feature, 'enabled': enabled})
+        return True
+
+    def save_ai_settings(self, sid, settings):
+        if not self.available or sid not in self.sessions: return False
+        from wlre.services.battle.auto_battle import validate
+        self.requests.put({'op': 'settings', 'id': sid, 'settings': validate(settings)})
         return True
 
     def stop(self, sid):

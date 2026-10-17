@@ -242,6 +242,8 @@ class LaLaApp(App):
         card.add_widget(title)
         card.add_widget(status)
         card.add_widget(controls)
+        from android_app.automation_ui import attach
+        attach(self, card, session.session_id)
         self.list_box.add_widget(card)
         self.cards[session.session_id] = (status, choices, title, stop, card)
 
@@ -317,7 +319,9 @@ class LaLaApp(App):
             session = self.manager.sessions.get(sid)
             if session is None: continue
             status, choices, title, stop, card = record
-            if kind == "status":
+            if kind == "notice":
+                self.message.text = value
+            elif kind == "status":
                 status.text = value
                 if session.stop_event.is_set():
                     for button in choices.values(): button.disabled = True
@@ -346,6 +350,8 @@ class LaLaApp(App):
                 stop.unbind(on_release=stop._lala_stop_callback)
                 stop.text = "移除"
                 stop.bind(on_release=lambda _button, session_id=sid: self.remove_card(session_id))
+        from android_app.automation_ui import refresh
+        for sid in self.cards: refresh(self, sid)
         return True
 
     def render_metrics(self, metrics):

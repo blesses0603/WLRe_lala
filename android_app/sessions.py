@@ -3,6 +3,9 @@ from dataclasses import dataclass, field
 import queue
 import threading
 import uuid
+import copy
+from wlre.services.battle.auto_battle import defaults, validate
+from wlre.storage import account_settings
 
 
 @dataclass
@@ -19,11 +22,15 @@ class Session:
     phase: str = "connecting"
     roles: list = field(default_factory=list)
     selection_pending: bool = False
+    ai_settings: dict = field(default_factory=defaults)
+    automation: dict = field(default_factory=dict)
+    automation_pending: set = field(default_factory=set)
     lock: threading.RLock = field(default_factory=threading.RLock, repr=False)
 
 
 class SessionManager:
-    def __init__(self):
+    def __init__(self, settings_base=None):
+        self.settings_base = settings_base
         self.sessions: dict[str, Session] = {}
         self.events = queue.Queue()
         self.lock = threading.RLock()
@@ -40,6 +47,10 @@ class SessionManager:
                 raise ValueError("這個帳號在此分流的連線尚未結束")
             session_id = uuid.uuid4().hex
             session = Session(session_id, label, account, host, port)
+            if self.settings_base is not None:
+                key = account_settings.identity(host, port, account)
+                if account_settings.settings_file(key, self.settings_base).exists():
+                    session.ai_settings = account_settings.load(key, self.settings_base)
             self.sessions[session_id] = session
             self.events.put((session_id, "status", "準備驗證帳號"))
 
@@ -62,6 +73,16 @@ class SessionManager:
                                          for r in event.get("roles", []) if isinstance(r, dict)]
                         session.phase = "role_selection"
                         self.events.put((session_id, "roles", session.roles))
+                    elif kind in ('auto_battle_status', 'roaming_status'):
+                        feature = 'battle' if kind == 'auto_battle_status' else 'roaming'
+                        session.automation[feature] = {k: copy.deepcopy(v) for k, v in event.items() if k != 'type'}
+                        session.automation_pending.discard(feature)
+                        self.events.put((session_id, 'automation', copy.deepcopy(session.automation)))
+                    elif kind == 'command_rejected' and event.get('command_type') in (
+                            'start_auto_battle', 'stop_auto_battle', 'start_roaming', 'stop_roaming'):
+                        feature = 'battle' if 'auto_battle' in event['command_type'] else 'roaming'
+                        session.automation_pending.discard(feature)
+                        self.events.put((session_id, 'notice', '操作未成功：請確認角色已入場、補給結果及隊長狀態後重試'))
                     elif kind == "command_rejected" and event.get("command_type") == "select_role":
                         session.selection_pending = False
                         self.events.put((session_id, "status", "角色選擇未成功，請重新選擇"))
@@ -75,6 +96,9 @@ class SessionManager:
                     player = state.get("player") or {}
                     stats = (state.get("knowledge") or {}).get("player", {}).get("stats", {})
                     session.phase = state.get("phase", "未知")
+                    session.automation = {'battle': copy.deepcopy(state.get('auto_battle') or {}),
+                                          'roaming': copy.deepcopy(state.get('roaming') or {})}
+                    self.events.put((session_id, 'automation', copy.deepcopy(session.automation)))
                     self.events.put((session_id, "snapshot", {
                         "phase": session.phase, "character": str(player.get("name") or ""),
                         "level": stats.get("level", player.get("level")), "scene": player.get("scene"),
@@ -123,6 +147,33 @@ class SessionManager:
                 return False
             session.selection_pending = True
             session.commands.put({"type": "select_role", "index": index})
+            return True
+
+    def automation_command(self, session_id, feature, enabled):
+        if feature not in ('battle', 'roaming') or type(enabled) is not bool: return False
+        with self.lock: session = self.sessions.get(session_id)
+        if session is None: return False
+        with session.lock:
+            if (not session.active or session.stop_event.is_set() or session.phase != 'world_ready'
+                    or feature in session.automation_pending): return False
+            command = {'type': ('start_' if enabled else 'stop_') +
+                       ('auto_battle' if feature == 'battle' else 'roaming')}
+            if enabled and feature == 'battle': command['settings'] = copy.deepcopy(session.ai_settings)
+            session.automation_pending.add(feature)
+            session.commands.put(command)
+            return True
+
+    def save_ai_settings(self, session_id, settings):
+        checked = validate(settings)
+        with self.lock:
+            session = self.sessions.get(session_id)
+            if session is None: return False
+            key = account_settings.identity(session.host, session.port, session.account)
+            if self.settings_base is not None: account_settings.save(key, checked, self.settings_base)
+            for other in self.sessions.values():
+                if account_settings.identity(other.host, other.port, other.account) == key:
+                    with other.lock: other.ai_settings = copy.deepcopy(checked)
+            self.events.put((session_id, 'notice', 'AI 設定已保存，下次啟動自動戰鬥時套用'))
             return True
 
     def stop(self, session_id):

@@ -43,6 +43,7 @@ jobs:
             ~/.gradle/caches
             ~/.gradle/wrapper
           key: ${{ runner.os }}-wlre-x86-${{ hashFiles('buildozer.spec') }}
+          restore-keys: ${{ runner.os }}-wlre-x86-
       - name: Build emulator APK (not the arm64 phone download)
         run: |
           rm -rf .buildozer/android/app bin

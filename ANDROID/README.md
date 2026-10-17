@@ -1,10 +1,12 @@
-> **舊版警示：v0.0.2／v0.0.3 已重現 Keystore JNI 啟動崩潰；v0.0.4 正重新驗證，請不要安裝舊產物。**
+> **舊版警示：v0.0.2／v0.0.3 已重現 Keystore JNI 啟動崩潰；v0.0.4 已通過 Android 12～16 啟動相容性流程，請不要安裝舊產物。**
 
-# WLRe_LaLa Android v0.0.4（實驗版）
+# WLRe_LaLa Android v0.0.5（實驗版）
 
 沿用 Kivy 直式介面與 Python 協議核心。所有 Android 修改位於 `android-development`；版本與桌面版分開。
 
 ## 本版功能
+
+- 各帳號卡片新增自動戰鬥／自動徘徊啟動與停止，以及 AI 設定。設定依帳號＋伺服器保存，重新登入自動載入；不自動啟動操作。狀態依遊戲核心實際回報更新。
 
 - 每個帳號使用獨立連線、停止旗標、選角佇列及狀態；沒有固定帳號數量上限。
 - 連線移至獨立 Python 前景服務程序，畫面暫停或重建不停止服務；重新開啟可取回帳號卡片及目前狀態。
@@ -20,11 +22,11 @@
 
 Android 15 對 `dataSync` 前景服務有背景累計時限（通常為每 24 小時 6 小時）；時限到達會停止服務，回到前景後可手動重啟。通知、前景服務與 wake lock 不能保證繞過 Doze、廠商省電或無網路。系統停止服務後，不會偷偷自動重新登入。
 
-手機安裝、Keystore 真正加解密、正式服登入、切換 App 與 15／30／60 分鐘鎖屏仍須實機驗收。桌面測試不能代替這些結果。請參閱 [驗收表](ACCEPTANCE.md) 與 [驗證紀錄](VALIDATION.md)。
+v0.0.4 使用者實機畫面已確認登入及角色狀態同步；Android API 31～36 模擬器均通過啟動、Keystore 加解密、切換 App 與短暫鎖屏測試。v0.0.5 自動戰鬥／徘徊及 15／30／60 分鐘鎖屏仍須實機驗收。桌面測試不能代替這些結果。請參閱 [驗收表](ACCEPTANCE.md) 與 [驗證紀錄](VALIDATION.md)。
 
 ## APK 與開發測試
 
-在 [Actions](https://github.com/blesses0603/WLRe_lala/actions) 選 **`android-apk.yml`（手機 APK）**；綠燈後才有 `WLRe_LaLa-Android-v0.0.4-debug` Artifact，內含 APK 與 SHA256SUMS。打包成功不等於實機登入驗收通過。
+在 [Actions](https://github.com/blesses0603/WLRe_lala/actions) 選 **`android-apk.yml`（手機 APK）**；綠燈後才有 `WLRe_LaLa-Android-v0.0.5-debug` Artifact，內含 APK 與 SHA256SUMS。打包成功不等於實機登入驗收通過。
 
 ```bash
 pip install kivy==2.3.1 Pillow cryptography

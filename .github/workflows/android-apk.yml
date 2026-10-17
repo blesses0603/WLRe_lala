@@ -1,4 +1,4 @@
-name: Android v0.0.4 Test APK
+name: Android v0.0.5 Test APK
 
 on:
   push:
@@ -61,6 +61,7 @@ jobs:
             ~/.gradle/caches
             ~/.gradle/wrapper
           key: ${{ runner.os }}-wlre-arm64-${{ hashFiles('buildozer.spec') }}
+          restore-keys: ${{ runner.os }}-wlre-arm64-
       - name: Build Android debug APK
         run: |
           rm -rf .buildozer/android/app bin
@@ -68,13 +69,13 @@ jobs:
       - name: Name APK and generate checksum
         run: |
           mkdir -p android-output
-          cp "$(find bin -maxdepth 1 -name '*.apk' -print -quit)" android-output/WLRe_LaLa-Android-v0.0.4-debug.apk
+          cp "$(find bin -maxdepth 1 -name '*.apk' -print -quit)" android-output/WLRe_LaLa-Android-v0.0.5-debug.apk
           cd android-output
-          sha256sum WLRe_LaLa-Android-v0.0.4-debug.apk > SHA256SUMS.txt
+          sha256sum WLRe_LaLa-Android-v0.0.5-debug.apk > SHA256SUMS.txt
       - name: Upload APK (only after successful build)
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: WLRe_LaLa-Android-v0.0.4-debug
+          name: WLRe_LaLa-Android-v0.0.5-debug
           path: android-output/*
           if-no-files-found: error
           retention-days: 14
