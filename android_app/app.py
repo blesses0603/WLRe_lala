@@ -126,7 +126,7 @@ class LaLaApp(App):
             elif kind == "roles":
                 for button in controls:
                     if button.text.startswith("角色 "):
-                        index = int(button.text.split()[-1])
+                        index = int(button.text.split()[1])
                         role = next((r for r in value if r["index"] == index), None)
                         button.disabled = role is None
                         if role:
