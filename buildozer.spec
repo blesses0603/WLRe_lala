@@ -17,7 +17,7 @@ android.service_class_name = org.lala.client.ConnectionService
 p4a.branch = develop
 p4a.commit = 8ef9d1dbbf769d2c14681dbc3c116c85e2e93bae
 android.api = 35
-android.minapi = 24
+android.minapi = 31
 android.archs = arm64-v8a
 android.accept_sdk_license = True
 
