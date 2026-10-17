@@ -54,7 +54,7 @@ class DashboardLayout(unittest.TestCase):
 
     def test_all_main_pages_have_a_visible_shared_outer_border(self):
         theme=self.app.theme
-        for page in (self.app.overview_panel.master,self.app.battle_page,self.app.party_panel,
+        for page in (self.app.overview_panel.master,self.app.party_panel,
                      self.app.alchemy_panel,self.app.crafting_panel,self.app.efficiency_panel):
             with self.subTest(page=str(page)):
                 self.app.left_tabs.select(page);self.root.update()
@@ -66,6 +66,21 @@ class DashboardLayout(unittest.TestCase):
                 middle=image.height()//2
                 self.assertNotEqual(tuple(self.root.tk.call(str(image),'get',1,middle)),background.getpixel((x+1,y+middle)))
                 self.assertEqual(tuple(self.root.tk.call(str(image),'get',4,middle)),background.getpixel((x+4,y+middle)))
+        self.app.left_tabs.select(self.app.overview_panel.master);self.root.update()
+
+    def test_battle_subpages_each_have_one_content_border(self):
+        theme=self.app.theme
+        self.app.left_tabs.select(self.app.battle_page)
+        self.assertFalse(getattr(self.app.battle_page,'_section_outline',False))
+        for page in (self.app.formation,self.app.roam_page,self.app.ai_page):
+            self.app.battle_tabs.select(page);self.root.update()
+            self.assertTrue(page.winfo_ismapped())
+            data=theme.windows[str(self.root)];data['signature']=None;theme.paint(self.root)
+            image=data['widgets'][str(page)]['images'][0]
+            x=page.winfo_rootx()-self.root.winfo_rootx();y=page.winfo_rooty()-self.root.winfo_rooty()
+            middle=image.height()//2;backing=data['background'].convert('RGB')
+            self.assertNotEqual(tuple(self.root.tk.call(str(image),'get',1,middle)),backing.getpixel((x+1,y+middle)))
+            self.assertEqual(tuple(self.root.tk.call(str(image),'get',4,middle)),backing.getpixel((x+4,y+middle)))
         self.app.left_tabs.select(self.app.overview_panel.master);self.root.update()
 
     def test_all_navigation_actions_still_work(self):

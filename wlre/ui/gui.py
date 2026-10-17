@@ -114,12 +114,14 @@ class App:
         tabs.add(self.formation,text='戰場陣形')
         self.priority_target=None
         self.battle_selection_key=None
-        controls=ttk.Frame(tabs)
+        controls=ttk.Frame(tabs,padding=6)
         tabs.add(controls,text='自動徘徊')
-        ai_page=ttk.Frame(tabs)
+        ai_page=ttk.Frame(tabs,padding=6)
         tabs.add(ai_page,text='自動戰鬥')
         self.ai_page=ai_page
         self.roam_page=controls
+        self.formation.configure(padding=6)
+        for page in (self.formation,controls,ai_page):page._section_outline=True
         # Map double-click navigation keeps its destination internally.
         self.x,self.y=tk.StringVar(),tk.StringVar()
         for var in (self.x,self.y):var.trace_add('write',lambda *args:setattr(self,'map_target_scene',None))
@@ -154,7 +156,7 @@ class App:
         self.efficiency_panel=EfficiencyPanel(left_tabs,self)
         left_tabs.add(self.efficiency_panel,text='經驗效率')
         self.crafting_panel.configure(padding=6)
-        for page in (overview,left_outer,self.party_panel,self.alchemy_panel,self.crafting_panel,self.efficiency_panel):
+        for page in (overview,self.party_panel,self.alchemy_panel,self.crafting_panel,self.efficiency_panel):
             page._section_outline=True
         left_tabs.bind('<<NotebookTabChanged>>',lambda e:self.refresh_selected(),add='+')
         self.battle_tabs.bind('<<NotebookTabChanged>>',lambda e:self.refresh_selected(),add='+')
