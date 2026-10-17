@@ -3,7 +3,7 @@ import os
 import tkinter as tk
 import unittest
 from unittest.mock import patch
-from tkinter import font as tkfont
+from tkinter import font as tkfont, ttk
 from wlre.core.state import State
 from wlre.ui.gui import App
 
@@ -32,6 +32,17 @@ class DashboardLayout(unittest.TestCase):
         self.app.left_tabs.select(self.app.overview_panel.master)
         self.app.activity_tabs.select(self.app.logs_frame)
         self.root.update()
+
+    def test_party_tables_have_no_visible_scrollbars(self):
+        self.app.left_tabs.select(self.app.party_panel)
+        self.root.update()
+        for tree in (self.app.party_panel.members, self.app.party_panel.requests):
+            with self.subTest(table=str(tree)):
+                self.assertEqual(tree.winfo_class(), 'Treeview')
+                self.assertFalse(
+                    any(isinstance(child, ttk.Scrollbar)
+                        for child in tree.master.winfo_children())
+                )
 
     def test_summary_rows_have_room_for_real_text(self):
         state=State().snapshot()
