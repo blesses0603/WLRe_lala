@@ -2,6 +2,8 @@
 
 ## 2026-10-17 優化工作區
 
+- v0.4.20 Windows CI 修正：將 Tk `focus_displayof()` 固定為無焦點，成功重現與 Actions 完全相同的兩項失敗；修正測試前景條件及每項分頁重設後，同一重現情境兩項均通過。完整 162 項中 161 通過、1 項 Windows DPAPI 略過；背景暫存／回到前景恢復的專用測試仍通過，正式 UI 行為未調整。版本標籤預檢、資源自檢、actionlint 及 diff 檢查通過。
+
 - Releases 編譯改用已在使用者 Windows 成功的 `--diagnose-compiler` 方式；28 項打包／診斷／發行封裝測試與 actionlint 檢查通過。GitHub 雲端編譯與發布結果以 Actions 實際執行為準。
 
 - 可選編譯診斷模式：162 項測試中 161 通過、1 項 Windows DPAPI 略過；驗證預設保留快取、standalone／onefile 診斷模式僅新增 `--disable-cache=ccache` 與 `--show-scons`、CLI dry-run 正確轉傳且不編譯。核對 Nuitka 4.3 的 `--show-scons` 會啟用 SCons `--debug=stacktrace`；資源自檢與 diff 檢查通過。尚未在使用者 Windows Python 3.14.8／MSVC 14.5 實測，根因仍需新的診斷紀錄確認。
