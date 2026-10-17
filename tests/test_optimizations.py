@@ -64,7 +64,7 @@ class SharedFiles(unittest.TestCase):
 
 
 class AccountPreferences(unittest.TestCase):
-    def test_account_and_line_preferences_are_isolated_without_credentials(self):
+    def test_account_preferences_are_isolated_but_lines_share_without_credentials(self):
         from wlre.storage import account_settings as store
         from wlre.services.battle.auto_battle import defaults
         with tempfile.TemporaryDirectory() as directory:
@@ -78,11 +78,11 @@ class AccountPreferences(unittest.TestCase):
             self.assertTrue(store.load(a,directory)['field_heal'])
             self.assertEqual(store.load(a,directory)['recovery']['hp']['player_percent'],37)
             self.assertFalse(store.load(b,directory)['field_heal'])
-            self.assertNotEqual(a,c)
+            self.assertEqual(a,c)
             for file in Path(directory).rglob('*.json'):
                 self.assertNotIn('private-account',file.read_text())
             with patch('wlre.services.battle.party_guard.load',return_value={'enabled':False,'members':[]}):
-                self.assertFalse(store.load(c,directory)['field_heal'])
+                self.assertTrue(store.load(c,directory)['field_heal'])
 
     def test_invalid_settings_do_not_overwrite_saved_preferences(self):
         from wlre.storage import account_settings as store

@@ -535,7 +535,7 @@ class App:
 
     def activate_account_settings(self,host,port,account):
         key=account_settings.identity(host,port,account,self._selected_line_id)
-        value=account_settings.load(key)
+        value=account_settings.load(key,legacy_keys=account_settings.legacy_identities(host,port,account,self._selected_line_id))
         self._settings_key=key;self.ai_settings=value
         self.party_guard_panel.set_config(value['party_guard'])
         self.party_guard_panel.update_state({})
