@@ -2,6 +2,7 @@
 import os
 import tkinter as tk
 import unittest
+from unittest.mock import patch
 from tkinter import font as tkfont
 from wlre.core.state import State
 from wlre.ui.gui import App
@@ -19,6 +20,18 @@ class DashboardLayout(unittest.TestCase):
     def tearDownClass(cls):
         for job in cls.root.tk.call('after','info'):cls.root.tk.call('after','cancel',job)
         cls.root.destroy()
+
+    def setUp(self):
+        # Layout assertions describe the foreground UI. Windows CI may not
+        # grant focus; background buffering has its own dedicated tests.
+        foreground = patch.object(self.app, 'background_window', return_value=False)
+        foreground.start()
+        self.addCleanup(foreground.stop)
+        # Every test starts on the expected pages, even if a prior assertion
+        # failed before its final tab-restoration statements.
+        self.app.left_tabs.select(self.app.overview_panel.master)
+        self.app.activity_tabs.select(self.app.logs_frame)
+        self.root.update()
 
     def test_summary_rows_have_room_for_real_text(self):
         state=State().snapshot()
