@@ -102,6 +102,26 @@ class Runtime:
             path.unlink(missing_ok=True)
 
 
+class LatestEvents:
+    """Coalesce per-account UI state while Android pauses the rendering loop."""
+    def __init__(self):
+        self.values = {}
+        self.lock = threading.Lock()
+
+    def put(self, event):
+        with self.lock:
+            key = (event[0], event[1])
+            # Refresh insertion order so terminal state is always applied last.
+            self.values.pop(key, None)
+            self.values[key] = event
+
+    def get_nowait(self):
+        with self.lock:
+            if not self.values: raise queue.Empty
+            key = next(iter(self.values))
+            return self.values.pop(key)
+
+
 class ServiceManager:
     """UI adapter. Socket calls run off the Kivy thread; no network sessions here."""
     background = True
@@ -109,7 +129,7 @@ class ServiceManager:
     def __init__(self, path):
         self.path = str(path)
         self.sessions = {}
-        self.events = queue.Queue()
+        self.events = LatestEvents()
         self.requests = queue.Queue()
         self.metrics = {}
         self.available = False

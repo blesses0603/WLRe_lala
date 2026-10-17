@@ -8,7 +8,7 @@ import time
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from android_app.runtime import Runtime, ServiceManager, receive, send
+from android_app.runtime import Runtime, LatestEvents, receive, send
 from android_app.vault import AccountVault
 
 
@@ -98,6 +98,18 @@ class RuntimeTests(unittest.TestCase):
             finally:
                 runtime.exit_requested = True
                 thread.join(3)
+
+    def test_paused_ui_coalesces_updates_per_account(self):
+        inbox = LatestEvents()
+        for hp in range(10000):
+            inbox.put(('A', 'snapshot', {'hp': hp}))
+        inbox.put(('B', 'status', 'online'))
+        inbox.put(('A', 'finished', 'stopped'))
+        self.assertEqual(len(inbox.values), 3)
+        self.assertEqual(inbox.get_nowait(), ('A', 'snapshot', {'hp': 9999}))
+        self.assertEqual(inbox.get_nowait(), ('B', 'status', 'online'))
+        self.assertEqual(inbox.get_nowait(), ('A', 'finished', 'stopped'))
+        with self.assertRaises(queue.Empty): inbox.get_nowait()
 
     def test_rejected_select_replays_unchanged_roles(self):
         # Simulate a server rejecting selection with the same role list.

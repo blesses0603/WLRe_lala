@@ -12,9 +12,11 @@
 
 ## v0.0.2 — 2026-10-18
 
-- 完整 198 項測試：196 通過、2 項平台限定略過。Android 專用 21 項測試涵蓋獨立連線、私有 socket、畫面重新附接、背景生命週期、無畫面事件清理、保存帳號切換及刪除。
+- 完整 198 項測試：196 通過、2 項平台限定略過。Android 專用 22 項測試涵蓋獨立連線、私有 socket、畫面重新附接、背景生命週期、無畫面事件清理、保存帳號切換及刪除。
 - 密文儲存測試使用桌面 AESGCM 驗證非明文、載入、刪除、竄改失敗與原檔保留；**不等同於 Android Keystore 真機測試**。
 - 自訂 Java 前景通知／Android 15 超時服務，使用 Android 35 SDK 與 JDK 17 編譯檢查通過；測試時 PythonService／PythonActivity 使用最小介面 stub，完整整合仍須 APK 建置驗證。
 - actionlint、Python compileall、diff whitespace 檢查通過。
 - 上一輪 Actions 39050117226 失敗於 charset_normalizer 3.5.2 Android wheel 被 Linux 主機 pip 拒收；本版固定 charset-normalizer 3.4.2 及 python-for-android revision，重跑完整建置。
 - 尚無正式帳號連線、手機 Keystore、背景或鎖屏時長的實測結果；15／30／60 分鐘測試仍需手機驗收。
+
+- 後續追加暫停畫面的事件合併測試：10,000 次更新僅保留各帳號最新狀態；Android 專用 22 項全部通過。完整測試前次 198 項通過（含 2 略過），新增此項後未重跑完整套件。
