@@ -350,8 +350,6 @@ class GlassTheme:
                     new_styles = self.skin(w, data, backing.crop((x, y, x+a, y+b)), cls) or new_styles
                     record=data['widgets'].get(str(w))
                     if record is not None:record['crop_key']=crop_key
-            elif cls == 'Canvas' and hasattr(w, 'set_glass_background'):
-                w.set_glass_background(backing.crop((x, y, x+a, y+b)))
             elif cls == 'Text':
                 w.configure(background=PANEL, foreground=TEXT, insertbackground=TEXT,
                             selectbackground='#32617e', relief='flat', borderwidth=0)

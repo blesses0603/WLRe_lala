@@ -100,12 +100,11 @@ class App:
         left_tabs=RoundedNotebook(left_panel,borderless=True)
         self.left_tabs=left_tabs
         left_tabs.pack(fill='both',expand=True)
-        overview=ttk.Frame(left_tabs,padding=(0,4))
+        overview=ttk.Frame(left_tabs,padding=6)
         left_tabs.add(overview,text='主頁')
         self.overview_panel=OverviewPanel(overview,self)
         self.overview_panel.pack(fill='both',expand=True)
         left_outer=ttk.Frame(left_tabs,padding=6)
-        left_outer._section_outline=True
         left_tabs.add(left_outer,text='戰鬥/徘徊')
         self.battle_page=left_outer
         tabs=RoundedNotebook(left_outer,borderless=True)
@@ -154,6 +153,9 @@ class App:
         left_tabs.add(self.crafting_panel,text='製作')
         self.efficiency_panel=EfficiencyPanel(left_tabs,self)
         left_tabs.add(self.efficiency_panel,text='經驗效率')
+        self.crafting_panel.configure(padding=6)
+        for page in (overview,left_outer,self.party_panel,self.alchemy_panel,self.crafting_panel,self.efficiency_panel):
+            page._section_outline=True
         left_tabs.bind('<<NotebookTabChanged>>',lambda e:self.refresh_selected(),add='+')
         self.battle_tabs.bind('<<NotebookTabChanged>>',lambda e:self.refresh_selected(),add='+')
         self.overview_panel.update_state({})

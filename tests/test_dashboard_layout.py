@@ -52,6 +52,22 @@ class DashboardLayout(unittest.TestCase):
             self.assertLessEqual(widget.winfo_rootx()+widget.winfo_width(),self.root.winfo_rootx()+1280)
             self.assertLessEqual(widget.winfo_rooty()+widget.winfo_height(),self.root.winfo_rooty()+800)
 
+    def test_all_main_pages_have_a_visible_shared_outer_border(self):
+        theme=self.app.theme
+        for page in (self.app.overview_panel.master,self.app.battle_page,self.app.party_panel,
+                     self.app.alchemy_panel,self.app.crafting_panel,self.app.efficiency_panel):
+            with self.subTest(page=str(page)):
+                self.app.left_tabs.select(page);self.root.update()
+                data=theme.windows[str(self.root)];data['signature']=None;theme.paint(self.root)
+                image=data['widgets'][str(page)]['images'][0]
+                x=page.winfo_rootx()-self.root.winfo_rootx()
+                y=page.winfo_rooty()-self.root.winfo_rooty()
+                background=data['background'].convert('RGB')
+                middle=image.height()//2
+                self.assertNotEqual(tuple(self.root.tk.call(str(image),'get',1,middle)),background.getpixel((x+1,y+middle)))
+                self.assertEqual(tuple(self.root.tk.call(str(image),'get',4,middle)),background.getpixel((x+4,y+middle)))
+        self.app.left_tabs.select(self.app.overview_panel.master);self.root.update()
+
     def test_all_navigation_actions_still_work(self):
         panel=self.app.overview_panel
         for key,destination in (('party','party_panel'),('alchemy','alchemy_panel'),('crafting','crafting_panel'),('efficiency','efficiency_panel')):

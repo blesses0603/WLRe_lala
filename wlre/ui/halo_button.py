@@ -3,10 +3,8 @@ import colorsys
 import math
 import time
 from functools import lru_cache
-import tkinter as tk
 from tkinter import ttk
-from PIL import Image, ImageDraw, ImageTk
-from wlre.ui.theme import BG
+from PIL import Image, ImageDraw
 
 
 @lru_cache(maxsize=8)
@@ -70,35 +68,22 @@ def edge_overlay(width,height,phase):
     return overlay.resize((width,height),Image.Resampling.BOX)
 
 
-class HaloButton(tk.Canvas):
+class HaloButton(ttk.Button):
     def __init__(self,parent,command):
-        super().__init__(parent,width=60,height=26,highlightthickness=0,bg=BG,bd=0)
-        self.background_photo=None;self.background_item=None
+        super().__init__(parent,text='啟動',width=4,padding=(3,2),command=command)
         self.active=False;self.phase=0;self.job=None;self.started=None
-        self.button=ttk.Button(self,text='啟動',width=4,padding=(2,0),command=command)
-        self.button.halo_owner=self
+        self.halo_owner=self
         self.surfaces=[];self.photos=[];self.halo_visible=False
-        self.create_window(30,13,window=self.button,width=52,height=20)
         self.bind('<Map>',self.animate,add='+')
         self.bind('<Unmap>',self.pause,add='+')
         self.bind('<Destroy>',self.pause,add='+')
-
-    def set_glass_background(self,image):
-        """Match the window artwork beneath the halo instead of a solid box."""
-        self.background_photo=ImageTk.PhotoImage(image,master=self)
-        if self.background_item is None:
-            self.background_item=self.create_image(0,0,anchor='nw',image=self.background_photo,tags='glass-background')
-        else:self.itemconfigure(self.background_item,image=self.background_photo)
-        self.tag_lower(self.background_item)
-
-    def invoke(self):return self.button.invoke()
 
     def set_active(self,active):
         active=bool(active)
         if active==self.active:return
         self.active=active
         if active:self.started=time.monotonic()
-        self.button.configure(text='關閉' if self.active else '啟動')
+        self.configure(text='關閉' if self.active else '啟動')
         if self.active:self.animate()
         else:
             self.pause();self.paint_edge()
@@ -125,7 +110,7 @@ class HaloButton(tk.Canvas):
             overlay=edge_overlay(width,height,self.phase)
         for surface,photo in zip(self.surfaces,self.photos):
             photo.paste(Image.alpha_composite(surface,overlay) if overlay is not None else surface)
-        if self.button.winfo_ismapped():self.button.event_generate('<Expose>',when='tail')
+        if self.winfo_ismapped():self.event_generate('<Expose>',when='tail')
 
     def advance(self):
         self.job=None;self.animate()
