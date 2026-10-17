@@ -9,7 +9,7 @@ from PIL import Image,ImageTk
 from wlre.ui.minimap import SmallMaps
 from wlre.services.world.display_position import current_position
 from wlre.services.world.navigation import Repository, NavigationError
-from wlre.services.world.map_names import map_label, map_choices, parse_map_id
+from wlre.services.world.map_names import map_label, parse_map_id
 from wlre.services.world.portals import Portals, nearest_marker
 from wlre.services.world.portal_policy import allowed_rows, destination_problem
 
@@ -38,27 +38,12 @@ class HomeMap(ttk.Frame):
         header=ttk.Frame(self)
         header.grid(row=0,column=0,sticky='ew')
         self.columnconfigure(0,weight=1)
-        self.rowconfigure(3,weight=1)
-        ttk.Label(header,text='小地圖',style='Heading.TLabel').pack(side='left')
-        choose=ttk.Frame(self)
-        choose.grid(row=1,column=0,sticky='ew',pady=(10,6))
-        self.choice=tk.StringVar(value=map_label(12903))
-        self.map_choices=[value for value in map_choices() if self.maps.has_image(parse_map_id(value))]
-        combo=ttk.Combobox(choose,textvariable=self.choice,values=self.map_choices,width=30)
-        combo.pack(side='left',fill='x',expand=True)
-        combo.bind('<<ComboboxSelected>>',lambda e:self.manual_load())
-        combo.bind('<Return>',lambda e:self.manual_load())
-        ttk.Button(choose,text='載入',command=self.manual_load).pack(side='left',padx=(6,0))
-        switches=ttk.Frame(self)
-        switches.grid(row=2,column=0,sticky='ew',pady=(0,6))
-        self.follow=tk.BooleanVar(value=True)
-        self.overlay=tk.BooleanVar(value=False)
-        ttk.Checkbutton(switches,text='跟隨目前地圖',variable=self.follow,command=lambda:self.set_state(self.state,True)).pack(side='left')
-        ttk.Checkbutton(switches,text='導航邊界',variable=self.overlay,command=self.draw).pack(side='left',padx=10)
-        ttk.Label(switches,text='單擊選點・雙擊移動',style='Muted.TLabel').pack(side='right')
+        self.rowconfigure(1,weight=1)
+        self.map_title=tk.StringVar(value='小地圖｜等待角色地圖')
+        ttk.Label(header,textvariable=self.map_title,style='Heading.TLabel',wraplength=360).pack(side='left',fill='x',expand=True)
         self.portal_status=tk.StringVar(value='單擊選取傳點，按換圖按鈕或雙擊才送出；不會自動走路。')
         body=ttk.Frame(self)
-        body.grid(row=3,column=0,sticky='nsew')
+        body.grid(row=1,column=0,sticky='nsew')
         sidebar=ttk.Frame(body,width=155 if compact else 185)
         sidebar.pack(side='left',fill='y',padx=(0,8))
         sidebar.pack_propagate(False)
@@ -89,13 +74,13 @@ class HomeMap(ttk.Frame):
         self.canvas.bind('<Configure>',self.resize)
         self.canvas.bind('<Button-1>',self.pick)
         self.canvas.bind('<Double-Button-1>',self.double_pick)
-        self.note=tk.StringVar(value='正在載入小地圖…')
+        self.note=tk.StringVar(value='等待角色地圖同步…')
         legend='紅點：角色　黃圈：目的地\n青色：出口　紫色：事件入口　灰色：未確認\n單擊清單選取；按換圖或雙擊才送出'
         self.status_labels=[]
         if show_status:
             if status_parent is None:
                 status_parent=ttk.Frame(self)
-                status_parent.grid(row=4,column=0,sticky='ew',pady=(6,0))
+                status_parent.grid(row=2,column=0,sticky='ew',pady=(6,0))
             self.status_labels=[]
             for options in ({'textvariable':self.note},{'textvariable':self.portal_status},{'text':legend}):
                 label=ttk.Label(status_parent,**options,style='Muted.TLabel',wraplength=430)
@@ -103,11 +88,7 @@ class HomeMap(ttk.Frame):
             def wrap_status(event):
                 for label in self.status_labels:label.configure(wraplength=max(120,event.width-24))
             status_parent.bind('<Configure>',wrap_status,add='+')
-        self.after_idle(lambda:self.show_map(12903))
-
-    def manual_load(self):
-        self.follow.set(False)
-        self.show_map(self.choice.get())
+        self.after_idle(self.draw)
 
     def show_map(self,map_id):
         self.route=None
@@ -116,7 +97,7 @@ class HomeMap(ttk.Frame):
         self.projection=None
         try:
             self.selected_id=parse_map_id(map_id)
-            self.choice.set(map_label(self.selected_id))
+            self.map_title.set('小地圖｜'+map_label(self.selected_id))
             self.projection,scene=self.maps.projection(self.selected_id)
             self.image=self.maps.image(scene)
             if self.image is not None:
@@ -215,7 +196,7 @@ class HomeMap(ttk.Frame):
             self.audit_window.lift();return
         win=tk.Toplevel(self);self.audit_window=win
         win.title('地圖傳送點逐圖核對 · 1262');configure_dialog(win,1000,600);win.resizable(False,False)
-        ttk.Label(win,text='雙擊地圖列可預覽。已核對數量只代表門編號與觸碰事件有效，正式服是否允許遠距觸發仍待實測。').pack(fill='x',padx=10,pady=8)
+        ttk.Label(win,text='已核對數量只代表門編號與觸碰事件有效，正式服是否允許遠距觸發仍待實測。').pack(fill='x',padx=10,pady=8)
         def open_report():
             import webbrowser
             webbrowser.open((PROJECT_ROOT/'docs/Portal_Review_1262.html').as_uri())
@@ -229,10 +210,6 @@ class HomeMap(ttk.Frame):
         tree.configure(yscrollcommand=bar.set);tree.pack(fill='both',expand=True)
         for row in self.portals.audit.values():
             tree.insert('', 'end',iid=str(row['scene']),values=(row['scene'],row['name'],row['count'],row['normal'],row['event'],row.get('direct_ready',0),row['status']))
-        def preview(event=None):
-            if tree.selection():self.follow.set(False);self.show_map(int(tree.selection()[0]))
-        tree.bind('<Double-Button-1>',preview)
-        ttk.Button(win,text='預覽選取地圖',command=preview).pack(pady=8)
 
     def resize(self,event):
         if self._resize_job:self.after_cancel(self._resize_job)
@@ -252,7 +229,7 @@ class HomeMap(ttk.Frame):
         self.canvas.delete('all')
         if not self.projection:
             self.canvas.create_text(self.canvas.winfo_width()/2,self.canvas.winfo_height()/2,
-                                    text='此場景沒有原始小地圖\n請從左側清單選擇返回出口\n地圖圖示與座標操作已停用',fill='#c8d3dc',font=('Microsoft JhengHei UI',-16),justify='center')
+                                    text=('等待角色地圖同步…' if self.selected_id is None else '此場景沒有原始小地圖\n請從左側清單選擇返回出口\n地圖圖示與座標操作已停用'),fill='#c8d3dc',font=('Microsoft JhengHei UI',-16),justify='center')
             return
         left,top,scale=self.view()
         size=max(1,round(1024*scale))
@@ -263,10 +240,6 @@ class HomeMap(ttk.Frame):
                 self._photo_key=image_key
                 self._photo_source=self.image
             self.canvas.create_image(left,top,image=self.photo,anchor='nw')
-        if self.mesh and (self.overlay.get() or self.image is None):
-            for tri in self.mesh.faces:
-                xy=[c for p in tri for c in self.screen_pixel(*self.projection.navigation_to_pixel(p[0],p[2]))]
-                self.canvas.create_polygon(*xy,fill='',outline='#65c6d5',width=1)
         if self.route:
             xy=[c for p in self.route['points'] for c in self.screen_pixel(*self.projection.navigation_to_pixel(p[0],p[2]))]
             if len(xy)>=4:self.canvas.create_line(*xy,fill='#ffce58',width=3)
@@ -335,7 +308,7 @@ class HomeMap(ttk.Frame):
         self.state=state or {}
         self.update_portal_button()
         scene=self.state.get('player',{}).get('scene')
-        if self.follow.get() and scene is not None and (force or scene!=self.selected_id):
+        if scene is not None and (force or scene!=self.selected_id):
             self.show_map(scene)
         travel=self.state.get('portal_travel',{})
         if travel and travel.get('scene')==scene:self.portal_status.set(travel.get('name','')+'｜'+travel.get('reason',''))
