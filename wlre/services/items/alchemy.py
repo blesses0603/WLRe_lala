@@ -75,6 +75,7 @@ def prepare(state,command):
 
 
 class AutoAlchemy:
+    continuation_delay=1.0
     def __init__(self):self.plan=None;self.pending=None;self.next_due=0
     def start(self,state,command,now=None):
         now=time.monotonic() if now is None else now
@@ -94,7 +95,16 @@ class AutoAlchemy:
                 state.inventory['reserved'][key]=max(0,state.inventory['reserved'].get(key,0)-remaining)
         state.inventory['alchemy_slots']=[]
         self.pending=None;state.alchemy['pending']=False
-    def observe(self,event,state):
+    def production_confirmed(self):
+        p=self.pending;result=p.get('result') if p else None
+        if not result:return False
+        if p['added'].get(str(result['item_id']),0)>=result['count']:return True
+        counts=p.get('snapshot_counts')
+        if counts is not None and result['item_id'] not in {r['item_id'] for r in p['consumption']}:
+            return counts.get(str(result['item_id']),0)>=p['totals'].get(str(result['item_id']),0)+result['count']
+        return False
+
+    def observe(self,event,state,now=None):
         if not self.pending and not state.alchemy.get('enabled'):return
         k=event['type']
         if k=='battle_start':self.pause(state,'戰鬥中，暫停後續煉金')
@@ -123,19 +133,15 @@ class AutoAlchemy:
             elif k=='alchemy_space_error':
                 self.stop(state,'伺服器回覆：背包空間／煉金條件不足');state.inventory['reliable']=False;self.release(state);return
             result=self.pending.get('result')
-            produced=False
-            if result:
-                produced=self.pending['added'].get(str(result['item_id']),0)>=result['count']
-                if self.pending.get('snapshot_counts') is not None and result['item_id'] not in {r['item_id'] for r in self.pending['consumption']}:
-                    current=self.pending['snapshot_counts'].get(str(result['item_id']),0)
-                    produced=produced or current>=self.pending['totals'].get(str(result['item_id']),0)+result['count']
+            produced=self.production_confirmed()
             if result and produced and state.inventory.get('reliable') and all(self.pending['deleted'].get(str(row['index']),0)>=row['count'] for row in self.pending['consumption']):
                 state.alchemy['completed']+=1
                 record={**result,'round':state.alchemy['completed'],'name':item_name(result['item_id'])}
                 state.alchemy['history']=(state.alchemy['history']+[record])[-100:]
-                self.release(state);self.next_due=0
+                self.release(state)
+                self.next_due=(time.monotonic() if now is None else now)+self.continuation_delay
                 if state.alchemy['completed']>=state.alchemy['requested']:self.stop(state,'設定次數已完成')
-                elif state.alchemy['enabled']:state.alchemy['status']='已確認產物入包與材料扣除，準備下一次'
+                elif state.alchemy['enabled']:state.alchemy['status']='本次已完成；稍候再執行下一次'
     def tick(self,state,now=None):
         now=time.monotonic() if now is None else now
         plan=self.plan
@@ -146,14 +152,31 @@ class AutoAlchemy:
                 self.pending['battle_paused']=True;self.pause(state,'戰鬥／事件中，等待本次煉金回覆');return []
             if self.pending.pop('battle_paused',False):self.pending['deadline']=now+15
             if now>=self.pending['deadline']:
-                self.stop(state,'煉金結果、產物入包或材料扣除未完整確認，已停止；請重新登入同步包包')
+                result=self.pending.get('result');missing=[]
+                if not result:missing.append('煉金結果')
+                if not self.production_confirmed():
+                    missing.append('產物入包')
+                slots=[str(row['index']) for row in self.pending['consumption']
+                       if self.pending['deleted'].get(str(row['index']),0)<row['count']]
+                if slots:missing.append('材料扣除（格位 '+','.join(slots)+'）')
+                if not state.inventory.get('reliable'):missing.append('包包同步：'+state.inventory.get('sync_error','狀態不可靠'))
+                detail='、'.join(missing) or '包包一致性'
+                state.alchemy['last_confirmation']={'round':state.alchemy['completed']+1,'missing':missing}
+                self.stop(state,f"第{state.alchemy['completed']+1}次等待{detail}逾時；已停止，請重新登入同步包包")
                 state.inventory['reliable']=False;self.release(state)
             return []
-        if not state.alchemy.get('enabled') or now<self.next_due:return []
-        if battle_pause:self.pause(state,'戰鬥／戰後事件中，暫停煉金');return []
+        if not state.alchemy.get('enabled'):return []
+        if battle_pause:
+            self.next_due=now+self.continuation_delay
+            self.pause(state,'戰鬥／戰後事件中，暫停煉金');return []
         supply=state.inventory.get('field_supply',{})
         if supply.get('uncertain'):self.stop(state,'補給結果未確認，請重新登入同步後再煉金');return []
-        if supply.get('pending') or any(state.inventory.get('reserved',{}).values()):self.pause(state,'等待補給／包包使用回覆');return []
+        if supply.get('pending') or any(state.inventory.get('reserved',{}).values()):
+            self.next_due=now+self.continuation_delay
+            self.pause(state,'等待補給／包包使用回覆');return []
+        if now<self.next_due:
+            state.alchemy.update(paused=True,pause_reason='等待連續煉金間隔',status='等待連續煉金間隔／戰鬥與補給穩定後繼續')
+            return []
         state.alchemy.update(paused=False,pause_reason=None)
         try:
             # Revalidate live slots and resources before every packet, with one-run quantities.

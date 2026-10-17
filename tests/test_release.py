@@ -26,10 +26,10 @@ def setup():
 def complete(a,s):
  p=copy.deepcopy(a.pending)
  for row in p['consumption']:
-  event={'type':'bag_delete','index':row['index'],'count':row['count']};apply_live(s,event);a.observe(event,s)
- a.observe({'type':'alchemy_result','item_id':10000,'count':1},s)
+  event={'type':'bag_delete','index':row['index'],'count':row['count']};apply_live(s,event);a.observe(event,s,now=0)
+ a.observe({'type':'alchemy_result','item_id':10000,'count':1},s,now=0)
  event={'type':'bag_add','source':3,'item':{'index':0,'item_id':10000,'count':1,'serial':999}}
- apply_live(s,event);a.observe(event,s)
+ apply_live(s,event);a.observe(event,s,now=0)
 
 class Concurrency(unittest.TestCase):
  def test_can_run_with_ai_roam_and_movement(self):
