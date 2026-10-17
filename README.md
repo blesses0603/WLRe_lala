@@ -91,3 +91,23 @@
 - 區分資料未同步與零值，離線時標示為最後收到的資料；必要隊員判定不計入附近玩家。
 
 [查看版本歷史](版本歷史.md)
+
+
+## 自動發布 Windows Releases
+
+已加入 [Windows Nuitka Release](https://github.com/blesses0603/WLRe_lala/actions/workflows/release-windows.yml) 工作流程。
+推送 `v` 開頭的版本標籤後，GitHub Actions 會在 Windows 2022 使用 Python 3.12 x64／MSVC 執行測試、Nuitka standalone 編譯及 EXE 資源自檢，再封裝整個程式資料夾、重新開啟 ZIP 驗證 CRC，最後上傳 ZIP 與 `SHA256SUMS.txt` 至 Releases。
+
+1. 先更新 `wlre/__init__.py` 的 `__version__` 並提交至 GitHub。
+2. 建立並推送與程式版本完全一致的標籤。例如版本為 `0.4.20` 時：
+
+   ```bash
+   git tag v0.4.20
+   git push origin v0.4.20
+   ```
+
+3. 到 GitHub 的 **Actions → Windows Nuitka Release** 查看進度；成功後 Releases 會出現下載檔。下載 ZIP 後完整解壓，再執行資料夾中的 `WLRE_Client.exe`。
+
+亦可從該工作流程的 **Run workflow** 輸入已存在的版本標籤來執行。標籤必須包含本工作流程及打包程式；同版本已存在的 Release 不會被覆寫，若發布已完成，請使用新版本。版本不一致、測試／編譯／自檢／ZIP 驗證失敗時均不會發布。
+
+一般 `git push` 與本機 `build_nuitka.bat` 仍只提交程式碼或在本機打包，不會自動發布。Actions 使用 GitHub 內建的 `GITHUB_TOKEN`；只有發布工作擁有 `contents: write`，不需把個人 Token 放入程式或 BAT。儲存庫需啟用 GitHub Actions，組織權限政策也需允許此工作流程的寫入權限。
