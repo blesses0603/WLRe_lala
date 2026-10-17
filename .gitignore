@@ -6,3 +6,8 @@ __pycache__/
 dist_nuitka/
 
 .macos-build-env/
+
+# Android build cache and generated packages
+.buildozer/
+bin/
+.gradle/
