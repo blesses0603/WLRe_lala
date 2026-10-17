@@ -296,7 +296,7 @@ class GlassTheme:
         if not data:
             return
         data['job'] = None
-        if not window.winfo_exists():
+        if not window.winfo_exists() or window.state() in ('iconic','withdrawn'):
             return
         width, height = window.winfo_width(), window.winfo_height()
         if width < 10 or height < 10:

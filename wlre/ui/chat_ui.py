@@ -17,6 +17,7 @@ class ChatPanel(ttk.Frame):
     def __init__(self,parent,app,height=250):
         super().__init__(parent,height=height)
         self.pack_propagate(False)
+        self.display_dirty=False
         self.app=app;self.messages=deque(maxlen=200);self.pending=False;self.line_targets={};self.line_events={};self.names=NameBook();self.quote=None;self.sent_quote=None;self.emoji_picker=None;self.emojis=EmojiImages(self)
         box=group(self,text='聊天',padding=6);box.pack(fill='both',expand=True)
         tools=ttk.Frame(box);tools.pack(fill='x',pady=(0,3))
@@ -100,6 +101,8 @@ class ChatPanel(ttk.Frame):
             at_bottom=self.view.yview()[1]>=.999
             dropped=self.messages[0] if len(self.messages)==self.messages.maxlen else None
             self.messages.append(e)
+            if self.app.entered_world and self.app.background_window():
+                self.display_dirty=True;return
             if dropped and self.matches(dropped):
                 self.view.configure(state='normal');self.view.delete('1.0','2.0');self.view.configure(state='disabled')
                 self.line_targets={line-1:target for line,target in self.line_targets.items() if line>1}
@@ -126,7 +129,9 @@ class ChatPanel(ttk.Frame):
         for e in self.messages:
             name=plain_text(self.names.name(e['role_id'],name_scope(e)) if e['role_id'] else '系統')
             if name!=str(e['role_id']) and e['name']!=name:e['name']=name;changed=True
-        if changed:self.redraw(scroll=False)
+        if changed:
+            if self.app.entered_world and self.app.background_window():self.display_dirty=True
+            else:self.redraw(scroll=False)
 
     def insert_content(self,text,tags):
         for kind,value in segments(plain_text(text)):
@@ -151,6 +156,7 @@ class ChatPanel(ttk.Frame):
         self.view.insert('end','\n',e['channel'])
 
     def redraw(self,scroll=True):
+        self.display_dirty=False
         position=self.view.yview()[0];self.view.configure(state='normal');self.view.delete('1.0','end');self.line_targets={};self.line_events={}
         for e in self.messages:
             if self.matches(e):self.insert(e)

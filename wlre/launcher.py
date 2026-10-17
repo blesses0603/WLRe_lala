@@ -3,6 +3,7 @@ from pathlib import Path
 import subprocess
 import sys
 import venv
+from wlre.storage.atomic import file_lock
 
 
 def main():
@@ -16,13 +17,16 @@ def main():
     except (ImportError,AssertionError):
         environment=root/'.ui-env'
         python=environment/('Scripts/python.exe' if sys.platform=='win32' else 'bin/python')
-        if not python.exists():
-            print('Preparing image support (first run)...',flush=True)
-            venv.EnvBuilder(with_pip=True).create(environment)
-        probe=subprocess.run([str(python),'-c',"from PIL import Image,ImageTk,features; assert hasattr(Image,'Resampling') and features.check('webp')"],
-                             stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-        if probe.returncode:
-            subprocess.run([str(python),'-m','pip','install','-r',str(root/'requirements-ui.txt')],check=True)
+        # A second client must wait until the first finishes creating/installing.
+        with file_lock(environment,timeout=300):
+            if not python.exists():
+                print('Preparing image support (first run)...',flush=True)
+                venv.EnvBuilder(with_pip=True).create(environment)
+            probe=subprocess.run([str(python),'-c',"from PIL import Image,ImageTk,features; assert hasattr(Image,'Resampling') and features.check('webp')"],
+                                 stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+            if probe.returncode:
+                subprocess.run([str(python),'-m','pip','install','-r',str(root/'requirements-ui.txt')],check=True)
+                subprocess.run([str(python),'-c',"from PIL import Image,ImageTk,features; assert hasattr(Image,'Resampling') and features.check('webp')"],check=True)
     return subprocess.run([str(python),*arguments],cwd=root).returncode
 
 

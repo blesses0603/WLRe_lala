@@ -52,7 +52,7 @@ def identity(host,port,account,line_id=0):
 def _empty():return {'version':2,'selected':None,'entries':{}}
 
 
-def _read(file):
+def _read_unlocked(file):
     try:
         with file.open(encoding='utf8') as stream:store=json.load(stream)
     except FileNotFoundError:return _empty()
@@ -66,6 +66,12 @@ def _read(file):
     if store.get('selected') is not None and (not isinstance(store['selected'],str) or store['selected'] not in store['entries']):
         raise MemoryError('記住的帳號選擇資料錯誤。')
     return store
+
+
+def _read(file):
+    from wlre.storage.atomic import file_lock
+    if not file.exists():return _empty()
+    with file_lock(file):return _read_unlocked(file)
 
 
 def list_entries(file=None):
@@ -99,12 +105,27 @@ def _write(store,file):
     finally:Path(temporary).unlink(missing_ok=True)
 
 
+def _transaction(function):
+    from functools import wraps
+    from inspect import signature
+    from wlre.storage.atomic import file_lock
+    parameters=signature(function)
+    @wraps(function)
+    def guarded(*args,**kwargs):
+        file=parameters.bind(*args,**kwargs).arguments.get('file')
+        with file_lock(Path(file) if file is not None else path()):
+            return function(*args,**kwargs)
+    return guarded
+
+
+@_transaction
 def select(key,file=None):
     file=Path(file) if file is not None else path();store=_read(file)
     if key not in store['entries']:raise MemoryError('此帳號已移除，請重新選擇。')
     store['selected']=key;_write(store,file)
 
 
+@_transaction
 def delete(key,file=None):
     file=Path(file) if file is not None else path();store=_read(file)
     store['entries'].pop(key,None)
@@ -113,12 +134,14 @@ def delete(key,file=None):
     else:file.unlink(missing_ok=True)
 
 
+@_transaction
 def forget_password(key,file=None):
     file=Path(file) if file is not None else path();store=_read(file)
     if key in store['entries']:
         store['entries'][key].pop('secret',None);_write(store,file)
 
 
+@_transaction
 def save(host,port,account,password,remember_account,remember_password,file=None,line_id=0,line_name=''):
     file=Path(file) if file is not None else path()
     if not isinstance(host,str) or not host.strip() or type(port) is not int or not 0<port<=65535 or not isinstance(account,str) or not account:

@@ -34,7 +34,11 @@ class CompactCrafting(unittest.TestCase):
         self.assertFalse(self.errors,self.errors)
 
     def test_selection_is_shared_by_detail_and_custom_plan(self):
+        self.browser.change_page(1)
+        previous_page=self.browser.page
         self.browser.pick_card(1)
+        self.assertEqual(self.browser.pages.select(),str(self.browser.detail_page))
+        self.assertEqual(self.browser.page,previous_page)
         self.assertEqual(self.panel.recipe_id,self.browser.cards[1]['id'])
         self.browser.count.set('2')
         self.browser.pages.select(self.browser.detail_page);self.root.update()
@@ -55,6 +59,10 @@ class CompactCrafting(unittest.TestCase):
         self.panel.render(state);self.root.update()
         self.browser.show_queue();self.root.update()
         self.assertEqual(self.browser.queue.item('1','values')[2],'2')
+        state['crafting'].update(active=1,running=True,started_at=None)
+        self.panel.render(state);self.root.update();self.browser.update_queue()
+        self.assertIn('製作中',self.browser.queue_activity.get())
+        self.assertTrue(self.browser.queue_progress.winfo_ismapped())
         self.browser.queue.selection_set('1');self.app.send=Mock()
         self.browser.queue_command('up')
         self.app.send.assert_called_once_with({'type':'craft','action':'up','index':1,'revision':7})

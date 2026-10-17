@@ -1,5 +1,6 @@
 """Windows Nuitka build coordinator; testable planning requires no compiler."""
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -89,11 +90,34 @@ def select_compiler(requested='auto',version=None,msvc_available=None):
     return 'msvc' if msvc_available else 'mingw64'
 
 
+def prepare_dependencies(python,environment,log,upgrade=False):
+    """Reuse validated build dependencies; retry whenever validation fails."""
+    requirements=ROOT/'requirements-build.txt'
+    signature=hashlib.sha256(requirements.read_bytes()+b'\0'+(ROOT/'requirements-ui.txt').read_bytes()).hexdigest()
+    marker=environment/'dependencies.sha256'
+    try:cached=marker.read_text(encoding='ascii')==signature
+    except OSError:cached=False
+    probe=[str(python),'-c',"import tkinter; from PIL import Image,ImageTk,features; assert features.check('webp'); import nuitka"]
+    if cached and not upgrade:
+        try:
+            run_logged([str(python),'-m','pip','check'],log)
+            run_logged(probe,log)
+            return
+        except RuntimeError:pass
+    marker.unlink(missing_ok=True)
+    if upgrade:run_logged([str(python),'-m','pip','install','--upgrade','pip'],log)
+    run_logged([str(python),'-m','pip','install','--upgrade','-r',str(requirements)],log)
+    run_logged([str(python),'-m','pip','check'],log)
+    run_logged(probe,log)
+    marker.write_text(signature,encoding='ascii')
+
+
 def main(argv=None):
     parser=argparse.ArgumentParser(description='Nuitka Windows 打包')
     parser.add_argument('--mode',choices=('standalone','onefile'),default='standalone')
     parser.add_argument('--compiler',choices=('auto','msvc','mingw64'),default='auto')
     parser.add_argument('--dry-run',action='store_true',help='只檢查並列出打包計畫，不安裝或編譯')
+    parser.add_argument('--upgrade-deps',action='store_true',help='重新更新打包依賴與 pip')
     args=parser.parse_args(argv)
     if args.dry_run:
         print(json.dumps({'version':__version__,'command':make_command(sys.executable,args.mode,compiler=args.compiler),
@@ -115,9 +139,7 @@ def main(argv=None):
         print('Python import library: '+str(library),flush=True)
         with log.open('a',encoding='utf8') as stream:
             stream.write('Import library: '+str(library)+'\nStaged library: '+str(staged)+'\nHeader: '+str(header)+'\n')
-        run_logged([str(python),'-m','pip','install','--upgrade','pip'],log)
-        run_logged([str(python),'-m','pip','install','--upgrade','-r',str(ROOT/'requirements-build.txt')],log)
-        run_logged([str(python),'-c',"import tkinter; from PIL import Image,ImageTk,features; assert features.check('webp'); import nuitka"],log)
+        prepare_dependencies(python,environment,log,args.upgrade_deps)
         run_logged(make_command(python,args.mode,compiler=compiler),log,library_dir=staged.parent)
         executable=(output/'WLRE_Client.exe') if args.mode=='onefile' else (output/'WLRE_Client.dist/WLRE_Client.exe')
         if not executable.is_file():raise RuntimeError('編譯未產生預期的 EXE：'+str(executable))

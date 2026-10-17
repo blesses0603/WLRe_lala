@@ -116,7 +116,8 @@ class PartyGuardPanel(LabelFrame):
 
     def apply(self):
         try:
-            config=self.collect();party_guard.save(config)
+            config=self.collect()
+            self.app.persist_ai_settings({**self.app.ai_settings,'party_guard':config})
         except (OSError,ValueError,TypeError) as exc:
             messagebox.showerror('必要隊員名單',str(exc),parent=self.app.root);return
         self.app.ai_settings['party_guard']=config

@@ -53,15 +53,23 @@ class Favorites:
         self.path=Path(path) if path else Path.home()/'.wlre_client'/'crafting_favorites.json'
         self.ids=[];self.load_error=None
         try:
-            data=json.loads(self.path.read_text(encoding='utf-8'))
-            values=data.get('items',[]) if isinstance(data,dict) else []
+            from wlre.storage.atomic import file_lock
+            if not self.path.exists():raise FileNotFoundError
+            with file_lock(self.path):data=json.loads(self.path.read_text(encoding='utf-8'))
+            if not isinstance(data,dict) or data.get('version',1)!=1 or not isinstance(data.get('items',[]),list):raise ValueError('收藏格式錯誤')
+            values=data.get('items',[])
             self.ids=list(dict.fromkeys(int(v) for v in values if str(v) in RECIPES))[:self.limit]
         except FileNotFoundError:pass
         except (ValueError,TypeError,OSError) as exc:self.load_error=str(exc)
     def toggle(self,item_id):
         if str(item_id) not in RECIPES:raise ValueError('配方不存在')
-        updated=[v for v in self.ids if v!=item_id] if item_id in self.ids else self.ids+[item_id]
-        if len(updated)>self.limit:raise ValueError('我的最愛最多 100 項')
-        self.path.parent.mkdir(parents=True,exist_ok=True)
-        temp=self.path.with_suffix('.json.tmp');temp.write_text(json.dumps({'version':1,'items':updated},ensure_ascii=False),encoding='utf-8');temp.replace(self.path)
-        self.ids=updated
+        from wlre.storage.atomic import file_lock,write_json
+        enable=item_id not in self.ids
+        with file_lock(self.path):
+            current=Favorites(self.path)
+            if current.load_error:raise ValueError('收藏檔案無法讀取，未覆寫原檔')
+            ids=current.ids
+            updated=(ids if item_id in ids else ids+[item_id]) if enable else [v for v in ids if v!=item_id]
+            if len(updated)>self.limit:raise ValueError('我的最愛最多 100 項')
+            write_json(self.path,{'version':1,'items':updated})
+            self.ids=updated

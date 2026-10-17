@@ -1,0 +1,6 @@
+__pycache__/
+*.py[cod]
+.ui-env/
+.ui-env.lock
+.nuitka-env/
+dist_nuitka/

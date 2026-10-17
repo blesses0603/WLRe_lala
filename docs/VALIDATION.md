@@ -1,7 +1,17 @@
-# v0.4.19 驗證結果
+# 驗證結果
+
+## 2026-10-17 優化工作區
+
+- Linux／Xorg 虛擬桌面：115 項測試中 114 項通過，1 項 Windows 原生 DPAPI 測試略過。
+- 涵蓋主頁版面、隱藏分頁切換、背景聊天與事件暫存、製作詳情與進度、帳號設定隔離、跨程序寫入及崩潰後鎖釋放。
+- 新增啟動依賴鎖與安裝後驗證測試，以及重複打包快取、需求變更失效、強制更新與失敗後清除快取測試。
+- `python WLRE_Client.py --self-test` 通過。
+- `python -m tools.build.build_nuitka --dry-run` 通過；未執行 Windows EXE 編譯。
+- `git diff --check` 通過。
+- Windows BAT、原生 DPAPI、EXE 編譯，以及正式伺服器多帳號操作仍待 Windows 實機驗證；未宣稱 CPU 或記憶體降低百分比。
+- 本次為原始碼優化，未發布新版本 ZIP 或 EXE。
+
+## v0.4.19 原始基準
 
 - 77 項測試：76 項通過，1 項 Windows DPAPI 測試略過。
-- `python WLRE_Client.py --self-test` 通過。
-- 以模擬子程序確認 Client 與導航入口、工作目錄及 BAT 引用正確。
-- ZIP 關閉後重新讀取、CRC、解壓及逐檔 SHA-256 比對通過。
-- Windows BAT 實際執行、EXE 編譯及正式服操作待實機驗證。
+- 原始驗證紀錄包含 ZIP 關閉後的 CRC、解壓與 SHA-256 比對；本次沒有重新取得或驗證該 ZIP。

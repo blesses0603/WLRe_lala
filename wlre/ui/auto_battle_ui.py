@@ -243,6 +243,7 @@ class RuleCard:
 
 class SettingsEditor:
     def __init__(self,app):
+        self.settings_key=app.settings_identity()
         self.app=app;self.draft=RuleDraft(app.ai_settings);self.flags={};self.cards={};self.rootvars={};self.rule_views={}
         w=self.window=tk.Toplevel(app.root);w.title('Lua 規則 AI 設定');configure_dialog(w,1080,720);w.resizable(False,False)
         box=ttk.Frame(w,padding=12);box.pack(fill='both',expand=True)
@@ -267,7 +268,7 @@ class SettingsEditor:
         general=ttk.Frame(tabs,padding=16);tabs.add(general,text='停止條件')
         for key,label in [('bPlayerDieCloseAI','角色陣亡時停止AI與徘徊'),('bNPCDieCloseAI','夥伴陣亡時停止AI與徘徊')]:
             v=tk.BooleanVar();self.rootvars[key]=v;ttk.Checkbutton(general,text=label,variable=v).pack(anchor='w',pady=8)
-        self.note=tk.StringVar(value='變更先留在草稿，按「套用全部設定」才生效；匯出包含目前所有修改。')
+        self.note=tk.StringVar(value='變更先留在草稿；「套用全部設定」會儲存到目前帳號，不會自動啟動 AI。')
         note_label=ttk.Label(box,textvariable=self.note,wraplength=900)
         note_label.pack(side='bottom',anchor='w',pady=8)
         buttons=ttk.Frame(box);buttons.pack(side='bottom',fill='x')
@@ -304,7 +305,7 @@ class SettingsEditor:
         for resource,page in self.recovery_pages.items():page.render(self.draft.value['recovery'][resource])
     def edit(self,who,key,index):
         try:self.draft=RuleDraft(self.collect())
-        except (ValueError,TypeError,KeyError,tk.TclError) as exc:messagebox.showerror('AI設定',str(exc),parent=self.window);return
+        except (OSError,ValueError,TypeError,KeyError,tk.TclError) as exc:messagebox.showerror('AI設定',str(exc),parent=self.window);return
         data=self.draft.value['profiles'][who][key];row=data[index] if isinstance(data,list) else data
         def commit(value):self.draft.set_action(who,key,index,value);self.cards[who,key].render()
         ActionEditor(self.window,row,lambda:self.app.snapshot,who,commit)
@@ -313,12 +314,12 @@ class SettingsEditor:
             self.draft=RuleDraft(self.collect());data=self.draft.value['profiles'][who][key]
             row=copy.deepcopy(data[index] if isinstance(data,list) else data);row.update(id=0,kind=1,bUseNextSkill=False)
             self.draft.set_action(who,key,index,row);self.cards[who,key].render()
-        except (ValueError,TypeError,KeyError,tk.TclError) as exc:messagebox.showerror('AI設定',str(exc),parent=self.window)
+        except (OSError,ValueError,TypeError,KeyError,tk.TclError) as exc:messagebox.showerror('AI設定',str(exc),parent=self.window)
     def move(self,who,key,index,direction):
         try:
             self.draft=RuleDraft(self.collect())
             if self.draft.swap(who,key,index,direction):self.cards[who,key].render()
-        except (ValueError,TypeError,KeyError,tk.TclError) as exc:messagebox.showerror('AI設定',str(exc),parent=self.window)
+        except (OSError,ValueError,TypeError,KeyError,tk.TclError) as exc:messagebox.showerror('AI設定',str(exc),parent=self.window)
     def collect(self):
         value=copy.deepcopy(self.draft.value)
         for (who,flag),v in self.flags.items():value['profiles'][who][flag]=v.get()
@@ -330,12 +331,13 @@ class SettingsEditor:
         return validate(value)
     def apply(self):
         try:
-            value=self.collect();self.app.ai_settings=value
+            if self.settings_key!=self.app.settings_identity():raise ValueError('帳號已變更，請重新開啟設定')
+            value=self.collect();self.app.persist_ai_settings(value);self.app.ai_settings=value
             self.app.party_guard_panel.set_config(value['party_guard'])
             self.app.party_guard_panel.update_state(self.app.snapshot)
             if self.app.snapshot.get('auto_battle',{}).get('enabled'):self.app.send({'type':'start_auto_battle','settings':value})
             self.window.destroy()
-        except (ValueError,TypeError,KeyError,tk.TclError) as exc:messagebox.showerror('AI設定',str(exc),parent=self.window)
+        except (OSError,ValueError,TypeError,KeyError,tk.TclError) as exc:messagebox.showerror('AI設定',str(exc),parent=self.window)
     def load(self):
         path=filedialog.askopenfilename(parent=self.window,filetypes=[('AI設定','*.json')])
         if not path:return
@@ -345,7 +347,7 @@ class SettingsEditor:
         except (OSError,ValueError,TypeError,KeyError) as exc:messagebox.showerror('AI設定',str(exc),parent=self.window)
     def export(self):
         try:value=self.collect()
-        except (ValueError,TypeError,KeyError,tk.TclError) as exc:messagebox.showerror('AI設定',str(exc),parent=self.window);return
+        except (OSError,ValueError,TypeError,KeyError,tk.TclError) as exc:messagebox.showerror('AI設定',str(exc),parent=self.window);return
         path=filedialog.asksaveasfilename(parent=self.window,defaultextension='.json',filetypes=[('AI設定','*.json')])
         if not path:return
         try:

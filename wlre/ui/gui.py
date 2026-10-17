@@ -3,6 +3,7 @@ import json
 import queue
 import threading
 import time
+from collections import deque
 import tkinter as tk
 from wlre.ui.window_layout import configure_dialog
 from wlre.ui.rounded_notebook import RoundedNotebook
@@ -12,6 +13,8 @@ from tkinter import ttk, filedialog, messagebox
 from wlre.ui.theme import install as install_theme
 from wlre.network.client import run_client
 from wlre.storage.defaults import load_default_profile
+from wlre.storage import account_settings
+from wlre.core.diagnostics import Diagnostics
 from wlre.services.world.map_names import map_label
 from wlre.ui.battle_view import BattleView
 from wlre.services.battle.battle_commands import owned_units, slot
@@ -36,6 +39,14 @@ from wlre.ui.party_guard_ui import PartyGuardPanel
 class App:
     def __init__(self, root):
         self.root=root
+        self.diagnostics=Diagnostics()
+        root.bind('<Destroy>',lambda e:self.diagnostics.close() if e.widget is root else None,add='+')
+        original_exception=root.report_callback_exception
+        def report_exception(*args):
+            self.diagnostics.error();original_exception(*args)
+        root.report_callback_exception=report_exception
+        self._pending_display=None;self._last_display=0
+        self._background_logs=deque(maxlen=500)
         root.withdraw()
         self.login_window=None
         self.entered_world=False
@@ -52,6 +63,7 @@ class App:
         self.worker=None
         self.live_active=False
         self.profile=None
+        self._settings_key=None
         self.snapshot={}
         self.navigation_windows=[]
         self.resource_windows=[]
@@ -143,6 +155,8 @@ class App:
         left_tabs.add(self.crafting_panel,text='製作')
         self.efficiency_panel=EfficiencyPanel(left_tabs,self)
         left_tabs.add(self.efficiency_panel,text='經驗效率')
+        left_tabs.bind('<<NotebookTabChanged>>',lambda e:self.refresh_selected(),add='+')
+        self.battle_tabs.bind('<<NotebookTabChanged>>',lambda e:self.refresh_selected(),add='+')
         self.overview_panel.update_state({})
         self.logs_frame=LabelFrame(right,text='事件紀錄',padding=6,height=205)
         self.logs_frame.pack(side='bottom',fill='x',pady=(8,0))
@@ -335,6 +349,9 @@ class App:
             self.status.set('已帶入記住的帳號；密碼無法解密，請重新輸入。' if record['password_error'] else '已帶入記住的登入資料，請按登入。')
         except (OSError,ValueError):self.status.set('記住的登入資料無法讀取；請手動輸入。')
         self.refresh_saved_accounts()
+        if not self.live_active and self.account.get():
+            try:self.activate_account_settings(self.host.get(),int(self.port.get()),self.account.get())
+            except (OSError,ValueError,TypeError,KeyError):self.status.set('帳號偏好設定無法讀取，請檢查設定檔。')
         if hasattr(self,'line_choice'):self.refresh_server_lines()
 
     def restore_remembered_password(self):
@@ -469,9 +486,12 @@ class App:
             messagebox.showerror('導航資料無法載入',str(exc),parent=self.root)
 
     def write(self, text):
+        if self.entered_world and self.background_window():
+            self._background_logs.append(text);return
         self.log.configure(state='normal')
         self.log.insert('end',chinese(text)+'\n')
-        if int(self.log.index('end-1c').split('.')[0]) > 500: self.log.delete('1.0','101.0')
+        count=int(self.log.index('end-1c').split('.')[0])
+        if count>500:self.log.delete('1.0',f'{count-499}.0')
         self.log.see('end')
         self.log.configure(state='disabled')
 
@@ -519,6 +539,23 @@ class App:
                 with open(path,'w',encoding='utf-8') as f:json.dump({k:self.profile[k] for k in fields if k in self.profile},f,ensure_ascii=False,indent=2)
             except OSError as exc:messagebox.showerror('儲存失敗',str(exc),parent=self.dialog_parent())
 
+    def settings_identity(self):
+        if self.live_active and self._settings_key:return self._settings_key
+        if not self.host.get().strip() or not self.account.get():return None
+        return account_settings.identity(self.host.get(),self.port.get(),self.account.get(),self._selected_line_id)
+
+    def persist_ai_settings(self,value):
+        key=self.settings_identity()
+        if key is None:raise ValueError('請先選擇登入帳號，再儲存帳號設定')
+        account_settings.save(key,value)
+
+    def activate_account_settings(self,host,port,account):
+        key=account_settings.identity(host,port,account,self._selected_line_id)
+        value=account_settings.load(key)
+        self._settings_key=key;self.ai_settings=value
+        self.party_guard_panel.set_config(value['party_guard'])
+        self.party_guard_panel.update_state({})
+
     def connect(self):
         if not self.profile:
             messagebox.showinfo('尚無設定','請先匯入登入封包或載入連線設定。',parent=self.dialog_parent());return
@@ -529,6 +566,9 @@ class App:
         try:port=int(self.port.get())
         except ValueError:return
         host,profile,verify=self.host.get().strip(),dict(self.profile),self.verify.get()
+        try:self.activate_account_settings(host,port,account)
+        except (OSError,ValueError,KeyError,TypeError) as exc:
+            messagebox.showerror('帳號設定','設定無法載入，未覆寫原檔。'+str(exc),parent=self.dialog_parent());return
         if not self.save_saved_login():return
         self.password.set('')
         self.entered_world=False
@@ -536,7 +576,8 @@ class App:
         self.status.set('正在連線與驗證帳號…')
         self.connect_button.configure(state='disabled')
         self.stop_event=threading.Event();self.commands=queue.Queue();self.snapshot={}
-        self.chat_panel.reset()
+        self.chat_panel.reset();self._background_logs.clear()
+        self._pending_display=None;self._last_display=0
         self.log.configure(state='normal');self.log.delete('1.0','end');self.log.configure(state='disabled')
         self.efficiency_panel.update_state({})
         self.overview_panel.update_state({})
@@ -574,14 +615,26 @@ class App:
                        'scene':self.snapshot.get('player',{}).get('scene')})
         except ValueError:messagebox.showinfo('座標','X、Y 請輸入整數。',parent=self.root)
 
+    def refresh_selected(self):
+        if self.snapshot and hasattr(self,'home_map'):self.render(self.snapshot)
+
+    def background_window(self):
+        if self.root.state() in ('iconic','withdrawn'):return True
+        return self.root.focus_displayof() is None
+
     def render(self, state):
         self.snapshot=state
         self.chat_panel.update_names(state)
-        self.efficiency_panel.update_state(state)
-        self.overview_panel.update_state(state)
-        self.party_panel.render(state)
-        self.party_guard_panel.update_state(state)
-        self.alchemy_panel.render(state)
+        self.efficiency_panel.state=state;self.overview_panel.state=state
+        if self.efficiency_panel.winfo_ismapped():self.efficiency_panel.update_state(state)
+        if self.overview_panel.winfo_ismapped():self.overview_panel.update_state(state)
+        if self.party_panel.winfo_ismapped():self.party_panel.render(state)
+        else:
+            requests=sum(v.get('status')=='pending' for v in state.get('party',{}).get('requests',{}).values())
+            badge=f'組隊（{requests}）' if requests else '組隊'
+            if self.left_tabs.tab(self.party_panel,'text')!=badge:self.left_tabs.tab(self.party_panel,text=badge)
+        if self.party_guard_panel.winfo_ismapped():self.party_guard_panel.update_state(state)
+        if self.alchemy_panel.winfo_ismapped():self.alchemy_panel.render(state)
         self.crafting_panel.render(state)
         remaining_resources=[]
         for view in self.resource_windows:
@@ -634,11 +687,14 @@ class App:
         latest=None
         status_override=None
         session_finished=False
-        deadline=time.perf_counter()+0.008
+        started=time.perf_counter()
+        deadline=started+0.008
+        processed=0
         for _ in range(500):
             if time.perf_counter()>=deadline:break
             try:kind,data=self.events.get_nowait()
             except queue.Empty:break
+            processed+=1
             if kind=='session_finished':session_finished=True
             elif kind=='state':latest=data
             elif kind=='error':
@@ -653,7 +709,18 @@ class App:
                 if event_kind.startswith('chat_'):continue
                 if event_kind=='connection_closed':status_override='連線已關閉'
                 for line in local_event_lines(event,context):self.write(line)
-        if latest:self.render(latest)
+        if hasattr(self,'diagnostics'):
+            if latest:self._pending_display=latest
+            background=self.background_window()
+            now=time.monotonic()
+            if not background:
+                if self._background_logs:
+                    lines='\n'.join(self._background_logs);self._background_logs.clear();self.write(lines)
+                if self.chat_panel.display_dirty:self.chat_panel.redraw()
+            if self._pending_display and (not background or now-self._last_display>=0.5):
+                self.render(self._pending_display);self._pending_display=None;self._last_display=now
+            self.diagnostics.poll(processed,self.events.qsize(),(time.perf_counter()-started)*1000,background)
+        elif latest:self.render(latest)
         if status_override:self.status.set(chinese(status_override))
         if session_finished:
             self.password.set('')
@@ -671,7 +738,7 @@ class App:
         self.status.set('正在中斷連線…')
 
     def close(self):
-        self.stop_event.set();self.password.set('');self.root.destroy()
+        self.stop_event.set();self.password.set('');self.diagnostics.close();self.root.destroy()
 
 
 def main():

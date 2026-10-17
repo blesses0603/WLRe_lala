@@ -73,6 +73,8 @@
 
 ## wlre/core
 
+- `diagnostics.py`：不含使用者內容的介面效能紀錄
+
 - `__init__.py`
 - `activity.py`
 - `efficiency.py`
@@ -91,6 +93,9 @@
 - `wire.py`
 
 ## wlre/storage
+
+- `atomic.py`：跨程序設定檔鎖與原子儲存
+- `account_settings.py`：帳號及分流獨立偏好設定
 
 - `__init__.py`
 - `defaults.py`

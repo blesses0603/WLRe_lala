@@ -17,6 +17,7 @@ class DashboardLayout(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        for job in cls.root.tk.call('after','info'):cls.root.tk.call('after','cancel',job)
         cls.root.destroy()
 
     def test_summary_rows_have_room_for_real_text(self):
