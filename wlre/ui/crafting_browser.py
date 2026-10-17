@@ -118,11 +118,20 @@ class CraftingBrowser:
         if embedded:
             self.material_box=ttk.Frame(right)
             self.material_box.pack(fill='both',expand=True,pady=(2,0))
-            self.material_table=ttk.Treeview(self.material_box,columns=('name','usable','required'),height=5,show='tree headings',selectmode='browse')
+            style=ttk.Style(self.material_box)
+            style.configure('Recipe.Treeview',indent=0,padding=0)
+            style.configure('Recipe.Treeview.Heading',padding=(2,0))
+            style.layout('Recipe.Treeview.Item',[('Treeitem.padding',{'sticky':'nswe','children':[('Treeitem.image',{'side':'left','sticky':''}),('Treeitem.text',{'side':'left','sticky':''})]})])
+            self.material_table=ttk.Treeview(self.material_box,style='Recipe.Treeview',columns=('name','usable','required'),height=5,show='tree headings',selectmode='browse')
             for key,label,width in (('name','材料',76),('usable','可用',60),('required','需求',60)):
                 self.material_table.heading(key,text=label);self.material_table.column(key,width=width,minwidth=40,stretch=key!='name',anchor='w' if key=='name' else 'center')
-            self.material_table.heading('#0',text='');self.material_table.column('#0',width=28,minwidth=28,stretch=False)
+            self.material_table.heading('#0',text='');self.material_table.column('#0',width=26,minwidth=26,stretch=False,anchor='w')
             self.material_table.pack(fill='both',expand=True)
+            def lock_separator(event):
+                if self.material_table.identify_region(event.x,event.y)=='separator':return 'break'
+            self.material_table.bind('<Button-1>',lock_separator)
+            self.material_table.bind('<Double-Button-1>',lock_separator)
+            self.material_table.bind('<Motion>',lock_separator)
             self.material_table.tag_configure('missing',foreground='#f2b0a8')
             self.material_table.tag_configure('ready',foreground='#a8e4c0')
         else:

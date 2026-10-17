@@ -107,6 +107,23 @@ class CompactCrafting(unittest.TestCase):
         self.assertTrue(self.app.home_map.winfo_ismapped())
         self.assertTrue(self.app.chat_panel.winfo_ismapped())
 
+    def test_material_icons_align_left_and_headers_cannot_be_dragged(self):
+        table=self.browser.material_table;self.root.update()
+        first=table.get_children()[0];bounds=table.bbox(first)
+        self.assertLessEqual(bounds[1],26)
+        self.assertIn('image',table.identify_element(3,bounds[1]+bounds[3]//2))
+        columns=('#0','name','usable','required')
+        before=[table.column(c,'width') for c in columns]
+        separator=next(x for x in range(1,table.winfo_width()) if table.identify_region(x,8)=='separator')
+        table.event_generate('<ButtonPress-1>',x=separator,y=8)
+        table.event_generate('<B1-Motion>',x=separator+30,y=8,state=256)
+        table.event_generate('<ButtonRelease-1>',x=separator+30,y=8)
+        self.root.update()
+        self.assertEqual([table.column(c,'width') for c in columns],before)
+        table.event_generate('<ButtonPress-1>',x=50,y=bounds[1]+bounds[3]//2)
+        table.event_generate('<ButtonRelease-1>',x=50,y=bounds[1]+bounds[3]//2)
+        self.assertEqual(table.selection(),(first,))
+
     def test_favorite_has_separate_click_target_and_does_not_change_recipe(self):
         import tempfile
         from pathlib import Path
