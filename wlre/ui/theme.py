@@ -243,22 +243,30 @@ class GlassTheme:
             gdi.DeleteObject(region)
 
     def minimize(self, window):
-        if os.name == 'nt' and getattr(window, '_glass_hwnd', None):
-            import ctypes
-            ctypes.windll.user32.ShowWindow.argtypes = [ctypes.c_void_p, ctypes.c_int]
-            ctypes.windll.user32.ShowWindow(window._glass_hwnd, 6)
-        else:
-            window._glass_restore = True
-            window.overrideredirect(False)
-            window.iconify()
+        # Keep window-message dispatch inside _tkinter. Calling synchronous
+        # user32.ShowWindow through ctypes here releases the GIL and can reenter
+        # Tk's window procedure without its saved Python thread state (3.14).
+        if not window.winfo_exists() or window.state() in ('iconic', 'withdrawn'):
+            return
+        window._glass_restore = True
+        window.overrideredirect(False)
+        window.iconify()
 
     def restore(self, window, event):
         if event.widget is not window:
             return
+        window.after_idle(lambda: self.finish_restore(window))
+
+    def finish_restore(self, window):
+        # A Map event can already be queued when iconify runs. Only restore
+        # chrome once the window is actually visible again; tolerate closure
+        # before this idle callback executes.
+        if not window.winfo_exists() or window.state() in ('iconic', 'withdrawn'):
+            return
         if getattr(window, '_glass_restore', False):
             window._glass_restore = False
-            window.after_idle(lambda: window.overrideredirect(True))
-        window.after_idle(lambda: self.windows_chrome(window))
+            window.overrideredirect(True)
+        self.windows_chrome(window)
 
     def destroyed(self, window, event):
         if event.widget is window:
