@@ -107,4 +107,5 @@ class Roaming:
 def summary(value):
     text=LABELS.get(value.get('status'),'尚未啟動');center=value.get('center')
     if center:text+=f"｜中心 ({round(center[0])}, {round(center[1])})｜下一點 {value.get('next_point',1)}/4"
-    return text+('｜'+value['reason'] if value.get('reason') else '')
+    reason=value.get('reason','').replace('依伺服器確認位置重新定位','依目前位置重新定位').replace('等待伺服器位置確認','等待位置更新')
+    return text+('｜'+reason if reason else '')

@@ -192,7 +192,7 @@ class NavigationWindow:
             fix=location.get('confirmed')
             markers=[]
             if displayed and displayed['kind']=='local_report' and fix:
-                markers.append((fix,'末次伺服器確認','#b7bec7',False))
+                markers.append((fix,'上次位置','#b7bec7',False))
             if displayed:markers.append((displayed,displayed['label'],'#ff4545',displayed['filled']))
             for point,label,color,filled in markers:
                 try:

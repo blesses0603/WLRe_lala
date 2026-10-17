@@ -9,7 +9,6 @@ class EfficiencyPanel(ttk.Frame):
         super().__init__(parent,padding=8);self.app=app;self.state={};self.signature=None;self.labels={};self.selected=tk.StringVar();self.unit=tk.StringVar(value='分')
         top=ttk.Frame(self);top.pack(fill='x')
         ttk.Label(top,text='經驗效率',style='Heading.TLabel').pack(side='left')
-        ttk.Button(top,text='包包／特技',command=app.open_resources).pack(side='right')
         ttk.Button(top,text='重設統計',command=self.reset).pack(side='right',padx=4)
         select=ttk.Frame(self);select.pack(fill='x',pady=(5,3))
         ttk.Label(select,text='統計對象').pack(side='left')

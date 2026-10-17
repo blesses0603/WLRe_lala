@@ -43,7 +43,7 @@ def summarize(state, live, guard, now=None):
     if state.get('battle',{}).get('active'):
         activity.append(f"戰鬥中｜第 {state['battle'].get('round',0)} 回合")
     if state.get('local_movement') and state['local_movement'].get('status')=='running':
-        activity.append('移動中（本機推算，抵達待確認）')
+        activity.append('移動中')
     if state.get('event_flow',{}).get('blocked'):activity.append('等待伺服器事件結束')
     if supply.get('uncertain'):activity.append('補給結果未確認，已鎖定重複使用')
     elif supply.get('pending'):activity.append('等待補給確認')
@@ -92,8 +92,8 @@ class OverviewPanel(ttk.Frame):
             ('ai','自動戰鬥','ai_page',1,32),
             ('roaming','自動徘徊','roam_page',1,32),
             ('supply','補給紀錄',None,1,32),
-            ('alchemy','自動煉金','alchemy_panel',1,32),
-            ('crafting','家具製作','crafting_panel',1,32),
+            ('alchemy','煉金','alchemy_panel',1,32),
+            ('crafting','製作','crafting_panel',1,32),
             ('party','隊伍檢查','party_panel',2,48),
             ('efficiency','經驗效率','efficiency_panel',2,48),
         )

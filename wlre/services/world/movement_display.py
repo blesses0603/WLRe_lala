@@ -12,14 +12,14 @@ def movement_summary(check):
     if not check:return ''
     target=point_text(check['target'])
     role=check.get('role_id')
-    label='目的地' if check['target'].get('source')=='local_goal' else '回報/通知座標'
+    label='目的地' if check['target'].get('source')=='local_goal' else '移動座標'
     prefix=f"角色 ID={role if role is not None else '未知'}｜{label} {target}"
     status=check['status']
-    if status=='waiting':return prefix+'｜等待位置確認（尚無後續本機位置回覆）'
+    if status=='waiting':return prefix+'｜等待位置更新'
     fix=check['confirmation']
-    result={'matched':'位置回覆符合目的地',
-            'different_position':'位置回覆與目的地不同，尚未確認抵達',
-            'scene_changed':'位置回覆位於不同地圖，此次移動未確認抵達'}[status]
-    return prefix+f"｜{result}｜{fix['source']} {point_text(fix)}"
+    result={'matched':'位置已更新',
+            'different_position':'位置與目的地不同',
+            'scene_changed':'地圖已切換'}[status]
+    return prefix+f"｜{result}｜{point_text(fix)}"
 
 

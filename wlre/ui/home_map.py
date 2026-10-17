@@ -292,10 +292,10 @@ class HomeMap(ttk.Frame):
             if displayed['kind']=='local_report' and fix:
                 x,y=self.screen_pixel(*self.projection.packet_to_pixel(fix['x'],fix['y']))
                 self.canvas.create_oval(x-5,y-5,x+5,y+5,fill='',outline='#b7bec7',width=2)
-                self.canvas.create_text(x+9,y-12,text=f"末次確認 ({fix['x']}, {fix['y']})",fill='#c5cbd3',anchor='w')
+                self.canvas.create_text(x+9,y-12,text=f"上次位置 ({fix['x']}, {fix['y']})",fill='#c5cbd3',anchor='w')
             x,y=self.screen_pixel(*self.projection.packet_to_pixel(displayed['x'],displayed['y']))
             self.canvas.create_oval(x-6,y-6,x+6,y+6,fill='#ed4747' if displayed['filled'] else '',outline='#ff5959',width=2)
-            self.canvas.create_text(x+9,y+13,text=f"{displayed['label']} ({displayed['x']}, {displayed['y']})",fill='white',anchor='w')
+            self.canvas.create_text(x+9,y+13,text=f"({displayed['x']}, {displayed['y']})",fill='white',anchor='w')
         targets=[t for t in (location.get('requested_destination'),location.get('server_destination')) if t and t.get('scene')==self.selected_id]
         local=self.state.get('local_movement')
         if local and local.get('scene')==self.selected_id:

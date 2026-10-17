@@ -17,8 +17,8 @@ def current_position(state):
                     and 0<=local[k]<=65535 for k in ('x','y'))):
         return {'scene':local['scene'],'x':round(local['x']),'y':round(local['y']),
                 'source':'local_report','kind':'local_report','filled':True,
-                'label':'本機同步（待伺服器確認）'}
+                'label':'角色位置'}
     if not fix or fix.get('scene')!=player.get('scene'):return None
     current=bool(location.get('confirmed_is_current'))
     return {**fix,'kind':'server_fix','filled':current,
-            'label':'伺服器確認' if current else '末次伺服器確認'}
+            'label':'角色位置' if current else '上次位置'}

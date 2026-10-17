@@ -34,16 +34,16 @@ def lines(event,state):
     if kind=='command_rejected':return ['操作未送出：'+chinese(event['error'])]
     if not pid:return []
     if kind.startswith('craft_'):
-        names={'craft_snapshot':'家具製作排程已同步','craft_added':'已加入製作排程','craft_started':'伺服器確認開始製作','craft_paused':'伺服器確認暫停製作','craft_completed':'伺服器回覆製作完成','craft_deleted':'製作排程已移除','craft_swapped':'製作順序回覆已收到','craft_human':'製作夥伴已同步'}
+        names={'craft_snapshot':'家具製作排程已同步','craft_added':'已加入製作排程','craft_started':'開始製作','craft_paused':'暫停製作','craft_completed':'製作完成','craft_deleted':'製作排程已移除','craft_swapped':'製作順序回覆已收到','craft_human':'製作夥伴已同步'}
         return [event.get('reason') or names.get(kind,'製作資料已更新')]
     if kind in ('activity_self','activity_roles') and (kind=='activity_self' or pid in event.get('roles',[])):
         return [('開始' if event['active'] else '結束')+event['activity']]
     if kind in ('position_snapshot','walk'):
         if event['role_id']!=pid:return []
         point=f"座標 {event['x']}, {event['y']}"
-        if kind=='position_snapshot':return [f"角色位置已確認｜{map_label(event['scene'])}｜{point}"]
-        return ['角色移動通知｜'+point+'｜等待抵達確認']
-    if kind=='movement_request':return [f"已同步移動座標 {event['x']}, {event['y']}｜等待位置確認"]
+        if kind=='position_snapshot':return [f"角色位置｜{map_label(event['scene'])}｜{point}"]
+        return ['角色移動｜'+point]
+    if kind=='movement_request':return [f"移動座標 {event['x']}, {event['y']}"]
     if kind=='attack_result':
         actions=[]
         for action in event['actions']:
@@ -78,7 +78,7 @@ def lines(event,state):
         return []
     if kind=='world_player':return ['已登入角色：'+event['player']['name']] if event['player']['role_id']==pid else []
     if kind=='bag_add':return [f"獲得道具：{item_name(event['item']['item_id'])} ×{event['item']['count']}"]
-    if kind=='alchemy_result':return [f"煉金結果：{item_name(event['item_id'])} ×{event['count']}（伺服器確認）"]
+    if kind=='alchemy_result':return [f"煉金結果：{item_name(event['item_id'])} ×{event['count']}"]
     if kind=='alchemy_space_error':return ['煉金失敗：包包空間不足']
     if kind=='auto_battle_status':return ['自動戰鬥：'+ai_summary(event)]
     if kind=='roaming_status':return ['自動徘徊：'+roaming_summary(event)]

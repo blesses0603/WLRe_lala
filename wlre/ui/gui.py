@@ -74,7 +74,7 @@ class App:
         for var in (self.host,self.port,self.account):var.trace_add('write',self.login_identity_changed)
         self.password.trace_add('write',self.login_password_changed)
         self.status=tk.StringVar(value='載入設定中…')
-        self.world=tk.StringVar(value='尚未收到本機角色位置。')
+        self.world=tk.StringVar(value='尚未收到角色位置。')
         self.world_compact=tk.StringVar(value='尚未收到角色位置')
         self.movement_status=tk.StringVar(value='尚無移動要求。')
         self.layout=DashboardLayout(root,self)
@@ -138,9 +138,9 @@ class App:
         self.party_panel=PartyPanel(left_tabs,self)
         left_tabs.add(self.party_panel,text='組隊')
         self.alchemy_panel=AlchemyPanel(left_tabs,self)
-        left_tabs.add(self.alchemy_panel,text='自動煉金')
+        left_tabs.add(self.alchemy_panel,text='煉金')
         self.crafting_panel=CraftingPanel(left_tabs,self)
-        left_tabs.add(self.crafting_panel,text='家具製作')
+        left_tabs.add(self.crafting_panel,text='製作')
         self.efficiency_panel=EfficiencyPanel(left_tabs,self)
         left_tabs.add(self.efficiency_panel,text='經驗效率')
         self.overview_panel.update_state({})
@@ -596,8 +596,8 @@ class App:
         local=state.get('local_movement')
         progress=''
         if local:
-            label={'running':'步行中','finished':'本機路徑已走完','stopped':'已停止同步'}.get(local['status'],local['status'])
-            progress=f"{label}｜推算 ({round(local['x'])}, {round(local['y'])})｜已同步 {local['steps_sent']} 次｜{local['reason']}\n"
+            label={'running':'步行中','finished':'路徑處理完成','stopped':'已停止移動'}.get(local['status'],local['status'])
+            progress=f"{label}｜座標 ({round(local['x'])}, {round(local['y'])})\n"
         self.movement_status.set(progress+(movement_summary(check) or '尚無移動要求。'))
         if check!=self.last_movement_check:
             if check:self.write(movement_summary(check))
@@ -613,27 +613,16 @@ class App:
         self.update_role_choices(state['roles'])
         player=state['player'];battle=state['battle']
         if player:
-            location=state.get('location',{})
-            fix=location.get('confirmed')
             displayed=current_position(state)
             if displayed:
-                text=f"{player['name']}｜{map_label(displayed['scene'])}｜{displayed['label']} ({displayed['x']}, {displayed['y']})"
-                if displayed['kind']=='local_report':
-                    text+=f"｜末次伺服器確認 ({fix['x']}, {fix['y']}) {fix['source']}"
-                    target=state['local_movement']['target']
-                    text+=f"｜目的地 ({target['x']}, {target['y']})"
-                else:
-                    text+=' '+displayed.get('source','')
-                    targets=[x for x in (location.get('requested_destination'),location.get('server_destination')) if x]
-                    target=max(targets,key=lambda x:x.get('packet_number',0)) if targets else None
-                    if target:text+=f"｜同步/通知座標 ({target['x']}, {target['y']})，非抵達確認"
+                text=f"{player['name']}｜{map_label(displayed['scene'])}｜座標 ({displayed['x']}, {displayed['y']})"
                 self.world.set(text)
-            else:self.world.set(f"{player['name']}｜{map_label(player['scene'])}｜沒有可顯示的本機位置")
-        else:self.world.set('世界資料：此連線尚無本機角色確認座標')
+            else:self.world.set(f"{player['name']}｜{map_label(player['scene'])}｜位置待更新")
+        else:self.world.set('尚未收到角色位置')
         if player and displayed:
-            self.world_compact.set(f"{player['name']}｜{map_label(displayed['scene'])}｜座標 {displayed['x']}, {displayed['y']}｜{displayed['label']}")
+            self.world_compact.set(f"{player['name']}｜{map_label(displayed['scene'])}｜座標 {displayed['x']}, {displayed['y']}")
         elif player:
-            self.world_compact.set(f"{player['name']}｜{map_label(player['scene'])}｜位置待同步")
+            self.world_compact.set(f"{player['name']}｜{map_label(player['scene'])}｜位置待更新")
         else:self.world_compact.set('尚未收到角色位置')
         phase=PHASES.get(state['phase'],'角色狀態待更新')
         flow=state.get('event_flow',{})
