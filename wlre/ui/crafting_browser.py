@@ -5,8 +5,8 @@ from collections import OrderedDict
 import tkinter as tk
 from wlre.ui.window_layout import configure_dialog
 from tkinter import ttk
-from wlre.ui.rounded_notebook import RoundedNotebook
-from PIL import Image,ImageTk
+from wlre.ui.layout import scroll_table
+from PIL import Image,ImageDraw,ImageTk
 from wlre.ui.theme import group
 from wlre.services.items.crafting import RECIPES, recipe_plan, effective_time, elapsed, confirmed_unlocked
 from wlre.services.items.combat_resources import item_name
@@ -57,15 +57,13 @@ class CraftingBrowser:
         ttk.Label(searchbar,text='搜尋').pack(side='left',padx=(8,4))
         self.search=tk.StringVar();search=ttk.Entry(searchbar,textvariable=self.search,width=16);search.pack(side='left',fill='x',expand=True);search.bind('<KeyRelease>',self.defer_search)
         body=ttk.Frame(box);body.pack(fill='both',expand=True)
-        if embedded:
-            self.pages=RoundedNotebook(body);self.pages.pack(fill='both',expand=True)
-            catalog=ttk.Frame(self.pages);self.detail_page=ttk.Frame(self.pages)
-            self.pages.add(catalog,text='製作項目');self.pages.add(self.detail_page,text='配方詳情')
-            catalog.columnconfigure(0,minsize=140,weight=0);catalog.columnconfigure(1,weight=1);catalog.rowconfigure(0,weight=1)
-            self.detail_page.columnconfigure(0,weight=1,uniform='details');self.detail_page.columnconfigure(1,weight=1,uniform='details');self.detail_page.rowconfigure(0,weight=1)
-        else:
-            catalog=body;catalog.columnconfigure(0,minsize=164,weight=0);catalog.columnconfigure(1,minsize=470,weight=1);catalog.columnconfigure(2,minsize=410,weight=0);catalog.rowconfigure(0,weight=1)
+        catalog=body
+        catalog.columnconfigure(0,minsize=128 if embedded else 164,weight=0)
+        catalog.columnconfigure(1,weight=1)
+        catalog.columnconfigure(2,minsize=248 if embedded else 410,weight=0)
+        catalog.rowconfigure(0,weight=1)
         side=group(catalog,text='工作設備',padding=6);side.grid(row=0,column=0,sticky='nsew',padx=(0,8))
+        if embedded:side.configure(width=128);side.pack_propagate(False)
         self.tool_tree=ttk.Treeview(side,show='tree',selectmode='browse',height=15);self.tool_tree.column('#0',width=120 if embedded else 136,stretch=True)
         sb=ttk.Scrollbar(side,command=self.tool_tree.yview);sb.pack(side='right',fill='y');self.tool_tree.configure(yscrollcommand=sb.set);self.tool_tree.pack(fill='both',expand=True);self.tool_tree.bind('<<TreeviewSelect>>',self.pick_tool)
         middle=ttk.Frame(catalog) if embedded else group(catalog,text='製作項目',padding=6);middle.grid(row=0,column=1,sticky='nsew',padx=(0,8))
@@ -75,38 +73,62 @@ class CraftingBrowser:
         ttk.Button(nav,text='下一頁',command=lambda:self.change_page(1)).pack(side='right')
         self.grid=ttk.Frame(middle);self.grid.pack(fill='both',expand=True)
         self.cards=[]
+        self.favorite_images={}
+        for selected in (False,True):
+            image=Image.new('RGBA',(72,72));draw=ImageDraw.Draw(image)
+            points=[]
+            for step in range(121):
+                t=step/120*math.tau
+                x=16*math.sin(t)**3;y=13*math.cos(t)-5*math.cos(2*t)-2*math.cos(3*t)-math.cos(4*t)
+                points.append((36+x*1.8,31-y*1.8))
+            if selected:draw.polygon(points,fill='#ffd784')
+            else:draw.line(points,fill='#9acddd',width=5,joint='curve')
+            self.favorite_images[selected]=ImageTk.PhotoImage(image.resize((18,18),Image.Resampling.LANCZOS),master=w)
         columns=4
         for i in range(self.page_size):
             cell=ttk.Frame(self.grid,padding=3);cell.grid(row=i//columns,column=i%columns,sticky='nsew',padx=2,pady=2)
             self.grid.columnconfigure(i%columns,weight=1,uniform='cards');self.grid.rowconfigure(i//columns,weight=1,uniform='cards')
-            favorite=ttk.Label(cell,text='♡',cursor='hand2',anchor='e',font=('Microsoft JhengHei UI',-14))
-            if embedded:favorite.place(relx=1,x=-3,y=1,anchor='ne')
-            else:favorite.pack(anchor='e')
-            favorite.bind('<Button-1>',lambda e,n=i:self.toggle_favorite(n))
+            footer=ttk.Frame(cell);footer.pack(side='bottom',fill='x',pady=(2,0))
+            favorite=ttk.Button(footer,text='收藏',image=self.favorite_images[False],width=2,padding=(2,1),command=lambda n=i:self.toggle_favorite(n))
+            favorite.pack(side='right',padx=(2,0))
+            status=ttk.Label(footer,anchor='w',style='Muted.TLabel',width=1);status.pack(side='left',fill='x',expand=True)
             button=ttk.Button(cell,compound='top',padding=(3,2) if embedded else (9,5),command=lambda n=i:self.pick_card(n));button.pack(fill='both',expand=True)
-            status=ttk.Label(cell,anchor='center',style='Muted.TLabel');status.pack(side='bottom',fill='x',before=button)
             self.cards.append({'frame':cell,'button':button,'favorite':favorite,'status':status,'id':None,'image':None})
-        right=group(self.detail_page if embedded else body,text='製作詳情',padding=6 if embedded else 8);right.grid(row=0,column=0 if embedded else 2,sticky='nsew')
+        right=group(body,text='配方詳情',padding=6 if embedded else 8);right.grid(row=0,column=2,sticky='nsew')
+        self.detail_panel=right
+        if embedded:right.configure(width=248);right.pack_propagate(False)
         title=ttk.Frame(right);title.pack(fill='x')
         self.large_image=ttk.Label(title);self.large_image.pack(side='left',padx=(0,8))
-        self.name=tk.StringVar(value='請選擇製作物');ttk.Label(title,textvariable=self.name,style='Heading.TLabel',wraplength=220 if embedded else 260).pack(side='left',fill='x',expand=True)
-        self.hold=tk.StringVar();ttk.Label(right,textvariable=self.hold,wraplength=300 if embedded else 380).pack(fill='x',pady=5)
-        self.device=tk.StringVar();ttk.Label(right,textvariable=self.device,style='Muted.TLabel',wraplength=300 if embedded else 380).pack(fill='x')
-        self.time=tk.StringVar();ttk.Label(right,textvariable=self.time,style='Muted.TLabel',wraplength=300 if embedded else 380).pack(fill='x',pady=4)
-        self.material_box=group(self.detail_page if embedded else right,text='材料：背包可用／需求',padding=5)
-        if embedded:self.material_box.grid(row=0,column=1,sticky='nsew',padx=(6,0))
-        else:self.material_box.pack(fill='both',expand=True,pady=(4,0))
-        self.material_widgets=[]
-        for i in range(5):
-            line=ttk.Frame(self.material_box);line.pack(fill='x',pady=3)
-            icon=ttk.Label(line);icon.pack(side='left',padx=(0,5))
-            text=ttk.Label(line,wraplength=270 if embedded else 290);text.pack(side='left',fill='x',expand=True)
-            self.material_widgets.append((line,icon,text))
-        compose=ttk.Frame(right);compose.pack(side='bottom',fill='x',pady=(6,0),**({'before':title} if embedded else {'before':self.material_box}))
-        ttk.Label(compose,text='批數').pack(side='left');self.count=tk.StringVar(value='1')
-        ttk.Spinbox(compose,from_=1,to=255,textvariable=self.count,width=5).pack(side='left',padx=4)
-        self.add_button=ttk.Button(compose,text='加入排程',command=self.add,state='disabled');self.add_button.pack(side='right')
-        ttk.Button(compose,text='加入自訂',command=lambda:self.panel.open_plan().add(self.selected,self.count.get())).pack(side='right',padx=3)
+        self.name=tk.StringVar(value='請選擇製作物');ttk.Label(title,textvariable=self.name,style='Heading.TLabel',wraplength=180 if embedded else 260).pack(side='left',fill='x',expand=True)
+        self.hold=tk.StringVar();ttk.Label(right,textvariable=self.hold,wraplength=225 if embedded else 380).pack(fill='x',pady=5)
+        self.device=tk.StringVar();ttk.Label(right,textvariable=self.device,style='Muted.TLabel',wraplength=225 if embedded else 380).pack(fill='x')
+        self.time=tk.StringVar();ttk.Label(right,textvariable=self.time,style='Muted.TLabel',wraplength=225 if embedded else 380).pack(fill='x',pady=4)
+        self.material_widgets=[];self.material_table=None
+        if embedded:
+            self.material_box=ttk.Frame(right)
+            self.material_box.pack(fill='both',expand=True,pady=(4,0))
+            table_frame,self.material_table=scroll_table(self.material_box,('name','usable','required'),('材料','可用','需求'),(90,50,50),height=3,show='tree headings')
+            self.material_table.heading('#0',text='');self.material_table.column('#0',width=28,minwidth=28,stretch=False)
+            table_frame.pack(fill='both',expand=True)
+            self.material_table.tag_configure('missing',foreground='#f2b0a8')
+            self.material_table.tag_configure('ready',foreground='#a8e4c0')
+        else:
+            self.material_box=group(right,text='材料：背包可用／需求',padding=5)
+            self.material_box.pack(fill='both',expand=True,pady=(4,0))
+            for i in range(5):
+                line=ttk.Frame(self.material_box);line.pack(fill='x',pady=3)
+                icon=ttk.Label(line);icon.pack(side='left',padx=(0,5))
+                text=ttk.Label(line,wraplength=290);text.pack(side='left',fill='x',expand=True)
+                self.material_widgets.append((line,icon,text))
+        compose=ttk.Frame(right);compose.pack(side='bottom',fill='x',pady=(6,0),before=title if embedded else self.material_box)
+        batch=ttk.Frame(compose) if embedded else compose
+        if embedded:batch.pack(fill='x')
+        ttk.Label(batch,text='批數').pack(side='left');self.count=tk.StringVar(value='1')
+        ttk.Spinbox(batch,from_=1,to=255,textvariable=self.count,width=5).pack(side='left',padx=4)
+        actions=ttk.Frame(compose) if embedded else compose
+        if embedded:actions.pack(fill='x',pady=(4,0))
+        self.add_button=ttk.Button(actions,text='加入排程',command=self.add,state='disabled');self.add_button.pack(side='right')
+        ttk.Button(actions,text='加入自訂',command=lambda:self.panel.open_plan().add(self.selected,self.count.get())).pack(side='right',padx=3)
         self.count.trace_add('write',lambda *args:self.refresh_detail(force=True))
         self.reason=tk.StringVar()
         if not embedded:ttk.Label(right,textvariable=self.reason,style='Muted.TLabel',wraplength=380).pack(side='bottom',fill='x',pady=(5,0),before=self.material_box)
@@ -186,12 +208,12 @@ class CraftingBrowser:
             card['frame'].grid();r=visible[i];sid=r['item_id'];card['id']=sid
             im=card['image']=self.icons.get(sid,32 if self.embedded else 56);name=item_name(sid)
             # Fixed-size grid and bounded 2-line names, no control per all recipes.
-            caption=name if len(name)<=7 else name[:6]+'…'
+            limit=5 if self.embedded else 7
+            caption=name if len(name)<=limit else name[:limit-1]+'…'
             card['button'].configure(text=caption,image=im)
-            card['favorite'].configure(text='♥' if sid in favs else '♡')
-            if self.embedded:card['favorite'].lift()
+            card['favorite'].configure(text='取消收藏' if sid in favs else '收藏',image=self.favorite_images[sid in favs])
             status=availability(self.state,r)[0]
-            card['status'].configure(text=('選取 · ' if sid==self.selected else '')+status)
+            card['status'].configure(text=('✓ ' if sid==self.selected else '')+status)
         if self.selected not in [r['item_id'] for r in visible]:self.selected=visible[0]['item_id'] if visible else None;self.detail_key=None
         self.refresh_detail()
 
@@ -201,7 +223,6 @@ class CraftingBrowser:
         sid=self.cards[index]['id']
         if sid:
             self.selected=sid;self.refresh_grid(force=True);self.refresh_detail(force=True)
-            if self.embedded:self.pages.select(self.detail_page)
     def toggle_favorite(self,index):
         sid=self.cards[index]['id']
         if not sid:return
@@ -214,6 +235,7 @@ class CraftingBrowser:
         if recipe is None:
             self.name.set('沒有符合的未鎖定項目');self.hold.set('');self.device.set('');self.time.set('');self.reason.set('調整設備篩選、搜尋，或先同步小屋資料');self.large_image.configure(image='');self.add_button.configure(state='disabled')
             for line,icon,text in self.material_widgets:line.pack_forget()
+            if self.material_table is not None:self.material_table.delete(*self.material_table.get_children())
             return
         try:count=int(self.count.get())
         except ValueError:count=0
@@ -231,6 +253,13 @@ class CraftingBrowser:
             if i>=len(materials):line.pack_forget();continue
             line.pack(fill='x',pady=2);m=materials[i];icon.image=self.icons.get(m['item_id'],28);icon.configure(image=icon.image)
             text.configure(text=f"{m['name']}   {fmt(m['usable'])}/{m['required']}"+(f"｜已擺 {m['placed']} 不計入" if m['placed'] else ''),foreground='#f2b0a8' if m['usable'] is None or m['usable']<m['required'] else '#a8e4c0')
+        if self.material_table is not None:
+            self.material_table.delete(*self.material_table.get_children());self.material_images=[]
+            for material in materials:
+                image=self.icons.get(material['item_id'],24);self.material_images.append(image)
+                tag='missing' if material['usable'] is None or material['usable']<material['required'] else 'ready'
+                name=material['name']+(f"（已擺 {material['placed']} 不計入）" if material['placed'] else '')
+                self.material_table.insert('','end',image=image,values=(name,fmt(material['usable']),material['required']),tags=(tag,))
         plan_ok=False
         if valid and status=='可製作' and not c.get('pending') and not c.get('uncertain'):
             from types import SimpleNamespace

@@ -49,11 +49,13 @@ class CompactCrafting(unittest.TestCase):
         self.browser.change_page(1)
         previous_page=self.browser.page
         self.browser.pick_card(1)
-        self.assertEqual(self.browser.pages.select(),str(self.browser.detail_page))
+        self.root.update()
+        self.assertTrue(self.browser.detail_panel.winfo_ismapped())
+        self.assertTrue(self.browser.grid.winfo_ismapped())
         self.assertEqual(self.browser.page,previous_page)
         self.assertEqual(self.panel.recipe_id,self.browser.cards[1]['id'])
         self.browser.count.set('2')
-        self.browser.pages.select(self.browser.detail_page);self.root.update()
+        self.root.update()
         self.assertTrue(self.browser.add_button.winfo_ismapped())
         self.assertEqual(self.panel.count.get(),'2')
         plan=self.panel.open_plan();plan.add_current()
@@ -64,6 +66,40 @@ class CompactCrafting(unittest.TestCase):
             self.app.live_active=True;self.browser.refresh_detail()
             self.assertFalse(self.browser.add_button.instate(['disabled']))
         self.assertFalse(self.errors,self.errors)
+
+    def test_recipe_details_and_all_items_stay_visible_with_live_batch_quantities(self):
+        self.assertFalse(hasattr(self.browser,'pages'))
+        self.assertTrue(self.browser.detail_panel.winfo_ismapped())
+        self.browser.count.set('1');self.browser.refresh_detail(force=True)
+        table=self.browser.material_table
+        original=[int(table.item(i,'values')[2]) for i in table.get_children()]
+        self.assertTrue(original)
+        self.browser.count.set('2');self.browser.refresh_detail(force=True);self.root.update()
+        self.assertEqual([int(table.item(i,'values')[2]) for i in table.get_children()],[n*2 for n in original])
+        self.assertTrue(self.browser.add_button.winfo_ismapped())
+        edge=self.browser.detail_panel.winfo_rootx()
+        for card in self.browser.cards:
+            self.assertTrue(card['button'].winfo_ismapped())
+            self.assertLessEqual(card['button'].winfo_rootx()+card['button'].winfo_width(),edge)
+
+    def test_favorite_has_separate_click_target_and_does_not_change_recipe(self):
+        import tempfile
+        from pathlib import Path
+        from wlre.services.items.crafting_browser_model import Favorites
+        previous=self.browser.favorite_store
+        with tempfile.TemporaryDirectory() as directory:
+            try:
+                self.browser.favorite_store=Favorites(Path(directory)/'favorites.json')
+                self.browser.refresh_grid(force=True);self.root.update()
+                card=self.browser.cards[0];sid=card['id'];selected=self.browser.selected
+                image=card['favorite'].cget('image')
+                self.assertGreaterEqual(card['favorite'].winfo_rooty(),card['button'].winfo_rooty()+card['button'].winfo_height())
+                card['favorite'].invoke();self.root.update()
+                self.assertIn(sid,self.browser.favorite_store.ids)
+                self.assertNotEqual(card['favorite'].cget('image'),image)
+                self.assertEqual(self.browser.selected,selected)
+                card['favorite'].invoke();self.assertNotIn(sid,self.browser.favorite_store.ids)
+            finally:self.browser.favorite_store=previous
 
     def test_queue_uses_server_snapshot_and_keeps_revision_in_commands(self):
         state=State().snapshot();item_id=self.panel.recipe_id
