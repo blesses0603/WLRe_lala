@@ -5,7 +5,7 @@ from unittest.mock import patch
 from wlre.core.state import State
 from wlre.ui.gui import App
 from wlre.ui.auto_battle_ui import SettingsEditor
-from wlre.ui.halo_button import edge_points
+from wlre.ui.halo_button import edge_points,edge_overlay
 
 
 @unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt','Requires a desktop')
@@ -122,3 +122,16 @@ class EdgeSampling(unittest.TestCase):
         self.assertLessEqual(max(lengths),.76)
         self.assertGreater(min(lengths),.5)
         self.assertIs(points,edge_points(52,20))
+
+
+class StableHaloMask(unittest.TestCase):
+    def test_alpha_is_identical_through_full_color_cycle_and_has_no_square_corners(self):
+        first=edge_overlay(52,20,0)
+        alpha=first.getchannel('A')
+        for phase in (.01,.25,.5,.75,.99):
+            frame=edge_overlay(52,20,phase)
+            self.assertEqual(frame.getchannel('A').tobytes(),alpha.tobytes())
+            self.assertNotEqual(frame.tobytes(),first.tobytes())
+        for x,y in ((0,0),(1,1),(50,1),(1,18),(50,18),(26,10)):
+            self.assertEqual(alpha.getpixel((x,y)),0)
+        self.assertGreater(alpha.getpixel((26,1)),0)

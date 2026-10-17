@@ -39,6 +39,37 @@ def edge_points(width,height):
     return tuple(result)
 
 
+@lru_cache(maxsize=8)
+def edge_texture(width,height):
+    """Fixed, continuous alpha mask; animation changes colors only."""
+    scale=3;size=(width*scale,height*scale)
+    mask=Image.new('L',size)
+    radius=min(9,(width-3)/2,(height-3)/2)
+    ImageDraw.Draw(mask).rounded_rectangle((scale,scale,(width-2)*scale,(height-2)*scale),
+        radius=radius*scale,outline=255,width=4)
+    texture=Image.new('P',size)
+    points=edge_points(width,height)
+    pixels=texture.load();alpha=mask.load()
+    for y in range(size[1]):
+        for x in range(size[0]):
+            if alpha[x,y]:
+                _,position=min(points,key=lambda item:(item[0][0]-x/scale)**2+(item[0][1]-y/scale)**2)
+                pixels[x,y]=round(position*255)
+    return texture,mask
+
+
+def edge_overlay(width,height,phase):
+    texture,mask=edge_texture(width,height)
+    colored=texture.copy()
+    palette=[]
+    for index in range(256):
+        palette.extend(round(v*255) for v in colorsys.hsv_to_rgb((index/256+phase)%1,.85,1))
+    colored.putpalette(palette)
+    overlay=colored.convert('RGBA');overlay.putalpha(mask)
+    # Area averaging keeps alpha outside the exact curve at zero: no ringing.
+    return overlay.resize((width,height),Image.Resampling.BOX)
+
+
 class HaloButton(tk.Canvas):
     def __init__(self,parent,command):
         super().__init__(parent,width=60,height=26,highlightthickness=0,bg=BG,bd=0)
@@ -91,17 +122,10 @@ class HaloButton(tk.Canvas):
         overlay=None
         if self.halo_visible:
             width,height=self.surfaces[0].size
-            scale=3
-            overlay=Image.new('RGBA',(width*scale,height*scale))
-            draw=ImageDraw.Draw(overlay)
-            points=edge_points(width,height)
-            for index,(point,position) in enumerate(points):
-                color=tuple(round(v*255) for v in colorsys.hsv_to_rgb((position+self.phase)%1,.85,1))+(255,)
-                end=points[(index+1)%len(points)][0]
-                draw.line((tuple(v*scale for v in point),tuple(v*scale for v in end)),fill=color,width=4)
-            overlay=overlay.resize((width,height),Image.Resampling.LANCZOS)
+            overlay=edge_overlay(width,height,self.phase)
         for surface,photo in zip(self.surfaces,self.photos):
             photo.paste(Image.alpha_composite(surface,overlay) if overlay is not None else surface)
+        if self.button.winfo_ismapped():self.button.event_generate('<Expose>',when='tail')
 
     def advance(self):
         self.job=None;self.animate()
