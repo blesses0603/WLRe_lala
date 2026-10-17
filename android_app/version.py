@@ -1,2 +1,2 @@
 """Android release numbering is separate from the desktop release."""
-ANDROID_VERSION = "0.0.2"
+ANDROID_VERSION = "0.0.3"

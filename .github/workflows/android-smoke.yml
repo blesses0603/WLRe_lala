@@ -1,0 +1,62 @@
+name: Android emulator startup smoke
+on:
+  push:
+    branches: [android-development]
+    paths:
+      - 'android_app/**'
+      - 'main.py'
+      - 'wlre/**'
+      - 'buildozer.spec'
+      - 'tools/android_smoke.py'
+      - '.github/workflows/android-smoke.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: android-smoke-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  smoke:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    env:
+      KIVY_NO_ARGS: '1'
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y autoconf automake libtool pkg-config cmake libffi-dev libssl-dev libsqlite3-dev zlib1g-dev libncurses5-dev libncursesw5-dev libltdl-dev zip unzip
+          python -m pip install 'buildozer>=1.5,<2' 'cython<3'
+      - name: Build emulator APK (not the arm64 phone download)
+        run: |
+          sed -i 's/android.archs = arm64-v8a/android.archs = x86_64/' buildozer.spec
+          buildozer -v android debug
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Launch Android and verify UI and foreground service
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: python tools/android_smoke.py
+      - name: Upload startup diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: Android-emulator-startup-diagnostics
+          path: android-smoke-*.txt
+          if-no-files-found: ignore

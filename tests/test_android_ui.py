@@ -92,3 +92,26 @@ class AndroidUI(unittest.TestCase):
         self.assertEqual([r['account'] for r in self.app.vault.records], ['B'])
         self.assertEqual(self.app.password.text, '')
         self.assertFalse(self.session.stop_event.is_set())
+
+    def test_android_startup_error_keeps_ui_and_hides_exception_details(self):
+        from types import SimpleNamespace
+        import android_app.app as module
+        def fail(_name): raise RuntimeError('fixture-secret must not appear')
+        with patch.object(module, 'platform', 'android'), patch.dict('sys.modules', {'jnius': SimpleNamespace(autoclass=fail)}):
+            self.app.initialize_android()
+            self.assertIn('A01', self.app.message.text)
+            self.assertNotIn('fixture-secret', self.app.message.text)
+            with patch.object(self.app.manager, 'start') as start:
+                self.app.connect_account()
+                start.assert_not_called()
+        self.assertIsNotNone(self.app.root if self.app.root else self.root)
+
+    def test_monitor_failure_does_not_exit_render_loop(self):
+        from types import SimpleNamespace
+        import queue
+        self.app.manager = SimpleNamespace(background=True, sessions={'fixture': self.session},
+            available=True, metrics={'active': 1}, events=queue.Queue())
+        with patch.object(self.app, 'render_metrics', side_effect=RuntimeError('private detail')):
+            self.assertTrue(self.app.drain_events())
+        self.assertIn('A06', self.app.resources.text)
+        self.assertNotIn('private detail', self.app.resources.text)

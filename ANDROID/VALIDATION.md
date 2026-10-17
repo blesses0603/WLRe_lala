@@ -28,3 +28,12 @@
 - 產物：[WLRe_LaLa-Android-v0.0.2-debug](https://github.com/blesses0603/WLRe_lala/actions/runs/39051241946/artifacts/12108650193)，包含 APK 與 SHA256SUMS；GitHub 回報壓縮產物大小 111,303,027 bytes。
 - 此執行環境取回 GitHub Azure Blob 產物時收到 Forbidden，因此未在本地解開 APK 檢查 manifest／校驗碼，不能宣稱已做本地產物驗證。
 - Android Keystore 實際加解密、手機安裝、正式服雙帳號、切 App、鎖屏與耗電仍待手機實測。
+
+## v0.0.3 啟動閃退調查
+
+使用者回報 v0.0.2 點開後、尚未看到登入畫面即閃退；尚未取得手機型號、Android 版本或 logcat，根因未確定。
+
+- 將 Android 服務／Keystore 初始化移出 App 建構子，等 Kivy 畫面建立後才執行；服務初始化失敗顯示 A01／A02，Keystore 失敗顯示 A03，避免未處理例外直接結束畫面。
+- 服務尚未就緒時禁止退回 Activity 內建立遊戲連線；資源監控例外顯示 A06，保留介面與服務連線。
+- 增加無正式帳號的 Android 35 x86_64 模擬器測試：確認 UI 與服務 readiness、切 Home、短暫關屏及返回，並上傳 logcat。此測試不能代替手機 ABI、正式連線或長時間鎖屏驗收。
+- 本地 Android 專用 24 項測試通過，包括初始化失敗不退出、不顯示例外中的敏感字串，以及監控例外保留畫面。

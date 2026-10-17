@@ -42,22 +42,53 @@ class LaLaApp(App):
         self.vault = None
         self.saved_accounts = []
         self.vault_error = False
+        self.android_initializing = False
+        self.android_ready_reported = False
+
+    def on_start(self):
+        print('WLRE_ANDROID_UI_READY', flush=True)
         if platform == 'android':
+            Clock.schedule_once(self.initialize_android, 0.5)
+
+    def initialize_android(self, *_):
+        if self.android_initializing: return
+        self.android_initializing = True
+        stage = 'A01'
+        try:
             from jnius import autoclass
             from android_app.runtime import ServiceManager
             from android_app.vault import AndroidCipher, AccountVault
             activity = autoclass('org.kivy.android.PythonActivity').mActivity
             directory = Path(str(activity.getNoBackupFilesDir().getAbsolutePath()))
-            self.android_service = autoclass('org.lala.client.wlrelala.ServiceConnections')
-            self.android_activity = activity
-            self.android_service.start(activity, '')
-            self.manager = ServiceManager(directory / 'runtime/sessions.sock')
+            stage = 'A02'
+            service = autoclass('org.lala.client.wlrelala.ServiceConnections')
+            service.start(activity, '')
+            self.android_service, self.android_activity = service, activity
+            if not getattr(self.manager, 'background', False):
+                self.manager = ServiceManager(directory / 'runtime/sessions.sock')
+            stage = 'A03'
             try:
                 self.vault = AccountVault(directory / 'accounts.enc', AndroidCipher())
                 self.saved_accounts = self.vault.load()
+                self.saved.values = self.saved_names()
+                self.remember.disabled = False
             except Exception:
                 self.vault_error = True
-                self.vault = None  # Never overwrite ciphertext after decryption failure.
+                self.vault = None
+                self.remember.disabled = True
+                self.message.text = '帳密解密／金鑰初始化失敗；原資料已保留，可不保存帳密登入（A03）'
+        except Exception as exc:
+            # Never show exception text: it may include credentials or paths.
+            self.message.text = 'Android 服務初始化失敗：' + stage + ' / ' + type(exc).__name__
+            print('WLRE_ANDROID_STARTUP_ERROR ' + stage + ' ' + type(exc).__name__, flush=True)
+        finally:
+            self.android_initializing = False
+
+    def stop_android_service(self, *_):
+        try:
+            self.android_service.stop(self.android_activity)
+        except Exception as exc:
+            self.message.text = '停止服務失敗（A04 / ' + type(exc).__name__ + '）'
 
 
     def build(self):
@@ -114,9 +145,9 @@ class LaLaApp(App):
         if platform == 'android':
             service_row = BoxLayout(size_hint_y=None, height=dp(44), spacing=dp(6))
             restart = Button(text='啟動背景服務')
-            restart.bind(on_release=lambda *_: self.android_service.start(self.android_activity, ''))
+            restart.bind(on_release=self.initialize_android)
             stop_service = Button(text='停止全部連線與服務')
-            stop_service.bind(on_release=lambda *_: self.android_service.stop(self.android_activity))
+            stop_service.bind(on_release=self.stop_android_service)
             service_row.add_widget(restart)
             service_row.add_widget(stop_service)
             base.add_widget(service_row)
@@ -139,10 +170,16 @@ class LaLaApp(App):
         outer.add_widget(base)
         if platform == 'android':
             from android.permissions import request_permissions
-            request_permissions(['android.permission.POST_NOTIFICATIONS'])
+            from jnius import autoclass
+            if autoclass('android.os.Build$VERSION').SDK_INT >= 33:
+                try: request_permissions(['android.permission.POST_NOTIFICATIONS'])
+                except Exception: self.message.text = '通知權限請由系統設定開啟（A05）'
         return outer
 
     def connect_account(self, *_):
+        if platform == 'android' and not getattr(self.manager, 'background', False):
+            self.message.text = '背景服務未就緒，請點擊啟動背景服務'
+            return
         record = self.lookup.get(self.server.text)
         account = self.account.text.strip()
         password = self.password.text
@@ -243,13 +280,13 @@ class LaLaApp(App):
                     record[0].text = '服務無回應；連線狀態未知'
                     for button in record[1].values(): button.disabled = True
             elif metrics:
-                import time
-                from jnius import autoclass
-                memory = autoclass('android.os.Debug$MemoryInfo')()
-                autoclass('android.os.Debug').getMemoryInfo(memory)
-                self.resources.text = ('在線 {online}／活動連線 {active}｜服務 PSS {service_pss_kib} KiB'.format(**metrics)
-                    + '\n畫面 PSS ' + str(memory.getTotalPss()) + ' KiB｜裝置電量 ' + str(metrics.get('battery_percent') if metrics.get('battery_percent') is not None else '未知')
-                    + '%｜裝置溫度 ' + str(metrics.get('device_temperature_c') if metrics.get('device_temperature_c') is not None else '未知') + '°C｜App 耗電未知｜' + time.strftime('%H:%M:%S', time.localtime(metrics['sample_time'])))
+                if not self.android_ready_reported:
+                    print('WLRE_ANDROID_SERVICE_CONNECTED', flush=True)
+                    self.android_ready_reported = True
+                try:
+                    self.render_metrics(metrics)
+                except Exception:
+                    self.resources.text = '資源監控暫時無法讀取（A06）；連線由服務管理'
         for _ in range(80):
             try:
                 sid, kind, value = self.manager.events.get_nowait()
@@ -298,6 +335,15 @@ class LaLaApp(App):
                 stop.text = "移除"
                 stop.bind(on_release=lambda _button, session_id=sid: self.remove_card(session_id))
         return True
+
+    def render_metrics(self, metrics):
+        import time
+        from jnius import autoclass
+        memory = autoclass('android.os.Debug$MemoryInfo')()
+        autoclass('android.os.Debug').getMemoryInfo(memory)
+        self.resources.text = ('在線 {online}／活動連線 {active}｜服務 PSS {service_pss_kib} KiB'.format(**metrics)
+            + '\n畫面 PSS ' + str(memory.getTotalPss()) + ' KiB｜裝置電量 ' + str(metrics.get('battery_percent') if metrics.get('battery_percent') is not None else '未知')
+            + '%｜裝置溫度 ' + str(metrics.get('device_temperature_c') if metrics.get('device_temperature_c') is not None else '未知') + '°C｜App 耗電未知｜' + time.strftime('%H:%M:%S', time.localtime(metrics['sample_time'])))
 
     def on_pause(self):
         self.password.text = ""
