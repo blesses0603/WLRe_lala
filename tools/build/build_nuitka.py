@@ -22,7 +22,7 @@ def data_files(root=ROOT):
                   and not any(part.startswith('.') or part=='__pycache__' for part in p.relative_to(root).parts))
 
 
-def make_command(python,mode='standalone',root=ROOT,compiler='auto'):
+def make_command(python,mode='standalone',root=ROOT,compiler='auto',diagnose_compiler=False):
     output=root/'dist_nuitka'/mode
     command=[str(python),'-m','nuitka','--mode='+mode,'--enable-plugin=tk-inter',
              '--include-package=wlre','--windows-console-mode=disable',
@@ -34,6 +34,10 @@ def make_command(python,mode='standalone',root=ROOT,compiler='auto'):
              '--file-description=飄流Re:LaLa  =By赤寧=',
              '--file-version='+__version__+'.0','--product-version='+__version__+'.0']
     if compiler!='auto':command.append('--msvc=latest' if compiler=='msvc' else '--mingw64')
+    if diagnose_compiler:
+        # --show-scons enables SCons --debug=stacktrace in Nuitka 4.3.
+        # Bypass clcache only on this diagnostic run, leaving defaults intact.
+        command.extend(['--disable-cache=ccache', '--show-scons'])
     command.extend('--include-data-files='+str(p)+'='+p.relative_to(root).as_posix() for p in data_files(root))
     command.append(str(root/'WLRE_Client.py'))
     return command
@@ -145,9 +149,11 @@ def main(argv=None):
     parser.add_argument('--compiler',choices=('auto','msvc','mingw64'),default='auto')
     parser.add_argument('--dry-run',action='store_true',help='只檢查並列出打包計畫，不安裝或編譯')
     parser.add_argument('--upgrade-deps',action='store_true',help='重新更新打包依賴與 pip')
+    parser.add_argument('--diagnose-compiler',action='store_true',
+                        help='本次停用 C 編譯快取並記錄 SCons 詳細指令及錯誤堆疊')
     args=parser.parse_args(argv)
     if args.dry_run:
-        print(json.dumps({'version':__version__,'command':make_command(sys.executable,args.mode,compiler=args.compiler),
+        print(json.dumps({'version':__version__,'command':make_command(sys.executable,args.mode,compiler=args.compiler,diagnose_compiler=args.diagnose_compiler),
                           'resource_count':len(data_files())},ensure_ascii=False,indent=2));return 0
     if os.name!='nt':parser.error('Windows EXE 請在 Windows 執行 build_nuitka.bat')
     if not (3,10)<=sys.version_info[:2]<=(3,14) or struct.calcsize('P')!=8:
@@ -166,7 +172,10 @@ def main(argv=None):
         with log.open('a',encoding='utf8') as stream:
             stream.write('Import library: '+str(library)+'\nStaged library: '+str(staged)+'\nHeader: '+str(header)+'\n')
         prepare_dependencies(python,environment,log,args.upgrade_deps)
-        run_logged(make_command(python,args.mode,compiler=compiler),log,library_dir=staged.parent)
+        if args.diagnose_compiler:
+            print('編譯診斷模式：本次停用 C 編譯快取，啟用 SCons 詳細指令與錯誤堆疊。',flush=True)
+        run_logged(make_command(python,args.mode,compiler=compiler,
+                                diagnose_compiler=args.diagnose_compiler),log,library_dir=staged.parent)
         executable=(output/'WLRE_Client.exe') if args.mode=='onefile' else (output/'WLRE_Client.dist/WLRE_Client.exe')
         if not executable.is_file():raise RuntimeError('編譯未產生預期的 EXE：'+str(executable))
         run_logged([str(executable),'--self-test'],log)

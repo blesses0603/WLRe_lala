@@ -2,6 +2,8 @@
 
 ## 2026-10-17 優化工作區
 
+- 可選編譯診斷模式：162 項測試中 161 通過、1 項 Windows DPAPI 略過；驗證預設保留快取、standalone／onefile 診斷模式僅新增 `--disable-cache=ccache` 與 `--show-scons`、CLI dry-run 正確轉傳且不編譯。核對 Nuitka 4.3 的 `--show-scons` 會啟用 SCons `--debug=stacktrace`；資源自檢與 diff 檢查通過。尚未在使用者 Windows Python 3.14.8／MSVC 14.5 實測，根因仍需新的診斷紀錄確認。
+
 - 打包 pip 自動修復：159 項測試中 158 通過、1 項 Windows DPAPI 略過；新增健康環境沿用、pip 匯入失敗後重建／再驗證、修復仍失敗即停止及新環境建立測試。資源自檢、打包 dry-run 及 diff 檢查通過；尚未在使用者 Windows Python 3.14.8 環境實際重建及編譯。
 
 - 自動 Releases：155 項測試中 154 通過、1 項 Windows DPAPI 略過；新增標籤版本不符拒絕、完整資料夾 ZIP 內容／SHA256、缺少或空 EXE 拒絕、CRC 失敗保留舊檔並清除暫存檔測試。actionlint 1.7.7、打包 dry-run、版本預檢、資源自檢及 diff 檢查通過。尚未觸發 Actions Windows 編譯或正式 Releases 發布；首次推送版本標籤後仍需確認雲端執行結果。

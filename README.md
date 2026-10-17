@@ -112,3 +112,14 @@
 亦可從該工作流程的 **Run workflow** 輸入已存在的版本標籤來執行。標籤必須包含本工作流程及打包程式；同版本已存在的 Release 不會被覆寫，若發布已完成，請使用新版本。版本不一致、測試／編譯／自檢／ZIP 驗證失敗時均不會發布。
 
 一般 `git push` 與本機 `build_nuitka.bat` 仍只提交程式碼或在本機打包，不會自動發布。Actions 使用 GitHub 內建的 `GITHUB_TOKEN`；只有發布工作擁有 `contents: write`，不需把個人 Token 放入程式或 BAT。儲存庫需啟用 GitHub Actions，組織權限政策也需允許此工作流程的寫入權限。
+
+
+### MSVC／SCons 編譯失敗診斷
+
+若編譯停在 `__constants.obj` 並出現 `UnicodeDecodeError: mbcs`，可在專案資料夾的 PowerShell 執行：
+
+```powershell
+.\build_nuitka.bat --compiler msvc --diagnose-compiler
+```
+
+本次會傳入 `--disable-cache=ccache` 與 `--show-scons`，略過 C 編譯快取並將 SCons 詳細指令與錯誤堆疊寫入 `dist_nuitka/standalone/build.log`。一般打包與 Releases 的預設快取行為維持不變；這是診斷模式，不代表已確認根因或保證編譯成功。如果仍失敗，請提供這次重新產生的完整 `build.log`。不必刪除專案或打包環境。
