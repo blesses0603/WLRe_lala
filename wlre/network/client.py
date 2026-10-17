@@ -4,6 +4,7 @@ Actual-server interoperability is capture-verified, but a live login from this
 implementation still needs to be tested by the account owner.
 """
 import queue
+from wlre.network.state_updates import StatePublisher, notify_state
 import socket
 import threading
 import time
@@ -46,20 +47,20 @@ def _send_command_packet(connection,packet,key,state,emit,on_state):
                'skill_id':int.from_bytes(data[4:6],'little') if packet.sub==1 else 10024}
         if packet.sub==2:event.update(item_id=int.from_bytes(data[4:6],'little'),bag_index=data[8])
         state.apply(event);emit(event)
-        if on_state:on_state(state.snapshot())
+        if on_state:notify_state(on_state,state)
     if (packet.main,packet.sub)==(23,15):
         event={'type':'field_item_sent','bag_index':packet.payload[0],'item_id':int.from_bytes(packet.payload[1:3],'little'),'npc_index':packet.payload[7]}
         state.apply(event);emit(event)
-        if on_state:on_state(state.snapshot())
+        if on_state:notify_state(on_state,state)
     if (packet.main,packet.sub)==(23,147):
         event={'type':'field_storage_sent','resource':'hp' if packet.payload[0]==3 else 'sp','npc_index':packet.payload[2],'amount':int.from_bytes(packet.payload[3:5],'little')}
         state.apply(event);emit(event)
-        if on_state:on_state(state.snapshot())
+        if on_state:notify_state(on_state,state)
     if packet.main==2 and packet.sub in (1,2,3,5,6):emit(sent_event(packet))
     movement=decode_outbound_movement(packet)
     if movement:
         state.apply(movement);emit(movement)
-        if on_state:on_state(state.snapshot())
+        if on_state:notify_state(on_state,state)
 
 
 def verify_account(endpoint, profile, account, password, emit, stop_event, timeout=10):
@@ -358,9 +359,12 @@ class SessionLogic:
 def run_client(host, port, profile, emit, *, account=None, password=None,
                login_kind=2, platform=None, language=None, role_index=None,
                duration=15, timeout=5, verify_first=False, stop_event=None,
-               commands=None, on_state=None):
+               commands=None, on_state=None, snapshot_interval=0):
     if duration is not None and duration <= 0 or timeout <= 0:
         raise ProtocolError('duration and timeout must be positive')
+    if snapshot_interval<0:raise ProtocolError('snapshot_interval must not be negative')
+    if on_state and snapshot_interval:
+        on_state=StatePublisher(on_state,snapshot_interval)
     stop_event = stop_event or threading.Event()
     commands = commands or queue.Queue()
     profile = dict(profile)
@@ -395,32 +399,33 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
                 if stop_event.wait(0.1): return state
                 _send(connection, request, profile['tx_xor'], emit)
             while not stop_event.is_set() and time.monotonic() < deadline:
+                if isinstance(on_state,StatePublisher):on_state.flush(state)
                 event_replies=logic.flush_events(state) if request else []
                 for response in event_replies:_send(connection,response,profile['tx_xor'],emit)
-                if event_replies and on_state:on_state(state.snapshot())
+                if event_replies and on_state:notify_state(on_state,state)
                 for _ in range(20):
                     try: command = commands.get_nowait()
                     except queue.Empty: break
                     try:
                         for packet in logic.command(command, state):
                             _send_command_packet(connection,packet,profile['tx_xor'],state,emit,on_state)
-                        if command.get('type') in ('team','start_alchemy','stop_alchemy','reset_efficiency','craft') and on_state:on_state(state.snapshot())
+                        if command.get('type') in ('team','start_alchemy','stop_alchemy','reset_efficiency','craft') and on_state:notify_state(on_state,state)
                         if command.get('type') in ('start_auto_battle','stop_auto_battle','set_party_guard'):
                             emit({'type':'auto_battle_status',**state.auto_battle})
-                            if on_state:on_state(state.snapshot())
+                            if on_state:notify_state(on_state,state)
                         if command.get('type') in ('start_roaming','stop_roaming'):
                             emit({'type':'roaming_status',**state.roaming})
-                            if on_state:on_state(state.snapshot())
+                            if on_state:notify_state(on_state,state)
                         if command.get('type') in ('walk','stop_walk','portal_walk','portal_direct'):
                             emit({'type':'local_movement','status':state.local_movement['status'],
                                   'scene':state.player.get('scene'),'target':state.local_movement['target'],
                                   'reason':state.local_movement['reason']}) if state.local_movement else None
-                            if on_state:on_state(state.snapshot())
+                            if on_state:notify_state(on_state,state)
                     except (ValueError, KeyError, TypeError) as exc:
                         emit({'type': 'command_rejected', 'command_type':command.get('type'), 'error': str(exc)})
                 before_craft=(state.crafting['status'],state.crafting['pending'],state.crafting['revision'],state.crafting['auto_continue'],repr(state.crafting.get('local_plan')))
                 for packet in logic.crafting.tick(state,time.monotonic()):_send_command_packet(connection,packet,profile['tx_xor'],state,emit,on_state)
-                if before_craft!=(state.crafting['status'],state.crafting['pending'],state.crafting['revision'],state.crafting['auto_continue'],repr(state.crafting.get('local_plan'))) and on_state:on_state(state.snapshot())
+                if before_craft!=(state.crafting['status'],state.crafting['pending'],state.crafting['revision'],state.crafting['auto_continue'],repr(state.crafting.get('local_plan'))) and on_state:notify_state(on_state,state)
                 supply_event=logic.field_supply.tick(state,time.monotonic())
                 if supply_event:
                     emit(supply_event)
@@ -428,24 +433,24 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
                         logic.auto_battle.stop(state,supply_event['reason'])
                         logic.roaming.stop(state,logic.movement,'補給結果未確認')
                         emit({'type':'auto_battle_status',**state.auto_battle})
-                    if on_state:on_state(state.snapshot())
+                    if on_state:notify_state(on_state,state)
                 before_ai=state.auto_battle
                 ai_packets=logic.auto_battle.tick(state,logic,time.monotonic())
                 if state.auto_battle is not before_ai:
                     emit({'type':'auto_battle_status',**state.auto_battle})
-                    if on_state:on_state(state.snapshot())
+                    if on_state:notify_state(on_state,state)
                 for packet in ai_packets:_send_command_packet(connection,packet,profile['tx_xor'],state,emit,on_state)
                 before_services=(state.alchemy['status'],state.alchemy['pending'],state.alchemy['completed'],state.party['status'])
                 service_packets=logic.alchemy.tick(state,time.monotonic())
                 expired=expire_team(state)
                 for packet in service_packets:_send_command_packet(connection,packet,profile['tx_xor'],state,emit,on_state)
                 after_services=(state.alchemy['status'],state.alchemy['pending'],state.alchemy['completed'],state.party['status'])
-                if (expired or before_services!=after_services) and on_state:on_state(state.snapshot())
+                if (expired or before_services!=after_services) and on_state:notify_state(on_state,state)
                 before_roaming=state.roaming
                 logic.roaming.tick(state,logic.movement,time.monotonic())
                 if state.roaming is not before_roaming:
                     emit({'type':'roaming_status',**state.roaming})
-                    if on_state:on_state(state.snapshot())
+                    if on_state:notify_state(on_state,state)
                 before_tick=state.local_movement
                 packets=logic.movement.tick(state,time.monotonic())
                 for packet in packets:
@@ -456,7 +461,7 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
                 before_portal=state.portal_travel
                 for packet in logic.portal_travel.tick(state,logic.movement,time.monotonic()):
                     _send(connection,packet,profile['tx_xor'],emit)
-                if on_state and (state.local_movement is not before_tick or state.portal_travel is not before_portal):on_state(state.snapshot())
+                if on_state and (state.local_movement is not before_tick or state.portal_travel is not before_portal):notify_state(on_state,state)
                 try: raw = connection.recv(65536)
                 except socket.timeout: continue
                 if not raw: break
@@ -467,10 +472,10 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
                     if request:
                         for response in logic.receive(event, state):
                             _send(connection, response, profile['tx_xor'], emit)
-                    if on_state and event['type'] != 'unimplemented': on_state(state.snapshot())
+                    if on_state and event['type'] != 'unimplemented': notify_state(on_state,state)
                 event_replies=logic.flush_events(state) if request else []
                 for response in event_replies:_send(connection,response,profile['tx_xor'],emit)
-                if event_replies and on_state:on_state(state.snapshot())
+                if event_replies and on_state:notify_state(on_state,state)
             if not stop_event.is_set(): parser.finish()
     finally:
         logic.crafting.disconnect(state)
@@ -478,6 +483,6 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
         logic.portal_travel.cancel(state,'連線結束，已取消傳點移動')
         logic.auto_battle.stop(state,'連線結束')
         logic.roaming.stop(state,logic.movement,'連線結束')
-        if on_state:on_state(state.snapshot())
+        if on_state:notify_state(on_state,state,force=True)
         emit({'type': 'connection_closed', 'last_phase': state.phase})
     return state

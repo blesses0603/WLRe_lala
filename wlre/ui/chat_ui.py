@@ -77,8 +77,10 @@ class ChatPanel(ttk.Frame):
         self.app.send(command)
 
     def handle_event(self,event,state):
-        self.update_names(state,event)
         kind=event['type']
+        if kind not in ('chat_sent','chat_result','chat_notice','connection_closed','chat_message','command_rejected'):return
+        if kind=='command_rejected' and event.get('command_type')!='chat':return
+        self.update_names(state,event)
         if kind=='chat_sent':
             self.finish_pending()
             if self.text.get()==event['text']:self.text.set('')

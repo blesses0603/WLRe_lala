@@ -2,6 +2,7 @@
 import json
 import queue
 import threading
+import time
 import tkinter as tk
 from wlre.ui.window_layout import configure_dialog
 from wlre.ui.rounded_notebook import RoundedNotebook
@@ -545,7 +546,7 @@ class App:
                 run_client(host,port,profile,lambda e:self.events.put(('event',e)),
                            account=account,password=password,verify_first=verify,duration=None,
                            stop_event=self.stop_event,commands=self.commands,
-                           on_state=lambda s:self.events.put(('state',s)))
+                           on_state=lambda s:self.events.put(('state',s)),snapshot_interval=0.1)
             finally:
                 self.live_active=False
                 self.events.put(('session_finished',None))
@@ -644,7 +645,9 @@ class App:
         latest=None
         status_override=None
         session_finished=False
+        deadline=time.perf_counter()+0.008
         for _ in range(500):
+            if time.perf_counter()>=deadline:break
             try:kind,data=self.events.get_nowait()
             except queue.Empty:break
             if kind=='session_finished':session_finished=True
@@ -672,7 +675,7 @@ class App:
             self.connect_button.configure(state='normal')
         elif latest and self.live_active and latest.get('phase')=='world_ready' and latest.get('player'):
             if not self.entered_world:self.show_main()
-        self.root.after(50,self.poll)
+        self.root.after(10 if not self.events.empty() else 50,self.poll)
 
     def stop(self):
         self.stop_event.set()
