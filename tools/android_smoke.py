@@ -24,7 +24,7 @@ def main():
         deadline = time.monotonic() + 90
         while True:
             logs = adb('logcat', '-d', '-v', 'threadtime')
-            if 'WLRE_ANDROID_UI_READY' in logs and 'WLRE_ANDROID_SERVICE_CONNECTED' in logs: break
+            if all(marker in logs for marker in ('WLRE_ANDROID_UI_READY', 'WLRE_ANDROID_SERVICE_CONNECTED', 'WLRE_ANDROID_KEYSTORE_READY')): break
             if time.monotonic() >= deadline: raise RuntimeError('UI/service readiness markers missing')
             time.sleep(2)
         assert alive(PACKAGE), 'Activity process exited'

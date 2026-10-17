@@ -35,8 +35,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y autoconf automake libtool pkg-config cmake libffi-dev libssl-dev libsqlite3-dev zlib1g-dev libncurses5-dev libncursesw5-dev libltdl-dev zip unzip
           python -m pip install 'buildozer>=1.5,<2' 'cython<3'
+      - uses: actions/cache@v6.1.0
+        with:
+          path: |
+            ~/.buildozer/android
+            .buildozer/android/platform
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-wlre-x86-${{ hashFiles('buildozer.spec') }}
       - name: Build emulator APK (not the arm64 phone download)
         run: |
+          rm -rf .buildozer/android/app bin
           sed -i 's/android.archs = arm64-v8a/android.archs = x86_64/' buildozer.spec
           buildozer -v android debug
       - name: Upload emulator APK

@@ -9,7 +9,7 @@ class AndroidCipher:
     alias = 'WLRe_LaLa.accounts.v1'
 
     def __init__(self):
-        from jnius import autoclass
+        from jnius import autoclass, cast
         self.cls = autoclass
         self.store = autoclass('java.security.KeyStore').getInstance('AndroidKeyStore')
         self.store.load(None)
@@ -18,12 +18,12 @@ class AndroidCipher:
             builder = autoclass('android.security.keystore.KeyGenParameterSpec$Builder')(
                 self.alias, props.PURPOSE_ENCRYPT | props.PURPOSE_DECRYPT)
             builder.setKeySize(256)
-            builder.setBlockModes([props.BLOCK_MODE_GCM])
-            builder.setEncryptionPaddings([props.ENCRYPTION_PADDING_NONE])
+            builder.setBlockModes(props.BLOCK_MODE_GCM)
+            builder.setEncryptionPaddings(props.ENCRYPTION_PADDING_NONE)
             gen = autoclass('javax.crypto.KeyGenerator').getInstance('AES', 'AndroidKeyStore')
-            gen.init(builder.build())
+            gen.init(cast('java.security.spec.AlgorithmParameterSpec', builder.build()))
             gen.generateKey()
-        self.key = self.store.getKey(self.alias, None)
+        self.key = cast('java.security.Key', self.store.getKey(self.alias, None))
 
     def encrypt(self, data):
         cipher = self.cls('javax.crypto.Cipher').getInstance('AES/GCM/NoPadding')
@@ -34,8 +34,9 @@ class AndroidCipher:
 
     def decrypt(self, record):
         cipher = self.cls('javax.crypto.Cipher').getInstance('AES/GCM/NoPadding')
+        from jnius import cast
         spec = self.cls('javax.crypto.spec.GCMParameterSpec')(128, base64.b64decode(record['iv']))
-        cipher.init(2, self.key, spec)
+        cipher.init(2, self.key, cast('java.security.spec.AlgorithmParameterSpec', spec))
         return bytes(int(b) & 255 for b in cipher.doFinal(base64.b64decode(record['data'])))
 
 

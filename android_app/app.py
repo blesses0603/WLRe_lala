@@ -80,10 +80,16 @@ class LaLaApp(App):
                 self.manager = ServiceManager(directory / 'runtime/sessions.sock')
             stage = 'A03'
             try:
-                self.vault = AccountVault(directory / 'accounts.enc', AndroidCipher())
+                cipher = AndroidCipher()
+                import os
+                probe = os.urandom(32)
+                if cipher.decrypt(cipher.encrypt(probe)) != probe:
+                    raise ValueError('Keystore roundtrip failed')
+                self.vault = AccountVault(directory / 'accounts.enc', cipher)
                 self.saved_accounts = self.vault.load()
                 self.saved.values = self.saved_names()
                 self.remember.disabled = False
+                print('WLRE_ANDROID_KEYSTORE_READY', flush=True)
             except Exception:
                 self.vault_error = True
                 self.vault = None

@@ -39,3 +39,11 @@
 - 本地 Android 專用 24 項測試通過，包括初始化失敗不退出、不顯示例外中的敏感字串，以及監控例外保留畫面。
 
 - 依使用者指定，以 Android 12+ 為支援目標，最低 API 調整為 31；不預先宣稱尚未測試的 Android 版本或所有廠牌均已相容。
+
+## v0.0.4：模擬器重現的 JNI 原生中止
+
+- v0.0.3 Android API 31／32／33 啟動測試失敗；API 31 的 logcat 明確顯示 `ArrayStoreException: java.lang.String[] cannot be stored in an array of type java.lang.String[]`，隨後 `JNI DETECTED ERROR IN APPLICATION`／SIGABRT。
+- Keystore Builder 的 Java varargs 誤傳 Python list，PyJNIUS 將其再次包成陣列；修正為逐個字串參數。這種 JVM 原生中止不能由 Python try/except 攔截，因此 v0.0.3 的啟動防護不足以修好此問題，請勿視為修復完成。
+- 使用真實 PyJNIUS 1.7.0／JDK 17 發現並修正 Cipher.init／KeyGenerator.init 的多載型別選擇，明確 cast 為 Key／AlgorithmParameterSpec。
+- 新增真實 Java varargs 與 AES-GCM 全位元組回歸測試（Android KeyStore provider 以測試 stub 代替，JCE 加解密為真實 Java 呼叫）；本地 25 項 Android 測試通過。
+- 模擬器新增實際 Android Keystore 隨機資料加密／解密成功標記，必須同時通過 UI、服務與 Keystore 才算啟動測試成功。v0.0.4 需重新跑 API 31–36，結果另行記錄。

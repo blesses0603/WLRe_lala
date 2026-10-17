@@ -1,4 +1,4 @@
-name: Android v0.0.3 Test APK
+name: Android v0.0.4 Test APK
 
 on:
   push:
@@ -48,23 +48,33 @@ jobs:
       - name: Install Buildozer
         run: |
           python -m pip install --upgrade pip
-          python -m pip install "buildozer>=1.5,<2" "cython<3" "kivy==2.3.1" Pillow cryptography
+          python -m pip install "buildozer>=1.5,<2" "cython<3" "kivy==2.3.1" Pillow cryptography pyjnius==1.7.0
       - name: Test Android isolation, IPC, encrypted storage and UI
         run: xvfb-run -a python -m unittest discover -s tests -p 'test_android*.py' -q
       - name: Check Python syntax before packaging
         run: python -m compileall -q main.py android_app wlre
+      - uses: actions/cache@v6.1.0
+        with:
+          path: |
+            ~/.buildozer/android
+            .buildozer/android/platform
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-wlre-arm64-${{ hashFiles('buildozer.spec') }}
       - name: Build Android debug APK
-        run: buildozer -v android debug
+        run: |
+          rm -rf .buildozer/android/app bin
+          buildozer -v android debug
       - name: Name APK and generate checksum
         run: |
           mkdir -p android-output
-          cp "$(find bin -maxdepth 1 -name '*.apk' -print -quit)" android-output/WLRe_LaLa-Android-v0.0.3-debug.apk
+          cp "$(find bin -maxdepth 1 -name '*.apk' -print -quit)" android-output/WLRe_LaLa-Android-v0.0.4-debug.apk
           cd android-output
-          sha256sum WLRe_LaLa-Android-v0.0.3-debug.apk > SHA256SUMS.txt
+          sha256sum WLRe_LaLa-Android-v0.0.4-debug.apk > SHA256SUMS.txt
       - name: Upload APK (only after successful build)
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: WLRe_LaLa-Android-v0.0.3-debug
+          name: WLRe_LaLa-Android-v0.0.4-debug
           path: android-output/*
           if-no-files-found: error
           retention-days: 14
