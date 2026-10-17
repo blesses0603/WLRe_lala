@@ -14,6 +14,8 @@
 - `crafting_browser.py`
 - `crafting_plan_ui.py`
 - `crafting_ui.py`
+- `dashboard_layout.py`：主視窗幾何與區域配置
+- `overview_ui.py`：狀態摘要與功能入口
 - `efficiency_ui.py`
 - `gui.py`
 - `home_map.py`

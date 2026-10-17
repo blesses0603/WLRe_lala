@@ -13,8 +13,8 @@ from wlre.network.wire import ProtocolError
 
 
 class ChatPanel(ttk.Frame):
-    def __init__(self,parent,app):
-        super().__init__(parent,height=250)
+    def __init__(self,parent,app,height=250):
+        super().__init__(parent,height=height)
         self.pack_propagate(False)
         self.app=app;self.messages=deque(maxlen=200);self.pending=False;self.line_targets={};self.line_events={};self.names=NameBook();self.quote=None;self.sent_quote=None;self.emoji_picker=None;self.emojis=EmojiImages(self)
         box=group(self,text='聊天',padding=6);box.pack(fill='both',expand=True)

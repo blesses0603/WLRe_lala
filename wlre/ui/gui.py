@@ -24,6 +24,7 @@ from wlre.ui.chat_ui import ChatPanel
 from wlre.core.event_log import lines as local_event_lines, chinese, PHASES
 from wlre.ui.efficiency_ui import EfficiencyPanel
 from wlre.ui.overview_ui import OverviewPanel
+from wlre.ui.dashboard_layout import DashboardLayout
 from wlre.ui.crafting_ui import CraftingPanel
 from wlre.services.world.movement_display import movement_summary
 from wlre.services.battle import party_guard;from wlre.storage import login_memory;from wlre.storage import server_lines
@@ -74,45 +75,24 @@ class App:
         self.world=tk.StringVar(value='尚未收到本機角色位置。')
         self.world_compact=tk.StringVar(value='尚未收到角色位置')
         self.movement_status=tk.StringVar(value='尚無移動要求。')
-        box=ttk.Frame(root,padding=16)
-        box.pack(fill='both',expand=True)
-        header=ttk.Frame(box)
-        header.pack(fill='x',pady=(0,8))
-        ttk.Label(header,text='角色控制',style='Heading.TLabel').pack(side='left')
-        ttk.Label(header,text=__version__,style='Muted.TLabel').pack(side='left',padx=12)
-        ttk.Button(header,text='登入／選角',command=self.show_login).pack(side='right',padx=3)
-        ttk.Button(header,text='中斷連線',command=self.stop).pack(side='right',padx=3)
-        status_label=ttk.Label(box,textvariable=self.status,wraplength=1536)
-        status_label.pack(fill='x',pady=(0,3))
-        status_label.bind('<Configure>',lambda e:status_label.configure(wraplength=max(1,e.width)))
-        self.position_summary=ttk.Label(box,textvariable=self.world_compact,anchor='w')
-        self.position_summary.pack(fill='x',pady=(0,6))
-        self.main_tab=ttk.Frame(box)
-        self.main_tab.pack(fill='both',expand=True)
-        panes=ttk.Frame(self.main_tab)
-        panes.columnconfigure(0,minsize=640,weight=1)
-        panes.columnconfigure(1,minsize=600,weight=1)
-        panes.rowconfigure(0,weight=1)
-        panes.pack(fill='both',expand=True)
-        left_panel=ttk.Frame(panes,width=660)
-        left_panel.grid(row=0,column=0,sticky='nsew',padx=(0,10))
-        left_panel.grid_propagate(False)
-        left_panel.pack_propagate(False)
+        self.layout=DashboardLayout(root,self)
+        self.position_summary=self.layout.position
+        self.main_tab=self.layout.content
+        left_panel=self.layout.left
+        right=self.layout.right
         self.left_panel=left_panel
-        self.chat_panel=ChatPanel(left_panel,self)
+        self.chat_panel=ChatPanel(left_panel,self,height=205)
         self.chat_panel.pack(side='bottom',fill='x',pady=(8,0))
         left_tabs=RoundedNotebook(left_panel)
         self.left_tabs=left_tabs
         left_tabs.pack(fill='both',expand=True)
-        overview=ttk.Frame(left_tabs,padding=12)
+        overview=ttk.Frame(left_tabs,padding=(0,4))
         left_tabs.add(overview,text='主頁')
         self.overview_panel=OverviewPanel(overview,self)
         self.overview_panel.pack(fill='both',expand=True)
         left_outer=ttk.Frame(left_tabs)
         left_tabs.add(left_outer,text='戰鬥/徘徊')
         self.battle_page=left_outer
-        right=ttk.Frame(panes)
-        right.grid(row=0,column=1,sticky='nsew')
         battle=LabelFrame(left_outer,text='戰場',padding=8)
         battle.pack(fill='both',expand=True)
         tabs=RoundedNotebook(battle)
@@ -162,10 +142,10 @@ class App:
         self.efficiency_panel=EfficiencyPanel(left_tabs,self)
         left_tabs.add(self.efficiency_panel,text='經驗效率')
         self.overview_panel.update_state({})
-        self.logs_frame=LabelFrame(right,text='事件紀錄',padding=6,height=120)
+        self.logs_frame=LabelFrame(right,text='事件紀錄',padding=6,height=205)
         self.logs_frame.pack(side='bottom',fill='x',pady=(8,0))
         self.logs_frame.pack_propagate(False)
-        self.home_map=HomeMap(right,self.pick_map_destination,self.open_navigation,on_move=self.walk,on_portal=lambda portal_id:self.send({'type':'portal_direct','portal_id':portal_id}),show_status=False)
+        self.home_map=HomeMap(right,self.pick_map_destination,self.open_navigation,on_move=self.walk,on_portal=lambda portal_id:self.send({'type':'portal_direct','portal_id':portal_id}),show_status=False,compact=True)
         self.home_map.pack(fill='both',expand=True)
         logs=self.logs_frame
         self.log=tk.Text(logs,height=5,state='disabled',wrap='word',font=('Microsoft JhengHei UI',-16),background='#142638',foreground='#eff7ff',insertbackground='#eff7ff',relief='flat')
@@ -173,8 +153,6 @@ class App:
         self.log.configure(yscrollcommand=logscroll.set)
         logscroll.pack(side='right',fill='y')
         self.log.pack(side='left',fill='both',expand=True)
-        self.main_tab.pack_forget()
-        self.main_tab.pack(fill='both',expand=True)
         try:
             self.set_profile(load_default_profile())
             self.status.set('已載入預設連線設定。請登入並選角，進入遊戲後自動開啟主頁。')

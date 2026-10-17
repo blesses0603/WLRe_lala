@@ -31,9 +31,10 @@ class GlassGroup(ttk.Frame):
             top = values[1] if len(values) > 1 else left
             right = values[2] if len(values) > 2 else left
             bottom = values[3] if len(values) > 3 else top
-        super().__init__(parent, padding=(left, top+18, right, bottom), **kwargs)
+        caption_height=tkfont.nametofont('TkDefaultFont',root=parent).metrics('linespace')
+        super().__init__(parent, padding=(left, top+caption_height+8, right, bottom), **kwargs)
         self.caption = ttk.Label(self, text=text, style='Section.TLabel')
-        self.caption.place(x=12, y=8, bordermode='outside')
+        self.caption.place(x=12, y=4, bordermode='outside')
 
 
 def group(parent, **kwargs):
@@ -64,7 +65,9 @@ class GlassTheme:
             icon=source.convert('RGBA')
         self.icon=ImageTk.PhotoImage(icon,master=root)
         self.title_icon=ImageTk.PhotoImage(icon.resize((24,24),Image.Resampling.LANCZOS),master=root)
-        self.font = 'Microsoft JhengHei UI' if os.name == 'nt' else 'WenQuanYi Micro Hei'
+        families=set(tkfont.families(root))
+        candidates=('Microsoft JhengHei UI','Noto Sans CJK TC','Noto Serif CJK TC','WenQuanYi Micro Hei')
+        self.font=next((name for name in candidates if name in families),tkfont.nametofont('TkDefaultFont',root=root).actual('family'))
         root.tk.call('tk', 'scaling', 1.0)
         self.configure_styles()
         root.bind_all('<Map>', self.mapped, add='+')

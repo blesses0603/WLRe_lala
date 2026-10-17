@@ -14,8 +14,8 @@ from wlre.services.world.portal_policy import allowed_rows, destination_problem
 
 
 class HomeMap(ttk.Frame):
-    def __init__(self,parent,on_pick,on_navigation,on_move=None,on_portal=None,status_parent=None,show_status=True):
-        super().__init__(parent,padding=12)
+    def __init__(self,parent,on_pick,on_navigation,on_move=None,on_portal=None,status_parent=None,show_status=True,compact=False):
+        super().__init__(parent,padding=8 if compact else 12)
         self.on_pick,self.on_navigation=on_pick,on_navigation
         self.on_move=on_move
         self.on_portal=on_portal
@@ -59,11 +59,10 @@ class HomeMap(ttk.Frame):
         self.portal_status=tk.StringVar(value='單擊選取傳點，按換圖按鈕或雙擊才送出；不會自動走路。')
         body=ttk.Frame(self)
         body.grid(row=3,column=0,sticky='nsew')
-        sidebar=ttk.Frame(body,width=185)
+        sidebar=ttk.Frame(body,width=155 if compact else 185)
         sidebar.pack(side='left',fill='y',padx=(0,8))
         sidebar.pack_propagate(False)
         lists=RoundedNotebook(sidebar)
-        lists.pack(fill='both',expand=True)
         self.npc_tab=ttk.Frame(lists)
         self.monster_tab=ttk.Frame(lists)
         lists.add(self.npc_tab,text='NPC')
@@ -80,11 +79,12 @@ class HomeMap(ttk.Frame):
         mbar.pack(side='right',fill='y');self.monster_list.pack(fill='both',expand=True)
         self.monster_list.bind('<<ListboxSelect>>',self.choose_monster)
         self.portal_go=ttk.Button(sidebar,text='直接嘗試換圖',command=self.go_portal,state='disabled')
-        self.portal_go.pack(fill='x',pady=(6,3))
-        ttk.Button(sidebar,text='逐圖核對',command=self.show_audit).pack(fill='x')
+        ttk.Button(sidebar,text='逐圖核對',command=self.show_audit).pack(side='bottom',fill='x')
+        self.portal_go.pack(side='bottom',fill='x',pady=(6,3))
+        lists.pack(fill='both',expand=True)
         mapbody=ttk.Frame(body)
         mapbody.pack(side='left',fill='both',expand=True)
-        self.canvas=tk.Canvas(mapbody,background='#18232c',highlightthickness=0,width=420,height=280)
+        self.canvas=tk.Canvas(mapbody,background='#18232c',highlightthickness=0,width=300 if compact else 420,height=240 if compact else 280)
         self.canvas.pack(fill='both',expand=True)
         self.canvas.bind('<Configure>',self.resize)
         self.canvas.bind('<Button-1>',self.pick)

@@ -85,42 +85,43 @@ class OverviewPanel(ttk.Frame):
     def __init__(self,parent,app):
         super().__init__(parent);self.app=app;self.values={};self.signature=None
         self.labels={};self.full_values={};self.cards={}
-        self.columnconfigure(0,weight=1,uniform='overview')
-        self.columnconfigure(1,weight=1,uniform='overview')
-        for row,weight in enumerate((2,1,1,1,1,1)):
-            self.rowconfigure(row,weight=weight,uniform='overview_rows')
+        self.columnconfigure(0,weight=1)
         layout=(
-            ('role','角色與夥伴',None,0,0,2,3),
-            ('activity','目前活動',None,1,0,2,2),
-            ('ai','自動戰鬥','ai_page',2,0,1,2),
-            ('roaming','自動徘徊','roam_page',2,1,1,2),
-            ('supply','補給紀錄',None,3,0,1,2),
-            ('alchemy','自動煉金','alchemy_panel',3,1,1,2),
-            ('crafting','家具製作','crafting_panel',4,0,1,2),
-            ('party','隊伍與必要隊員','party_panel',4,1,1,2),
-            ('efficiency','經驗效率','efficiency_panel',5,0,2,2),
+            ('role','角色與夥伴',None,3,84),
+            ('activity','目前活動',None,1,38),
+            ('ai','自動戰鬥','ai_page',1,32),
+            ('roaming','自動徘徊','roam_page',1,32),
+            ('supply','補給紀錄',None,1,32),
+            ('alchemy','自動煉金','alchemy_panel',1,32),
+            ('crafting','家具製作','crafting_panel',1,32),
+            ('party','隊伍檢查','party_panel',2,48),
+            ('efficiency','經驗效率','efficiency_panel',2,48),
         )
-        for key,title,destination,row,column,span,lines in layout:
-            frame=ttk.Frame(self,padding=(6,2))
-            frame.grid(row=row,column=column,columnspan=span,sticky='nsew',padx=2,pady=2)
+        self.actions={}
+        for row,(key,title,destination,lines,height) in enumerate(layout):
+            self.rowconfigure(row,minsize=height,weight=1 if key=='role' else 0)
+            frame=ttk.Frame(self,padding=(8,3))
+            frame.grid(row=row,column=0,sticky='nsew')
             frame.grid_propagate(False)
-            frame.columnconfigure(0,weight=1)
-            frame.rowconfigure(1,weight=1)
+            frame.columnconfigure(1,weight=1)
+            frame.rowconfigure(0,weight=1)
             self.cards[key]=frame
-            ttk.Label(frame,text=title,style='Section.TLabel').grid(row=0,column=0,sticky='w')
+            ttk.Label(frame,text=title,style='Section.TLabel',width=9,anchor='nw').grid(row=0,column=0,sticky='nw',padx=(0,6))
             value=tk.StringVar();self.values[key]=value
-            label=ttk.Label(frame,textvariable=value,justify='left',anchor='nw')
-            label.grid(row=1,column=0,columnspan=2,sticky='nsew')
+            label=ttk.Label(frame,textvariable=value,justify='left',anchor='w')
+            label.grid(row=0,column=1,sticky='nsew')
             self.labels[key]=(label,lines)
             label.bind('<Configure>',lambda e,k=key:self.fit_value(k))
             label.bind('<Double-1>',lambda e,k=key:self.show_detail(k))
             if destination:
                 callback=lambda d=destination:self.open_panel(d)
-                text='查看'
-            elif key=='role':callback=app.open_resources;text='包包／特技'
+                text='開啟'
+            elif key=='role':callback=app.open_resources;text='包包'
             elif key=='supply':callback=lambda:self.open_panel('ai_page',settings=True);text='設定'
             else:callback=lambda k=key:self.show_detail(k);text='詳情'
-            ttk.Button(frame,text=text,command=callback).grid(row=0,column=1,sticky='e',padx=(4,0))
+            button=ttk.Button(frame,text=text,width=4,command=callback,padding=(3,2))
+            button.grid(row=0,column=2,sticky='e',padx=(6,0))
+            self.actions[key]=button
         self.after(1000,self.tick)
 
     def open_panel(self,name,settings=False):
@@ -149,7 +150,7 @@ class OverviewPanel(ttk.Frame):
         lines=text.splitlines()
         if len(lines)>limit:
             lines=lines[:limit-1]+['｜'.join(lines[limit-1:])]
-        font=tkfont.Font(font=label.cget('font') or 'TkDefaultFont')
+        font=tkfont.nametofont('TkDefaultFont',root=self)
         width=max(1,label.winfo_width()-4)
         height=max(1,label.winfo_height())
         visible=max(1,min(limit,height//max(1,font.metrics('linespace'))))
