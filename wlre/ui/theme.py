@@ -392,6 +392,12 @@ class GlassTheme:
         states = ('normal', 'active', 'pressed', 'disabled') if cls == 'TButton' else ('normal',)
         for state in states:
             surface = crop.copy()
+            if cls == 'TLabelframe' or type(widget).__name__ in ('HomeMap', 'GlassGroup') or getattr(widget, '_section_outline', False):
+                overlay = Image.new('RGBA', crop.size)
+                ImageDraw.Draw(overlay).rounded_rectangle(
+                    (1, 5 if cls == 'TLabelframe' else 1, crop.width-2, crop.height-2),
+                    radius=14, outline=(98, 201, 224, 150))
+                surface = Image.alpha_composite(surface, overlay)
             if cls == 'TButton':
                 overlay = Image.new('RGBA', crop.size)
                 d = ImageDraw.Draw(overlay)

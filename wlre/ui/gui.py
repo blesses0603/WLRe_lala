@@ -104,7 +104,8 @@ class App:
         left_tabs.add(overview,text='主頁')
         self.overview_panel=OverviewPanel(overview,self)
         self.overview_panel.pack(fill='both',expand=True)
-        left_outer=ttk.Frame(left_tabs)
+        left_outer=ttk.Frame(left_tabs,padding=6)
+        left_outer._section_outline=True
         left_tabs.add(left_outer,text='戰鬥/徘徊')
         self.battle_page=left_outer
         tabs=RoundedNotebook(left_outer,borderless=True)
