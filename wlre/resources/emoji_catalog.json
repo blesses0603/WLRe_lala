@@ -1,0 +1,504 @@
+{
+  "source": "1262 EmojiData_C; Lua array index maps [EmojiN]",
+  "entries": {
+    "1": {
+      "id": 1,
+      "mark_id": 0,
+      "sprite": "Emoji_001",
+      "text_id": 34878,
+      "show_in_list": true,
+      "available": true
+    },
+    "2": {
+      "id": 2,
+      "mark_id": 0,
+      "sprite": "Emoji_002",
+      "text_id": 34879,
+      "show_in_list": true,
+      "available": true
+    },
+    "3": {
+      "id": 3,
+      "mark_id": 0,
+      "sprite": "Emoji_003",
+      "text_id": 34880,
+      "show_in_list": true,
+      "available": true
+    },
+    "4": {
+      "id": 4,
+      "mark_id": 0,
+      "sprite": "Emoji_004",
+      "text_id": 34881,
+      "show_in_list": true,
+      "available": true
+    },
+    "5": {
+      "id": 5,
+      "mark_id": 0,
+      "sprite": "Emoji_005",
+      "text_id": 34882,
+      "show_in_list": true,
+      "available": true
+    },
+    "6": {
+      "id": 6,
+      "mark_id": 0,
+      "sprite": "Emoji_006",
+      "text_id": 34883,
+      "show_in_list": true,
+      "available": true
+    },
+    "7": {
+      "id": 7,
+      "mark_id": 0,
+      "sprite": "Emoji_007",
+      "text_id": 34884,
+      "show_in_list": true,
+      "available": true
+    },
+    "8": {
+      "id": 8,
+      "mark_id": 0,
+      "sprite": "Emoji_008",
+      "text_id": 34885,
+      "show_in_list": true,
+      "available": true
+    },
+    "9": {
+      "id": 9,
+      "mark_id": 0,
+      "sprite": "Emoji_009",
+      "text_id": 34886,
+      "show_in_list": true,
+      "available": true
+    },
+    "10": {
+      "id": 10,
+      "mark_id": 0,
+      "sprite": "Emoji_010",
+      "text_id": 34887,
+      "show_in_list": true,
+      "available": true
+    },
+    "11": {
+      "id": 11,
+      "mark_id": 0,
+      "sprite": "Emoji_011",
+      "text_id": 34888,
+      "show_in_list": true,
+      "available": true
+    },
+    "12": {
+      "id": 12,
+      "mark_id": 0,
+      "sprite": "Emoji_012",
+      "text_id": 34889,
+      "show_in_list": true,
+      "available": true
+    },
+    "13": {
+      "id": 13,
+      "mark_id": 0,
+      "sprite": "Emoji_013",
+      "text_id": 34890,
+      "show_in_list": true,
+      "available": true
+    },
+    "14": {
+      "id": 14,
+      "mark_id": 0,
+      "sprite": "Emoji_014",
+      "text_id": 34891,
+      "show_in_list": true,
+      "available": true
+    },
+    "15": {
+      "id": 15,
+      "mark_id": 0,
+      "sprite": "Emoji_015",
+      "text_id": 34892,
+      "show_in_list": true,
+      "available": true
+    },
+    "16": {
+      "id": 16,
+      "mark_id": 0,
+      "sprite": "Emoji_016",
+      "text_id": 34893,
+      "show_in_list": true,
+      "available": true
+    },
+    "17": {
+      "id": 17,
+      "mark_id": 0,
+      "sprite": "Emoji_017",
+      "text_id": 34894,
+      "show_in_list": true,
+      "available": true
+    },
+    "18": {
+      "id": 18,
+      "mark_id": 0,
+      "sprite": "Emoji_018",
+      "text_id": 34895,
+      "show_in_list": true,
+      "available": true
+    },
+    "19": {
+      "id": 19,
+      "mark_id": 0,
+      "sprite": "Emoji_019",
+      "text_id": 34896,
+      "show_in_list": true,
+      "available": true
+    },
+    "20": {
+      "id": 20,
+      "mark_id": 0,
+      "sprite": "Emoji_020",
+      "text_id": 34897,
+      "show_in_list": true,
+      "available": true
+    },
+    "21": {
+      "id": 21,
+      "mark_id": 1,
+      "sprite": "Emoji_045",
+      "text_id": 34915,
+      "show_in_list": true,
+      "available": true
+    },
+    "22": {
+      "id": 22,
+      "mark_id": 2,
+      "sprite": "Emoji_046",
+      "text_id": 34916,
+      "show_in_list": true,
+      "available": true
+    },
+    "23": {
+      "id": 23,
+      "mark_id": 3,
+      "sprite": "Emoji_047",
+      "text_id": 34917,
+      "show_in_list": true,
+      "available": true
+    },
+    "24": {
+      "id": 24,
+      "mark_id": 4,
+      "sprite": "Emoji_048",
+      "text_id": 34918,
+      "show_in_list": true,
+      "available": true
+    },
+    "25": {
+      "id": 25,
+      "mark_id": 5,
+      "sprite": "Emoji_049",
+      "text_id": 34919,
+      "show_in_list": true,
+      "available": true
+    },
+    "26": {
+      "id": 26,
+      "mark_id": 6,
+      "sprite": "Emoji_050",
+      "text_id": 34920,
+      "show_in_list": true,
+      "available": true
+    },
+    "27": {
+      "id": 27,
+      "mark_id": 7,
+      "sprite": "Emoji_051",
+      "text_id": 34921,
+      "show_in_list": true,
+      "available": true
+    },
+    "28": {
+      "id": 28,
+      "mark_id": 8,
+      "sprite": "Emoji_052",
+      "text_id": 34922,
+      "show_in_list": true,
+      "available": true
+    },
+    "29": {
+      "id": 29,
+      "mark_id": 9,
+      "sprite": "Emoji_053",
+      "text_id": 34923,
+      "show_in_list": true,
+      "available": true
+    },
+    "30": {
+      "id": 30,
+      "mark_id": 10,
+      "sprite": "Emoji_054",
+      "text_id": 34924,
+      "show_in_list": true,
+      "available": true
+    },
+    "31": {
+      "id": 31,
+      "mark_id": 11,
+      "sprite": "Emoji_055",
+      "text_id": 34925,
+      "show_in_list": true,
+      "available": true
+    },
+    "32": {
+      "id": 32,
+      "mark_id": 12,
+      "sprite": "Emoji_056",
+      "text_id": 34926,
+      "show_in_list": true,
+      "available": true
+    },
+    "33": {
+      "id": 33,
+      "mark_id": 13,
+      "sprite": "Emoji_057",
+      "text_id": 34927,
+      "show_in_list": true,
+      "available": true
+    },
+    "34": {
+      "id": 34,
+      "mark_id": 14,
+      "sprite": "Emoji_058",
+      "text_id": 34928,
+      "show_in_list": true,
+      "available": true
+    },
+    "35": {
+      "id": 35,
+      "mark_id": 15,
+      "sprite": "Emoji_059",
+      "text_id": 34929,
+      "show_in_list": true,
+      "available": true
+    },
+    "36": {
+      "id": 36,
+      "mark_id": 16,
+      "sprite": "Emoji_060",
+      "text_id": 34930,
+      "show_in_list": true,
+      "available": true
+    },
+    "37": {
+      "id": 37,
+      "mark_id": 17,
+      "sprite": "Emoji_061",
+      "text_id": 34931,
+      "show_in_list": true,
+      "available": true
+    },
+    "38": {
+      "id": 38,
+      "mark_id": 18,
+      "sprite": "Emoji_062",
+      "text_id": 34932,
+      "show_in_list": true,
+      "available": true
+    },
+    "39": {
+      "id": 39,
+      "mark_id": 19,
+      "sprite": "Emoji_063",
+      "text_id": 34933,
+      "show_in_list": true,
+      "available": true
+    },
+    "40": {
+      "id": 40,
+      "mark_id": 20,
+      "sprite": "Emoji_064",
+      "text_id": 34934,
+      "show_in_list": true,
+      "available": true
+    },
+    "41": {
+      "id": 41,
+      "mark_id": 21,
+      "sprite": "Emoji_065",
+      "text_id": 34938,
+      "show_in_list": true,
+      "available": true
+    },
+    "42": {
+      "id": 42,
+      "mark_id": 22,
+      "sprite": "Emoji_066",
+      "text_id": 34939,
+      "show_in_list": true,
+      "available": true
+    },
+    "43": {
+      "id": 43,
+      "mark_id": 23,
+      "sprite": "Emoji_067",
+      "text_id": 34940,
+      "show_in_list": true,
+      "available": true
+    },
+    "44": {
+      "id": 44,
+      "mark_id": 24,
+      "sprite": "Emoji_068",
+      "text_id": 34943,
+      "show_in_list": true,
+      "available": true
+    },
+    "45": {
+      "id": 45,
+      "mark_id": 25,
+      "sprite": "Emoji_069",
+      "text_id": 34944,
+      "show_in_list": true,
+      "available": true
+    },
+    "46": {
+      "id": 46,
+      "mark_id": 26,
+      "sprite": "Emoji_070",
+      "text_id": 34945,
+      "show_in_list": true,
+      "available": true
+    },
+    "47": {
+      "id": 47,
+      "mark_id": 27,
+      "sprite": "Emoji_071",
+      "text_id": 34946,
+      "show_in_list": true,
+      "available": true
+    },
+    "48": {
+      "id": 48,
+      "mark_id": 28,
+      "sprite": "Emoji_072",
+      "text_id": 34947,
+      "show_in_list": true,
+      "available": true
+    },
+    "49": {
+      "id": 49,
+      "mark_id": 29,
+      "sprite": "Emoji_073",
+      "text_id": 34948,
+      "show_in_list": true,
+      "available": true
+    },
+    "50": {
+      "id": 50,
+      "mark_id": 30,
+      "sprite": "Emoji_074",
+      "text_id": 34949,
+      "show_in_list": true,
+      "available": true
+    },
+    "51": {
+      "id": 51,
+      "mark_id": 31,
+      "sprite": "Emoji_075",
+      "text_id": 34950,
+      "show_in_list": true,
+      "available": true
+    },
+    "52": {
+      "id": 52,
+      "mark_id": 32,
+      "sprite": "Emoji_076",
+      "text_id": 34951,
+      "show_in_list": true,
+      "available": true
+    },
+    "53": {
+      "id": 53,
+      "mark_id": 0,
+      "sprite": "Emoji_077",
+      "text_id": 34957,
+      "show_in_list": false,
+      "available": true
+    },
+    "54": {
+      "id": 54,
+      "mark_id": 0,
+      "sprite": "Emoji_078",
+      "text_id": 34958,
+      "show_in_list": false,
+      "available": true
+    },
+    "55": {
+      "id": 55,
+      "mark_id": 0,
+      "sprite": "Emoji_079",
+      "text_id": 34959,
+      "show_in_list": false,
+      "available": true
+    },
+    "56": {
+      "id": 56,
+      "mark_id": 0,
+      "sprite": "Emoji_080",
+      "text_id": 34960,
+      "show_in_list": false,
+      "available": true
+    },
+    "57": {
+      "id": 57,
+      "mark_id": 0,
+      "sprite": "Emoji_081",
+      "text_id": 34961,
+      "show_in_list": false,
+      "available": true
+    },
+    "58": {
+      "id": 58,
+      "mark_id": 0,
+      "sprite": "Emoji_082",
+      "text_id": 34962,
+      "show_in_list": false,
+      "available": true
+    },
+    "59": {
+      "id": 59,
+      "mark_id": 0,
+      "sprite": "Emoji_083",
+      "text_id": 34963,
+      "show_in_list": false,
+      "available": true
+    },
+    "60": {
+      "id": 60,
+      "mark_id": 0,
+      "sprite": "Emoji_084",
+      "text_id": 34964,
+      "show_in_list": false,
+      "available": true
+    },
+    "61": {
+      "id": 61,
+      "mark_id": 0,
+      "sprite": "Emoji_085",
+      "text_id": 34965,
+      "show_in_list": false,
+      "available": true
+    },
+    "62": {
+      "id": 62,
+      "mark_id": 0,
+      "sprite": "Emoji_086",
+      "text_id": 34966,
+      "show_in_list": false,
+      "available": true
+    }
+  },
+  "image_source": "Uploaded MainPackage_1262_2026_10_14_15_02_22_47; SpriteAtlas_Emoji; b593cdf89459c6803e5e189aac4bb927; static first animation frame _1",
+  "image_bundle_sha256": "e9dce8f6f37e7a4df6bb7c98cfac89a2329ae2b3d8e8b620abb87db71e02ca9e",
+  "available_images": 62
+}

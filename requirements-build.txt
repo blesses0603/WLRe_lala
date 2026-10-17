@@ -1,0 +1,4 @@
+-r requirements-ui.txt
+Nuitka>=4.3,<5
+ordered-set>=4,<5
+zstandard>=0.22,<1

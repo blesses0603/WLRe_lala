@@ -1,0 +1,11 @@
+[
+{"id":1,"address":"0","port":0,"state":1,"title":"S01","name":"地球召引","nameChat":"地球"},
+{"id":2,"address":"0","port":0,"state":4,"title":"S02","name":"水星躍動","nameChat":"水星"},
+{"id":101,"address":"34.81.10.22","port":16988,"state":0,"title":"S01","name":"地球召引 1線","nameChat":"地球"},
+{"id":102,"address":"35.194.144.7","port":16988,"state":0,"title":"S01","name":"地球召引 2線","nameChat":"地球"},
+{"id":103,"address":"104.155.198.206","port":16988,"state":0,"title":"S01","name":"地球召引 3線","nameChat":"地球"},
+{"id":104,"address":"35.236.157.85","port":16988,"state":0,"title":"S01","name":"地球召引 4線","nameChat":"地球"},
+{"id":105,"address":"35.201.137.25","port":16988,"state":0,"title":"S01","name":"地球召引 5線","nameChat":"地球"},
+{"id":201,"address":"34.81.92.114","port":16988,"state":0,"title":"S02","name":"水星躍動 1線","nameChat":"水星"},
+{"id":202,"address":"104.155.199.27","port":16988,"state":0,"title":"S02","name":"水星躍動 2線","nameChat":"水星"}
+]

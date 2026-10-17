@@ -1,0 +1,20 @@
+{
+  "rx_xor": 173,
+  "tx_xor": 173,
+  "platform": 3,
+  "language": 0,
+  "verification_endpoint": {
+    "host": "34.81.10.22",
+    "port": 16988
+  },
+  "game_endpoint": {
+    "host": "34.81.10.22",
+    "port": 16988
+  },
+  "evidence": "observed PCAP; official live client not tested",
+  "observed_packets": {
+    "s2c": 1848,
+    "c2s": 9
+  },
+  "capture_sha256": "2dd969e7d4e85556bc526db42632521e5c7d7c5ac7201f0aaf559da87dce2322"
+}
