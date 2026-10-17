@@ -107,7 +107,7 @@
    git push origin v0.4.20
    ```
 
-3. 到 GitHub 的 **Actions → Windows and macOS Nuitka Release** 查看進度；成功後 Releases 會出現下載檔。下載 ZIP 後完整解壓，再執行資料夾中的 `WLRE_Client.exe`。
+3. 到 GitHub 的 **Actions → Windows and macOS Nuitka Release** 查看進度；成功後 Releases 會出現下載檔。下載 ZIP 後完整解壓，再執行資料夾中的 `WLRe_LaLa.exe`。
 
 亦可從該工作流程的 **Run workflow** 輸入已存在的版本標籤來執行。標籤必須包含本工作流程及打包程式；同版本已存在的 Release 不會被覆寫，若發布已完成，請使用新版本。版本不一致、測試／編譯／自檢／ZIP 驗證失敗時均不會發布。
 
@@ -130,7 +130,7 @@
 同一版本標籤會啟動 Windows、macOS Apple Silicon（arm64）及 macOS Intel（x64）三項原生打包；全部通過測試與自檢後，同一筆 Release 會包含三個 ZIP 與統一的 `SHA256SUMS.txt`。
 
 - M 系列 Mac 下載檔名含 `macos_arm64` 的 ZIP；Intel Mac 使用 `macos_x64`。
-- ZIP 解壓後得到 `WLRE_Client.app`，可移至「應用程式」後開啟。不需另行安裝 Python。
+- ZIP 解壓後得到 `WLRe_LaLa.app`，可移至「應用程式」後開啟。不需另行安裝 Python。
 - Mac ZIP 使用系統 `ditto` 保留 framework 捷徑、執行權限及簽署內容；編譯後執行資源自檢、實際建立 Tk 主頁的 GUI 自檢，以及 `codesign` 驗證。
 - 使用 macOS 15 原生 runner 編譯；較舊 macOS 的相容性仍需實機確認。
 - 目前採 Nuitka 預設的 ad-hoc 簽署，未配置 Apple Developer ID 或公證，下載後可能受 Gatekeeper 阻擋。若系統提示無法開啟，先確認下載來源，再依 macOS「隱私權與安全性」提供的個別 App 開啟選項處理。

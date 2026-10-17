@@ -149,5 +149,5 @@ jobs:
         run: >-
           gh release create "$RELEASE_TAG"
           --verify-tag --generate-notes
-          --title "WLRE LaLa $RELEASE_TAG"
+          --title "WLRe_LaLa $RELEASE_TAG"
           release/*.zip release/SHA256SUMS.txt

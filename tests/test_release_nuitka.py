@@ -17,9 +17,9 @@ class NuitkaReleaseTests(unittest.TestCase):
                 validate_tag(tag)
 
     def make_build(self, root):
-        source = root / 'dist_nuitka/standalone/WLRE_Client.dist'
+        source = root / 'dist_nuitka/standalone/WLRe_LaLa.dist'
         source.mkdir(parents=True)
-        (source / 'WLRE_Client.exe').write_bytes(b'fixture exe')
+        (source / 'WLRe_LaLa.exe').write_bytes(b'fixture exe')
         (source / 'runtime.dll').write_bytes(b'fixture runtime')
         (source / 'wlre/resources').mkdir(parents=True)
         (source / 'wlre/resources/fixture.zip').write_bytes(b'fixture resource')
@@ -33,9 +33,9 @@ class NuitkaReleaseTests(unittest.TestCase):
             with zipfile.ZipFile(archive) as bundle:
                 self.assertIsNone(bundle.testzip())
                 self.assertEqual(set(bundle.namelist()), {
-                    'WLRE_Client/WLRE_Client.exe', 'WLRE_Client/runtime.dll',
-                    'WLRE_Client/wlre/resources/fixture.zip'})
-                self.assertEqual(bundle.read('WLRE_Client/runtime.dll'), b'fixture runtime')
+                    'WLRe_LaLa/WLRe_LaLa.exe', 'WLRe_LaLa/runtime.dll',
+                    'WLRe_LaLa/wlre/resources/fixture.zip'})
+                self.assertEqual(bundle.read('WLRe_LaLa/runtime.dll'), b'fixture runtime')
             self.assertEqual(checksum.read_text(),
                 hashlib.sha256(archive.read_bytes()).hexdigest() + '  ' + archive.name + '\n')
             self.assertFalse(archive.with_suffix('.zip.tmp').exists())
@@ -46,7 +46,7 @@ class NuitkaReleaseTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 package_release('v' + __version__, root)
             source = self.make_build(root)
-            (source / 'WLRE_Client.exe').write_bytes(b'')
+            (source / 'WLRe_LaLa.exe').write_bytes(b'')
             with self.assertRaises(ValueError):
                 package_release('v' + __version__, root)
             self.assertFalse((root / 'dist_nuitka/release').exists())

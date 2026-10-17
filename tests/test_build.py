@@ -24,6 +24,8 @@ class BuildPlan(unittest.TestCase):
         self.assertEqual(Path(command[-1]).name,'WLRE_Client.py')
         self.assertNotIn('start_ui.py',command)
         self.assertIn('--enable-plugin=tk-inter',command)
+        self.assertIn('--output-folder-name=WLRe_LaLa',command)
+        self.assertIn('--output-filename=WLRe_LaLa.exe',command)
         self.assertIn('--include-package=wlre',command)
         self.assertIn('--windows-icon-from-ico='+str(build_nuitka.ROOT/'wlre/resources/assets/app.ico'),command)
         self.assertEqual(sum(v.startswith('--include-data-files=') for v in command),len(build_nuitka.data_files()))

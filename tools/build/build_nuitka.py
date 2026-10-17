@@ -27,7 +27,7 @@ def make_command(python,mode='standalone',root=ROOT,compiler='auto',diagnose_com
     command=[str(python),'-m','nuitka','--mode='+mode,'--enable-plugin=tk-inter',
              '--include-package=wlre','--windows-console-mode=disable',
              '--windows-icon-from-ico='+str(root/'wlre/resources/assets/app.ico'),
-             '--output-filename=WLRE_Client.exe','--output-dir='+str(output),
+             '--output-folder-name=WLRe_LaLa','--output-filename=WLRe_LaLa.exe','--output-dir='+str(output),
              '--report='+str(output/'compilation-report.xml'),'--assume-yes-for-downloads',
              '--jobs='+str(max(1,min(4,os.cpu_count() or 1))),
              '--company-name=ByChiNing','--product-name=飄流Re:LaLa  =By赤寧=',
@@ -176,11 +176,11 @@ def main(argv=None):
             print('編譯診斷模式：本次停用 C 編譯快取，啟用 SCons 詳細指令與錯誤堆疊。',flush=True)
         run_logged(make_command(python,args.mode,compiler=compiler,
                                 diagnose_compiler=args.diagnose_compiler),log,library_dir=staged.parent)
-        executable=(output/'WLRE_Client.exe') if args.mode=='onefile' else (output/'WLRE_Client.dist/WLRE_Client.exe')
+        executable=(output/'WLRe_LaLa.exe') if args.mode=='onefile' else (output/'WLRe_LaLa.dist/WLRe_LaLa.exe')
         if not executable.is_file():raise RuntimeError('編譯未產生預期的 EXE：'+str(executable))
         run_logged([str(executable),'--self-test'],log)
         print('\n打包及資源自檢完成：'+str(executable),flush=True)
-        if args.mode=='standalone':print('分享時請複製整個 WLRE_Client.dist 資料夾。',flush=True)
+        if args.mode=='standalone':print('分享時請複製整個 WLRe_LaLa.dist 資料夾。',flush=True)
         return 0
     except (OSError,RuntimeError,subprocess.SubprocessError) as exc:
         with log.open('a',encoding='utf8') as stream:stream.write('\nERROR: '+str(exc)+'\n')

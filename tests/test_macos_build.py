@@ -27,6 +27,9 @@ class MacBuildPlanning(unittest.TestCase):
         for arch, target in [('arm64', 'arm64'), ('x64', 'x86_64')]:
             command = build_macos.make_command('python', arch=arch)
             self.assertIn('--macos-create-app-bundle', command)
+            self.assertIn('--output-folder-name=WLRe_LaLa', command)
+            self.assertIn('--output-filename=WLRe_LaLa', command)
+            self.assertIn('--macos-app-name=WLRe_LaLa', command)
             self.assertIn('--macos-target-arch=' + target, command)
             self.assertIn('--macos-app-version=' + __version__, command)
             self.assertIn('--enable-plugin=tk-inter', command)
@@ -59,7 +62,7 @@ class MacReleasePackaging(unittest.TestCase):
         self.directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)
         self.root = Path(self.directory.name)
-        self.bundle = self.root / 'dist_nuitka/macos_arm64/WLRE_Client.app'
+        self.bundle = self.root / 'dist_nuitka/macos_arm64/WLRe_LaLa.app'
         (self.bundle / 'Contents/MacOS').mkdir(parents=True)
         self.executable = self.bundle / 'Contents/MacOS/fixture-client'
         self.executable.write_bytes(b'fixture executable')
@@ -89,7 +92,7 @@ class MacReleasePackaging(unittest.TestCase):
         self.assertEqual(checksum.name, 'SHA256SUMS_macos_arm64.txt')
         self.assertEqual(checksum.read_text(), hashlib.sha256(archive.read_bytes()).hexdigest() + '  ' + archive.name + '\n')
         with zipfile.ZipFile(archive) as bundle:
-            self.assertIn('WLRE_Client.app/Contents/MacOS/fixture-client', bundle.namelist())
+            self.assertIn('WLRe_LaLa.app/Contents/MacOS/fixture-client', bundle.namelist())
             self.assertIsNone(bundle.testzip())
         self.assertFalse(archive.with_suffix('.zip.tmp').exists())
 
@@ -118,10 +121,10 @@ class MacReleasePackaging(unittest.TestCase):
         link.symlink_to('fixture-client')
         archive, _ = release_macos.package_release('v' + __version__, 'arm64', self.root)
         with zipfile.ZipFile(archive) as bundle:
-            info = bundle.getinfo('WLRE_Client.app/Contents/MacOS/client-link')
+            info = bundle.getinfo('WLRe_LaLa.app/Contents/MacOS/client-link')
             self.assertTrue(stat.S_ISLNK(info.external_attr >> 16))
             self.assertEqual(bundle.read(info), b'fixture-client')
-            executable = bundle.getinfo('WLRE_Client.app/Contents/MacOS/fixture-client')
+            executable = bundle.getinfo('WLRe_LaLa.app/Contents/MacOS/fixture-client')
             self.assertTrue((executable.external_attr >> 16) & stat.S_IXUSR)
 
 

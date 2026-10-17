@@ -6,9 +6,9 @@
 
 預設為資料夾版，完成後執行：
 
-`dist_nuitka\standalone\WLRE_Client.dist\WLRE_Client.exe`
+`dist_nuitka\standalone\WLRe_LaLa.dist\WLRe_LaLa.exe`
 
-分享時帶走整個 `WLRE_Client.dist` 資料夾，不能只複製 EXE。使用者電腦不需另外安裝 Python。
+分享時帶走整個 `WLRe_LaLa.dist` 資料夾，不能只複製 EXE。使用者電腦不需另外安裝 Python。
 
 若要單一 EXE，在此資料夾的命令提示字元執行：
 
@@ -16,7 +16,7 @@
 build_nuitka.bat --mode onefile
 ```
 
-輸出：`dist_nuitka\onefile\WLRE_Client.exe`。單檔會在啟動時解壓資源，地圖及圖片較多，啟動可能較資料夾版慢。
+輸出：`dist_nuitka\onefile\WLRe_LaLa.exe`。單檔會在啟動時解壓資源，地圖及圖片較多，啟動可能較資料夾版慢。
 
 如需指定編譯器：
 

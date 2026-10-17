@@ -30,14 +30,14 @@ def make_command(python, root=ROOT, arch=None):
         raise ValueError('macOS 架構必須為 arm64 或 x64')
     output = output_dir(root, arch)
     command = [str(python), '-m', 'nuitka', '--mode=standalone',
-        '--macos-create-app-bundle', '--macos-app-name=WLRE LaLa',
+        '--macos-create-app-bundle', '--macos-app-name=WLRe_LaLa',
         '--macos-signed-app-name=com.bychining.wlre-lala',
         '--macos-app-version=' + __version__,
         '--macos-app-mode=gui',
         '--macos-app-icon=' + str(root / 'wlre/resources/assets/app.ico'),
         '--macos-target-arch=' + ('x86_64' if arch == 'x64' else 'arm64'),
         '--enable-plugin=tk-inter', '--include-package=wlre',
-        '--output-filename=WLRE_Client', '--output-dir=' + str(output),
+        '--output-folder-name=WLRe_LaLa', '--output-filename=WLRe_LaLa', '--output-dir=' + str(output),
         '--report=' + str(output / 'compilation-report.xml'),
         '--assume-yes-for-downloads', '--disable-cache=ccache',
         '--jobs=' + str(max(1, min(4, os.cpu_count() or 1)))]
@@ -82,7 +82,7 @@ def main(argv=None):
         run_logged([sys.executable, '-m', 'pip', 'check'], log)
         run_logged([sys.executable, '-c', 'import tkinter; from PIL import Image,ImageTk; import nuitka; print(tkinter.TkVersion)'], log)
         run_logged(make_command(sys.executable, arch=arch), log)
-        bundle = output / 'WLRE_Client.app'
+        bundle = output / 'WLRe_LaLa.app'
         executable = bundle_executable(bundle)
         run_logged([str(executable), '--self-test'], log)
         run_logged([str(executable), '--smoke-test-gui'], log)

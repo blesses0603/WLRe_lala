@@ -16,13 +16,13 @@ def validate_tag(tag, version=__version__):
 
 def package_release(tag, root=ROOT):
     validate_tag(tag)
-    source = root / 'dist_nuitka/standalone/WLRE_Client.dist'
-    executable = source / 'WLRE_Client.exe'
+    source = root / 'dist_nuitka/standalone/WLRe_LaLa.dist'
+    executable = source / 'WLRe_LaLa.exe'
     if not executable.is_file() or executable.stat().st_size == 0:
         raise ValueError('找不到完整的 standalone EXE；請先完成 Nuitka 打包及資源自檢')
     destination = root / 'dist_nuitka/release'
     destination.mkdir(parents=True, exist_ok=True)
-    archive = destination / f'WLRE_LaLa_{tag}_windows_x64.zip'
+    archive = destination / f'WLRe_LaLa_{tag}_windows_x64.zip'
     temporary = archive.with_suffix('.zip.tmp')
     try:
         with zipfile.ZipFile(temporary, 'w', compression=zipfile.ZIP_DEFLATED) as bundle:
@@ -30,7 +30,7 @@ def package_release(tag, root=ROOT):
                 if item.is_symlink():
                     raise ValueError(f'發行內容不接受符號連結：{item}')
                 if item.is_file():
-                    bundle.write(item, 'WLRE_Client/' + item.relative_to(source).as_posix())
+                    bundle.write(item, 'WLRe_LaLa/' + item.relative_to(source).as_posix())
         # Reopen after close: a truncated archive must never be published.
         with zipfile.ZipFile(temporary) as bundle:
             bad = bundle.testzip()

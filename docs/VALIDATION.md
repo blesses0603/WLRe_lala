@@ -2,6 +2,8 @@
 
 ## 2026-10-17 優化工作區
 
+- 打包更名 `WLRe_LaLa`：Windows／macOS 皆明確設定 Nuitka output-folder-name，避免資料夾仍沿用 Python 入口名稱；檢查 EXE／App、ZIP 內容根目錄與封裝路徑同步。172 項中 170 通過、2 項原生平台略過；兩平台打包 dry-run、actionlint 及 diff 檢查通過，實際產物待新版本 Actions 編譯。
+
 - macOS Actions：172 項中 170 通過、2 項略過（Windows DPAPI／原生 macOS ditto）。新增 Apple Silicon／Intel 原生架構與平台拒絕、macOS 專屬編譯參數／完整資源、plist 入口驗證、ditto 指令／ZIP CRC／獨立 SHA256、CRC 失敗保留舊檔，以及 GUI CLI 建立與清理測試。兩架構 dry-run、Linux 桌面 GUI 自檢、actionlint 1.7.12 及 diff 檢查通過。核對官方 runner-images 文件的 `macos-15` ARM64／`macos-15-intel` x64 標籤；原生 macOS 編譯、簽署驗證與 ditto 捷徑／執行權限測試仍待新版本 Actions 實跑，未宣稱 Mac 成品已驗證。
 
 - v0.4.20 Windows CI 修正：將 Tk `focus_displayof()` 固定為無焦點，成功重現與 Actions 完全相同的兩項失敗；修正測試前景條件及每項分頁重設後，同一重現情境兩項均通過。完整 162 項中 161 通過、1 項 Windows DPAPI 略過；背景暫存／回到前景恢復的專用測試仍通過，正式 UI 行為未調整。版本標籤預檢、資源自檢、actionlint 及 diff 檢查通過。

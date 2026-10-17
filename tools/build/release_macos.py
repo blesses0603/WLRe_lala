@@ -15,11 +15,11 @@ def package_release(tag, arch, root=ROOT):
     validate_tag(tag)
     if arch not in ('arm64', 'x64'):
         raise ValueError('macOS 架構必須為 arm64 或 x64')
-    source = output_dir(root, arch) / 'WLRE_Client.app'
+    source = output_dir(root, arch) / 'WLRe_LaLa.app'
     executable = bundle_executable(source)
     destination = root / 'dist_nuitka/release'
     destination.mkdir(parents=True, exist_ok=True)
-    archive = destination / f'WLRE_LaLa_{tag}_macos_{arch}.zip'
+    archive = destination / f'WLRe_LaLa_{tag}_macos_{arch}.zip'
     temporary = archive.with_suffix('.zip.tmp')
     try:
         subprocess.run(['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent',
