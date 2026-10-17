@@ -422,5 +422,7 @@ class GlassTheme:
                 # Keep the Tcl image referenced by the ttk element while resizing.
                 old.tk.call(str(old),'configure','-width',crop.width,'-height',crop.height)
                 old.paste(new)
+        if cls == 'TButton' and hasattr(widget, 'halo_owner'):
+            widget.halo_owner.set_button_surfaces(images,record['images'])
         widget.event_generate('<Expose>')
         return first

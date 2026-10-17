@@ -28,12 +28,12 @@ class OverviewControls(unittest.TestCase):
                 self.state[section]['enabled']=True
                 self.app.render(self.state);self.root.update()
                 self.assertEqual(button.button.cget('text'),'關閉')
-                self.assertTrue(button.find_withtag('halo'));self.assertIsNotNone(button.job)
+                self.assertTrue(button.halo_visible);self.assertIsNotNone(button.job)
                 button.invoke();self.assertEqual(send.call_args.args[0]['type'],stop)
                 self.state[section]['enabled']=False
                 self.app.render(self.state);self.root.update()
                 self.assertEqual(button.button.cget('text'),'啟動')
-                self.assertFalse(button.find_withtag('halo'));self.assertIsNone(button.job)
+                self.assertFalse(button.halo_visible);self.assertIsNone(button.job)
 
     def test_hidden_animation_pauses_and_disconnect_clears_halo(self):
         self.state['auto_battle']['enabled']=True;self.app.render(self.state);self.root.update()
@@ -61,11 +61,27 @@ class OverviewControls(unittest.TestCase):
             button.set_active(True);button.set_active(False)
             self.assertEqual(button.background_item,item)
             self.assertEqual(button.type(item),'image')
-            self.assertFalse(button.find_withtag('halo'))
+            self.assertFalse(button.halo_visible)
             button.configure(width=64);self.root.update()
             theme.windows[str(self.root)]['signature']=None;theme.paint(self.root)
             self.assertEqual(button.background_photo.width(),button.winfo_width())
             self.assertEqual(button.find_all()[0],item)
+
+    def test_rainbow_follows_button_edge_without_rectangular_canvas_frame(self):
+        button=self.panel.actions['ai'];theme=self.app.theme
+        theme.windows[str(self.root)]['signature']=None;theme.paint(self.root)
+        button.set_active(True)
+        def pixel(x,y):return tuple(self.root.tk.call(str(button.photos[0]),'get',x,y))
+        base=button.surfaces[0].convert('RGB');width,height=base.size
+        self.assertEqual(pixel(1,1),base.getpixel((1,1)))
+        self.assertNotEqual(pixel(width//2,1),base.getpixel((width//2,1)))
+        first=pixel(width//2,1)
+        button.phase+=.3;button.paint_edge()
+        self.assertNotEqual(pixel(width//2,1),first)
+        self.assertFalse(button.find_withtag('halo'))
+        button.set_active(False)
+        self.assertEqual(pixel(width//2,1),base.getpixel((width//2,1)))
+        self.assertFalse(button.halo_visible)
 
     def test_settings_entry_title_map_header_and_button_bounds(self):
         with patch('wlre.ui.auto_battle_ui.open_settings') as settings:
