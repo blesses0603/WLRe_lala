@@ -7,10 +7,10 @@ from android_app.sessions import SessionManager
 
 
 def main():
-    from jnius import autoclass
+    from jnius import autoclass, cast
     service = autoclass('org.kivy.android.PythonService').mService
     context = autoclass('android.content.Context')
-    power = service.getSystemService(context.POWER_SERVICE)
+    power = cast('android.os.PowerManager', service.getSystemService(context.POWER_SERVICE))
     wake = power.newWakeLock(1, 'WLRe_LaLa:connections')
     wake.setReferenceCounted(False)
     manager = SessionManager()
@@ -31,7 +31,7 @@ def main():
         battery = service.registerReceiver(None, autoclass('android.content.IntentFilter')(
             'android.intent.action.BATTERY_CHANGED'))
         level, scale = (battery.getIntExtra('level', -1), battery.getIntExtra('scale', -1)) if battery else (-1, -1)
-        battery_manager = service.getSystemService(context.BATTERY_SERVICE)
+        battery_manager = cast('android.os.BatteryManager', service.getSystemService(context.BATTERY_SERVICE))
         current = battery_manager.getIntProperty(2)  # BATTERY_PROPERTY_CURRENT_NOW, device-wide microamps
         temperature = battery.getIntExtra('temperature', -1) if battery else -1
         return {'device_current_ua': current if current != -2147483648 else None,

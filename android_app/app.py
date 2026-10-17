@@ -248,8 +248,8 @@ class LaLaApp(App):
                 memory = autoclass('android.os.Debug$MemoryInfo')()
                 autoclass('android.os.Debug').getMemoryInfo(memory)
                 self.resources.text = ('在線 {online}／活動連線 {active}｜服務 PSS {service_pss_kib} KiB'.format(**metrics)
-                    + '\n畫面 PSS ' + str(memory.getTotalPss()) + ' KiB｜裝置電量 ' + str(metrics.get('battery_percent', '未知'))
-                    + '%｜裝置溫度 ' + str(metrics.get('device_temperature_c')) + '°C｜App 耗電未知｜' + time.strftime('%H:%M:%S', time.localtime(metrics['sample_time'])))
+                    + '\n畫面 PSS ' + str(memory.getTotalPss()) + ' KiB｜裝置電量 ' + str(metrics.get('battery_percent') if metrics.get('battery_percent') is not None else '未知')
+                    + '%｜裝置溫度 ' + str(metrics.get('device_temperature_c') if metrics.get('device_temperature_c') is not None else '未知') + '°C｜App 耗電未知｜' + time.strftime('%H:%M:%S', time.localtime(metrics['sample_time'])))
         for _ in range(80):
             try:
                 sid, kind, value = self.manager.events.get_nowait()
