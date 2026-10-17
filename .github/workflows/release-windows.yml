@@ -1,4 +1,4 @@
-name: Windows Nuitka Release
+name: Windows and macOS Nuitka Release
 
 on:
   push:
@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: windows-release-${{ inputs.tag || github.ref_name }}
+  group: desktop-release-${{ inputs.tag || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -62,8 +62,67 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+  build_macos:
+    name: macOS ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+      BUILD_ARCH: ${{ matrix.arch }}
+      PYTHONUTF8: '1'
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag && format('refs/tags/{0}', inputs.tag) || github.ref }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: ${{ matrix.arch }}
+      - name: Check version tag and native architecture
+        run: |
+          python -m tools.build.release_nuitka --tag "$RELEASE_TAG" --check-tag
+          python -c 'import os; from tools.build.build_macos import native_arch; assert native_arch() == os.environ["BUILD_ARCH"]'
+      - name: Install build dependencies
+        run: python -m pip install -r requirements-build-macos.txt
+      - name: Run tests and native GUI smoke test
+        run: |
+          python -m unittest discover -s tests -q
+          python WLRE_Client.py --smoke-test-gui
+      - name: Compile, self-test and verify app signature
+        run: python -m tools.build.build_macos --arch "$BUILD_ARCH"
+      - name: Package and verify app ZIP
+        run: python -m tools.build.release_macos --tag "$RELEASE_TAG" --arch "$BUILD_ARCH"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.arch }}-release
+          path: dist_nuitka/release/*
+          if-no-files-found: error
+          retention-days: 14
+      - name: Preserve macOS build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.arch }}-diagnostics
+          path: |
+            dist_nuitka/macos_${{ matrix.arch }}/build.log
+            dist_nuitka/macos_${{ matrix.arch }}/compilation-report.xml
+          if-no-files-found: ignore
+          retention-days: 14
+
   publish:
-    needs: build
+    needs: [build, build_macos]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -72,11 +131,17 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: windows-release
+          pattern: '*-release'
+          merge-multiple: true
           path: release
-      - name: Verify checksum
+      - name: Verify and combine platform checksums
         working-directory: release
-        run: sha256sum --check SHA256SUMS.txt
+        run: |
+          for manifest in SHA256SUMS*.txt; do
+            sha256sum --check "$manifest"
+          done
+          cat SHA256SUMS_macos_*.txt >> SHA256SUMS.txt
+          rm SHA256SUMS_macos_*.txt
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}

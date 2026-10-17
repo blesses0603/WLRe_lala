@@ -94,9 +94,9 @@
 [查看版本歷史](版本歷史.md)
 
 
-## 自動發布 Windows Releases
+## 自動發布 Windows／macOS Releases
 
-已加入 [Windows Nuitka Release](https://github.com/blesses0603/WLRe_lala/actions/workflows/release-windows.yml) 工作流程。
+已加入 [Windows and macOS Nuitka Release](https://github.com/blesses0603/WLRe_lala/actions/workflows/release-windows.yml) 工作流程。
 推送 `v` 開頭的版本標籤後，GitHub Actions 會在 Windows 2022 使用 Python 3.12 x64／MSVC 執行測試、略過 C 編譯快取並保留詳細紀錄的 Nuitka standalone 編譯及 EXE 資源自檢，再封裝整個程式資料夾、重新開啟 ZIP 驗證 CRC，最後上傳 ZIP 與 `SHA256SUMS.txt` 至 Releases。
 
 1. 先更新 `wlre/__init__.py` 的 `__version__` 並提交至 GitHub。
@@ -107,7 +107,7 @@
    git push origin v0.4.20
    ```
 
-3. 到 GitHub 的 **Actions → Windows Nuitka Release** 查看進度；成功後 Releases 會出現下載檔。下載 ZIP 後完整解壓，再執行資料夾中的 `WLRE_Client.exe`。
+3. 到 GitHub 的 **Actions → Windows and macOS Nuitka Release** 查看進度；成功後 Releases 會出現下載檔。下載 ZIP 後完整解壓，再執行資料夾中的 `WLRE_Client.exe`。
 
 亦可從該工作流程的 **Run workflow** 輸入已存在的版本標籤來執行。標籤必須包含本工作流程及打包程式；同版本已存在的 Release 不會被覆寫，若發布已完成，請使用新版本。版本不一致、測試／編譯／自檢／ZIP 驗證失敗時均不會發布。
 
@@ -123,3 +123,26 @@
 ```
 
 本次會傳入 `--disable-cache=ccache` 與 `--show-scons`，略過 C 編譯快取並將 SCons 詳細指令與錯誤堆疊寫入 `dist_nuitka/standalone/build.log`。一般本機打包的預設快取行為維持不變；Releases 工作流程明確使用此模式，沿用已在 Windows 成功打包的略過快取方式。這是診斷模式，不代表已確認根因或保證編譯成功。如果仍失敗，請提供這次重新產生的完整 `build.log`。不必刪除專案或打包環境。
+
+
+### macOS 下載與打包
+
+同一版本標籤會啟動 Windows、macOS Apple Silicon（arm64）及 macOS Intel（x64）三項原生打包；全部通過測試與自檢後，同一筆 Release 會包含三個 ZIP 與統一的 `SHA256SUMS.txt`。
+
+- M 系列 Mac 下載檔名含 `macos_arm64` 的 ZIP；Intel Mac 使用 `macos_x64`。
+- ZIP 解壓後得到 `WLRE_Client.app`，可移至「應用程式」後開啟。不需另行安裝 Python。
+- Mac ZIP 使用系統 `ditto` 保留 framework 捷徑、執行權限及簽署內容；編譯後執行資源自檢、實際建立 Tk 主頁的 GUI 自檢，以及 `codesign` 驗證。
+- 使用 macOS 15 原生 runner 編譯；較舊 macOS 的相容性仍需實機確認。
+- 目前採 Nuitka 預設的 ad-hoc 簽署，未配置 Apple Developer ID 或公證，下載後可能受 Gatekeeper 阻擋。若系統提示無法開啟，先確認下載來源，再依 macOS「隱私權與安全性」提供的個別 App 開啟選項處理。
+- Mac 可記住帳號；現有記住密碼功能使用 Windows DPAPI，Mac 不支援，不會改存明文密碼。
+
+在 Mac 手動打包（依實際 CPU 選擇 `arm64` 或 `x64`）：
+
+```bash
+python3 -m venv .macos-build-env
+source .macos-build-env/bin/activate
+python -m pip install -r requirements-build-macos.txt
+python -m tools.build.build_macos --arch arm64
+```
+
+需具備含 Tk 的 Python 3.12 與 Xcode Command Line Tools。macOS 封裝工具獨立於 Windows 腳本，不會使用 MSVC、Windows `.lib` 或 `.exe` 設定。舊版本標籤不會包含後來新增的工作流程；請以包含此修改的新版本標籤發布。

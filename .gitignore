@@ -4,3 +4,5 @@ __pycache__/
 .ui-env.lock
 .nuitka-env/
 dist_nuitka/
+
+.macos-build-env/

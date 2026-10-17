@@ -1,0 +1,3 @@
+-r requirements-build.txt
+# Nuitka converts the existing Windows icon into the macOS ICNS format.
+imageio>=2.36,<3
