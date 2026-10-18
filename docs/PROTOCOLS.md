@@ -61,9 +61,12 @@ a baseline; subsequent valid completions yield rates. Skill EXP is excluded.
 Histories contain at most31 samples per identity; all-session gain/count are
 aggregates. Negative totals, stage changes and identity changes rebase.
 
-Phase 07 correction: when first creating an efficiency row, immediately
-retrieve and update the State-owned guarded dictionary; writing to the
-detached pre-wrapped temporary previously lost initial EXP and level values.
+Phase 07 correction: both the first per-role efficiency object and
+individual character/companion rows must be re-read after assignment to
+State's guarded container. The former code wrote the role ID onto a detached
+pre-wrapped temporary, causing every subsequent event to reset all statistics;
+newly created rows similarly lost initial EXP and level. Both now update the
+authoritative State-owned dictionaries before any battle is sampled.
 Roster members not in the current battle do not lose
 previously confirmed 10/30-sample history. If a *known participant* has no
 S8 EXP evidence when S20-8 arrives, its baseline is invalidated rather than
