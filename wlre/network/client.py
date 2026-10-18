@@ -21,7 +21,8 @@ from wlre.services.items.field_supply import FieldSupply
 from wlre.services.items.post_battle_maintenance import PostBattleMaintenance
 from wlre.services.social.chat import sent_event
 from wlre.network.protocol import login, select_role, decode
-from wlre.network.protocol import decode_outbound_movement
+from wlre.network.command_envelope import validate_command, rejected_command_type
+from wlre.network.outbound_observations import observed_outbound
 from wlre.core.state import State
 from wlre.core.maintenance import PeriodicCleanup
 from wlre.services.world.movement import Movement
@@ -42,29 +43,18 @@ def _send(connection, packet, key, emit):
     emit({'type': 'sent', 'main': packet.main, 'sub': packet.sub, 'payload': 'redacted'})
 
 
-def _send_command_packet(connection,packet,key,state,emit,on_state):
-    _send(connection,packet,key,emit)
-    if packet.main==50 and packet.sub in (1,2):
-        data=packet.payload
-        event={'type':'battle_command_sent','col':data[0],'row':data[1],
-               'target_col':data[2],'target_row':data[3],
-               'skill_id':int.from_bytes(data[4:6],'little') if packet.sub==1 else 10024}
-        if packet.sub==2:event.update(item_id=int.from_bytes(data[4:6],'little'),bag_index=data[8])
-        state.apply(event);emit(event)
-        if on_state:notify_state(on_state,state)
-    if (packet.main,packet.sub)==(23,15):
-        event={'type':'field_item_sent','bag_index':packet.payload[0],'item_id':int.from_bytes(packet.payload[1:3],'little'),'npc_index':packet.payload[7]}
-        state.apply(event);emit(event)
-        if on_state:notify_state(on_state,state)
-    if (packet.main,packet.sub)==(23,147):
-        event={'type':'field_storage_sent','resource':'hp' if packet.payload[0]==3 else 'sp','npc_index':packet.payload[2],'amount':int.from_bytes(packet.payload[3:5],'little')}
-        state.apply(event);emit(event)
-        if on_state:notify_state(on_state,state)
-    if packet.main==2 and packet.sub in (1,2,3,5,6):emit(sent_event(packet))
-    movement=decode_outbound_movement(packet)
-    if movement:
-        state.apply(movement);emit(movement)
-        if on_state:notify_state(on_state,state)
+def _send_command_packet(connection, packet, key, state, emit, on_state):
+    # Reject malformed candidate command packets BEFORE socket.sendall.
+    # An observation records a local send only after the send succeeds.
+    observed = observed_outbound(packet)
+    _send(connection, packet, key, emit)
+    if observed is not None:
+        state.apply(observed)
+        emit(observed)
+        if on_state:
+            notify_state(on_state, state)
+    if packet.main == 2 and packet.sub in (1, 2, 3, 5, 6):
+        emit(sent_event(packet))
 
 
 def verify_account(endpoint, profile, account, password, emit, stop_event, timeout=10):
@@ -211,7 +201,8 @@ class SessionLogic:
 
     def command(self, command, state):
         state.assert_writer()
-        return dispatch(self,command,state)
+        validate_command(command)
+        return dispatch(self, command, state)
 
 
     def disconnect(self,state):
@@ -311,7 +302,9 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
                                   'reason':state.local_movement['reason']}) if state.local_movement else None
                             if on_state:notify_state(on_state,state)
                     except (ValueError, KeyError, TypeError) as exc:
-                        emit({'type': 'command_rejected', 'command_type':command.get('type'), 'error': str(exc)})
+                        emit({'type': 'command_rejected',
+                              'command_type': rejected_command_type(command),
+                              'error': str(exc)})
                 advance_services(logic,state,
                     lambda packet:_send_command_packet(connection,packet,profile['tx_xor'],state,emit,on_state),
                     lambda packet:_send(connection,packet,profile['tx_xor'],emit),emit,on_state)

@@ -91,7 +91,7 @@
 |---|---|
 | [activity.py](../wlre/core/activity.py) | 伺服器活動事件解碼與活動／移動限制狀態。 |
 | [diagnostics.py](../wlre/core/diagnostics.py) | 每個程序的 UI 效能、連線及錯誤位置診斷與輪替日誌。 |
-| [efficiency.py](../wlre/core/efficiency.py) | 經驗樣本、效率、升級進度與倒數預估。 |
+| [efficiency.py](../wlre/core/efficiency.py) | 以已確認的戰鬥 EXP 樣本計算效率與升級預估；閒置夥伴不清空歷史，缺少 S8 回覆時禁止猜測。 |
 | [event_log.py](../wlre/core/event_log.py) | 將處理事件轉為本機事件紀錄文字。 |
 | [inventory_updates.py](../wlre/core/inventory_updates.py) | 權威物品記錄新增／合併與庫存一致性檢查。 |
 | [maintenance.py](../wlre/core/maintenance.py) | 每兩小時的快取清理計時器；不是戰後物品維護。 |
@@ -108,6 +108,8 @@
 |---|---|
 | [client.py](../wlre/network/client.py) | TCP 連線、SessionLogic、登入階段與命令／排程協調；實際命令規則及服務 tick 已各自拆分。 |
 | [commands.py](../wlre/network/commands.py) | 手動指令驗證與分派；保留 SessionLogic 入口。 |
+| [command_envelope.py](../wlre/network/command_envelope.py) | 網路指令格式驗證、長度限制與安全拒絕事件類型。 |
+| [outbound_observations.py](../wlre/network/outbound_observations.py) | C50/C23 成功送出後的本機狀態記錄與最小封包長度驗證。 |
 | [connection_health.py](../wlre/network/connection_health.py) | OS TCP keepalive、收包時間與連線結束證據。 |
 | [expedition.py](../wlre/network/expedition.py) | 遠征 S31 回覆解碼；不負責遠征策略。 |
 | [layouts.py](../wlre/network/layouts.py) | 角色清單、世界角色與戰鬥單位的固定封包欄位結構。 |

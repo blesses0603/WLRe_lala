@@ -61,6 +61,21 @@ a baseline; subsequent valid completions yield rates. Skill EXP is excluded.
 Histories contain at most31 samples per identity; all-session gain/count are
 aggregates. Negative totals, stage changes and identity changes rebase.
 
+Phase 07 correction: both the first per-role efficiency object and
+individual character/companion rows must be re-read after assignment to
+State's guarded container. The former code wrote the role ID onto a detached
+pre-wrapped temporary, causing every subsequent event to reset all statistics;
+newly created rows similarly lost initial EXP and level. Both now update the
+authoritative State-owned dictionaries before any battle is sampled.
+Roster members not in the current battle do not lose
+previously confirmed 10/30-sample history. If a *known participant* has no
+S8 EXP evidence when S20-8 arrives, its baseline is invalidated rather than
+guessing a zero gain or bridging an unknown interval; previous valid history
+is retained for display until a new confirmed baseline is established.
+Server-confirmed follower level/stage clears any prior inferred-status flag,
+while stale levels may still be inferred and explicitly labeled when the
+current EXP lies outside the received level's reference curve.
+
 Reference: current project exp_monitor(4).py (2026-10-15 version1),
 window_efficiency, level_need, cumulative and forecast_lines. Curves retain
 EXP_Monitor's level-one origin and the unreincarnated 3.1/5 reference
@@ -153,3 +168,17 @@ Packet capture import/replay/profile extraction and standalone packet inspection
 - S19-1／4 更新出戰 ID，S19-2 清除；發送時不修改本機出戰狀態。
 - 本次介面僅支援非戰鬥操作；戰鬥、伺服器事件、活動、自動戰鬥／徘徊與製作進行時暫停切換，並驗證選取索引與 ID 是否仍相符。僅跟隨型（CanGrow=0）不能出戰。連續指令至少間隔 2 秒（本機保守節流，非原版冷卻規則）。
 - 已驗證封包位元組、狀態回覆與介面操作，尚未驗證正式伺服器連線。
+
+## Phase 07: network command and packet observation boundaries
+
+- `command_envelope.py` validates that network-thread commands have a usable,
+  bounded `type` field. Invalid envelopes cause `command_rejected` events
+  without printing arbitrary submitted command contents. The individual
+  game service still validates its own action arguments and activity gates.
+- `outbound_observations.py` validates minimum bytes for locally observable
+  C50-1/2 and C23-15/147 candidate packets. A command send is only recorded
+  after `sendall` returns successfully. Movement C6-1 retains its original
+  decoder; S8/S20 and all server protocol semantics are unchanged.
+- The XOR frame reader continues to support fragmented and coalesced frames.
+  This refactor is *not* a new live-server wire-compatibility claim and does
+  not add speculative commands or network retries.
