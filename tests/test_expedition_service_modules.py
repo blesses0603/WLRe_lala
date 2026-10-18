@@ -27,6 +27,11 @@ class ExpeditionServiceModules(unittest.TestCase):
         self.assertEqual(legacy.Expedition.__module__,
                          'wlre.services.expedition.manager')
 
+    def test_legacy_module_misc_attributes_remain_accessible(self):
+        self.assertIs(legacy.CAT, manager.CAT)
+        self.assertIs(legacy.Writer, manager.Writer)
+        self.assertIs(legacy.STACKABLE, manager.STACKABLE)
+
     def test_original_data_and_team_paths_are_compatible(self):
         for name in ('data_root', 'parse_catalog', 'load_catalog',
                      'attach_names', 'parse_npcs'):
