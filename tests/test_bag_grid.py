@@ -1,7 +1,9 @@
 """Inventory grid model checks; no Tk display or game network required."""
 import unittest
 
-from wlre.ui.bag_grid import PAGE_SIZE, COLUMNS, ROWS, ICON_SIZE, visible_items, item_details
+from wlre.ui.bag_grid import (PAGE_SIZE, COLUMNS, ROWS, ICON_SIZE, STORAGE_ROWS,
+                              STORAGE_ICON_SIZE, grid_profile, page_count,
+                              visible_items, item_details)
 
 
 class BagGridModelTests(unittest.TestCase):
@@ -22,6 +24,16 @@ class BagGridModelTests(unittest.TestCase):
         self.assertEqual(ROWS, 4)
         self.assertEqual(PAGE_SIZE, 24)
         self.assertEqual(ICON_SIZE, 64)
+
+    def test_hyperspace_storage_48_entries_fit_without_clipping(self):
+        self.assertEqual(grid_profile(compact=True), (6, 2, 60))
+        self.assertEqual(STORAGE_ROWS, 2)
+        self.assertEqual(STORAGE_ICON_SIZE, 60)
+        self.assertEqual(page_count(48, compact=True), 4)
+        self.assertEqual(page_count(50, compact=True), 5)
+        self.assertEqual(page_count(0, compact=True), 1)
+        self.assertEqual(page_count(48), 2)
+        self.assertEqual(grid_profile(), (6, 4, 64))
 
     def test_slots_are_sorted_by_real_index(self):
         self.assertEqual([index for index, *_ in visible_items(self.inventory())], ['2', '8', '12'])
