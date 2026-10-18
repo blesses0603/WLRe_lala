@@ -1,3 +1,5 @@
+> **最新結果（2026-10-19）**：PR #19 Commit `d72f3de` 的 [三平台原始碼 CI](https://github.com/blesses0603/WLRe_lala/actions/runs/39171233034) 與 [三種原生打包 CI](https://github.com/blesses0603/WLRe_lala/actions/runs/39171233020) 六項工作全部 success。以下以前的「待補」紀錄為歷程，已由本次通過紀錄取代；Windows/macOS 使用者實機、macOS Intel Tk GUI 與正式遊戲伺服器仍需人工驗收。不建立 v0.6.0 正式 Release。
+
 # 第 10 項：測試、文件與版本整理
 
 > 建立日期：2026-10-19。工作分支：`chore/phase10-final-audit-20261019`，基準 main：`a27826bc3fcabcbb72e42f600721ad90c9115cad`（PR #18 已合併）。
@@ -78,3 +80,10 @@ README 中 v0.6.0 仍代表後續開發內容，不會因完成文件稽核就�
 ## 2026-10-19 跨平台驗收解鎖
 
 依使用者最新指示，不再以 GitHub Actions 額度作為阻擋完整檢查的理由：`Main and PR tests` 恢復 PR/main 的 Linux、Windows、macOS 三平台測試；`Native desktop packaging verification` 恢復建置相關 PR 的 Windows x64、macOS arm64 與 Intel x64 原生 Nuitka 編譯驗證，正式 Release 保持原流程。前文記錄額度不足為當時的歷史狀態，不是現在的限制。最新測試結果及人工驗收界線應以 PR #19 更新後的工作流程執行紀錄為準。
+
+## 最終自動化驗收總結（2026-10-19）
+
+- 第 10 項 PR #19 Commit `d72f3deffdb4c075b1a7fc6a1671009c55ad50fc`：[三平台回歸 workflow 39171233034](https://github.com/blesses0603/WLRe_lala/actions/runs/39171233034)：Ubuntu Linux、Windows 2022 x64、macOS 15 ARM64 三個 job 全部成功，涵蓋 Python 測試、GUI smoke、資源驗證和 build dry-run。
+- [原生編譯與封裝 workflow 39171233020](https://github.com/blesses0603/WLRe_lala/actions/runs/39171233020)：Windows x64 EXE、macOS Apple Silicon arm64 APP、macOS Intel x64 APP 三個 job 全部成功，已上傳 `desktop-windows-x64-validation`、`desktop-macos-arm64-validation`、`desktop-macos-x64-validation` artifacts；工作流程涵蓋 Nuitka 原生編譯、編譯後自檢與可執行的 GUI smoke、ZIP 完整性與平台架構／簽章驗證。macOS Intel hosted runner 的 GUI smoke 仍依既有例外跳過，需 Mac Intel 實機確認。
+- 六項自動化驗收均已完成，本項按「重構回歸、文件稽核、跨平台原生建置」範圍標記完成；不推定正式遊戲伺服器端到端行為、Windows 使用者環境與 Apple Developer ID 公證已驗證。
+- 程式版號保持 `wlre.__version__=0.5.0`，`v0.6.0` 僅是 README 開發摘要。未新建 `v0.6.0` 標籤，也未觸發正式 GitHub Release。
