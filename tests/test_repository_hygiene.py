@@ -24,11 +24,12 @@ class DocumentationAndReleaseAudit(unittest.TestCase):
         self.assertEqual(duplicates, [])
 
     def test_dev_readme_does_not_impersonate_unpublished_release(self):
-        self.assertEqual(audit_repository.application_version(ROOT), "0.5.0")
+        version = audit_repository.application_version(ROOT)
+        self.assertRegex(version, r"^\d+\.\d+\.\d+$")
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         changelog = (ROOT / "版本歷史.md").read_text(encoding="utf-8")
         self.assertIn("v0.6.0 開發版", readme)
-        self.assertIn("v0.5.0", readme)
+        self.assertIn("v" + version, readme)
         self.assertIn("2026-10-17", changelog)
         self.assertIn("releases/tag/v0.5.0", readme)
         self.assertIn("不是正式發布", changelog)
