@@ -3,7 +3,7 @@ import unittest
 
 from wlre.ui.bag_grid import (PAGE_SIZE, COLUMNS, ROWS, ICON_SIZE, STORAGE_ROWS,
                               STORAGE_ICON_SIZE, grid_profile, page_count,
-                              visible_items, item_details)
+                              visible_items, item_details, responsive_profile, reflow_page)
 
 
 class BagGridModelTests(unittest.TestCase):
@@ -34,6 +34,20 @@ class BagGridModelTests(unittest.TestCase):
         self.assertEqual(page_count(0, compact=True), 1)
         self.assertEqual(page_count(48), 2)
         self.assertEqual(grid_profile(), (6, 4, 64))
+
+    def test_responsive_grid_keeps_icon_sizes_and_avoids_cropped_columns(self):
+        self.assertEqual(responsive_profile(980, 470), (6, 4, 64))
+        self.assertEqual(responsive_profile(515, 280), (5, 3, 64))
+        self.assertEqual(responsive_profile(195, 190), (2, 2, 64))
+        self.assertEqual(responsive_profile(950, 180, compact=True), (6, 2, 60))
+        self.assertEqual(responsive_profile(380, 96, compact=True), (4, 1, 60))
+        self.assertEqual(page_count(48, compact=True, columns=4, rows=1), 12)
+
+    def test_reflow_keeps_selected_or_first_visible_item(self):
+        self.assertEqual(reflow_page(2, 24, 10, 145, selected_position=57), 5)
+        self.assertEqual(reflow_page(2, 24, 10, 145), 4)
+        self.assertEqual(reflow_page(9, 24, 6, 14), 2)
+        self.assertEqual(reflow_page(0, 24, 12, 0), 0)
 
     def test_slots_are_sorted_by_real_index(self):
         self.assertEqual([index for index, *_ in visible_items(self.inventory())], ['2', '8', '12'])
