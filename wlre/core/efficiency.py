@@ -70,7 +70,11 @@ def observe(state,event):
     eff=state.efficiency;pid=state.player.get('role_id');kind=event['type']
     if not pid:return
     if eff['role_id']!=pid:
-        state.efficiency=eff=defaults();eff['role_id']=pid
+        state.efficiency=defaults()
+        # State guards each assigned dictionary by wrapping it. Always
+        # continue through the authoritative instance after assignment.
+        eff=state.efficiency
+        eff['role_id']=pid
     now=event.get('_observed_at',time.monotonic())
     if not isinstance(now,(int,float)) or not math.isfinite(now):return
     eff['offline']=bool(event.get('_offline',eff['offline']))
