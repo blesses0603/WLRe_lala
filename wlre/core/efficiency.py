@@ -5,7 +5,7 @@ from wlre.core.event_log import owned
 
 STAGES={0:'未轉生',1:'一轉',2:'二轉星脈'}
 
-def defaults():return {'role_id':None,'rows':{},'pending':False,'dirty':[],'battles':0,'offline':False}
+def defaults():return {'role_id':None,'rows':{},'pending':False,'dirty':[],'participants':[],'battles':0,'offline':False}
 
 def need(level,degree):
     if degree==0:return math.floor(level**3.1+5+.5) # EXP_Monitor reference coefficients
@@ -41,7 +41,14 @@ def _row(state,key):
     if row is None or row.get('identity')!=identity:
         row={'identity':identity,'name':name,'exp':None,'level':None,'degree':None,'last_total':None,'last_gain':None,'earned':0,'count':0,'history':[],'first_time':None,'last_time':None}
         eff['rows'][key]=row
-    row.update(name=name,level=stats.get('level',row['level']),degree=stats.get('degree',row['degree']))
+    row['name']=name
+    # Confirmed level and degree always replace the previous inferred label.
+    if stats.get('level') is not None:
+        row['level']=stats['level']
+        row.pop('level_inferred',None)
+    if stats.get('degree') is not None:
+        row['degree']=stats['degree']
+        row.pop('degree_inferred',None)
     if stats.get('exp') is not None:row['exp']=stats['exp']
     if key!='self' and row['exp'] is not None:
         # Mounts may receive EXP without a refreshed fight-unit level. Keep the
@@ -69,7 +76,20 @@ def observe(state,event):
     for key in list(eff['rows']):
         if key!='self' and key.split(':')[1] not in state.knowledge.get('companions',{}):eff['rows'].pop(key)
     if kind=='battle_start':
-        eff['pending']=any(owned(u,pid) for u in event['units']);eff['dirty']=[]
+        units=event['units']
+        eff['pending']=any(owned(u,pid) for u in units)
+        eff['dirty']=[]
+        # Known participants have local role / companion-slot evidence.
+        # Inactive companions must retain their confirmed historical rates.
+        participants=set()
+        if eff['pending']:
+            for unit in units:
+                if unit.get('pid')==pid:participants.add('self')
+                index=unit.get('npc_index')
+                if (unit.get('master_id')==pid and type(index) is int
+                        and 1<=index<=255 and str(index) in state.knowledge.get('companions',{})):
+                    participants.add('follow:'+str(index))
+        eff['participants']=sorted(participants)
     key=None
     if kind=='attribute_set' and event.get('kind')==36 and event.get('parameter',0)==0:
         if event.get('entity')=='self':key='self'
@@ -87,9 +107,16 @@ def observe(state,event):
     if kind!='event_end' or not eff['pending']:return
     eff['pending']=False;eff['battles']+=1
     dirty=set(eff['dirty']);eff['dirty']=[]
+    participants=set(eff.get('participants',()))
+    eff['participants']=[]
     for key,row in eff['rows'].items():
         if key not in dirty:
-            row['last_total']=None;row['history']=[];row['last_gain']=None
+            # Missing evidence is not a zero-EXP sample. Invalidate the
+            # baseline only for units proven present in this battle.
+            # Never wipe a different companion's confirmed 10/30 history.
+            if key in participants:
+                row['last_total']=None
+                row['last_gain']=None
             continue
         total=row['exp'];last=row['last_total']
         if total is None:continue
