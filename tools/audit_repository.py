@@ -6,7 +6,6 @@ Zero-byte package __init__.py files are intentionally shared by Git.
 """
 from collections import defaultdict
 import argparse
-import ast
 import json
 from pathlib import Path
 import re
@@ -14,8 +13,8 @@ import shutil
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
-LINK = re.compile(r"!?(?:\\[[^\\]]*\\])\\(([^)]+)\\)")
-VERSION = re.compile(r"^__version__\\s*=\\s*(['\\\"])([^'\\\"]+)\\1", re.MULTILINE)
+LINK = re.compile(r"!?(?:\[[^\]]*\])\(([^)]+)\)")
+VERSION = re.compile(r"^__version__\s*=\s*(['\"])([^'\"]+)\1", re.MULTILINE)
 
 
 def markdown_files(root=ROOT):
@@ -54,10 +53,10 @@ def duplicate_tracked_blobs(root=ROOT):
     result = subprocess.run(["git", "ls-files", "--stage", "-z"], cwd=root,
                             capture_output=True, check=True)
     by_sha = defaultdict(list)
-    for entry in result.stdout.split(b"\\0"):
+    for entry in result.stdout.split(b"\0"):
         if not entry:
             continue
-        info, filename = entry.split(b"\\t", 1)
+        info, filename = entry.split(b"\t", 1)
         parts = info.split(b" ")
         if len(parts) != 3 or parts[2] != b"0":
             continue
