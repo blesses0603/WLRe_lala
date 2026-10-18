@@ -1,6 +1,6 @@
 # WLRe:LaLa | v0.6.0 開發版
 
-> **版本狀態（2026-10-18）**：本頁整理 v0.6.0 開發中的功能與更新，**不代表已發布 v0.6.0 安裝包**。程式版本來源 `wlre/__init__.py` 目前仍為 **0.5.0**；正式下載與版本標籤以 [GitHub Releases](https://github.com/blesses0603/WLRe_lala/releases) 為準。遊戲資料／協定核對基準為 **1262**。
+> **版本狀態（2026-10-19）**：本頁整理 v0.6.0 開發中的功能與更新，**不代表已發布 v0.6.0 安裝包**。程式版本來源 `wlre/__init__.py` 目前仍為 **0.5.0**，正式已發布的版本是 [**v0.5.0（2026-10-17）**](https://github.com/blesses0603/WLRe_lala/releases/tag/v0.5.0)；遊戲資料／協定核對基準為 **1262**。
 
 **WLRe:LaLa** 是《飄流幻境 RE：星之方舟》的 Python 桌面客戶端工具，使用 Tkinter／ttk、遊戲封包與內建資源。桌面版獨立維護，Android 不在本倉庫的建置範圍內。
 
@@ -64,11 +64,11 @@ python WLRE_Client.py --smoke-test-gui
 python -m tools.build.build_nuitka --dry-run
 ```
 
-`--self-test` 檢查必要資源，`--smoke-test-gui` 建立視窗但不登入；GUI 測試需要顯示環境（Linux CI 使用 Xvfb）。`.github/workflows/test.yml` 已配置 **Linux、Windows、macOS Apple Silicon** 的 PR／main 測試矩陣，是否通過以實際 GitHub Actions 結果為準；單元測試不能取代原生安裝包及正式伺服器測試。[驗證紀錄](docs/VALIDATION.md)
+`--self-test` 檢查必要資源，`--smoke-test-gui` 建立視窗但不登入；GUI 測試需要顯示環境（Linux CI 使用 Xvfb）。`.github/workflows/test.yml` 現在於一般 PR／main 提交自動執行 **Linux、Windows、macOS** 完整回歸；變更編譯流程或關鍵程式時，另由 `.github/workflows/desktop-packaging.yml` 自動執行 Windows x64 EXE、macOS Apple Silicon／Intel 原生建置。兩個工作流程仍可手動啟動，正式版本標籤亦照常執行發布打包。實際是否通過以 GitHub Actions 最新結果為準。[驗證紀錄](docs/VALIDATION.md) · [第 10 項稽核](docs/PHASE10_AUDIT.md)
 
 ## 參考文件
 
-- [整體架構](docs/ARCHITECTURE.md) · [模組索引](docs/STRUCTURE.md) · [介面配置](docs/UI_LAYOUT.md) · [重構進度](docs/REFACTOR_CHECKLIST.md)
+- [整體架構](docs/ARCHITECTURE.md) · [模組索引](docs/STRUCTURE.md) · [介面配置](docs/UI_LAYOUT.md) · [重構進度](docs/REFACTOR_CHECKLIST.md) · [第 10 項稽核](docs/PHASE10_AUDIT.md)
 - [遠征](docs/EXPEDITION.md) · [戰後維護](docs/MAINTENANCE.md) · [配點](docs/attribute_points_1262.md) · [超空間袋](docs/room_storage_1262.md)
 - [協定](docs/PROTOCOLS.md) · [連線診斷](docs/CONNECTION_DIAGNOSTICS.md) · [建置與發佈](docs/NUITKA_BUILD.md)
 

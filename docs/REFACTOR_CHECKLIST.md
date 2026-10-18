@@ -1,6 +1,6 @@
 # WLRe_lala 更新清單
 
-每項從 GitHub 最新 main 建立獨立分支，保留舊版匯入與原有操作。一般提交只跑 Linux 完整單元與 GUI 冒煙測試；需 Windows／macOS 跨平台驗收的變更或正式版本，在額度足夠時手動執行三平台回歸與原生打包，不得將日常輕量測試誤稱為三平台驗證。
+每項從 GitHub 最新 main 建立獨立分支，保留舊版匯入與原有操作。一般提交自動執行 Linux／Windows／macOS 完整單元與 GUI 冒煙測試；建置相關 PR 同步執行原生 Nuitka 打包，並以各 Commit 實際 GitHub Actions 結果為驗收依據。
 
 - [x] 01 遠征服務模組拆分：PR #9，Commit 1f08ab4
 - [x] 02 遠征 UI 模組拆分：PR #10，Commit cc167e2
@@ -11,7 +11,7 @@
 - [x] 07 網路封包與指令架構＋經驗效率修復：驗證指令格式、統一送出記錄、隔離無 EXP 回覆、保留閒置夥伴效率（完成 PR 三平台測試並合併後）
 - [x] 08 資源載入及效能改善：道具 ZIP 解碼快取受限、背景局部更新、回歸測試（PR 三平台通過且合併後完成）
 - [x] 09 Windows／macOS 建置與 Nuitka 加速：PR #18，三平台回歸及 Windows x64、macOS Intel／Apple Silicon 原生打包 CI 已通過（仍需人工 GUI／正式服務驗收）
-- [ ] 10 測試、文件及版本整理
+- [x] 10 測試、文件及版本整理：PR #19，Linux／Windows／macOS 回歸與 Windows EXE、macOS arm64／Intel APP 原生打包六項 CI 全通過（正式服與實機人工驗收另列）
 
 ## 第 03 項驗收範圍
 
@@ -79,3 +79,17 @@
 - Nuitka 加速：新增 `--jobs` （1～16，預設至多 6）、恢復 macOS C 編譯快取、GitHub Actions 設定 pip 與 Nuitka 編譯快取，保留全量圖片與資料資源。改善幅度尚需重複相同環境的編譯量測，未宣稱固定百分比。
 
 - GitHub Actions 額度不足時的驗證依據：Commit `4e3abc0` 已通過三平台完整回歸（run 39141397498）及 Windows／macOS Intel／Apple Silicon 原生打包（run 39141397522）；Commit `377884b` 僅改 `docs/REFACTOR_CHECKLIST.md`。後續的工作流程節流改動需另行檢查 YAML 與靜態測試，在額度恢復前**不宣稱新提交 CI 全綠**。
+
+## 第 10 項驗收結果（自動化完成）
+
+- 基準 main：`a27826bc3fcabcbb72e42f600721ad90c9115cad`，第 09 項 PR #18 已合併；本項獨立分支處理。
+- 完成 Git 追蹤檔案重複檢查、文件相對路徑及版本／發布狀態一致性核對，修正過時指引與失效連結，保留歷史檔及相容匯入路徑。
+- 保護第 07 項 EXP 效率、服務指令、登入與資料儲存行為，不碰正式封包及遊戲機制。新增唯讀的離線稽核命令 `python -m tools.audit_repository` 及回歸防護測試。
+- v0.5.0 是 2026-10-17 已發布的現行正式版；v0.6.0 仍是開發摘要。尚未新增標籤或執行正式打包，不提前調整應用版本常數。
+- GitHub Actions 額度限制已解除：PR #19 Commit `d72f3de` 的 [三平台原始碼回歸](https://github.com/blesses0603/WLRe_lala/actions/runs/39171233034) 及 [Windows x64／macOS arm64／Intel x64 原生 Nuitka 打包](https://github.com/blesses0603/WLRe_lala/actions/runs/39171233020) 均為 success。正式服、使用者電腦實機 GUI、macOS Developer ID 公證仍需獨立人工驗收。[盤點與驗收說明](PHASE10_AUDIT.md)
+
+- 第 10 項補測：新增獨立離線稽核 fixture 測試，CI 增加 `compileall`、Git index 重複檔嚴格檢查及 macOS ARM64／Intel dry-run；已另由 Windows／macOS 原生 CI 完成真正的回歸及 Nuitka 打包驗證。
+
+- 第 10 項本機資料稽核與 Ubuntu 補測：[39162618822](https://github.com/blesses0603/WLRe_lala/actions/runs/39162618822)，423 tests（2 skips）、GUI、資源、語法與嚴格檔案稽核均成功；20 份 Markdown／191 條本機連結完整。其後 Commit `d72f3de` 三平台回歸及原生打包再次成功。實機／實服仍是獨立限制。
+
+- 第 10 項 CI 原生打包產物：`desktop-windows-x64-validation`、`desktop-macos-arm64-validation`、`desktop-macos-x64-validation`，附於 [39171233020](https://github.com/blesses0603/WLRe_lala/actions/runs/39171233020)；本次為測試版 artifacts，**不是新的 GitHub Release**，應用程式版本常數仍是 `0.5.0`。

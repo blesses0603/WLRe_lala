@@ -1,8 +1,21 @@
 name: Native desktop packaging verification
 
-# Native builds consume significant Windows/macOS runner minutes.
-# Trigger explicitly from Actions; version tags use release-windows.yml instead.
+# Verify native Windows EXE and macOS APP on packaging-related pull requests.
+# Tags and official releases still use release-windows.yml.
 on:
+  pull_request:
+    paths:
+      - '.github/workflows/desktop-packaging.yml'
+      - '.github/workflows/release-windows.yml'
+      - '.github/workflows/test.yml'
+      - 'tools/build/**'
+      - 'wlre/**'
+      - 'WLRE_Client.py'
+      - 'requirements*.txt'
+      - 'tests/test_*build*.py'
+      - 'tests/test_release*.py'
+      - 'tests/test_repository_hygiene.py'
+      - 'docs/NUITKA_BUILD.md'
   workflow_dispatch:
 
 permissions:

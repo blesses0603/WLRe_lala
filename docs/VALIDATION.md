@@ -1,5 +1,27 @@
 # 驗證結果
 
+## 2026-10-19 第 10 項跨平台最終自動化驗收
+
+- 第 10 項 PR #19 Commit `d72f3de`：原始碼完整三平台回歸（Linux、Windows 2022、macOS arm64）在 [39171233034](https://github.com/blesses0603/WLRe_lala/actions/runs/39171233034) **全數 success**；原生 Windows x64 EXE、macOS Apple Silicon arm64 APP 與 Intel x64 APP 編譯、自檢、驗證、封裝在 [39171233020](https://github.com/blesses0603/WLRe_lala/actions/runs/39171233020) **全數 success**，並產出三個 CI artifacts。
+- 本項文件及 Git 資產嚴格稽核 20 份 Markdown、191 個相對連結、0 失效連結、0 非空重複檔；完整回歸保留第 07 項 EXP 效率修復。
+- 自動化驗收範圍完成。macOS Intel 真正圖形介面啟動、使用者 Windows 實機操作、正式伺服器端到端功能、Apple Developer ID 公證與 Gatekeeper 仍需獨立實測。
+- 本項沒有變更 `wlre.__version__`，也沒有發布 `v0.6.0`。
+
+
+## 2026-10-19 第 10 項啟動與補測：驗證狀態區分
+
+- 第 09 項 Commit `4e3abc0`：三平台回歸 [39141397498](https://github.com/blesses0603/WLRe_lala/actions/runs/39141397498) 全成功，Windows x64 與 macOS Intel／arm64 原生打包 [39141397522](https://github.com/blesses0603/WLRe_lala/actions/runs/39141397522) 全成功；此紀錄屬該版本，不代表之後每筆提交通過 CI。
+- PR #18 合併後日常 CI 只自動跑 Linux；Windows／macOS 的原始碼回歸及原生打包可手動啟動；GitHub Actions 額度不足時，新的 Runner 在開始執行測試前即失敗，不可當作程式回歸失敗。
+- 第 10 項初始盤點 286 個追蹤檔，未發現非空的完全重複檔；19 份 Markdown 發現兩個失效路徑，已列入本項修正；詳見 [第 10 項稽核](PHASE10_AUDIT.md)。
+- 第 10 項的新提交尚未取得跨平台 CI 完成紀錄，完整回歸、正式伺服器與使用者實機操作仍待驗證。不變更已修好的 EXP 效率邏輯。
+
+
+- PR #19 Commit `b23b804` Ubuntu CI [39147669166](https://github.com/blesses0603/WLRe_lala/actions/runs/39147669166)：417 tests、2 skips，GUI 冒煙、資源自檢及 Windows Nuitka dry-run 成功。新增嚴格 Git 稽核、全檔語法與 macOS 雙架構 dry-run 後需以**新提交的 CI** 驗收，不能借用上次成功結果。
+
+- PR #19 Commit `84b5450` Ubuntu CI [39162452731](https://github.com/blesses0603/WLRe_lala/actions/runs/39162452731)：423 項測試（2 項條件略過），全檔 Python 語法、嚴格 Git index 稽核、GUI 冒煙、資源自檢，以及 Windows/macOS ARM64／Intel Nuitka dry-run 均通過。該次嚴格稽核掃描 18 份 Markdown；最後補上資源署名 SOURCE.md 共 2 份後，應以更新後結果另行驗證。
+
+- PR #19 Commit `34add166` 最終完整 Ubuntu CI [39162618822](https://github.com/blesses0603/WLRe_lala/actions/runs/39162618822) success：423 tests（2 skips）、Linux GUI 冒煙、資源自檢、Python compileall、Windows/macOS 雙架構 Nuitka dry-run 全通過；嚴格 Git 稽核覆蓋 20 份 Markdown／191 個相對路徑，0 斷鏈及 0 非空重複 blob。Windows/macOS 本版原生驗證仍待手動觸發。
+
 ## 2026-10-17 優化工作區
 
 - v0.4.21 發布預檢：以假的 gh CLI 執行工作流程內的實際 Bash 步驟，驗證有效且未發布標籤可傳遞、`Ver.0.4.20`／其他錯誤格式在遠端請求前被拒絕、缺少標籤及已發布版本會提早停止。核對四項官方 Action 的指定版本皆採 Node.js 24；176 項中 174 通過、2 項原生平台略過，actionlint 與版本標籤預檢通過。
