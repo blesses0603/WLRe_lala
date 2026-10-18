@@ -54,4 +54,6 @@ BAT 會列出選中的版本、位元數、路徑及 Tk 版本；找不到可用
 2. **原生打包驗證**：`.github/workflows/desktop-packaging.yml` 對 PR 分別在 Windows x64、macOS arm64、macOS Intel x64 編譯 Nuitka，實際啟動**編譯後產物**執行 `--self-test` 和 `--smoke-test-gui`，並驗證 ZIP CRC。macOS 還需檢查 Mach-O 架構與 `codesign --verify --deep --strict`。
 3. **人工驗收**：需在使用者的 Windows 桌面及 Mac Finder 驗證實際操作；Apple Developer ID 公證、Gatekeeper 與正式伺服器連線不屬自動 CI 能證明的事項。
 
+macOS Intel 的 GitHub hosted runner 曾在原始碼 Tk GUI 冒煙測試逾時；CI 明確使用 `WLRE_NATIVE_GUI_SMOKE=0` 停用 **Intel 虛擬機的 GUI 視窗檢查**，但仍要求完整單元測試、原生編譯、編譯後 APP 的資源自檢、Mach-O 架構檢查、簽章與 ZIP 完整性。Intel 使用者電腦上的實際 APP GUI 啟動**尚未驗證**，需人工驗收。macOS Apple Silicon 的 CI GUI 冒煙測試維持啟用。
+
 PR 完整打包產物會暫存於 GitHub Actions artifacts；正式版仍需推送與 `wlre.__version__` 相符、尚未發行的 `vX.Y.Z` 標籤才能觸發 GitHub Release。macOS Intel 與 Apple Silicon 是分開建置的原生 APP，並非 Universal Binary。
