@@ -1,0 +1,63 @@
+"""Phase 10 safety net: docs, artifact policy and repository hygiene.
+
+These tests require neither a game account nor a GitHub Actions paid runner.
+"""
+from pathlib import Path
+import unittest
+
+from tools import audit_repository
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+class DocumentationAndReleaseAudit(unittest.TestCase):
+    def test_all_relative_markdown_links_resolve(self):
+        checked, broken = audit_repository.invalid_links(ROOT)
+        self.assertGreater(checked, 100)
+        self.assertEqual(broken, [], "Broken local Markdown references: " + repr(broken))
+
+    def test_no_identical_nonempty_tracked_files(self):
+        duplicates = audit_repository.duplicate_tracked_blobs(ROOT)
+        if duplicates is None:
+            self.skipTest("Git index unavailable, e.g. a source-only export")
+        self.assertEqual(duplicates, [])
+
+    def test_dev_readme_does_not_impersonate_unpublished_release(self):
+        self.assertEqual(audit_repository.application_version(ROOT), "0.5.0")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        changelog = (ROOT / "版本歷史.md").read_text(encoding="utf-8")
+        self.assertIn("v0.6.0 開發版", readme)
+        self.assertIn("v0.5.0", readme)
+        self.assertIn("2026-10-17", changelog)
+        self.assertIn("releases/tag/v0.5.0", readme)
+        self.assertIn("不是正式發布", changelog)
+
+    def test_actions_default_preserves_low_cost_pr_behavior(self):
+        daily = (ROOT / ".github/workflows/test.yml").read_text(encoding="utf-8")
+        native = (ROOT / ".github/workflows/desktop-packaging.yml").read_text(encoding="utf-8")
+        release = (ROOT / ".github/workflows/release-windows.yml").read_text(encoding="utf-8")
+        self.assertIn('["ubuntu-latest"]', daily)
+        self.assertIn('full_matrix:', daily)
+        self.assertIn("workflow_dispatch:", native)
+        native_triggers = native.split("on:\n", 1)[1].split("\npermissions:", 1)[0]
+        self.assertNotIn("pull_request:", native_triggers)
+        self.assertIn("tags:", release)
+        self.assertIn("build_macos:", release)
+
+    def test_legacy_compatibility_and_experience_regressions_retained(self):
+        for relative in (
+            "tests/test_exp_efficiency_regression.py",
+            "wlre/core/efficiency.py",
+            "wlre/services/expedition_data.py",
+            "wlre/services/expedition_teams.py",
+            "wlre/ui/expedition_ui.py",
+            "wlre/ui/minimap.py",
+            "docs/README_v0.5.0.md",
+        ):
+            with self.subTest(path=relative):
+                self.assertTrue((ROOT / relative).is_file())
+
+
+if __name__ == "__main__":
+    unittest.main()
