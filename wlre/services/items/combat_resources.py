@@ -51,6 +51,9 @@ def apply_live(state,event):
             if data['index']:set_companion(state,data)
     elif kind=='companion_delete' and event['owner_id']==state.player.get('role_id'):
         k['companions'].pop(str(event['index']),None)
+        # S8-2 values are keyed by *slot*, not permanent companion identity.
+        # A reused slot must never inherit the deleted NPC's old statistics.
+        state.attributes.pop(f"follow:{event['index']}", None)
     elif kind=='active_companion':k['active_npc_id']=event['npc_id']
     elif kind=='attribute_set':
         entity=event['entity'];profile=None
@@ -90,6 +93,12 @@ def apply_live(state,event):
             if match:unit['equips'][event['equip_index']-1]={'item_id':event['item_id'],'design_id':event['design_id']}
 
 def set_companion(state,data):
+    index = str(data['index'])
+    previous = state.knowledge['companions'].get(index)
+    if previous and previous.get('npc_id') != data['npc_id']:
+        # The same slot has been reassigned to a different NPC. Buffered
+        # S8 attributes for the previous occupant are no longer trustworthy.
+        state.attributes.pop(f"follow:{index}", None)
     npc=CAT['npcs'].get(str(data['npc_id']),{});skills={}
     for sid,value in zip(npc.get('skills',[]),data['skill_slots']):
         if sid and value['level']>0:skills[str(sid)]={**value,'source':'S15技能槽＋NpcData'}

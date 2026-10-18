@@ -2,6 +2,18 @@
 from wlre.network.wire import Packet, Writer, ProtocolError
 
 
+def ambiguous_identity(knowledge, npc_id):
+    """S19 reports NPC ID but not the companion slot index.
+
+    If duplicates exist, do not infer which copy is active or send a command
+    that can unintentionally affect a different companion of the same kind.
+    """
+    return sum(
+        profile.get('ready') is True and profile.get('npc_id') == npc_id
+        for profile in knowledge.get('companions', {}).values()
+    ) > 1
+
+
 def problem(state, index, npc_id, action):
     if action not in ('deploy', 'rest'):
         return '不支援的夥伴操作'
@@ -14,6 +26,8 @@ def problem(state, index, npc_id, action):
     if (type(index) is not int or type(npc_id) is not int or not 1 <= npc_id <= 0xffffffff
             or not profile or not profile.get('ready') or profile.get('npc_id') != npc_id):
         return '夥伴資料已變更，請重新選取'
+    if ambiguous_identity(knowledge, npc_id):
+        return '存在相同 NPC ID 的多隻夥伴；伺服器未回傳格位身份，暫停切換以免操作錯誤'
     if state.get('battle', {}).get('active'):
         return '請於戰鬥結束後切換夥伴'
     if state.get('event_flow', {}).get('blocked') or (state.get('battle_count') and state.get('battle', {}).get('post_event', {}).get('status') != 'completed'):
