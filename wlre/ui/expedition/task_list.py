@@ -1,4 +1,5 @@
 """Expedition quest list, server-backed filtering and live success estimates."""
+import tkinter as tk
 from wlre.ui.layout import scroll_table
 from wlre.services.expedition import duration
 from wlre.ui.expedition_display import task_name, time_text
