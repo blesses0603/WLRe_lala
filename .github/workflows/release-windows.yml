@@ -53,6 +53,7 @@ jobs:
     env:
       RELEASE_TAG: ${{ needs.preflight.outputs.tag }}
       PYTHONUTF8: '1'
+      NUITKA_CACHE_DIR: ${{ runner.temp }}/nuitka-cache
     steps:
       - uses: actions/checkout@v7.0.1
         with:
@@ -62,23 +63,26 @@ jobs:
         with:
           python-version: '3.12'
           architecture: x64
+          cache: pip
+          cache-dependency-path: |
+            requirements-ui.txt
+            requirements-build.txt
+            requirements-build-macos.txt
       - name: Check version tag
         run: python -m tools.build.release_nuitka --tag "$env:RELEASE_TAG" --check-tag
       - name: Install test dependencies
         run: python -m pip install -r requirements-ui.txt
       - name: Run tests
         run: python -m unittest discover -s tests -q
-      # Restore compiler object cache across fresh Windows runners.
-      # Cache is scoped to the release tag's source revision and shared with
-      # later releases through restore-keys.
-      - name: Restore Nuitka C compiler cache
+      # Match the PR cache namespace; never reuse objects across architectures.
+      - name: Restore Nuitka compiler cache
         uses: actions/cache@v4
         with:
-          path: ~\\AppData\\Local\\Nuitka\\Nuitka\\Cache\\clcache
-          key: nuitka-clcache-windows2022-py312-msvc-${{ hashFiles('requirements-build.txt', 'requirements-ui.txt') }}-${{ github.sha }}
+          path: ${{ env.NUITKA_CACHE_DIR }}
+          key: desktop-nuitka-v1-windows-x64-py312-${{ hashFiles('requirements-build.txt', 'requirements-build-macos.txt', 'requirements-ui.txt') }}-${{ github.sha }}
           restore-keys: |
-            nuitka-clcache-windows2022-py312-msvc-${{ hashFiles('requirements-build.txt', 'requirements-ui.txt') }}-
-            nuitka-clcache-windows2022-py312-msvc-
+            desktop-nuitka-v1-windows-x64-py312-${{ hashFiles('requirements-build.txt', 'requirements-build-macos.txt', 'requirements-ui.txt') }}-
+            desktop-nuitka-v1-windows-x64-py312-
       # Call the BAT's Python entry point directly to avoid its interactive pause.
       - name: Compile and self-test Windows EXE
         run: python -m tools.build.build_nuitka --mode standalone --compiler msvc
@@ -118,6 +122,7 @@ jobs:
       RELEASE_TAG: ${{ needs.preflight.outputs.tag }}
       BUILD_ARCH: ${{ matrix.arch }}
       PYTHONUTF8: '1'
+      NUITKA_CACHE_DIR: ${{ runner.temp }}/nuitka-cache
       # Intel hosted runner may lack a functional WindowServer; still self-test
       # the built APP and require Mach-O/signature validation.
       WLRE_NATIVE_GUI_SMOKE: ${{ matrix.arch == 'x64' && '0' || '1' }}
@@ -133,6 +138,19 @@ jobs:
         with:
           python-version: '3.12'
           architecture: ${{ matrix.arch }}
+          cache: pip
+          cache-dependency-path: |
+            requirements-ui.txt
+            requirements-build.txt
+            requirements-build-macos.txt
+      - name: Restore Nuitka compiler cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.NUITKA_CACHE_DIR }}
+          key: desktop-nuitka-v1-macos-${{ matrix.arch }}-py312-${{ hashFiles('requirements-build.txt', 'requirements-build-macos.txt', 'requirements-ui.txt') }}-${{ github.sha }}
+          restore-keys: |
+            desktop-nuitka-v1-macos-${{ matrix.arch }}-py312-${{ hashFiles('requirements-build.txt', 'requirements-build-macos.txt', 'requirements-ui.txt') }}-
+            desktop-nuitka-v1-macos-${{ matrix.arch }}-py312-
       - name: Check version tag and native architecture
         run: |
           python -m tools.build.release_nuitka --tag "$RELEASE_TAG" --check-tag
@@ -142,7 +160,11 @@ jobs:
       - name: Run tests and native GUI smoke test
         run: |
           python -m unittest discover -s tests -q
-          python WLRE_Client.py --smoke-test-gui
+          if [[ "$BUILD_ARCH" != "x64" ]]; then
+            python WLRE_Client.py --smoke-test-gui
+          else
+            echo 'Intel hosted CI GUI smoke unavailable; manual Mac test required.'
+          fi
       - name: Compile, self-test and verify app signature
         run: python -m tools.build.build_macos --arch "$BUILD_ARCH"
       - name: Package and verify app ZIP
