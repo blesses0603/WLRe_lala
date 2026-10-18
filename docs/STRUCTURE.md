@@ -1,6 +1,6 @@
 # 目錄與模組索引
 
-對照基礎：`main` 的 `3f27368` 加本次功能協調與狀態所有權改善，應用版本 `0.5.0`。本索引描述目前目錄；完整的啟動、資料流、狀態所有權、帳號保存與改善順序，請先閱讀 [整體架構](ARCHITECTURE.md)。
+對照基礎：目前 GitHub main 的目錄與模組，應用版本 0.5.0。本索引描述目前目錄；完整的啟動、資料流、狀態所有權、帳號保存與改善順序，請先閱讀 [整體架構](ARCHITECTURE.md)。
 
 ## 根目錄
 
@@ -81,8 +81,9 @@
 | [services_ui.py](../wlre/ui/services_ui.py) | 組隊與煉金操作面板。 |
 | [session_bridge.py](../wlre/ui/session_bridge.py) | 綁定單次連線的工作執行緒回呼與顯示信箱。 |
 | [theme.py](../wlre/ui/theme.py) | 視窗背景合成、標題列、按鈕貼圖與表格欄寬鎖定；保留共用主題入口。 |
+| [theme_surfaces.py](../wlre/ui/theme_surfaces.py) | 1280×800 共用背景畫布、巢狀父容器裁切與單層邊框運算。 |
 | [theme_styles.py](../wlre/ui/theme_styles.py) | 統一註冊 ttk 字型、色彩、按鈕、表格及輸入框樣式，不處理背景裁切。 |
-| [window_layout.py](../wlre/ui/window_layout.py) | 功能對話框的尺寸限制與置中。 |
+| [window_layout.py](../wlre/ui/window_layout.py) | 共用彈窗尺寸置中、低解析度縮限與去除重複邊框。 |
 
 ## wlre/core：會話狀態與共通處理
 

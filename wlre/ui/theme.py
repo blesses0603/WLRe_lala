@@ -7,12 +7,14 @@ No network, command queues, or game state are involved in this module.
 from wlre.paths import RESOURCE_ROOT
 from wlre.ui.button_art import button_image, button_kind
 from wlre.ui.theme_styles import apply_styles
+from wlre.ui.theme_surfaces import (artwork_canvas, window_background, visible_bounds,
+                                    widget_crop, draw_section)
 import copy
 import os
 import tkinter as tk
 from tkinter import font as tkfont
 from tkinter import ttk
-from PIL import Image, ImageDraw, ImageOps, ImageTk
+from PIL import Image, ImageDraw, ImageTk
 
 BG = '#101c2b'
 PANEL = '#142638'
@@ -65,6 +67,7 @@ class GlassTheme:
         self.windows = {}
         self.serial = 0
         self.art = Image.open(ASSETS / 'exp_background.png').convert('RGB')
+        self.wallpaper = artwork_canvas(self.art)
         with Image.open(ASSETS / 'app.ico') as source:
             icon=source.convert('RGBA')
         self.icon=ImageTk.PhotoImage(icon,master=root)
@@ -268,51 +271,46 @@ class GlassTheme:
         for w in children:
             x, y = w.winfo_rootx()-wx, w.winfo_rooty()-wy
             a, b = w.winfo_width(), w.winfo_height()
-            bounds = [max(0, x), max(0, y), min(width, x+a), min(height, y+b)]
+            parents = []
             ancestor = w.master
             while ancestor is not window:
-                ax, ay = ancestor.winfo_rootx()-wx, ancestor.winfo_rooty()-wy
-                bounds = [max(bounds[0], ax), max(bounds[1], ay),
-                          min(bounds[2], ax+ancestor.winfo_width()),
-                          min(bounds[3], ay+ancestor.winfo_height())]
+                parents.append((ancestor.winfo_rootx()-wx, ancestor.winfo_rooty()-wy,
+                                ancestor.winfo_width(), ancestor.winfo_height()))
                 ancestor = ancestor.master
-            if bounds[0] < bounds[2] and bounds[1] < bounds[3]:
-                boxes.append((w, x, y, a, b))
-        signature = (width, height, tuple((str(w), x, y, a, b) for w, x, y, a, b in boxes))
+            bounds = visible_bounds(x, y, a, b, (width, height), parents)
+            if bounds is not None:
+                boxes.append((w, x, y, a, b, bounds))
+        # A border policy change must repaint even if widget geometry is static.
+        outline = not getattr(window, '_no_glass_border', False)
+        signature = (width, height, outline,
+                     tuple((str(w), x, y, a, b, bounds) for w, x, y, a, b, bounds in boxes))
         if signature == data['signature']:
             return
         data['signature'] = signature
         # One image transform per window size. Every transparent control takes
         # the same absolute crop; nested panels never recolor/rescale the picture.
-        if data.get('background_size') != (width,height):
-            background = ImageOps.fit(self.art,(width,height),method=Image.Resampling.LANCZOS)
-            background = Image.blend(background,Image.new('RGB',background.size,'#071526'),.60 if window is not self.root else .46)
-            backing=background.convert('RGBA')
-            layer=Image.new('RGBA',backing.size)
-            # The resource dialog uses the original window's own themed edges.
-            # Suppress only its redundant cyan outline to avoid a double border.
-            if not getattr(window, '_no_glass_border', False):
-                ImageDraw.Draw(layer).rounded_rectangle((1,1,width-2,height-2),radius=20,
-                    outline=(98,201,224,200),width=1)
-            data['background']=Image.alpha_composite(backing,layer)
-            data['background_size'] = (width,height)
+        background_key = (width, height, outline)
+        if data.get('background_key') != background_key:
+            data['background'] = window_background(
+                self.wallpaper, width, height, main=window is self.root, outline=outline)
+            data['background_key'] = background_key
+            data['background_size'] = (width, height)
         if data.get('surface_key')!=signature:
             backing=data['background'].copy()
             layer=Image.new('RGBA',backing.size)
-            draw=ImageDraw.Draw(layer)
-            for widget,x,y,a,b in boxes:
+            for widget,x,y,a,b,bounds in boxes:
                 section=(getattr(widget,'_section_outline',False) or
                          type(widget).__name__ in ('HomeMap','GlassGroup','RecoveryPage') or
                          widget.winfo_class()=='TLabelframe')
                 fill=getattr(widget,'_surface_fill',(9,24,39,170) if section else None)
                 if fill and a>4 and b>4:
-                    draw.rounded_rectangle((x+1,y+1,x+a-2,y+b-2),radius=14,fill=fill)
+                    draw_section(layer, x, y, a, b, bounds, fill)
             data['surface']=Image.alpha_composite(backing,layer)
             data['surface_key']=signature
             data['surface_generation']=data.get('surface_generation',0)+1
         backing = data['surface']
         new_styles = False
-        for w, x, y, a, b in boxes:
+        for w, x, y, a, b, bounds in boxes:
             if a < 2 or b < 2:
                 continue
             cls = w.winfo_class()
@@ -323,7 +321,7 @@ class GlassTheme:
                 crop_key=(data['surface_generation'],width,height,x,y,a,b)
                 record=data['widgets'].get(str(w))
                 if record is None or record.get('crop_key')!=crop_key:
-                    new_styles = self.skin(w, data, backing.crop((x, y, x+a, y+b)), cls) or new_styles
+                    new_styles = self.skin(w, data, widget_crop(backing, x, y, a, b, bounds), cls) or new_styles
                     record=data['widgets'].get(str(w))
                     if record is not None:record['crop_key']=crop_key
             elif cls == 'Text':
