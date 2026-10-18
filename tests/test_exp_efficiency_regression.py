@@ -23,8 +23,8 @@ class EfficiencyEvidenceTests(unittest.TestCase):
                  'stats':{'exp':22000,'level':16,'degree':0,'name':'Idle Pet'}},
         }
 
-    def event(self,kind,when,**payload):
-        observe(self.state,{'type':kind,'_observed_at':when,**payload})
+    def event(self,event_type,when,**payload):
+        observe(self.state,{'type':event_type,'_observed_at':when,**payload})
 
     def start(self,time,pet_slot=2):
         units=[{'pid':71,'master_id':0,'npc_index':0}]
@@ -36,6 +36,15 @@ class EfficiencyEvidenceTests(unittest.TestCase):
         self.state.knowledge['companions'][str(slot)]['stats']['exp']=total
         self.event('attribute_set',when,entity=f'follow:{slot}',
                    human_kind=4,kind=36,parameter=0,value=total)
+
+    def test_first_authoritative_exp_and_level_are_saved_in_state(self):
+        self.event('initial_data_complete',1)
+        rows=self.state.efficiency['rows']
+        self.assertEqual(rows['self']['exp'],20000)
+        self.assertEqual(rows['self']['level'],15)
+        self.assertEqual(rows['follow:2']['exp'],10000)
+        self.assertIsNotNone(rows['follow:2']['level'])
+        self.assertEqual(rows['follow:3']['exp'],22000)
 
     def test_idle_companion_retains_rates_during_other_battles(self):
         self.start(0)
