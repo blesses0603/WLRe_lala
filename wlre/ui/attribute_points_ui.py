@@ -3,7 +3,8 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 
 from wlre.ui.window_layout import configure_dialog
-from wlre.services.battle.attribute_points import FIELDS, KEYS, MAX_BASE_ATTRIBUTE, baseline
+from wlre.services.battle.attribute_points import (FIELDS, KEYS, MAX_BASE_ATTRIBUTE, baseline,
+                                                   preview_block_reason)
 
 
 class AttributePointWindow:
@@ -13,6 +14,7 @@ class AttributePointWindow:
         self.window.title("角色能力 · 配點")
         configure_dialog(self.window, 570, 505)
         self.base = None
+        self._role_id = None
         self.add = {key: 0 for key in KEYS}
         self.queued = False
         self.role = tk.StringVar(value="角色資料待同步")
@@ -67,9 +69,8 @@ class AttributePointWindow:
         self.show_values()
 
     def locked(self):
-        data = self.app.snapshot.get("attribute_allocation", {})
-        return (self.queued or data.get("pending") or data.get("uncertain")
-                or not self.app.live_active)
+        return (self.queued or bool(preview_block_reason(
+            self.app.snapshot, live=self.app.live_active)))
 
     def show_values(self):
         if self.base is not None:
@@ -122,9 +123,11 @@ class AttributePointWindow:
             current = baseline(stats) if ready and player.get("role_id") else None
         except ValueError:
             current = None
-        if current != self.base:
-            # A server-side change invalidates any unsent local preview and
-            # completes the UI queue phase once new values are authoritative.
+        role_id = player.get("role_id")
+        if role_id != self._role_id or current != self.base:
+            # Never transfer a local preview to a different character, even
+            # when both characters have exactly the same visible statistics.
+            self._role_id = role_id
             self.queued = False
             self.base = current
             self.add = {key: 0 for key in KEYS}
@@ -141,5 +144,6 @@ class AttributePointWindow:
         elif allocation.get("status"):
             self.note.set(allocation["status"])
         elif not self.queued:
-            self.note.set("可預覽加減點；只有按下確認才會向伺服器送出。")
+            reason = preview_block_reason(state, live=self.app.live_active)
+            self.note.set(reason or "可預覽加減點；只有按下確認才會向伺服器送出。")
         self.show_values()
