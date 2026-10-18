@@ -123,12 +123,13 @@ class AttributePointWindow:
         except ValueError:
             current = None
         if current != self.base:
+            # A server-side change invalidates any unsent local preview and
+            # completes the UI queue phase once new values are authoritative.
+            self.queued = False
             self.base = current
             self.add = {key: 0 for key in KEYS}
         allocation = state.get("attribute_allocation", {})
         if allocation.get("pending"):
-            self.queued = False
-        elif self.queued and current != self.base:
             self.queued = False
         if allocation.get("uncertain"):
             self.queued = False
