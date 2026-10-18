@@ -59,6 +59,17 @@ def bundle_executable(bundle):
     return executable
 
 
+def verify_binary_arch(executable, arch):
+    """Reject an APP whose Mach-O entry cannot run on the requested runner."""
+    expected = {'arm64': 'arm64', 'x64': 'x86_64'}[arch]
+    result = subprocess.run(['lipo', '-archs', str(executable)],
+                            capture_output=True, text=True, check=True)
+    available = result.stdout.strip().split()
+    if expected not in available:
+        raise ValueError(f'App 主程式架構不符：需要 {expected}，實際為 {available}')
+    return available
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description='macOS Nuitka .app 打包（需在 macOS 執行）')
     parser.add_argument('--arch', choices=('arm64', 'x64'))
@@ -84,6 +95,7 @@ def main(argv=None):
         run_logged(make_command(sys.executable, arch=arch), log)
         bundle = output / 'WLRe_LaLa.app'
         executable = bundle_executable(bundle)
+        verify_binary_arch(executable, arch)
         run_logged([str(executable), '--self-test'], log)
         run_logged([str(executable), '--smoke-test-gui'], log)
         run_logged(['codesign', '--verify', '--deep', '--strict', str(bundle)], log)
