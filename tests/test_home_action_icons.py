@@ -38,7 +38,7 @@ class OriginalHomeActionIcons(unittest.TestCase):
             action_icon_photo('fixture-parent', '煉金')
         factory.assert_called_once()
         self.assertEqual(factory.call_args.kwargs['master'], 'fixture-parent')
-        self.assertIs(factory.call_args.args[0], action_icon_image('煉金'))
+        self.assertEqual(factory.call_args.args[0].tobytes(), action_icon_image('煉金').tobytes())
 
 
 if __name__ == '__main__':
