@@ -37,7 +37,7 @@ jobs:
     timeout-minutes: 120
     env:
       PYTHONUTF8: '1'
-      NUITKA_CACHE_DIR: ${{ runner.temp }}/nuitka-cache
+      NUITKA_CACHE_DIR: ${{ github.workspace }}/.nuitka-cache
       # The Intel hosted macOS VM timed out in Tk's GUI event loop.
       # Native compile, executable self-test, Mach-O and signature remain mandatory.
       WLRE_NATIVE_GUI_SMOKE: ${{ matrix.runner == 'macos-15-intel' && '0' || '1' }}
