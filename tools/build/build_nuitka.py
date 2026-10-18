@@ -177,6 +177,8 @@ def main(argv=None):
         executable=(output/'WLRe_LaLa.exe') if args.mode=='onefile' else (output/'WLRe_LaLa.dist/WLRe_LaLa.exe')
         if not executable.is_file():raise RuntimeError('編譯未產生預期的 EXE：'+str(executable))
         run_logged([str(executable),'--self-test'],log)
+        # Exercise Tcl/Tk and dashboard construction in the compiled EXE too.
+        run_logged([str(executable),'--smoke-test-gui'],log)
         print('\n打包及資源自檢完成：'+str(executable),flush=True)
         if args.mode=='standalone':print('分享時請複製整個 WLRe_LaLa.dist 資料夾。',flush=True)
         return 0
