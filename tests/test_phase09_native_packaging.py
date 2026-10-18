@@ -60,9 +60,19 @@ class NativeArchitectureTests(unittest.TestCase):
 
 
 class WorkflowVerificationTests(unittest.TestCase):
-    def test_pr_native_compilation_is_separate_from_headless_ci(self):
+    def test_native_compilation_requires_manual_dispatch_and_is_separate_from_daily_ci(self):
         workflow = (ROOT / '.github/workflows/desktop-packaging.yml').read_text(encoding='utf8')
-        self.assertIn('pull_request:', workflow)
+        event_block = workflow.split('on:\n', 1)[1].split('\npermissions:', 1)[0]
+        self.assertIn('workflow_dispatch:', event_block)
+        self.assertNotIn('pull_request:', event_block)
+        self.assertNotIn('push:', event_block)
+        cheap = (ROOT / '.github/workflows/test.yml').read_text(encoding='utf8')
+        self.assertIn('pull_request:', cheap)
+        self.assertIn('full_matrix:', cheap)
+        self.assertIn('default: false', cheap)
+        self.assertIn('["ubuntu-latest"]', cheap)
+        self.assertIn('["ubuntu-latest","windows-2022","macos-15"]', cheap)
+
         for runner in ('windows-2022', 'macos-15', 'macos-15-intel'):
             self.assertIn('runner: ' + runner, workflow)
         self.assertIn('python -m unittest discover -s tests -q', workflow)
