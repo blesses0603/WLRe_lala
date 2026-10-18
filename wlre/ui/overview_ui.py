@@ -3,6 +3,7 @@ import time
 import tkinter as tk
 from tkinter import ttk, font as tkfont
 from wlre.ui.halo_button import HaloButton
+from wlre.ui.button_art import settings_button
 from wlre.core.efficiency import rates, progress, forecast
 from wlre.services.battle.party import own_team, player_name
 from wlre.services.battle.party_guard import missing
@@ -149,11 +150,11 @@ class OverviewPanel(ttk.Frame):
             label.bind('<Configure>',lambda e,k=key:self.fit_value(k))
             if key in ('ai','roaming','expedition'):
                 if key=='ai':
-                    self.ai_settings_button=ttk.Button(tools,text='AI設定',width=6,padding=(3,2),command=self.open_ai_settings)
+                    self.ai_settings_button=settings_button(tools,self.open_ai_settings,text='AI設定')
                     self.ai_settings_button.pack(side='left',padx=(0,6))
                 elif key=='expedition':
-                    self.expedition_settings_button=ttk.Button(tools,text='遠征設定',width=6,padding=(3,2),
-                        command=lambda:self.open_panel('expedition_panel'))
+                    self.expedition_settings_button=settings_button(tools,
+                        lambda:self.open_panel('expedition_panel'),text='遠征設定')
                     self.expedition_settings_button.pack(side='left',padx=(0,6))
                 button=HaloButton(tools,command=lambda k=key:self.toggle(k));button.pack(side='left')
             else:
@@ -161,7 +162,9 @@ class OverviewPanel(ttk.Frame):
                 elif key=='role':callback=app.open_resources;text='包包'
                 elif key=='supply':callback=lambda:self.open_panel(None,settings=True);text='設定'
                 else:continue
-                button=ttk.Button(tools,text=text,width=4,command=callback,padding=(3,2));button.pack(side='left')
+                button=(settings_button(tools,callback) if key=='supply' else
+                        ttk.Button(tools,text=text,width=4,command=callback,padding=(3,2)))
+                button.pack(side='left')
             self.actions[key]=button
         self.after(1000,self.tick)
 

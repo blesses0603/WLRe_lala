@@ -201,7 +201,9 @@ class GlassTheme:
         close_button=ttk.Button(bar, text='', width=3, command=close, takefocus=True)
         close_button._game_button_kind='Btn_Close04'
         close_button.pack(side='right', padx=(6, 0))
-        ttk.Button(bar, text='—', width=3, command=lambda: self.minimize(window)).pack(side='right')
+        minimize_button=ttk.Button(bar, text='', width=3, command=lambda: self.minimize(window))
+        minimize_button._game_button_kind='Btn_Minimize'
+        minimize_button.pack(side='right')
         origin = []
         def start(event):
             origin[:] = [event.x_root, event.y_root, window.winfo_x(), window.winfo_y()]
@@ -448,7 +450,7 @@ class GlassTheme:
                     surface = Image.alpha_composite(surface, overlay)
                 else:
                     kind=button_kind(widget)
-                    if state=='disabled' and kind!='Btn_Close04':kind='Btn_016'
+                    if state=='disabled' and kind not in ('Btn_Close04','Btn_Minimize'):kind='Btn_016'
                     surface=Image.alpha_composite(surface,button_image(kind,crop.width,crop.height,state))
             images.append(surface)
         first = not record['images']

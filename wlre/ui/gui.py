@@ -8,7 +8,6 @@ import tkinter as tk
 from wlre.ui.window_layout import configure_dialog
 from wlre.ui.layout import heading
 from wlre.ui.rounded_notebook import RoundedNotebook
-from wlre.ui.function_icons import icon_photo
 from wlre import __version__
 from wlre.ui.theme import group as LabelFrame
 from tkinter import ttk, filedialog, messagebox
@@ -138,11 +137,6 @@ class App:
         left_tabs.add(self.crafting_panel,text='製作')
         self.efficiency_panel=EfficiencyPanel(left_tabs,self)
         left_tabs.add(self.efficiency_panel,text='經驗效率',align='right')
-        self.ai_shortcut=ttk.Button(left_tabs.bar,text='自動戰鬥',style='Icon.Tab.TButton',
-            command=self.overview_panel.open_ai_settings,compound='top',padding=(5,2))
-        self.ai_shortcut._function_icon=icon_photo(self.ai_shortcut,'自動戰鬥')
-        self.ai_shortcut.configure(image=self.ai_shortcut._function_icon)
-        self.ai_shortcut.pack(side='left',padx=(0,6))
         self.crafting_panel.configure(padding=6)
         for page in (overview,self.party_panel,self.companion_panel,self.expedition_panel,self.alchemy_panel,self.crafting_panel,self.efficiency_panel):
             page._section_outline=True

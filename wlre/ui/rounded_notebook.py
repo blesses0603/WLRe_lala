@@ -79,7 +79,7 @@ class RoundedNotebook(ttk.Frame):
             button = ttk.Button(self.bar, text=options['text'], style='Icon.Tab.TButton' if image else 'Pill.Tab.TButton',
                                 command=lambda p=page: self.select(p), takefocus=True, width=0)
             if image:
-                button.configure(image=image,compound='top')
+                button.configure(image=image,compound='none')
                 button._function_icon=image
             right=page in self.right_pages
             button.pack(side='right' if right else 'left',padx=(6,0) if right else (0,6))

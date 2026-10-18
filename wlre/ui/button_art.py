@@ -1,11 +1,23 @@
 """Original game button sprites, resized using their Unity slice borders."""
 from functools import lru_cache
-from PIL import Image, ImageEnhance, ImageOps
+from tkinter import ttk
+from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageOps, ImageTk
 from wlre.paths import RESOURCE_ROOT
 
 
-@lru_cache(maxsize=4)
+@lru_cache(maxsize=8)
 def source(name):
+    if name=='Btn_Minimize':
+        # Match the original close icon's cyan circular frame, with a dash.
+        image=Image.new('RGBA',(198,198))
+        glow=Image.new('RGBA',image.size)
+        draw=ImageDraw.Draw(glow)
+        draw.ellipse((27,27,170,170),outline=(55,244,239,230),width=15)
+        image=Image.alpha_composite(image,glow.filter(ImageFilter.GaussianBlur(12)))
+        draw=ImageDraw.Draw(image)
+        draw.ellipse((28,28,169,169),fill=(25,92,101,230),outline=(169,255,250,255),width=8)
+        draw.rounded_rectangle((61,91,137,106),radius=5,fill=(230,255,255,255))
+        return image.resize((66,66),Image.Resampling.LANCZOS)
     with Image.open(RESOURCE_ROOT / 'assets' / 'buttons' / (name + '.png')) as image:
         return image.convert('RGBA')
 
@@ -13,7 +25,7 @@ def source(name):
 @lru_cache(maxsize=256)
 def button_image(name, width, height, state='normal'):
     image = source(name)
-    if name == 'Btn_Close04':
+    if name in ('Btn_Close04','Btn_Minimize'):
         result = Image.new('RGBA', (width, height))
         icon = ImageOps.contain(image, (width, height), Image.Resampling.LANCZOS)
         result.alpha_composite(icon, ((width-icon.width)//2, (height-icon.height)//2))
@@ -48,3 +60,11 @@ def button_kind(widget):
     if text.startswith(('停止','中斷','取消')):return 'Btn_016'
     if text.startswith(('啟動','開始','確認','登入','送出')):return 'Btn_014'
     return 'Btn_004'
+
+
+def settings_button(parent, command, text='設定'):
+    photo=ImageTk.PhotoImage(source('Btn_Setting').resize((20,20),Image.Resampling.LANCZOS),master=parent)
+    button=ttk.Button(parent,text=text,image=photo,compound='none',width=0,
+                      style='Icon.Tab.TButton',padding=(2,1),command=command)
+    button._settings_icon=photo
+    return button
