@@ -108,8 +108,5 @@
 
 [查看版本歷史](版本歷史.md)
 
-## Android 專案
-
-Android 程式、APK 建置、相容性測試及操作說明已移至 [WLRe_lala_Android](https://github.com/blesses0603/WLRe_lala_Android)，使用新專案的 `main` 分支。原 `android-development` 分支停止 Android 開發；既有提交歷史保留。
 
 桌面版保留連線狀態診斷、更新排程修正、快取容量上限與每兩小時清理，詳見 [連線診斷](docs/CONNECTION_DIAGNOSTICS.md)。
