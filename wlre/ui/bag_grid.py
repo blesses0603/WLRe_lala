@@ -184,7 +184,10 @@ class BagGrid(ttk.Frame):
         self.page_label.set(f'{self.page + 1} / {pages}')
         signature = (tuple((index, item['item_id'], item.get('count'),
                            self.inventory.get('reserved', {}).get(index, 0))
-                           for index, item, _name in rows), self.page, self.index_selected)
+                           for index, item, _name in rows), self.page, self.index_selected,
+                     self.inventory.get('ready'), self.inventory.get('reliable'),
+                     self.inventory.get('use_failed'),
+                     tuple(self.inventory.get('alchemy_slots', ())))
         if signature != self._signature:
             self._signature = signature
             self._paint()
@@ -269,6 +272,10 @@ class BagGrid(ttk.Frame):
         )
         self.effect.set('效果\n' + '\n'.join(details['lines']))
         self.note.set('未驗證的交易與一般道具使用功能暫不提供')
-        enabled = details['available'] > 0 and self.inventory.get('ready') and self.inventory.get('reliable')
+        enabled = (details['available'] > 0 and self.inventory.get('ready')
+                   and self.inventory.get('reliable') and not self.inventory.get('use_failed')
+                   and str(index) not in self.inventory.get('alchemy_slots', ())
+                   and not record.get('locked') and not record.get('limited_time')
+                   and not record.get('available_time'))
         self.hp_button.configure(state='normal' if enabled and details['effects'].get('hp') else 'disabled')
         self.sp_button.configure(state='normal' if enabled and details['effects'].get('sp') else 'disabled')
