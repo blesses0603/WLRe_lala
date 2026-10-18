@@ -53,7 +53,7 @@ jobs:
     env:
       RELEASE_TAG: ${{ needs.preflight.outputs.tag }}
       PYTHONUTF8: '1'
-      NUITKA_CACHE_DIR: ${{ runner.temp }}/nuitka-cache
+      NUITKA_CACHE_DIR: ${{ github.workspace }}/.nuitka-cache
     steps:
       - uses: actions/checkout@v7.0.1
         with:
@@ -122,7 +122,7 @@ jobs:
       RELEASE_TAG: ${{ needs.preflight.outputs.tag }}
       BUILD_ARCH: ${{ matrix.arch }}
       PYTHONUTF8: '1'
-      NUITKA_CACHE_DIR: ${{ runner.temp }}/nuitka-cache
+      NUITKA_CACHE_DIR: ${{ github.workspace }}/.nuitka-cache
       # Intel hosted runner may lack a functional WindowServer; still self-test
       # the built APP and require Mach-O/signature validation.
       WLRE_NATIVE_GUI_SMOKE: ${{ matrix.arch == 'x64' && '0' || '1' }}
