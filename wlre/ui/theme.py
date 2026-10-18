@@ -352,8 +352,11 @@ class GlassTheme:
             background = Image.blend(background,Image.new('RGB',background.size,'#071526'),.60 if window is not self.root else .46)
             backing=background.convert('RGBA')
             layer=Image.new('RGBA',backing.size)
-            ImageDraw.Draw(layer).rounded_rectangle((1,1,width-2,height-2),radius=20,
-                outline=(98,201,224,200),width=1)
+            # The resource dialog uses the original window's own themed edges.
+            # Suppress only its redundant cyan outline to avoid a double border.
+            if not getattr(window, '_no_glass_border', False):
+                ImageDraw.Draw(layer).rounded_rectangle((1,1,width-2,height-2),radius=20,
+                    outline=(98,201,224,200),width=1)
             data['background']=Image.alpha_composite(backing,layer)
             data['background_size'] = (width,height)
         if data.get('surface_key')!=signature:
