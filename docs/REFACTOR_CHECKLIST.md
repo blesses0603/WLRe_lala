@@ -10,7 +10,7 @@
 - [x] 06 核心狀態與事件分派：抽離世界／戰鬥／登入事件路由，保持寫入權限與服務更新順序（測試合併後完成）
 - [x] 07 網路封包與指令架構＋經驗效率修復：驗證指令格式、統一送出記錄、隔離無 EXP 回覆、保留閒置夥伴效率（完成 PR 三平台測試並合併後）
 - [x] 08 資源載入及效能改善：道具 ZIP 解碼快取受限、背景局部更新、回歸測試（PR 三平台通過且合併後完成）
-- [ ] 09 Windows／macOS 建置
+- [x] 09 Windows／macOS 建置與 Nuitka 加速：PR #18，三平台回歸及 Windows x64、macOS Intel／Apple Silicon 原生打包 CI 已通過（仍需人工 GUI／正式服務驗收）
 - [ ] 10 測試、文件及版本整理
 
 ## 第 03 項驗收範圍
@@ -67,11 +67,13 @@
 - 以上屬於減少重複運算與有界快取，無宣稱正式遊戲中的固定 FPS 加速百分比；在不同 DPI／解析度及長時間連線仍需人工量測。
 
 
-## 第 09 項驗收條件（進行中）
+## 第 09 項驗收結果（自動化完成）
 
 - 基準 main：`523c7e586754c0e767fa4fcd624f28b704769cea`，工作分支 `fix/phase09-desktop-packaging-20261018`。
 - PR 新增 Windows x64、macOS arm64 和 Intel x64 Nuitka 原生打包檢查，原有三平台回歸 CI 不變。
-- Windows 編譯後 EXE 執行 `--self-test`、`--smoke-test-gui`；macOS 編譯後 APP 執行上述兩項、Mach-O 架構與簽章驗證。
+- Windows 編譯後 EXE 執行 `--self-test`、`--smoke-test-gui`；macOS 編譯後 APP 執行 `--self-test`、Mach-O 架構及簽章驗證，Apple Silicon 另驗證 GUI 冒煙測試；Intel GitHub runner 的 GUI 測試依已記錄環境限制略過，須在 Intel Mac 上人工驗證。
 - Windows/macOS 產出的 ZIP 應包含完整資料、通過 CRC、具有 SHA-256 校驗檔，避免以 dry-run 代替真正打包。
-- PR 的 Linux、Windows、macOS 回歸測試與三種桌面打包工作全部成功後，才可合併 main 並把本項勾選。
+- 已確認 PR #18 原生建置 CI [39141397522](https://github.com/blesses0603/WLRe_lala/actions/runs/39141397522) 的 Windows x64、macOS Intel x64、macOS arm64 三項皆 success，且產出三個 ZIP 驗證檔；跨平台回歸 CI [39141397498](https://github.com/blesses0603/WLRe_lala/actions/runs/39141397498) 的 Windows、Linux、macOS 三項皆 success。
 - Finder/Windows 人工使用、macOS Gatekeeper/公證以及正式遊戲伺服器行為仍須實機驗收，不由自動化測試取代。
+
+- Nuitka 加速：新增 `--jobs` （1～16，預設至多 6）、恢復 macOS C 編譯快取、GitHub Actions 設定 pip 與 Nuitka 編譯快取，保留全量圖片與資料資源。改善幅度尚需重複相同環境的編譯量測，未宣稱固定百分比。
