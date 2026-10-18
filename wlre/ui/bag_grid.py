@@ -10,10 +10,12 @@ from tkinter import ttk
 from wlre.services.items.combat_resources import CAT, item_name, heal_effects, available
 from wlre.ui.theme import PANEL, CYAN, group
 
-PAGE_SIZE = 25
-COLUMNS = 5
-SLOT_BG = '#173348'
-SLOT_ACTIVE = '#27637c'
+COLUMNS = 6
+ROWS = 4
+PAGE_SIZE = COLUMNS * ROWS
+ICON_SIZE = 64
+SLOT_BG = PANEL
+SLOT_ACTIVE = '#21445a'
 
 
 def visible_items(inventory, query=''):
@@ -56,7 +58,7 @@ def item_details(inventory, index, record):
 
 
 class BagGrid(ttk.Frame):
-    """Five-by-five icon pages with an item information card on selection."""
+    """Roomy icon pages with a compact bottom details strip."""
 
     def __init__(self, parent, icons, use_item):
         super().__init__(parent)
@@ -72,86 +74,76 @@ class BagGrid(ttk.Frame):
         self._images = []
         self._detail_image = None
 
-        shell = ttk.Frame(self, padding=(8, 8))
+        # Layout is one contiguous themed column.  Solid independent backplates
+        # previously left offset artwork and conspicuous borders at the edges.
+        shell = ttk.Frame(self, padding=0)
         shell.pack(fill='both', expand=True)
-        shell.columnconfigure(0, weight=3)
-        shell.columnconfigure(1, weight=2)
-        shell.rowconfigure(0, weight=1)
+        shell.columnconfigure(0, weight=1)
+        shell.rowconfigure(1, weight=1)
 
-        left = ttk.Frame(shell)
-        left.grid(row=0, column=0, sticky='nsew', padx=(0, 12))
-        title = ttk.Frame(left)
-        title.pack(fill='x', pady=(0, 8))
-        ttk.Label(title, text='背包格位', style='Heading.TLabel').pack(side='left')
+        header = ttk.Frame(shell)
+        header.grid(row=0, column=0, sticky='ew', pady=(0, 4))
+        ttk.Label(header, text='背包格位', style='Heading.TLabel').pack(side='left')
         self.summary = tk.StringVar(value='等待包包同步')
-        ttk.Label(title, textvariable=self.summary, style='Muted.TLabel').pack(side='right')
+        ttk.Label(header, textvariable=self.summary, style='Muted.TLabel').pack(side='right')
 
-        self.board = tk.Frame(left, bg=PANEL, borderwidth=0)
-        self.board.pack(fill='both', expand=True)
+        self.board = ttk.Frame(shell)
+        self.board.grid(row=1, column=0, sticky='nsew')
         self.cells = []
-        for row in range(5):
+        for row in range(ROWS):
             self.board.grid_rowconfigure(row, weight=1, uniform='bagrow')
         for column in range(COLUMNS):
             self.board.grid_columnconfigure(column, weight=1, uniform='bagcolumn')
         for position in range(PAGE_SIZE):
             self.cells.append(self._new_cell(position))
 
-        pager = ttk.Frame(left)
-        pager.pack(fill='x', pady=(8, 0))
+        pager = ttk.Frame(shell)
+        pager.grid(row=2, column=0, sticky='ew', pady=(4, 2))
         ttk.Button(pager, text='上一頁', command=lambda: self.change_page(-1)).pack(side='left')
         self.page_label = tk.StringVar(value='1 / 1')
         ttk.Label(pager, textvariable=self.page_label).pack(side='left', expand=True)
         ttk.Button(pager, text='下一頁', command=lambda: self.change_page(1)).pack(side='right')
 
-        self.hover_text = tk.StringVar(value='選擇道具格位，即可查看道具資訊')
-        ttk.Label(left, textvariable=self.hover_text, style='Muted.TLabel').pack(fill='x', pady=(6, 0))
-
-        # Use the same GlassGroup and themed ttk widgets as the other LaLa panels.
-        # Avoid a separate light-coloured backplate which ignores GlassTheme.
-        self.card = group(shell, text='道具資訊', padding=10)
-        self.card.grid(row=0, column=1, sticky='nsew')
-        self.card.grid_propagate(False)
+        # Small, inline information strip rather than a full-height side panel.
+        self.card = ttk.Frame(shell, padding=(4, 4))
+        self.card.grid(row=3, column=0, sticky='ew', pady=(2, 0))
+        self.card.columnconfigure(1, weight=1)
         self.card_title = tk.StringVar(value='物品資訊')
-        head = ttk.Frame(self.card)
-        head.pack(fill='x', pady=(0, 8))
-        ttk.Label(head, textvariable=self.card_title, style='Heading.TLabel',
-                  anchor='w', wraplength=220).pack(
-                      side='left', fill='x', expand=True, padx=(0, 8), pady=(0, 4))
-        ttk.Button(head, text='×', width=3, command=self.clear_selection).pack(side='right')
-
-        self.info = ttk.Frame(self.card)
-        self.info.pack(fill='both', expand=True)
-        self.large_icon = ttk.Label(self.info)
-        self.large_icon.pack(pady=(4, 8))
-        self.meta = tk.StringVar(value='請點選左側道具')
-        ttk.Label(self.info, textvariable=self.meta, anchor='w',
-                  justify='left', wraplength=270).pack(fill='x', padx=4, pady=(0, 6))
+        self.large_icon = ttk.Label(self.card)
+        self.large_icon.grid(row=0, column=0, rowspan=3, padx=(0, 12), sticky='w')
+        ttk.Label(self.card, textvariable=self.card_title, style='Heading.TLabel').grid(
+            row=0, column=1, sticky='w')
+        self.meta = tk.StringVar(value='請點選道具')
+        ttk.Label(self.card, textvariable=self.meta, anchor='w').grid(
+            row=1, column=1, sticky='ew')
         self.effect = tk.StringVar(value='')
-        ttk.Label(self.info, textvariable=self.effect, anchor='nw',
-                  justify='left', wraplength=270).pack(fill='x', padx=4, pady=(0, 8))
-        self.note = tk.StringVar(value='道具使用仍由原本程式驗證；未確認的操作不會送出')
-        ttk.Label(self.info, textvariable=self.note, style='Muted.TLabel',
-                  anchor='w', justify='left', wraplength=270).pack(
-                      fill='x', padx=4, pady=(6, 8))
-
+        ttk.Label(self.card, textvariable=self.effect, style='Muted.TLabel',
+                  anchor='w', wraplength=570).grid(row=2, column=1, sticky='ew')
+        self.note = tk.StringVar(value='')
+        # Keep the original healing validation, but show only context actions
+        # inside the selected item's strip, not duplicate buttons below the bag.
         buttons = ttk.Frame(self.card)
-        buttons.pack(fill='x', side='bottom', pady=(6, 0))
+        buttons.grid(row=0, column=2, rowspan=3, sticky='e', padx=(8, 0))
         self.hp_button = ttk.Button(buttons, text='補 HP', command=lambda: self.use_item('hp'))
-        self.hp_button.pack(side='left', expand=True, fill='x', padx=2)
+        self.hp_button.pack(pady=2)
         self.sp_button = ttk.Button(buttons, text='補 SP', command=lambda: self.use_item('sp'))
-        self.sp_button.pack(side='left', expand=True, fill='x', padx=2)
+        self.sp_button.pack(pady=2)
+
+        self.hover_text = tk.StringVar(value='點擊圖示查看道具詳情')
+        ttk.Label(shell, textvariable=self.hover_text, style='Muted.TLabel').grid(
+            row=4, column=0, sticky='w', pady=(0, 2))
         self._clear_card()
 
     def _new_cell(self, position):
         row, col = divmod(position, COLUMNS)
-        frame = tk.Frame(self.board, bg=SLOT_BG, highlightthickness=1,
-                         highlightbackground='#426985', cursor='hand2')
+        frame = tk.Frame(self.board, bg=SLOT_BG, borderwidth=0,
+                         highlightthickness=0, cursor='hand2')
         frame.grid(row=row, column=col, sticky='nsew', padx=4, pady=4)
         frame.grid_propagate(False)
         icon = tk.Label(frame, bg=SLOT_BG, bd=0, cursor='hand2')
-        icon.place(relx=0.5, rely=0.48, anchor='center')
+        icon.place(relx=0.5, rely=0.5, anchor='center')
         count = tk.Label(frame, bg=SLOT_BG, fg='#f9e6b5', bd=0, font=('TkDefaultFont', 10, 'bold'))
-        count.place(relx=0.96, rely=0.96, anchor='se')
+        count.place(relx=0.97, rely=0.96, anchor='se')
         entry = {'frame': frame, 'icon': icon, 'count': count, 'index': None}
         for widget in (frame, icon, count):
             widget.bind('<Button-1>', lambda _event, p=position: self.pick(p))
@@ -209,10 +201,10 @@ class BagGrid(ttk.Frame):
             bg = SLOT_ACTIVE if selected else SLOT_BG
             for widget in (cell['frame'], cell['icon'], cell['count']):
                 widget.configure(bg=bg)
-            cell['frame'].configure(highlightbackground=CYAN if selected else '#426985')
+            cell['frame'].configure(bg=bg)
             if row:
                 _index, item, _name = row
-                photo = self.icons.get(item['item_id'], 46)
+                photo = self.icons.get(item['item_id'], ICON_SIZE)
                 self._images.append(photo)
                 cell['icon'].configure(image=photo)
                 cell['count'].configure(text=str(item.get('count', 0)))
@@ -249,7 +241,7 @@ class BagGrid(ttk.Frame):
         self._detail_image = None
         self.meta.set('請點選左側道具格位')
         self.effect.set('')
-        self.note.set('依遊戲同步資料顯示；未提供的欄位不會推測')
+        self.note.set('')
         self.hp_button.configure(state='disabled')
         self.sp_button.configure(state='disabled')
 
@@ -261,15 +253,14 @@ class BagGrid(ttk.Frame):
             return
         details = item_details(self.inventory, index, record)
         self.card_title.set(details['name'])
-        self._detail_image = self.icons.get(details['id'], 78)
+        self._detail_image = self.icons.get(details['id'], 56)
         self.large_icon.configure(image=self._detail_image)
         self.meta.set(
-            f"道具 ID：{details['id']}\n"
-            f"格位：{details['index']}  |  類型碼：{details['kind'] if details['kind'] is not None else '未知'}\n"
-            f"持有：{details['count']}  |  待扣：{details['reserved']}  |  可用：{details['available']}"
+            f"ID {details['id']}　格位 {details['index']}　"
+            f"持有 {details['count']}　待扣 {details['reserved']}　可用 {details['available']}"
         )
-        self.effect.set('效果\n' + '\n'.join(details['lines']))
-        self.note.set('未驗證的交易與一般道具使用功能暫不提供')
+        self.effect.set('效果：' + ' / '.join(details['lines'][:3]))
+        self.note.set('')
         enabled = (details['available'] > 0 and self.inventory.get('ready')
                    and self.inventory.get('reliable') and not self.inventory.get('use_failed')
                    and str(index) not in self.inventory.get('alchemy_slots', ())
