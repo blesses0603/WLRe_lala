@@ -18,7 +18,7 @@ class ChatPanel(ttk.Frame):
         super().__init__(parent,height=height)
         self.pack_propagate(False)
         self.display_dirty=False
-        self.app=app;self.messages=deque(maxlen=200);self.pending=False;self.line_targets={};self.line_events={};self.names=NameBook();self.quote=None;self.sent_quote=None;self.emoji_picker=None;self.emojis=EmojiImages(self)
+        self.app=app;self.messages=deque(maxlen=200);self.pending=False;self.pending_timeout=None;self.line_targets={};self.line_events={};self.names=NameBook();self.quote=None;self.sent_quote=None;self.emoji_picker=None;self.emojis=EmojiImages(self)
         box=group(self,text='聊天',padding=6);box.pack(fill='both',expand=True)
         tools=ttk.Frame(box);tools.pack(fill='x',pady=(0,3))
         self.filter=tk.StringVar(value='全部')
@@ -71,11 +71,15 @@ class ChatPanel(ttk.Frame):
         try:
             if command['channel']=='密語':command['target']=self.names.resolve(command['target'],data.get('player',{}).get('role_id'))
             if self.quote:command['reply']=dict(self.quote)
-            chat_packet(command,SimpleNamespace(player=data.get('player',{}),attributes=data.get('attributes',{}),party=data.get('party',{})))
+            chat_packet(command,SimpleNamespace(player=data.get('player',{}),attributes=data.get('attributes',{}),party=data.get('party',{}),guild=data.get('guild',{})))
         except ProtocolError as exc:self.status.set(str(exc));return
         self.sent_quote=dict(self.quote) if self.quote else None
         self.pending=True;self.send_button.configure(state='disabled');self.status.set('準備送出…')
-        self.app.send(command)
+        if self.app.send(command) is False:
+            self.finish_pending()
+            self.status.set('連線已結束，請重新登入')
+            return
+        self.pending_timeout=self.after(10000,self.pending_expired)
 
     def handle_event(self,event,state):
         kind=event['type']
@@ -89,6 +93,7 @@ class ChatPanel(ttk.Frame):
             self.sent_quote=None
             self.status.set('已送出，等待伺服器轉送；不代表對方已讀')
         elif kind in ('chat_result','chat_notice'):
+            if kind=='chat_notice' or event.get('result')!=0:self.finish_pending()
             self.status.set(event['text'])
         elif kind=='command_rejected' and event.get('command_type')=='chat':
             self.finish_pending();self.status.set(event['error'])
@@ -116,7 +121,17 @@ class ChatPanel(ttk.Frame):
             if e['channel']=='密語' and e['role_id']!=e['own_id']:self.status.set(f"收到密語：{e['name']}（{e['role_id']}）；雙擊回覆")
 
     def finish_pending(self):
+        if self.pending_timeout is not None:
+            timer=self.pending_timeout;self.pending_timeout=None
+            try:self.after_cancel(timer)
+            except tk.TclError:pass
         self.pending=False;self.send_button.configure(state='normal')
+
+    def pending_expired(self):
+        if not self.pending:return
+        self.pending_timeout=None
+        self.finish_pending()
+        self.status.set('送出確認逾時，已恢復聊天按鈕；請確認連線是否正常')
 
     def reset(self):
         self.messages.clear();self.names=NameBook();self.cancel_quote();self.sent_quote=None;self.finish_pending();self.redraw();self.status.set('新連線，聊天紀錄已清空')
@@ -235,5 +250,9 @@ class ChatPanel(ttk.Frame):
 
     def cleanup(self,event):
         if event.widget is self:
+            if self.pending_timeout is not None:
+                try:self.after_cancel(self.pending_timeout)
+                except tk.TclError:pass
+                self.pending_timeout=None
             if self.emoji_picker and self.emoji_picker.winfo_exists():self.emoji_picker.destroy()
             self.emojis.close()
