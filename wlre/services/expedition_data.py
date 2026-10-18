@@ -1,113 +1,12 @@
-"""Read official AdventureData_C/AdventureLvData_C using the 1262 Lua layout."""
-from wlre.storage.paths import data_root as user_data_root
-import hashlib
-import json
-import os
-import struct
-from pathlib import Path
+"""Legacy module path for expedition catalog parsing.
 
-from wlre.network.wire import Reader, ProtocolError
-from wlre.paths import RESOURCE_ROOT
+Implementation moved to wlre.services.expedition.data. Keep this module as a
+thin alias so existing imports continue working while downstream code migrates.
+"""
+from .expedition import data as _implementation
+from .expedition.data import data_root, parse_catalog, load_catalog, attach_names, parse_npcs
 
+__all__ = ['data_root', 'parse_catalog', 'load_catalog', 'attach_names', 'parse_npcs']
 
-def data_root():
-    return user_data_root()
-
-
-def parse_catalog(tasks_data, levels_data):
-    r = Reader(tasks_data)
-    tasks = {}
-    count = r.i32()
-    if not 1 <= count <= 65535:
-        raise ProtocolError('遠征任務資料筆數錯誤')
-    for _ in range(count):
-        q = {'id': r.u16(), 'area': r.u8(), 'area_name': r.u32(), 'difficulty': r.u8(),
-             'name_id': r.u32(), 'description_id': r.u32(), 'minutes': r.u16(),
-             'faith_cost': r.u8(), 'success_rate': r.u16(),
-             'condition': [r.u16(), r.u16(), r.u16()]}
-        q['recommendations'] = [{'condition': [r.u16(), r.u16(), r.u16()], 'bonus': r.u16()} for _ in range(4)]
-        q['expedition_exp'] = r.u32()
-        q['rewards'] = [{'kind': r.u8(), 'id': r.u32(), 'value': r.u32()} for _ in range(3)]
-        q['special_rate'] = r.u16()
-        q['special_reward'] = {'kind': r.u8(), 'id': r.u32(), 'value': r.u32()}
-        q['exp'] = r.i32()
-        if not q['id'] or str(q['id']) in tasks or not q['minutes'] or q['faith_cost'] > 100:
-            raise ProtocolError('遠征任務資料內容錯誤')
-        tasks[str(q['id'])] = q
-    r.end()
-    r = Reader(levels_data)
-    count = r.i32()
-    if not 1 <= count <= 255:
-        raise ProtocolError('遠征等級資料筆數錯誤')
-    levels = {}
-    for _ in range(count):
-        level = r.u8()
-        r.u32(); r.u32()
-        value = {'teams': r.u8(), 'difficulty': r.u8(), 'reduction': r.u16()}
-        r.u8(); r.u8()
-        if str(level) in levels or not 0 <= value['teams'] <= 7 or value['reduction'] > 1000:
-            raise ProtocolError('遠征等級資料內容錯誤')
-        levels[str(level)] = value
-    r.end()
-    return {'tasks': tasks, 'levels': levels, 'source_sha256': {
-        'AdventureData_C': hashlib.sha256(tasks_data).hexdigest(),
-        'AdventureLvData_C': hashlib.sha256(levels_data).hexdigest()}}
-
-
-def load_catalog():
-    path = RESOURCE_ROOT / 'expedition_catalog.json'
-    if not path.is_file():
-        return {'tasks': {}, 'levels': {}}
-    return json.loads(path.read_text(encoding='utf8'))
-
-
-def attach_names(catalog, text_data):
-    """Data.OnLoadTextData: u32 key, u16 byte length, UTF-16LE text."""
-    r = Reader(text_data)
-    count = r.i32()
-    if not 1 <= count <= 1000000:
-        raise ProtocolError('文字資料筆數錯誤')
-    texts = {}
-    for _ in range(count):
-        key, size = r.u32(), r.u16()
-        if size % 2 or key in texts:
-            raise ProtocolError('文字資料長度或識別碼錯誤')
-        try:
-            texts[key] = r.take(size).decode('utf-16-le')
-        except UnicodeDecodeError as exc:
-            raise ProtocolError('文字資料編碼錯誤') from exc
-    r.end()
-    tasks = {}
-    for sid, quest in catalog['tasks'].items():
-        name = texts.get(quest['name_id'])
-        if not name:
-            raise ProtocolError(f'官方文字資料缺少任務名稱：{sid}')
-        tasks[sid] = {**quest, 'name': name, 'area_label': texts.get(quest['area_name'], '')}
-    return {**catalog, 'tasks': tasks, 'source_sha256': {
-        **catalog.get('source_sha256', {}), 'TextData_C': hashlib.sha256(text_data).hexdigest()}}
-
-
-def parse_npcs(npc_data, career_data):
-    """NpcData.New fixed numeric fields, and NpcCareerData.LoadData mapping."""
-    r = Reader(career_data)
-    careers = {}
-    for _ in range(r.i32()):
-        record = r.take(17)
-        original, career = struct.unpack_from('<HH', record, 2)
-        if career in careers: raise ProtocolError('轉職夥伴對照重複')
-        careers[career] = original
-    r.end()
-    r = Reader(npc_data)
-    count = r.i32()
-    if not 1 <= count <= 65535: raise ProtocolError('夥伴資料筆數錯誤')
-    npcs = {}
-    for _ in range(count):
-        for _ in range(2):
-            size = r.u16()
-            if size % 2: raise ProtocolError('夥伴名稱長度錯誤')
-            r.take(size).decode('utf-16-le')
-        fields = r.take(203)
-        sid = struct.unpack_from('<H', fields, 1)[0]
-        npcs[str(sid)] = {'element': fields[74], 'kind': fields[106], 'original': careers.get(sid, sid)}
-    r.end()
-    return npcs
+def __getattr__(name):
+    return getattr(_implementation, name)

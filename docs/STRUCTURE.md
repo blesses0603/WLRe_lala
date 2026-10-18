@@ -123,9 +123,11 @@
 | 模組 | 責任 |
 |---|---|
 | [coordination.py](../wlre/services/coordination.py) | 共用指令互斥與活動暫停條件；遠征獨立啟用。 |
-| [expedition.py](../wlre/services/expedition.py) | 遠征狀態、派遣、好友度恢復、領獎與回覆確認。 |
-| [expedition_data.py](../wlre/services/expedition_data.py) | 官方遠征／夥伴資料解析、內建 catalog 載入及遠征資料根目錄。 |
-| [expedition_teams.py](../wlre/services/expedition_teams.py) | 推薦條件、預估成功率與最多四人最佳隊伍搜尋。 |
+| [expedition/__init__.py](../wlre/services/expedition/__init__.py) | 舊版 `wlre.services.expedition` 的公開 API 相容入口，轉出原有遠征函式及類別。 |
+| [expedition/manager.py](../wlre/services/expedition/manager.py) | 遠征狀態、派遣、好友度恢復、領獎及伺服器回覆確認（保留原本安全保護）。 |
+| [expedition/data.py](../wlre/services/expedition/data.py) | 官方遠征／夥伴資料表解析、catalog 載入與資料根目錄。 |
+| [expedition/teams.py](../wlre/services/expedition/teams.py) | 併用條件、成功率及最多四人的精確隊伍搜尋。 |
+| [expedition_data.py](../wlre/services/expedition_data.py)／[expedition_teams.py](../wlre/services/expedition_teams.py) | 原始匯入路徑的相容轉接，不再維護第二份運算邏輯。 |
 
 ## wlre/services/battle：戰鬥、角色與隊伍
 

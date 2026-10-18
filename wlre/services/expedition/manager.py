@@ -7,10 +7,10 @@ import math
 import time
 
 from wlre.network.wire import Packet, Writer, ProtocolError
-from wlre.services.expedition_data import load_catalog
+from .data import load_catalog
 from wlre.services.items.combat_resources import CAT, available
 from wlre.core.inventory_updates import STACKABLE
-from wlre.services.expedition_teams import choose_members, condition_met, success_details
+from .teams import choose_members, condition_met, success_details
 
 
 def defaults():
