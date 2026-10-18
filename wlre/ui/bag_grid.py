@@ -29,9 +29,30 @@ def grid_profile(compact=False):
             STORAGE_ICON_SIZE if compact else ICON_SIZE)
 
 
-def page_count(item_count, compact=False):
-    columns, rows, _size = grid_profile(compact)
+def responsive_profile(width, height, compact=False):
+    """Fit whole inventory tiles into the drawable board, without overlap.
+
+    The published default 6x4 (storage 6x2) geometry stays unchanged on
+    ordinary desktops. Smaller dialogs use fewer columns and/or rows, keeping
+    the icon size and click targets intact rather than squeezing artwork.
+    """
+    _columns, maximum_rows, size = grid_profile(compact)
+    columns = min(COLUMNS, max(2, int(width) // (size + 32)))
+    rows = min(maximum_rows, max(1, int(height) // SLOT_HEIGHT))
+    return columns, rows, size
+
+
+def page_count(item_count, compact=False, *, columns=None, rows=None):
+    default_columns, default_rows, _size = grid_profile(compact)
+    columns = default_columns if columns is None else columns
+    rows = default_rows if rows is None else rows
     return max(1, math.ceil(item_count / (columns * rows)))
+
+
+def reflow_page(old_page, old_size, new_size, item_count, selected_position=None):
+    """Keep the selected item, or the previous top-left item, visible."""
+    anchor = selected_position if selected_position is not None else old_page * old_size
+    return min(max(0, anchor // new_size), max(0, math.ceil(item_count / new_size) - 1))
 
 
 def visible_items(inventory, query=''):
@@ -110,12 +131,15 @@ class BagGrid(ttk.Frame):
         self.board = ttk.Frame(shell)
         self.board.grid(row=1, column=0, sticky='nsew')
         self.cells = []
-        for row in range(self.row_count):
-            self.board.grid_rowconfigure(row, weight=1, minsize=SLOT_HEIGHT, uniform='bagrow')
-        for column in range(self.columns):
-            self.board.grid_columnconfigure(column, weight=1, minsize=self.icon_size + 24, uniform='bagcolumn')
-        for position in range(self.page_size):
+        # Do not force six column minimums on smaller windows: allow the
+        # board's actual width and height to determine its active tile count.
+        for row in range(ROWS):
+            self.board.grid_rowconfigure(row, weight=1, minsize=0, uniform='bagrow')
+        for column in range(COLUMNS):
+            self.board.grid_columnconfigure(column, weight=1, minsize=0, uniform='bagcolumn')
+        for position in range(COLUMNS * self.row_count):
             self.cells.append(self._new_cell(position))
+        self.board.bind('<Configure>', self._board_resized, add='+')
 
         pager = ttk.Frame(shell)
         pager.grid(row=2, column=0, sticky='ew', pady=(4, 2))
@@ -174,6 +198,37 @@ class BagGrid(ttk.Frame):
             widget.bind('<Enter>', lambda _event, p=position: self.show_hover(p))
         return entry
 
+    def _board_resized(self, event):
+        if event.widget is not self.board or event.width < 80 or event.height < 50:
+            return
+        columns, rows, _size = responsive_profile(event.width, event.height, self.compact)
+        if (columns, rows) == (self.columns, self.row_count):
+            return
+        old_size = self.page_size
+        selected_position = next(
+            (i for i, row in enumerate(self.rows) if row[0] == self.index_selected),
+            None,
+        )
+        self.columns, self.row_count = columns, rows
+        self.page_size = columns * rows
+        self.page = reflow_page(self.page, old_size, self.page_size,
+                                len(self.rows), selected_position)
+        for row in range(ROWS):
+            self.board.grid_rowconfigure(row, weight=1 if row < rows else 0, minsize=0)
+        for column in range(COLUMNS):
+            self.board.grid_columnconfigure(column, weight=1 if column < columns else 0,
+                                            minsize=0)
+        for position, cell in enumerate(self.cells):
+            if position < self.page_size:
+                row, col = divmod(position, columns)
+                cell['frame'].grid(row=row, column=col, sticky='nsew', padx=4, pady=4)
+            else:
+                cell['frame'].grid_remove()
+                cell['index'] = None
+        self.page_label.set(f'{self.page + 1} / {page_count(len(self.rows), self.compact, columns=columns, rows=rows)}')
+        self._signature = None
+        self._paint()
+
     def selection(self):
         return ('bag' + self.index_selected,) if self.index_selected is not None and ('bag' + self.index_selected) in self.bag_map else ()
 
@@ -192,24 +247,28 @@ class BagGrid(ttk.Frame):
         self.bag_map = {'bag' + index: item for index, item, _name in rows}
         if self.index_selected is not None and 'bag' + self.index_selected not in self.bag_map:
             self.index_selected = None
-        pages = page_count(len(rows), self.compact)
+        pages = page_count(len(rows), self.compact, columns=self.columns, rows=self.row_count)
         self.page = min(self.page, pages - 1)
         capacity = self.inventory.get('capacity')
         self.summary.set(f"{len(rows)} / {capacity if capacity is not None else '?'} 格")
         self.page_label.set(f'{self.page + 1} / {pages}')
         signature = (tuple((index, item['item_id'], item.get('count'),
-                           self.inventory.get('reserved', {}).get(index, 0))
+                           item.get('locked'), item.get('limited_time'),
+                           item.get('available_time'), available(self.inventory, index))
                            for index, item, _name in rows), self.page, self.index_selected,
+                     self.columns, self.row_count,
                      self.inventory.get('ready'), self.inventory.get('reliable'),
                      self.inventory.get('use_failed'),
-                     tuple(self.inventory.get('alchemy_slots', ())))
+                     tuple(self.inventory.get('alchemy_slots', ())),
+                     tuple(self.inventory.get('expedition_slots', ())),
+                     tuple(self.inventory.get('maintenance_slots', ())))
         if signature != self._signature:
             self._signature = signature
             self._paint()
         return self.bag_map
 
     def change_page(self, direction):
-        pages = page_count(len(self.rows), self.compact)
+        pages = page_count(len(self.rows), self.compact, columns=self.columns, rows=self.row_count)
         self.page = min(max(0, self.page + direction), pages - 1)
         self.page_label.set(f'{self.page + 1} / {pages}')
         self._signature = None
@@ -218,7 +277,7 @@ class BagGrid(ttk.Frame):
     def _paint(self):
         self._images = []
         page_rows = self.rows[self.page * self.page_size: (self.page + 1) * self.page_size]
-        for position, cell in enumerate(self.cells):
+        for position, cell in enumerate(self.cells[:self.page_size]):
             row = page_rows[position] if position < len(page_rows) else None
             index = row[0] if row else None
             cell['index'] = index
@@ -280,10 +339,13 @@ class BagGrid(ttk.Frame):
         self.card_title.set(details['name'])
         self._detail_image = self.icons.get(details['id'], 56)
         self.large_icon.configure(image=self._detail_image)
-        self.meta.set(
-            f"ID {details['id']}　格位 {details['index']}　"
-            f"持有 {details['count']}　待扣 {details['reserved']}　可用 {details['available']}"
-        )
+        if self.read_only:
+            self.meta.set(f"ID {details['id']}　格位 {details['index']}　數量 {details['count']}（唯讀）")
+        else:
+            self.meta.set(
+                f"ID {details['id']}　格位 {details['index']}　"
+                f"持有 {details['count']}　待扣 {details['reserved']}　可用 {details['available']}"
+            )
         self.effect.set('效果：' + ' / '.join(details['lines'][:3]))
         self.note.set('')
         enabled = (not self.read_only and details['available'] > 0 and self.inventory.get('ready')
