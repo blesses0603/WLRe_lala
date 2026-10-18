@@ -40,6 +40,9 @@ class Runtime:
         if operation == 'start':
             session = self.manager.start(**request['args'])
             return {'id': session.session_id}
+        if operation == 'game': return self.manager.game_command(request['id'], request['command'])
+        if operation == 'detail': return self.manager.session_detail(request['id'])
+        if operation == 'preferences': return self.manager.save_preferences(request['id'], request['preferences'])
         if operation == 'automation': return self.manager.automation_command(request['id'], request['feature'], request['enabled'])
         if operation == 'settings': return self.manager.save_ai_settings(request['id'], request['settings'])
         if operation == 'select': return self.manager.select_role(request['id'], request['index'])
@@ -137,6 +140,9 @@ class ServiceManager:
         self.metrics = {}
         self.available = False
         self._last = {}
+        self.paused = False
+        self.watched = None
+        self.details = {}
         threading.Thread(target=self._work, daemon=True, name='service-ui-bridge').start()
 
     def call(self, request):
@@ -151,6 +157,9 @@ class ServiceManager:
 
     def _work(self):
         while True:
+            if self.paused and self.requests.empty():
+                time.sleep(.5)
+                continue
             try:
                 try: request = self.requests.get(timeout=0.5)
                 except queue.Empty: request = None
@@ -161,6 +170,10 @@ class ServiceManager:
                     except ValueError:
                         self.events.put(('', 'error', '操作失敗，請確認帳號或連線狀態'))
                 data = self.call({'op': 'poll'})
+                watched = self.watched
+                if watched and any(r['id'] == watched for r in data['sessions']):
+                    self.details[watched] = self.call({'op': 'detail', 'id': watched})
+                else: self.details.clear()
                 self.metrics = data['metrics']
                 if not self.available: self._last.clear()
                 self.available = True
@@ -189,6 +202,7 @@ class ServiceManager:
             except (OSError, ValueError, KeyError):
                 self.available = False
                 self.metrics = {}
+                self.details.clear()
                 time.sleep(0.5)
 
     def start(self, **args):
@@ -215,6 +229,31 @@ class ServiceManager:
         if not self.available or sid not in self.sessions: return False
         from wlre.services.battle.auto_battle import validate
         self.requests.put({'op': 'settings', 'id': sid, 'settings': validate(settings)})
+        return True
+
+    def set_paused(self, paused):
+        self.paused = bool(paused)
+        if paused: self.available = False
+
+    def game_command(self, sid, command):
+        from android_app.features import checked_command
+        session = self.sessions.get(sid)
+        if (not self.available or not session or not session.active or session.stop_event.is_set()
+                or session.phase != 'world_ready'): return False
+        if self.requests.qsize() >= 32: raise ValueError('操作佇列已滿，請等待回覆')
+        self.requests.put({'op': 'game', 'id': sid, 'command': checked_command(command)})
+        return True
+
+    def session_detail(self, sid): return self.details.get(sid, {})
+
+    def watch(self, sid):
+        self.watched = sid
+        self.details = {k: v for k, v in self.details.items() if k == sid}
+
+    def save_preferences(self, sid, value):
+        from android_app.preferences import validate
+        if not self.available: return False
+        self.requests.put({'op': 'preferences', 'id': sid, 'preferences': validate(value)})
         return True
 
     def stop(self, sid):

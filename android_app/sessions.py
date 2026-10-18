@@ -4,6 +4,10 @@ import queue
 import threading
 import uuid
 import copy
+import time
+from collections import deque
+from android_app import features, preferences
+from wlre.services.social.chat_names import NameBook
 from wlre.services.battle.auto_battle import defaults, validate
 from wlre.storage import account_settings
 
@@ -25,6 +29,12 @@ class Session:
     ai_settings: dict = field(default_factory=defaults)
     automation: dict = field(default_factory=dict)
     automation_pending: set = field(default_factory=set)
+    game_state: dict = field(default_factory=dict)
+    chat_history: deque = field(default_factory=lambda: deque(maxlen=200))
+    log_history: deque = field(default_factory=lambda: deque(maxlen=200))
+    names: NameBook = field(default_factory=NameBook)
+    preferences: dict = field(default_factory=preferences.defaults)
+    detail_revision: int = 0
     lock: threading.RLock = field(default_factory=threading.RLock, repr=False)
 
 
@@ -51,6 +61,7 @@ class SessionManager:
                 key = account_settings.identity(host, port, account)
                 if account_settings.settings_file(key, self.settings_base).exists():
                     session.ai_settings = account_settings.load(key, self.settings_base)
+                session.preferences = preferences.load(self.settings_base, key)
             self.sessions[session_id] = session
             self.events.put((session_id, "status", "準備驗證帳號"))
 
@@ -59,6 +70,30 @@ class SessionManager:
                 with session.lock:
                     if session.stop_event.is_set():
                         return
+                    if kind == 'chat_message':
+                        session.names.update(session.game_state, event)
+                        session.chat_history.append({k: copy.deepcopy(event[k]) for k in (
+                            'channel', 'role_id', 'text', 'server_id', 'reply_id', 'reply_text',
+                            'reply_items', 'reply_at', 'items', 'whisper_target') if k in event})
+                        session.detail_revision += 1
+                    elif kind in ('chat_sent', 'chat_result', 'chat_notice'):
+                        text = '已送出，等待伺服器轉送；不代表對方已讀' if kind == 'chat_sent' else str(event.get('text', '發話回覆已收到'))
+                        self.events.put((session_id, 'notice', text[:500]))
+                    elif kind == 'chat_profile':
+                        session.names.update(session.game_state, event)
+                    if kind == 'command_rejected':
+                        from wlre.core.event_log import chinese
+                        text = '操作未送出：' + chinese(event.get('error', '操作條件不符'))[:500]
+                        # Errors originate from supported game commands, never login exceptions.
+                        if event.get('command_type') in features.GAME_COMMANDS:
+                            self.events.put((session_id, 'notice', text))
+                    if kind not in ('command_rejected', 'sent', 'connected', 'verifying_account'):
+                        from wlre.core.event_log import lines
+                        try:
+                            for text in lines(event, session.game_state):
+                                session.log_history.append(time.strftime('%H:%M:%S')+' '+str(text)[:1000])
+                                session.detail_revision += 1
+                        except (KeyError, TypeError, ValueError): pass
                     if kind in ("connected", "verifying_account", "connection_closed"):
                         labels = {"connected": "伺服器已連接，等待登入",
                                   "verifying_account": "正在驗證帳號", "connection_closed": "連線已結束"}
@@ -93,6 +128,9 @@ class SessionManager:
                 with session.lock:
                     if session.stop_event.is_set():
                         return
+                    session.game_state = features.project(state)
+                    session.names.update(session.game_state)
+                    session.detail_revision += 1
                     player = state.get("player") or {}
                     stats = (state.get("knowledge") or {}).get("player", {}).get("stats", {})
                     session.phase = state.get("phase", "未知")
@@ -174,6 +212,37 @@ class SessionManager:
                 if account_settings.identity(other.host, other.port, other.account) == key:
                     with other.lock: other.ai_settings = copy.deepcopy(checked)
             self.events.put((session_id, 'notice', 'AI 設定已保存，下次啟動自動戰鬥時套用'))
+            return True
+
+    def game_command(self, session_id, command):
+        checked = features.checked_command(command)
+        with self.lock: session = self.sessions.get(session_id)
+        if session is None: return False
+        with session.lock:
+            if not session.active or session.stop_event.is_set() or session.phase != 'world_ready': return False
+            if session.commands.qsize() >= 32: raise ValueError('操作佇列已滿，請等待回覆')
+            if checked['type'] == 'chat' and checked.get('channel') == '密語':
+                checked['target'] = session.names.resolve(checked.get('target'), session.game_state.get('player', {}).get('role_id'))
+            session.commands.put(checked)
+            return True
+
+    def session_detail(self, session_id):
+        with self.lock: session = self.sessions.get(session_id)
+        if session is None: raise ValueError('帳號連線不存在')
+        with session.lock: return features.detail(session)
+
+    def save_preferences(self, session_id, value):
+        checked = preferences.validate(value)
+        with self.lock:
+            session = self.sessions.get(session_id)
+            if session is None: return False
+            key = account_settings.identity(session.host, session.port, session.account)
+            if self.settings_base is not None: preferences.save(self.settings_base, key, checked)
+            for other in self.sessions.values():
+                if account_settings.identity(other.host, other.port, other.account) == key:
+                    with other.lock:
+                        other.preferences = copy.deepcopy(checked)
+                        other.detail_revision += 1
             return True
 
     def stop(self, session_id):

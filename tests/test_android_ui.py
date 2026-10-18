@@ -137,18 +137,13 @@ class AndroidUI(unittest.TestCase):
         self.assertTrue(card.automation_buttons['battle'].disabled)
 
     def test_ai_dialog_saves_validated_preferences(self):
-        from android_app.automation_ui import edit_settings
-        from kivy.uix.spinner import Spinner
-        from kivy.uix.button import Button
-        captured = []
-        with patch('android_app.automation_ui.Popup.open', lambda popup: captured.append(popup)):
-            edit_settings(self.app, 'fixture')
-        popup = captured[0]
-        widgets = list(popup.content.walk())
-        selectors = [w for w in widgets if isinstance(w, Spinner)]
-        self.assertEqual(len(selectors), 2)
-        for selector in selectors: selector.text = '自動選擇已知技能'
-        save = next(w for w in widgets if isinstance(w, Button) and w.text == '保存')
-        save.dispatch('on_release')
-        for profile in self.session.ai_settings['profiles'].values():
-            self.assertEqual(profile['orderAction'][0]['id'], -1)
+        from android_app.settings_ui import SettingsEditor
+        from kivy.uix.checkbox import CheckBox
+        with patch('android_app.widgets.Popup.open'):
+            editor = SettingsEditor(self.app, 'fixture')
+        checks = [w for w in editor.form.children if hasattr(w, 'children')]
+        checkboxes = [w for w in editor.form.walk() if isinstance(w, CheckBox)]
+        self.assertEqual(len(checkboxes), 3)
+        checkboxes[0].active = True
+        editor.save()
+        self.assertTrue(self.session.ai_settings['bPlayerDieCloseAI'])

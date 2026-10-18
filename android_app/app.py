@@ -38,6 +38,7 @@ class LaLaApp(App):
         super().__init__(**kwargs)
         self.manager = SessionManager()
         self.cards = {}
+        self.dashboard = None
         self.lines = []
         self.vault = None
         self.saved_accounts = []
@@ -152,7 +153,7 @@ class LaLaApp(App):
         button.bind(on_release=self.connect_account)
         base.add_widget(button)
 
-        self.message = Label(text="尚未登入。正式伺服器相容性仍待實機驗證。",
+        self.message = Label(text="選擇分流登入後，可開啟各帳號的角色功能。",
                              size_hint_y=None, height=dp(46))
         if self.vault_error: self.message.text = '帳密解密失敗；原資料已保留，請重新輸入登入'
         base.add_widget(self.message)
@@ -242,10 +243,17 @@ class LaLaApp(App):
         card.add_widget(title)
         card.add_widget(status)
         card.add_widget(controls)
+        from android_app.widgets import button as mobile_button
+        card.add_widget(mobile_button('開啟角色功能', lambda sid=session.session_id: self.open_dashboard(sid)))
         from android_app.automation_ui import attach
         attach(self, card, session.session_id)
         self.list_box.add_widget(card)
         self.cards[session.session_id] = (status, choices, title, stop, card)
+
+    def open_dashboard(self, sid):
+        if self.dashboard: self.dashboard.close()
+        from android_app.dashboard import Dashboard
+        self.dashboard = Dashboard(self, sid)
 
     def saved_names(self):
         return [r['account'] + ' | ' + r['server'] for r in self.saved_accounts]
@@ -321,6 +329,7 @@ class LaLaApp(App):
             status, choices, title, stop, card = record
             if kind == "notice":
                 self.message.text = value
+                if self.dashboard and self.dashboard.sid == sid: self.dashboard.message.text = value
             elif kind == "status":
                 status.text = value
                 if session.stop_event.is_set():
@@ -365,8 +374,12 @@ class LaLaApp(App):
 
     def on_pause(self):
         self.password.text = ""
+        if hasattr(self.manager, 'set_paused'): self.manager.set_paused(True)
         if not getattr(self.manager, 'background', False): self.manager.stop_all()
         return True
+
+    def on_resume(self):
+        if hasattr(self.manager, 'set_paused'): self.manager.set_paused(False)
 
     def on_stop(self):
         self.password.text = ""
