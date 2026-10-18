@@ -72,6 +72,8 @@ class GlassTheme:
         self.font=next((name for name in candidates if name in families),tkfont.nametofont('TkDefaultFont',root=root).actual('family'))
         root.tk.call('tk', 'scaling', 1.0)
         self.configure_styles()
+        for sequence in ('<Button-1>', '<Double-Button-1>', '<Motion>'):
+            root.bind_class('LockedTableColumns', sequence, self.lock_table_separator)
         root.bind_all('<Map>', self.mapped, add='+')
         self.attach(root)
 
@@ -118,7 +120,7 @@ class GlassTheme:
         s.configure('Treeview', background=PANEL, fieldbackground=PANEL, foreground=TEXT,
                     borderwidth=0, rowheight=26, font=(self.font, -14))
         s.configure('Treeview.Heading', background='#243d52', foreground='#c5f1ff',
-                    padding=6, font=(self.font, -14, 'bold'), relief='flat')
+                    padding=(2, 0), font=(self.font, -14, 'bold'), relief='flat')
         s.map('Treeview', background=[('selected', '#32617e')], foreground=[('selected', TEXT)])
         s.map('Treeview.Heading', background=[('active', '#365770')])
         for name in ('Vertical.TScrollbar', 'Horizontal.TScrollbar'):
@@ -144,8 +146,15 @@ class GlassTheme:
         }.items():
             self.root.option_add(pattern, value)
 
+    @staticmethod
+    def lock_table_separator(event):
+        if event.widget.identify_region(event.x, event.y) == 'separator':
+            return 'break'
+
     def mapped(self, event):
         widget = event.widget
+        if isinstance(widget, ttk.Treeview) and 'LockedTableColumns' not in widget.bindtags():
+            widget.bindtags(('LockedTableColumns',) + widget.bindtags())
         if isinstance(widget, (tk.Tk, tk.Toplevel)):
             self.attach(widget)
         try:

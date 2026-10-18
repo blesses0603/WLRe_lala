@@ -74,18 +74,35 @@ class ExpeditionPanel(ttk.Frame):
         ttk.Button(row, text='儲存', command=self.save).pack(side='left')
         body = ttk.Frame(self)
         body.pack(fill='both', expand=True, pady=4)
-        body.columnconfigure(0, weight=3); body.columnconfigure(1, weight=2); body.rowconfigure(1, weight=1)
-        ttk.Label(body, text='可用任務（依設定門檻篩選；顯示等級減免後時間）').grid(row=0, column=0, sticky='w')
+        for column, weight in enumerate((4, 3, 3)):
+            body.columnconfigure(column, weight=weight, uniform='expedition', minsize=0)
+        body.rowconfigure(1, weight=1)
+        ttk.Label(body, text='可用任務').grid(row=0, column=0, sticky='w')
         ttk.Label(body, text='駐紮所夥伴').grid(row=0, column=1, sticky='w')
-        frame, self.tasks = scroll_table(body, ('name', 'duration', 'success', 'rewards'),
-            ('任務名稱', '所需時間', '預估成功率', '任務獎勵'), (140, 90, 90, 240))
+        ttk.Label(body, text='任務詳情').grid(row=0, column=2, sticky='w')
+        frame, self.tasks = scroll_table(body, ('name', 'duration', 'success'),
+            ('任務名稱', '所需時間', '預估成功率'), (130, 85, 85), horizontal_scrollbar=False)
         frame.grid(row=1, column=0, sticky='nsew', padx=(0, 8))
         self.task_rows = {}
         self.task_detail = tk.StringVar(value='選取任務可查看完整獎勵與派遣條件。')
         self.tasks.bind('<<TreeviewSelect>>', lambda event: self.show_task())
-        frame, self.roles = scroll_table(body, ('name', 'faith', 'state'), ('夥伴', '好友度', '狀態'), (110, 55, 65))
-        frame.grid(row=1, column=1, sticky='nsew')
-        ttk.Label(self, textvariable=self.task_detail, wraplength=760).pack(fill='x', pady=3)
+        frame, self.roles = scroll_table(body, ('name', 'faith', 'state'),
+            ('夥伴', '好友度', '狀態'), (90, 55, 60), horizontal_scrollbar=False)
+        frame.grid(row=1, column=1, sticky='nsew', padx=(0, 8))
+        detail_frame = ttk.Frame(body)
+        detail_frame.grid(row=1, column=2, sticky='nsew')
+        detail_frame.rowconfigure(0, weight=1)
+        detail_frame.columnconfigure(0, weight=1)
+        self.detail_text = tk.Text(detail_frame, width=1, height=4, wrap='word',
+                                   state='disabled', borderwidth=0, highlightthickness=0,
+                                   background='#142638', foreground='#eff7ff', cursor='arrow',
+                                   font=ttk.Style(self).lookup('.', 'font') or 'TkDefaultFont')
+        self.detail_text.grid(row=0, column=0, sticky='nsew')
+        detail_scroll = ttk.Scrollbar(detail_frame, orient='vertical', command=self.detail_text.yview)
+        detail_scroll.grid(row=0, column=1, sticky='ns')
+        self.detail_text.configure(yscrollcommand=detail_scroll.set)
+        self.task_detail.trace_add('write', self.update_detail)
+        self.update_detail()
         self.note = tk.StringVar()
         self.team_status = tk.StringVar()
         ttk.Label(self, textvariable=self.team_status, wraplength=700).pack(fill='x', pady=3)
@@ -94,6 +111,12 @@ class ExpeditionPanel(ttk.Frame):
             variable.trace_add('write', self.preferences_changed)
         self.bind('<Destroy>', self.destroyed, add='+')
         self.render({})
+
+    def update_detail(self, *args):
+        self.detail_text.configure(state='normal')
+        self.detail_text.delete('1.0', 'end')
+        self.detail_text.insert('1.0', self.task_detail.get())
+        self.detail_text.configure(state='disabled')
 
     def config(self):
         return validate({'min_hours': float(self.hours.get()), 'faith_min': int(self.faith.get()),
@@ -112,8 +135,8 @@ class ExpeditionPanel(ttk.Frame):
                          12:'合計轉生階層', 13:'人型夥伴', 14:'獸型夥伴'}.get(rec['condition'][0], '條件')
                 met = '達標' if rec['met'] is True else '未達標' if rec['met'] is False else '資料不足'
                 recommendation.append(f"{label}：{met}（+{rec['awarded']/10:g}%）")
-            self.task_detail.set(f"{task_name(quest)}｜{time_text(seconds)}｜消耗好友度 {quest['faith_cost']}｜{result}\n{rewards_text(quest)}" +
-                                 ('\n推薦：' + '／'.join(recommendation) if recommendation else ''))
+            self.task_detail.set(f"{task_name(quest)}\n所需時間：{time_text(seconds)}\n消耗好友度：{quest['faith_cost']}\n{result}\n\n任務獎勵\n{rewards_text(quest)}" +
+                                 ('\n\n推薦條件\n' + '\n'.join(recommendation) if recommendation else ''))
         else:
             self.task_detail.set('選取任務可查看完整獎勵與派遣條件。')
 
@@ -302,9 +325,9 @@ class ExpeditionPanel(ttk.Frame):
                     rate = (('至少 ' if not details['complete'] else '') + f"{details['percent']:g}%") if members else '計算中' if self.plan_future is not None else '無可用隊伍'
                     seconds = duration(q, lv)
                     self.task_rows[str(qid)] = (q, result, seconds, details)
-                    self.tasks.insert('', 'end', iid=str(qid), values=(task_name(q), time_text(seconds), rate, rewards_text(q)))
+                    self.tasks.insert('', 'end', iid=str(qid), values=(task_name(q), time_text(seconds), rate))
                 elif qid and not q:
-                    self.tasks.insert('', 'end', iid=str(qid), values=('任務資料待更新', '待更新', '待更新', '待更新'))
+                    self.tasks.insert('', 'end', iid=str(qid), values=('任務資料待更新', '待更新', '待更新'))
             if selected and self.tasks.exists(selected[0]): self.tasks.selection_set(selected[0])
             self.show_task()
             for r in sorted(e.get('roles', {}).values(), key=lambda r: r['index']):

@@ -127,11 +127,6 @@ class CraftingBrowser:
                 self.material_table.heading(key,text=label);self.material_table.column(key,width=width,minwidth=40,stretch=key!='name',anchor='w' if key=='name' else 'center')
             self.material_table.heading('#0',text='');self.material_table.column('#0',width=26,minwidth=26,stretch=False,anchor='w')
             self.material_table.pack(fill='both',expand=True)
-            def lock_separator(event):
-                if self.material_table.identify_region(event.x,event.y)=='separator':return 'break'
-            self.material_table.bind('<Button-1>',lock_separator)
-            self.material_table.bind('<Double-Button-1>',lock_separator)
-            self.material_table.bind('<Motion>',lock_separator)
             self.material_table.tag_configure('missing',foreground='#f2b0a8')
             self.material_table.tag_configure('ready',foreground='#a8e4c0')
         else:
