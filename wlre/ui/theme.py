@@ -5,6 +5,7 @@ corners show the same background instead of a contrasting rectangular block.
 No network, command queues, or game state are involved in this module.
 """
 from wlre.paths import RESOURCE_ROOT
+from wlre.ui.button_art import button_image, button_kind
 import copy
 import os
 import tkinter as tk
@@ -197,7 +198,9 @@ class GlassTheme:
                 window.tk.eval(script)
             else:
                 window.destroy()
-        ttk.Button(bar, text='×', width=3, command=close, takefocus=True).pack(side='right', padx=(6, 0))
+        close_button=ttk.Button(bar, text='', width=3, command=close, takefocus=True)
+        close_button._game_button_kind='Btn_Close04'
+        close_button.pack(side='right', padx=(6, 0))
         ttk.Button(bar, text='—', width=3, command=lambda: self.minimize(window)).pack(side='right')
         origin = []
         def start(event):
@@ -428,13 +431,18 @@ class GlassTheme:
                     radius=14, outline=(98, 201, 224, 150))
                 surface = Image.alpha_composite(surface, overlay)
             if cls == 'TButton':
-                overlay = Image.new('RGBA', crop.size)
-                d = ImageDraw.Draw(overlay)
-                fill = {'normal': (12, 40, 63, 205), 'active': (38, 88, 114, 235),
-                        'pressed': (9, 27, 47, 240), 'disabled': (13, 30, 44, 195)}[state]
-                d.rounded_rectangle((1, 1, crop.width-2, crop.height-2), radius=crop.height//2 if record['original']=='Pill.Tab.TButton' else 9,
-                                    fill=fill, outline=(98, 201, 224, 120 if state=='disabled' else 220))
-                surface = Image.alpha_composite(surface, overlay)
+                if hasattr(widget, 'halo_owner') or record['original']=='Pill.Tab.TButton':
+                    overlay = Image.new('RGBA', crop.size)
+                    d = ImageDraw.Draw(overlay)
+                    fill = {'normal': (12, 40, 63, 205), 'active': (38, 88, 114, 235),
+                            'pressed': (9, 27, 47, 240), 'disabled': (13, 30, 44, 195)}[state]
+                    d.rounded_rectangle((1, 1, crop.width-2, crop.height-2), radius=crop.height//2 if record['original']=='Pill.Tab.TButton' else 9,
+                                        fill=fill, outline=(98, 201, 224, 120 if state=='disabled' else 220))
+                    surface = Image.alpha_composite(surface, overlay)
+                else:
+                    kind=button_kind(widget)
+                    if state=='disabled' and kind!='Btn_Close04':kind='Btn_016'
+                    surface=Image.alpha_composite(surface,button_image(kind,crop.width,crop.height,state))
             images.append(surface)
         first = not record['images']
         if first:
@@ -444,6 +452,9 @@ class GlassTheme:
                 spec += [('disabled', photos[3]), ('pressed', photos[2]), ('selected', photos[1]), ('active', photos[1])]
             self.style.element_create(record['element'], 'image', *spec, sticky='nswe', width=0, height=0)
             self.style.layout(record['style'], record['layout'])
+            if cls=='TButton' and not hasattr(widget,'halo_owner') and record['original']!='Pill.Tab.TButton':
+                self.style.configure(record['style'],foreground='#10283d')
+                self.style.map(record['style'],foreground=[('disabled','#46515e')])
             widget.configure(style=record['style'])
             record['images'] = photos
         else:
