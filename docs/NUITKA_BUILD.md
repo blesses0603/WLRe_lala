@@ -46,3 +46,12 @@ BAT 會列出選中的版本、位元數、路徑及 Tk 版本；找不到可用
 僅有 Python 3.13／3.14 且沒有 C++ 工具時，可安裝 Visual Studio 2022 Build Tools 的「使用 C++ 的桌面開發」，或另裝 64 位元 Python 3.12（含 Tcl/Tk）後重開 BAT。無須移除既有 Python。
 
 本次比對來源為你提供的 `WLRE_Nuitka_Core(1).zip`：採用其中的 Python 3.10～3.14 偵測、MSVC／MinGW64 選擇、依 Python 版本區分建置環境、Nuitka>=4.3 與獨立編譯子程序環境；打包內容則使用本專案的客戶端與資源。
+
+
+## 第 09 項：建置驗證分層
+
+1. **原始碼測試**：`.github/workflows/test.yml` 的 Windows、Linux、macOS 單元測試、原始碼 GUI 冒煙測試與 dry-run，不代表已產生可執行 EXE／APP。
+2. **原生打包驗證**：`.github/workflows/desktop-packaging.yml` 對 PR 分別在 Windows x64、macOS arm64、macOS Intel x64 編譯 Nuitka，實際啟動**編譯後產物**執行 `--self-test` 和 `--smoke-test-gui`，並驗證 ZIP CRC。macOS 還需檢查 Mach-O 架構與 `codesign --verify --deep --strict`。
+3. **人工驗收**：需在使用者的 Windows 桌面及 Mac Finder 驗證實際操作；Apple Developer ID 公證、Gatekeeper 與正式伺服器連線不屬自動 CI 能證明的事項。
+
+PR 完整打包產物會暫存於 GitHub Actions artifacts；正式版仍需推送與 `wlre.__version__` 相符、尚未發行的 `vX.Y.Z` 標籤才能觸發 GitHub Release。macOS Intel 與 Apple Silicon 是分開建置的原生 APP，並非 Universal Binary。
