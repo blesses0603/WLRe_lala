@@ -1,6 +1,8 @@
 """Expedition overview and opt-in automatic dispatch preferences."""
 import json
 import time
+import copy
+from concurrent.futures import ThreadPoolExecutor
 import tkinter as tk
 from tkinter import ttk, messagebox
 
@@ -10,6 +12,15 @@ from wlre.services.items.combat_resources import CAT, item_name
 from wlre.storage.atomic import file_lock, write_json
 from wlre.ui.layout import heading, scroll_table
 from wlre.ui.expedition_display import task_name, time_text, rewards_text
+from wlre.services.expedition_teams import success_details
+
+
+def plan_quests(quests, roles, threshold, npcs):
+    result = {}
+    for quest in quests:
+        team = choose_members(quest, roles, threshold, npcs)
+        result[str(quest['id'])] = (team, success_details(quest, team, npcs) if team else {})
+    return result
 
 
 class ExpeditionPanel(ttk.Frame):
@@ -19,6 +30,13 @@ class ExpeditionPanel(ttk.Frame):
         self.key = None
         self.signature = None
         self.loading_settings = False
+        self.pending_preferences = None
+        self.save_job = None
+        self.planner = None
+        self.plan_future = None
+        self.plan_job = None
+        self.plan_key = None
+        self.plans = {}
         self.catalog = load_catalog()
         heading(self, '遠征', '自動領獎、補好友度並接續派遣；不使用縮時或支援物品。')
         self.status = tk.StringVar(value='等待遠征與駐紮所資料同步。')
@@ -26,7 +44,7 @@ class ExpeditionPanel(ttk.Frame):
         controls = ttk.Frame(self)
         controls.pack(fill='x', pady=3)
         ttk.Label(controls, text='任務時間大於').pack(side='left')
-        self.hours = tk.StringVar(value='5')
+        self.hours = tk.StringVar(value='0')
         self.hours_input = ttk.Spinbox(controls, from_=0, to=24, increment=.5, width=5, textvariable=self.hours)
         self.hours_input.pack(side='left', padx=4)
         ttk.Label(controls, text='小時　好友度低於').pack(side='left')
@@ -34,6 +52,11 @@ class ExpeditionPanel(ttk.Frame):
         self.faith_input = ttk.Spinbox(controls, from_=1, to=100, width=4, textvariable=self.faith)
         self.faith_input.pack(side='left', padx=4)
         ttk.Label(controls, text='時補充').pack(side='left')
+        ttk.Label(controls, text='最低成功率').pack(side='left', padx=(8, 0))
+        self.min_success = tk.StringVar(value='75')
+        self.success_input = ttk.Spinbox(controls, from_=0, to=100, increment=5, width=4, textvariable=self.min_success)
+        self.success_input.pack(side='left', padx=3)
+        ttk.Label(controls, text='%').pack(side='left')
         self.auto_claim = tk.BooleanVar(value=True)
         self.claim_option = ttk.Checkbutton(controls, text='自動領獎', variable=self.auto_claim)
         self.claim_option.pack(side='left', padx=8)
@@ -54,8 +77,8 @@ class ExpeditionPanel(ttk.Frame):
         body.columnconfigure(0, weight=3); body.columnconfigure(1, weight=2); body.rowconfigure(1, weight=1)
         ttk.Label(body, text='可用任務（依設定門檻篩選；顯示等級減免後時間）').grid(row=0, column=0, sticky='w')
         ttk.Label(body, text='駐紮所夥伴').grid(row=0, column=1, sticky='w')
-        frame, self.tasks = scroll_table(body, ('name', 'duration', 'rewards'),
-            ('任務名稱', '所需時間', '任務獎勵'), (150, 100, 270))
+        frame, self.tasks = scroll_table(body, ('name', 'duration', 'success', 'rewards'),
+            ('任務名稱', '所需時間', '預估成功率', '任務獎勵'), (140, 90, 90, 240))
         frame.grid(row=1, column=0, sticky='nsew', padx=(0, 8))
         self.task_rows = {}
         self.task_detail = tk.StringVar(value='選取任務可查看完整獎勵與派遣條件。')
@@ -67,19 +90,30 @@ class ExpeditionPanel(ttk.Frame):
         self.team_status = tk.StringVar()
         ttk.Label(self, textvariable=self.team_status, wraplength=700).pack(fill='x', pady=3)
         ttk.Label(self, textvariable=self.note, style='Muted.TLabel', wraplength=700).pack(fill='x', pady=3)
-        self.hours.trace_add('write', self.update_filter)
+        for variable in (self.hours, self.faith, self.min_success, self.auto_claim, self.item):
+            variable.trace_add('write', self.preferences_changed)
+        self.bind('<Destroy>', self.destroyed, add='+')
         self.render({})
 
     def config(self):
         return validate({'min_hours': float(self.hours.get()), 'faith_min': int(self.faith.get()),
+                         'min_success': float(self.min_success.get()),
                          'item_id': self.items.get(self.item.get(), self.selected_item_id), 'auto_claim': self.auto_claim.get()})
 
     def show_task(self):
         selected = self.tasks.selection()
         row = self.task_rows.get(selected[0]) if selected else None
         if row:
-            quest, result, seconds = row
-            self.task_detail.set(f"{task_name(quest)}｜{time_text(seconds)}｜消耗好友度 {quest['faith_cost']}｜{result}\n{rewards_text(quest)}")
+            quest, result, seconds, details = row
+            recommendation = []
+            for rec in details.get('recommendations', []):
+                label = {1:'人數', 2:'指定元素', 3:'排除元素', 4:'指定夥伴', 5:'合計等級', 6:'合計潛能',
+                         7:'合計體質', 8:'合計力量', 9:'合計智力', 10:'合計智慧', 11:'合計敏捷',
+                         12:'合計轉生階層', 13:'人型夥伴', 14:'獸型夥伴'}.get(rec['condition'][0], '條件')
+                met = '達標' if rec['met'] is True else '未達標' if rec['met'] is False else '資料不足'
+                recommendation.append(f"{label}：{met}（+{rec['awarded']/10:g}%）")
+            self.task_detail.set(f"{task_name(quest)}｜{time_text(seconds)}｜消耗好友度 {quest['faith_cost']}｜{result}\n{rewards_text(quest)}" +
+                                 ('\n推薦：' + '／'.join(recommendation) if recommendation else ''))
         else:
             self.task_detail.set('選取任務可查看完整獎勵與派遣條件。')
 
@@ -93,6 +127,7 @@ class ExpeditionPanel(ttk.Frame):
         return data_root() / 'accounts' / (key + '.expedition.json')
 
     def load_settings(self, key):
+        self.flush_preferences()
         self.key = key
         value = preferences()
         if key:
@@ -105,6 +140,7 @@ class ExpeditionPanel(ttk.Frame):
         self.loading_settings = True
         try:
             self.hours.set(str(value['min_hours'])); self.faith.set(str(value['faith_min']))
+            self.min_success.set(str(value['min_success']))
             self.auto_claim.set(value['auto_claim'])
             self.selected_item_id = value['item_id']
             self.item.set('')
@@ -114,15 +150,78 @@ class ExpeditionPanel(ttk.Frame):
 
     def save(self):
         try:
+            self.flush_preferences()
             path = self.settings_path()
             with file_lock(path): write_json(path, self.config())
             self.status.set('已儲存遠征設定；登入後不會自動啟動。')
         except (OSError, ValueError) as exc:
             messagebox.showerror('遠征設定', str(exc), parent=self.app.root)
 
+    def preferences_changed(self, *args):
+        if self.loading_settings: return
+        try: value = self.config()
+        except ValueError: return  # allow partially typed numbers
+        if self.key:
+            self.pending_preferences = (self.key, value)
+            if self.save_job is not None:
+                self.after_cancel(self.save_job)
+            self.save_job = self.after(750, self.flush_preferences)
+        self.update_filter()
+
+    def flush_preferences(self):
+        if self.save_job is not None:
+            try: self.after_cancel(self.save_job)
+            except tk.TclError: pass
+            self.save_job = None
+        if self.pending_preferences is None: return
+        key, value = self.pending_preferences
+        path = data_root() / 'accounts' / (key + '.expedition.json')
+        try:
+            with file_lock(path): write_json(path, value)
+            self.pending_preferences = None
+        except (OSError, ValueError) as exc:
+            self.status.set('遠征設定自動儲存失敗：' + str(exc))
+
+    def destroyed(self, event):
+        if event.widget is not self: return
+        self.flush_preferences()
+        if self.plan_job is not None:
+            try: self.after_cancel(self.plan_job)
+            except tk.TclError: pass
+        if self.planner is not None: self.planner.shutdown(wait=False, cancel_futures=True)
+
+    def request_plans(self, quests, idle, threshold):
+        key = repr(([q['id'] for q in quests], idle, threshold))
+        if key == self.plan_key: return
+        self.plan_key = key
+        self.plans = {}
+        if self.plan_future is not None: self.plan_future.cancel()
+        if len(idle) <= 10:
+            self.plan_future = None
+            self.plans = plan_quests(quests, idle, threshold, self.catalog.get('npcs', {}))
+            return
+        if self.planner is None: self.planner = ThreadPoolExecutor(max_workers=1, thread_name_prefix='expedition-planner')
+        self.plan_future = self.planner.submit(plan_quests, quests, copy.deepcopy(idle), threshold, self.catalog.get('npcs', {}))
+        if self.plan_job is None: self.plan_job = self.after(50, self.collect_plans)
+
+    def collect_plans(self):
+        self.plan_job = None
+        if self.plan_future is None: return
+        if not self.plan_future.done():
+            self.plan_job = self.after(50, self.collect_plans)
+            return
+        try: self.plans = self.plan_future.result()
+        except Exception as exc:
+            self.status.set('成功率計算失敗：' + str(exc))
+            self.plans = {}
+        self.plan_future = None
+        self.signature = None
+        self.render(self.app.snapshot)
+
     def start(self):
         try:
             settings = self.config()
+            self.save()
         except ValueError as exc:
             messagebox.showerror('遠征設定', str(exc), parent=self.app.root)
             return
@@ -138,17 +237,20 @@ class ExpeditionPanel(ttk.Frame):
         if selected and selected not in self.items.values():
             self.items[f'{item_name(selected)}（目前無可用庫存）'] = selected
         self.item_combo.configure(values=list(self.items))
-        self.item.set(next(label for label, sid in self.items.items() if sid == selected))
+        loading = self.loading_settings
+        self.loading_settings = True
+        try: self.item.set(next(label for label, sid in self.items.items() if sid == selected))
+        finally: self.loading_settings = loading
 
     def render(self, state):
         e = state.get('expedition', {})
         live = self.app.live_active
-        if live and self.app._settings_key != self.key:
+        if live and self.app._settings_key and self.app._settings_key != self.key:
             self.load_settings(self.app._settings_key)
         self.update_inventory(state.get('inventory', {}))
         self.start_button.configure(state='normal' if live and e.get('ready') and e.get('outpost_ready')
                                     and self.catalog.get('tasks') and not e.get('enabled') and not e.get('uncertain') else 'disabled')
-        for control in (self.hours_input, self.faith_input, self.claim_option):
+        for control in (self.hours_input, self.faith_input, self.claim_option, self.success_input):
             control.configure(state='disabled' if e.get('enabled') or e.get('pending') else 'normal')
         self.item_combo.configure(state='disabled' if e.get('enabled') or e.get('pending') else 'readonly')
         if live and not e.get('enabled') and not e.get('pending') and not e.get('uncertain'):
@@ -166,9 +268,11 @@ class ExpeditionPanel(ttk.Frame):
             teams.append(f"隊伍 {t['index']}：{task_name(quest)}（{text}）")
         self.team_status.set(('｜'.join(teams) or '目前沒有進行中的遠征。') + f"　已自動領獎 {e.get('claimed', 0)} 次")
         try: hours = float(self.hours.get())
-        except ValueError: hours = 5
+        except ValueError: hours = 0
+        try: minimum = float(self.min_success.get())
+        except ValueError: minimum = 75
         signature = repr((e.get('revision'), e.get('roles'), e.get('quests'), e.get('teams'),
-                          e.get('level'), hours, self.faith.get(), recovery_stock(state.get('inventory', {}))))
+                          e.get('level'), hours, self.faith.get(), minimum, recovery_stock(state.get('inventory', {}))))
         if signature != self.signature:
             self.signature = signature
             selected = self.tasks.selection()
@@ -178,21 +282,29 @@ class ExpeditionPanel(ttk.Frame):
             busy = {npc for team in e.get('teams', {}).values() if team['quest'] for npc in team['members'] if npc}
             idle = [r for r in e.get('roles', {}).values() if r['state'] == 0 and r['npc_id'] not in busy]
             occupied = {self.catalog.get('tasks', {}).get(str(t['quest']), {}).get('area') for t in e.get('teams', {}).values() if t['quest']}
+            try: threshold = int(self.faith.get())
+            except ValueError: threshold = 80
+            visible_quests = [self.catalog['tasks'][str(qid)] for qid in sorted(set(e.get('quests', {}).values()))
+                              if str(qid) in self.catalog.get('tasks', {}) and lv
+                              and duration(self.catalog['tasks'][str(qid)], lv) > hours * 3600
+                              and self.catalog['tasks'][str(qid)]['difficulty'] <= lv['difficulty']]
+            self.request_plans(visible_quests, idle, threshold)
             for qid in sorted(set(e.get('quests', {}).values())):
                 q = self.catalog.get('tasks', {}).get(str(qid))
                 if q and lv and duration(q, lv) > hours * 3600 and q['difficulty'] <= lv['difficulty']:
-                    try: threshold = int(self.faith.get())
-                    except ValueError: threshold = 80
-                    members = choose_members(q, idle, threshold)
+                    members, details = self.plans.get(str(qid), ([], {}))
                     result = ('同區域遠征中' if q['area'] in occupied else
                               '可派遣' if members else '夥伴不足／條件未符')
                     if result == '可派遣' and any(r['faith'] < max(threshold, q['faith_cost']) for r in members):
                         result = '需補好友度'
+                    if members and details['percent'] < minimum:
+                        result = f'未達最低成功率 {minimum:g}%'
+                    rate = (('至少 ' if not details['complete'] else '') + f"{details['percent']:g}%") if members else '計算中' if self.plan_future is not None else '無可用隊伍'
                     seconds = duration(q, lv)
-                    self.task_rows[str(qid)] = (q, result, seconds)
-                    self.tasks.insert('', 'end', iid=str(qid), values=(task_name(q), time_text(seconds), rewards_text(q)))
+                    self.task_rows[str(qid)] = (q, result, seconds, details)
+                    self.tasks.insert('', 'end', iid=str(qid), values=(task_name(q), time_text(seconds), rate, rewards_text(q)))
                 elif qid and not q:
-                    self.tasks.insert('', 'end', iid=str(qid), values=('任務資料待更新', '待更新', '待更新'))
+                    self.tasks.insert('', 'end', iid=str(qid), values=('任務資料待更新', '待更新', '待更新', '待更新'))
             if selected and self.tasks.exists(selected[0]): self.tasks.selection_set(selected[0])
             self.show_task()
             for r in sorted(e.get('roles', {}).values(), key=lambda r: r['index']):

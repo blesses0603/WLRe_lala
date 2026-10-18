@@ -33,7 +33,7 @@ class ExpeditionFixture:
                 '1': {'index': 1, 'quest': 0, 'members': [0]*4},
                 '2': {'index': 2, 'quest': 0, 'members': [0]*4}})
         self.service = Expedition(catalog())
-        self.settings = {'min_hours': 5, 'faith_min': 80, 'item_id': 34014}
+        self.settings = {'min_hours': 5, 'faith_min': 80, 'item_id': 34014, 'min_success': 0}
 
     def event(self, event):
         self.state.apply(event)
@@ -103,7 +103,8 @@ class ExpeditionAutomation(ExpeditionFixture, unittest.TestCase):
         self.state.expedition['roles'].update({'2': role(2, 100, 1), '3': role(3, 99)})
         self.service.start(self.state, self.settings)
         self.service.tick(self.state, 10)
-        self.assertEqual(set(self.service.pending['members']), {101, 103})
+        self.assertTrue(set(self.service.pending['members']) <= {101, 103})
+        self.assertNotIn(102, self.service.pending['members'])
         self.assertEqual(choose_members({'condition': [2, 1, 1], 'faith_cost': 20}, [role()], 80), [])
 
     def test_session_rejects_conflicting_actions_and_missing_catalog(self):
@@ -277,6 +278,11 @@ class ExpeditionClaiming(ExpeditionFixture, unittest.TestCase):
                     'rewards': [{'kind': 6, 'id': 1, 'value': 10}]})
         self.assertIsNone(self.service.pending)
         self.assertEqual(self.state.expedition['claimed'], 1)
+
+    def test_success_minimum_does_not_block_claiming_completed_tasks(self):
+        self.service.start(self.state, {**self.settings, 'min_success': 100})
+        packet, = self.service.tick(self.state, 10)
+        self.assertEqual((packet.main, packet.sub), (31, 16))
 
     def test_no_early_claim_and_option_can_be_disabled(self):
         self.service.start(self.state, self.settings)

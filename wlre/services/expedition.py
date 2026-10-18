@@ -7,6 +7,7 @@ from wlre.network.wire import Packet, Writer, ProtocolError
 from wlre.services.expedition_data import load_catalog
 from wlre.services.items.combat_resources import CAT, available
 from wlre.core.inventory_updates import STACKABLE
+from wlre.services.expedition_teams import choose_members, condition_met, success_details
 
 
 def defaults():
@@ -59,7 +60,7 @@ def with_deadline(team):
 
 
 def preferences():
-    return {'faith_min': 80, 'item_id': 0, 'min_hours': 5, 'quests': [], 'auto_claim': True}
+    return {'faith_min': 80, 'item_id': 0, 'min_hours': 0, 'min_success': 75, 'quests': [], 'auto_claim': True}
 
 
 def validate(value):
@@ -69,10 +70,14 @@ def validate(value):
         v = value.get(key, result[key])
         if type(v) is not int or not low <= v <= high: raise ProtocolError('好友度門檻或物品編號錯誤')
         result[key] = v
-    hours = value.get('min_hours', 5)
+    hours = value.get('min_hours', 0)
     if type(hours) not in (int, float) or not math.isfinite(hours) or not 0 <= hours <= 24:
         raise ProtocolError('任務時間門檻必須介於 0 至 24 小時')
     result['min_hours'] = hours
+    minimum = value.get('min_success', 75)
+    if type(minimum) not in (int, float) or not math.isfinite(minimum) or not 0 <= minimum <= 100:
+        raise ProtocolError('最低成功率必須介於 0 至 100%')
+    result['min_success'] = minimum
     auto_claim = value.get('auto_claim', True)
     if type(auto_claim) is not bool: raise ProtocolError('自動領獎設定必須為布林值')
     result['auto_claim'] = auto_claim
@@ -111,40 +116,8 @@ def duration(quest, level):
     return math.floor(quest['minutes'] * (1000 - level['reduction']) / 1000 + .5) * 60
 
 
-def condition_ok(quest, roles):
-    kind, first, second = quest['condition']
-    if kind == 0: return True
-    if kind == 1: return len(roles) >= first
-    if kind == 4: return any(r['npc_id'] == first for r in roles)
-    keys = {6: 'potential', 7: 'con', 8: 'str', 9: 'int', 10: 'wis', 11: 'agi', 12: 'degree'}
-    if kind in keys: return sum(r['stats'].get(keys[kind], 0) for r in roles) >= first
-    if kind == 5:
-        return sum(r['stats']['level'] + (300 if r['stats']['degree'] == 2 else r['stats']['degree'] * 100) for r in roles) >= first
-    # NpcData element/kind/career mapping is not in the current combat catalog.
-    # Unknown conditions must not be treated as met.
-    return False
-
-
-def choose_members(quest, roles, threshold):
-    """Conditions currently supported are monotone sums; best four suffice."""
-    roles = [r for r in roles if r['faith'] >= quest['faith_cost'] or r['faith'] < threshold]
-    kind = quest['condition'][0]
-    keys = {6: 'potential', 7: 'con', 8: 'str', 9: 'int', 10: 'wis', 11: 'agi', 12: 'degree'}
-    def strength(role):
-        stats = role['stats']
-        if kind == 4:
-            return int(role['npc_id'] == quest['condition'][1])
-        if kind == 5:
-            return stats['level'] + (300 if stats['degree'] == 2 else stats['degree'] * 100)
-        return stats.get(keys.get(kind), 0)
-    def select(pool):
-        return sorted(pool, key=lambda r: (-strength(r), -r['faith'], r['index']))[:4]
-    target = max(threshold, quest['faith_cost'])
-    # Prefer a team needing no consumables if it satisfies the condition.
-    candidates = select([r for r in roles if r['faith'] >= target])
-    if candidates and condition_ok(quest, candidates): return candidates
-    candidates = select(roles)
-    return candidates if candidates and condition_ok(quest, candidates) else []
+def condition_ok(quest, roles, npcs=None):
+    return condition_met(quest['condition'], roles, npcs) is True
 
 
 def blocked(state):
@@ -295,14 +268,16 @@ class Expedition:
             return []
         occupied_areas = {self.catalog['tasks'].get(str(t['quest']), {}).get('area') for t in e['teams'].values() if t['quest']}
         quests = [self.catalog['tasks'].get(str(q)) for q in set(e['quests'].values()) if not cfg['quests'] or q in cfg['quests']]
-        candidates = [(q, choose_members(q, roles, cfg['faith_min'])) for q in quests
+        candidates = [(q, choose_members(q, roles, cfg['faith_min'], self.catalog.get('npcs', {}))) for q in quests
                       if q and duration(q, lv) > cfg['min_hours'] * 3600
                       and q['difficulty'] <= lv['difficulty'] and q['area'] not in occupied_areas]
-        candidates = [(q, team) for q, team in candidates if team]
+        candidates = [(q, team) for q, team in candidates if team and
+                      success_details(q, team, self.catalog.get('npcs', {}))['percent'] >= cfg['min_success']]
         if not candidates:
-            e['status'] = f"沒有符合條件且預計超過 {cfg['min_hours']:g} 小時的任務（未支援的隊伍條件不會派遣）"
+            e['status'] = f"沒有符合條件、預計超過 {cfg['min_hours']:g} 小時且成功率至少 {cfg['min_success']:g}% 的隊伍"
             return []
-        quest, roles = max(candidates, key=lambda pair: (duration(pair[0], lv), -pair[0]['id']))
+        quest, roles = max(candidates, key=lambda pair: (
+            success_details(pair[0], pair[1], self.catalog.get('npcs', {}))['points'], duration(pair[0], lv), -pair[0]['id']))
         for role in roles:
             target = max(cfg['faith_min'], quest['faith_cost'])
             if role['faith'] >= target: continue
@@ -313,7 +288,8 @@ class Expedition:
         for npc in members + [0] * (4 - len(members)): w.u16(npc)
         w.u8(0)  # no support/shortening items
         self.pending = {'kind': 'dispatch', 'quest': quest['id'], 'members': members, 'due': now + 20}
-        e.update(pending='dispatch', status=f"已送出任務 {quest['id']}，等待伺服器確認")
+        rate = success_details(quest, roles, self.catalog.get('npcs', {}))['percent']
+        e.update(pending='dispatch', status=f"已送出任務 {quest['id']}（預估成功率 {rate:g}%），等待伺服器確認")
         return [Packet(31, 15, w.build())]
 
     def claim(self, state, team, now):

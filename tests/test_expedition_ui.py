@@ -2,6 +2,7 @@ import os
 import tempfile
 import tkinter as tk
 import unittest
+import time
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
@@ -11,6 +12,9 @@ from wlre.ui.expedition_ui import ExpeditionPanel
 @unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt', 'Requires a desktop')
 class ExpeditionPanelTests(unittest.TestCase):
     def setUp(self):
+        self.folder = tempfile.TemporaryDirectory()
+        self.local_data = patch.dict(os.environ, {'LOCALAPPDATA': self.folder.name})
+        self.local_data.start()
         self.root = tk.Tk()
         self.app = SimpleNamespace(root=self.root, live_active=True, _settings_key=None,
             snapshot={}, send=Mock(return_value=True), settings_identity=lambda: 'a'*64)
@@ -26,8 +30,11 @@ class ExpeditionPanelTests(unittest.TestCase):
 
     def tearDown(self):
         self.root.destroy()
+        self.local_data.stop()
+        self.folder.cleanup()
 
     def test_threshold_controls_filter_tasks_and_enqueue_configuration(self):
+        self.panel.hours.set('5')
         self.panel.render(self.state)
         self.assertEqual(len(self.panel.tasks.get_children()), 1)
         self.panel.hours.set('3')
@@ -35,7 +42,7 @@ class ExpeditionPanelTests(unittest.TestCase):
         self.panel.faith.set('85')
         self.panel.start_button.invoke()
         self.assertEqual(self.app.send.call_args.args[0], {'type': 'start_expedition',
-            'settings': {'min_hours': 3.0, 'faith_min': 85, 'item_id': 0, 'quests': [], 'auto_claim': True}})
+            'settings': {'min_hours': 3.0, 'faith_min': 85, 'item_id': 0, 'quests': [], 'auto_claim': True, 'min_success': 75}})
         self.app.send.return_value = False
         self.panel.start()
         self.assertIn('重新登入', self.panel.status.get())
@@ -52,7 +59,7 @@ class ExpeditionPanelTests(unittest.TestCase):
             self.panel.faith.set('90')
             self.panel.auto_claim.set(False)
             self.panel.save()
-            self.panel.hours.set('1')
+            self.panel.load_settings('b'*64)
             self.panel.load_settings('a'*64)
             self.assertEqual(self.panel.hours.get(), '7.5')
             self.assertEqual(self.panel.faith.get(), '90')
@@ -73,6 +80,40 @@ class ExpeditionPanelTests(unittest.TestCase):
         self.app.send.assert_not_called()
         self.assertIn('已自動檢查', self.panel.status.get())
 
+    def test_defaults_and_account_switch_autosave_use_original_account(self):
+        self.assertEqual(self.panel.hours.get(), '0')
+        self.assertEqual(self.panel.min_success.get(), '75')
+        self.app._settings_key = 'a'*64
+        self.panel.load_settings('a'*64)
+        self.panel.hours.set('2')
+        self.panel.min_success.set('85')
+        self.app._settings_key = 'b'*64
+        self.panel.load_settings('b'*64)  # flush A's pending edits under A's identity
+        self.assertEqual(self.panel.hours.get(), '0')
+        self.assertEqual(self.panel.min_success.get(), '75')
+        self.panel.min_success.set('90')
+        self.panel.flush_preferences()
+        self.app._settings_key = 'a'*64
+        self.panel.load_settings('a'*64)
+        self.assertEqual(self.panel.hours.get(), '2.0')
+        self.assertEqual(self.panel.min_success.get(), '85.0')
+        self.app.send.assert_not_called()
+
+    def test_success_column_and_background_planner(self):
+        self.catalog['tasks']['1']['success_rate'] = 500
+        self.state['expedition']['roles'] = {str(i): {'index': i, 'npc_id': i, 'faith': 90,
+            'state': 0, 'stats': {'level': 1, 'degree': 0}} for i in range(1, 12)}
+        self.panel.render(self.state)
+        self.assertIsNotNone(self.panel.plan_future)
+        deadline = time.monotonic() + 3
+        while self.panel.plan_future is not None and time.monotonic() < deadline:
+            self.root.update()
+            time.sleep(.005)
+        self.assertIsNone(self.panel.plan_future)
+        self.assertEqual(self.panel.tasks.item('1', 'values')[2], '50%')
+        self.panel.tasks.selection_set('1'); self.panel.show_task()
+        self.assertIn('未達最低成功率 75%', self.panel.task_detail.get())
+
     def test_task_rows_show_name_reduced_time_and_rewards(self):
         quest = self.catalog['tasks']['1']
         quest.update(name='測試採集任務', expedition_exp=25, exp=100,
@@ -83,10 +124,10 @@ class ExpeditionPanelTests(unittest.TestCase):
         row = self.panel.tasks.item('1', 'values')
         self.assertEqual(row[0], '測試採集任務')
         self.assertEqual(row[1], '5 小時 49 分鐘')
-        self.assertIn('遠征經驗 × 25', row[2])
-        self.assertIn('遠征幣 × 20', row[2])
-        self.assertIn('桃太郎飯糰 × 2', row[2])
-        self.assertIn('機率獎勵：紫鑽 × 3', row[2])
+        self.assertIn('遠征經驗 × 25', row[3])
+        self.assertIn('遠征幣 × 20', row[3])
+        self.assertIn('桃太郎飯糰 × 2', row[3])
+        self.assertIn('機率獎勵：紫鑽 × 3', row[3])
         self.panel.tasks.selection_set('1')
         self.panel.show_task()
         self.assertIn('消耗好友度 20', self.panel.task_detail.get())

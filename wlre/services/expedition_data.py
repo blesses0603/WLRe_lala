@@ -2,6 +2,7 @@
 import hashlib
 import json
 import os
+import struct
 from pathlib import Path
 
 from wlre.network.wire import Reader, ProtocolError
@@ -23,7 +24,7 @@ def parse_catalog(tasks_data, levels_data):
              'name_id': r.u32(), 'description_id': r.u32(), 'minutes': r.u16(),
              'faith_cost': r.u8(), 'success_rate': r.u16(),
              'condition': [r.u16(), r.u16(), r.u16()]}
-        r.take(4 * 8)  # four recommendation conditions
+        q['recommendations'] = [{'condition': [r.u16(), r.u16(), r.u16()], 'bonus': r.u16()} for _ in range(4)]
         q['expedition_exp'] = r.u32()
         q['rewards'] = [{'kind': r.u8(), 'id': r.u32(), 'value': r.u32()} for _ in range(3)]
         q['special_rate'] = r.u16()
@@ -83,3 +84,29 @@ def attach_names(catalog, text_data):
         tasks[sid] = {**quest, 'name': name, 'area_label': texts.get(quest['area_name'], '')}
     return {**catalog, 'tasks': tasks, 'source_sha256': {
         **catalog.get('source_sha256', {}), 'TextData_C': hashlib.sha256(text_data).hexdigest()}}
+
+
+def parse_npcs(npc_data, career_data):
+    """NpcData.New fixed numeric fields, and NpcCareerData.LoadData mapping."""
+    r = Reader(career_data)
+    careers = {}
+    for _ in range(r.i32()):
+        record = r.take(17)
+        original, career = struct.unpack_from('<HH', record, 2)
+        if career in careers: raise ProtocolError('轉職夥伴對照重複')
+        careers[career] = original
+    r.end()
+    r = Reader(npc_data)
+    count = r.i32()
+    if not 1 <= count <= 65535: raise ProtocolError('夥伴資料筆數錯誤')
+    npcs = {}
+    for _ in range(count):
+        for _ in range(2):
+            size = r.u16()
+            if size % 2: raise ProtocolError('夥伴名稱長度錯誤')
+            r.take(size).decode('utf-16-le')
+        fields = r.take(203)
+        sid = struct.unpack_from('<H', fields, 1)[0]
+        npcs[str(sid)] = {'element': fields[74], 'kind': fields[106], 'original': careers.get(sid, sid)}
+    r.end()
+    return npcs
