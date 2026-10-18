@@ -3,6 +3,7 @@
 Door indices are matched against Eve NewDoor data, never list row numbers.
 Server S7-1/S12-1 remains authoritative for the resulting map and position.
 """
+from wlre.core.state_ownership import writes
 import math
 from wlre.services.world.portals import Portals
 from wlre.services.world.portal_policy import destination_problem
@@ -31,6 +32,7 @@ class PortalTravel:
                                 'awaiting_response': False, 'last_source': '傳點請求等待已結束'}
         self.request_flow = None
 
+    @writes('portal_travel')
     def cancel(self, state, reason='使用者停止傳點移動'):
         if self.pending:
             self.status(state, 'cancelled', reason)
@@ -39,6 +41,7 @@ class PortalTravel:
         self.deadline = None
         self.event_finished = False
 
+    @writes('portal_travel')
     def start(self, state, movement, portal_id, now):
         if self.pending:
             if self.pending['id'] == portal_id:
@@ -71,6 +74,7 @@ class PortalTravel:
                                'door_index': portal.get('door_index'),
                                'walk_target': {'x': x, 'y': y}}
 
+    @writes('portal_travel')
     def start_direct(self, state, movement, portal_id, now):
         if self.pending:
             if self.pending['id'] == portal_id:
@@ -105,6 +109,7 @@ class PortalTravel:
         self.request_flow = state.event_flow
         return [Packet(20, 8, Writer().u16(index).build())]
 
+    @writes('portal_travel')
     def observe(self, event, state, movement):
         p = self.pending
         if not p:
@@ -140,6 +145,7 @@ class PortalTravel:
         elif self.deadline is None and state.local_movement and state.local_movement.get('status') == 'stopped':
             self.cancel(state, state.local_movement.get('reason', '移動已停止'))
 
+    @writes('portal_travel')
     def tick(self, state, movement, now):
         p = self.pending
         if not p:

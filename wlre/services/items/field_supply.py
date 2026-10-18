@@ -1,4 +1,6 @@
 """One outstanding bag or storage heal across manual controls and AI; never retry uncertainty."""
+from wlre.core.state_ownership import writes
+from wlre.services.items import reservations
 import time
 from wlre.network.wire import ProtocolError
 from wlre.services.items.combat_resources import field_context
@@ -9,15 +11,19 @@ class FieldSupply:
     def check(self):
         if self.uncertain:raise ProtocolError('前次補給結果未確認；請重新登入同步，禁止重複使用補給')
         if self.pending:raise ProtocolError('前次補給尚待同一物品扣除與 HP／SP 回覆，請勿重複送出')
+    @writes('field_supply')
     def status(self,state,status,reason,item_id=None):
         self.revision+=1
         state.inventory['field_supply']={'status':status,'reason':reason,'item_id':item_id,'pending':bool(self.pending),'uncertain':self.uncertain}
+    @writes('field_supply')
     def begin(self,state,plan,target,now=None):
         self.check();now=time.monotonic() if now is None else now
         item=state.inventory['items'].get(str(plan['bag_index']))
         if not item or item['item_id']!=plan['item_id']:raise ProtocolError('補給物品已變更')
+        reservations.acquire(state.inventory,'field_supply',plan['resource_reservations'],exclusive=True)
         self.pending={'index':plan['bag_index'],'item_id':plan['item_id'],'serial':item.get('serial'),'count':item['count'],'slot':f"{target['col']}:{target['row']}",'pid':target['pid'],'npc_index':target.get('npc_index',0),'owner':state.player.get('role_id'),'resource':plan['resource'],'before':target.get(plan['resource'],0),'due':now+self.timeout,'consumed':False,'restored':False,'failure':None}
         self.status(state,'pending','等待同一格物品扣除及同一對象 HP／SP 回覆',plan['item_id'])
+    @writes('field_supply')
     def begin_storage(self,state,plan,target,now=None):
         self.check();now=time.monotonic() if now is None else now
         balance=state.potion_storage.get(plan['resource'],{})
@@ -27,6 +33,7 @@ class FieldSupply:
             'resource':plan['resource'],'before':target.get(plan['resource'],0),'due':now+self.timeout,
             'balance':balance['value'],'amount':plan['amount'],'consumed':False,'restored':False,'failure':None}
         self.status(state,'pending','等待儲存槽使用回覆及同一對象 HP／SP 更新')
+    @writes('field_supply')
     def observe(self,event,state):
         p=self.pending
         if not p or self.uncertain:return
@@ -55,6 +62,7 @@ class FieldSupply:
         if health:
             context,_=field_context(state.snapshot());unit=context['battle_units'].get(p['slot'],{})
             if unit.get('pid')==p['pid'] and unit.get('npc_index',0)==p['npc_index'] and unit.get(resource,0)>p['before']:p['restored']=True
+    @writes('field_supply')
     def tick(self,state,now=None):
         p=self.pending
         if not p or self.uncertain:return None
@@ -63,10 +71,12 @@ class FieldSupply:
         reason=p['failure']
         if state.player.get('role_id')!=p['owner'] or unit.get('pid')!=p['pid'] or unit.get('npc_index',0)!=p['npc_index']:reason='補給對象已變更，前次結果未確認，請重新登入同步'
         if not reason and p['consumed'] and p['restored']:
+            reservations.release(state.inventory,'field_supply')
             self.pending=None;self.status(state,'confirmed',('儲存槽使用及 HP／SP 回覆均已確認' if p.get('source')=='storage' else '物品扣除及 HP／SP 回覆均已確認'),p['item_id'])
         else:
             if not reason and now>=p['due']:reason='補給回覆逾時，已禁止續送；請重新登入同步'
             if not reason:return None
+            reservations.uncertain(state.inventory,'field_supply')
             self.uncertain=True;state.inventory['use_failed']=True
             self.status(state,'uncertain',reason,p['item_id'])
         return {'type':'field_supply_status',**state.inventory['field_supply']}

@@ -1,4 +1,6 @@
 """AutoPlay.lua AutoWalk/ReAutoWalk four offsets, native order and no dwell."""
+from wlre.core.state_ownership import writes
+from wlre.services.coordination import reason as coordination_reason
 from wlre.network.wire import ProtocolError
 from wlre.services.world.coordinates import Coordinates
 from wlre.services.battle.party import own_team
@@ -21,10 +23,12 @@ class Roaming:
         self.converter=converter;self.enabled=False;self.sticky=False
         self.await_battle_end=False;self.current_path=0;self.manual=False
 
+    @writes('roaming')
     def status(self,state,value,reason='',**fields):
         updated={**state.roaming,'status':value,'reason':reason,**fields}
         if updated!=state.roaming:state.roaming=updated
 
+    @writes('roaming')
     def start(self,state,movement,now=0):
         if state.activities:raise ProtocolError('目前'+ '、'.join(state.activities)+'中，不能啟動徘徊')
         self.center=origin(state);self.scene=state.player['scene'];self.role_id=state.player['role_id']
@@ -37,15 +41,18 @@ class Roaming:
             'scene':self.scene,'role_id':self.role_id,'center':list(self.center),
             'next_point':self.current_path+1,'goals_started':0,'target':None,'mode':'lua_four_points'}
 
+    @writes('roaming')
     def stop(self,state,movement,reason='使用者停止徘徊'):
         self.enabled=False;self.sticky=False;self.await_battle_end=False;self.manual=False
         movement.stop(state,reason);self.status(state,'disabled',reason,enabled=False)
 
+    @writes('roaming')
     def recenter(self,state,movement,reason='依目前位置重新定位'):
         movement.stop(state,reason)
         self.center=origin(state);self.manual=False;self.sticky=False
         self.status(state,'ready',reason,center=list(self.center))
 
+    @writes('roaming')
     def observe(self,event,state,movement):
         if not self.enabled:return
         if state.activities:
@@ -70,6 +77,7 @@ class Roaming:
             # S6-1 is a destination notice, not arrival. Never recenter from it.
             self.sticky=True;self.status(state,'paused_event','收到不同移動目的地，等待伺服器位置確認')
 
+    @writes('roaming')
     def tick(self,state,movement,now):
         if not self.enabled:return
         if state.activities:
@@ -84,8 +92,10 @@ class Roaming:
             movement.stop(state,'導航障礙資料已失效');self.status(state,'paused_navigation','等待障礙資料更新');return
         if state.battle.get('active') or self.await_battle_end:
             self.status(state,'paused_battle','等待戰後事件結束');return
-        if state.maintenance.get('pending') or state.maintenance.get('uncertain') or state.maintenance.get('checking') or state.event_flow.get('blocked') or state.inventory.get('field_supply',{}).get('pending') or state.inventory.get('field_supply',{}).get('uncertain') or state.auto_battle.get('status') in ('healing','waiting_heal'):
-            self.status(state,'paused_event','等待事件／補給完成');return
+        pause=coordination_reason(state,'roaming')
+        if pause:
+            movement.stop(state,pause)
+            self.status(state,'paused_event',pause);return
         if movement.active:
             self.status(state,'manual' if self.manual else 'moving','抵達後接續下一點');return
         if self.manual:

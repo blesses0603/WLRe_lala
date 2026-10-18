@@ -142,3 +142,23 @@ class ExpeditionPanelTests(unittest.TestCase):
     def test_unavailable_name_is_not_replaced_with_made_up_title(self):
         self.panel.render(self.state)
         self.assertEqual(self.panel.tasks.item('1', 'values')[0], '任務名稱待補齊')
+
+    def test_failed_flush_preserves_original_account_and_pending_preferences(self):
+        self.panel.load_settings('a'*64)
+        self.panel.hours.set('6')
+        pending=self.panel.pending_preferences
+        with patch('wlre.ui.expedition_ui.expedition_settings.save',side_effect=OSError('disk full')):
+            with self.assertRaises(OSError):self.panel.load_settings('b'*64)
+        self.assertEqual(self.panel.key,'a'*64)
+        self.assertEqual(self.panel.pending_preferences,pending)
+        self.assertEqual(self.panel.hours.get(),'6')
+        self.assertTrue(self.panel.flush_preferences())
+
+    def test_corrupt_target_settings_do_not_switch_or_overwrite(self):
+        from wlre.storage.expedition_settings import settings_file
+        self.panel.load_settings('a'*64)
+        target=settings_file('b'*64);target.parent.mkdir(parents=True,exist_ok=True)
+        target.write_text('{broken')
+        with self.assertRaises(ValueError):self.panel.load_settings('b'*64)
+        self.assertEqual(self.panel.key,'a'*64)
+        self.assertEqual(target.read_text(),'{broken')

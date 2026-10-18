@@ -149,14 +149,15 @@ class ExpeditionPanel(ttk.Frame):
         return expedition_settings.settings_file(key)
 
     def load_settings(self, key):
-        self.flush_preferences()
-        self.key = key
+        if not self.flush_preferences():raise OSError('前一帳號的遠征設定尚未儲存，未切換帳號')
         value = preferences()
         if key:
             try:
                 value = expedition_settings.load(key)
             except (OSError, ValueError) as exc:
                 self.status.set('遠征設定讀取失敗：' + str(exc))
+                raise
+        self.key = key
         self.loading_settings = True
         try:
             self.hours.set(str(value['min_hours'])); self.faith.set(str(value['faith_min']))
@@ -170,8 +171,8 @@ class ExpeditionPanel(ttk.Frame):
 
     def save(self):
         try:
-            self.flush_preferences()
-            path = self.settings_path()
+            if not self.flush_preferences():raise OSError('先前遠征設定尚未儲存')
+            self.settings_path()
             expedition_settings.save(self.app.settings_identity(), self.config())
             self.status.set('已儲存遠征設定；登入後不會自動啟動。')
         except (OSError, ValueError) as exc:
@@ -193,13 +194,15 @@ class ExpeditionPanel(ttk.Frame):
             try: self.after_cancel(self.save_job)
             except tk.TclError: pass
             self.save_job = None
-        if self.pending_preferences is None: return
+        if self.pending_preferences is None: return True
         key, value = self.pending_preferences
         try:
             expedition_settings.save(key, value)
             self.pending_preferences = None
+            return True
         except (OSError, ValueError) as exc:
             self.status.set('遠征設定自動儲存失敗：' + str(exc))
+            return False
 
     def destroyed(self, event):
         if event.widget is not self: return

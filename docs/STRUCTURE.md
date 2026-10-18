@@ -1,6 +1,6 @@
 # 目錄與模組索引
 
-對照版本：`main` 的 `7657b04`，應用版本 `0.5.0`。本索引描述目前目錄；完整的啟動、資料流、狀態所有權、帳號保存與改善順序，請先閱讀 [整體架構](ARCHITECTURE.md)。
+對照基礎：`main` 的 `3f27368` 加本次功能協調與狀態所有權改善，應用版本 `0.5.0`。本索引描述目前目錄；完整的啟動、資料流、狀態所有權、帳號保存與改善順序，請先閱讀 [整體架構](ARCHITECTURE.md)。
 
 ## 根目錄
 
@@ -15,6 +15,7 @@
 | `tools/` | 建置／發佈／資源維護工具。 |
 | `tests/` | unittest 測試。 |
 | `docs/` | 架構、介面、協定與驗證說明。 |
+| `.github/workflows/test.yml` | main／PR 的 Linux、Windows 測試與 GUI 冒煙檢查。 |
 | `.github/workflows/release-windows.yml` | Windows 與 macOS 共用發版工作流程，檔名仍保留 windows。 |
 
 ## wlre：套件入口
@@ -30,6 +31,7 @@
 
 | 模組 | 責任 |
 |---|---|
+| [account_controller.py](../wlre/ui/account_controller.py) | 帳號偏好載入、儲存與成功後啟用。 |
 | [attribute_points_ui.py](../wlre/ui/attribute_points_ui.py) | 角色五項能力配點視窗與確認流程。 |
 | [auto_battle_ui.py](../wlre/ui/auto_battle_ui.py) | 角色／夥伴 AI 規則草稿、設定匯入匯出與套用。 |
 | [bag_grid.py](../wlre/ui/bag_grid.py) | 背包與唯讀儲物格狀介面、分頁規格與物品詳情模型。 |
@@ -53,6 +55,7 @@
 | [halo_button.py](../wlre/ui/halo_button.py) | 主頁功能開關的動態七彩啟用邊線。 |
 | [home_map.py](../wlre/ui/home_map.py) | 主頁地圖、NPC／怪物清單與傳點操作。 |
 | [layout.py](../wlre/ui/layout.py) | 共用標題與可捲動表格。 |
+| [login_controller.py](../wlre/ui/login_controller.py) | 登入視窗、記住帳號、分流與角色選擇協調。 |
 | [maintenance_ui.py](../wlre/ui/maintenance_ui.py) | 戰後修理／整理設定與即時背包選物視窗。 |
 | [minimap.py](../wlre/ui/minimap.py) | 小地圖索引、圖像讀取與投影換算；含待下移的共用資料模型。 |
 | [navigation_gui.py](../wlre/ui/navigation_gui.py) | 獨立地圖／導航檢視工具。 |
@@ -62,6 +65,7 @@
 | [resource_view.py](../wlre/ui/resource_view.py) | 實際背包、超空間袋與已確認特技對話框。 |
 | [rounded_notebook.py](../wlre/ui/rounded_notebook.py) | 以實際按鈕組成的分頁列、選取狀態與鍵盤切換。 |
 | [services_ui.py](../wlre/ui/services_ui.py) | 組隊與煉金操作面板。 |
+| [session_bridge.py](../wlre/ui/session_bridge.py) | 綁定單次連線的工作執行緒回呼與顯示信箱。 |
 | [theme.py](../wlre/ui/theme.py) | 共用背景合成、視窗標題列、ttk 樣式、按鈕貼圖與表格欄寬鎖定。 |
 | [window_layout.py](../wlre/ui/window_layout.py) | 功能對話框的尺寸限制與置中。 |
 
@@ -76,6 +80,7 @@
 | [inventory_updates.py](../wlre/core/inventory_updates.py) | 權威物品記錄新增／合併與庫存一致性檢查。 |
 | [maintenance.py](../wlre/core/maintenance.py) | 每兩小時的快取清理計時器；不是戰後物品維護。 |
 | [state.py](../wlre/core/state.py) | State 欄位、事件套用、位置證據與快照。 |
+| [state_ownership.py](../wlre/core/state_ownership.py) | 單一寫入執行緒、巢狀容器保護與服務欄位修改範圍。 |
 
 ## wlre/network：連線與協定
 
@@ -109,6 +114,7 @@
 
 | 模組 | 責任 |
 |---|---|
+| [coordination.py](../wlre/services/coordination.py) | 共用指令互斥與活動暫停條件；遠征獨立啟用。 |
 | [expedition.py](../wlre/services/expedition.py) | 遠征狀態、派遣、好友度恢復、領獎與回覆確認。 |
 | [expedition_data.py](../wlre/services/expedition_data.py) | 官方遠征／夥伴資料解析、內建 catalog 載入及遠征資料根目錄。 |
 | [expedition_teams.py](../wlre/services/expedition_teams.py) | 推薦條件、預估成功率與最多四人最佳隊伍搜尋。 |
@@ -157,6 +163,7 @@
 | [maintenance.py](../wlre/services/items/maintenance.py) | 戰後修理／整理設定、背包篩選及官方封包建立。 |
 | [post_battle_maintenance.py](../wlre/services/items/post_battle_maintenance.py) | 逐筆修理、販售、丟棄與格位／裝備確認。 |
 | [recovery.py](../wlre/services/items/recovery.py) | HP／SP 補給偏好、藥水儲存槽與補給選擇規則。 |
+| [reservations.py](../wlre/services/items/reservations.py) | 跨戰鬥、補給、煉金、製作、遠征與維護的背包保留登記。 |
 | [room_storage.py](../wlre/services/items/room_storage.py) | S62 儲藏室／雜物櫃的唯讀解碼與權威狀態。 |
 
 ## wlre/services/social：聊天與公會
@@ -206,6 +213,7 @@
 
 | 領域 | 代表性測試 |
 |---|---|
+| 跨功能／狀態所有權 | `test_automation_integration.py`、`test_architecture_boundaries.py` |
 | 封包／狀態／配點 | `test_state_updates.py`、`test_attribute_points.py`、`test_room_storage_1262.py` |
 | AI／組隊／夥伴 | `test_optimized_ui.py`、`test_party_guard.py`、`test_companion_commands.py` |
 | 遠征 | `test_expedition.py`、`test_expedition_teams.py`、`test_expedition_ui.py` |

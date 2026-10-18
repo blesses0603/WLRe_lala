@@ -1,4 +1,7 @@
 """Sequential Lua alchemy requests, gated on results AND bag consumption."""
+from wlre.core.state_ownership import writes
+from wlre.services.items import reservations
+from wlre.services.coordination import reason as coordination_reason
 from wlre.paths import RESOURCE_ROOT
 import json,time,copy
 from wlre.network.wire import Packet, Writer, ProtocolError
@@ -77,6 +80,7 @@ def prepare(state,command):
 class AutoAlchemy:
     continuation_delay=1.0
     def __init__(self):self.plan=None;self.pending=None;self.next_due=0
+    @writes('alchemy')
     def start(self,state,command,now=None):
         now=time.monotonic() if now is None else now
         if state.alchemy.get('enabled') or self.pending:raise ProtocolError('煉金仍在執行或等待回覆')
@@ -84,16 +88,16 @@ class AutoAlchemy:
         self.plan=plan;self.next_due=now
         state.alchemy={**defaults(),'enabled':True,'requested':plan['runs'],'status':'準備煉金'}
         return self.tick(state,now)
+    @writes('alchemy')
     def pause(self,state,reason):
         if state.alchemy.get('enabled'):state.alchemy.update(paused=True,pause_reason=reason,status=reason+'；保留剩餘次數')
+    @writes('alchemy')
     def stop(self,state,reason='使用者停止'):
         state.alchemy={**state.alchemy,'enabled':False,'paused':False,'pause_reason':None,'status':reason+('；本次已送出，仍等待結果' if self.pending else '')}
-    def release(self,state):
-        if self.pending:
-            for row in self.pending['consumption']:
-                key=str(row['index']);remaining=max(0,row['count']-self.pending['deleted'].get(key,0))
-                state.inventory['reserved'][key]=max(0,state.inventory['reserved'].get(key,0)-remaining)
-        state.inventory['alchemy_slots']=[]
+    @writes('alchemy')
+    def release(self,state,confirmed=True):
+        if confirmed:reservations.release(state.inventory,'alchemy')
+        else:reservations.uncertain(state.inventory,'alchemy')
         self.pending=None;state.alchemy['pending']=False
     def production_confirmed(self):
         p=self.pending;result=p.get('result') if p else None
@@ -104,6 +108,7 @@ class AutoAlchemy:
             return counts.get(str(result['item_id']),0)>=p['totals'].get(str(result['item_id']),0)+result['count']
         return False
 
+    @writes('alchemy')
     def observe(self,event,state,now=None):
         if not self.pending and not state.alchemy.get('enabled'):return
         k=event['type']
@@ -113,7 +118,7 @@ class AutoAlchemy:
         if self.pending:
             if k=='alchemy_result':
                 if not event.get('item_id') or not event.get('count'):
-                    self.stop(state,'伺服器未回覆有效產物，已停止並要求重新同步包包');state.inventory['reliable']=False;self.release(state);return
+                    self.stop(state,'伺服器未回覆有效產物，已停止並要求重新同步包包');state.inventory['reliable']=False;self.release(state,confirmed=False);return
                 if self.pending.get('result') is not None:return
                 self.pending['result']={'item_id':event['item_id'],'count':event['count']}
             elif k=='bag_add' and event.get('source')==3:
@@ -131,7 +136,7 @@ class AutoAlchemy:
                     consumed=max(0,row['before_count']-remaining)
                     self.pending['deleted'][str(row['index'])]=max(consumed,self.pending['deleted'].get(str(row['index']),0))
             elif k=='alchemy_space_error':
-                self.stop(state,'伺服器回覆：背包空間／煉金條件不足');state.inventory['reliable']=False;self.release(state);return
+                self.stop(state,'伺服器回覆：背包空間／煉金條件不足');state.inventory['reliable']=False;self.release(state,confirmed=False);return
             result=self.pending.get('result')
             produced=self.production_confirmed()
             if result and produced and state.inventory.get('reliable') and all(self.pending['deleted'].get(str(row['index']),0)>=row['count'] for row in self.pending['consumption']):
@@ -142,6 +147,7 @@ class AutoAlchemy:
                 self.next_due=(time.monotonic() if now is None else now)+self.continuation_delay
                 if state.alchemy['completed']>=state.alchemy['requested']:self.stop(state,'設定次數已完成')
                 elif state.alchemy['enabled']:state.alchemy['status']='本次已完成；稍候再執行下一次'
+    @writes('alchemy')
     def tick(self,state,now=None):
         now=time.monotonic() if now is None else now
         plan=self.plan
@@ -163,12 +169,19 @@ class AutoAlchemy:
                 detail='、'.join(missing) or '包包一致性'
                 state.alchemy['last_confirmation']={'round':state.alchemy['completed']+1,'missing':missing}
                 self.stop(state,f"第{state.alchemy['completed']+1}次等待{detail}逾時；已停止，請重新登入同步包包")
-                state.inventory['reliable']=False;self.release(state)
+                state.inventory['reliable']=False;reservations.uncertain(state.inventory,'alchemy')
+                self.pending=None;state.alchemy['pending']=False
             return []
         if not state.alchemy.get('enabled'):return []
         if battle_pause:
             self.next_due=now+self.continuation_delay
             self.pause(state,'戰鬥／戰後事件中，暫停煉金');return []
+        if state.inventory.get('field_supply',{}).get('uncertain'):
+            self.stop(state,'補給結果未確認，請重新登入同步後再煉金');return []
+        pause=coordination_reason(state,'alchemy')
+        if pause:
+            self.next_due=now+self.continuation_delay
+            self.pause(state,pause);return []
         supply=state.inventory.get('field_supply',{})
         if supply.get('uncertain'):self.stop(state,'補給結果未確認，請重新登入同步後再煉金');return []
         if supply.get('pending') or any(state.inventory.get('reserved',{}).values()):
@@ -188,8 +201,7 @@ class AutoAlchemy:
             for row in rows:writer.u8(row['index']).u8(row['count']);row['before_count']=state.inventory['items'][str(row['index'])]['count']
         except (ValueError,TypeError,KeyError) as exc:self.stop(state,str(exc));return []
         consumption=aggregate_rows(rows)
-        for row in consumption:state.inventory['reserved'][str(row['index'])]=row['count']
-        state.inventory['alchemy_slots']=[str(row['index']) for row in consumption]
+        reservations.acquire(state.inventory,'alchemy',consumption,exclusive=True)
         totals={}
         for value in state.inventory['items'].values():
             sid=str(value['item_id']);totals[sid]=totals.get(sid,0)+value['count']

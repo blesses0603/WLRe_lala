@@ -1,4 +1,6 @@
 """Local plan with unlimited entries and chunked batch submission; server acknowledgement owns every transition."""
+from wlre.services.coordination import reason as coordination_reason
+from wlre.core.state_ownership import writes
 from wlre.network.wire import ProtocolError
 
 
@@ -17,9 +19,11 @@ def validate_rows(rows):
     return result
 
 class PlanMixin:
+    @writes('crafting')
     def plan(self,state):
         return state.crafting.setdefault('local_plan',{'rows':[],'enabled':False,'sent':0,'revision':0,'status':'尚未啟動自訂清單'})
 
+    @writes('crafting')
     def command(self,state,command,now=None):
         p=self.plan(state);action=command.get('action')
         if action=='plan_set':
@@ -32,7 +36,8 @@ class PlanMixin:
             if not p['rows']:raise ProtocolError('自訂清單為空')
             if state.crafting['uncertain']:raise ProtocolError('製作狀態不確定，請重新登入同步')
             if self.pending:raise ProtocolError('請等待目前製作操作確認')
-            if state.battle.get('active') or state.event_flow.get('blocked') or state.alchemy.get('enabled') or state.alchemy.get('pending') or state.roaming.get('enabled') or state.auto_battle.get('enabled'):raise ProtocolError('請先停止其他自動功能並結束戰鬥／事件')
+            pause=coordination_reason(state,'crafting')
+            if pause:raise ProtocolError(pause)
             p.update(enabled=True,status='自訂清單執行中');state.crafting['auto_continue']=True;state.crafting['status']=p['status'];return []
         if action=='plan_pause':
             p.update(enabled=False,status='清單已暫停；已送入伺服器的項目保留');state.crafting['auto_continue']=False;state.crafting['status']=p['status'];return []
@@ -41,6 +46,7 @@ class PlanMixin:
         if action=='add' and p['enabled']:raise ProtocolError('自訂清單執行中，請先暫停再手動加入')
         return self._server_command(state,command,now)
 
+    @writes('crafting')
     def observe(self,event,state,now=None):
         old=self.pending
         self._server_observe(event,state,now)
@@ -54,6 +60,7 @@ class PlanMixin:
                 p['status']='已確認送入伺服器；等待下一空位'
         if event['type'] in ('craft_failed','craft_paused'):p.update(enabled=False,status=state.crafting['status'])
 
+    @writes('crafting')
     def tick(self,state,now=None):
         from wlre.services.items.crafting import tools
         p=self.plan(state);c=state.crafting
@@ -62,6 +69,9 @@ class PlanMixin:
         if c['uncertain']:
             p.update(enabled=False,status=c['status']);return packets
         if packets or self.pending or not p['enabled']:return packets
+        pause=coordination_reason(state,'crafting')
+        if pause:
+            p['status']=pause;return []
         if state.battle.get('active') or state.event_flow.get('blocked'):return []
         if self.wait_output:
             if self.wait_output['received']<self.wait_output['required']:

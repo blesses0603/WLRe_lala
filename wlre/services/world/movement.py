@@ -1,4 +1,5 @@
 """Local path locomotion and C6-1 position reporting, not server arrival ACKs."""
+from wlre.core.state_ownership import writes
 import math
 from wlre.services.world.coordinates import Coordinates
 from wlre.services.world.navigation import Repository
@@ -20,6 +21,7 @@ class Movement:
         self.position=None
         self.next_due=0.0
 
+    @writes('movement')
     def start(self,state,x,y,now,bounds=None):
         if not (0<=x<=65535 and 0<=y<=65535):raise ProtocolError('目的地超出 UInt16 座標範圍')
         if state.activities:raise ProtocolError('目前'+ '、'.join(state.activities)+'中，無法移動')
@@ -76,11 +78,13 @@ class Movement:
                               'role_id':self.role_id,'confirmation':None}
         return route
 
+    @writes('movement')
     def stop(self,state,reason='使用者停止'):
         self.active=False
         if state.local_movement:
             state.local_movement={**state.local_movement,'status':'stopped','reason':reason}
 
+    @writes('movement')
     def observe(self,event,state):
         if not self.active:return
         kind=event['type']
@@ -95,6 +99,7 @@ class Movement:
         elif state.navigation.get('stale') and state.navigation.get('scene')==self.scene:
             self.stop(state,'障礙資料變更，停止舊路徑')
 
+    @writes('movement')
     def tick(self,state,now):
         if not self.active:return []
         if (state.player.get('role_id')!=self.role_id or state.player.get('scene')!=self.scene

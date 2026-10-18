@@ -1,4 +1,7 @@
 """Supported AutoPlay.lua rule ordering, using current validated command adapters."""
+from wlre.core.state_ownership import writes
+from wlre.services.items import reservations
+from wlre.services.coordination import reason as coordination_reason
 import copy
 import math
 from wlre.services.items import recovery, maintenance;from wlre.services.battle import party_guard
@@ -157,17 +160,21 @@ class AutoBattle:
     def __init__(self):
         self.enabled=False;self.settings=defaults();self.key=None;self.failed_key=None
         self.decided=set();self.due=0;self.roster=set();self.field_wait_key=None
+    @writes('auto_battle')
     def status(self,state,status,reason='',**fields):
         value={**state.auto_battle,'enabled':self.enabled,'status':status,'reason':reason,**fields}
         if value!=state.auto_battle:state.auto_battle=value
+    @writes('auto_battle')
     def start(self,state,settings):
         self.settings=validate(settings);self.field_wait_key=None;self.enabled=True;self.key=None;self.failed_key=None;self.decided=set()
         self.status(state,'armed','等待新回合／本回合可操作單位')
+    @writes('auto_battle')
     def stop(self,state,reason='使用者停止AI'):
         self.enabled=False;self.status(state,'disabled',reason)
+    @writes('auto_battle')
     def tick(self,state,logic,now):
         if not self.enabled or not logic.world_acknowledged:return []
-        if state.maintenance.get('pending') or state.maintenance.get('uncertain'):
+        if coordination_reason(state,'auto_battle'):
             self.status(state,'maintenance',state.maintenance.get('status','等待戰後修理／整理'));return []
         battle=state.battle
         snap=state.snapshot();all_owned=owned_units(snap,False);pid=state.player.get('role_id')
@@ -195,7 +202,7 @@ class AutoBattle:
             self.status(state,'waiting','本回合已下令，等待下一回合');return []
         guard_reason=party_guard.escape_reason(snap,self.settings['party_guard'])
         old_key,old_units=logic.round_key,set(logic.sent_units)
-        old_reserved=copy.deepcopy(state.inventory['reserved'])
+        old_reserved=reservations.checkpoint(state.inventory)
         try:
             decisions=[]
             for u in pending:
@@ -210,12 +217,13 @@ class AutoBattle:
             packets=[]
             for d in decisions:packets.extend(logic.command(d['command'],state))
         except (ValueError,KeyError,TypeError) as exc:
-            logic.round_key,logic.sent_units=old_key,old_units;state.inventory['reserved']=old_reserved;self.failed_key=key
+            logic.round_key,logic.sent_units=old_key,old_units;reservations.restore(state.inventory,old_reserved);self.failed_key=key
             self.status(state,'blocked',str(exc));logic.roaming.stop(state,logic.movement,'AI指令資料不足，停止徘徊');return []
         self.decided.update(slot(u) for u in pending)
         self.status(state,'submitted','已準備本回合指令，送出後等待伺服器結果',decisions=decisions)
         return packets
 
+    @writes('auto_battle')
     def heal_field(self,state,logic,now):
         if state.event_flow.get('blocked') or (state.battle_count and state.battle.get('post_event',{}).get('status')!='completed'):return None
         context,actor=field_context(state.snapshot())

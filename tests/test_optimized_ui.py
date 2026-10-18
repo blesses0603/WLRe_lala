@@ -86,3 +86,10 @@ class OptimizedWindow(unittest.TestCase):
         self.assertIn('fixture-message',self.app.chat_panel.view.get('1.0','end'))
         self.assertIn('fixture-log-599',self.app.log.get('1.0','end'))
         self.assertFalse(self.app._background_logs)
+
+    def test_account_activation_does_not_publish_key_if_expedition_load_fails(self):
+        previous_key=self.app._settings_key;previous_settings=self.app.ai_settings
+        with patch('wlre.ui.account_controller.account_settings.load',return_value=dict(previous_settings)),patch.object(self.app.expedition_panel,'load_settings',side_effect=OSError('settings unavailable')):
+            with self.assertRaises(OSError):self.app.activate_account_settings('fixture',123,'another-account')
+        self.assertEqual(self.app._settings_key,previous_key)
+        self.assertIs(self.app.ai_settings,previous_settings)

@@ -1,4 +1,7 @@
 """1262 Room.lua server smith schedule; manual submissions, confirmed execution."""
+from wlre.core.state_ownership import writes
+from wlre.services.items import reservations
+from wlre.services.coordination import reason as coordination_reason
 from wlre.paths import RESOURCE_ROOT
 import json,time
 from wlre.network.wire import Packet, Reader, Writer, ProtocolError
@@ -169,11 +172,17 @@ from wlre.services.items.crafting_plan import PlanMixin
 class Crafting(PlanMixin):
     def __init__(self):self.pending=None;self.next_start=False;self.seen_completed=0;self.wait_output=None
 
+    @writes('crafting')
     def _set_pending(self,state,action,now,**data):
         self.pending={'action':action,'due':now+15,**data};state.crafting['pending']=action;state.crafting['status']='已送出，等待伺服器確認'
 
-    def _clear(self,state):self.pending=None;state.crafting['pending']=None
+    @writes('crafting')
+    def _clear(self,state,confirmed=True):
+        if confirmed:reservations.release(state.inventory,'crafting')
+        else:reservations.uncertain(state.inventory,'crafting')
+        self.pending=None;state.crafting['pending']=None
 
+    @writes('crafting')
     def _server_command(self,state,command,now=None):
         now=time.monotonic() if now is None else now;action=command.get('action');c=state.crafting
         if action=='stop_auto':c['auto_continue']=False;c['status']='已停止自動接續；已開始的伺服器製作仍需按暫停';return []
@@ -188,9 +197,11 @@ class Crafting(PlanMixin):
             packet=Packet(64,3,bytes([c['active']]))
         else:
             if state.battle.get('active') or state.event_flow.get('blocked'):raise ProtocolError('等待戰鬥／事件結束後再操作製作')
-            if state.alchemy.get('enabled') or state.alchemy.get('pending') or state.roaming.get('enabled') or state.auto_battle.get('enabled'):raise ProtocolError('請先停止煉金、徘徊與自動戰鬥')
+            pause=coordination_reason(state,'crafting')
+            if pause:raise ProtocolError(pause)
             if action=='add':
                 r,allocations,packet=recipe_plan(state,int(command['item_id']),command['count'])
+                reservations.acquire(state.inventory,'crafting',allocations,exclusive=True)
                 self._set_pending(state,'add',now,item_id=r['item_id'],allocations=allocations,ack=False,quick=r['seconds']==0,quick_done=False)
                 return [packet]
             if not c['ready']:raise ProtocolError('製作排程尚未同步')
@@ -216,6 +227,7 @@ class Crafting(PlanMixin):
             else:raise ProtocolError('未知製作操作')
         self._set_pending(state,action,now);return [packet]
 
+    @writes('crafting')
     def _server_observe(self,event,state,now=None):
         now=time.monotonic() if now is None else now;k=event['type'];c=state.crafting
         if k=='craft_completed' and c['completed']>self.seen_completed:
@@ -239,20 +251,22 @@ class Crafting(PlanMixin):
             if k=='craft_completed' and p['quick'] and not p['quick_done']:
                 p.update(ack=True,quick_done=True);c['completed']+=1;self.seen_completed=c['completed']
             if p['ack']:
-                consumed=True
+                consumed=bool(state.inventory.get('reliable'))
                 for a in p['allocations']:
                     item=state.inventory['items'].get(str(a['index']))
-                    if item and item['item_id']==a['item_id'] and item.get('serial')==a['serial'] and item['count']>a['before']-a['count']:consumed=False
+                    if item and (item['item_id']!=a['item_id'] or item.get('serial')!=a['serial'] or item['count']>a['before']-a['count']):consumed=False
+                    if item is None and a['before']>a['count']:consumed=False
                 if consumed:self._clear(state);c['status']='排程與材料扣除均已確認'
         elif p and ((p['action']=='start' and k=='craft_started') or (p['action']=='pause' and k=='craft_paused') or (p['action']=='delete' and k=='craft_deleted') or (p['action'] in ('up','down') and k=='craft_swapped')):self._clear(state)
 
+    @writes('crafting')
     def _server_tick(self,state,now=None):
         now=time.monotonic() if now is None else now;c=state.crafting
         if self.pending and now>=self.pending['due']:
             if self.pending['action']=='add':state.inventory['reliable']=False
-            self._clear(state);c.update(auto_continue=False,uncertain=True,status='製作回覆逾時，停止重送；請重新登入同步');return []
+            self._clear(state,confirmed=False);c.update(auto_continue=False,uncertain=True,status='製作回覆逾時，停止重送；請重新登入同步');return []
         if self.pending or not c['auto_continue'] or c['uncertain']:return []
-        if state.battle.get('active') or state.event_flow.get('blocked'):return []
+        if coordination_reason(state,'crafting'):return []
         if c['running'] and not c['completion_requested']:
             row=c['queue'].get(str(c['active']))
             if not row:return []
@@ -278,7 +292,8 @@ class Crafting(PlanMixin):
             except ProtocolError as exc:c['auto_continue']=False;c['status']=str(exc)
         return []
 
+    @writes('crafting')
     def disconnect(self,state):
         if self.pending and self.pending['action']=='add':state.inventory['reliable']=False
         self.plan(state).update(enabled=False,status='連線已結束，請確認剩餘清單後重新啟動')
-        self._clear(state);self.next_start=False;self.wait_output=None;state.crafting.update(auto_continue=False,status='連線已結束，重新登入後同步伺服器排程')
+        self._clear(state,confirmed=False);self.next_start=False;self.wait_output=None;state.crafting.update(auto_continue=False,status='連線已結束，重新登入後同步伺服器排程')

@@ -1,4 +1,7 @@
 """Serialized post-battle maintenance; no assumed success or timeout retries."""
+from wlre.core.state_ownership import writes
+from wlre.services.items import reservations
+from wlre.services.coordination import reason as coordination_reason
 import copy
 from wlre.services.items.maintenance import backpack_stock, cleanup_action, cleanup_packet, repair_packet
 from wlre.services.items.combat_resources import CAT, item_name
@@ -38,15 +41,19 @@ class PostBattleMaintenance:
     def __init__(self):
         self.pending=None;self.uncertain=False;self.settle_key=None;self.settle_due=0
 
+    @writes('maintenance')
     def status(self,state,text,**fields):
         value={**state.maintenance,'status':text,'uncertain':self.uncertain,**fields}
         if value!=state.maintenance:state.maintenance=value
 
+    @writes('maintenance')
     def fail(self,state,logic,text):
+        reservations.uncertain(state.inventory,'maintenance')
         self.uncertain=True;state.inventory['use_failed']=True
         self.status(state,text+'；請重新登入同步',checking=False)
         logic.auto_battle.stop(state,text);logic.roaming.stop(state,logic.movement,text)
 
+    @writes('maintenance')
     def observe(self,event,state):
         p=self.pending
         if not p or self.uncertain:return
@@ -71,6 +78,7 @@ class PostBattleMaintenance:
                 spent=spent or same and item.get('damage',0)>p['before'].get('damage',0)
             if spent:p['spent']=True
 
+    @writes('maintenance')
     def tick(self,state,logic,now):
         if self.pending:
             p=self.pending
@@ -89,7 +97,7 @@ class PostBattleMaintenance:
             if p.get('failure') or not state.inventory.get('reliable'):
                 self.fail(state,logic,p.get('failure') or '修理／整理背包資料失效');return []
             if confirmed:
-                self.pending=None;state.inventory['maintenance_slots']=[]
+                self.pending=None;reservations.release(state.inventory,'maintenance')
                 self.status(state,'已確認'+{'repair':'裝備修復與道具耗用','sell':'販售扣料','delete':'丟棄扣料'}[p['action']],
                             pending=None,checking=False,completed=state.maintenance.get('completed',0)+1)
                 self.settle_key=None
@@ -99,14 +107,7 @@ class PostBattleMaintenance:
         if self.uncertain or not logic.auto_battle.enabled or not logic.world_acknowledged:return []
         config=logic.auto_battle.settings['maintenance']
         if not config['repair_enabled'] and not config['cleanup_enabled']:return []
-        if state.phase!='world_ready' or not state.battle_count or state.battle.get('active'):return []
-        if state.event_flow.get('blocked') or state.battle.get('post_event',{}).get('status')!='completed':return []
-        if state.activities:return []
-        if state.crafting.get('pending') or state.crafting.get('auto_continue'):return []
-        if state.alchemy.get('pending') or state.alchemy.get('enabled'):return []
-        if state.expedition.get('pending') or state.expedition.get('uncertain'):return []
-        supply=state.inventory.get('field_supply',{})
-        if supply.get('pending') or supply.get('uncertain') or state.inventory.get('use_failed'):return []
+        if not state.battle_count or coordination_reason(state,'maintenance') or state.inventory.get('use_failed'):return []
         inv=state.inventory
         if not inv.get('ready') or not inv.get('reliable'):
             self.status(state,'等待背包可靠同步');return []
@@ -147,9 +148,9 @@ class PostBattleMaintenance:
             return []
         index,item=chosen
         packet=repair_packet(target,index,item['item_id']) if action=='repair' else cleanup_packet(action,index,count)
+        reservations.acquire(inv,'maintenance',[{'index':index,'item_id':item['item_id'],'count':count}],exclusive=True)
         self.pending={'action':action,'index':index,'count':count,'before':copy.deepcopy(item),'target':target,
                       'owner':state.player.get('role_id'),'due':now+self.timeout,'spent':False,'ack':False}
-        inv['maintenance_slots']=[str(index)]
         logic.movement.stop(state,'等待戰後修理／整理確認')
         label={'repair':'修理','sell':'販售','delete':'丟棄'}[action]
         self.status(state,'等待'+label+'回覆：'+item_name(item['item_id']),
@@ -160,5 +161,4 @@ class PostBattleMaintenance:
     def slot_available(inv,index):
         item=inv['items'][str(index)]
         return (item['count']>0 and not item.get('locked') and not item.get('available_time') and not item.get('limited_time')
-                and not inv.get('reserved',{}).get(str(index)) and str(index) not in inv.get('alchemy_slots',[])
-                and str(index) not in inv.get('expedition_slots',[]) and str(index) not in inv.get('maintenance_slots',[]))
+                and reservations.available(inv,index)==item['count'])

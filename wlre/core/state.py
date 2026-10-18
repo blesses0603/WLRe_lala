@@ -1,5 +1,8 @@
 """Known authoritative values only; no invented damage formula or HP baseline."""
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field, fields
+from contextlib import contextmanager
+import threading
+from wlre.core.state_ownership import FIELDS, guarded, plain
 from wlre.services.world.obstacle_scope import affects_navigation
 from wlre.services.social.guild import apply_guild
 from wlre.services.items.recovery import apply_recovery
@@ -58,6 +61,35 @@ class State:
     alchemy: dict = field(default_factory=alchemy_defaults)
     expedition: dict = field(default_factory=expedition_defaults)
 
+    def __post_init__(self):
+        object.__setattr__(self,'_writer',threading.get_ident())
+        object.__setattr__(self,'_scope',None)
+        for value in fields(self):setattr(self,value.name,getattr(self,value.name))
+
+    def assert_writer(self,field=None):
+        if threading.get_ident()!=self._writer:
+            raise RuntimeError('State may only be accessed by its owning network thread; use snapshots and commands')
+        if field and self._scope is not None and field not in FIELDS[self._scope]:
+            raise RuntimeError(f'{self._scope} cannot mutate State.{field}')
+
+    def __setattr__(self,name,value):
+        if hasattr(self,'_writer') and not name.startswith('_'):
+            self.assert_writer(name)
+            value=guarded(value,lambda:self.assert_writer(name))
+        object.__setattr__(self,name,value)
+
+    @contextmanager
+    def editing(self,owner):
+        self.assert_writer()
+        if owner not in FIELDS:raise ValueError(owner)
+        previous=self._scope;object.__setattr__(self,'_scope',owner)
+        try:yield self
+        finally:object.__setattr__(self,'_scope',previous)
+
+    def __deepcopy__(self,memo):
+        self.assert_writer()
+        return type(self)(**self.snapshot())
+
     def remember_position(self,role_id,x,y):
         # Observed remote positions are a cache, not a lifetime travel history.
         # Authoritative local location remains separately in self.location.
@@ -100,6 +132,7 @@ class State:
                        'confirmed_is_current':True,'requested_destination':None,'server_destination':None}
 
     def apply(self, event):
+        self.assert_writer()
         self.packet_count += 1
         kind = event["type"]
         apply_recovery(self,event)
@@ -222,4 +255,5 @@ class State:
         observe_efficiency(self,event)
 
     def snapshot(self):
-        return asdict(self)
+        self.assert_writer()
+        return {value.name:plain(getattr(self,value.name)) for value in fields(self)}

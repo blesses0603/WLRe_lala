@@ -1,4 +1,5 @@
 """Route validated manual commands without owning the connection."""
+from wlre.services.coordination import command_reason
 import time
 from wlre.network.wire import ProtocolError
 from wlre.services.battle.party import team_command, own_team
@@ -8,6 +9,7 @@ from wlre.services.items.recovery import storage_plan, storage_packet
 from wlre.services.social.chat import chat_packet
 from wlre.network.protocol import select_role, attack, cast_skill, use_battle_item, use_field_item
 from wlre.services.items.combat_resources import learned_command, food_command, reserve, field_context
+from wlre.services.items import reservations
 import copy
 from wlre.services.battle.party_guard import validate as validate_party_guard
 from wlre.services.battle.combat import normal_skill, NORMALS
@@ -26,9 +28,9 @@ def dispatch(logic,command,state):
         state.phase = 'role_selected_awaiting_world'
         return [packet]
     if not logic.world_acknowledged: raise ProtocolError('world initialization has not completed')
-    if (logic.maintenance.pending or logic.maintenance.uncertain) and kind not in (
-            'stop_auto_battle','stop_roaming','stop_walk','stop_expedition','stop_crafting','stop_alchemy','chat','reset_efficiency'):
-        raise ProtocolError('請先等待戰後修理／整理確認；結果未確認時需重新登入同步')
+    reason=command_reason(state,command,maintenance_pending=bool(logic.maintenance.pending),
+                          maintenance_uncertain=logic.maintenance.uncertain)
+    if reason:raise ProtocolError(reason)
     if kind == 'allocate_points':
         if state.phase != 'world_ready' or not state.player.get('role_id'):
             raise ProtocolError('角色尚未完成登入同步')
@@ -50,9 +52,6 @@ def dispatch(logic,command,state):
     if kind == 'stop_expedition':
         logic.expedition.stop(state)
         return []
-    if (state.expedition['enabled'] or state.expedition['pending'] or state.expedition['uncertain']) and kind in (
-            'start_alchemy', 'craft', 'companion'):
-        raise ProtocolError('請先停止遠征自動派遣，並等待目前遠征操作確認')
     if kind == 'companion':
         packet = companion_command(state, command)
         now = time.monotonic()
@@ -62,8 +61,6 @@ def dispatch(logic,command,state):
         return [packet]
     if kind in ('start_auto_battle','start_roaming','battle_item'):logic.field_supply.check()
     if kind=='craft':return logic.crafting.command(state,command)
-    if kind in ('start_roaming','start_auto_battle','start_alchemy','field_item','field_storage','learned_action','battle_item') and (state.crafting.get('pending') or state.crafting.get('auto_continue')):
-        raise ProtocolError('請先停止製作接續，並等待目前製作操作回覆')
     if kind=='reset_efficiency':
         from wlre.core.efficiency import defaults, observe
         state.efficiency=defaults();observe(state,{'type':'reset_efficiency'})
@@ -138,7 +135,6 @@ def dispatch(logic,command,state):
         plan=food_command(context,actor,command.get('resource','hp'),command.get('item_id'),target,True,index=command.get('bag_index'))
         logic.field_supply.begin(state,plan,context['battle_units'][target])
         logic.movement.stop(state,'等待補給回覆')
-        reserve(state,plan['resource_reservations'])
         return [use_field_item(plan['item_id'],plan['bag_index'],npc_index)]
     if kind in ('learned_action','battle_item'):
         if not state.battle.get('active') or state.battle.get('round',0)<=0:raise ProtocolError('沒有可下令的戰鬥回合')
@@ -170,14 +166,14 @@ def dispatch(logic,command,state):
         excluded={f'{c}:{r}' for c,r in logic.sent_units} if logic.round_key==(state.battle_count,state.battle.get('round')) else set()
         plans=plan_round(state.snapshot(),command.get('modes'),command.get('target_slot'),excluded)
         previous_key,previous_units=logic.round_key,set(logic.sent_units)
-        previous_reserved=copy.deepcopy(state.inventory['reserved'])
+        previous_reserved=reservations.checkpoint(state.inventory)
         try:
             packets=[]
             for action in plans:packets.extend(logic.command(action,state))
             return packets
         except (ValueError,KeyError,TypeError):
             logic.round_key,logic.sent_units=previous_key,previous_units
-            state.inventory['reserved']=previous_reserved
+            reservations.restore(state.inventory,previous_reserved)
             raise
     if kind in ('attack','battle_action'):
         if not state.battle.get('active') or state.battle.get('round', 0) <= 0:

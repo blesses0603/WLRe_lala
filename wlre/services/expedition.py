@@ -1,4 +1,7 @@
 """Server-confirmed expedition automation. Never retry unconfirmed consumption."""
+from wlre.core.state_ownership import writes
+from wlre.services.items import reservations
+from wlre.services.coordination import reason as coordination_reason
 import copy
 import math
 import time
@@ -121,16 +124,7 @@ def condition_ok(quest, roles, npcs=None):
 
 
 def blocked(state):
-    if state.maintenance.get('pending') or state.maintenance.get('uncertain'):return '等待戰後修理／整理確認'
-    if state.phase != 'world_ready': return '等待登入與角色同步'
-    if state.battle.get('active') or state.event_flow.get('blocked'): return '等待戰鬥／伺服器事件結束'
-    if state.battle_count and state.battle.get('post_event', {}).get('status') != 'completed': return '等待戰後事件完成'
-    if state.activities: return '請先結束目前活動'
-    if state.crafting.get('pending') or state.crafting.get('auto_continue'): return '請先停止製作並等待回覆'
-    if state.alchemy.get('pending') or state.alchemy.get('enabled'): return '請先停止煉金並等待回覆'
-    supply = state.inventory.get('field_supply', {})
-    if supply.get('pending') or supply.get('uncertain'): return '請先等待補給結果確認'
-    return ''
+    return coordination_reason(state,'expedition')
 
 
 def item_totals(inventory):
@@ -162,6 +156,7 @@ class Expedition:
         self.pending = None
         self.next_check = 0
 
+    @writes('expedition')
     def start(self, state, settings):
         e = state.expedition
         if e['uncertain'] or self.pending: raise ProtocolError('前次遠征操作未確認，請重新登入同步')
@@ -177,9 +172,11 @@ class Expedition:
         e.update(enabled=True, settings=settings, status=f"自動派遣已啟動（預計超過 {settings['min_hours']:g} 小時）")
         self.next_check = 0
 
+    @writes('expedition')
     def stop(self, state, reason='已停止自動派遣'):
         state.expedition.update(enabled=False, status=reason + ('；仍在等待已送出的操作回覆' if self.pending else ''))
 
+    @writes('expedition')
     def observe(self, event, state):
         p = self.pending
         if not p: return
@@ -229,19 +226,22 @@ class Expedition:
             if p['faith_ok'] and all(p['consumed'][index] == used for index, (_, used) in p['slots'].items()):
                 self.confirm(state, '好友度與物品扣除已確認')
 
+    @writes('expedition')
     def confirm(self, state, text):
         if self.pending and self.pending['kind'] == 'faith':
-            state.inventory.pop('expedition_slots', None)
+            reservations.release(state.inventory,'expedition')
         self.pending = None
         state.expedition.update(pending=None, status=text)
         self.next_check = time.monotonic() + 1
 
+    @writes('expedition')
     def tick(self, state, now=None):
         now = time.monotonic() if now is None else now
         e = state.expedition
         if self.pending:
             if now >= self.pending['due'] and not e['uncertain']:
                 e['uncertain'] = True
+                reservations.uncertain(state.inventory,'expedition')
                 self.stop(state, '遠征操作逾時未確認，已停止且不會重送；請重新登入同步')
             return []
         if not e['enabled'] or e['uncertain'] or now < self.next_check: return []
@@ -358,9 +358,10 @@ class Expedition:
             return None
         w = Writer().u8(role['index']).u8(len(slots))
         for index, (_, used) in slots.items(): w.u8(1).u16(int(index)).u16(item_id).u16(used)
+        reservations.acquire(state.inventory,'expedition',[{'index':int(index),'item_id':before['item_id'],'count':used}
+                             for index,(before,used) in slots.items()],exclusive=True)
         self.pending = {'kind': 'faith', 'index': role['index'], 'npc_id': role['npc_id'],
                         'target': target, 'slots': slots, 'consumed': dict.fromkeys(slots, 0),
                         'faith_ok': False, 'due': now + 20}
-        state.inventory['expedition_slots'] = list(slots)
         e.update(pending='faith', status=f"補充夥伴 {role['npc_id']} 好友度：使用 {count} 個物品，等待確認")
         return Packet(31, 27, w.build())

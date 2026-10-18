@@ -5,6 +5,7 @@ from wlre.network.protocol import decode_outbound_movement
 from wlre.services.battle.party import expire as expire_team
 
 def advance_services(logic,state,send_command,send_raw,emit,on_state):
+    state.assert_writer()
     before_maintenance=state.maintenance
     for packet in logic.maintenance.tick(state,logic,time.monotonic()):
         send_command(packet)
