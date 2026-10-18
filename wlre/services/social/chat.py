@@ -22,6 +22,13 @@ def chat_packet(command,state):
     if any(ord(c)<32 or ord(c)==127 for c in text):raise ProtocolError('聊天內容不可含換行或控制字元')
     encoded=unicode_field(text)
     if channel=='隊伍' and not own_team(state):raise ProtocolError('請先加入隊伍再發話')
+    if channel=='組織':
+        guild=getattr(state,'guild',{}) or {}
+        role_id=state.player.get('role_id')
+        if not guild.get('ready'):
+            raise ProtocolError('組織資料尚未同步或尚未加入組織，無法發話')
+        if not role_id or str(role_id) not in guild.get('members',{}):
+            raise ProtocolError('目前角色不在組織成員名單中，無法發話')
     if channel=='世界':
         attrs=state.attributes.get('self',{})
         level=attrs.get('40:0',attrs.get('35:0',state.attributes.get('TrueLv',state.attributes.get('Lv'))))

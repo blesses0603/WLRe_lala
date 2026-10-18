@@ -592,8 +592,10 @@ class App:
 
     def send(self, command):
         if not self.live_active or not self.worker or not self.worker.is_alive():
-            messagebox.showinfo('尚未連線','請先登入後再操作。',parent=self.root);return
+            messagebox.showinfo('尚未連線','請先登入後再操作。',parent=self.root)
+            return False
         self.commands.put(command)
+        return True
 
     def select_role(self):
         index=self.role_map.get(self.role_choice.get())
