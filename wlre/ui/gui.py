@@ -37,6 +37,7 @@ from wlre.ui.crafting_ui import CraftingPanel
 from wlre.services.world.movement_display import movement_summary
 from wlre.services.battle import party_guard;from wlre.storage import login_memory;from wlre.storage import server_lines
 from wlre.ui.party_guard_ui import PartyGuardPanel
+from wlre.ui.companion_ui import CompanionPanel
 
 
 class App:
@@ -122,6 +123,8 @@ class App:
         self.roaming_status=tk.StringVar(value='已停止')
         self.party_panel=PartyPanel(left_tabs,self)
         left_tabs.add(self.party_panel,text='組隊')
+        self.companion_panel=CompanionPanel(left_tabs,self)
+        left_tabs.add(self.companion_panel,text='夥伴出戰')
         self.party_guard_panel=PartyGuardPanel(self.party_panel.guard_host,self,compact=True)
         self.party_guard_panel.pack(fill='both',expand=True)
         if self.party_guard_load_error:self.party_guard_panel.note.set('名單讀取失敗，未啟用：'+self.party_guard_load_error)
@@ -132,7 +135,7 @@ class App:
         self.efficiency_panel=EfficiencyPanel(left_tabs,self)
         left_tabs.add(self.efficiency_panel,text='經驗效率',align='right')
         self.crafting_panel.configure(padding=6)
-        for page in (overview,self.party_panel,self.alchemy_panel,self.crafting_panel,self.efficiency_panel):
+        for page in (overview,self.party_panel,self.companion_panel,self.alchemy_panel,self.crafting_panel,self.efficiency_panel):
             page._section_outline=True
         left_tabs.bind('<<NotebookTabChanged>>',lambda e:self.refresh_selected(),add='+')
         self.overview_panel.update_state({})
@@ -570,6 +573,7 @@ class App:
         self._pending_display=None;self._last_display=0
         self.log.configure(state='normal');self.log.delete('1.0','end');self.log.configure(state='disabled')
         self.efficiency_panel.update_state({})
+        self.companion_panel.render({})
         self.overview_panel.update_state({})
         def work():
             self.live_active=True
@@ -625,6 +629,7 @@ class App:
         self.efficiency_panel.state=state;self.overview_panel.state=state
         if self.efficiency_panel.winfo_ismapped():self.efficiency_panel.update_state(state)
         if self.overview_panel.winfo_ismapped():self.overview_panel.update_state(state)
+        if self.companion_panel.winfo_ismapped():self.companion_panel.render(state)
         if self.party_panel.winfo_ismapped():self.party_panel.render(state)
         else:
             requests=sum(v.get('status')=='pending' for v in state.get('party',{}).get('requests',{}).values())

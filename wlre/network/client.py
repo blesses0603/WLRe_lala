@@ -12,6 +12,7 @@ import time
 from wlre.network.wire import FrameDecoder, Packet, encode, ProtocolError
 from wlre.services.world.portal_travel import PortalTravel
 from wlre.services.battle.party import team_command, own_team, expire as expire_team
+from wlre.services.battle.companions import command as companion_command
 from wlre.services.items.alchemy import AutoAlchemy
 from wlre.services.items.crafting import Crafting
 from wlre.services.items.field_supply import FieldSupply
@@ -94,6 +95,7 @@ class SessionLogic:
     """Deterministic reactions shared by network operation and tests."""
     def __init__(self, role_index=None):
         self.last_chat_time = None
+        self.last_companion_time = None
         self.field_supply = FieldSupply()
         self.crafting = Crafting()
         self.alchemy = AutoAlchemy()
@@ -208,6 +210,13 @@ class SessionLogic:
             state.phase = 'role_selected_awaiting_world'
             return [packet]
         if not self.world_acknowledged: raise ProtocolError('world initialization has not completed')
+        if kind == 'companion':
+            packet = companion_command(state, command)
+            now = time.monotonic()
+            if self.last_companion_time is not None and now - self.last_companion_time < 2:
+                raise ProtocolError('夥伴操作間隔至少 2 秒，請等待伺服器回覆')
+            self.last_companion_time = now
+            return [packet]
         if kind in ('start_auto_battle','start_roaming','battle_item'):self.field_supply.check()
         if kind=='craft':return self.crafting.command(state,command)
         if kind in ('start_roaming','start_auto_battle','start_alchemy','field_item','field_storage','learned_action','battle_item') and (state.crafting.get('pending') or state.crafting.get('auto_continue')):
