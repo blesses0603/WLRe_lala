@@ -65,3 +65,13 @@
 - 保留既有 UI 事件更新節流、網路單一寫入者與 State 快照安全行為。無需更動任何遊戲封包或經驗效率計算。
 - 新增跨視窗圖像生命週期、壓縮檔解碼次數、快取記憶體上限和局部背景失效的自動回歸測試。
 - 以上屬於減少重複運算與有界快取，無宣稱正式遊戲中的固定 FPS 加速百分比；在不同 DPI／解析度及長時間連線仍需人工量測。
+
+
+## 第 09 項驗收條件（進行中）
+
+- 基準 main：`523c7e586754c0e767fa4fcd624f28b704769cea`，工作分支 `fix/phase09-desktop-packaging-20261018`。
+- PR 新增 Windows x64、macOS arm64 和 Intel x64 Nuitka 原生打包檢查，原有三平台回歸 CI 不變。
+- Windows 編譯後 EXE 執行 `--self-test`、`--smoke-test-gui`；macOS 編譯後 APP 執行上述兩項、Mach-O 架構與簽章驗證。
+- Windows/macOS 產出的 ZIP 應包含完整資料、通過 CRC、具有 SHA-256 校驗檔，避免以 dry-run 代替真正打包。
+- PR 的 Linux、Windows、macOS 回歸測試與三種桌面打包工作全部成功後，才可合併 main 並把本項勾選。
+- Finder/Windows 人工使用、macOS Gatekeeper/公證以及正式遊戲伺服器行為仍須實機驗收，不由自動化測試取代。
