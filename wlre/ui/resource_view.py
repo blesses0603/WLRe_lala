@@ -34,23 +34,26 @@ class ResourceView:
         # The large duplicate HP/SP row is no longer needed.
         # Context-specific recovery buttons remain in the compact item strip.
         self.remote_status=tk.StringVar(value='等待角色資料')
-        remote_body=ttk.Frame(remote,padding=(12,10));remote_body.pack(fill='both',expand=True)
-        heading(remote_body,'超空間袋','遊戲中的遠端小屋儲藏室入口，不是第二份普通背包。')
-        remote_head=ttk.Frame(remote_body);remote_head.pack(fill='x',pady=(12,14))
-        self.remote_icon=self.icons.get(34977,52)
-        ttk.Label(remote_head,image=self.remote_icon).pack(side='left',padx=(4,16))
+        # A compact header preserves vertical space for actual item slots;
+        # the earlier duplicated headline and large icon compressed tiles into strips.
+        remote_body=ttk.Frame(remote,padding=(6,2))
+        remote_body.pack(fill='both',expand=True)
+        remote_head=ttk.Frame(remote_body)
+        remote_head.pack(fill='x',pady=(0,2))
+        self.remote_icon=self.icons.get(34977,34)
+        ttk.Label(remote_head,image=self.remote_icon).pack(side='left',padx=(0,8))
         ttk.Label(remote_head,text='超空間袋｜小屋儲藏室',style='Heading.TLabel').pack(side='left')
-        ttk.Label(remote_body,textvariable=self.remote_status,style='Muted.TLabel',wraplength=850).pack(anchor='w',pady=(2,12))
-        ttk.Label(remote_body,text='只顯示伺服器 S62 已同步的儲藏物品；未驗證寄取操作不提供。',style='Muted.TLabel',wraplength=850).pack(anchor='w',pady=2)
+        ttk.Label(remote_head,text='S62 唯讀同步',style='Muted.TLabel').pack(side='right')
+        ttk.Label(remote_body,textvariable=self.remote_status,style='Muted.TLabel',wraplength=910).pack(anchor='w',pady=(0,2))
         storage_tabs=RoundedNotebook(remote_body)
-        storage_tabs.pack(fill='both',expand=True,pady=(6,0))
+        storage_tabs.pack(fill='both',expand=True,pady=(2,0))
         garage_page=ttk.Frame(storage_tabs);materials_page=ttk.Frame(storage_tabs)
         storage_tabs.add(garage_page,text='儲藏室')
         storage_tabs.add(materials_page,text='雜物櫃')
         self.remote_garage=BagGrid(garage_page,self.icons,lambda resource:None,
-                                   read_only=True,title='儲藏室物品')
+                                   read_only=True,title='儲藏室物品',compact=True)
         self.remote_materials=BagGrid(materials_page,self.icons,lambda resource:None,
-                                      read_only=True,title='雜物櫃物品')
+                                      read_only=True,title='雜物櫃物品',compact=True)
         self.remote_garage.pack(fill='both',expand=True)
         self.remote_materials.pack(fill='both',expand=True)
         ttk.Button(skills,text='施放選取特技（戰鬥內）',command=self.use_skill).pack(anchor='w',pady=5)
