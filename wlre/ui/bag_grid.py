@@ -23,6 +23,17 @@ SLOT_BG = '#132d40'
 SLOT_ACTIVE = '#244f67'
 
 
+def grid_profile(compact=False):
+    """Columns, rows, and icon size for ordinary vs nested storage pages."""
+    return (COLUMNS, STORAGE_ROWS if compact else ROWS,
+            STORAGE_ICON_SIZE if compact else ICON_SIZE)
+
+
+def page_count(item_count, compact=False):
+    columns, rows, _size = grid_profile(compact)
+    return max(1, math.ceil(item_count / (columns * rows)))
+
+
 def visible_items(inventory, query=''):
     """Return actual inventory slots sorted by index, without inventing slots."""
     search = query.strip().casefold()
@@ -69,10 +80,8 @@ class BagGrid(ttk.Frame):
         super().__init__(parent)
         self.read_only = read_only
         self.compact = compact
-        self.columns = COLUMNS
-        self.row_count = STORAGE_ROWS if compact else ROWS
+        self.columns, self.row_count, self.icon_size = grid_profile(compact)
         self.page_size = self.columns * self.row_count
-        self.icon_size = STORAGE_ICON_SIZE if compact else ICON_SIZE
         self.icons = icons
         self.use_item = use_item
         self.rows = []
@@ -183,7 +192,7 @@ class BagGrid(ttk.Frame):
         self.bag_map = {'bag' + index: item for index, item, _name in rows}
         if self.index_selected is not None and 'bag' + self.index_selected not in self.bag_map:
             self.index_selected = None
-        pages = max(1, math.ceil(len(rows) / self.page_size))
+        pages = page_count(len(rows), self.compact)
         self.page = min(self.page, pages - 1)
         capacity = self.inventory.get('capacity')
         self.summary.set(f"{len(rows)} / {capacity if capacity is not None else '?'} 格")
@@ -200,7 +209,7 @@ class BagGrid(ttk.Frame):
         return self.bag_map
 
     def change_page(self, direction):
-        pages = max(1, math.ceil(len(self.rows) / self.page_size))
+        pages = page_count(len(self.rows), self.compact)
         self.page = min(max(0, self.page + direction), pages - 1)
         self.page_label.set(f'{self.page + 1} / {pages}')
         self._signature = None
