@@ -84,7 +84,7 @@ class Roaming:
             movement.stop(state,'導航障礙資料已失效');self.status(state,'paused_navigation','等待障礙資料更新');return
         if state.battle.get('active') or self.await_battle_end:
             self.status(state,'paused_battle','等待戰後事件結束');return
-        if state.event_flow.get('blocked') or state.inventory.get('field_supply',{}).get('pending') or state.inventory.get('field_supply',{}).get('uncertain') or state.auto_battle.get('status') in ('healing','waiting_heal'):
+        if state.maintenance.get('pending') or state.maintenance.get('uncertain') or state.maintenance.get('checking') or state.event_flow.get('blocked') or state.inventory.get('field_supply',{}).get('pending') or state.inventory.get('field_supply',{}).get('uncertain') or state.auto_battle.get('status') in ('healing','waiting_heal'):
             self.status(state,'paused_event','等待事件／補給完成');return
         if movement.active:
             self.status(state,'manual' if self.manual else 'moving','抵達後接續下一點');return

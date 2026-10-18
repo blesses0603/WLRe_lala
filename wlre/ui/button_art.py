@@ -7,8 +7,8 @@ from wlre.paths import RESOURCE_ROOT
 
 @lru_cache(maxsize=8)
 def source(name):
-    if name=='Btn_Minimize':
-        # Match the original close icon's cyan circular frame, with a dash.
+    if name in ('Btn_Minimize','Btn_Close04'):
+        # Both window controls use the exact same frame and glow geometry.
         image=Image.new('RGBA',(198,198))
         glow=Image.new('RGBA',image.size)
         draw=ImageDraw.Draw(glow)
@@ -16,7 +16,11 @@ def source(name):
         image=Image.alpha_composite(image,glow.filter(ImageFilter.GaussianBlur(12)))
         draw=ImageDraw.Draw(image)
         draw.ellipse((28,28,169,169),fill=(25,92,101,230),outline=(169,255,250,255),width=8)
-        draw.rounded_rectangle((61,91,137,106),radius=5,fill=(230,255,255,255))
+        if name=='Btn_Minimize':
+            draw.rounded_rectangle((61,91,137,106),radius=5,fill=(230,255,255,255))
+        else:
+            draw.line((72,72,126,126),fill=(230,255,255,255),width=13)
+            draw.line((72,126,126,72),fill=(230,255,255,255),width=13)
         return image.resize((66,66),Image.Resampling.LANCZOS)
     with Image.open(RESOURCE_ROOT / 'assets' / 'buttons' / (name + '.png')) as image:
         return image.convert('RGBA')
@@ -67,4 +71,22 @@ def settings_button(parent, command, text='設定'):
     button=ttk.Button(parent,text=text,image=photo,compound='none',width=0,
                       style='Icon.Tab.TButton',padding=(2,1),command=command)
     button._settings_icon=photo
+    return button
+
+
+def bag_button(parent, command):
+    image=ImageOps.contain(source('Btn_Bag'),(24,24),Image.Resampling.LANCZOS)
+    photo=ImageTk.PhotoImage(image,master=parent)
+    button=ttk.Button(parent,text='包包',image=photo,compound='none',width=0,
+                      style='Icon.Tab.TButton',padding=(2,1),command=command)
+    button._bag_icon=photo
+    return button
+
+
+def recovery_button(parent, command):
+    image=ImageOps.contain(source('Btn_CategoryAISetting003'),(24,24),Image.Resampling.LANCZOS)
+    photo=ImageTk.PhotoImage(image,master=parent)
+    button=ttk.Button(parent,text='回復',image=photo,compound='none',width=0,
+                      style='Icon.Tab.TButton',padding=(2,1),command=command)
+    button._recovery_icon=photo
     return button

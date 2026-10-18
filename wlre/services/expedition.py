@@ -121,6 +121,7 @@ def condition_ok(quest, roles, npcs=None):
 
 
 def blocked(state):
+    if state.maintenance.get('pending') or state.maintenance.get('uncertain'):return '等待戰後修理／整理確認'
     if state.phase != 'world_ready': return '等待登入與角色同步'
     if state.battle.get('active') or state.event_flow.get('blocked'): return '等待戰鬥／伺服器事件結束'
     if state.battle_count and state.battle.get('post_event', {}).get('status') != 'completed': return '等待戰後事件完成'

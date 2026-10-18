@@ -24,6 +24,7 @@ def owned(unit,pid):return bool(pid and (unit.get('pid')==pid or unit.get('maste
 def battle_local(state):return any(owned(u,state.get('player',{}).get('role_id')) for u in state.get('battle_units',{}).values())
 
 def lines(event,state):
+    if event.get('type')=='maintenance_status':return ['戰後修理／整理：'+event.get('status','')]
     if event.get('type')=='field_supply_status':return [('補給已確認：' if event.get('status')=='confirmed' else '補給已鎖定：')+event.get('reason','')]
     kind=event['type'];pid=state.get('player',{}).get('role_id');units=state.get('battle_units',{})
     if kind in ('unimplemented','sent') or kind.startswith('chat_'):return []

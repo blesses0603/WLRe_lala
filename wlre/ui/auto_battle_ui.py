@@ -13,6 +13,7 @@ from wlre.services.battle.auto_battle import validate, ACTION_IDS
 from wlre.services.battle.battle_commands import ACTIONS, owned_units
 from wlre.services.items.combat_resources import CAT, skill_rows, field_context
 from wlre.ui.recovery_ui import RecoveryPage
+from wlre.ui.maintenance_ui import MaintenancePage
 
 NAMES={0:'略過此格',**{sid:ACTIONS[mode] for sid,mode in ACTION_IDS.items()}}
 TARGETS={1:'最低HP',2:'屬性優先',3:'最高HP'}
@@ -275,6 +276,8 @@ class SettingsEditor:
             page=RecoveryPage(self.recovery_tab,self,resource,self.rootvars['field_heal'],compact=True)
             page.grid(row=1,column=column,sticky='nsew',padx=(0,4) if column==0 else (4,0))
             self.recovery_pages[resource]=page
+        self.maintenance_page=MaintenancePage(tabs,self)
+        tabs.add(self.maintenance_page,text='修理／整理')
         general=ttk.Frame(tabs,padding=16);tabs.add(general,text='停止條件')
         for key,label in [('bPlayerDieCloseAI','角色陣亡時停止AI與徘徊'),('bNPCDieCloseAI','夥伴陣亡時停止AI與徘徊')]:
             v=tk.BooleanVar();self.rootvars[key]=v;ttk.Checkbutton(general,text=label,variable=v).pack(anchor='w',pady=8)
@@ -314,6 +317,7 @@ class SettingsEditor:
         for key,v in self.rootvars.items():v.set(self.draft.value[key])
         for card in self.cards.values():card.render()
         for resource,page in self.recovery_pages.items():page.render(self.draft.value['recovery'][resource])
+        self.maintenance_page.render(self.draft.value['maintenance'])
     def edit(self,who,key,index):
         try:self.draft=RuleDraft(self.collect())
         except (OSError,ValueError,TypeError,KeyError,tk.TclError) as exc:messagebox.showerror('AI設定',str(exc),parent=self.window);return
@@ -339,10 +343,13 @@ class SettingsEditor:
         if hasattr(self,'recovery_pages'):
             value['recovery']={resource:page.collect() for resource,page in self.recovery_pages.items()}
             for resource in ('hp','sp'):value['field_'+resource+'_percent']=value['recovery'][resource]['player_percent']
+        if hasattr(self,'maintenance_page'):value['maintenance']=self.maintenance_page.collect()
         return validate(value)
     def apply(self):
         try:
             if self.settings_key!=self.app.settings_identity():raise ValueError('帳號已變更，請重新開啟設定')
+            if self.app.snapshot.get('maintenance',{}).get('pending') or self.app.snapshot.get('maintenance',{}).get('uncertain'):
+                raise ValueError('請先等待戰後修理／整理確認；結果未確認時需重新登入同步')
             value=self.collect();self.app.persist_ai_settings(value);self.app.ai_settings=value
             self.app.party_guard_panel.set_config(value['party_guard'])
             self.app.party_guard_panel.update_state(self.app.snapshot)

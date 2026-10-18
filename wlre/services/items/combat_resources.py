@@ -17,19 +17,38 @@ def apply_live(state,event):
     if kind=='bag_snapshot':
         fresh={'ready':True,'reliable':True,'capacity':event['capacity'],'items':{},'reserved':{},
                'revision':inv.get('revision',0)+1,'use_failed':False,'field_supply':inv.get('field_supply',{}),'alchemy_slots':list(inv.get('alchemy_slots',[])),
-               'expedition_slots':list(inv.get('expedition_slots',[]))}
+               'expedition_slots':list(inv.get('expedition_slots',[])),
+               'maintenance_slots':list(inv.get('maintenance_slots',[]))}
         for value in event['items']:
             if not add_item(fresh,dict(value)):break
         state.inventory=fresh
     elif kind=='bag_add':
         add_item(inv,dict(event['item']));inv['revision']+=1
-    elif kind=='bag_delete':
+    elif kind in ('bag_delete','bag_sell'):
         index=str(event['index']);value=inv['items'].get(index);count=event['count']
         if not value or count>value['count']:inv.update(reliable=False,sync_error='物品扣除數量或格位不符')
         elif value:
             value['count']-=count
             if not value['count']:inv['items'].pop(index)
         inv['reserved'][index]=max(0,inv['reserved'].get(index,0)-count);inv['revision']+=1
+    elif kind=='bag_damage':
+        item=inv['items'].get(str(event['index']))
+        if item:
+            item['damage']=event['damage'];inv['revision']+=1
+    elif kind=='bag_broken':
+        apply_live(state,{'type':'bag_delete','index':event['index'],'count':1})
+    elif kind in ('equip_damage','equip_broken'):
+        npc=event.get('npc_index',0)
+        profile=k['player'] if not npc else k['companions'].get(str(npc),{})
+        equips=profile.get('equips',[])
+        index=event.get('index')
+        if index is None:
+            fit=CAT['items'].get(str(event.get('item_id')),{}).get('fit_type')
+            index=7 if fit==11 else fit
+        if type(index) is int and 1<=index<=len(equips):
+            equip=equips[index-1]
+            if kind=='equip_broken':equip.update(item_id=event['item_id'],damage=250)
+            else:equip['damage']=event['damage']
     elif kind=='item_use_result':
         inv['last_use_result']=event['result']
         if event['result'] in (3,4):inv['use_failed']=True
@@ -45,6 +64,7 @@ def apply_live(state,event):
         equips=[{'item_id':0} for _ in range(9)]
         for value in event['equips']:
             fit=CAT['items'].get(str(value['item_id']),{}).get('fit_type',0)
+            if fit==11:fit=7
             if 1<=fit<=9:equips[fit-1]=dict(value)
         k['player']['equips']=equips
     elif kind=='companion_snapshot':
@@ -84,6 +104,11 @@ def apply_live(state,event):
                 profile=profile_for({'knowledge':k,'player':state.player},unit)
                 if profile:profile.setdefault('stats',{})[{25:'hp',26:'sp',46:'max_hp',47:'max_sp'}[value['kind']]]=value['value']
     elif kind=='battle_equip' and 1<=event['equip_index']<=9:
+        if event['owner_id']==state.player.get('role_id'):
+            profile=k['player'] if not event['npc_index'] else k['companions'].get(str(event['npc_index']),{})
+            equips=profile.get('equips',[]);index=event['equip_index']-1
+            if index<len(equips) and equips[index].get('item_id')!=event['item_id']:
+                equips[index]={'item_id':event['item_id'],'design_id':event['design_id']}
         for unit in state.battle_units.values():
             match=(unit['pid']==event['owner_id'] if event['npc_index']==0 else
                    unit['master_id']==event['owner_id'] and unit['npc_index']==event['npc_index'])
@@ -102,7 +127,7 @@ def set_companion(state,data):
             'human_kind':4,'kind':attribute,'parameter':parameter,'value':value})
 
 def available(inv,index):
-    if str(index) in inv.get('expedition_slots',[]):return 0
+    if str(index) in inv.get('expedition_slots',[]) or str(index) in inv.get('maintenance_slots',[]):return 0
     return max(0,inv.get('items',{}).get(str(index),{}).get('count',0)-inv.get('reserved',{}).get(str(index),0))
 
 def allocate(inv,item_id,count):

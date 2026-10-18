@@ -1,7 +1,7 @@
 """Supported AutoPlay.lua rule ordering, using current validated command adapters."""
 import copy
 import math
-from wlre.services.items import recovery;from wlre.services.battle import party_guard
+from wlre.services.items import recovery, maintenance;from wlre.services.battle import party_guard
 from wlre.services.battle.battle_commands import owned_units, slot, action_command
 from wlre.network.wire import ProtocolError
 from wlre.services.items.combat_resources import CAT, best_skill_command, learned_command, food_command, field_context
@@ -26,7 +26,7 @@ def defaults():
     profiles={'player':default_profile(),'partner':default_profile()}
     profiles['partner']['lowHpAction']['notice']=3
     profiles['partner']['lowSpAction']['notice']=3
-    return {'bPlayerDieCloseAI':False,'bNPCDieCloseAI':False,'field_heal':False,'field_hp_percent':60,'field_sp_percent':30,'profiles':profiles,'recovery':recovery.defaults(),'party_guard':party_guard.defaults()}
+    return {'bPlayerDieCloseAI':False,'bNPCDieCloseAI':False,'field_heal':False,'field_hp_percent':60,'field_sp_percent':30,'profiles':profiles,'recovery':recovery.defaults(),'party_guard':party_guard.defaults(),'maintenance':maintenance.defaults()}
 
 def validate(settings):
     if not isinstance(settings,dict):raise ProtocolError('AI設定須為JSON物件')
@@ -41,6 +41,7 @@ def validate(settings):
             if type(settings[key]) is not int or not 0<=settings[key]<=100:raise ProtocolError('戰後補給門檻須為0～100百分比')
             result[key]=settings[key]
     if 'party_guard' in settings:result['party_guard']=party_guard.validate(settings['party_guard'])
+    if 'maintenance' in settings:result['maintenance']=maintenance.validate(settings['maintenance'])
     if 'recovery' in settings:result['recovery']=recovery.validate(settings['recovery'])
     else:
         for res in ('hp','sp'):
@@ -166,6 +167,8 @@ class AutoBattle:
         self.enabled=False;self.status(state,'disabled',reason)
     def tick(self,state,logic,now):
         if not self.enabled or not logic.world_acknowledged:return []
+        if state.maintenance.get('pending') or state.maintenance.get('uncertain'):
+            self.status(state,'maintenance',state.maintenance.get('status','等待戰後修理／整理'));return []
         battle=state.battle
         snap=state.snapshot();all_owned=owned_units(snap,False);pid=state.player.get('role_id')
         death_check=battle.get('active') or (state.battle_count>0 and battle.get('post_event',{}).get('status')!='completed')

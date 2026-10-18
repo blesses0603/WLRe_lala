@@ -17,6 +17,7 @@ from wlre.services.expedition import Expedition
 from wlre.services.items.alchemy import AutoAlchemy
 from wlre.services.items.crafting import Crafting
 from wlre.services.items.field_supply import FieldSupply
+from wlre.services.items.post_battle_maintenance import PostBattleMaintenance
 from wlre.services.items.recovery import storage_plan, storage_packet
 from wlre.services.social.chat import chat_packet, sent_event
 from wlre.network.protocol import login, select_role, decode, attack, cast_skill, use_battle_item, use_field_item
@@ -98,6 +99,7 @@ class SessionLogic:
         self.last_chat_time = None
         self.last_companion_time = None
         self.field_supply = FieldSupply()
+        self.maintenance = PostBattleMaintenance()
         self.expedition = Expedition()
         self.expedition_time_requested = False
         self.crafting = Crafting()
@@ -122,6 +124,7 @@ class SessionLogic:
         kind = event['type']
         self.expedition.observe(event,state)
         self.field_supply.observe(event,state)
+        self.maintenance.observe(event,state)
         self.crafting.observe(event,state)
         self.alchemy.observe(event,state)
         if kind in ('team_join','team_list','team_new_leader'):
@@ -218,6 +221,9 @@ class SessionLogic:
             state.phase = 'role_selected_awaiting_world'
             return [packet]
         if not self.world_acknowledged: raise ProtocolError('world initialization has not completed')
+        if (self.maintenance.pending or self.maintenance.uncertain) and kind not in (
+                'stop_auto_battle','stop_roaming','stop_walk','stop_expedition','stop_crafting','stop_alchemy','chat','reset_efficiency'):
+            raise ProtocolError('請先等待戰後修理／整理確認；結果未確認時需重新登入同步')
         if kind == 'start_expedition':
             self.expedition.start(state, command.get('settings', {}))
             return []
@@ -460,6 +466,12 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
                             if on_state:notify_state(on_state,state)
                     except (ValueError, KeyError, TypeError) as exc:
                         emit({'type': 'command_rejected', 'command_type':command.get('type'), 'error': str(exc)})
+                before_maintenance=state.maintenance
+                for packet in logic.maintenance.tick(state,logic,time.monotonic()):
+                    _send_command_packet(connection,packet,profile['tx_xor'],state,emit,on_state)
+                if state.maintenance != before_maintenance:
+                    emit({'type':'maintenance_status',**state.maintenance})
+                    if on_state:notify_state(on_state,state)
                 before_expedition = (state.expedition['status'], state.expedition['pending'], state.expedition['enabled'])
                 for packet in logic.expedition.tick(state,time.monotonic()):
                     _send_command_packet(connection,packet,profile['tx_xor'],state,emit,on_state)

@@ -56,6 +56,28 @@ def decode_live(packet,r,event):
         while r.remaining:event['items'].append(item_save(r,r.u8()))
     elif key==(23,6):event.update(type='bag_add',item=item_save(r,r.u8()),source=r.u16())
     elif key==(23,9):event.update(type='bag_delete',index=r.u8(),count=r.u8(),show_message=r.u8())
+    elif key==(27,6):
+        event.update(type='bag_sell',gold=r.u32(),index=r.u8(),count=r.u8())
+    elif key==(27,8):event.update(type='sale_notice',result=r.u8())
+    elif key in ((23,27),(23,28)):
+        npc=r.u8() if key==(23,28) else 0
+        event.update(type='equip_damage',npc_index=npc,index=r.u8(),damage=r.u8())
+    elif key==(23,35):
+        event.update(type='equip_broken',npc_index=r.u8(),item_id=r.u16())
+    elif key==(23,140):
+        kind=r.u8()
+        if kind==1:
+            grid,index,damage,npc=r.u8(),r.u8(),r.u32(),r.u8()
+            event.update(type='bag_damage' if grid==1 else 'equip_damage' if grid in (2,3) else 'unknown_damage',
+                         grid=grid,index=index,damage=damage,npc_index=0 if grid==2 else npc)
+        elif kind==2:
+            grid,index,npc,item=r.u8(),r.u8(),r.u8(),r.u16()
+            event.update(type='bag_broken' if grid==1 else 'equip_broken' if grid in (2,3) else 'unknown_damage',
+                         grid=grid,index=index,item_id=item,npc_index=0 if grid==2 else npc)
+        elif kind==4:event.update(type='equip_damage',index=r.u8(),damage=r.u8(),npc_index=r.u8())
+        elif kind in (3,5):
+            r.take(8 if kind==3 else 16);event.update(type='item_server_time',kind=kind)
+        else:raise ProtocolError('未知裝備損害度回覆')
     elif key==(23,11):
         event.update(type='player_equip_data',equips=[])
         while r.remaining:event['equips'].append(item_save(r,None,True))
