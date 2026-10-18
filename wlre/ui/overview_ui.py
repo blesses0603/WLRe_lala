@@ -4,10 +4,8 @@ import tkinter as tk
 from tkinter import ttk, font as tkfont
 from wlre.ui.halo_button import HaloButton
 from wlre.core.efficiency import rates, progress, forecast
-from wlre.services.battle.auto_battle import summary as ai_summary
 from wlre.services.battle.party import own_team, player_name
 from wlre.services.battle.party_guard import missing
-from wlre.services.world.roaming import summary as roaming_summary
 
 
 def health(stats):
@@ -71,27 +69,44 @@ def summarize(state, live, guard, now=None):
             elapsed=max(0,(time.monotonic() if now is None else now)-row['last_time'])
         speed=f'{rate:,.0f}／分' if rate is not None else '等待樣本'
         efficiency=f"本次 +{row.get('earned',0):,}｜近10場 {speed}\n預估升級：{forecast(remaining,rate,elapsed)}"
+    battling=state.get('battle',{}).get('active',False)
+    ai=state.get('auto_battle',{})
+    roaming=state.get('roaming',{})
+    ai_text=('戰鬥中...' if battling else '等待戰鬥...') if ai.get('enabled') else '未啟用'
+    if not roaming.get('enabled'):
+        roaming_text='未啟用'
+    elif battling:
+        roaming_text='遇敵戰鬥中...'
+    elif state.get('event_flow',{}).get('blocked') or roaming.get('status')=='paused_event':
+        roaming_text='等待事件結束...'
+    elif roaming.get('status') in ('paused_navigation','paused_scene','paused_team','blocked'):
+        roaming_text={'paused_navigation':'等待導航資料...', 'paused_scene':'等待地圖確認...',
+                      'paused_team':'跟隨隊長中...', 'blocked':'路線受阻...'}[roaming['status']]
+    else:
+        roaming_text='徘徊遇敵中...'
     expedition=state.get('expedition',{})
     active_teams=[t for t in expedition.get('teams',{}).values() if t.get('quest')]
-    expedition_text=('自動派遣已啟用' if expedition.get('enabled') else '自動派遣未啟用')
-    if not live: expedition_text='已離線｜'+expedition_text
+    expedition_text='自動派遣中...' if expedition.get('enabled') else '自動派遣未啟用'
     if not expedition.get('ready') or not expedition.get('outpost_ready'):
-        expedition_text+='｜資料待同步'
-    elif active_teams:
-        clock=time.monotonic() if now is None else now
-        due=[max(0,t['due']-clock) for t in active_teams if t.get('due') is not None]
-        timing=('可領獎' if min(due)==0 else f'最近完成 {min(due)/3600:.1f} 小時') if due else '時間待同步'
-        expedition_text+=f"\n遠征中 {len(active_teams)} 隊｜{timing}"
+        expedition_text+='\n遠征資料待同步'
     else:
-        expedition_text+='\n目前沒有進行中的遠征'
+        expedition_text+=f"\n遠征 {len(active_teams)} 隊"
+        if active_teams:
+            clock=time.monotonic() if now is None else now
+            due=[max(0,t['due']-clock) for t in active_teams if t.get('due') is not None]
+            if len(due)!=len(active_teams): timing='最快完成時間待同步'
+            elif min(due)==0: timing='最快完成 0 小時（可領獎）'
+            else: timing=f'最快完成 {min(due)/3600:.1f} 小時'
+            expedition_text+='\n'+timing
     if expedition.get('uncertain'):
-        expedition_text+='｜結果未確認'
-    elif expedition.get('enabled') and expedition.get('status'):
-        expedition_text+='｜'+expedition['status']
+        expedition_text='結果未確認｜請重新登入同步'
+    if not live:
+        ai_text=roaming_text='已離線'
+        expedition_text='已離線｜以下為最後資料\n'+expedition_text.replace('自動派遣中...', '自動派遣已停止')
     return {
         'role':role,'activity':'\n'.join(activity),
-        'ai':ai_summary(state['auto_battle']) if 'auto_battle' in state else '待同步',
-        'roaming':roaming_summary(state['roaming']) if 'roaming' in state else '待同步',
+        'ai':ai_text,
+        'roaming':roaming_text,
         'supply':supply_text,
         'alchemy':f"{alchemy.get('status','待同步')}｜完成 {alchemy.get('completed',0)}/{alchemy.get('requested',0)}",
         'crafting':f"{craft.get('status','待同步')}｜本次完成 {craft.get('completed',0)} 項",
@@ -103,23 +118,23 @@ class OverviewPanel(ttk.Frame):
     def __init__(self,parent,app):
         super().__init__(parent);self.app=app;self.values={};self.signature=None
         self.labels={};self.full_values={};self.cards={}
-        for column in range(6):
+        for column in range(2):
             self.columnconfigure(column,weight=1,uniform='overview')
         layout=(
-            ('role','角色與夥伴',None,3,0,0,3,100),
-            ('activity','目前活動',None,3,0,3,3,100),
-            ('ai','自動戰鬥',None,3,1,0,2,100),
-            ('roaming','自動徘徊',None,3,1,2,2,100),
-            ('expedition','遠征','expedition_panel',3,1,4,2,100),
-            ('supply','補給紀錄',None,2,2,0,2,76),
-            ('alchemy','煉金','alchemy_panel',2,2,2,2,76),
-            ('crafting','製作','crafting_panel',2,2,4,2,76),
-            ('party','隊伍檢查','party_panel',2,3,0,3,76),
-            ('efficiency','經驗效率','efficiency_panel',2,3,3,3,76),
+            ('role','角色與夥伴',None,3,0,0,1,94),
+            ('activity','目前活動',None,3,0,1,1,94),
+            ('ai','自動戰鬥',None,2,1,0,1,78),
+            ('roaming','自動徘徊',None,2,1,1,1,78),
+            ('expedition','遠征','expedition_panel',3,2,0,1,92),
+            ('efficiency','經驗效率','efficiency_panel',3,2,1,1,92),
+            ('supply','補給紀錄',None,2,3,0,1,78),
+            ('party','隊伍檢查','party_panel',2,3,1,1,78),
+            ('alchemy','煉金','alchemy_panel',1,4,0,1,62),
+            ('crafting','製作','crafting_panel',1,4,1,1,62),
         )
         self.actions={}
         for key,title,destination,lines,row,col,span,height in layout:
-            self.rowconfigure(row,minsize=height,weight=1 if row in (0,1) else 0)
+            self.rowconfigure(row,minsize=height,weight=1 if row==0 else 0)
             frame=ttk.Frame(self,padding=(10,4))
             frame._surface_fill=(17,46,64,220) if key in ('ai','roaming','expedition') else (13,32,48,210)
             frame.grid(row=row,column=col,columnspan=span,sticky='nsew',padx=3,pady=3)
@@ -128,8 +143,8 @@ class OverviewPanel(ttk.Frame):
             ttk.Label(frame,text=title,style='Section.TLabel',anchor='w').grid(row=0,column=0,sticky='w')
             tools=ttk.Frame(frame);tools.grid(row=0,column=1,sticky='e')
             value=tk.StringVar();self.values[key]=value
-            label=ttk.Label(frame,textvariable=value,justify='left',anchor='w')
-            label.grid(row=1,column=0,columnspan=2,sticky='nsew',pady=(2,0))
+            label=ttk.Label(frame,textvariable=value,justify='left',anchor='nw')
+            label.grid(row=1,column=0,columnspan=2,sticky='nsew',pady=(4,0))
             self.labels[key]=(label,lines)
             label.bind('<Configure>',lambda e,k=key:self.fit_value(k))
             if key in ('ai','roaming','expedition'):
@@ -189,24 +204,31 @@ class OverviewPanel(ttk.Frame):
     def fit_value(self,key):
         label,limit=self.labels[key]
         text=self.full_values.get(key,'等待同步')
-        lines=text.splitlines()
-        if len(lines)>limit:
-            lines=lines[:limit-1]+['｜'.join(lines[limit-1:])]
         font=tkfont.nametofont('TkDefaultFont',root=self)
         width=max(1,label.winfo_width()-4)
         height=max(1,label.winfo_height())
         visible=max(1,min(limit,height//max(1,font.metrics('linespace'))))
-        lines=lines[:visible-1]+['｜'.join(lines[visible-1:])] if len(lines)>visible else lines
+        # Wrap status text into the available lines before applying an ellipsis.
         fitted=[]
-        for line in lines:
+        remaining=text.splitlines()
+        while remaining and len(fitted)<visible:
+            line=remaining.pop(0)
             if font.measure(line)>width:
+                last=len(fitted)==visible-1
+                suffix='…' if last else ''
                 low,high=0,len(line)
                 while low<high:
                     middle=(low+high+1)//2
-                    if font.measure(line[:middle]+'…')<=width:low=middle
+                    if font.measure(line[:middle]+suffix)<=width:low=middle
                     else:high=middle-1
-                line=line[:low]+'…'
-            fitted.append(line)
+                fitted.append(line[:low]+suffix)
+                if not last and low: remaining.insert(0,line[low:].lstrip('｜ '))
+            else:
+                fitted.append(line)
+        if remaining and fitted and not fitted[-1].endswith('…'):
+            line=fitted[-1]
+            while line and font.measure(line+'…')>width:line=line[:-1]
+            fitted[-1]=line+'…'
         self.values[key].set('\n'.join(fitted))
 
     def tick(self):
