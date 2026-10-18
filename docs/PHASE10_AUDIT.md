@@ -52,3 +52,13 @@ python -m tools.build.build_nuitka --dry-run
 
 目前正式可下載版請使用 [v0.5.0 GitHub Release](https://github.com/blesses0603/WLRe_lala/releases/tag/v0.5.0)。
 README 中 v0.6.0 仍代表後續開發內容，不會因完成文件稽核就立刻創造 `v0.6.0` 標籤、觸發需要付費額度的建置或承諾已完成新的可執行檔。
+
+## 補齊遺漏的自動化檢測（2026-10-19）
+
+新增 `tests/test_audit_repository.py` 六組 fixture 測試：相對連結／文件錨點／外部 URL、缺檔與越界、單雙引號版本值、非空 Git blob 重複與空白套件檔例外、缺少 Git index 不得冒稱已驗證、嚴格模式和失效連結失敗退出碼。
+
+日常 Linux CI 明確新增 `python -m compileall -q wlre tools tests WLRE_Client.py`、`python -m tools.audit_repository --strict-git`，以及 Windows Nuitka 與 macOS arm64／Intel x64 的 dry-run 打包計畫檢查。**dry-run 只驗證計畫，不是原生編譯**。
+
+第 10 項前次 Commit `b23b804` 的 Ubuntu CI [39147669166](https://github.com/blesses0603/WLRe_lala/actions/runs/39147669166) 成功，417 tests、2 skips，含 GUI、資源自檢和 Windows dry-run。新補測需以最新 Commit 的 CI 結果另行驗收。
+
+**仍待真實平台驗證：** `Main and PR tests` → `Run workflow` → 選第 10 項分支、`full_matrix=true` 才會執行 Windows／macOS 原始碼測試；`Native desktop packaging verification` → `Run workflow` → 選第 10 項分支才會實際編譯 Windows x64 EXE、macOS arm64／Intel x64 APP。額度不足時不自動觸發。Mac Intel 實機 GUI、Windows 真實操作及遊戲正式服仍需人工驗收。

@@ -40,6 +40,10 @@ class DocumentationAndReleaseAudit(unittest.TestCase):
         release = (ROOT / ".github/workflows/release-windows.yml").read_text(encoding="utf-8")
         self.assertIn('["ubuntu-latest"]', daily)
         self.assertIn('full_matrix:', daily)
+        self.assertIn('python -m tools.audit_repository --strict-git', daily)
+        self.assertIn('python -m compileall -q', daily)
+        self.assertIn('tools.build.build_macos --arch arm64 --dry-run', daily)
+        self.assertIn('tools.build.build_macos --arch x64 --dry-run', daily)
         self.assertIn("workflow_dispatch:", native)
         native_triggers = native.split("on:\n", 1)[1].split("\npermissions:", 1)[0]
         self.assertNotIn("pull_request:", native_triggers)

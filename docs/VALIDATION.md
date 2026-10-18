@@ -1,12 +1,14 @@
 # 驗證結果
 
-## 2026-10-19 第 10 項啟動：驗證狀態區分
+## 2026-10-19 第 10 項啟動與補測：驗證狀態區分
 
 - 第 09 項 Commit `4e3abc0`：三平台回歸 [39141397498](https://github.com/blesses0603/WLRe_lala/actions/runs/39141397498) 全成功，Windows x64 與 macOS Intel／arm64 原生打包 [39141397522](https://github.com/blesses0603/WLRe_lala/actions/runs/39141397522) 全成功；此紀錄屬該版本，不代表之後每筆提交通過 CI。
 - PR #18 合併後日常 CI 只自動跑 Linux；Windows／macOS 的原始碼回歸及原生打包可手動啟動；GitHub Actions 額度不足時，新的 Runner 在開始執行測試前即失敗，不可當作程式回歸失敗。
 - 第 10 項初始盤點 286 個追蹤檔，未發現非空的完全重複檔；19 份 Markdown 發現兩個失效路徑，已列入本項修正；詳見 [第 10 項稽核](PHASE10_AUDIT.md)。
 - 第 10 項的新提交尚未取得跨平台 CI 完成紀錄，完整回歸、正式伺服器與使用者實機操作仍待驗證。不變更已修好的 EXP 效率邏輯。
 
+
+- PR #19 Commit `b23b804` Ubuntu CI [39147669166](https://github.com/blesses0603/WLRe_lala/actions/runs/39147669166)：417 tests、2 skips，GUI 冒煙、資源自檢及 Windows Nuitka dry-run 成功。新增嚴格 Git 稽核、全檔語法與 macOS 雙架構 dry-run 後需以**新提交的 CI** 驗收，不能借用上次成功結果。
 
 ## 2026-10-17 優化工作區
 
