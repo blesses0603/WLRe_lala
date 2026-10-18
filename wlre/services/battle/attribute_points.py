@@ -36,6 +36,33 @@ def baseline(stats):
     return result
 
 
+def preview_block_reason(snapshot, *, live=True):
+    """UI-only eligibility hint; the network command remains authoritative.
+
+    Never allow a disabled/offline/unsynchronized UI to appear spendable.
+    Actual allocation still revalidates on the network thread at send time.
+    """
+    if not live:
+        return "請先登入並完成連線"
+    if snapshot.get("phase") != "world_ready" or not snapshot.get("player", {}).get("role_id"):
+        return "角色尚未完成登入同步"
+    player = snapshot.get("knowledge", {}).get("player", {})
+    if not player.get("ready"):
+        return "角色能力尚未完整同步"
+    allocation = snapshot.get("attribute_allocation", {})
+    if allocation.get("uncertain"):
+        return allocation.get("status") or "上次配點結果不明，請重新登入同步"
+    if allocation.get("pending"):
+        return allocation.get("status") or "上一筆配點尚未確認"
+    if snapshot.get("battle", {}).get("active"):
+        return "戰鬥中不可配點"
+    if snapshot.get("event_flow", {}).get("blocked"):
+        return "遊戲事件尚未結束，不能配點"
+    if any(snapshot.get(key, {}).get("enabled") for key in ("auto_battle", "roaming")):
+        return "請先停止自動戰鬥或徘徊再配點"
+    return ""
+
+
 def allocation(stats, increments, expected_baseline):
     """Return (packet, authoritative expected stats) without altering stats."""
     values = baseline(stats)
