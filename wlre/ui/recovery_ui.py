@@ -53,15 +53,15 @@ class SupplyPicker:
 
 class RecoveryPage(ttk.Frame):
     def __init__(self,parent,editor,resource,master_enabled,compact=False):
-        super().__init__(parent,padding=8 if compact else 10);self.compact=compact;self.editor=editor;self.resource=resource;self.items=[0]*10;self.images=[];self.timer=None
+        super().__init__(parent,padding=4 if compact else 10);self.compact=compact;self.editor=editor;self.resource=resource;self.items=[0]*10;self.images=[];self.timer=None
         self.icons=ItemIcons(self);self.buttons=[];self.vars={k:tk.BooleanVar() for k in ('enabled','other_items','first','after')}
         head=ttk.Frame(self);head.pack(fill='x')
         if compact:ttk.Label(head,text=resource.upper()+' 補給',style='Heading.TLabel').pack(side='left')
         else:ttk.Checkbutton(head,text='啟用戰後補給',variable=master_enabled).pack(side='left')
         self.balance=tk.StringVar();ttk.Label(head,textvariable=self.balance,style='Muted.TLabel').pack(side='right')
-        ttk.Checkbutton(self,text='優先使用藥水儲存槽回復'+resource.upper(),variable=self.vars['first'],command=self.first_changed).pack(anchor='w',pady=2 if compact else 4)
-        ttk.Checkbutton(self,text='自動使用指定'+resource.upper()+'補品（由左至右、上至下）',variable=self.vars['enabled']).pack(anchor='w',pady=1 if compact else 3)
-        grid=ttk.Frame(self);grid.pack(fill='x',pady=4)
+        ttk.Checkbutton(self,text='優先使用藥水儲存槽回復'+resource.upper(),variable=self.vars['first'],command=self.first_changed).pack(anchor='w',pady=1 if compact else 4)
+        ttk.Checkbutton(self,text='自動使用指定'+resource.upper()+'補品（由左至右、上至下）',variable=self.vars['enabled']).pack(anchor='w',pady=0 if compact else 3)
+        grid=ttk.Frame(self);grid.pack(fill='x',pady=2 if compact else 4)
         columns=3 if compact else 5
         for i in range(10):
             grid.columnconfigure(i%columns,weight=1,uniform='slots')
@@ -69,11 +69,11 @@ class RecoveryPage(ttk.Frame):
             button.grid(row=i//columns,column=i%columns,sticky='nsew',padx=3,pady=1 if compact else 3,ipady=0 if compact else 5)
             button.bind('<Button-3>',lambda e,i=i:self.clear(i));self.buttons.append(button)
         ttk.Label(self,text='依序選補品；右鍵清除，缺少時跳過。' if compact else '點選空格選補品；右鍵清除。缺少的物品會跳過，順序保留。',style='Muted.TLabel',wraplength=450 if compact else 900).pack(anchor='w')
-        ttk.Checkbutton(self,text='指定補品用完後，使用藥水儲存槽',variable=self.vars['after'],command=self.after_changed).pack(anchor='w',pady=2 if compact else 4)
-        ttk.Checkbutton(self,text='指定補品用完後，使用包包內其他'+resource.upper()+'補品',variable=self.vars['other_items']).pack(anchor='w',pady=2 if compact else 4)
+        ttk.Checkbutton(self,text='指定補品用完後，使用藥水儲存槽',variable=self.vars['after'],command=self.after_changed).pack(anchor='w',pady=1 if compact else 4)
+        ttk.Checkbutton(self,text='指定補品用完後，使用包包內其他'+resource.upper()+'補品',variable=self.vars['other_items']).pack(anchor='w',pady=1 if compact else 4)
         self.percents={};self.amounts={};self.scales={}
         for who,title in (('player','玩家'),('partner','夥伴')):
-            row=ttk.Frame(self);row.pack(fill='x',pady=2 if compact else 4)
+            row=ttk.Frame(self);row.pack(fill='x',pady=1 if compact else 4)
             v=tk.IntVar(value=0);self.percents[who]=v
             amount=tk.StringVar();self.amounts[who]=amount
             if compact:

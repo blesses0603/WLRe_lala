@@ -110,7 +110,14 @@ class CompactCrafting(unittest.TestCase):
     def test_material_icons_align_left_and_headers_cannot_be_dragged(self):
         table=self.browser.material_table;self.root.update()
         first=table.get_children()[0];bounds=table.bbox(first)
-        self.assertLessEqual(bounds[1],26)
+        # Treeview header height follows the platform font metrics: Linux
+        # may place the first row at 28 px instead of 26 px on Windows.
+        # Verify the item begins directly below its real header, not at a
+        # hardcoded pixel offset that breaks with DPI and native Tk fonts.
+        body_top=next((y for y in range(table.winfo_height())
+                       if table.identify_region(3,y) in ('tree','cell')),None)
+        self.assertIsNotNone(body_top)
+        self.assertLessEqual(bounds[1],body_top+2)
         self.assertIn('image',table.identify_element(3,bounds[1]+bounds[3]//2))
         columns=('#0','name','usable','required')
         before=[table.column(c,'width') for c in columns]
