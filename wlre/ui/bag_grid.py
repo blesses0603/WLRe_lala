@@ -8,15 +8,12 @@ import tkinter as tk
 from tkinter import ttk
 
 from wlre.services.items.combat_resources import CAT, item_name, heal_effects, available
-from wlre.ui.theme import PANEL, TEXT, CYAN
+from wlre.ui.theme import PANEL, CYAN, group
 
 PAGE_SIZE = 25
 COLUMNS = 5
 SLOT_BG = '#173348'
 SLOT_ACTIVE = '#27637c'
-CARD_BG = '#dfebf8'
-CARD_INK = '#234761'
-CARD_MUTED = '#527189'
 
 
 def visible_items(inventory, query=''):
@@ -109,32 +106,33 @@ class BagGrid(ttk.Frame):
         self.hover_text = tk.StringVar(value='選擇道具格位，即可查看道具資訊')
         ttk.Label(left, textvariable=self.hover_text, style='Muted.TLabel').pack(fill='x', pady=(6, 0))
 
-        # Deliberately keep the details inline: new Toplevel windows are skinned
-        # and reparented by GlassTheme, so a pop-up risks losing focus.
-        self.card = tk.Frame(shell, bg=CARD_BG, highlightthickness=2,
-                             highlightbackground='#9bb8d1', padx=10, pady=8)
+        # Use the same GlassGroup and themed ttk widgets as the other LaLa panels.
+        # Avoid a separate light-coloured backplate which ignores GlassTheme.
+        self.card = group(shell, text='道具資訊', padding=10)
         self.card.grid(row=0, column=1, sticky='nsew')
         self.card.grid_propagate(False)
         self.card_title = tk.StringVar(value='物品資訊')
-        head = tk.Frame(self.card, bg='#cfe0f4')
+        head = ttk.Frame(self.card)
         head.pack(fill='x', pady=(0, 8))
-        tk.Label(head, textvariable=self.card_title, font=('TkDefaultFont', 12, 'bold'),
-                 bg='#cfe0f4', fg=CARD_INK, anchor='w', wraplength=220).pack(side='left', fill='x', expand=True, padx=8, pady=8)
-        ttk.Button(head, text='×', width=3, command=self.clear_selection).pack(side='right', padx=4)
+        ttk.Label(head, textvariable=self.card_title, style='Heading.TLabel',
+                  anchor='w', wraplength=220).pack(
+                      side='left', fill='x', expand=True, padx=(0, 8), pady=(0, 4))
+        ttk.Button(head, text='×', width=3, command=self.clear_selection).pack(side='right')
 
-        self.info = tk.Frame(self.card, bg=CARD_BG)
+        self.info = ttk.Frame(self.card)
         self.info.pack(fill='both', expand=True)
-        self.large_icon = tk.Label(self.info, bg=CARD_BG)
+        self.large_icon = ttk.Label(self.info)
         self.large_icon.pack(pady=(4, 8))
         self.meta = tk.StringVar(value='請點選左側道具')
-        tk.Label(self.info, textvariable=self.meta, bg=CARD_BG, fg=CARD_INK,
-                 anchor='w', justify='left', wraplength=270).pack(fill='x', padx=4, pady=(0, 6))
+        ttk.Label(self.info, textvariable=self.meta, anchor='w',
+                  justify='left', wraplength=270).pack(fill='x', padx=4, pady=(0, 6))
         self.effect = tk.StringVar(value='')
-        tk.Label(self.info, textvariable=self.effect, bg=CARD_BG, fg=CARD_INK,
-                 anchor='nw', justify='left', wraplength=270).pack(fill='x', padx=4, pady=(0, 8))
+        ttk.Label(self.info, textvariable=self.effect, anchor='nw',
+                  justify='left', wraplength=270).pack(fill='x', padx=4, pady=(0, 8))
         self.note = tk.StringVar(value='道具使用仍由原本程式驗證；未確認的操作不會送出')
-        tk.Label(self.info, textvariable=self.note, bg=CARD_BG, fg=CARD_MUTED,
-                 anchor='w', justify='left', wraplength=270).pack(fill='x', padx=4, pady=(6, 8))
+        ttk.Label(self.info, textvariable=self.note, style='Muted.TLabel',
+                  anchor='w', justify='left', wraplength=270).pack(
+                      fill='x', padx=4, pady=(6, 8))
 
         buttons = ttk.Frame(self.card)
         buttons.pack(fill='x', side='bottom', pady=(6, 0))
