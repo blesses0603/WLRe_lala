@@ -57,3 +57,12 @@ BAT 會列出選中的版本、位元數、路徑及 Tk 版本；找不到可用
 macOS Intel 的 GitHub hosted runner 曾在原始碼 Tk GUI 冒煙測試逾時；CI 明確使用 `WLRE_NATIVE_GUI_SMOKE=0` 停用 **Intel 虛擬機的 GUI 視窗檢查**，但仍要求完整單元測試、原生編譯、編譯後 APP 的資源自檢、Mach-O 架構檢查、簽章與 ZIP 完整性。Intel 使用者電腦上的實際 APP GUI 啟動**尚未驗證**，需人工驗收。macOS Apple Silicon 的 CI GUI 冒煙測試維持啟用。
 
 PR 完整打包產物會暫存於 GitHub Actions artifacts；正式版仍需推送與 `wlre.__version__` 相符、尚未發行的 `vX.Y.Z` 標籤才能觸發 GitHub Release。macOS Intel 與 Apple Silicon 是分開建置的原生 APP，並非 Universal Binary。
+
+## 打包速度與編譯快取（第 09 項）
+
+- Windows 和 macOS 預設使用最多 **6** 個平行 C 編譯工作，仍不超過偵測到的 CPU 數。可按記憶體容量調整：Windows 用 `build_nuitka.bat --jobs 8`；macOS 用 `python -m tools.build.build_macos --arch arm64 --jobs 8`（允許 1～16）。
+- 執行 `--dry-run --jobs 8` 可以核對設定，不會啟動 Nuitka 編譯。工作數太高可能用盡 RAM 或比預設更慢，優先視 CPU、RAM 與測試結果調整。
+- macOS 已移除原本無條件使用的 `--disable-cache=ccache`。Nuitka 會在編譯器快取工具可用時使用它，並不保證所有 runner 都裝有 ccache。
+- GitHub Actions PR 與正式 Release 會透過 `NUITKA_CACHE_DIR` 配合 `actions/cache` 儲存與恢復 Nuitka 編譯快取；按照 Windows、macOS arm64／x64、Python 版本與 requirements 分開快取。pip 下載快取也開啟。
+- **第一次全新編譯通常不會因快取而變快**，重複建置且 C 原始碼和編譯器選項足夠相似時才可能命中。快取結果會在 GitHub Actions 日誌中顯示，可用各次 Nuitka 編譯時間比較；沒有測量前不宣稱百分比改善。
+- 此次加速不移除任何圖片、JSON、ZIP、Tk 插件或 `--include-package=wlre`，仍要求完整編譯後自檢與跨平台回歸測試通過。若遇到記憶體不足，可指定 `--jobs 2`。
