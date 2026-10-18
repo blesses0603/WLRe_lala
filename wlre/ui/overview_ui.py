@@ -118,23 +118,23 @@ class OverviewPanel(ttk.Frame):
     def __init__(self,parent,app):
         super().__init__(parent);self.app=app;self.values={};self.signature=None
         self.labels={};self.full_values={};self.cards={}
-        for column in range(2):
+        for column in range(6):
             self.columnconfigure(column,weight=1,uniform='overview')
         layout=(
-            ('role','角色與夥伴',None,3,0,0,1,94),
-            ('activity','目前活動',None,3,0,1,1,94),
-            ('ai','自動戰鬥',None,2,1,0,1,78),
-            ('roaming','自動徘徊',None,2,1,1,1,78),
-            ('expedition','遠征','expedition_panel',3,2,0,1,92),
-            ('efficiency','經驗效率','efficiency_panel',3,2,1,1,92),
-            ('supply','補給紀錄',None,2,3,0,1,78),
-            ('party','隊伍檢查','party_panel',2,3,1,1,78),
-            ('alchemy','煉金','alchemy_panel',1,4,0,1,62),
-            ('crafting','製作','crafting_panel',1,4,1,1,62),
+            ('role','角色與夥伴',None,3,0,0,3,100),
+            ('activity','目前活動',None,3,0,3,3,100),
+            ('ai','自動戰鬥',None,3,1,0,2,100),
+            ('roaming','自動徘徊',None,3,1,2,2,100),
+            ('expedition','遠征','expedition_panel',3,1,4,2,100),
+            ('supply','補給紀錄',None,2,2,0,2,76),
+            ('alchemy','煉金','alchemy_panel',2,2,2,2,76),
+            ('crafting','製作','crafting_panel',2,2,4,2,76),
+            ('party','隊伍檢查','party_panel',2,3,0,3,76),
+            ('efficiency','經驗效率','efficiency_panel',2,3,3,3,76),
         )
         self.actions={}
         for key,title,destination,lines,row,col,span,height in layout:
-            self.rowconfigure(row,minsize=height,weight=1 if row==0 else 0)
+            self.rowconfigure(row,minsize=height,weight=1 if row in (0,1) else 0)
             frame=ttk.Frame(self,padding=(10,4))
             frame._surface_fill=(17,46,64,220) if key in ('ai','roaming','expedition') else (13,32,48,210)
             frame.grid(row=row,column=col,columnspan=span,sticky='nsew',padx=3,pady=3)
@@ -143,8 +143,8 @@ class OverviewPanel(ttk.Frame):
             ttk.Label(frame,text=title,style='Section.TLabel',anchor='w').grid(row=0,column=0,sticky='w')
             tools=ttk.Frame(frame);tools.grid(row=0,column=1,sticky='e')
             value=tk.StringVar();self.values[key]=value
-            label=ttk.Label(frame,textvariable=value,justify='left',anchor='nw')
-            label.grid(row=1,column=0,columnspan=2,sticky='nsew',pady=(4,0))
+            label=ttk.Label(frame,textvariable=value,justify='left',anchor='w')
+            label.grid(row=1,column=0,columnspan=2,sticky='nsew',pady=(2,0))
             self.labels[key]=(label,lines)
             label.bind('<Configure>',lambda e,k=key:self.fit_value(k))
             if key in ('ai','roaming','expedition'):
