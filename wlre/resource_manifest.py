@@ -1,0 +1,49 @@
+"""Shared required assets and package-data rules for runtime and native builds."""
+import json
+from pathlib import Path
+import zipfile
+
+DATA_SUFFIXES={'.json','.zip','.png','.ico'}
+REQUIRED_RESOURCES=(
+    'alchemy_catalog.json','combat_catalog.json','crafting_catalog.json','default_profile.json',
+    'emoji_catalog.json','emoji_images.zip','enums.json','expedition_catalog.json','graph_origins.json',
+    'item_icon_coverage.json','item_icon_map.json','item_icons.zip','item_stackable.json',
+    'map_names.json','navigation_data.zip','normal_attack_data.json','portals.json',
+    'server_list.json','smallmaps.zip','stage_coordinates.json',
+    'assets/app.ico','assets/exp_background.png',
+    *('assets/buttons/'+name+'.png' for name in (
+        'Btn_004','Btn_014','Btn_016','Btn_Bag','Btn_CategoryAISetting003','Btn_Close04','Btn_Setting')),
+    *('assets/function-icons/'+name+'.png' for name in (
+        'Btn_AI','MainIcon_001','MainIcon_005','MainIcon_007','MainIcon_010',
+        'MainIcon_011','MainIcon_020','MainIcon_038','MainIcon_041')),
+)
+
+
+def require_resources(root):
+    root=Path(root)
+    missing=[name for name in REQUIRED_RESOURCES if not (root/name).is_file()]
+    if missing:raise RuntimeError('Missing resources: '+', '.join(missing))
+
+
+def data_files(package_root):
+    package_root=Path(package_root)
+    require_resources(package_root/'resources')
+    return sorted(p for p in package_root.rglob('*')
+                  if p.is_file() and p.suffix.lower() in DATA_SUFFIXES
+                  and not any(part.startswith('.') or part=='__pycache__' for part in p.relative_to(package_root).parts))
+
+
+def validate_resources(root):
+    """Validate all shipped data, including nested button/function-icon images."""
+    from PIL import Image
+    root=Path(root);require_resources(root)
+    for path in root.rglob('*'):
+        if not path.is_file():continue
+        if path.suffix=='.json':
+            with path.open(encoding='utf8') as stream:json.load(stream)
+        elif path.suffix=='.zip':
+            with zipfile.ZipFile(path) as archive:
+                bad=archive.testzip()
+                if bad:raise RuntimeError(f'Corrupt resource: {path.name}/{bad}')
+        elif path.suffix.lower() in ('.png','.ico'):
+            with Image.open(path) as image:image.verify()

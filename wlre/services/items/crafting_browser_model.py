@@ -1,4 +1,5 @@
 """Read-only craft browser: explicit unknowns, own-house evidence and bag counts."""
+from wlre.storage.paths import favorites_file,legacy_favorites_file
 import json
 from pathlib import Path
 from wlre.services.items.crafting import RECIPES
@@ -50,10 +51,17 @@ def availability(state,recipe,count=1):
 class Favorites:
     limit=100
     def __init__(self,path=None):
-        self.path=Path(path) if path else Path.home()/'.wlre_client'/'crafting_favorites.json'
+        self.path=Path(path) if path else favorites_file()
         self.ids=[];self.load_error=None
         try:
             from wlre.storage.atomic import file_lock
+            if path is None and not self.path.exists() and legacy_favorites_file().exists():
+                from wlre.storage.atomic import write_json
+                with file_lock(self.path):
+                    if not self.path.exists():
+                        old=Favorites(legacy_favorites_file())
+                        if old.load_error:raise ValueError(old.load_error)
+                        write_json(self.path,{'version':1,'items':old.ids})
             if not self.path.exists():raise FileNotFoundError
             with file_lock(self.path):data=json.loads(self.path.read_text(encoding='utf-8'))
             if not isinstance(data,dict) or data.get('version',1)!=1 or not isinstance(data.get('items',[]),list):raise ValueError('收藏格式錯誤')

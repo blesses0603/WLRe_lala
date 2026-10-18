@@ -1,4 +1,5 @@
 """Numeric UI health metrics only: no accounts, packets, messages or tracebacks."""
+from wlre.storage.paths import data_root as user_data_root
 import logging,os,time,traceback
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -8,7 +9,7 @@ class Diagnostics:
     def __init__(self,base=None):
         self.logger=logging.Logger('wlre-health');self.logger.propagate=False
         self.last=0;self.errors=0;self.last_connection=None;self.connection_logged=None;self.last_error=None;self.error_logged=None
-        root=Path(base) if base is not None else Path(os.environ.get('LOCALAPPDATA') or Path.home()/'.config')/'WLRE_LaLa'/'diagnostics'
+        root=Path(base) if base is not None else user_data_root()/'diagnostics'
         self.path=root/f'health-{os.getpid()}.log'
         try:
             root.mkdir(parents=True,exist_ok=True)

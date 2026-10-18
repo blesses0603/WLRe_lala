@@ -42,6 +42,9 @@ from wlre.ui.companion_ui import CompanionPanel
 from wlre.ui.expedition_ui import ExpeditionPanel
 
 
+from wlre.ui.dashboard_builder import build_dashboard
+
+
 class App:
     def __init__(self, root):
         self.root=root
@@ -98,72 +101,7 @@ class App:
         self.world=tk.StringVar(value='尚未收到角色位置。')
         self.world_compact=tk.StringVar(value='尚未收到角色位置')
         self.movement_status=tk.StringVar(value='尚無移動要求。')
-        self.layout=DashboardLayout(root,self)
-        self.position_summary=self.layout.position
-        self.main_tab=self.layout.content
-        left_panel=self.layout.left
-        right=self.layout.right
-        self.left_panel=left_panel
-        self.chat_panel=ChatPanel(left_panel,self,height=175)
-        self.chat_panel.pack(side='bottom',fill='x',pady=(8,0))
-        left_tabs=RoundedNotebook(left_panel,borderless=True,icons=True)
-        self.left_tabs=left_tabs
-        left_tabs.pack(fill='both',expand=True)
-        overview=ttk.Frame(left_tabs,padding=6)
-        left_tabs.add(overview,text='主頁')
-        self.overview_panel=OverviewPanel(overview,self)
-        self.overview_panel.pack(fill='both',expand=True)
-        self.priority_target=None
-        self.battle_selection_key=None
-        # Map double-click navigation keeps its destination internally.
-        self.x,self.y=tk.StringVar(),tk.StringVar()
-        for var in (self.x,self.y):var.trace_add('write',lambda *args:setattr(self,'map_target_scene',None))
-        self.ai_settings=ai_defaults()
-        self.party_guard_load_error=''
-        try:self.ai_settings['party_guard']=party_guard.load()
-        except (OSError,ValueError,TypeError) as exc:self.party_guard_load_error=str(exc)
-        self.ai_status=tk.StringVar(value='已停止')
-        self.roaming_status=tk.StringVar(value='已停止')
-        self.party_panel=PartyPanel(left_tabs,self)
-        left_tabs.add(self.party_panel,text='組隊')
-        self.companion_panel=CompanionPanel(left_tabs,self)
-        left_tabs.add(self.companion_panel,text='夥伴出戰')
-        self.expedition_panel=ExpeditionPanel(left_tabs,self)
-        left_tabs.add(self.expedition_panel,text='遠征')
-        self.party_guard_panel=PartyGuardPanel(self.party_panel.guard_host,self,compact=True)
-        self.party_guard_panel.pack(fill='both',expand=True)
-        if self.party_guard_load_error:self.party_guard_panel.note.set('名單讀取失敗，未啟用：'+self.party_guard_load_error)
-        self.alchemy_panel=AlchemyPanel(left_tabs,self)
-        left_tabs.add(self.alchemy_panel,text='煉金')
-        self.crafting_panel=CraftingPanel(left_tabs,self)
-        left_tabs.add(self.crafting_panel,text='製作')
-        self.efficiency_panel=EfficiencyPanel(left_tabs,self)
-        left_tabs.add(self.efficiency_panel,text='經驗效率',align='right')
-        self.crafting_panel.configure(padding=6)
-        for page in (overview,self.party_panel,self.companion_panel,self.expedition_panel,self.alchemy_panel,self.crafting_panel,self.efficiency_panel):
-            page._section_outline=True
-        left_tabs.bind('<<NotebookTabChanged>>',lambda e:self.refresh_selected(),add='+')
-        self.overview_panel.update_state({})
-        self.home_map=HomeMap(right,self.pick_map_destination,self.open_navigation,on_move=self.walk,on_portal=lambda portal_id:self.send({'type':'portal_direct','portal_id':portal_id}),show_status=False,compact=True)
-        self.home_map.configure(width=380,height=320)
-        self.home_map.grid(row=0,column=0,sticky='nw')
-        self.home_map.grid_propagate(False)
-        self.activity_tabs=RoundedNotebook(right)
-        self.activity_tabs.grid(row=1,column=0,sticky='nsew',pady=(8,0))
-        right.columnconfigure(0,weight=1);right.rowconfigure(1,weight=1)
-        self.logs_frame=ttk.Frame(self.activity_tabs,padding=6)
-        self.logs_frame._section_outline=True
-        self.activity_tabs.add(self.logs_frame,text='事件紀錄')
-        self.formation=BattleView(self.activity_tabs,self.pick_battle_unit)
-        self.formation.configure(padding=6);self.formation._section_outline=True
-        self.activity_tabs.add(self.formation,text='戰場陣形')
-        self.activity_tabs.bind('<<NotebookTabChanged>>',lambda e:self.refresh_selected(),add='+')
-        logs=self.logs_frame
-        self.log=tk.Text(logs,height=5,state='disabled',wrap='word',font=('Microsoft JhengHei UI',-14),background='#142638',foreground='#eff7ff',insertbackground='#eff7ff',relief='flat')
-        logscroll=ttk.Scrollbar(logs,orient='vertical',command=self.log.yview)
-        self.log.configure(yscrollcommand=logscroll.set)
-        logscroll.pack(side='right',fill='y')
-        self.log.pack(side='left',fill='both',expand=True)
+        build_dashboard(self)
         try:
             self.set_profile(load_default_profile())
             self.status.set('已載入預設連線設定。請登入並選角，進入遊戲後自動開啟主頁。')

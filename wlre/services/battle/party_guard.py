@@ -1,4 +1,5 @@
 """User-selected required role IDs, checked against server-confirmed membership."""
+from wlre.storage.paths import data_root as user_data_root
 import json
 import os
 from pathlib import Path
@@ -51,8 +52,7 @@ def escape_reason(state,config):
 
 
 def settings_path():
-    base=Path(os.environ.get('LOCALAPPDATA') or (Path.home()/'.config'))
-    return base/'WLRE_LaLa'/'party_guard.json'
+    return user_data_root()/'party_guard.json'
 
 
 def load(path=None):

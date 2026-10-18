@@ -1,5 +1,4 @@
 """Expedition overview and opt-in automatic dispatch preferences."""
-import json
 import time
 import copy
 from concurrent.futures import ThreadPoolExecutor
@@ -7,9 +6,9 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 
 from wlre.services.expedition import preferences, validate, faith_gain, duration, recovery_stock, choose_members
-from wlre.services.expedition_data import data_root, load_catalog
+from wlre.services.expedition_data import load_catalog
 from wlre.services.items.combat_resources import CAT, item_name
-from wlre.storage.atomic import file_lock, write_json
+from wlre.storage import expedition_settings
 from wlre.ui.layout import heading, scroll_table
 from wlre.ui.expedition_display import task_name, time_text, rewards_text
 from wlre.services.expedition_teams import success_details
@@ -147,17 +146,15 @@ class ExpeditionPanel(ttk.Frame):
     def settings_path(self):
         key = self.app.settings_identity()
         if not key: raise ValueError('請先選擇帳號再儲存遠征設定')
-        return data_root() / 'accounts' / (key + '.expedition.json')
+        return expedition_settings.settings_file(key)
 
     def load_settings(self, key):
         self.flush_preferences()
         self.key = key
         value = preferences()
         if key:
-            path = data_root() / 'accounts' / (key + '.expedition.json')
             try:
-                with file_lock(path):
-                    if path.exists(): value = validate(json.loads(path.read_text(encoding='utf8')))
+                value = expedition_settings.load(key)
             except (OSError, ValueError) as exc:
                 self.status.set('遠征設定讀取失敗：' + str(exc))
         self.loading_settings = True
@@ -175,7 +172,7 @@ class ExpeditionPanel(ttk.Frame):
         try:
             self.flush_preferences()
             path = self.settings_path()
-            with file_lock(path): write_json(path, self.config())
+            expedition_settings.save(self.app.settings_identity(), self.config())
             self.status.set('已儲存遠征設定；登入後不會自動啟動。')
         except (OSError, ValueError) as exc:
             messagebox.showerror('遠征設定', str(exc), parent=self.app.root)
@@ -198,9 +195,8 @@ class ExpeditionPanel(ttk.Frame):
             self.save_job = None
         if self.pending_preferences is None: return
         key, value = self.pending_preferences
-        path = data_root() / 'accounts' / (key + '.expedition.json')
         try:
-            with file_lock(path): write_json(path, value)
+            expedition_settings.save(key, value)
             self.pending_preferences = None
         except (OSError, ValueError) as exc:
             self.status.set('遠征設定自動儲存失敗：' + str(exc))

@@ -1,6 +1,6 @@
 """Guard portal destinations; retain known exits when the current map has no image."""
 from functools import lru_cache
-from wlre.ui.minimap import SmallMaps
+from wlre.services.world.smallmaps import SmallMaps
 
 @lru_cache(maxsize=1)
 def smallmaps():

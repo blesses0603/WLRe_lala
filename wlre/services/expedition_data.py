@@ -1,4 +1,5 @@
 """Read official AdventureData_C/AdventureLvData_C using the 1262 Lua layout."""
+from wlre.storage.paths import data_root as user_data_root
 import hashlib
 import json
 import os
@@ -10,7 +11,7 @@ from wlre.paths import RESOURCE_ROOT
 
 
 def data_root():
-    return Path(os.environ.get('LOCALAPPDATA') or Path.home() / '.config') / 'WLRE_LaLa'
+    return user_data_root()
 
 
 def parse_catalog(tasks_data, levels_data):

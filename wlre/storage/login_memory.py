@@ -1,4 +1,5 @@
 """Opt-in login memory. Passwords use current-user Windows DPAPI only."""
+from wlre.storage.paths import data_root as user_data_root
 import base64
 import ctypes
 import json
@@ -12,7 +13,7 @@ class MemoryError(ValueError):
 
 
 def path():
-    return Path(os.environ.get('LOCALAPPDATA') or (Path.home()/'.config'))/'WLRE_LaLa'/'login_memory.json'
+    return user_data_root()/'login_memory.json'
 
 
 def _crypt(raw,entropy,decrypt=False):

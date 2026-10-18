@@ -10,16 +10,14 @@ import subprocess
 import sys
 import venv
 from wlre import __version__
+from wlre.resource_manifest import DATA_SUFFIXES, data_files as package_data_files
 from tools.build.python_build_support import development_files, stage_library
 
 ROOT=Path(__file__).resolve().parents[2]
-DATA_SUFFIXES={'.json','.zip','.png','.ico'}
 
 
 def data_files(root=ROOT):
-    return sorted(p for p in (root/'wlre').rglob('*')
-                  if p.is_file() and p.suffix.lower() in DATA_SUFFIXES
-                  and not any(part.startswith('.') or part=='__pycache__' for part in p.relative_to(root).parts))
+    return package_data_files(root/'wlre')
 
 
 def make_command(python,mode='standalone',root=ROOT,compiler='auto',diagnose_compiler=False):

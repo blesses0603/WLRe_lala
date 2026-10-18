@@ -1,10 +1,8 @@
 """Direct Nuitka entry point: no child Python process or dependency installer."""
-import json
 import os
 from pathlib import Path
 import sys
 import traceback
-import zipfile
 
 
 def self_test():
@@ -13,17 +11,8 @@ def self_test():
     from wlre.ui import gui
     assert callable(gui.main)
     from wlre.paths import RESOURCE_ROOT
-    package=RESOURCE_ROOT
-    required=('server_list.json','default_profile.json','combat_catalog.json','navigation_data.zip','emoji_images.zip','emoji_catalog.json','smallmaps.zip','item_icons.zip','item_icon_map.json','assets/app.ico','assets/exp_background.png')
-    for relative in required:
-        if not (package/relative).is_file():raise RuntimeError('Missing resource: '+relative)
-    for path in package.glob('*.json'):
-        with path.open(encoding='utf8') as stream:json.load(stream)
-    for path in package.glob('*.zip'):
-        with zipfile.ZipFile(path) as archive:
-            bad=archive.testzip()
-            if bad:raise RuntimeError(f'Corrupt resource: {path.name}/{bad}')
-    with Image.open(package/'assets/app.ico') as icon:icon.load()
+    from wlre.resource_manifest import validate_resources
+    validate_resources(RESOURCE_ROOT)
     assert callable(ImageTk.PhotoImage) and tkinter.TkVersion>=8.6
     return 0
 
@@ -54,7 +43,8 @@ def smoke_test_gui():
 
 
 def main():
-    log_dir=Path(os.environ.get('LOCALAPPDATA',str(Path.home())))/'WLRE_Client'
+    from wlre.storage.paths import error_log_file
+    log_dir=error_log_file().parent
     log_dir.mkdir(parents=True,exist_ok=True)
     # Console-less EXEs still keep Tk callback errors and startup tracebacks.
     log=log_dir/'error.log'
