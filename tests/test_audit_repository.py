@@ -28,8 +28,12 @@ class AuditFixtures(unittest.TestCase):
             '__version__ = "0.5.0"\n', encoding="utf-8")
 
     def test_links_skip_external_urls_and_support_fragments(self):
+        asset = self.root / "wlre/resources/assets/buttons"
+        asset.mkdir(parents=True)
+        (asset / "SOURCE.md").write_text("[main](../../../../README.md)\n", encoding="utf-8")
+        self.assertIn(asset / "SOURCE.md", audit_repository.markdown_files(self.root))
         count, broken = audit_repository.invalid_links(self.root)
-        self.assertEqual(count, 3)
+        self.assertEqual(count, 4)
         self.assertEqual(broken, [])
 
     def test_missing_and_outside_links_are_reported(self):

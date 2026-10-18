@@ -10,6 +10,8 @@
 
 - PR #19 Commit `b23b804` Ubuntu CI [39147669166](https://github.com/blesses0603/WLRe_lala/actions/runs/39147669166)：417 tests、2 skips，GUI 冒煙、資源自檢及 Windows Nuitka dry-run 成功。新增嚴格 Git 稽核、全檔語法與 macOS 雙架構 dry-run 後需以**新提交的 CI** 驗收，不能借用上次成功結果。
 
+- PR #19 Commit `84b5450` Ubuntu CI [39162452731](https://github.com/blesses0603/WLRe_lala/actions/runs/39162452731)：423 項測試（2 項條件略過），全檔 Python 語法、嚴格 Git index 稽核、GUI 冒煙、資源自檢，以及 Windows/macOS ARM64／Intel Nuitka dry-run 均通過。該次嚴格稽核掃描 18 份 Markdown；最後補上資源署名 SOURCE.md 共 2 份後，應以更新後結果另行驗證。
+
 ## 2026-10-17 優化工作區
 
 - v0.4.21 發布預檢：以假的 gh CLI 執行工作流程內的實際 Bash 步驟，驗證有效且未發布標籤可傳遞、`Ver.0.4.20`／其他錯誤格式在遠端請求前被拒絕、缺少標籤及已發布版本會提早停止。核對四項官方 Action 的指定版本皆採 Node.js 24；176 項中 174 通過、2 項原生平台略過，actionlint 與版本標籤預檢通過。

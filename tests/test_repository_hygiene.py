@@ -13,6 +13,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class DocumentationAndReleaseAudit(unittest.TestCase):
     def test_all_relative_markdown_links_resolve(self):
+        documents = audit_repository.markdown_files(ROOT)
+        self.assertIn(ROOT / "wlre/resources/assets/buttons/SOURCE.md", documents)
+        self.assertIn(ROOT / "wlre/resources/assets/function-icons/SOURCE.md", documents)
+        self.assertGreaterEqual(len(documents), 20)
         checked, broken = audit_repository.invalid_links(ROOT)
         self.assertGreater(checked, 100)
         self.assertEqual(broken, [], "Broken local Markdown references: " + repr(broken))

@@ -18,8 +18,13 @@ VERSION = re.compile(r"^__version__\s*=\s*(['\"])([^'\"]+)\1", re.MULTILINE)
 
 
 def markdown_files(root=ROOT):
-    """Only tracked project prose; do not traverse build venvs or generated output."""
-    return [root / "README.md", root / "版本歷史.md", *sorted((root / "docs").rglob("*.md"))]
+    """Authored Markdown, including attribution beside resources; avoid build output."""
+    return [
+        root / "README.md",
+        root / "版本歷史.md",
+        *sorted((root / "docs").rglob("*.md")),
+        *sorted((root / "wlre/resources").rglob("*.md")),
+    ]
 
 
 def invalid_links(root=ROOT):

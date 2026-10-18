@@ -62,3 +62,9 @@ README 中 v0.6.0 仍代表後續開發內容，不會因完成文件稽核就�
 第 10 項前次 Commit `b23b804` 的 Ubuntu CI [39147669166](https://github.com/blesses0603/WLRe_lala/actions/runs/39147669166) 成功，417 tests、2 skips，含 GUI、資源自檢和 Windows dry-run。新補測需以最新 Commit 的 CI 結果另行驗收。
 
 **仍待真實平台驗證：** `Main and PR tests` → `Run workflow` → 選第 10 項分支、`full_matrix=true` 才會執行 Windows／macOS 原始碼測試；`Native desktop packaging verification` → `Run workflow` → 選第 10 項分支才會實際編譯 Windows x64 EXE、macOS arm64／Intel x64 APP。額度不足時不自動觸發。Mac Intel 實機 GUI、Windows 真實操作及遊戲正式服仍需人工驗收。
+
+## 稽核覆蓋範圍修正
+
+在 Commit `84b5450` 的 Ubuntu CI [39162452731](https://github.com/blesses0603/WLRe_lala/actions/runs/39162452731)，423 項測試（2 項條件略過）成功，嚴格稽核顯示 18 份 Markdown、191 個相對連結、0 斷鏈、0 非空重複 Git blob。
+
+核對後發現資料集另外包含兩份圖片資源歸屬聲明：`wlre/resources/assets/buttons/SOURCE.md`、`wlre/resources/assets/function-icons/SOURCE.md`。這次已將兩者加入 `tools.audit_repository.markdown_files` 的檢查清單，測試亦明確保護這兩個路徑。總計應覆蓋 20 份 Markdown；最終結果以本次新提交之 CI 為準。
