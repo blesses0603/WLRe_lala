@@ -89,3 +89,5 @@
 - 由於 GitHub Actions 額度不足，第 10 項目前不勾選完成，也不宣稱最新提交 CI 全綠；待測試恢復、人工審查與必要實機驗收後，再進行合併／發布判斷。[盤點與驗收說明](PHASE10_AUDIT.md)
 
 - 第 10 項補測：新增獨立離線稽核 fixture 測試，CI 增加 `compileall`、Git index 重複檔嚴格檢查及 macOS ARM64／Intel dry-run。Windows／macOS 原生回歸、真正打包與實機尚待驗證，第 10 項暫不勾選。
+
+- 第 10 項 Ubuntu 補測已通過：[39162618822](https://github.com/blesses0603/WLRe_lala/actions/runs/39162618822)，423 tests（2 skips）、GUI、資源、語法與嚴格檔案稽核均成功；20 份 Markdown／191 條本機連結完整。Windows/macOS 與實機仍未驗證，勾選狀態不變。

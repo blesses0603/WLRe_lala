@@ -45,7 +45,7 @@ python -m tools.build.build_nuitka --dry-run
 - [第 09 項三平台回歸 CI](https://github.com/blesses0603/WLRe_lala/actions/runs/39141397498)（Commit `4e3abc0`）：Windows、Linux、macOS 均 success。
 - [第 09 項三平台原生打包 CI](https://github.com/blesses0603/WLRe_lala/actions/runs/39141397522)（Commit `4e3abc0`）：Windows x64、macOS Intel x64、Apple Silicon arm64 均 success，成功產出檔案。
 - 第 09 項合併後，普通 PR/main 只執行 Ubuntu，跨平台回歸與完整 Nuitka 原生建置改為可選手動；發版標籤仍會執行正式建置。
-- **第 10 項的新提交目前沒有最新通過的 CI 結果**，額度不足造成 Runner 無法啟動，與程式測試通過是不同概念。
+- **第 10 項已取得 Ubuntu 最新完整回歸結果**：Commit `34add166` 在 [CI 39162618822](https://github.com/blesses0603/WLRe_lala/actions/runs/39162618822) 通過 423 項測試（2 項平台條件略過）；新增嚴格 Git 稽核確認 20 份 Markdown、191 個相對連結、0 斷鏈、0 非空重複檔案。Windows／macOS 三平台回歸及新原生建置仍未執行，不可混為一談。
 - 尚需：在有足夠額度的環境執行第 10 項完整回歸、必要時手動三平台驗收、Windows／Mac 實機操作及正式遊戲驗證，確認穩定後再決定 v0.6.0 的版本常數、標籤與發布。
 
 ## 版本操作政策
@@ -68,3 +68,9 @@ README 中 v0.6.0 仍代表後續開發內容，不會因完成文件稽核就�
 在 Commit `84b5450` 的 Ubuntu CI [39162452731](https://github.com/blesses0603/WLRe_lala/actions/runs/39162452731)，423 項測試（2 項條件略過）成功，嚴格稽核顯示 18 份 Markdown、191 個相對連結、0 斷鏈、0 非空重複 Git blob。
 
 核對後發現資料集另外包含兩份圖片資源歸屬聲明：`wlre/resources/assets/buttons/SOURCE.md`、`wlre/resources/assets/function-icons/SOURCE.md`。這次已將兩者加入 `tools.audit_repository.markdown_files` 的檢查清單，測試亦明確保護這兩個路徑。總計應覆蓋 20 份 Markdown；最終結果以本次新提交之 CI 為準。
+
+## 最新驗證紀錄
+
+2026-10-19，Commit `34add166`：[GitHub Actions 39162618822](https://github.com/blesses0603/WLRe_lala/actions/runs/39162618822)，Ubuntu job success。實際執行 423 tests、2 skips；成功完成 Linux GUI smoke、資源 `--self-test`、Python 全檔 `compileall`、`tools.audit_repository --strict-git`，與 Windows／macOS 雙架構 Nuitka dry-run。稽核明確顯示 `markdown_files=20`、`local_links_checked=191`、`broken_local_links=[]`、`nonempty_duplicate_blobs=[]`、`git_index_available=true`。
+
+需要 Windows／macOS 真正執行與原生打包的補測仍保留未驗收，故 PR #19 保持 Draft、第 10 項尚未勾選。
