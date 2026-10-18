@@ -15,7 +15,7 @@
 | `tools/` | 建置／發佈／資源維護工具。 |
 | `tests/` | unittest 測試。 |
 | `docs/` | 架構、介面、協定與驗證說明。 |
-| `.github/workflows/test.yml` | main／PR 的 Linux、Windows 測試與 GUI 冒煙檢查。 |
+| `.github/workflows/test.yml` | main／PR 的 Linux、Windows、macOS（Apple Silicon）測試與 GUI 冒煙檢查。 |
 | `.github/workflows/release-windows.yml` | Windows 與 macOS 共用發版工作流程，檔名仍保留 windows。 |
 
 ## wlre：套件入口
