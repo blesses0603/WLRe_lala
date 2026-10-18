@@ -20,7 +20,7 @@ def summarize(state, live, guard, now=None):
     """Format only known state; missing data must not look like success or zero HP."""
     player=state.get('player',{});knowledge=state.get('knowledge',{})
     if not player.get('role_id'):
-        return dict.fromkeys(('role','activity','ai','roaming','supply','alchemy','crafting','party','efficiency'),'等待登入與角色資料同步')
+        return dict.fromkeys(('role','activity','ai','roaming','supply','alchemy','crafting','party','efficiency','expedition'),'等待登入與角色資料同步')
     stats=dict(knowledge.get('player',{}).get('stats',{}))
     if state.get('battle',{}).get('active'):
         unit=next((u for u in state.get('battle_units',{}).values() if u.get('pid')==player['role_id'] and not u.get('master_id')),None)
@@ -71,6 +71,23 @@ def summarize(state, live, guard, now=None):
             elapsed=max(0,(time.monotonic() if now is None else now)-row['last_time'])
         speed=f'{rate:,.0f}／分' if rate is not None else '等待樣本'
         efficiency=f"本次 +{row.get('earned',0):,}｜近10場 {speed}\n預估升級：{forecast(remaining,rate,elapsed)}"
+    expedition=state.get('expedition',{})
+    active_teams=[t for t in expedition.get('teams',{}).values() if t.get('quest')]
+    expedition_text=('自動派遣已啟用' if expedition.get('enabled') else '自動派遣未啟用')
+    if not live: expedition_text='已離線｜'+expedition_text
+    if not expedition.get('ready') or not expedition.get('outpost_ready'):
+        expedition_text+='｜資料待同步'
+    elif active_teams:
+        clock=time.monotonic() if now is None else now
+        due=[max(0,t['due']-clock) for t in active_teams if t.get('due') is not None]
+        timing=('可領獎' if min(due)==0 else f'最近完成 {min(due)/3600:.1f} 小時') if due else '時間待同步'
+        expedition_text+=f"\n遠征中 {len(active_teams)} 隊｜{timing}"
+    else:
+        expedition_text+='\n目前沒有進行中的遠征'
+    if expedition.get('uncertain'):
+        expedition_text+='｜結果未確認'
+    elif expedition.get('enabled') and expedition.get('status'):
+        expedition_text+='｜'+expedition['status']
     return {
         'role':role,'activity':'\n'.join(activity),
         'ai':ai_summary(state['auto_battle']) if 'auto_battle' in state else '待同步',
@@ -78,7 +95,7 @@ def summarize(state, live, guard, now=None):
         'supply':supply_text,
         'alchemy':f"{alchemy.get('status','待同步')}｜完成 {alchemy.get('completed',0)}/{alchemy.get('requested',0)}",
         'crafting':f"{craft.get('status','待同步')}｜本次完成 {craft.get('completed',0)} 項",
-        'party':party,'efficiency':efficiency,
+        'party':party,'efficiency':efficiency,'expedition':expedition_text,
     }
 
 
@@ -97,7 +114,8 @@ class OverviewPanel(ttk.Frame):
             ('alchemy','煉金','alchemy_panel',1,3,1,1,58),
             ('crafting','製作','crafting_panel',1,4,0,1,58),
             ('party','隊伍檢查','party_panel',2,4,1,1,70),
-            ('efficiency','經驗效率','efficiency_panel',2,5,0,2,70),
+            ('efficiency','經驗效率','efficiency_panel',2,5,0,1,70),
+            ('expedition','遠征','expedition_panel',2,5,1,1,70),
         )
         self.actions={}
         for key,title,destination,lines,row,col,span,height in layout:
@@ -114,10 +132,14 @@ class OverviewPanel(ttk.Frame):
             label.grid(row=1,column=0,columnspan=2,sticky='nsew',pady=(2,0))
             self.labels[key]=(label,lines)
             label.bind('<Configure>',lambda e,k=key:self.fit_value(k))
-            if key in ('ai','roaming'):
+            if key in ('ai','roaming','expedition'):
                 if key=='ai':
                     self.ai_settings_button=ttk.Button(tools,text='AI設定',width=6,padding=(3,2),command=self.open_ai_settings)
                     self.ai_settings_button.pack(side='left',padx=(0,6))
+                elif key=='expedition':
+                    self.expedition_settings_button=ttk.Button(tools,text='遠征設定',width=6,padding=(3,2),
+                        command=lambda:self.open_panel('expedition_panel'))
+                    self.expedition_settings_button.pack(side='left',padx=(0,6))
                 button=HaloButton(tools,command=lambda k=key:self.toggle(k));button.pack(side='left')
             else:
                 if destination:callback=lambda d=destination:self.open_panel(d);text='開啟'
@@ -134,11 +156,14 @@ class OverviewPanel(ttk.Frame):
 
     def toggle(self,key):
         state=self.app.snapshot
-        section='auto_battle' if key=='ai' else 'roaming'
+        section={'ai':'auto_battle','roaming':'roaming','expedition':'expedition'}[key]
         active=self.app.live_active and state.get(section,{}).get('enabled',False)
         if key=='ai':
             command={'type':'stop_auto_battle'} if active else {'type':'start_auto_battle','settings':self.app.ai_settings}
             self.app.send(command)
+        elif key=='expedition':
+            if active:self.app.send({'type':'stop_expedition'})
+            else:self.app.expedition_panel.start()
         elif active:self.app.send({'type':'stop_roaming'})
         else:self.app.start_roaming()
 
@@ -153,7 +178,7 @@ class OverviewPanel(ttk.Frame):
 
     def refresh(self):
         state=getattr(self,'state',{})
-        for key,section in (('ai','auto_battle'),('roaming','roaming')):
+        for key,section in (('ai','auto_battle'),('roaming','roaming'),('expedition','expedition')):
             self.actions[key].set_active(self.app.live_active and state.get(section,{}).get('enabled',False))
         values=summarize(getattr(self,'state',{}),self.app.live_active,self.app.ai_settings.get('party_guard',{}))
         if values!=self.signature:
