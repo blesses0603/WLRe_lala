@@ -39,8 +39,6 @@ def apply_world_event(state, event, affects_navigation):
         state.navigation['stale'] = True
         state.navigation['revision'] += 1
         state.navigation['reasons'] = (state.navigation['reasons']+[event['reason']])[-10:]
-    elif kind == "initial_data_complete":
-        state.initial_data_complete = True
 
     if kind == "walk":
         state.remember_position(event["role_id"],event["x"],event["y"])
