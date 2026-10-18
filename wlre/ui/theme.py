@@ -92,7 +92,7 @@ class GlassTheme:
         s.configure('Heading.TLabel', font=(self.font, -16, 'bold'), foreground='#c5f1ff')
         s.configure('Section.TLabel', font=(self.font, -14, 'bold'), foreground='#c5f1ff')
         s.configure('Muted.TLabel', foreground=MUTED, font=(self.font, -14))
-        s.configure('TButton', padding=(7, 4), borderwidth=0, foreground=TEXT,
+        s.configure('TButton', padding=(7, 4), borderwidth=0, focusthickness=0, foreground=TEXT,
                     background='#233d52', focuscolor=CYAN)
         s.map('TButton', foreground=[('disabled', '#7292a4')],
               background=[('pressed', '#142638'), ('active', '#365770')])

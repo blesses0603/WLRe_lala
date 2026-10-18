@@ -19,10 +19,13 @@ class EfficiencyPanel(ttk.Frame):
         self.info=tk.StringVar(value='等待登入角色與經驗資料');ttk.Label(summary,textvariable=self.info,style='Section.TLabel',wraplength=800).pack(fill='x',pady=(0,6))
         self.total=tk.StringVar(value='首場作基準，從第二個有效樣本計算效率');ttk.Label(summary,textvariable=self.total,style='Muted.TLabel',wraplength=800).pack(fill='x')
         self.progress=ttk.Progressbar(summary,maximum=100);self.progress.pack(fill='x',pady=5)
-        self.table=ttk.Treeview(self,columns=['mode','speed','next','target'],show='headings',height=3,selectmode='none')
-        for key,title,width in [('mode','統計範圍',116),('speed','經驗／分',144),('next','升級倒數',158),('target','一轉190倒數',178)]:
+        style=ttk.Style(self)
+        style.configure('Efficiency.Treeview',borderwidth=0,relief='flat',
+                        bordercolor='#142638',lightcolor='#142638',darkcolor='#142638')
+        self.table=ttk.Treeview(self,style='Efficiency.Treeview',columns=['mode','speed','next','target'],show='headings',height=3,selectmode='none')
+        for key,title,width in [('mode','統計範圍',150),('speed','經驗／分',110),('next','升級倒數',240),('target','一轉190倒數',260)]:
             self.table.heading(key,text=title);self.table.column(key,width=width,minwidth=60,anchor='center')
-        self.table.pack(fill='both',expand=True)
+        self.table.pack(fill='x',anchor='n')
         for key in ('all','ten','thirty'):self.table.insert('','end',iid=key,values=('—',)*4)
         self.note=tk.StringVar(value='只統計本機角色與已確認的所屬夥伴／坐騎，首場作基準。')
         ttk.Label(self,textvariable=self.note,style='Muted.TLabel',wraplength=800).pack(fill='x',pady=(5,0))
