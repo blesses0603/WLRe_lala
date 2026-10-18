@@ -10,6 +10,7 @@ New focused modules:
 This package replaces the historical expedition.py module. All consuming
 code can continue importing from wlre.services.expedition unchanged.
 """
+from . import manager as _implementation
 from .manager import (
     Expedition, defaults, apply_expedition, with_deadline, preferences,
     validate, faith_gain, recovery_stock, duration, condition_ok, blocked,
@@ -23,3 +24,12 @@ __all__ = [
     'blocked', 'item_totals', 'claim_space', 'load_catalog', 'choose_members',
     'condition_met', 'success_details',
 ]
+
+
+def __getattr__(name):
+    """Preserve remaining legacy expedition.py module attributes on demand."""
+    return getattr(_implementation, name)
+
+
+def __dir__():
+    return sorted(set(globals()) | set(dir(_implementation)))
