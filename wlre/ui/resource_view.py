@@ -6,6 +6,7 @@ from tkinter import ttk,messagebox
 from wlre.services.items.combat_resources import CAT, skill_rows, available, heal_effects, item_name, food_command, learned_command, field_context
 from wlre.services.battle.battle_commands import owned_units
 from wlre.ui.crafting_browser import ItemIcons
+from wlre.ui.bag_grid import BagGrid
 from wlre.ui.layout import heading,scroll_table
 
 class ResourceView:
@@ -22,8 +23,9 @@ class ResourceView:
         self.status=tk.StringVar();ttk.Label(self.window,textvariable=self.status,wraplength=970).pack(fill='x',padx=10)
         tabs=RoundedNotebook(self.window);tabs.pack(fill='both',expand=True,padx=10,pady=10)
         bag=ttk.Frame(tabs);skills=ttk.Frame(tabs);tabs.add(bag,text='實際包包');tabs.add(skills,text='全部已確認特技')
-        self.bag=self.table(bag,('index','id','name','count','reserved','available','effect'),('索引','ID','名稱','持有','待扣','可用','回復效果'))
-        self.bag.configure(show='tree headings');self.bag.heading('#0',text='圖示');self.bag.column('#0',width=48,minwidth=48,stretch=False)
+        # Keep the current v0.5.0 window and skill table; only replace bag content.
+        self.bag=BagGrid(bag,self.icons,self.use_item)
+        self.bag.pack(fill='both',expand=True)
         self.skills=self.table(skills,('actor','id','name','level','kind','sp','status','source'),('角色／夥伴','ID','特技','等級','分類','消耗SP','基礎條件／不可用原因','資料來源'))
         actions=ttk.Frame(bag);actions.pack(fill='x',pady=5)
         ttk.Button(actions,text='使用選取道具補HP',command=lambda:self.use_item('hp')).pack(side='left',padx=4)
@@ -61,14 +63,8 @@ class ResourceView:
         self.signature=signature;query=self.query.get().casefold();inv=state.get('inventory',{});k=state.get('knowledge',{})
         self.status.set(f"包包：{'已同步' if inv.get('ready') else '等待S23-5'}｜{'數量有效' if inv.get('reliable') else '尚不可自動取用'}｜{len(inv.get('items',{}))}格；角色技能：{'已同步' if k.get('player',{}).get('ready') else '等待S5-3'}；夥伴資料：{len(k.get('companions',{}))}隻。更新顯示不會發送未驗證的查包封包。")
         selected_bag=self.bag.selection();selected_skill=self.skills.selection()
-        self.bag.delete(*self.bag.get_children());self.skills.delete(*self.skills.get_children());self.bag_map={};self.skill_map={};self.bag_images={}
-        for index,value in sorted(inv.get('items',{}).items(),key=lambda x:int(x[0])):
-            name=item_name(value['item_id'])
-            if query and query not in (name+str(value['item_id'])).casefold():continue
-            effect=' / '.join(f'{a.upper()} +{b}' for a,b in heal_effects(value['item_id']).items())
-            iid='bag'+index;self.bag_map[iid]=value
-            image=self.icons.get(value['item_id'],24);self.bag_images[iid]=image
-            self.bag.insert('','end',iid=iid,image=image,values=(index,value['item_id'],name,value['count'],inv.get('reserved',{}).get(index,0),available(inv,index),effect))
+        self.skills.delete(*self.skills.get_children());self.skill_map={}
+        self.bag_map=self.bag.render(inv,query)
         for actor in self.actors(state):
             label=('角色 ' if actor['pid']==state.get('player',{}).get('role_id') else f"夥伴#{actor.get('npc_index')} ")+actor.get('name','')
             for row in skill_rows(state,actor):
@@ -76,12 +72,12 @@ class ResourceView:
                 iid=f"skill{actor['pid']}_{actor.get('npc_index',0)}_{row['id']}"
                 self.skill_map[iid]=(actor,row['id'])
                 self.skills.insert('','end',iid=iid,values=(label,row['id'],row['name'],row['level'],row['category'],row['sp'],'；'.join(row['reasons']) or '基礎條件可用',row['source']))
-        if selected_bag and selected_bag[0] in self.bag_map:self.bag.selection_set(selected_bag[0])
+        if selected_bag and selected_bag[0] in self.bag_map and not self.bag.selection():self.bag.selection_set(selected_bag[0])
         if selected_skill and selected_skill[0] in self.skill_map:self.skills.selection_set(selected_skill[0])
 
     def use_item(self,resource):
         selected=self.bag.selection()
-        if not selected:return
+        if not selected or selected[0] not in self.bag_map:return
         value=self.bag_map[selected[0]];state=self.app.snapshot
         try:
             if state.get('battle',{}).get('active'):
