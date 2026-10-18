@@ -7,6 +7,7 @@ from wlre.services.items.combat_resources import CAT, skill_rows, available, hea
 from wlre.services.battle.battle_commands import owned_units
 from wlre.ui.crafting_browser import ItemIcons
 from wlre.ui.bag_grid import BagGrid
+from wlre.ui.room_storage_status import unlock_message, storage_sync_message, confirmed_view
 from wlre.ui.layout import heading,scroll_table
 
 class ResourceView:
@@ -33,7 +34,8 @@ class ResourceView:
         self.skills=self.table(skills,('actor','id','name','level','kind','sp','status','source'),('角色／夥伴','ID','特技','等級','分類','消耗SP','基礎條件／不可用原因','資料來源'))
         # The large duplicate HP/SP row is no longer needed.
         # Context-specific recovery buttons remain in the compact item strip.
-        self.remote_status=tk.StringVar(value='等待角色資料')
+        self.remote_status=tk.StringVar(value='等待 S62 同步')
+        self.remote_unlock_status=tk.StringVar(value='等待背包同步')
         # A compact header preserves vertical space for actual item slots;
         # the earlier duplicated headline and large icon compressed tiles into strips.
         remote_body=ttk.Frame(remote,padding=(6,2))
@@ -45,6 +47,7 @@ class ResourceView:
         ttk.Label(remote_head,text='超空間袋｜小屋儲藏室',style='Heading.TLabel').pack(side='left')
         ttk.Label(remote_head,text='S62 唯讀同步',style='Muted.TLabel').pack(side='right')
         ttk.Label(remote_body,textvariable=self.remote_status,style='Muted.TLabel',wraplength=910).pack(anchor='w',pady=(0,2))
+        ttk.Label(remote_body,textvariable=self.remote_unlock_status,style='Muted.TLabel',wraplength=910).pack(anchor='w',pady=(0,2))
         storage_tabs=RoundedNotebook(remote_body)
         storage_tabs.pack(fill='both',expand=True,pady=(2,0))
         garage_page=ttk.Frame(storage_tabs);materials_page=ttk.Frame(storage_tabs)
@@ -102,34 +105,12 @@ class ResourceView:
         if selected_skill and selected_skill[0] in self.skill_map:self.skills.selection_set(selected_skill[0])
 
     def update_remote_status(self,state):
-        # Presence of unlock item does not prove the mission bit has been set.
-        inv=state.get('inventory',{})
-        count=sum(int(item.get('count',0)) for item in inv.get('items',{}).values()
-                  if item.get('item_id')==34977)
-        if not inv.get('ready'):
-            result='背包尚未同步，無法檢查超空間袋道具；遠端儲藏室資料未確認。'
-        elif count:
-            result=f'目前背包持有「超空間袋」解鎖道具 ×{count}。是否已啟用，仍須遊戲標記確認。'
-        else:
-            result='背包未持有超空間袋解鎖道具；可能已啟用，LaLa 尚未取得解鎖標記。'
-        storage=state.get('room_storage',{})
-        garage=storage.get('garage',{})
-        materials=storage.get('materials',{})
-        self.remote_garage.render(garage,self.query.get())
-        self.remote_materials.render(materials,self.query.get())
-        if garage.get('ready') or materials.get('ready'):
-            sources=[]
-            for label,bucket in (('儲藏室',garage),('雜物櫃',materials)):
-                if bucket.get('ready'):
-                    count=len(bucket.get('items',{}))
-                    status='同步異常' if not bucket.get('reliable',True) else f'已同步 {count} 格'
-                else:
-                    status='等待伺服器 S62 同步'
-                sources.append(f'{label}：{status}')
-            result='｜'.join(sources)
-            if not garage.get('reliable',True) or not materials.get('reliable',True):
-                result+='；資料不一致，請重新登入同步'
-        self.remote_status.set(result)
+        inventory = state.get('inventory', {})
+        storage = state.get('room_storage', {})
+        self.remote_unlock_status.set(unlock_message(inventory))
+        self.remote_status.set(storage_sync_message(storage))
+        self.remote_garage.render(confirmed_view(storage.get('garage', {})), self.query.get())
+        self.remote_materials.render(confirmed_view(storage.get('materials', {})), self.query.get())
 
     def use_item(self,resource):
         selected=self.bag.selection()
