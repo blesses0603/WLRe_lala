@@ -20,14 +20,24 @@ def data_files(root=ROOT):
     return package_data_files(root/'wlre')
 
 
-def make_command(python,mode='standalone',root=ROOT,compiler='auto',diagnose_compiler=False):
+def compiler_jobs(requested=None, cpu_count=None):
+    """Use a conservative CPU-aware default, with an explicit bounded override."""
+    if requested is not None:
+        if not isinstance(requested, int) or not 1 <= requested <= 16:
+            raise ValueError('Nuitka 平行編譯工作數必須為 1～16')
+        return requested
+    count = os.cpu_count() if cpu_count is None else cpu_count
+    return max(1, min(6, count or 1))
+
+
+def make_command(python,mode='standalone',root=ROOT,compiler='auto',diagnose_compiler=False,jobs=None):
     output=root/'dist_nuitka'/mode
     command=[str(python),'-m','nuitka','--mode='+mode,'--enable-plugin=tk-inter',
              '--include-package=wlre','--windows-console-mode=disable',
              '--windows-icon-from-ico='+str(root/'wlre/resources/assets/app.ico'),
              '--output-folder-name=WLRe_LaLa','--output-filename=WLRe_LaLa.exe','--output-dir='+str(output),
              '--report='+str(output/'compilation-report.xml'),'--assume-yes-for-downloads',
-             '--jobs='+str(max(1,min(4,os.cpu_count() or 1))),
+             '--jobs='+str(compiler_jobs(jobs)),
              '--company-name=ByChiNing','--product-name=飄流Re:LaLa  =By赤寧=',
              '--file-description=飄流Re:LaLa  =By赤寧=',
              '--file-version='+__version__+'.0','--product-version='+__version__+'.0']
@@ -145,13 +155,18 @@ def main(argv=None):
     parser=argparse.ArgumentParser(description='Nuitka Windows 打包')
     parser.add_argument('--mode',choices=('standalone','onefile'),default='standalone')
     parser.add_argument('--compiler',choices=('auto','msvc','mingw64'),default='auto')
+    parser.add_argument('--jobs',type=int,help='C 編譯並行工作數（1～16）；預設最多 6，記憶體不足請降低')
     parser.add_argument('--dry-run',action='store_true',help='只檢查並列出打包計畫，不安裝或編譯')
     parser.add_argument('--upgrade-deps',action='store_true',help='重新更新打包依賴與 pip')
     parser.add_argument('--diagnose-compiler',action='store_true',
                         help='本次停用 C 編譯快取並記錄 SCons 詳細指令及錯誤堆疊')
     args=parser.parse_args(argv)
+    try:
+        compiler_jobs(args.jobs)
+    except ValueError as exc:
+        parser.error(str(exc))
     if args.dry_run:
-        print(json.dumps({'version':__version__,'command':make_command(sys.executable,args.mode,compiler=args.compiler,diagnose_compiler=args.diagnose_compiler),
+        print(json.dumps({'version':__version__,'command':make_command(sys.executable,args.mode,compiler=args.compiler,diagnose_compiler=args.diagnose_compiler,jobs=args.jobs),
                           'resource_count':len(data_files())},ensure_ascii=False,indent=2));return 0
     if os.name!='nt':parser.error('Windows EXE 請在 Windows 執行 build_nuitka.bat')
     if not (3,10)<=sys.version_info[:2]<=(3,14) or struct.calcsize('P')!=8:
@@ -173,10 +188,12 @@ def main(argv=None):
         if args.diagnose_compiler:
             print('編譯診斷模式：本次停用 C 編譯快取，啟用 SCons 詳細指令與錯誤堆疊。',flush=True)
         run_logged(make_command(python,args.mode,compiler=compiler,
-                                diagnose_compiler=args.diagnose_compiler),log,library_dir=staged.parent)
+                                diagnose_compiler=args.diagnose_compiler,jobs=args.jobs),log,library_dir=staged.parent)
         executable=(output/'WLRe_LaLa.exe') if args.mode=='onefile' else (output/'WLRe_LaLa.dist/WLRe_LaLa.exe')
         if not executable.is_file():raise RuntimeError('編譯未產生預期的 EXE：'+str(executable))
         run_logged([str(executable),'--self-test'],log)
+        # Exercise Tcl/Tk and dashboard construction in the compiled EXE too.
+        run_logged([str(executable),'--smoke-test-gui'],log)
         print('\n打包及資源自檢完成：'+str(executable),flush=True)
         if args.mode=='standalone':print('分享時請複製整個 WLRe_LaLa.dist 資料夾。',flush=True)
         return 0

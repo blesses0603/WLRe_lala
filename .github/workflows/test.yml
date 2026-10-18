@@ -5,6 +5,12 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      full_matrix:
+        description: 'Run all three OS regressions (Windows/macOS use extra paid minutes)'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -18,7 +24,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-2022, macos-15]
+        # Cheap default for ordinary PR/main commits; opt in to full OS coverage.
+        os: ${{ fromJSON(github.event_name == 'workflow_dispatch' && inputs.full_matrix && '["ubuntu-latest","windows-2022","macos-15"]' || '["ubuntu-latest"]') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     defaults:

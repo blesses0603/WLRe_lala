@@ -128,6 +128,7 @@ class MacReleasePackaging(unittest.TestCase):
             self.assertTrue((executable.external_attr >> 16) & stat.S_IXUSR)
 
 
+@unittest.skipIf(os.environ.get('WLRE_NATIVE_GUI_SMOKE') == '0', 'Hosted Intel runner has no WindowServer; manual GUI verification required')
 @unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt' or sys.platform == 'darwin',
                      'Requires a desktop')
 class BundledGuiSmokeTest(unittest.TestCase):

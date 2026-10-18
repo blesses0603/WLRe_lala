@@ -33,7 +33,7 @@ MSVC 需要 Visual Studio 2022 或更新的 C++ 建置工具。MinGW 使用 Nuit
 
 失敗時查看輸出目錄中的 `build.log`、`compilation-report.xml`；EXE 啟動錯誤記錄於 `%LOCALAPPDATA%\WLRE_Client\error.log`。
 
-目前交付包含原始碼與打包流程；尚未在 Windows 實際編譯產生 EXE。
+第 09 項已在 GitHub Actions 真正編譯並自檢 Windows x64 EXE，以及 macOS arm64／Intel x64 APP；這是自動化建置驗證，不等於已完成使用者電腦上的實機互動與正式伺服器驗證。
 
 參考：[Nuitka 官方手冊](https://nuitka.net/user-documentation/user-manual.html)、[常見問題](https://nuitka.net/user-documentation/common-issue-solutions.html)。
 
@@ -46,3 +46,31 @@ BAT 會列出選中的版本、位元數、路徑及 Tk 版本；找不到可用
 僅有 Python 3.13／3.14 且沒有 C++ 工具時，可安裝 Visual Studio 2022 Build Tools 的「使用 C++ 的桌面開發」，或另裝 64 位元 Python 3.12（含 Tcl/Tk）後重開 BAT。無須移除既有 Python。
 
 本次比對來源為你提供的 `WLRE_Nuitka_Core(1).zip`：採用其中的 Python 3.10～3.14 偵測、MSVC／MinGW64 選擇、依 Python 版本區分建置環境、Nuitka>=4.3 與獨立編譯子程序環境；打包內容則使用本專案的客戶端與資源。
+
+
+## 第 09 項：建置驗證分層
+
+1. **日常原始碼測試**：`.github/workflows/test.yml` 的普通 PR／main 提交只跑 Linux 的完整單元測試、Xvfb GUI 冒煙測試與 dry-run，節省 Windows／macOS Runner 額度。若需三平台原始碼回歸，可從 Actions 手動啟動 `Main and PR tests`，勾選 `full_matrix=true`；這些原始碼測試不代表已產生可執行 EXE／APP。
+2. **手動原生打包驗證**：`.github/workflows/desktop-packaging.yml` 僅接受 Actions 的 `Run workflow` 手動觸發，不會因一般 PR 而自動編譯。手動啟動時在 Windows x64、macOS arm64、macOS Intel x64 編譯 Nuitka，真正啟動編譯後產物作資源自檢及可執行的 GUI 冒煙測試，並驗證 ZIP CRC；macOS 還需檢查 Mach-O 架構與 `codesign --verify --deep --strict`。Intel GitHub Runner 的 GUI 限制如後述。
+3. **人工驗收**：需在使用者的 Windows 桌面及 Mac Finder 驗證實際操作；Apple Developer ID 公證、Gatekeeper 與正式伺服器連線不屬自動 CI 能證明的事項。
+
+macOS Intel 的 GitHub hosted runner 曾在原始碼 Tk GUI 冒煙測試逾時；CI 明確使用 `WLRE_NATIVE_GUI_SMOKE=0` 停用 **Intel 虛擬機的 GUI 視窗檢查**，但仍要求完整單元測試、原生編譯、編譯後 APP 的資源自檢、Mach-O 架構檢查、簽章與 ZIP 完整性。Intel 使用者電腦上的實際 APP GUI 啟動**尚未驗證**，需人工驗收。macOS Apple Silicon 的 CI GUI 冒煙測試維持啟用。
+
+手動完整打包產物會暫存於 GitHub Actions artifacts；正式版仍需推送與 `wlre.__version__` 相符、尚未發行的 `vX.Y.Z` 標籤才能觸發 GitHub Release，正式 Release 將自動執行三平台原生打包。macOS Intel 與 Apple Silicon 是分開建置的原生 APP，並非 Universal Binary。
+
+## 打包速度與編譯快取（第 09 項）
+
+- Windows 和 macOS 預設使用最多 **6** 個平行 C 編譯工作，仍不超過偵測到的 CPU 數。可按記憶體容量調整：Windows 用 `build_nuitka.bat --jobs 8`；macOS 用 `python -m tools.build.build_macos --arch arm64 --jobs 8`（允許 1～16）。
+- 執行 `--dry-run --jobs 8` 可以核對設定，不會啟動 Nuitka 編譯。工作數太高可能用盡 RAM 或比預設更慢，優先視 CPU、RAM 與測試結果調整。
+- macOS 已移除原本無條件使用的 `--disable-cache=ccache`。Nuitka 會在編譯器快取工具可用時使用它，並不保證所有 runner 都裝有 ccache。
+- GitHub Actions 手動原生驗證與正式 Release 會透過 `NUITKA_CACHE_DIR` 配合 `actions/cache` 儲存與恢復 Nuitka 編譯快取；按照 Windows、macOS arm64／x64、Python 版本與 requirements 分開快取。pip 下載快取也開啟。
+- **第一次全新編譯通常不會因快取而變快**，重複建置且 C 原始碼和編譯器選項足夠相似時才可能命中。快取結果會在 GitHub Actions 日誌中顯示，可用各次 Nuitka 編譯時間比較；沒有測量前不宣稱百分比改善。
+- 此次加速不移除任何圖片、JSON、ZIP、Tk 插件或 `--include-package=wlre`，仍要求完整編譯後自檢與跨平台回歸測試通過。若遇到記憶體不足，可指定 `--jobs 2`。
+
+## GitHub Actions 額度節省策略（2026-10）
+
+- 普通 PR 與推送到 `main`：僅啟動 `Main and PR tests` 的 Ubuntu job，保留完整單元測試、GUI 冒煙測試與自檢，**不自動使用 Windows／macOS Runner**。
+- 需要跨平台原始碼測試時：在 Actions 中選擇 `Main and PR tests` → `Run workflow` → 啟用 `full_matrix`。預設為 `false`，避免誤用額度。
+- 需要驗證原生可執行檔時：在 Actions 中選擇 `Native desktop packaging verification` → `Run workflow`。此操作會在 Windows x64、macOS arm64 與 macOS Intel x64 各編譯一次，請先確認 Actions 額度足夠。
+- 正式版本：推送符合 `vX.Y.Z` 的新標籤後，`Windows and macOS Nuitka Release` 自動執行正式建置與發布；此流程不因平日 CI 降級而取消。
+- 無額度時請勿反覆重試 Runner 啟動前失敗的工作。已成功執行的第 09 項原生驗證為 [39141397522](https://github.com/blesses0603/WLRe_lala/actions/runs/39141397522)，三平台原始碼回歸為 [39141397498](https://github.com/blesses0603/WLRe_lala/actions/runs/39141397498)。`377884b` 僅更新驗收文件；後續 CI 因額度不足未啟動 Runner，不可寫成程式測試失敗或最新 Commit 已通過 CI。
