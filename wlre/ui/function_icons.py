@@ -21,6 +21,18 @@ def icon_image(name, size=34):
     return image.resize((size,size),Image.Resampling.LANCZOS)
 
 
+@lru_cache(maxsize=32)
+def action_icon_image(title, size=24):
+    """Resize the unmodified transparent game PNG for a homepage action."""
+    name = ICONS[title]
+    with Image.open(RESOURCE_ROOT / 'assets' / 'function-icons' / (name + '.png')) as source:
+        return ImageOps.contain(source.convert('RGBA'), (size, size), Image.Resampling.LANCZOS)
+
+
+def action_icon_photo(widget, title, size=24):
+    return ImageTk.PhotoImage(action_icon_image(title, size), master=widget)
+
+
 def icon_photo(widget, title, size=34):
     name=ICONS.get(title)
     return ImageTk.PhotoImage(icon_image(name,size),master=widget) if name else None
