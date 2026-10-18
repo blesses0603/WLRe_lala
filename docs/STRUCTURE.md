@@ -56,7 +56,14 @@
 | [efficiency_ui.py](../wlre/ui/efficiency_ui.py) | 角色／夥伴經驗摘要、進度與三列效率表格。 |
 | [event_queue.py](../wlre/ui/event_queue.py) | 有界顯示信箱、最新快照合併與舊顯示事件清理。 |
 | [expedition_display.py](../wlre/ui/expedition_display.py) | 遠征任務名稱、耗時與獎勵的顯示格式。 |
-| [expedition_ui.py](../wlre/ui/expedition_ui.py) | 遠征設定、帳號保存、清單與背景組隊預估。 |
+| [expedition_ui.py](../wlre/ui/expedition_ui.py) | 遠征介面舊版匯入入口；保留 `ExpeditionPanel` 與背景計算的相容掛點。 |
+| [expedition/panel.py](../wlre/ui/expedition/panel.py) | 遠征主面板、統一狀態更新及子視圖協調。 |
+| [expedition/controls.py](../wlre/ui/expedition/controls.py) | 門檻、好友度、領獎與物品設定控制列。 |
+| [expedition/settings.py](../wlre/ui/expedition/settings.py) | 帳號設定讀寫、延遲儲存及啟停操作。 |
+| [expedition/planner.py](../wlre/ui/expedition/planner.py) | 背景組隊計算、成功率結果與執行緒生命週期。 |
+| [expedition/task_list.py](../wlre/ui/expedition/task_list.py) | 可用任務、時間及成功率表格與篩選。 |
+| [expedition/team_view.py](../wlre/ui/expedition/team_view.py) | 駐紮所夥伴清單。 |
+| [expedition/task_detail.py](../wlre/ui/expedition/task_detail.py) | 任務獎勵與推薦條件的詳細資訊。 |
 | [function_icons.py](../wlre/ui/function_icons.py) | 主要分頁的原版圓形功能圖示。 |
 | [gui.py](../wlre/ui/gui.py) | App 組裝、登入、背景工作、命令送入與畫面事件分派。 |
 | [halo_button.py](../wlre/ui/halo_button.py) | 主頁功能開關的動態七彩啟用邊線。 |
