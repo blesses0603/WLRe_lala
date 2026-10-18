@@ -7,4 +7,9 @@ class SettingsPage(Page):
         super().__init__(d)
         self.add_widget(label('完整 AI／戰後補給設定依帳號＋伺服器保存。規則編輯為草稿，按保存後於下次啟動自動戰鬥套用。'))
         for name in SettingsEditor.TABS:
-            self.add_widget(button(name,lambda tab=name:SettingsEditor(d.app,d.sid,tab)))
+            self.add_widget(button(name,lambda tab=name:self.open(tab)))
+    def open(self, tab):
+        if 'ai_settings' not in self.d.data:
+            self.d.message.text = '等待本帳號設定與已學特技同步，請稍候再試'
+            return
+        SettingsEditor(self.d.app,self.d.sid,tab)

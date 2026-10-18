@@ -157,3 +157,17 @@ class MobilePages(unittest.TestCase):
         self.assertEqual(len(packets), 2)
         state.battle['round'] += 1
         with self.assertRaises(ValueError): logic.command(command, state)
+
+    def test_card_ai_button_attaches_account_before_loading_skill_choices(self):
+        from android_app.automation_ui import edit_settings
+        self.app.manager.background = True
+        self.app.manager.available = True
+        self.app.manager.watch = __import__('unittest.mock', fromlist=['Mock']).Mock()
+        with patch.object(self.app.manager, 'session_detail', return_value={}):
+            d = edit_settings(self.app, 'fixture')
+        self.addCleanup(d.dismissed)
+        self.app.manager.watch.assert_called_once_with('fixture')
+        self.assertEqual(d.page_name, 'AI與補給設定')
+        self.assertEqual(d.data, {})
+        d.page.open('角色規則')
+        self.assertIn('等待本帳號設定', d.message.text)

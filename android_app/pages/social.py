@@ -33,6 +33,9 @@ class Party(Page):
         p = self.state.get('party', {})
         self.d.send(dict(type='team', action='flag', enabled=not p.get('enabled_requested', p.get('enabled'))))
     def guard(self):
+        if 'ai_settings' not in self.d.data:
+            self.d.message.text = '等待本帳號設定同步，請稍候再試'
+            return
         from android_app.settings_ui import SettingsEditor
         SettingsEditor(self.d.app, self.d.sid, initial='必要成員')
     def refresh(self):

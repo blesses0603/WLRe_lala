@@ -59,5 +59,9 @@ def toggle(app, sid, feature):
 
 
 def edit_settings(app, sid):
+    if getattr(app.manager, 'background', False):
+        app.open_dashboard(sid)
+        app.dashboard.navigation.text = 'AI與補給設定'
+        return app.dashboard
     from android_app.settings_ui import SettingsEditor
     return SettingsEditor(app, sid)
