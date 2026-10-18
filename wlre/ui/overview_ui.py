@@ -28,17 +28,17 @@ def summarize(state, live, guard, now=None):
             stats.update({k:unit[k] for k in ('hp','sp','max_hp','max_sp','level') if k in unit})
     role=f"{player.get('name','角色')}｜等級 {stats.get('level','待同步')}\n{health(stats)}"
     companions=knowledge.get('companions',{})
-    if companions:
+    active=knowledge.get('active_npc_id')
+    profile=next((p for p in companions.values() if active is not None and p.get('npc_id')==active),None)
+    if profile is not None:
         from wlre.services.items.combat_resources import CAT
-        rows=[]
-        for profile in companions.values():
-            s=profile.get('stats',{});npc=profile.get('npc_id')
-            name=s.get('name') or CAT['npcs'].get(str(npc),{}).get('name') or '夥伴／坐騎'
-            marker='（出戰）' if npc==knowledge.get('active_npc_id') else ''
-            rows.append(f"{name}{marker}｜{health(s)}")
-        role+='\n'+'\n'.join(rows)
+        s=profile.get('stats',{});npc=profile.get('npc_id')
+        name=s.get('name') or CAT['npcs'].get(str(npc),{}).get('name') or '夥伴'
+        role+=f"\n{name}（出戰）｜{health(s)}"
+    elif active:
+        role+='\n出戰夥伴：資料待同步'
     else:
-        role+='\n夥伴／坐騎：'+('尚無資料' if knowledge.get('companions_ready') else '待同步')
+        role+='\n夥伴：未出戰'
     supply=state.get('inventory',{}).get('field_supply',{})
     activity=[]
     if state.get('battle',{}).get('active'):

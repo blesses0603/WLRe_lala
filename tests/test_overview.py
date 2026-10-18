@@ -42,3 +42,24 @@ class Overview(unittest.TestCase):
 
     def test_empty_snapshot_waits_for_login(self):
         self.assertTrue(all('等待登入' in text for text in summarize({},False,self.guard).values()))
+
+    def test_only_active_companion_is_shown(self):
+        knowledge=self.state['knowledge']
+        knowledge['companions']={
+            '1':{'npc_id':101,'stats':{'name':'出戰夥伴','hp':0,'max_hp':100}},
+            '2':{'npc_id':102,'stats':{'name':'休息夥伴','hp':50}}}
+        knowledge['active_npc_id']=101
+        role=summarize(self.state,True,self.guard)['role']
+        self.assertIn('出戰夥伴（出戰）｜HP 0/100',role)
+        self.assertNotIn('休息夥伴',role)
+        knowledge['active_npc_id']=None
+        role=summarize(self.state,True,self.guard)['role']
+        self.assertIn('夥伴：未出戰',role)
+        self.assertNotIn('休息夥伴',role)
+        self.assertNotIn('出戰夥伴',role)
+
+    def test_missing_active_profile_waits_for_sync(self):
+        self.state['knowledge']['active_npc_id']=101
+        role=summarize(self.state,True,self.guard)['role']
+        self.assertIn('出戰夥伴：資料待同步',role)
+        self.assertNotIn('未出戰',role)
