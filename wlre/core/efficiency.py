@@ -41,6 +41,9 @@ def _row(state,key):
     if row is None or row.get('identity')!=identity:
         row={'identity':identity,'name':name,'exp':None,'level':None,'degree':None,'last_total':None,'last_gain':None,'earned':0,'count':0,'history':[],'first_time':None,'last_time':None}
         eff['rows'][key]=row
+        # State wraps assigned dictionaries in OwnedDict. Continue updating
+        # that authoritative instance, not the detached pre-wrap local dict.
+        row=eff['rows'][key]
     row['name']=name
     # Confirmed level and degree always replace the previous inferred label.
     if stats.get('level') is not None:
