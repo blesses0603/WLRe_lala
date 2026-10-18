@@ -166,6 +166,9 @@ class OverviewPanel(ttk.Frame):
                         bag_button(tools,callback) if key=='role' else
                         ttk.Button(tools,text=text,width=4,command=callback,padding=(3,2)))
                 button.pack(side='left')
+                if key=='role':
+                    ttk.Button(tools, text='配點', width=4, command=app.open_attributes,
+                               padding=(3,2)).pack(side='left', padx=(6,0))
             self.actions[key]=button
         self.after(1000,self.tick)
 

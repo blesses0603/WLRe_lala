@@ -89,7 +89,9 @@ def apply_live(state,event):
                 if event['value']>0:profile['skills'][sid]={'level':event['value'],'exp':0,'source':f'S8-{event.get("sub",0)}'}
                 else:profile['skills'].pop(sid,None)
             else:
-                names={25:'hp',26:'sp',35:'level',36:'exp',39:'degree',41:'atk',43:'matk',46:'max_hp',47:'max_sp',205:'max_hp',206:'max_sp'}
+                names={25:'hp',26:'sp',27:'int',28:'str',29:'con',30:'agi',33:'wis',
+                       35:'level',36:'exp',38:'attribute_potential',39:'degree',
+                       41:'atk',43:'matk',46:'max_hp',47:'max_sp',205:'max_hp',206:'max_sp'}
                 if event['kind'] in names:profile.setdefault('stats',{})[names[event['kind']]]=event['value']
     elif kind in ('battle_start','battle_units'):
         for unit in event['units']:

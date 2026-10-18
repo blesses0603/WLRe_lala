@@ -11,6 +11,7 @@ from wlre.core.activity import apply_activity
 from wlre.services.items.crafting import defaults as craft_defaults, room_defaults, apply_crafting
 from wlre.services.items.room_storage import defaults as storage_defaults, apply_storage
 from wlre.services.expedition import defaults as expedition_defaults, apply_expedition
+from wlre.services.battle.attribute_points import defaults as points_defaults, apply_event as apply_points_event
 
 
 POSITION_CACHE_LIMIT = 2048
@@ -28,6 +29,7 @@ class State:
     efficiency: dict = field(default_factory=efficiency_defaults)
     phase: str = "disconnected"
     attributes: dict = field(default_factory=dict)
+    attribute_allocation: dict = field(default_factory=points_defaults)
     positions: dict = field(default_factory=dict)
     battle: dict = field(default_factory=lambda: {"actions": 0, "winner_side": None})
     packet_count: int = 0
@@ -106,6 +108,7 @@ class State:
         apply_crafting(self,event)
         apply_storage(self,event)
         apply_live(self,event)
+        apply_points_event(self,event)
         apply_party(self,event)
         apply_expedition(self,event)
         if kind == "login_result":

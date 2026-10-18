@@ -12,6 +12,7 @@ import time
 from wlre.network.wire import FrameDecoder, Packet, encode, ProtocolError
 from wlre.services.world.portal_travel import PortalTravel
 from wlre.services.battle.party import team_command, own_team, expire as expire_team
+from wlre.services.battle.attribute_points import allocation as build_allocation, begin as begin_allocation, expire as expire_allocation
 from wlre.services.battle.companions import command as companion_command
 from wlre.services.expedition import Expedition
 from wlre.services.items.alchemy import AutoAlchemy
@@ -224,6 +225,21 @@ class SessionLogic:
         if (self.maintenance.pending or self.maintenance.uncertain) and kind not in (
                 'stop_auto_battle','stop_roaming','stop_walk','stop_expedition','stop_crafting','stop_alchemy','chat','reset_efficiency'):
             raise ProtocolError('請先等待戰後修理／整理確認；結果未確認時需重新登入同步')
+        if kind == 'allocate_points':
+            if state.phase != 'world_ready' or not state.player.get('role_id'):
+                raise ProtocolError('角色尚未完成登入同步')
+            if (state.battle.get('active') or state.event_flow.get('blocked')
+                    or state.auto_battle.get('enabled') or state.roaming.get('enabled')):
+                raise ProtocolError('戰鬥、事件或自動活動中不可配點，請先停止')
+            if not state.knowledge.get('player', {}).get('ready'):
+                raise ProtocolError('請等待角色能力同步')
+            if state.attribute_allocation['pending'] or state.attribute_allocation['uncertain']:
+                raise ProtocolError('前次配點未確認，請重新同步')
+            packet, expected = build_allocation(
+                state.knowledge['player']['stats'], command.get('increments'),
+                command.get('baseline'))
+            begin_allocation(state, expected)
+            return [packet]
         if kind == 'start_expedition':
             self.expedition.start(state, command.get('settings', {}))
             return []
@@ -442,6 +458,7 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
                     removed = state.clear_position_history()
                     emit({'type': 'periodic_cleanup', 'positions_removed': removed})
                 health.publish()
+                if expire_allocation(state) and on_state:notify_state(on_state,state)
                 if isinstance(on_state,StatePublisher):on_state.flush(state)
                 event_replies=logic.flush_events(state) if request else []
                 for response in event_replies:_send(connection,response,profile['tx_xor'],emit)
@@ -452,7 +469,7 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
                     try:
                         for packet in logic.command(command, state):
                             _send_command_packet(connection,packet,profile['tx_xor'],state,emit,on_state)
-                        if command.get('type') in ('team','start_alchemy','stop_alchemy','reset_efficiency','craft','start_expedition','stop_expedition') and on_state:notify_state(on_state,state)
+                        if command.get('type') in ('team','start_alchemy','stop_alchemy','reset_efficiency','craft','start_expedition','stop_expedition','allocate_points') and on_state:notify_state(on_state,state)
                         if command.get('type') in ('start_auto_battle','stop_auto_battle','set_party_guard'):
                             emit({'type':'auto_battle_status',**state.auto_battle})
                             if on_state:notify_state(on_state,state)

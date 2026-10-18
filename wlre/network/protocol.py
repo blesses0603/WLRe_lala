@@ -145,6 +145,9 @@ def decode(packet, local_role_id=None):
         # Actual capture has both 2-byte and 3-byte forms. Lua consumes only
         # col/row; keep the observed extra byte without assigning semantics.
         if r.remaining == 1: event["extension_byte"] = r.u8()
+    elif key == (8, 4):
+        # 1262 Protocols_008.lua: success notification has no payload.
+        event.update(type='attribute_allocation_success')
     elif key in ((8, 1), (8, 2), (8, 3)):
         event["type"] = "attribute_set"
         if packet.sub == 1:

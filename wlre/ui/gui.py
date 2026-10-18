@@ -27,6 +27,7 @@ from wlre.services.world.roaming import summary as roaming_summary
 from wlre.services.battle.auto_battle import defaults as ai_defaults, summary as ai_summary
 from wlre.ui.auto_battle_ui import open_settings
 from wlre.ui.resource_view import ResourceView
+from wlre.ui.attribute_points_ui import AttributePointWindow
 from wlre.ui.services_ui import PartyPanel, AlchemyPanel
 from wlre.ui.chat_ui import ChatPanel
 from wlre.core.event_log import lines as local_event_lines, chinese, PHASES
@@ -73,6 +74,7 @@ class App:
         self.snapshot={}
         self.navigation_windows=[]
         self.resource_windows=[]
+        self.attribute_window=None
         self.role_map={}
         self.map_target_scene=None
         self.last_movement_check=None
@@ -609,6 +611,14 @@ class App:
     def open_resources(self):
         self.resource_windows.append(ResourceView(self))
 
+    def open_attributes(self):
+        view=self.attribute_window
+        if view is not None and view.window.winfo_exists():
+            view.window.lift()
+            view.window.focus_force()
+        else:
+            self.attribute_window=AttributePointWindow(self)
+
     def start_roaming(self):
         self.send({'type':'start_roaming'})
 
@@ -652,6 +662,8 @@ class App:
                 if view.window.winfo_exists():view.set_state(state);remaining_resources.append(view)
             except tk.TclError:pass
         self.resource_windows=remaining_resources
+        if self.attribute_window is not None and self.attribute_window.window.winfo_exists():
+            self.attribute_window.render(state)
         self.ai_status.set(ai_summary(state.get('auto_battle',{})))
         self.roaming_status.set(roaming_summary(state.get('roaming',{})))
         self.home_map.set_state(state)
@@ -747,6 +759,9 @@ class App:
                 event=data;event_kind=event['type']
                 context=latest if latest is not None else self.snapshot
                 self.chat_panel.handle_event(event,context)
+                if (event_kind=='command_rejected' and event.get('command_type')=='allocate_points'
+                        and self.attribute_window is not None and self.attribute_window.window.winfo_exists()):
+                    self.attribute_window.rejected(event.get('error', '伺服器要求失敗'))
                 if event_kind=='command_rejected' and event.get('command_type')=='craft':self.crafting_panel.status.set(event['error'])
                 if event_kind=='command_rejected' and event.get('command_type') in ('start_expedition','stop_expedition'):
                     self.expedition_panel.status.set(event['error'])
