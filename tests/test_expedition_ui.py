@@ -14,9 +14,9 @@ class ExpeditionPanelTests(unittest.TestCase):
         self.root = tk.Tk()
         self.app = SimpleNamespace(root=self.root, live_active=True, _settings_key=None,
             snapshot={}, send=Mock(return_value=True), settings_identity=lambda: 'a'*64)
-        self.catalog = {'levels': {'1': {'reduction': 0}}, 'tasks': {
-            '1': {'id': 1, 'minutes': 360, 'faith_cost': 20},
-            '2': {'id': 2, 'minutes': 240, 'faith_cost': 10}}}
+        self.catalog = {'levels': {'1': {'reduction': 0, 'difficulty': 2}}, 'tasks': {
+            '1': {'id': 1, 'minutes': 360, 'faith_cost': 20, 'difficulty': 1, 'area': 1, 'condition': [0, 0, 0]},
+            '2': {'id': 2, 'minutes': 240, 'faith_cost': 10, 'difficulty': 1, 'area': 2, 'condition': [0, 0, 0]}}}
         with patch('wlre.ui.expedition_ui.load_catalog', return_value=self.catalog):
             self.panel = ExpeditionPanel(self.root, self.app)
         self.panel.pack(fill='both', expand=True)
@@ -44,7 +44,7 @@ class ExpeditionPanelTests(unittest.TestCase):
         self.panel.catalog = {'tasks': {}, 'levels': {}}
         self.panel.render(self.state)
         self.assertTrue(self.panel.start_button.instate(['disabled']))
-        self.assertIn('缺少官方', self.panel.note.get())
+        self.assertIn('內建遠征資料不完整', self.panel.note.get())
 
     def test_account_preferences_reload_without_automatic_start(self):
         with tempfile.TemporaryDirectory() as folder, patch.dict(os.environ, {'LOCALAPPDATA': folder}):
@@ -60,3 +60,40 @@ class ExpeditionPanelTests(unittest.TestCase):
             self.app.send.assert_not_called()
             self.panel.load_settings('b'*64)
             self.assertEqual(self.panel.faith.get(), '80')
+
+    def test_backpack_options_update_automatically_and_exclude_locked_items(self):
+        self.state['inventory'] = {'ready': True, 'reliable': True, 'items': {
+            '1': {'item_id': 34014, 'count': 3}, '2': {'item_id': 34068, 'count': 5, 'locked': True}}}
+        self.panel.render(self.state)
+        self.assertEqual(set(self.panel.items.values()), {0, 34014})
+        self.assertTrue(any('可用 3' in text for text in self.panel.items))
+        self.state['inventory']['items']['1']['count'] = 1
+        self.panel.render(self.state)
+        self.assertTrue(any('可用 1' in text for text in self.panel.items))
+        self.app.send.assert_not_called()
+        self.assertIn('已自動檢查', self.panel.status.get())
+
+    def test_task_rows_show_name_reduced_time_and_rewards(self):
+        quest = self.catalog['tasks']['1']
+        quest.update(name='測試採集任務', expedition_exp=25, exp=100,
+            rewards=[{'kind': 6, 'id': 13, 'value': 20}, {'kind': 10, 'id': 34014, 'value': 2}],
+            special_reward={'kind': 6, 'id': 4, 'value': 3}, special_rate=300)
+        self.catalog['levels']['1']['reduction'] = 30
+        self.panel.render(self.state)
+        row = self.panel.tasks.item('1', 'values')
+        self.assertEqual(row[0], '測試採集任務')
+        self.assertEqual(row[1], '5 小時 49 分鐘')
+        self.assertIn('遠征經驗 × 25', row[2])
+        self.assertIn('遠征幣 × 20', row[2])
+        self.assertIn('桃太郎飯糰 × 2', row[2])
+        self.assertIn('機率獎勵：紫鑽 × 3', row[2])
+        self.panel.tasks.selection_set('1')
+        self.panel.show_task()
+        self.assertIn('消耗好友度 20', self.panel.task_detail.get())
+        self.state['expedition']['revision'] += 1
+        self.panel.render(self.state)
+        self.assertEqual(self.panel.tasks.selection(), ('1',))
+
+    def test_unavailable_name_is_not_replaced_with_made_up_title(self):
+        self.panel.render(self.state)
+        self.assertEqual(self.panel.tasks.item('1', 'values')[0], '任務名稱待補齊')

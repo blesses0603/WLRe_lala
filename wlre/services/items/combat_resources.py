@@ -16,7 +16,8 @@ def apply_live(state,event):
     kind=event['type'];inv=state.inventory;k=state.knowledge
     if kind=='bag_snapshot':
         fresh={'ready':True,'reliable':True,'capacity':event['capacity'],'items':{},'reserved':{},
-               'revision':inv.get('revision',0)+1,'use_failed':False,'field_supply':inv.get('field_supply',{}),'alchemy_slots':list(inv.get('alchemy_slots',[]))}
+               'revision':inv.get('revision',0)+1,'use_failed':False,'field_supply':inv.get('field_supply',{}),'alchemy_slots':list(inv.get('alchemy_slots',[])),
+               'expedition_slots':list(inv.get('expedition_slots',[]))}
         for value in event['items']:
             if not add_item(fresh,dict(value)):break
         state.inventory=fresh
@@ -101,6 +102,7 @@ def set_companion(state,data):
             'human_kind':4,'kind':attribute,'parameter':parameter,'value':value})
 
 def available(inv,index):
+    if str(index) in inv.get('expedition_slots',[]):return 0
     return max(0,inv.get('items',{}).get(str(index),{}).get('count',0)-inv.get('reserved',{}).get(str(index),0))
 
 def allocate(inv,item_id,count):

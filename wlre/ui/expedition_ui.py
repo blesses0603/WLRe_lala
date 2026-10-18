@@ -2,13 +2,14 @@
 import json
 import time
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from tkinter import ttk, messagebox
 
-from wlre.services.expedition import preferences, validate, faith_gain, duration
-from wlre.services.expedition_data import data_root, load_catalog, import_catalog
+from wlre.services.expedition import preferences, validate, faith_gain, duration, recovery_stock, choose_members
+from wlre.services.expedition_data import data_root, load_catalog
 from wlre.services.items.combat_resources import CAT, item_name
 from wlre.storage.atomic import file_lock, write_json
 from wlre.ui.layout import heading, scroll_table
+from wlre.ui.expedition_display import task_name, time_text, rewards_text
 
 
 class ExpeditionPanel(ttk.Frame):
@@ -39,10 +40,9 @@ class ExpeditionPanel(ttk.Frame):
         row = ttk.Frame(self)
         row.pack(fill='x', pady=3)
         ttk.Label(row, text='恢復物品').pack(side='left')
-        self.item = tk.StringVar(value='不使用物品')
-        self.items = {'不使用物品': 0}
-        self.items.update({f"{item_name(int(sid))}（{sid}，+{faith_gain(int(sid))}）": int(sid)
-                           for sid in CAT['items'] if faith_gain(int(sid))})
+        self.item = tk.StringVar(value='自動從背包選擇')
+        self.selected_item_id = 0
+        self.items = {'自動從背包選擇': 0}
         self.item_combo = ttk.Combobox(row, textvariable=self.item, values=list(self.items), state='readonly', width=28)
         self.item_combo.pack(side='left', fill='x', expand=True, padx=6)
         self.start_button = ttk.Button(row, text='啟動自動派遣', command=self.start)
@@ -51,24 +51,37 @@ class ExpeditionPanel(ttk.Frame):
         ttk.Button(row, text='儲存', command=self.save).pack(side='left')
         body = ttk.Frame(self)
         body.pack(fill='both', expand=True, pady=4)
-        body.columnconfigure(0, weight=1); body.columnconfigure(1, weight=1); body.rowconfigure(1, weight=1)
+        body.columnconfigure(0, weight=3); body.columnconfigure(1, weight=2); body.rowconfigure(1, weight=1)
         ttk.Label(body, text='可用任務（依設定門檻篩選；顯示等級減免後時間）').grid(row=0, column=0, sticky='w')
         ttk.Label(body, text='駐紮所夥伴').grid(row=0, column=1, sticky='w')
-        frame, self.tasks = scroll_table(body, ('id', 'duration', 'faith'), ('任務 ID', '小時', '消耗好友度'), (70, 70, 90))
+        frame, self.tasks = scroll_table(body, ('name', 'duration', 'rewards'),
+            ('任務名稱', '所需時間', '任務獎勵'), (150, 100, 270))
         frame.grid(row=1, column=0, sticky='nsew', padx=(0, 8))
-        frame, self.roles = scroll_table(body, ('name', 'faith', 'state'), ('夥伴', '好友度', '狀態'), (140, 65, 70))
+        self.task_rows = {}
+        self.task_detail = tk.StringVar(value='選取任務可查看完整獎勵與派遣條件。')
+        self.tasks.bind('<<TreeviewSelect>>', lambda event: self.show_task())
+        frame, self.roles = scroll_table(body, ('name', 'faith', 'state'), ('夥伴', '好友度', '狀態'), (110, 55, 65))
         frame.grid(row=1, column=1, sticky='nsew')
+        ttk.Label(self, textvariable=self.task_detail, wraplength=760).pack(fill='x', pady=3)
         self.note = tk.StringVar()
         self.team_status = tk.StringVar()
         ttk.Label(self, textvariable=self.team_status, wraplength=700).pack(fill='x', pady=3)
         ttk.Label(self, textvariable=self.note, style='Muted.TLabel', wraplength=700).pack(fill='x', pady=3)
-        ttk.Button(self, text='載入官方遠征資料表', command=self.import_data).pack(anchor='w')
         self.hours.trace_add('write', self.update_filter)
         self.render({})
 
     def config(self):
         return validate({'min_hours': float(self.hours.get()), 'faith_min': int(self.faith.get()),
-                         'item_id': self.items.get(self.item.get(), 0), 'auto_claim': self.auto_claim.get()})
+                         'item_id': self.items.get(self.item.get(), self.selected_item_id), 'auto_claim': self.auto_claim.get()})
+
+    def show_task(self):
+        selected = self.tasks.selection()
+        row = self.task_rows.get(selected[0]) if selected else None
+        if row:
+            quest, result, seconds = row
+            self.task_detail.set(f"{task_name(quest)}｜{time_text(seconds)}｜消耗好友度 {quest['faith_cost']}｜{result}\n{rewards_text(quest)}")
+        else:
+            self.task_detail.set('選取任務可查看完整獎勵與派遣條件。')
 
     def update_filter(self, *args):
         if not self.loading_settings:
@@ -93,7 +106,9 @@ class ExpeditionPanel(ttk.Frame):
         try:
             self.hours.set(str(value['min_hours'])); self.faith.set(str(value['faith_min']))
             self.auto_claim.set(value['auto_claim'])
-            self.item.set(next((label for label, sid in self.items.items() if sid == value['item_id']), '不使用物品'))
+            self.selected_item_id = value['item_id']
+            self.item.set('')
+            self.update_inventory(self.app.snapshot.get('inventory', {}))
         finally:
             self.loading_settings = False
 
@@ -114,52 +129,74 @@ class ExpeditionPanel(ttk.Frame):
         if self.app.send({'type': 'start_expedition', 'settings': settings}) is False:
             self.status.set('連線已結束，請重新登入後再啟動遠征。')
 
-    def import_data(self):
-        paths = []
-        for name in ('AdventureData_C', 'AdventureLvData_C'):
-            path = filedialog.askopenfilename(parent=self.app.root, title='選擇官方 ' + name + ' 原始資料檔')
-            if not path: return
-            paths.append(path)
-        try:
-            self.catalog = import_catalog(*paths)
-            self.signature = None
-            self.render(self.app.snapshot)
-        except (OSError, ValueError) as exc:
-            messagebox.showerror('遠征資料', str(exc), parent=self.app.root)
+    def update_inventory(self, inventory):
+        selected = self.items.get(self.item.get(), self.selected_item_id)
+        self.selected_item_id = selected
+        self.items = {'自動從背包選擇': 0}
+        for sid, count in sorted(recovery_stock(inventory).items()):
+            self.items[f'{item_name(sid)}（+{faith_gain(sid)}，可用 {count}）'] = sid
+        if selected and selected not in self.items.values():
+            self.items[f'{item_name(selected)}（目前無可用庫存）'] = selected
+        self.item_combo.configure(values=list(self.items))
+        self.item.set(next(label for label, sid in self.items.items() if sid == selected))
 
     def render(self, state):
         e = state.get('expedition', {})
         live = self.app.live_active
         if live and self.app._settings_key != self.key:
             self.load_settings(self.app._settings_key)
+        self.update_inventory(state.get('inventory', {}))
         self.start_button.configure(state='normal' if live and e.get('ready') and e.get('outpost_ready')
                                     and self.catalog.get('tasks') and not e.get('enabled') and not e.get('uncertain') else 'disabled')
         for control in (self.hours_input, self.faith_input, self.claim_option):
             control.configure(state='disabled' if e.get('enabled') or e.get('pending') else 'normal')
         self.item_combo.configure(state='disabled' if e.get('enabled') or e.get('pending') else 'readonly')
-        self.status.set(('' if live else '已離線｜') + e.get('status', '等待遠征與駐紮所資料同步。'))
+        if live and not e.get('enabled') and not e.get('pending') and not e.get('uncertain'):
+            status = (f"已自動檢查伺服器任務與駐紮所資料（{len(set(e.get('quests', {}).values()) - {0})} 筆任務）"
+                      if e.get('ready') and e.get('outpost_ready') else '上線後等待伺服器任務與駐紮所資料同步。')
+        else:
+            status = e.get('status', '等待遠征與駐紮所資料同步。')
+        self.status.set(('' if live else '已離線｜') + status)
         teams = []
         for t in e.get('teams', {}).values():
             if not t.get('quest'): continue
             remaining = max(0, t.get('due', 0) - time.monotonic())
             text = f'剩餘 {remaining/3600:.1f} 小時' if remaining else '待領取結果'
-            teams.append(f"隊伍 {t['index']}：任務 {t['quest']}（{text}）")
+            quest = self.catalog.get('tasks', {}).get(str(t['quest']), {})
+            teams.append(f"隊伍 {t['index']}：{task_name(quest)}（{text}）")
         self.team_status.set(('｜'.join(teams) or '目前沒有進行中的遠征。') + f"　已自動領獎 {e.get('claimed', 0)} 次")
         try: hours = float(self.hours.get())
         except ValueError: hours = 5
-        signature = repr((e.get('revision'), e.get('roles'), e.get('quests'), e.get('level'), hours))
+        signature = repr((e.get('revision'), e.get('roles'), e.get('quests'), e.get('teams'),
+                          e.get('level'), hours, self.faith.get(), recovery_stock(state.get('inventory', {}))))
         if signature != self.signature:
             self.signature = signature
+            selected = self.tasks.selection()
+            self.task_rows = {}
             self.tasks.delete(*self.tasks.get_children()); self.roles.delete(*self.roles.get_children())
             lv = self.catalog.get('levels', {}).get(str(e.get('level')))
+            busy = {npc for team in e.get('teams', {}).values() if team['quest'] for npc in team['members'] if npc}
+            idle = [r for r in e.get('roles', {}).values() if r['state'] == 0 and r['npc_id'] not in busy]
+            occupied = {self.catalog.get('tasks', {}).get(str(t['quest']), {}).get('area') for t in e.get('teams', {}).values() if t['quest']}
             for qid in sorted(set(e.get('quests', {}).values())):
                 q = self.catalog.get('tasks', {}).get(str(qid))
-                if q and lv and duration(q, lv) > hours * 3600:
-                    self.tasks.insert('', 'end', values=(qid, f'{duration(q, lv)/3600:.2f}', q['faith_cost']))
+                if q and lv and duration(q, lv) > hours * 3600 and q['difficulty'] <= lv['difficulty']:
+                    try: threshold = int(self.faith.get())
+                    except ValueError: threshold = 80
+                    members = choose_members(q, idle, threshold)
+                    result = ('同區域遠征中' if q['area'] in occupied else
+                              '可派遣' if members else '夥伴不足／條件未符')
+                    if result == '可派遣' and any(r['faith'] < max(threshold, q['faith_cost']) for r in members):
+                        result = '需補好友度'
+                    seconds = duration(q, lv)
+                    self.task_rows[str(qid)] = (q, result, seconds)
+                    self.tasks.insert('', 'end', iid=str(qid), values=(task_name(q), time_text(seconds), rewards_text(q)))
                 elif qid and not q:
-                    self.tasks.insert('', 'end', values=(qid, '缺資料', '待同步'))
+                    self.tasks.insert('', 'end', iid=str(qid), values=('任務資料待更新', '待更新', '待更新'))
+            if selected and self.tasks.exists(selected[0]): self.tasks.selection_set(selected[0])
+            self.show_task()
             for r in sorted(e.get('roles', {}).values(), key=lambda r: r['index']):
                 name = CAT['npcs'].get(str(r['npc_id']), {}).get('name', f"夥伴 {r['npc_id']}")
                 self.roles.insert('', 'end', values=(name, r['faith'], '閒置' if r['state'] == 0 else '遠征中'))
-        self.note.set('缺少官方任務／等級資料，目前無法自動派遣。' if not self.catalog.get('tasks') else
-                      '只從駐紮所閒置夥伴挑選；未支援的條件會跳過。領獎前檢查背包空間，回覆與物品入包確認後才繼續。')
+        self.note.set('內建遠征資料不完整，請更新完整程式。' if not self.catalog.get('tasks') else
+                      '內建官方遠征資料；上線後自動檢查任務與背包。可與自動戰鬥、徘徊同時啟用。')

@@ -6,7 +6,6 @@ from pathlib import Path
 
 from wlre.network.wire import Reader, ProtocolError
 from wlre.paths import RESOURCE_ROOT
-from wlre.storage.atomic import write_json
 
 
 def data_root():
@@ -25,11 +24,11 @@ def parse_catalog(tasks_data, levels_data):
              'faith_cost': r.u8(), 'success_rate': r.u16(),
              'condition': [r.u16(), r.u16(), r.u16()]}
         r.take(4 * 8)  # four recommendation conditions
-        r.u32()  # expedition experience
+        q['expedition_exp'] = r.u32()
         q['rewards'] = [{'kind': r.u8(), 'id': r.u32(), 'value': r.u32()} for _ in range(3)]
         q['special_rate'] = r.u16()
         q['special_reward'] = {'kind': r.u8(), 'id': r.u32(), 'value': r.u32()}
-        r.i32()  # character experience
+        q['exp'] = r.i32()
         if not q['id'] or str(q['id']) in tasks or not q['minutes'] or q['faith_cost'] > 100:
             raise ProtocolError('遠征任務資料內容錯誤')
         tasks[str(q['id'])] = q
@@ -53,16 +52,34 @@ def parse_catalog(tasks_data, levels_data):
         'AdventureLvData_C': hashlib.sha256(levels_data).hexdigest()}}
 
 
-def import_catalog(tasks_path, levels_path):
-    value = parse_catalog(Path(tasks_path).read_bytes(), Path(levels_path).read_bytes())
-    write_json(data_root() / 'expedition_catalog.json', value)
-    return value
-
-
 def load_catalog():
-    local = data_root() / 'expedition_catalog.json'
-    bundled = RESOURCE_ROOT / 'expedition_catalog.json'
-    path = local if local.is_file() else bundled
+    path = RESOURCE_ROOT / 'expedition_catalog.json'
     if not path.is_file():
         return {'tasks': {}, 'levels': {}}
     return json.loads(path.read_text(encoding='utf8'))
+
+
+def attach_names(catalog, text_data):
+    """Data.OnLoadTextData: u32 key, u16 byte length, UTF-16LE text."""
+    r = Reader(text_data)
+    count = r.i32()
+    if not 1 <= count <= 1000000:
+        raise ProtocolError('文字資料筆數錯誤')
+    texts = {}
+    for _ in range(count):
+        key, size = r.u32(), r.u16()
+        if size % 2 or key in texts:
+            raise ProtocolError('文字資料長度或識別碼錯誤')
+        try:
+            texts[key] = r.take(size).decode('utf-16-le')
+        except UnicodeDecodeError as exc:
+            raise ProtocolError('文字資料編碼錯誤') from exc
+    r.end()
+    tasks = {}
+    for sid, quest in catalog['tasks'].items():
+        name = texts.get(quest['name_id'])
+        if not name:
+            raise ProtocolError(f'官方文字資料缺少任務名稱：{sid}')
+        tasks[sid] = {**quest, 'name': name, 'area_label': texts.get(quest['area_name'], '')}
+    return {**catalog, 'tasks': tasks, 'source_sha256': {
+        **catalog.get('source_sha256', {}), 'TextData_C': hashlib.sha256(text_data).hexdigest()}}

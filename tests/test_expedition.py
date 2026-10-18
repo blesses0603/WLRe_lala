@@ -8,8 +8,9 @@ from wlre.network.client import SessionLogic
 from wlre.network.protocol import decode
 from wlre.network.wire import Packet, ProtocolError, Writer
 from wlre.services.expedition import Expedition, duration, validate, choose_members
-from wlre.services.expedition_data import parse_catalog
+from wlre.services.expedition_data import parse_catalog, attach_names
 from wlre.paths import RESOURCE_ROOT
+from wlre.services.items.combat_resources import available
 import json
 
 
@@ -68,12 +69,14 @@ class ExpeditionAutomation(ExpeditionFixture, unittest.TestCase):
         packet, = self.service.tick(self.state, 10)
         expected = Writer().u8(1).u8(1).u8(1).u16(3).u16(34014).u16(2).build()
         self.assertEqual((packet.main, packet.sub, packet.payload), (31, 27, expected))
+        self.assertEqual(available(self.state.inventory, 3), 0)
         self.assertEqual(self.state.expedition['roles']['1']['faith'], 70)
         self.event({'type': 'outpost_faith', 'index': 1, 'faith': 80, 'show': 0})
         self.assertIsNotNone(self.service.pending)
         self.assertEqual(self.service.tick(self.state, 11), [])
         self.event({'type': 'bag_delete', 'index': 3, 'count': 2})
         self.assertIsNone(self.service.pending)
+        self.assertEqual(available(self.state.inventory, 3), 3)
         packet, = self.service.tick(self.state, self.service.next_check + 1)
         self.assertEqual((packet.main, packet.sub), (31, 15))
 
@@ -113,12 +116,78 @@ class ExpeditionAutomation(ExpeditionFixture, unittest.TestCase):
         self.state.battle['active'] = True
         with self.assertRaises(ProtocolError): self.service.start(self.state, self.settings)
 
+    def test_ai_roaming_and_expedition_can_start_in_either_order(self):
+        from unittest.mock import Mock
+        for expedition_first in (True, False):
+            with self.subTest(expedition_first=expedition_first):
+                state = copy.deepcopy(self.state)
+                state.player = {'role_id': 1, 'scene': 60000}
+                state.location.update(confirmed={'scene': 60000, 'x': 500, 'y': 500, 'packet_number': 1}, confirmed_is_current=True)
+                logic = SessionLogic(); logic.world_acknowledged = True
+                logic.expedition = Expedition(catalog())
+                logic.roaming.converter = Mock()
+                if expedition_first: logic.command({'type': 'start_expedition', 'settings': self.settings}, state)
+                logic.command({'type': 'start_auto_battle'}, state)
+                logic.command({'type': 'start_roaming'}, state)
+                if not expedition_first: logic.command({'type': 'start_expedition', 'settings': self.settings}, state)
+                packet, = logic.expedition.tick(state, 10)
+                self.assertEqual((packet.main, packet.sub), (31, 15))
+                self.assertTrue(state.auto_battle['enabled'])
+                self.assertTrue(state.roaming['enabled'])
+                self.assertTrue(state.expedition['enabled'])
+                logic.command({'type': 'start_auto_battle'}, state)  # pending expedition does not block AI
+
+    def test_actual_battle_still_waits_then_resumes(self):
+        self.state.auto_battle['enabled'] = True
+        self.state.roaming['enabled'] = True
+        self.service.start(self.state, self.settings)
+        self.state.battle['active'] = True
+        self.assertEqual(self.service.tick(self.state, 10), [])
+        self.assertTrue(self.state.expedition['enabled'])
+        self.state.battle['active'] = False
+        packet, = self.service.tick(self.state, 13)
+        self.assertEqual((packet.main, packet.sub), (31, 15))
+
+    def test_automatic_backpack_selection_can_mix_item_types(self):
+        self.state.expedition['roles']['1']['faith'] = 70
+        self.state.inventory.update(ready=True, reliable=True, items={
+            '3': {'item_id': 34014, 'count': 1}, '4': {'item_id': 34068, 'count': 1}})
+        self.service.start(self.state, {**self.settings, 'item_id': 0})
+        packet, = self.service.tick(self.state, 10)
+        self.assertEqual(self.service.pending['target'], 78)
+        self.assertEqual(available(self.state.inventory, 4), 0)
+        self.assertEqual(available(self.state.inventory, 3), 1)
+        self.event({'type': 'bag_delete', 'index': 4, 'count': 1})
+        self.event({'type': 'outpost_faith', 'index': 1, 'faith': 78, 'show': 0})
+        packet, = self.service.tick(self.state, self.service.next_check + 1)
+        self.assertEqual(packet.payload[5:7], Writer().u16(34014).build())
+        self.assertEqual(self.service.pending['target'], 80)
+
+    def test_automatic_selection_does_not_use_locked_stock(self):
+        self.state.expedition['roles']['1']['faith'] = 70
+        self.state.inventory.update(ready=True, reliable=True, items={'3': {'item_id': 34014, 'count': 10, 'locked': True}})
+        self.service.start(self.state, {**self.settings, 'item_id': 0})
+        self.assertEqual(self.service.tick(self.state, 10), [])
+        self.assertFalse(self.state.expedition['enabled'])
+
+    def test_online_sync_requests_time_once_without_starting_automation(self):
+        logic = SessionLogic()
+        event = {'type': 'expedition_level', 'level': 1, 'exp': 0}
+        self.assertEqual(logic.receive(event, self.state), [])
+        logic.world_acknowledged = True
+        packet, = logic.receive(event, self.state)
+        self.assertEqual((packet.main, packet.sub, packet.payload), (31, 28, b''))
+        self.assertEqual(logic.receive(event, self.state), [])
+        self.assertFalse(self.state.expedition['enabled'])
+
 
 class ExpeditionWire(unittest.TestCase):
     def test_bundled_official_catalog_uses_minutes_and_level_reduction(self):
         value = json.loads((RESOURCE_ROOT / 'expedition_catalog.json').read_text(encoding='utf8'))
         self.assertEqual(len(value['tasks']), 260)
         self.assertEqual(len(value['levels']), 10)
+        self.assertEqual(value['tasks']['1']['name'], '遺跡探索 I')
+        self.assertTrue(all(q.get('name') for q in value['tasks'].values()))
         self.assertEqual(duration(value['tasks']['1'], value['levels']['1']), 30 * 60)
         longest = max(value['tasks'].values(), key=lambda q: q['minutes'])
         self.assertEqual(longest['minutes'], 720)
@@ -153,6 +222,16 @@ class ExpeditionWire(unittest.TestCase):
         self.assertEqual(value['levels']['1']['reduction'], 200)
         with self.assertRaises(ProtocolError): parse_catalog(w.build()[:-1], lv)
         with self.assertRaises(ProtocolError): parse_catalog(w.build(), lv + b'\0')
+
+    def test_text_table_uses_official_text_id_and_rejects_incomplete_data(self):
+        original = {'tasks': {'1': {'name_id': 141001, 'area_name': 140001}}}
+        text = '測試中文任務'.encode('utf-16-le')
+        raw = Writer().u32(1).u32(141001).u16(len(text)).raw(text).build()
+        translated = attach_names(original, raw)
+        self.assertEqual(translated['tasks']['1']['name'], '測試中文任務')
+        self.assertNotIn('name', original['tasks']['1'])
+        with self.assertRaises(ProtocolError): attach_names(original, raw[:-1])
+        with self.assertRaises(ProtocolError): attach_names({'tasks': {'2': {'name_id': 141002, 'area_name': 140001}}}, raw)
 
 
 class ExpeditionClaiming(ExpeditionFixture, unittest.TestCase):

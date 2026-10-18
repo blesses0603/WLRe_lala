@@ -110,6 +110,20 @@ class DashboardLayout(unittest.TestCase):
         self.app.activity_tabs.select(self.app.logs_frame)
         self.assertIn('fixture-before-switch',self.app.log.get('1.0','end'))
         self.assertIn('fixture-while-battle-visible',self.app.log.get('1.0','end'))
+
+    def test_hidden_expedition_checks_online_tasks_without_opening_tab(self):
+        panel = self.app.expedition_panel
+        quest = next(q for q in panel.catalog['tasks'].values() if q['difficulty'] == 1 and q['minutes'] > 300)
+        state = State().snapshot()
+        state['player'] = {'role_id': 1, 'name': '測試角色', 'scene': 60000}
+        state['expedition'].update(ready=True, outpost_ready=True, level=1, quests={'1': quest['id']})
+        with patch.object(self.app, 'live_active', True), patch.object(self.app, 'send') as send:
+            self.app.render(state)
+            self.root.update()
+            self.assertFalse(panel.winfo_ismapped())
+            self.assertEqual(len(panel.tasks.get_children()), 1)
+            self.assertIn('已自動檢查', panel.status.get())
+            send.assert_not_called()
         self.app.left_tabs.select(self.app.overview_panel.master);self.root.update()
 
     def test_all_navigation_actions_still_work(self):

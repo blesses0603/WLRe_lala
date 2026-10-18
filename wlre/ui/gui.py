@@ -637,7 +637,7 @@ class App:
         if self.efficiency_panel.winfo_ismapped():self.efficiency_panel.update_state(state)
         if self.overview_panel.winfo_ismapped():self.overview_panel.update_state(state)
         if self.companion_panel.winfo_ismapped():self.companion_panel.render(state)
-        if self.expedition_panel.winfo_ismapped():self.expedition_panel.render(state)
+        self.expedition_panel.render(state)
         if self.party_panel.winfo_ismapped():self.party_panel.render(state)
         else:
             requests=sum(v.get('status')=='pending' for v in state.get('party',{}).get('requests',{}).values())

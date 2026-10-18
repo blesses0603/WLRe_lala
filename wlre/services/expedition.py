@@ -93,6 +93,19 @@ def faith_gain(item_id):
     return values[-1] if values and values[-1] > 0 else 0
 
 
+def recovery_stock(inventory):
+    """Only server-backed, unlocked, unreserved, non-expiring faith items."""
+    if not inventory.get('ready') or not inventory.get('reliable'): return {}
+    stock = {}
+    for index, item in inventory.get('items', {}).items():
+        sid = item['item_id']
+        if (not faith_gain(sid) or item.get('locked') or item.get('limited_time', 0)
+                or item.get('available_time', 0)): continue
+        amount = available(inventory, index)
+        if amount: stock[sid] = stock.get(sid, 0) + amount
+    return stock
+
+
 def duration(quest, level):
     # Text.GetTimeStr consumes minutes. Lua rounds reduced minutes first.
     return math.floor(quest['minutes'] * (1000 - level['reduction']) / 1000 + .5) * 60
@@ -139,7 +152,6 @@ def blocked(state):
     if state.battle.get('active') or state.event_flow.get('blocked'): return '等待戰鬥／伺服器事件結束'
     if state.battle_count and state.battle.get('post_event', {}).get('status') != 'completed': return '等待戰後事件完成'
     if state.activities: return '請先結束目前活動'
-    if state.auto_battle.get('enabled') or state.roaming.get('enabled'): return '請先停止自動戰鬥與徘徊'
     if state.crafting.get('pending') or state.crafting.get('auto_continue'): return '請先停止製作並等待回覆'
     if state.alchemy.get('pending') or state.alchemy.get('enabled'): return '請先停止煉金並等待回覆'
     supply = state.inventory.get('field_supply', {})
@@ -182,7 +194,7 @@ class Expedition:
         settings = validate(settings)
         self.catalog = self.catalog_override if self.catalog_override is not None else load_catalog()
         if not self.catalog.get('tasks') or not self.catalog.get('levels'):
-            raise ProtocolError('缺少官方遠征任務／等級資料，請先載入 AdventureData_C 與 AdventureLvData_C')
+            raise ProtocolError('內建遠征資料不完整，請更新完整程式')
         if not e['ready'] or not e['outpost_ready']: raise ProtocolError('等待遠征與駐紮所資料同步')
         level = self.catalog['levels'].get(str(e['level']))
         if not level: raise ProtocolError('此遠征等級缺少官方資料')
@@ -244,6 +256,8 @@ class Expedition:
                 self.confirm(state, '好友度與物品扣除已確認')
 
     def confirm(self, state, text):
+        if self.pending and self.pending['kind'] == 'faith':
+            state.inventory.pop('expedition_slots', None)
         self.pending = None
         state.expedition.update(pending=None, status=text)
         self.next_check = time.monotonic() + 1
@@ -326,10 +340,31 @@ class Expedition:
 
     def restore(self, state, role, target, item_id, now):
         e = state.expedition
-        gain = faith_gain(item_id)
         inv = state.inventory
-        if not gain or not inv.get('ready') or not inv.get('reliable'):
-            self.stop(state, '缺少已指定的好友度恢復物品，或背包資料尚不可靠')
+        if not inv.get('ready') or not inv.get('reliable'):
+            self.stop(state, '背包資料尚不可靠，請等待同步後重新啟動')
+            return None
+        stock = recovery_stock(inv)
+        deficit = target - role['faith']
+        if item_id == 0:
+            if sum(faith_gain(sid) * amount for sid, amount in stock.items()) < deficit:
+                self.stop(state, '背包內可用的好友度恢復物品不足，已停止自動派遣')
+                return None
+            options = []
+            for sid, amount in stock.items():
+                gain = faith_gain(sid)
+                required = math.ceil(deficit / gain)
+                if amount >= required:
+                    options.append((required, required * gain - deficit, sid))
+            if options:
+                item_id = min(options)[2]
+            else:
+                # Mix types sequentially, waiting for each batch's confirmation.
+                item_id = max(stock, key=lambda sid: (faith_gain(sid) * stock[sid], -sid))
+                target = min(target, role['faith'] + faith_gain(item_id) * stock[item_id])
+        gain = faith_gain(item_id)
+        if not gain:
+            self.stop(state, '指定物品不是可用的好友度恢復物品')
             return None
         count = math.ceil((target - role['faith']) / gain)
         slots = {}
@@ -349,5 +384,6 @@ class Expedition:
         self.pending = {'kind': 'faith', 'index': role['index'], 'npc_id': role['npc_id'],
                         'target': target, 'slots': slots, 'consumed': dict.fromkeys(slots, 0),
                         'faith_ok': False, 'due': now + 20}
+        state.inventory['expedition_slots'] = list(slots)
         e.update(pending='faith', status=f"補充夥伴 {role['npc_id']} 好友度：使用 {count} 個物品，等待確認")
         return Packet(31, 27, w.build())

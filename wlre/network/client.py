@@ -99,6 +99,7 @@ class SessionLogic:
         self.last_companion_time = None
         self.field_supply = FieldSupply()
         self.expedition = Expedition()
+        self.expedition_time_requested = False
         self.crafting = Crafting()
         self.alchemy = AutoAlchemy()
         self.movement = Movement()
@@ -184,6 +185,10 @@ class SessionLogic:
             self.world_acknowledged = True
             state.phase = 'world_ready'
             self.acknowledged_scene = state.player.get('scene')
+        if (self.world_acknowledged and state.expedition['ready'] and state.expedition['outpost_ready']
+                and not self.expedition_time_requested):
+            outgoing.append(Packet(31, 28))  # ExpeditionMgr.RequestTime; no paid refresh
+            self.expedition_time_requested = True
         return outgoing
 
     def flush_events(self,state):
@@ -220,7 +225,7 @@ class SessionLogic:
             self.expedition.stop(state)
             return []
         if (state.expedition['enabled'] or state.expedition['pending'] or state.expedition['uncertain']) and kind in (
-                'start_auto_battle', 'start_roaming', 'start_alchemy', 'craft', 'field_item', 'field_storage', 'battle_item', 'companion'):
+                'start_alchemy', 'craft', 'companion'):
             raise ProtocolError('請先停止遠征自動派遣，並等待目前遠征操作確認')
         if kind == 'companion':
             packet = companion_command(state, command)
