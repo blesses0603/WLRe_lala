@@ -66,7 +66,8 @@
 | [rounded_notebook.py](../wlre/ui/rounded_notebook.py) | 以實際按鈕組成的分頁列、選取狀態與鍵盤切換。 |
 | [services_ui.py](../wlre/ui/services_ui.py) | 組隊與煉金操作面板。 |
 | [session_bridge.py](../wlre/ui/session_bridge.py) | 綁定單次連線的工作執行緒回呼與顯示信箱。 |
-| [theme.py](../wlre/ui/theme.py) | 共用背景合成、視窗標題列、ttk 樣式、按鈕貼圖與表格欄寬鎖定。 |
+| [theme.py](../wlre/ui/theme.py) | 視窗背景合成、標題列、按鈕貼圖與表格欄寬鎖定；保留共用主題入口。 |
+| [theme_styles.py](../wlre/ui/theme_styles.py) | 統一註冊 ttk 字型、色彩、按鈕、表格及輸入框樣式，不處理背景裁切。 |
 | [window_layout.py](../wlre/ui/window_layout.py) | 功能對話框的尺寸限制與置中。 |
 
 ## wlre/core：會話狀態與共通處理
