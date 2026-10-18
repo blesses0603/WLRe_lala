@@ -99,6 +99,8 @@ class EfficiencyEvidenceTests(unittest.TestCase):
         self.assertEqual(self.state.efficiency['rows']['self']['earned'],0)
 
     def test_authoritative_level_clears_inference_marker(self):
+        # Keep the EXP total consistent with the newly confirmed level.
+        self.state.knowledge['companions']['2']['stats']['exp']=cumulative(12,0)+50
         self.event('login_result',1,result=0)
         row=self.state.efficiency['rows']['follow:2']
         row['level_inferred']=True
