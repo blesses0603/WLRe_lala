@@ -13,6 +13,7 @@ from wlre.network.wire import FrameDecoder, Packet, encode, ProtocolError
 from wlre.services.world.portal_travel import PortalTravel
 from wlre.services.battle.party import team_command, own_team, expire as expire_team
 from wlre.services.battle.companions import command as companion_command
+from wlre.services.expedition import Expedition
 from wlre.services.items.alchemy import AutoAlchemy
 from wlre.services.items.crafting import Crafting
 from wlre.services.items.field_supply import FieldSupply
@@ -97,6 +98,7 @@ class SessionLogic:
         self.last_chat_time = None
         self.last_companion_time = None
         self.field_supply = FieldSupply()
+        self.expedition = Expedition()
         self.crafting = Crafting()
         self.alchemy = AutoAlchemy()
         self.movement = Movement()
@@ -117,6 +119,7 @@ class SessionLogic:
     def receive(self, event, state):
         outgoing = []
         kind = event['type']
+        self.expedition.observe(event,state)
         self.field_supply.observe(event,state)
         self.crafting.observe(event,state)
         self.alchemy.observe(event,state)
@@ -210,6 +213,15 @@ class SessionLogic:
             state.phase = 'role_selected_awaiting_world'
             return [packet]
         if not self.world_acknowledged: raise ProtocolError('world initialization has not completed')
+        if kind == 'start_expedition':
+            self.expedition.start(state, command.get('settings', {}))
+            return []
+        if kind == 'stop_expedition':
+            self.expedition.stop(state)
+            return []
+        if (state.expedition['enabled'] or state.expedition['pending'] or state.expedition['uncertain']) and kind in (
+                'start_auto_battle', 'start_roaming', 'start_alchemy', 'craft', 'field_item', 'field_storage', 'battle_item', 'companion'):
+            raise ProtocolError('請先停止遠征自動派遣，並等待目前遠征操作確認')
         if kind == 'companion':
             packet = companion_command(state, command)
             now = time.monotonic()
@@ -429,7 +441,7 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
                     try:
                         for packet in logic.command(command, state):
                             _send_command_packet(connection,packet,profile['tx_xor'],state,emit,on_state)
-                        if command.get('type') in ('team','start_alchemy','stop_alchemy','reset_efficiency','craft') and on_state:notify_state(on_state,state)
+                        if command.get('type') in ('team','start_alchemy','stop_alchemy','reset_efficiency','craft','start_expedition','stop_expedition') and on_state:notify_state(on_state,state)
                         if command.get('type') in ('start_auto_battle','stop_auto_battle','set_party_guard'):
                             emit({'type':'auto_battle_status',**state.auto_battle})
                             if on_state:notify_state(on_state,state)
@@ -443,6 +455,11 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
                             if on_state:notify_state(on_state,state)
                     except (ValueError, KeyError, TypeError) as exc:
                         emit({'type': 'command_rejected', 'command_type':command.get('type'), 'error': str(exc)})
+                before_expedition = (state.expedition['status'], state.expedition['pending'], state.expedition['enabled'])
+                for packet in logic.expedition.tick(state,time.monotonic()):
+                    _send_command_packet(connection,packet,profile['tx_xor'],state,emit,on_state)
+                if before_expedition != (state.expedition['status'], state.expedition['pending'], state.expedition['enabled']) and on_state:
+                    notify_state(on_state,state)
                 before_craft=(state.crafting['status'],state.crafting['pending'],state.crafting['revision'],state.crafting['auto_continue'],repr(state.crafting.get('local_plan')))
                 for packet in logic.crafting.tick(state,time.monotonic()):_send_command_packet(connection,packet,profile['tx_xor'],state,emit,on_state)
                 if before_craft!=(state.crafting['status'],state.crafting['pending'],state.crafting['revision'],state.crafting['auto_continue'],repr(state.crafting.get('local_plan'))) and on_state:notify_state(on_state,state)
@@ -508,6 +525,7 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
         closed_reason = 'client_error'; closed_error = exc
         raise
     finally:
+        logic.expedition.stop(state,'連線結束，遠征自動派遣已停止')
         logic.crafting.disconnect(state)
         logic.alchemy.stop(state,'連線結束')
         logic.portal_travel.cancel(state,'連線結束，已取消傳點移動')

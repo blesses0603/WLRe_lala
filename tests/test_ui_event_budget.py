@@ -28,8 +28,9 @@ class EventBudget(unittest.TestCase):
         panel.update_names.assert_not_called()
 
     def test_chat_event_still_updates_names_and_status(self):
-        panel=SimpleNamespace(update_names=Mock(),status=Mock())
+        panel=SimpleNamespace(update_names=Mock(),status=Mock(),finish_pending=Mock())
         event={'type':'chat_notice','text':'fixture'};state={'player':{'role_id':1}}
         ChatPanel.handle_event(panel,event,state)
         panel.update_names.assert_called_once_with(state,event)
         panel.status.set.assert_called_once_with('fixture')
+        panel.finish_pending.assert_called_once_with()

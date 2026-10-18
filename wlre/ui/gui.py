@@ -38,6 +38,7 @@ from wlre.services.world.movement_display import movement_summary
 from wlre.services.battle import party_guard;from wlre.storage import login_memory;from wlre.storage import server_lines
 from wlre.ui.party_guard_ui import PartyGuardPanel
 from wlre.ui.companion_ui import CompanionPanel
+from wlre.ui.expedition_ui import ExpeditionPanel
 
 
 class App:
@@ -125,6 +126,8 @@ class App:
         left_tabs.add(self.party_panel,text='組隊')
         self.companion_panel=CompanionPanel(left_tabs,self)
         left_tabs.add(self.companion_panel,text='夥伴出戰')
+        self.expedition_panel=ExpeditionPanel(left_tabs,self)
+        left_tabs.add(self.expedition_panel,text='遠征')
         self.party_guard_panel=PartyGuardPanel(self.party_panel.guard_host,self,compact=True)
         self.party_guard_panel.pack(fill='both',expand=True)
         if self.party_guard_load_error:self.party_guard_panel.note.set('名單讀取失敗，未啟用：'+self.party_guard_load_error)
@@ -135,7 +138,7 @@ class App:
         self.efficiency_panel=EfficiencyPanel(left_tabs,self)
         left_tabs.add(self.efficiency_panel,text='經驗效率',align='right')
         self.crafting_panel.configure(padding=6)
-        for page in (overview,self.party_panel,self.companion_panel,self.alchemy_panel,self.crafting_panel,self.efficiency_panel):
+        for page in (overview,self.party_panel,self.companion_panel,self.expedition_panel,self.alchemy_panel,self.crafting_panel,self.efficiency_panel):
             page._section_outline=True
         left_tabs.bind('<<NotebookTabChanged>>',lambda e:self.refresh_selected(),add='+')
         self.overview_panel.update_state({})
@@ -544,6 +547,7 @@ class App:
         key=account_settings.identity(host,port,account,self._selected_line_id)
         value=account_settings.load(key,legacy_keys=account_settings.legacy_identities(host,port,account,self._selected_line_id))
         self._settings_key=key;self.ai_settings=value
+        self.expedition_panel.load_settings(key)
         self.party_guard_panel.set_config(value['party_guard'])
         self.party_guard_panel.update_state({})
 
@@ -574,6 +578,7 @@ class App:
         self.log.configure(state='normal');self.log.delete('1.0','end');self.log.configure(state='disabled')
         self.efficiency_panel.update_state({})
         self.companion_panel.render({})
+        self.expedition_panel.render({})
         self.overview_panel.update_state({})
         def work():
             self.live_active=True
@@ -632,6 +637,7 @@ class App:
         if self.efficiency_panel.winfo_ismapped():self.efficiency_panel.update_state(state)
         if self.overview_panel.winfo_ismapped():self.overview_panel.update_state(state)
         if self.companion_panel.winfo_ismapped():self.companion_panel.render(state)
+        if self.expedition_panel.winfo_ismapped():self.expedition_panel.render(state)
         if self.party_panel.winfo_ismapped():self.party_panel.render(state)
         else:
             requests=sum(v.get('status')=='pending' for v in state.get('party',{}).get('requests',{}).values())
@@ -742,6 +748,8 @@ class App:
                 context=latest if latest is not None else self.snapshot
                 self.chat_panel.handle_event(event,context)
                 if event_kind=='command_rejected' and event.get('command_type')=='craft':self.crafting_panel.status.set(event['error'])
+                if event_kind=='command_rejected' and event.get('command_type') in ('start_expedition','stop_expedition'):
+                    self.expedition_panel.status.set(event['error'])
                 if event_kind.startswith('chat_'):continue
                 if event_kind=='connection_closed':status_override='連線已關閉'
                 for line in local_event_lines(event,context):self.write(line)
