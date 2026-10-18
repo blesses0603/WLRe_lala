@@ -703,6 +703,10 @@ class App:
                 except tk.TclError:pass
 
     def _poll_once(self):
+        if hasattr(self.events, 'cleanup'):
+            removed = self.events.cleanup()
+            if removed is not None and hasattr(self, 'diagnostics'):
+                self.diagnostics.logger.info('periodic_cleanup display_events_removed=%d', removed)
         latest=None
         status_override=None
         session_finished=False
@@ -717,6 +721,9 @@ class App:
             if kind=='health':
                 self.connection_monitor.update(data)
                 if hasattr(self,'diagnostics'): self.diagnostics.connection(data)
+            elif kind=='event' and data.get('type') == 'periodic_cleanup':
+                if hasattr(self, 'diagnostics'):
+                    self.diagnostics.logger.info('periodic_cleanup positions_removed=%d', data['positions_removed'])
             elif kind=='session_finished':session_finished=True
             elif kind=='state':latest=data
             elif kind=='error':

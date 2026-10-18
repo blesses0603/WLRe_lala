@@ -63,6 +63,14 @@ class State:
                 oldest=next(iter(self.positions))
             self.positions.pop(oldest)
 
+    def clear_position_history(self):
+        own = str(self.player.get('role_id'))
+        removed = len(self.positions) - int(own in self.positions)
+        current = self.positions.get(own)
+        self.positions.clear()
+        if current is not None: self.positions[own] = current
+        return removed
+
     def wait_for_position(self):
         target=self.location.get('requested_destination') or self.location.get('server_destination')
         if self.local_movement and self.local_movement.get('status') in ('running','finished'):

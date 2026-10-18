@@ -22,6 +22,7 @@ from wlre.services.items.combat_resources import learned_command, food_command, 
 import copy
 from wlre.network.protocol import decode_outbound_movement
 from wlre.core.state import State
+from wlre.core.maintenance import PeriodicCleanup
 from wlre.services.world.movement import Movement
 from wlre.services.world.roaming import Roaming
 from wlre.services.battle.auto_battle import AutoBattle
@@ -391,6 +392,7 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
     parser, logic = FrameDecoder(profile['rx_xor']), SessionLogic(role_index)
     deadline = time.monotonic() + duration if duration is not None else float('inf')
     health = ConnectionHealth(emit)
+    cleanup_timer = PeriodicCleanup()
     closed_reason = 'duration'; closed_error = None
     try:
         with socket.create_connection((host, port), timeout=timeout) as connection:
@@ -404,6 +406,9 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
                 if stop_event.wait(0.1): return state
                 _send(connection, request, profile['tx_xor'], emit)
             while not stop_event.is_set() and time.monotonic() < deadline:
+                if cleanup_timer.due():
+                    removed = state.clear_position_history()
+                    emit({'type': 'periodic_cleanup', 'positions_removed': removed})
                 health.publish()
                 if isinstance(on_state,StatePublisher):on_state.flush(state)
                 event_replies=logic.flush_events(state) if request else []
