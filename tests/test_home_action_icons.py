@@ -37,7 +37,7 @@ class OriginalHomeActionIcons(unittest.TestCase):
         with patch('wlre.ui.function_icons.ImageTk.PhotoImage') as factory:
             action_icon_photo('fixture-parent', '煉金')
         factory.assert_called_once()
-        self.assertIs(factory.call_args.kwargs['master'], 'fixture-parent')
+        self.assertEqual(factory.call_args.kwargs['master'], 'fixture-parent')
         self.assertIs(factory.call_args.args[0], action_icon_image('煉金'))
 
 
