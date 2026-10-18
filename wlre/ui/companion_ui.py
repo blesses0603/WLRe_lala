@@ -4,7 +4,7 @@ from tkinter import ttk
 
 from wlre.services.items.combat_resources import CAT
 from wlre.ui.layout import heading, scroll_table
-from wlre.services.battle.companions import problem
+from wlre.services.battle.companions import problem, ambiguous_identity
 
 
 class CompanionPanel(ttk.Frame):
@@ -63,7 +63,11 @@ class CompanionPanel(ttk.Frame):
             self.companions.delete(*self.companions.get_children())
             for index, profile in sorted(profiles.items(), key=lambda item: int(item[0])):
                 stats = profile.get('stats', {})
-                status = '出戰中' if active is not None and profile.get('npc_id') == active else '未出戰'
+                npc_id = profile.get('npc_id')
+                status = ('同 ID・格位待確認' if active is not None
+                          and npc_id == active and ambiguous_identity(knowledge, npc_id)
+                          else '出戰中' if active is not None and npc_id == active
+                          else '未出戰')
                 self.companions.insert('', 'end', iid=str(index), values=(
                     index, self.name(profile), stats.get('level', '待同步'),
                     self.amount(stats, 'hp'), self.amount(stats, 'sp'), status))
@@ -105,5 +109,7 @@ class CompanionPanel(ttk.Frame):
         if reason:
             self.notice.set(reason)
             return
-        self.app.send({'type': 'companion', 'action': action, 'index': int(selected[0]), 'npc_id': profile['npc_id']})
-        self.notice.set('已提交夥伴指令，等待伺服器確認。')
+        queued = self.app.send({'type': 'companion', 'action': action,
+                                'index': int(selected[0]), 'npc_id': profile['npc_id']})
+        self.notice.set('已提交夥伴指令，等待伺服器確認。' if queued
+                        else '夥伴操作未送出，請檢查連線狀態。')
