@@ -74,3 +74,10 @@
 - 完整回歸共218項，216項通過、2項略過；Android 專項 41 項通過。
 - 新增確認：分頁切換保留材料與聊天草稿、聊天 ACK 依請求識別碼核對、遭拒保留文字、密語保留正確 target_id、完整設定入口先附接該帳號詳細資料。
 - 正式伺服器的材料／補品消耗與多帳號長時間背景操作未自動執行，仍待手機驗收。
+
+
+### v0.0.6 Actions 結果（程式 c9aa986）
+
+- [手機 APK 流程 39082627294](https://github.com/blesses0603/WLRe_lala/actions/runs/39082627294)：成功。產物 [WLRe_LaLa-Android-v0.0.6-debug](https://github.com/blesses0603/WLRe_lala/actions/runs/39082627294/artifacts/12120095506)，內含 ARM64 手機 APK 與 SHA256SUMS。
+- [相容性流程 39082627295](https://github.com/blesses0603/WLRe_lala/actions/runs/39082627295)：建置與 API 31／32／33／34／35／36 七個工作全部成功。涵蓋 Android 12／12L／13／14／15／16 的啟動、UI／服務／Keystore 就緒、Home 15 秒、鎖屏 30 秒與回到畫面後程序存活。
+- 上述模擬器流程未登入正式遊戲帳號，不能替代實機功能操作、材料消耗確認或 15／30／60 分鐘背景網路驗收。
