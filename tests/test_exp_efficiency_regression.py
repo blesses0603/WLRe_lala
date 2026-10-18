@@ -40,11 +40,15 @@ class EfficiencyEvidenceTests(unittest.TestCase):
     def test_first_authoritative_exp_and_level_are_saved_in_state(self):
         self.event('initial_data_complete',1)
         rows=self.state.efficiency['rows']
+        self.assertEqual(self.state.efficiency['role_id'],71)
         self.assertEqual(rows['self']['exp'],20000)
         self.assertEqual(rows['self']['level'],15)
         self.assertEqual(rows['follow:2']['exp'],10000)
         self.assertIsNotNone(rows['follow:2']['level'])
         self.assertEqual(rows['follow:3']['exp'],22000)
+        self.event('event_active',2,sub=1)
+        self.assertEqual(self.state.efficiency['role_id'],71)
+        self.assertEqual(self.state.efficiency['rows']['follow:2']['exp'],10000)
 
     def test_idle_companion_retains_rates_during_other_battles(self):
         self.start(0)
