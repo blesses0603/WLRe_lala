@@ -33,7 +33,10 @@
 |---|---|
 | [account_controller.py](../wlre/ui/account_controller.py) | 帳號偏好載入、儲存與成功後啟用。 |
 | [attribute_points_ui.py](../wlre/ui/attribute_points_ui.py) | 角色五項能力配點視窗與確認流程。 |
-| [auto_battle_ui.py](../wlre/ui/auto_battle_ui.py) | 角色／夥伴 AI 規則草稿、設定匯入匯出與套用。 |
+| [auto_battle_ui.py](../wlre/ui/auto_battle_ui.py) | AI 設定入口、整體套用、匯入匯出，保留原本的編輯器公開介面。 |
+| [auto_battle/model.py](../wlre/ui/auto_battle/model.py) | AI 規則草稿驗證、已確認特技及可用行動清單。 |
+| [auto_battle/action_editor.py](../wlre/ui/auto_battle/action_editor.py) | 行動編輯、技能與物品選取、目標與條件。 |
+| [auto_battle/rule_card.py](../wlre/ui/auto_battle/rule_card.py) | 各類 AI 規則卡片與操作控制項。 |
 | [bag_grid.py](../wlre/ui/bag_grid.py) | 背包與唯讀儲物格狀介面、分頁規格與物品詳情模型。 |
 | [battle_view.py](../wlre/ui/battle_view.py) | 戰場陣形、單位卡片、目標選擇與檢視。 |
 | [button_art.py](../wlre/ui/button_art.py) | 原版按鈕切片縮放、視窗控制與設定／包包／回復圖示按鈕。 |
