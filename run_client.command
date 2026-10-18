@@ -1,7 +1,8 @@
 #!/bin/bash
 # macOS equivalent of run_client.bat (Apple Silicon / Intel).
 # Put this file next to run_client.bat and WLRE_Client.py.
-set -u
+# macOS ships Bash 3.2, whose nounset mode rejects an empty array.
+# Keep candidate discovery safe when no suitable Python is installed.
 
 cd "$(dirname "$0")" || exit 1
 export PYTHONUTF8=1
