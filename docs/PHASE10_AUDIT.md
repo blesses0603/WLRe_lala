@@ -1,0 +1,54 @@
+# 第 10 項：測試、文件與版本整理
+
+> 建立日期：2026-10-19。工作分支：`chore/phase10-final-audit-20261019`，基準 main：`a27826bc3fcabcbb72e42f600721ad90c9115cad`（PR #18 已合併）。
+> 本項先完成離線審核與文件修正；GitHub Actions 額度耗盡時，不會冒稱新提交已通過最新 CI。
+
+## 目標與安全界線
+
+- 核對源碼／文件的實際版本，區分 **已發行 v0.5.0** 與 **v0.6.0 開發中的功能摘要**。只更新文件並保留 `wlre.__version__ = "0.5.0"`，不在沒有正式打包驗證時提早宣稱 v0.6.0 已發布。
+- 清理真正重複、失效或過時的紀錄，同時保留歷史檔、相容匯入、正式遊戲資源、設定格式與測試入口。不得因檔名短或看起來像轉接模組就任意刪除。
+- 不修改 EXP 效率計算、封包、登入、角色設定的程式碼，特別保留 `tests/test_exp_efficiency_regression.py` 及已驗證的第 07 項修正。
+- 不重複觸發消耗昂貴 Runner 的 Windows／macOS 打包。三平台回歸及正式版打包待 GitHub Actions 額度恢復後再驗證；實機與正式伺服器依舊需人工驗收。
+
+## 2026-10-19 初始盤點
+
+| 類別 | 結果 |
+| --- | --- |
+| GitHub main 樹 | 286 個追蹤檔案，約 102.4 MB（依 Git blob size 加總，並非 ZIP 體積） |
+| 相同 Git blob SHA | 僅 12 個零位元組套件 `__init__.py`，皆有建立 Python 套件的用途 |
+| 完全相同的非空追蹤檔案 | 0 組，沒有需要刪除的同內容副本 |
+| Markdown 文件及相對連結 | 19 份 Markdown、185 個相對路徑連結 |
+| 失效相對路徑連結 | 2 處，皆在 `docs/README_v0.5.0.md`，已列入此次修正 |
+| 可疑暫存資料 | 未在追蹤樹發現 `.pyc`、`.bak`、`.log`、`.sqlite`、`.pem` 等典型暫存／祕密檔 |
+| 發行狀態 | GitHub Releases 上 v0.5.0 已於 2026-10-17 發布，含 Windows x64、macOS arm64、macOS x64 ZIP 與 SHA256SUMS |
+| 當前程式版本 | `wlre/__init__.py` 為 `0.5.0`；README v0.6.0 是未發布的開發摘要 |
+
+歷史報告 `docs/Portal_Review_1262.html`、`docs/README_v0.5.0.md` 與 `docs/CLEANUP.md` 是可追溯資料，不是重複執行檔。
+小型相容轉接模組（例如 `wlre/services/expedition_data.py`、`expedition_teams.py`、`wlre/ui/expedition_ui.py`、`wlre/ui/minimap.py`）暫時保留，因為動態匯入、測試及舊路徑使用者無法單靠檔案長度判定不存在。
+
+## 新增的離線驗證
+
+```bash
+python -m tools.audit_repository
+python -m tools.audit_repository --strict-git
+python -m unittest discover -s tests -q
+python WLRE_Client.py --self-test
+python -m tools.build.build_nuitka --dry-run
+```
+
+`tools.audit_repository` 唯讀，無網路、遊戲帳號或自動發版功能，會核對 Markdown 相對檔案路徑、程式版本及 Git 追蹤的非空重複 blob。
+`--strict-git` 要求存在 Git index；純原始碼匯出可不用此參數。
+`tests/test_repository_hygiene.py` 防止日後再引入失效連結、重複非空檔及錯誤的自動打包觸發設定。
+
+## 已有的第 09 項證據與未完成項目
+
+- [第 09 項三平台回歸 CI](https://github.com/blesses0603/WLRe_lala/actions/runs/39141397498)（Commit `4e3abc0`）：Windows、Linux、macOS 均 success。
+- [第 09 項三平台原生打包 CI](https://github.com/blesses0603/WLRe_lala/actions/runs/39141397522)（Commit `4e3abc0`）：Windows x64、macOS Intel x64、Apple Silicon arm64 均 success，成功產出檔案。
+- 第 09 項合併後，普通 PR/main 只執行 Ubuntu，跨平台回歸與完整 Nuitka 原生建置改為可選手動；發版標籤仍會執行正式建置。
+- **第 10 項的新提交目前沒有最新通過的 CI 結果**，額度不足造成 Runner 無法啟動，與程式測試通過是不同概念。
+- 尚需：在有足夠額度的環境執行第 10 項完整回歸、必要時手動三平台驗收、Windows／Mac 實機操作及正式遊戲驗證，確認穩定後再決定 v0.6.0 的版本常數、標籤與發布。
+
+## 版本操作政策
+
+目前正式可下載版請使用 [v0.5.0 GitHub Release](https://github.com/blesses0603/WLRe_lala/releases/tag/v0.5.0)。
+README 中 v0.6.0 仍代表後續開發內容，不會因完成文件稽核就立刻創造 `v0.6.0` 標籤、觸發需要付費額度的建置或承諾已完成新的可執行檔。
