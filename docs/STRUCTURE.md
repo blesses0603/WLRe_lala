@@ -41,7 +41,9 @@
 | [chat_ui.py](../wlre/ui/chat_ui.py) | 聊天顯示、頻道、輸入與發話結果。 |
 | [companion_ui.py](../wlre/ui/companion_ui.py) | 夥伴資料與出戰／休息操作。 |
 | [connection_status.py](../wlre/ui/connection_status.py) | 將傳輸健康證據轉成連線狀態文字。 |
-| [crafting_browser.py](../wlre/ui/crafting_browser.py) | 製作配方瀏覽、物品圖像快取、設備分類與配方詳情。 |
+| [crafting_browser.py](../wlre/ui/crafting_browser.py) | 製作配方瀏覽、設備分類與配方詳情；保留舊版 ItemIcons 匯入相容性。 |
+| [crafting/item_icons.py](../wlre/ui/crafting/item_icons.py) | 製作／背包共用的道具 ZIP 圖像快取與貼圖載入。 |
+| [crafting/queue_view.py](../wlre/ui/crafting/queue_view.py) | 製作排程視窗、控制指令與伺服器佇列進度顯示。 |
 | [crafting_plan_ui.py](../wlre/ui/crafting_plan_ui.py) | 本機自訂製作清單與伺服器排程操作介面。 |
 | [crafting_ui.py](../wlre/ui/crafting_ui.py) | 製作主分頁整合。 |
 | [dashboard_builder.py](../wlre/ui/dashboard_builder.py) | 主頁分頁、面板與事件區的視窗建立。 |
