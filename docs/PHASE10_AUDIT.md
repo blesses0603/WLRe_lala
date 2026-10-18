@@ -74,3 +74,7 @@ README 中 v0.6.0 仍代表後續開發內容，不會因完成文件稽核就�
 2026-10-19，Commit `34add166`：[GitHub Actions 39162618822](https://github.com/blesses0603/WLRe_lala/actions/runs/39162618822)，Ubuntu job success。實際執行 423 tests、2 skips；成功完成 Linux GUI smoke、資源 `--self-test`、Python 全檔 `compileall`、`tools.audit_repository --strict-git`，與 Windows／macOS 雙架構 Nuitka dry-run。稽核明確顯示 `markdown_files=20`、`local_links_checked=191`、`broken_local_links=[]`、`nonempty_duplicate_blobs=[]`、`git_index_available=true`。
 
 需要 Windows／macOS 真正執行與原生打包的補測仍保留未驗收，故 PR #19 保持 Draft、第 10 項尚未勾選。
+
+## 2026-10-19 跨平台驗收解鎖
+
+依使用者最新指示，不再以 GitHub Actions 額度作為阻擋完整檢查的理由：`Main and PR tests` 恢復 PR/main 的 Linux、Windows、macOS 三平台測試；`Native desktop packaging verification` 恢復建置相關 PR 的 Windows x64、macOS arm64 與 Intel x64 原生 Nuitka 編譯驗證，正式 Release 保持原流程。前文記錄額度不足為當時的歷史狀態，不是現在的限制。最新測試結果及人工驗收界線應以 PR #19 更新後的工作流程執行紀錄為準。

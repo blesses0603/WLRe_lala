@@ -15,8 +15,8 @@
 | `tools/` | 建置／發佈／資源維護工具。 |
 | `tests/` | unittest 測試。 |
 | `docs/` | 架構、介面、協定與驗證說明。 |
-| `.github/workflows/test.yml` | main／PR 自動執行 Linux 單元與 GUI 測試；手動 `full_matrix` 才執行 Windows／macOS 回歸。 |
-| `.github/workflows/desktop-packaging.yml` | 手動執行 Windows x64／macOS arm64／Intel x64 原生 Nuitka 驗證。 |
+| `.github/workflows/test.yml` | main／PR 自動執行 Linux、Windows、macOS 三平台完整單元測試與 GUI 冒煙測試。 |
+| `.github/workflows/desktop-packaging.yml` | 建置相關 PR 自動執行 Windows x64／macOS arm64／Intel x64 原生 Nuitka 驗證，亦可手動觸發。 |
 | `.github/workflows/release-windows.yml` | Windows 與 macOS 共用發版工作流程，檔名仍保留 windows。 |
 
 ## wlre：套件入口

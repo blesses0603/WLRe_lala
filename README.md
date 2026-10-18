@@ -64,7 +64,7 @@ python WLRE_Client.py --smoke-test-gui
 python -m tools.build.build_nuitka --dry-run
 ```
 
-`--self-test` 檢查必要資源，`--smoke-test-gui` 建立視窗但不登入；GUI 測試需要顯示環境（Linux CI 使用 Xvfb）。`.github/workflows/test.yml` 的一般 PR／main 提交目前**僅自動跑 Linux** 的完整測試與 GUI 冒煙檢查，以節省 Actions 額度；Windows／macOS 三平台回歸須在 Actions 手動開啟 `full_matrix`，完整 Nuitka EXE／APP 打包亦改為手動驗證（正式版本標籤仍自動打包）。測試狀態以實際 GitHub Actions 結果為準，不能把 Runner 額度不足視為程式失敗或測試成功。[驗證紀錄](docs/VALIDATION.md) · [第 10 項稽核](docs/PHASE10_AUDIT.md)
+`--self-test` 檢查必要資源，`--smoke-test-gui` 建立視窗但不登入；GUI 測試需要顯示環境（Linux CI 使用 Xvfb）。`.github/workflows/test.yml` 現在於一般 PR／main 提交自動執行 **Linux、Windows、macOS** 完整回歸；變更編譯流程或關鍵程式時，另由 `.github/workflows/desktop-packaging.yml` 自動執行 Windows x64 EXE、macOS Apple Silicon／Intel 原生建置。兩個工作流程仍可手動啟動，正式版本標籤亦照常執行發布打包。實際是否通過以 GitHub Actions 最新結果為準。[驗證紀錄](docs/VALIDATION.md) · [第 10 項稽核](docs/PHASE10_AUDIT.md)
 
 ## 參考文件
 

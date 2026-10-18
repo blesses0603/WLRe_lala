@@ -60,18 +60,16 @@ class NativeArchitectureTests(unittest.TestCase):
 
 
 class WorkflowVerificationTests(unittest.TestCase):
-    def test_native_compilation_requires_manual_dispatch_and_is_separate_from_daily_ci(self):
+    def test_native_compilation_runs_on_relevant_prs_and_remains_manually_dispatchable(self):
         workflow = (ROOT / '.github/workflows/desktop-packaging.yml').read_text(encoding='utf8')
         event_block = workflow.split('on:\n', 1)[1].split('\npermissions:', 1)[0]
         self.assertIn('workflow_dispatch:', event_block)
-        self.assertNotIn('pull_request:', event_block)
+        self.assertIn('pull_request:', event_block)
+        self.assertIn('tools/build/**', event_block)
         self.assertNotIn('push:', event_block)
-        cheap = (ROOT / '.github/workflows/test.yml').read_text(encoding='utf8')
-        self.assertIn('pull_request:', cheap)
-        self.assertIn('full_matrix:', cheap)
-        self.assertIn('default: false', cheap)
-        self.assertIn('["ubuntu-latest"]', cheap)
-        self.assertIn('["ubuntu-latest","windows-2022","macos-15"]', cheap)
+        daily = (ROOT / '.github/workflows/test.yml').read_text(encoding='utf8')
+        self.assertIn('pull_request:', daily)
+        self.assertIn('os: [ubuntu-latest, windows-2022, macos-15]', daily)
 
         for runner in ('windows-2022', 'macos-15', 'macos-15-intel'):
             self.assertIn('runner: ' + runner, workflow)

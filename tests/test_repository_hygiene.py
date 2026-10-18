@@ -38,19 +38,19 @@ class DocumentationAndReleaseAudit(unittest.TestCase):
         self.assertIn("releases/tag/v0.5.0", readme)
         self.assertIn("不是正式發布", changelog)
 
-    def test_actions_default_preserves_low_cost_pr_behavior(self):
+    def test_actions_run_full_regressions_and_native_pr_builds(self):
         daily = (ROOT / ".github/workflows/test.yml").read_text(encoding="utf-8")
         native = (ROOT / ".github/workflows/desktop-packaging.yml").read_text(encoding="utf-8")
         release = (ROOT / ".github/workflows/release-windows.yml").read_text(encoding="utf-8")
-        self.assertIn('["ubuntu-latest"]', daily)
-        self.assertIn('full_matrix:', daily)
+        self.assertIn('os: [ubuntu-latest, windows-2022, macos-15]', daily)
         self.assertIn('python -m tools.audit_repository --strict-git', daily)
         self.assertIn('python -m compileall -q', daily)
         self.assertIn('tools.build.build_macos --arch arm64 --dry-run', daily)
         self.assertIn('tools.build.build_macos --arch x64 --dry-run', daily)
         self.assertIn("workflow_dispatch:", native)
         native_triggers = native.split("on:\n", 1)[1].split("\npermissions:", 1)[0]
-        self.assertNotIn("pull_request:", native_triggers)
+        self.assertIn("pull_request:", native_triggers)
+        self.assertIn("tools/build/**", native_triggers)
         self.assertIn("tags:", release)
         self.assertIn("build_macos:", release)
 
