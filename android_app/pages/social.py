@@ -61,7 +61,7 @@ class Party(Page):
 
 class Chat(Page):
     def __init__(self, d):
-        super().__init__(d); self.offset = 0; self.quote = None
+        super().__init__(d); self.offset = 0; self.quote = None; self.pending = False; self.sent_text = None
         self.filter = select(self, '顯示頻道', ['全部', *CHANNELS, '跨服', '系統']); self.filter.bind(text=lambda *_: self.render())
         self.messages = column(); self.add_widget(self.messages)
         self.add_widget(row(button('較早訊息', lambda: self.move(-1)), button('最新訊息', lambda: self.move(999))))
@@ -70,7 +70,9 @@ class Chat(Page):
         self.quote_label = label('未引用訊息'); self.add_widget(self.quote_label)
         self.add_widget(button('取消引用', self.cancel_quote))
         self.text = field(self, '聊天內容')
-        self.add_widget(row(button('表情', self.emojis), button('送出', self.send)))
+        self.send_button = button('送出', self.send)
+        self.add_widget(row(button('表情', self.emojis), self.send_button))
+        self.channel.bind(text=lambda *_: self.cancel_quote() if self.quote and self.quote['channel'] != self.channel.text else None)
     def cancel_quote(self): self.quote = None; self.quote_label.text = '未引用訊息'
     def emojis(self):
         from android_app.assets import emoji_entries, emoji_texture
@@ -82,11 +84,22 @@ class Chat(Page):
             return Image(texture=value, size_hint=(None, None), size=(dp(40),dp(40))) if value else None
         pick('選擇表情', entries, lambda i: setattr(self.text, 'text', self.text.text.text + f'[Emoji{i}]'), icon=icon)
     def send(self):
-        command = dict(type='chat', channel=self.channel.text, target=self.target.text, text=self.text.text)
+        if self.pending: return
+        import uuid
+        self.request_id = uuid.uuid4().hex
+        command = dict(type='chat', request_id=self.request_id, channel=self.channel.text, target=self.target.text, text=self.text.text)
         if self.quote: command['reply'] = copy.deepcopy(self.quote)
         if self.d.send(command):
             self.d.message.text = '聊天已排入佇列；請以伺服器轉送／回覆為準'
-            self.text.text = ''; self.cancel_quote()
+            self.pending = True; self.send_button.disabled = True; self.sent_text = self.text.text
+            self.sent_quote = copy.deepcopy(self.quote)
+    def ack(self, value):
+        if not self.pending or value.get('request_id') != getattr(self, 'request_id', None): return
+        self.pending = False; self.send_button.disabled = False
+        if value.get('status') == 'sent':
+            if self.text.text == value.get('text') == self.sent_text: self.text.text = ''
+            if self.quote == getattr(self, 'sent_quote', None): self.cancel_quote()
+
     def move(self, delta):
         self.offset = max(0, self.offset+delta); self.render()
     def actions(self, message):
@@ -97,20 +110,28 @@ class Chat(Page):
             if message.get('channel') == '跨服': self.d.message.text = '跨服訊息不能當作本服密語對象'; return
             pid = self.state.get('player', {}).get('role_id')
             rid = message.get('role_id')
-            target = message.get('whisper_target') if rid == pid else rid
+            target = message.get('target_id') if rid == pid else rid
             self.channel.text = '密語'; self.target.text = str(target or ''); popup.dismiss()
         def quote():
             channel = message.get('channel')
-            if channel not in CHANNELS or not message.get('role_id'): return
+            if channel not in CHANNELS or not message.get('role_id'):
+                self.d.message.text = '此頻道不支援引用回覆'; return
             self.channel.text = channel
             pid = self.state.get('player', {}).get('role_id')
-            target = message.get('whisper_target') if message['role_id'] == pid else message['role_id']
+            target = message.get('target_id') if message['role_id'] == pid else message['role_id']
             if channel == '密語': self.target.text = str(target)
             self.quote = dict(role_id=message['role_id'], text=message['text'], channel=channel,
                 items=[v['item_id'] if isinstance(v, dict) else v for v in message.get('items', [])],
-                has_at=False, whisper_target=target)
-            self.quote_label.text = '引用：'+plain_text(message['text']); popup.dismiss()
+                has_at=bool(message.get('reply_id')), whisper_target=target)
+            self.quote_label.text = '引用：'+plain_text(message['text'])
+            prefix = '@'+message.get('name', str(message['role_id']))+' '
+            if not self.text.text.startswith(prefix): self.text.text = prefix+self.text.text
+            popup.dismiss()
         body.add_widget(row(button('密語回覆', whisper), button('引用回覆', quote)))
+        def copy_message():
+            from kivy.core.clipboard import Clipboard
+            Clipboard.copy(plain_text(message.get('text',''))); popup.dismiss()
+        body.add_widget(button('複製訊息', copy_message))
         from android_app.widgets import dialog
         popup = dialog('訊息操作', body, .6)
     def render(self):
@@ -133,6 +154,8 @@ class Chat(Page):
             if images: self.messages.add_widget(row(*images))
         self.messages.add_widget(label(f'{self.offset+1}/{pages} 頁 · 保留最近 200 則'))
     def refresh(self):
+        if not self.d.live:
+            self.pending = False; self.send_button.disabled = False
         key = (str(self.d.data.get('chat')), self.filter.text)
         if key != self.key:
             was_latest = self.offset >= max(0, ((len(getattr(self, '_previous', []))+19)//20)-1)

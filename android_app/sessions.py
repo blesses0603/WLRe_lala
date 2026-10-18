@@ -35,6 +35,8 @@ class Session:
     names: NameBook = field(default_factory=NameBook)
     preferences: dict = field(default_factory=preferences.defaults)
     detail_revision: int = 0
+    chat_sequence: int = 0
+    chat_requests: deque = field(default_factory=deque)
     lock: threading.RLock = field(default_factory=threading.RLock, repr=False)
 
 
@@ -74,14 +76,20 @@ class SessionManager:
                         session.names.update(session.game_state, event)
                         session.chat_history.append({k: copy.deepcopy(event[k]) for k in (
                             'channel', 'role_id', 'text', 'server_id', 'reply_id', 'reply_text',
-                            'reply_items', 'reply_at', 'items', 'whisper_target') if k in event})
+                            'reply_items', 'reply_at', 'items', 'target_id') if k in event})
                         session.detail_revision += 1
                     elif kind in ('chat_sent', 'chat_result', 'chat_notice'):
                         text = '已送出，等待伺服器轉送；不代表對方已讀' if kind == 'chat_sent' else str(event.get('text', '發話回覆已收到'))
                         self.events.put((session_id, 'notice', text[:500]))
+                        if kind == 'chat_sent':
+                            session.chat_sequence += 1
+                            self.events.put((session_id, 'chat_ack', dict(sequence=session.chat_sequence, request_id=session.chat_requests.popleft() if session.chat_requests else None, status='sent', text=event.get('text',''))))
                     elif kind == 'chat_profile':
                         session.names.update(session.game_state, event)
                     if kind == 'command_rejected':
+                        if event.get('command_type') == 'chat':
+                            session.chat_sequence += 1
+                            self.events.put((session_id, 'chat_ack', dict(sequence=session.chat_sequence,request_id=session.chat_requests.popleft() if session.chat_requests else None,status='rejected')))
                         from wlre.core.event_log import chinese
                         text = '操作未送出：' + chinese(event.get('error', '操作條件不符'))[:500]
                         # Errors originate from supported game commands, never login exceptions.
@@ -132,7 +140,11 @@ class SessionManager:
                     session.names.update(session.game_state)
                     session.detail_revision += 1
                     player = state.get("player") or {}
-                    stats = (state.get("knowledge") or {}).get("player", {}).get("stats", {})
+                    stats = dict((state.get("knowledge") or {}).get("player", {}).get("stats", {}))
+                    if state.get('battle', {}).get('active'):
+                        unit = next((u for u in state.get('battle_units', {}).values()
+                            if player.get('role_id') is not None and u.get('pid') == player['role_id'] and not u.get('master_id')), {})
+                        stats.update({k: unit[k] for k in ('hp','max_hp','sp','max_sp','level') if k in unit})
                     session.phase = state.get("phase", "未知")
                     session.automation = {'battle': copy.deepcopy(state.get('auto_battle') or {}),
                                           'roaming': copy.deepcopy(state.get('roaming') or {})}
@@ -223,6 +235,7 @@ class SessionManager:
             if session.commands.qsize() >= 32: raise ValueError('操作佇列已滿，請等待回覆')
             if checked['type'] == 'chat' and checked.get('channel') == '密語':
                 checked['target'] = session.names.resolve(checked.get('target'), session.game_state.get('player', {}).get('role_id'))
+            if checked['type'] == 'chat': session.chat_requests.append(checked.get('request_id'))
             session.commands.put(checked)
             return True
 

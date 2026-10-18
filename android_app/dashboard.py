@@ -14,6 +14,7 @@ class Dashboard:
         self.app, self.sid = app, sid
         self.data = {}; self.page = None; self.page_name = None; self.signature = None
         self.closed = False
+        self.views = {}
         session = app.manager.sessions[sid]
         base = BoxLayout(orientation='vertical', spacing=dp(6), padding=dp(6))
         self.status = label('等待服務同步', 50); base.add_widget(self.status)
@@ -54,7 +55,6 @@ class Dashboard:
         except (ValueError, OSError) as exc: self.message.text = str(exc); return False
 
     def show(self, name):
-        if self.page and hasattr(self.page, 'close'): self.page.close()
         self.page_name = name; self.content.clear_widgets()
         from android_app.pages.general import Overview, Events, Efficiency
         from android_app.pages.resources import Resources, Battle
@@ -63,8 +63,11 @@ class Dashboard:
         from android_app.pages.map import MapPage
         from android_app.pages.settings import SettingsPage
         classes = dict(zip(PAGES, (Overview, Resources, MapPage, Battle, Chat, Party, Alchemy, Crafting, Efficiency, Events, SettingsPage)))
-        self.page = classes[name](self)
-        scroll = ScrollView(do_scroll_x=False); scroll.add_widget(self.page)
+        if name not in self.views:
+            page = classes[name](self)
+            scroll = ScrollView(do_scroll_x=False); scroll.add_widget(page)
+            self.views[name] = (page, scroll)
+        self.page, scroll = self.views[name]
         self.content.add_widget(scroll)
         self.page.refresh()
 
@@ -83,11 +86,15 @@ class Dashboard:
             if self.page: self.page.refresh()
         return True
 
+    def chat_ack(self, value):
+        if '聊天' in self.views: self.views['聊天'][0].ack(value)
+
     def close(self): self.popup.dismiss()
 
     def dismissed(self):
         if self.closed: return
         self.closed = True; self.timer.cancel()
-        if self.page and hasattr(self.page, 'close'): self.page.close()
+        for page, _ in self.views.values():
+            if hasattr(page, 'close'): page.close()
         if hasattr(self.app.manager, 'watch'): self.app.manager.watch(None)
         self.app.dashboard = None

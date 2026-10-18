@@ -55,6 +55,8 @@ class MobileFeatures(unittest.TestCase):
         self.assertNotIn('new',data['state']['inventory']['items'])
         self.assertTrue(self.manager.game_command(session.session_id,dict(type='chat',channel='密語',target='附近',text='測試')))
         self.assertEqual(session.commands.get_nowait()['target'],456)
+        emit(dict(type='chat_message',channel='密語',role_id=123,target_id=456,text='本機密語'))
+        self.assertEqual(self.manager.session_detail(session.session_id)['chat'][-1]['target_id'],456)
 
     def test_preferences_are_private_and_scoped_without_auto_start(self):
         with tempfile.TemporaryDirectory() as base:
@@ -171,3 +173,23 @@ class MobilePages(unittest.TestCase):
         self.assertEqual(d.data, {})
         d.page.open('角色規則')
         self.assertIn('等待本帳號設定', d.message.text)
+
+    def test_tab_switch_preserves_forms_and_chat_waits_for_matching_ack(self):
+        from android_app.dashboard import Dashboard
+        d = Dashboard(self.app, 'fixture'); self.addCleanup(d.dismissed)
+        d.data = self.app.manager.session_detail('fixture')
+        d.show('煉金'); alchemy = d.page; alchemy.runs.text = '7'
+        d.show('聊天'); chat = d.page; chat.text.text = '測試聊天'
+        chat.send()
+        command = self.session.commands.get_nowait()
+        self.assertEqual(command['text'], '測試聊天')
+        self.assertEqual(chat.text.text, '測試聊天')
+        self.assertTrue(chat.pending)
+        d.show('煉金'); self.assertIs(d.page, alchemy); self.assertEqual(d.page.runs.text,'7')
+        chat.ack({'status':'sent','request_id':'old','text':'測試聊天'})
+        self.assertTrue(chat.pending)
+        d.chat_ack({'status':'rejected','request_id':command['request_id']})
+        self.assertFalse(chat.pending); self.assertEqual(chat.text.text,'測試聊天')
+        d.show('聊天'); chat.send(); sent = self.session.commands.get_nowait()
+        d.chat_ack({'status':'sent','request_id':sent['request_id'],'text':'測試聊天'})
+        self.assertFalse(chat.pending); self.assertEqual(chat.text.text,'')

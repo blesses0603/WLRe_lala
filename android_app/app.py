@@ -327,7 +327,9 @@ class LaLaApp(App):
             session = self.manager.sessions.get(sid)
             if session is None: continue
             status, choices, title, stop, card = record
-            if kind == "notice":
+            if kind == 'chat_ack':
+                if self.dashboard and self.dashboard.sid == sid: self.dashboard.chat_ack(value)
+            elif kind == "notice":
                 self.message.text = value
                 if self.dashboard and self.dashboard.sid == sid: self.dashboard.message.text = value
             elif kind == "status":

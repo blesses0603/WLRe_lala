@@ -30,7 +30,11 @@ class Overview(Page):
              ('（出戰）' if v.get('npc_id') == k.get('active_npc_id') else ''), v)
             for v in k.get('companions', {}).values()]
         for name, profile in profiles:
-            stats = profile.get('stats', {})
+            stats = dict(profile.get('stats', {}))
+            if s.get('battle', {}).get('active'):
+                identity = profile.get('npc_id', p.get('role_id'))
+                unit = next((u for u in s.get('battle_units', {}).values() if identity is not None and u.get('pid') == identity), {})
+                stats.update({key:unit[key] for key in ('hp','max_hp','sp','max_sp','level') if key in unit})
             rows.append(name + ' Lv.' + str(stats.get('level', '—')) + '\n' +
                 'HP {}/{} · SP {}/{}'.format(*(stats.get(key, '—') for key in ('hp', 'max_hp', 'sp', 'max_sp'))))
         from wlre.services.battle.auto_battle import summary as battle
@@ -53,7 +57,7 @@ class Efficiency(Page):
     def __init__(self, d):
         super().__init__(d)
         self.subject = select(self, '統計對象', ['等待資料']); self.subject.bind(text=lambda *_: self.render())
-        self.unit = select(self, '效率單位', ['分', '時', '秒']); self.unit.bind(text=lambda *_: self.render())
+        self.unit = select(self, '效率單位', ['分', '時', '天', '秒']); self.unit.bind(text=lambda *_: self.render())
         self.info = label(); self.add_widget(self.info)
         self.add_widget(button('重新統計', lambda: d.send({'type': 'reset_efficiency'}, '重設本帳號的經驗效率統計？')))
         self.lookup = {}
@@ -66,12 +70,15 @@ class Efficiency(Page):
         r = self.lookup.get(self.subject.text)
         if not r: self.info.text = '等待角色經驗資料；首場作為基準'; return
         remaining, percent, reborn = progress(r['exp'], r['level'], r['degree']) if all(r.get(k) is not None for k in ('exp', 'level', 'degree')) else (None, None, None)
+        import time
+        elapsed = max(0, time.monotonic()-r['last_time']) if self.d.live and not self.state.get('efficiency', {}).get('offline') and r.get('last_time') is not None else 0
         text = [f"{r['name']}｜{STAGES.get(r.get('degree'), '階段未同步')}｜Lv.{r.get('level')}",
                 '進度 '+(f'{percent:.1f}%' if percent is not None else '待同步'),
                 f"累積經驗 {r.get('exp')}｜本次 +{r['earned']}｜本場 +{r.get('last_gain')}"]
-        factor = {'分': 1, '時': 60, '秒': 1/60}[self.unit.text]
+        factor = {'分': 1, '時': 60, '天': 1440, '秒': 1/60}[self.unit.text]
         for title, (rate, count) in zip(('總平均', '近10場', '近30場'), rates(r)):
             speed = f'{rate*factor:,.1f}' if rate is not None else '等待樣本'
             text += [f'{title}（{count} 場）：{speed}／{self.unit.text}',
-                     '升級：'+forecast(remaining, rate)+'｜一轉190：'+forecast(reborn, rate)]
+                     '升級：'+forecast(remaining, rate, elapsed)+'｜一轉190：'+(forecast(reborn, rate, elapsed) if r.get('degree') == 1 else '—')]
+        if r.get('level_inferred') or r.get('degree_inferred'): text.append('此夥伴／坐騎的等級或階段依經驗曲線推估')
         self.info.text = '\n\n'.join(text)+'\n\n預估採用已完成戰鬥的有效樣本；未同步時不推算。'
