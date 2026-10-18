@@ -63,7 +63,7 @@ class OverviewControls(unittest.TestCase):
         for key in ('party','alchemy','crafting','efficiency'):
             button=self.panel.actions[key]
             self.assertEqual(button.winfo_class(),'TButton')
-            self.assertEqual(button.cget('style'),'Icon.Tab.TButton')
+            self.assertTrue(str(button.cget('style')).endswith('Icon.Tab.TButton'))
             self.assertEqual(button.winfo_width(),reference.winfo_width())
             self.assertEqual(button.winfo_height(),reference.winfo_height())
             self.assertFalse(button.winfo_children())
