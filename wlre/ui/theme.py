@@ -8,7 +8,7 @@ from wlre.paths import RESOURCE_ROOT
 from wlre.ui.button_art import button_image, button_kind
 from wlre.ui.theme_styles import apply_styles
 from wlre.ui.theme_surfaces import (artwork_canvas, window_background, visible_bounds,
-                                    widget_crop, draw_section)
+                                    widget_crop, draw_section, section_layers)
 import copy
 import os
 import tkinter as tk
@@ -282,7 +282,8 @@ class GlassTheme:
                 boxes.append((w, x, y, a, b, bounds))
         # A border policy change must repaint even if widget geometry is static.
         outline = not getattr(window, '_no_glass_border', False)
-        signature = (width, height, outline,
+        sections = section_layers(boxes)
+        signature = (width, height, outline, sections,
                      tuple((str(w), x, y, a, b, bounds) for w, x, y, a, b, bounds in boxes))
         if signature == data['signature']:
             return
@@ -295,18 +296,14 @@ class GlassTheme:
                 self.wallpaper, width, height, main=window is self.root, outline=outline)
             data['background_key'] = background_key
             data['background_size'] = (width, height)
-        if data.get('surface_key')!=signature:
+        surface_key = (background_key, sections)
+        if data.get('surface_key')!=surface_key:
             backing=data['background'].copy()
             layer=Image.new('RGBA',backing.size)
-            for widget,x,y,a,b,bounds in boxes:
-                section=(getattr(widget,'_section_outline',False) or
-                         type(widget).__name__ in ('HomeMap','GlassGroup','RecoveryPage') or
-                         widget.winfo_class()=='TLabelframe')
-                fill=getattr(widget,'_surface_fill',(9,24,39,170) if section else None)
-                if fill and a>4 and b>4:
-                    draw_section(layer, x, y, a, b, bounds, fill)
+            for x,y,a,b,bounds,fill in sections:
+                draw_section(layer, x, y, a, b, bounds, fill)
             data['surface']=Image.alpha_composite(backing,layer)
-            data['surface_key']=signature
+            data['surface_key']=surface_key
             data['surface_generation']=data.get('surface_generation',0)+1
         backing = data['surface']
         new_styles = False
@@ -318,7 +315,8 @@ class GlassTheme:
                 if cls == 'TLabelframe' and not hasattr(w, '_glass_label') and w.cget('text'):
                     w._glass_label = ttk.Label(w, text=w.cget('text'), style='Section.TLabel')
                     w.configure(labelwidget=w._glass_label)
-                crop_key=(data['surface_generation'],width,height,x,y,a,b)
+                # Include ancestor clipping even when widget geometry stays fixed.
+                crop_key=(data['surface_generation'],width,height,x,y,a,b,bounds)
                 record=data['widgets'].get(str(w))
                 if record is None or record.get('crop_key')!=crop_key:
                     new_styles = self.skin(w, data, widget_crop(backing, x, y, a, b, bounds), cls) or new_styles

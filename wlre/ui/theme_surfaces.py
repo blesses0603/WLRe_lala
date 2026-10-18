@@ -63,3 +63,22 @@ def draw_section(layer, x, y, width, height, bounds, fill):
     left, top, right, bottom = bounds
     layer.alpha_composite(tile.crop((left-x, top-y, right-x, bottom-y)),
                           dest=(left, top))
+
+
+def section_layers(boxes):
+    """Describe only surfaces that can actually change the shared wallpaper.
+
+    A normal label/button moving or being added needs its own crop refreshed,
+    not a repaint of every other Tk PhotoImage in the window. Colored section
+    panels, in contrast, affect the pixels behind multiple child controls.
+    """
+    result = []
+    for widget, x, y, width, height, bounds in boxes:
+        section = (getattr(widget, '_section_outline', False)
+                   or type(widget).__name__ in ('HomeMap', 'GlassGroup', 'RecoveryPage')
+                   or widget.winfo_class() == 'TLabelframe')
+        fill = getattr(widget, '_surface_fill',
+                       (9, 24, 39, 170) if section else None)
+        if fill and width > 4 and height > 4:
+            result.append((x, y, width, height, bounds, fill))
+    return tuple(result)
