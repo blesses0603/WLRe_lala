@@ -41,8 +41,18 @@ class ResourceView:
         ttk.Label(remote_head,image=self.remote_icon).pack(side='left',padx=(4,16))
         ttk.Label(remote_head,text='超空間袋｜小屋儲藏室',style='Heading.TLabel').pack(side='left')
         ttk.Label(remote_body,textvariable=self.remote_status,style='Muted.TLabel',wraplength=850).pack(anchor='w',pady=(2,12))
-        ttk.Label(remote_body,text='依 1262 Lua：解鎖道具 ID 34977，解鎖標記 1291；啟用後原版會開啟小屋儲藏室。',wraplength=850).pack(anchor='w',pady=4)
-        ttk.Label(remote_body,text='目前 LaLa 尚未同步可靠的儲藏室物品清單與解鎖標記，因此不會用普通背包內容填充，也不會發送未驗證的寄取封包。',style='Muted.TLabel',wraplength=850).pack(anchor='w',pady=4)
+        ttk.Label(remote_body,text='只顯示伺服器 S62 已同步的儲藏物品；未驗證寄取操作不提供。',style='Muted.TLabel',wraplength=850).pack(anchor='w',pady=2)
+        storage_tabs=RoundedNotebook(remote_body)
+        storage_tabs.pack(fill='both',expand=True,pady=(6,0))
+        garage_page=ttk.Frame(storage_tabs);materials_page=ttk.Frame(storage_tabs)
+        storage_tabs.add(garage_page,text='儲藏室')
+        storage_tabs.add(materials_page,text='雜物櫃')
+        self.remote_garage=BagGrid(garage_page,self.icons,lambda resource:None,
+                                   read_only=True,title='儲藏室物品')
+        self.remote_materials=BagGrid(materials_page,self.icons,lambda resource:None,
+                                      read_only=True,title='雜物櫃物品')
+        self.remote_garage.pack(fill='both',expand=True)
+        self.remote_materials.pack(fill='both',expand=True)
         ttk.Button(skills,text='施放選取特技（戰鬥內）',command=self.use_skill).pack(anchor='w',pady=5)
         ttk.Label(skills,text='搜尋列出已學、裝備附帶、生活與被動；可施放與否會再核對目前回合、武器、資源及目標。',wraplength=960).pack(anchor='w')
         self.query.trace_add('write',lambda *a:self.refresh())
@@ -70,7 +80,7 @@ class ResourceView:
         return actors
 
     def set_state(self,state):
-        signature=(str(state.get('inventory')),str(state.get('knowledge')),str(state.get('battle_units')),state.get('battle',{}).get('active'),self.query.get())
+        signature=(str(state.get('inventory')),str(state.get('knowledge')),str(state.get('battle_units')),state.get('battle',{}).get('active'),self.query.get(),state.get('room_storage',{}).get('revision'))
         if signature==self.signature:return
         self.signature=signature;query=self.query.get().casefold();inv=state.get('inventory',{});k=state.get('knowledge',{})
         self.status.set(f"包包：{'已同步' if inv.get('ready') else '等待S23-5'}｜{'數量有效' if inv.get('reliable') else '尚不可自動取用'}｜{len(inv.get('items',{}))}格；角色技能：{'已同步' if k.get('player',{}).get('ready') else '等待S5-3'}；夥伴資料：{len(k.get('companions',{}))}隻。更新顯示不會發送未驗證的查包封包。")
@@ -99,6 +109,23 @@ class ResourceView:
             result=f'目前背包持有「超空間袋」解鎖道具 ×{count}。是否已啟用，仍須遊戲標記確認。'
         else:
             result='背包未持有超空間袋解鎖道具；可能已啟用，LaLa 尚未取得解鎖標記。'
+        storage=state.get('room_storage',{})
+        garage=storage.get('garage',{})
+        materials=storage.get('materials',{})
+        self.remote_garage.render(garage,self.query.get())
+        self.remote_materials.render(materials,self.query.get())
+        if garage.get('ready') or materials.get('ready'):
+            sources=[]
+            for label,bucket in (('儲藏室',garage),('雜物櫃',materials)):
+                if bucket.get('ready'):
+                    count=len(bucket.get('items',{}))
+                    status='同步異常' if not bucket.get('reliable',True) else f'已同步 {count} 格'
+                else:
+                    status='等待伺服器 S62 同步'
+                sources.append(f'{label}：{status}')
+            result='｜'.join(sources)
+            if not garage.get('reliable',True) or not materials.get('reliable',True):
+                result+='；資料不一致，請重新登入同步'
         self.remote_status.set(result)
 
     def use_item(self,resource):
