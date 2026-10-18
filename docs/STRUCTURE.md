@@ -43,6 +43,8 @@
 | [connection_status.py](../wlre/ui/connection_status.py) | 將傳輸健康證據轉成連線狀態文字。 |
 | [crafting_browser.py](../wlre/ui/crafting_browser.py) | 製作配方瀏覽、設備分類與配方詳情；保留舊版 ItemIcons 匯入相容性。 |
 | [crafting/item_icons.py](../wlre/ui/crafting/item_icons.py) | 製作／背包共用的道具 ZIP 圖像快取與貼圖載入。 |
+| [crafting/catalog_grid.py](../wlre/ui/crafting/catalog_grid.py) | 製作物品圖示格位建置、分類結果分頁與格位刷新。 |
+| [crafting/recipe_detail.py](../wlre/ui/crafting/recipe_detail.py) | 配方資訊、材料表、批量控制與可製作狀態顯示。 |
 | [crafting/queue_view.py](../wlre/ui/crafting/queue_view.py) | 製作排程視窗、控制指令與伺服器佇列進度顯示。 |
 | [crafting_plan_ui.py](../wlre/ui/crafting_plan_ui.py) | 本機自訂製作清單與伺服器排程操作介面。 |
 | [crafting_ui.py](../wlre/ui/crafting_ui.py) | 製作主分頁整合。 |
