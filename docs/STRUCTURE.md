@@ -87,7 +87,7 @@
 
 | 模組 | 責任 |
 |---|---|
-| [client.py](../wlre/network/client.py) | TCP 連線迴圈、SessionLogic、指令分派與服務 tick 排程。 |
+| [client.py](../wlre/network/client.py) | TCP 連線、SessionLogic、登入階段與命令／排程協調；實際命令規則及服務 tick 已各自拆分。 |
 | [commands.py](../wlre/network/commands.py) | 手動指令驗證與分派；保留 SessionLogic 入口。 |
 | [connection_health.py](../wlre/network/connection_health.py) | OS TCP keepalive、收包時間與連線結束證據。 |
 | [expedition.py](../wlre/network/expedition.py) | 遠征 S31 回覆解碼；不負責遠征策略。 |
