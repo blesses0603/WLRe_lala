@@ -1,0 +1,99 @@
+name: Native desktop packaging verification
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/desktop-packaging.yml'
+      - '.github/workflows/release-windows.yml'
+      - 'tools/build/**'
+      - 'wlre/**'
+      - 'WLRE_Client.py'
+      - 'requirements*.txt'
+      - 'tests/test_*build*.py'
+      - 'tests/test_release*.py'
+      - 'docs/NUITKA_BUILD.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  desktop-package:
+    name: Compile / launch / archive (${{ matrix.label }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-2022
+            label: windows-x64
+            arch: x64
+          - runner: macos-15
+            label: macos-arm64
+            arch: arm64
+          - runner: macos-15-intel
+            label: macos-x64
+            arch: x64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    env:
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.12'
+          architecture: ${{ matrix.arch }}
+      - name: Install test and build dependencies (Windows)
+        if: runner.os == 'Windows'
+        run: python -m pip install -r requirements-ui.txt
+      - name: Install test and build dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: python -m pip install -r requirements-build-macos.txt
+      - name: Run full regression suite
+        run: python -m unittest discover -s tests -q
+      - name: Compile and launch real Windows EXE
+        if: runner.os == 'Windows'
+        run: python -m tools.build.build_nuitka --mode standalone --compiler msvc
+      - name: Package and CRC-check Windows distribution
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $version = python -c "from wlre import __version__; print(__version__)"
+          python -m tools.build.release_nuitka --tag "v$version"
+      - name: Confirm native macOS Python and build APP
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          EXPECTED_ARCH: ${{ matrix.arch }}
+        run: |
+          python -c 'import os; from tools.build.build_macos import native_arch; assert native_arch() == os.environ["EXPECTED_ARCH"]'
+          python -m tools.build.build_macos --arch "$EXPECTED_ARCH"
+      - name: Archive and CRC-check native macOS APP
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          BUILD_ARCH: ${{ matrix.arch }}
+        run: |
+          version="$(python -c 'from wlre import __version__; print(__version__)')"
+          python -m tools.build.release_macos --tag "v$version" --arch "$BUILD_ARCH"
+      - name: Upload compiled package and checksums
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: desktop-${{ matrix.label }}-validation
+          path: dist_nuitka/release/*
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload compiler diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: desktop-${{ matrix.label }}-logs
+          path: |
+            dist_nuitka/standalone/build.log
+            dist_nuitka/standalone/compilation-report.xml
+            dist_nuitka/macos_*/build.log
+            dist_nuitka/macos_*/compilation-report.xml
+          if-no-files-found: ignore
+          retention-days: 7
