@@ -103,25 +103,25 @@ class OverviewPanel(ttk.Frame):
     def __init__(self,parent,app):
         super().__init__(parent);self.app=app;self.values={};self.signature=None
         self.labels={};self.full_values={};self.cards={}
-        self.columnconfigure(0,weight=1,uniform='overview')
-        self.columnconfigure(1,weight=1,uniform='overview')
+        for column in range(6):
+            self.columnconfigure(column,weight=1,uniform='overview')
         layout=(
-            ('role','角色與夥伴',None,3,0,0,2,84),
-            ('activity','目前活動',None,1,1,0,2,52),
-            ('ai','自動戰鬥',None,1,2,0,1,58),
-            ('roaming','自動徘徊',None,1,2,1,1,58),
-            ('supply','補給紀錄',None,1,3,0,1,58),
-            ('alchemy','煉金','alchemy_panel',1,3,1,1,58),
-            ('crafting','製作','crafting_panel',1,4,0,1,58),
-            ('party','隊伍檢查','party_panel',2,4,1,1,70),
-            ('efficiency','經驗效率','efficiency_panel',2,5,0,1,70),
-            ('expedition','遠征','expedition_panel',2,5,1,1,70),
+            ('role','角色與夥伴',None,3,0,0,3,100),
+            ('activity','目前活動',None,3,0,3,3,100),
+            ('ai','自動戰鬥',None,3,1,0,2,100),
+            ('roaming','自動徘徊',None,3,1,2,2,100),
+            ('expedition','遠征','expedition_panel',3,1,4,2,100),
+            ('supply','補給紀錄',None,2,2,0,2,76),
+            ('alchemy','煉金','alchemy_panel',2,2,2,2,76),
+            ('crafting','製作','crafting_panel',2,2,4,2,76),
+            ('party','隊伍檢查','party_panel',2,3,0,3,76),
+            ('efficiency','經驗效率','efficiency_panel',2,3,3,3,76),
         )
         self.actions={}
         for key,title,destination,lines,row,col,span,height in layout:
-            self.rowconfigure(row,minsize=height,weight=1 if key=='role' else 0)
+            self.rowconfigure(row,minsize=height,weight=1 if row in (0,1) else 0)
             frame=ttk.Frame(self,padding=(10,4))
-            frame._surface_fill=(13,32,48,200)
+            frame._surface_fill=(17,46,64,220) if key in ('ai','roaming','expedition') else (13,32,48,210)
             frame.grid(row=row,column=col,columnspan=span,sticky='nsew',padx=3,pady=3)
             frame.grid_propagate(False);frame.columnconfigure(0,weight=1);frame.rowconfigure(1,weight=1)
             self.cards[key]=frame
