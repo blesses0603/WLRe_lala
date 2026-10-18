@@ -136,7 +136,7 @@ class DashboardLayout(unittest.TestCase):
             with self.subTest(key=key):
                 self.assertEqual(button.cget('text'),title)
                 self.assertTrue(button.cget('image'))
-                self.assertEqual(button.cget('compound'),'none')
+                self.assertEqual(str(button.cget('compound')),'none')
                 self.assertIsNotNone(button._action_icon)
                 button.invoke();self.root.update()
                 expected=getattr(self.app,destination)
