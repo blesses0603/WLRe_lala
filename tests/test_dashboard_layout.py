@@ -128,10 +128,19 @@ class DashboardLayout(unittest.TestCase):
 
     def test_all_navigation_actions_still_work(self):
         panel=self.app.overview_panel
-        for key,destination in (('party','party_panel'),('alchemy','alchemy_panel'),('crafting','crafting_panel'),('efficiency','efficiency_panel')):
-            panel.actions[key].invoke();self.root.update()
-            expected=getattr(self.app,destination)
-            self.assertEqual(self.app.left_tabs.select(),str(expected))
+        for key,destination,title in (('party','party_panel','隊伍檢查'),
+                                      ('alchemy','alchemy_panel','煉金'),
+                                      ('crafting','crafting_panel','製作'),
+                                      ('efficiency','efficiency_panel','經驗效率')):
+            button=panel.actions[key]
+            with self.subTest(key=key):
+                self.assertEqual(button.cget('text'),title)
+                self.assertTrue(button.cget('image'))
+                self.assertEqual(button.cget('compound'),'none')
+                self.assertIsNotNone(button._action_icon)
+                button.invoke();self.root.update()
+                expected=getattr(self.app,destination)
+                self.assertEqual(self.app.left_tabs.select(),str(expected))
         self.app.left_tabs.select(panel.master);self.root.update()
         self.assertFalse(self.errors,self.errors)
 
