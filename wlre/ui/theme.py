@@ -431,7 +431,14 @@ class GlassTheme:
                     radius=14, outline=(98, 201, 224, 150))
                 surface = Image.alpha_composite(surface, overlay)
             if cls == 'TButton':
-                if hasattr(widget, 'halo_owner') or record['original']=='Pill.Tab.TButton':
+                if record['original']=='Icon.Tab.TButton':
+                    overlay=Image.new('RGBA',crop.size)
+                    draw=ImageDraw.Draw(overlay)
+                    if state in ('active','pressed'):
+                        draw.rounded_rectangle((1,1,crop.width-2,crop.height-2),radius=10,
+                            fill=(38,88,114,130 if state=='active' else 210),outline=(98,201,224,200))
+                    surface=Image.alpha_composite(surface,overlay)
+                elif hasattr(widget, 'halo_owner') or record['original']=='Pill.Tab.TButton':
                     overlay = Image.new('RGBA', crop.size)
                     d = ImageDraw.Draw(overlay)
                     fill = {'normal': (12, 40, 63, 205), 'active': (38, 88, 114, 235),
@@ -452,7 +459,7 @@ class GlassTheme:
                 spec += [('disabled', photos[3]), ('pressed', photos[2]), ('selected', photos[1]), ('active', photos[1])]
             self.style.element_create(record['element'], 'image', *spec, sticky='nswe', width=0, height=0)
             self.style.layout(record['style'], record['layout'])
-            if cls=='TButton' and not hasattr(widget,'halo_owner') and record['original']!='Pill.Tab.TButton':
+            if cls=='TButton' and not hasattr(widget,'halo_owner') and record['original'] not in ('Pill.Tab.TButton','Icon.Tab.TButton'):
                 self.style.configure(record['style'],foreground='#10283d')
                 self.style.map(record['style'],foreground=[('disabled','#46515e')])
             widget.configure(style=record['style'])

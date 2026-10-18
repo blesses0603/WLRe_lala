@@ -1,14 +1,18 @@
 """Notebook page management with a separate row of real rounded tab buttons."""
 from tkinter import ttk
+from wlre.ui.function_icons import icon_photo
 
 
 class RoundedNotebook(ttk.Frame):
-    def __init__(self, parent, borderless=True, **kwargs):
+    def __init__(self, parent, borderless=True, icons=False, **kwargs):
         super().__init__(parent, **kwargs)
+        self.icons=icons
         style = ttk.Style(self)
         style.configure('PillBody.TNotebook', borderwidth=0, tabmargins=0)
         style.layout('PillBody.TNotebook.Tab', [])
         style.configure('Pill.Tab.TButton', padding=(10, 4))
+        style.configure('Icon.Tab.TButton', padding=(5, 2),foreground='#eff7ff')
+        style.map('Icon.Tab.TButton',foreground=[('selected','#ffffff')])
         style.map('Pill.Tab.TButton', foreground=[('selected', '#ffffff')])
         self.bar = ttk.Frame(self, padding=(0, 2, 0, 6))
         self.bar.pack(fill='x')
@@ -71,8 +75,12 @@ class RoundedNotebook(ttk.Frame):
             options = self.book.tab(page)
             if options['state'] == 'hidden':
                 continue
-            button = ttk.Button(self.bar, text=options['text'], style='Pill.Tab.TButton',
+            image=icon_photo(self,options['text']) if self.icons else None
+            button = ttk.Button(self.bar, text=options['text'], style='Icon.Tab.TButton' if image else 'Pill.Tab.TButton',
                                 command=lambda p=page: self.select(p), takefocus=True, width=0)
+            if image:
+                button.configure(image=image,compound='top')
+                button._function_icon=image
             right=page in self.right_pages
             button.pack(side='right' if right else 'left',padx=(6,0) if right else (0,6))
             if options['state'] == 'disabled':
