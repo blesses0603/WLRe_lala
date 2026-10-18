@@ -22,6 +22,7 @@
 
 - 主頁改為**三欄功能卡**與精簡自動化狀態，加入遠征入口；維持 1280×800 主視窗、固定小地圖及聊天／戰場資訊區。
 - 採用遊戲原版**圓形功能入口、按鈕與設定／背包／回復圖示**；統一操作樣式、視窗控制及背景襯底。
+- **共用視窗與背景架構**：固定 1280×800 插畫座標系、父容器裁切、對話框置中與自訂標題列外框，減少背景錯位、黑色條帶及重複青框；HiDPI 動態縮放仍待完善。
 - 調整背包格位、超空間袋的頁籤與裁切邊界，並改善緊湊補給、製作及經驗效率版面。
 - 製作保留分類、搜尋、收藏、圖示列表（每頁 12 項）、配方詳情及佇列；組隊清單移除不必要的捲動條而保留原操作。
 - 修正未確認加入公會時的聊天發送判斷及發話鎖定復原，降低操作卡住的風險。
@@ -67,7 +68,7 @@ python -m tools.build.build_nuitka --dry-run
 
 ## 參考文件
 
-- [整體架構](docs/ARCHITECTURE.md) · [模組索引](docs/STRUCTURE.md) · [介面配置](docs/UI_LAYOUT.md)
+- [整體架構](docs/ARCHITECTURE.md) · [模組索引](docs/STRUCTURE.md) · [介面配置](docs/UI_LAYOUT.md) · [重構進度](docs/REFACTOR_CHECKLIST.md)
 - [遠征](docs/EXPEDITION.md) · [戰後維護](docs/MAINTENANCE.md) · [配點](docs/attribute_points_1262.md) · [超空間袋](docs/room_storage_1262.md)
 - [協定](docs/PROTOCOLS.md) · [連線診斷](docs/CONNECTION_DIAGNOSTICS.md) · [建置與發佈](docs/NUITKA_BUILD.md)
 
