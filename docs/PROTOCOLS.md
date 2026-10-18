@@ -61,7 +61,10 @@ a baseline; subsequent valid completions yield rates. Skill EXP is excluded.
 Histories contain at most31 samples per identity; all-session gain/count are
 aggregates. Negative totals, stage changes and identity changes rebase.
 
-Phase 07 correction: roster members not in the current battle do not lose
+Phase 07 correction: when first creating an efficiency row, immediately
+retrieve and update the State-owned guarded dictionary; writing to the
+detached pre-wrapped temporary previously lost initial EXP and level values.
+Roster members not in the current battle do not lose
 previously confirmed 10/30-sample history. If a *known participant* has no
 S8 EXP evidence when S20-8 arrives, its baseline is invalidated rather than
 guessing a zero gain or bridging an unknown interval; previous valid history
