@@ -11,6 +11,9 @@ from wlre.core.activity import apply_activity
 from wlre.services.items.crafting import defaults as craft_defaults, room_defaults, apply_crafting
 
 
+POSITION_CACHE_LIMIT = 2048
+
+
 @dataclass
 class State:
     potion_storage: dict = field(default_factory=dict)
@@ -47,6 +50,18 @@ class State:
 
     party: dict = field(default_factory=party_defaults)
     alchemy: dict = field(default_factory=alchemy_defaults)
+
+    def remember_position(self,role_id,x,y):
+        # Observed remote positions are a cache, not a lifetime travel history.
+        # Authoritative local location remains separately in self.location.
+        key=str(role_id);own=str(self.player.get('role_id'))
+        self.positions.pop(key,None);self.positions[key]=[x,y]
+        while len(self.positions)>POSITION_CACHE_LIMIT:
+            oldest=next(iter(self.positions))
+            if oldest==own:
+                self.positions[own]=self.positions.pop(own)
+                oldest=next(iter(self.positions))
+            self.positions.pop(oldest)
 
     def wait_for_position(self):
         target=self.location.get('requested_destination') or self.location.get('server_destination')
@@ -95,7 +110,8 @@ class State:
             self.event_flow={**self.event_flow,'blocked':False,'awaiting_response':False,'last_source':'S20-8'}
         elif kind == "world_player":
             self.player = event["player"]
-            self.positions[str(self.player["role_id"])] = [self.player["x"], self.player["y"]]
+            self.positions.clear()
+            self.remember_position(self.player["role_id"],self.player["x"],self.player["y"])
             self.phase = "world_received"
             self.confirm_location(self.player['scene'],self.player['x'],self.player['y'],'S3-1')
             self.navigation = {'scene':self.player['scene'],'revision':self.navigation['revision']+1,
@@ -104,8 +120,9 @@ class State:
             if event['role_id']==self.player.get('role_id'):
                 same_scene=event['scene']==self.player.get('scene')
                 previous_navigation=self.navigation
+                if not same_scene:self.positions.clear()
                 self.player.update(scene=event['scene'],x=event['x'],y=event['y'])
-                self.positions[str(event['role_id'])]=[event['x'],event['y']]
+                self.remember_position(event['role_id'],event['x'],event['y'])
                 self.confirm_location(event['scene'],event['x'],event['y'],event['source'])
                 # Same-map repositioning may also change floor or dynamic objects.
                 self.navigation={'scene':event['scene'],'revision':previous_navigation['revision']+1,
@@ -113,7 +130,7 @@ class State:
                     'runtime_geometry_verified':False,
                     'reasons':previous_navigation.get('reasons',[]) if same_scene else []}
             else:
-                self.positions[str(event['role_id'])]=[event['x'],event['y']]
+                self.remember_position(event['role_id'],event['x'],event['y'])
         elif kind == 'movement_request':
             self.location['requested_destination']={'x':event['x'],'y':event['y'],
                         'scene':self.player.get('scene'),'source':'C6-1','packet_number':self.packet_count}
@@ -158,12 +175,14 @@ class State:
             key = f"{event['kind']}:{event['parameter']}"
             entity[key] = event["value"]
         elif kind == "walk":
-            self.positions[str(event["role_id"])] = [event["x"], event["y"]]
+            self.remember_position(event["role_id"],event["x"],event["y"])
             if event['role_id']==self.player.get('role_id'):
                 self.location['server_destination']={'x':event['x'],'y':event['y'],
                         'scene':self.player.get('scene'),'source':'S6-1','packet_number':self.packet_count}
                 self.location['confirmed_is_current']=False
                 self.wait_for_position()
+        elif kind == 'nearby_leave' and event['role_id']!=self.player.get('role_id'):
+            self.positions.pop(str(event['role_id']),None)
         elif kind == "battle_command_sent":
             self.battle.setdefault("commands", {})[f"{event['col']}:{event['row']}"] = {**event, "status":"sent"}
         elif kind == "attack_result":

@@ -16,6 +16,8 @@ from wlre.network.client import run_client
 from wlre.storage.defaults import load_default_profile
 from wlre.storage import account_settings
 from wlre.core.diagnostics import Diagnostics
+from wlre.ui.event_queue import DisplayQueue
+from wlre.ui.connection_status import ConnectionStatus
 from wlre.services.world.map_names import map_label
 from wlre.ui.battle_view import BattleView
 from wlre.services.battle.battle_commands import owned_units, slot
@@ -40,11 +42,12 @@ from wlre.ui.party_guard_ui import PartyGuardPanel
 class App:
     def __init__(self, root):
         self.root=root
+        self._closing=False
         self.diagnostics=Diagnostics()
         root.bind('<Destroy>',lambda e:self.diagnostics.close() if e.widget is root else None,add='+')
         original_exception=root.report_callback_exception
         def report_exception(*args):
-            self.diagnostics.error();original_exception(*args)
+            if self.diagnostics.error(*args): original_exception(*args)
         root.report_callback_exception=report_exception
         self._pending_display=None;self._last_display=0
         self._background_logs=deque(maxlen=500)
@@ -59,7 +62,7 @@ class App:
         root.maxsize(width,height)
         root.resizable(False,False)
         self.theme=install_theme(root)
-        self.events,self.commands=queue.Queue(),queue.Queue()
+        self.events,self.commands=DisplayQueue(),queue.Queue()
         self.stop_event=threading.Event()
         self.worker=None
         self.live_active=False
@@ -85,6 +88,8 @@ class App:
         self._memory_restoring=False;self._password_autofilled=False;self.saved_accounts={}
         for var in (self.host,self.port,self.account):var.trace_add('write',self.login_identity_changed)
         self.password.trace_add('write',self.login_password_changed)
+        self.connection_monitor=ConnectionStatus()
+        self.connection_status=tk.StringVar(value='尚未連線')
         self.status=tk.StringVar(value='載入設定中…')
         self.world=tk.StringVar(value='尚未收到角色位置。')
         self.world_compact=tk.StringVar(value='尚未收到角色位置')
@@ -223,6 +228,7 @@ class App:
         self.role_choice.pack(side='left',fill='x',expand=True,padx=(0,8))
         ttk.Button(row,text='選角進入',command=self.select_role).pack(side='right')
         ttk.Label(self.login_tab,textvariable=self.status,wraplength=620).pack(fill='x',pady=8)
+        ttk.Label(self.login_tab,textvariable=self.connection_status,wraplength=620).pack(fill='x')
         ttk.Label(self.login_tab,text='選角後等待世界資料同步完成，將自動開啟主頁。',style='Muted.TLabel').pack(anchor='w')
         self.update_role_choices(self.snapshot.get('roles',[]))
         self.connect_button.configure(state='disabled' if self.live_active else 'normal')
@@ -555,6 +561,8 @@ class App:
         self.password.set('')
         self.entered_world=False
         self.update_role_choices([])
+        self.connection_monitor.reset()
+        self.connection_status.set('正在連線與驗證帳號…')
         self.status.set('正在連線與驗證帳號…')
         self.connect_button.configure(state='disabled')
         self.stop_event=threading.Event();self.commands=queue.Queue();self.snapshot={}
@@ -566,14 +574,17 @@ class App:
         def work():
             self.live_active=True
             try:
-                run_client(host,port,profile,lambda e:self.events.put(('event',e)),
+                run_client(host,port,profile,self.receive_event,
                            account=account,password=password,verify_first=True,duration=None,
                            stop_event=self.stop_event,commands=self.commands,
-                           on_state=lambda s:self.events.put(('state',s)),snapshot_interval=0.1)
+                           on_state=lambda s:self.events.put(('state',s)),snapshot_interval=0.1,tcp_keepalive=True)
             finally:
                 self.live_active=False
                 self.events.put(('session_finished',None))
         self.background(work)
+
+    def receive_event(self, event):
+        self.events.put(('health' if event.get('type')=='connection_health' else 'event',event))
 
     def send(self, command):
         if not self.live_active or not self.worker or not self.worker.is_alive():
@@ -601,8 +612,12 @@ class App:
         if self.snapshot and hasattr(self,'home_map'):self.render(self.snapshot)
 
     def background_window(self):
-        if self.root.state() in ('iconic','withdrawn'):return True
-        return self.root.focus_displayof() is None
+        try:
+            if self.root.state() in ('iconic','withdrawn'):return True
+            # ttk popdown widgets exist in Tcl but not Tkinter's widget map.
+            # focus_displayof() resolves that map and raises KeyError('popdown').
+            return not bool(self.root.tk.call('focus','-displayof',self.root._w))
+        except tk.TclError:return True
 
     def render(self, state):
         self.snapshot=state
@@ -666,6 +681,28 @@ class App:
         self.refresh_battle_selection()
 
     def poll(self):
+        failed=False
+        try:
+            App._poll_once(self)
+        except Exception as exc:
+            failed=True
+            if hasattr(self,'_pending_display'):self._pending_display=None
+            try:self.status.set('畫面更新異常，已記錄診斷；將繼續更新連線狀態')
+            except Exception:pass
+            try:self.root.report_callback_exception(type(exc),exc,exc.__traceback__)
+            except Exception:pass
+        finally:
+            if not getattr(self,'_closing',False):
+                try:
+                    if hasattr(self,'connection_monitor'):
+                        self.connection_status.set(self.connection_monitor.text(bool(self.worker and self.worker.is_alive())))
+                except Exception:pass
+                try:
+                    if self.root.winfo_exists():
+                        self.root.after(1000 if failed else 10 if not self.events.empty() else 50,self.poll)
+                except tk.TclError:pass
+
+    def _poll_once(self):
         latest=None
         status_override=None
         session_finished=False
@@ -677,7 +714,10 @@ class App:
             try:kind,data=self.events.get_nowait()
             except queue.Empty:break
             processed+=1
-            if kind=='session_finished':session_finished=True
+            if kind=='health':
+                self.connection_monitor.update(data)
+                if hasattr(self,'diagnostics'): self.diagnostics.connection(data)
+            elif kind=='session_finished':session_finished=True
             elif kind=='state':latest=data
             elif kind=='error':
                 self.chat_panel.finish_pending()
@@ -713,13 +753,16 @@ class App:
             self.connect_button.configure(state='normal')
         elif latest and self.live_active and latest.get('phase')=='world_ready' and latest.get('player'):
             if not self.entered_world:self.show_main()
-        self.root.after(10 if not self.events.empty() else 50,self.poll)
+        if hasattr(self.events,'take_dropped'):
+            dropped=self.events.take_dropped()
+            if dropped and hasattr(self,'diagnostics'):self.diagnostics.dropped(dropped)
 
     def stop(self):
         self.stop_event.set()
         self.status.set('正在中斷連線…')
 
     def close(self):
+        self._closing=True
         self.stop_event.set();self.password.set('');self.diagnostics.close();self.root.destroy()
 
 

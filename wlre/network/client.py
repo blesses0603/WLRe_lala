@@ -3,6 +3,7 @@
 Actual-server interoperability is capture-verified, but a live login from this
 implementation still needs to be tested by the account owner.
 """
+from wlre.network.connection_health import ConnectionHealth, configure_keepalive
 import queue
 from wlre.network.state_updates import StatePublisher, notify_state
 import socket
@@ -389,16 +390,13 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
     state = State(phase='connecting')
     parser, logic = FrameDecoder(profile['rx_xor']), SessionLogic(role_index)
     deadline = time.monotonic() + duration if duration is not None else float('inf')
+    health = ConnectionHealth(emit)
+    closed_reason = 'duration'; closed_error = None
     try:
         with socket.create_connection((host, port), timeout=timeout) as connection:
-            if tcp_keepalive:
-                connection.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-                for name, value in (('TCP_KEEPIDLE', 60), ('TCP_KEEPINTVL', 15), ('TCP_KEEPCNT', 4)):
-                    option = getattr(socket, name, None)
-                    if option is not None:
-                        try: connection.setsockopt(socket.IPPROTO_TCP, option, value)
-                        except OSError: pass  # OS may not expose adjustable intervals.
+            if tcp_keepalive: health.keepalive = configure_keepalive(connection)
             connection.settimeout(0.05)
+            health.publish(force=True)
             state.phase = 'connected'
             emit({'type': 'connected', 'server_compatibility_verified': False,
                   'wire_observed_in_capture': bool(profile.get('capture_sha256'))})
@@ -406,6 +404,7 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
                 if stop_event.wait(0.1): return state
                 _send(connection, request, profile['tx_xor'], emit)
             while not stop_event.is_set() and time.monotonic() < deadline:
+                health.publish()
                 if isinstance(on_state,StatePublisher):on_state.flush(state)
                 event_replies=logic.flush_events(state) if request else []
                 for response in event_replies:_send(connection,response,profile['tx_xor'],emit)
@@ -471,9 +470,12 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
                 if on_state and (state.local_movement is not before_tick or state.portal_travel is not before_portal):notify_state(on_state,state)
                 try: raw = connection.recv(65536)
                 except socket.timeout: continue
-                if not raw: break
+                if not raw:
+                    closed_reason = 'server_closed'
+                    break
                 for packet in parser.feed(raw):
                     event = decode(packet,state.player.get('role_id'))
+                    health.received()
                     state.apply(event)
                     emit(event)
                     if request:
@@ -484,12 +486,23 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
                 for response in event_replies:_send(connection,response,profile['tx_xor'],emit)
                 if event_replies and on_state:notify_state(on_state,state)
             if not stop_event.is_set(): parser.finish()
+            else: closed_reason = 'stopped'
+    except OSError as exc:
+        closed_reason = 'network_error'; closed_error = exc
+        raise
+    except Exception as exc:
+        closed_reason = 'client_error'; closed_error = exc
+        raise
     finally:
         logic.crafting.disconnect(state)
         logic.alchemy.stop(state,'連線結束')
         logic.portal_travel.cancel(state,'連線結束，已取消傳點移動')
         logic.auto_battle.stop(state,'連線結束')
         logic.roaming.stop(state,logic.movement,'連線結束')
+        last_phase = state.phase
+        state.phase = 'disconnected'
         if on_state:notify_state(on_state,state,force=True)
-        emit({'type': 'connection_closed', 'last_phase': state.phase})
+        if closed_error is None and stop_event.is_set():closed_reason='stopped'
+        health.close(closed_reason,closed_error)
+        emit({'type': 'connection_closed', 'last_phase': last_phase, 'reason': closed_reason})
     return state
