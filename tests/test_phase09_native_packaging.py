@@ -17,21 +17,21 @@ ROOT = Path(__file__).resolve().parents[1]
 class NativeArchitectureTests(unittest.TestCase):
     def test_matching_macho_architecture_is_accepted(self):
         with patch.object(build_macos.subprocess, 'run',
-                          return_value=Mock(stdout='arm64\\n')) as run:
+                          return_value=Mock(stdout='arm64\n')) as run:
             self.assertEqual(build_macos.verify_binary_arch('app-binary', 'arm64'), ['arm64'])
         self.assertEqual(run.call_args.args[0], ['lipo', '-archs', 'app-binary'])
         self.assertTrue(run.call_args.kwargs['check'])
 
     def test_intel_arch_is_checked_independently_of_apple_silicon(self):
         with patch.object(build_macos.subprocess, 'run',
-                          return_value=Mock(stdout='x86_64\\n')):
+                          return_value=Mock(stdout='x86_64\n')):
             self.assertEqual(build_macos.verify_binary_arch('app-binary', 'x64'), ['x86_64'])
             with self.assertRaisesRegex(ValueError, '架構不符'):
                 build_macos.verify_binary_arch('app-binary', 'arm64')
 
     def test_incorrect_arch_and_lipo_errors_cannot_pass(self):
         with patch.object(build_macos.subprocess, 'run',
-                          return_value=Mock(stdout='arm64\\n')):
+                          return_value=Mock(stdout='arm64\n')):
             with self.assertRaisesRegex(ValueError, 'x86_64'):
                 build_macos.verify_binary_arch('app-binary', 'x64')
         with patch.object(build_macos.subprocess, 'run',
