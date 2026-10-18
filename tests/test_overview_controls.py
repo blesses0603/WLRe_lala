@@ -46,9 +46,10 @@ class OverviewControls(unittest.TestCase):
         self.app.live_active=False;self.panel.refresh()
         self.assertFalse(button.active);self.assertIsNone(button.job)
 
-    def test_overview_uses_shared_border_and_actions_use_standard_button_geometry(self):
+    def test_overview_uses_shared_border_and_uniform_action_geometry(self):
         self.assertTrue(self.panel.master._section_outline)
-        reference=self.panel.actions['alchemy']
+        # Stateful HaloButtons still use one shared text-button geometry.
+        reference=self.panel.actions['ai']
         for key in ('ai','roaming'):
             button=self.panel.actions[key]
             self.assertEqual(button.winfo_class(),'TButton')
@@ -57,6 +58,56 @@ class OverviewControls(unittest.TestCase):
             self.assertEqual(button.winfo_width(),reference.winfo_width())
             self.assertEqual(button.winfo_height(),reference.winfo_height())
             self.assertFalse(button.winfo_children())
+        # Navigation icon buttons have their own consistent, larger geometry.
+        reference=self.panel.actions['party']
+        for key in ('party','alchemy','crafting','efficiency'):
+            button=self.panel.actions[key]
+            self.assertEqual(button.winfo_class(),'TButton')
+            self.assertEqual(button.cget('style'),'Icon.Tab.TButton')
+            self.assertEqual(button.winfo_width(),reference.winfo_width())
+            self.assertEqual(button.winfo_height(),reference.winfo_height())
+            self.assertFalse(button.winfo_children())
+            frame=self.panel.cards[key]
+            self.assertLessEqual(button.winfo_y()+button.winfo_height(),frame.winfo_height())
+
+
+    def test_home_open_actions_share_the_corresponding_notebook_png(self):
+        from wlre.ui.function_icons import ICONS
+        tabs=self.app.left_tabs
+        for key,title,destination in (
+                ('party','組隊','party_panel'),
+                ('alchemy','煉金','alchemy_panel'),
+                ('crafting','製作','crafting_panel'),
+                ('efficiency','經驗效率','efficiency_panel')):
+            with self.subTest(action=key):
+                button=self.panel.actions[key]
+                tab_button=tabs.buttons[str(getattr(self.app,destination))]
+                self.assertTrue(str(button.cget('image')))
+                self.assertIsNotNone(getattr(button,'_function_icon',None))
+                self.assertEqual(button._function_icon.width(),tab_button._function_icon.width())
+                self.assertEqual(button._function_icon.height(),tab_button._function_icon.height())
+                self.assertIn(ICONS[title],('MainIcon_005','MainIcon_007','MainIcon_011','MainIcon_020'))
+                # The composite icon data is identical, though Tk photo handles differ.
+                for x,y in ((17,17),(8,17),(23,12)):
+                    self.assertEqual(
+                        self.root.tk.call(str(button._function_icon),'get',x,y),
+                        self.root.tk.call(str(tab_button._function_icon),'get',x,y))
+                button.invoke();self.root.update()
+                self.assertEqual(tabs.select(),str(getattr(self.app,destination)))
+        tabs.select(self.panel.master);self.root.update()
+
+    def test_dashboard_icon_button_falls_back_to_clickable_text_if_png_unreadable(self):
+        from wlre.ui.function_icons import icon_action_button
+        called=[]
+        with patch('wlre.ui.function_icons.icon_image',side_effect=OSError('missing PNG')):
+            button=icon_action_button(self.panel,'組隊',lambda:called.append(True))
+        try:
+            self.assertEqual(str(button.cget('image')),'')
+            self.assertEqual(button.cget('text'),'開啟')
+            button.invoke()
+            self.assertEqual(called,[True])
+        finally:
+            button.destroy()
 
     def test_rainbow_follows_button_edge_without_rectangular_canvas_frame(self):
         button=self.panel.actions['ai'];theme=self.app.theme
@@ -132,3 +183,4 @@ class StableHaloMask(unittest.TestCase):
         for x,y in ((0,0),(1,1),(50,1),(1,18),(50,18),(26,10)):
             self.assertEqual(alpha.getpixel((x,y)),0)
         self.assertGreater(alpha.getpixel((26,1)),0)
+

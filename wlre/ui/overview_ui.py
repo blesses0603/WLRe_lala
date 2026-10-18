@@ -4,6 +4,7 @@ import tkinter as tk
 from tkinter import ttk, font as tkfont
 from wlre.ui.halo_button import HaloButton
 from wlre.ui.button_art import settings_button, bag_button, recovery_button
+from wlre.ui.function_icons import icon_action_button
 from wlre.core.efficiency import rates, progress, forecast
 from wlre.services.battle.party import own_team, player_name
 from wlre.services.battle.party_guard import missing
@@ -134,6 +135,9 @@ class OverviewPanel(ttk.Frame):
             ('efficiency','經驗效率','efficiency_panel',2,3,3,3,76),
         )
         self.actions={}
+        # Dashboard tiles reuse the exact PNG artwork shown in notebook tabs.
+        action_titles={'party':'組隊','alchemy':'煉金',
+                       'crafting':'製作','efficiency':'經驗效率'}
         for key,title,destination,lines,row,col,span,height in layout:
             self.rowconfigure(row,minsize=height,weight=1 if row in (0,1) else 0)
             frame=ttk.Frame(self,padding=(10,4))
@@ -164,6 +168,8 @@ class OverviewPanel(ttk.Frame):
                 else:continue
                 button=(recovery_button(tools,callback) if key=='supply' else
                         bag_button(tools,callback) if key=='role' else
+                        icon_action_button(tools,action_titles[key],callback)
+                        if key in action_titles else
                         ttk.Button(tools,text=text,width=4,command=callback,padding=(3,2)))
                 button.pack(side='left')
                 if key=='role':

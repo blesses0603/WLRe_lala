@@ -1,5 +1,6 @@
 """Original game pictograms with compact circular navigation backplates."""
 from functools import lru_cache
+from tkinter import ttk
 from PIL import Image, ImageDraw, ImageOps, ImageTk
 from wlre.paths import RESOURCE_ROOT
 
@@ -23,4 +24,22 @@ def icon_image(name, size=34):
 
 def icon_photo(widget, title, size=34):
     name=ICONS.get(title)
-    return ImageTk.PhotoImage(icon_image(name,size),master=widget) if name else None
+    if not name:return None
+    try:
+        artwork=icon_image(name,size)
+    except (OSError,ValueError):
+        # A missing or unreadable source must not prevent the UI from opening.
+        return None
+    return ImageTk.PhotoImage(artwork,master=widget)
+
+
+def icon_action_button(parent, title, command, size=34):
+    """Reuse the corresponding notebook icon for a compact dashboard action."""
+    photo=icon_photo(parent,title,size)
+    if photo is None:
+        return ttk.Button(parent,text='開啟',width=4,command=command,padding=(3,2))
+    button=ttk.Button(parent,text='開啟'+title,image=photo,compound='none',
+                      style='Icon.Tab.TButton',width=0,padding=(5,2),command=command)
+    # Tk does not own the Python image reference; keep it alive with the button.
+    button._function_icon=photo
+    return button
