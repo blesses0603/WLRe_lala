@@ -60,8 +60,9 @@ def item_details(inventory, index, record):
 class BagGrid(ttk.Frame):
     """Roomy icon pages with a compact bottom details strip."""
 
-    def __init__(self, parent, icons, use_item):
+    def __init__(self, parent, icons, use_item, read_only=False, title='背包格位'):
         super().__init__(parent)
+        self.read_only = read_only
         self.icons = icons
         self.use_item = use_item
         self.rows = []
@@ -83,7 +84,7 @@ class BagGrid(ttk.Frame):
 
         header = ttk.Frame(shell)
         header.grid(row=0, column=0, sticky='ew', pady=(0, 4))
-        ttk.Label(header, text='背包格位', style='Heading.TLabel').pack(side='left')
+        ttk.Label(header, text=title, style='Heading.TLabel').pack(side='left')
         self.summary = tk.StringVar(value='等待包包同步')
         ttk.Label(header, textvariable=self.summary, style='Muted.TLabel').pack(side='right')
 
@@ -128,6 +129,8 @@ class BagGrid(ttk.Frame):
         self.hp_button.pack(pady=2)
         self.sp_button = ttk.Button(buttons, text='補 SP', command=lambda: self.use_item('sp'))
         self.sp_button.pack(pady=2)
+        if self.read_only:
+            buttons.grid_remove()
 
         self.hover_text = tk.StringVar(value='點擊圖示查看道具詳情')
         ttk.Label(shell, textvariable=self.hover_text, style='Muted.TLabel').grid(
@@ -170,7 +173,8 @@ class BagGrid(ttk.Frame):
             self.index_selected = None
         pages = max(1, math.ceil(len(rows) / PAGE_SIZE))
         self.page = min(self.page, pages - 1)
-        self.summary.set(f"{len(rows)} / {self.inventory.get('capacity', '?')} 格")
+        capacity = self.inventory.get('capacity')
+        self.summary.set(f"{len(rows)} / {capacity if capacity is not None else '?'} 格")
         self.page_label.set(f'{self.page + 1} / {pages}')
         signature = (tuple((index, item['item_id'], item.get('count'),
                            self.inventory.get('reserved', {}).get(index, 0))
@@ -261,7 +265,7 @@ class BagGrid(ttk.Frame):
         )
         self.effect.set('效果：' + ' / '.join(details['lines'][:3]))
         self.note.set('')
-        enabled = (details['available'] > 0 and self.inventory.get('ready')
+        enabled = (not self.read_only and details['available'] > 0 and self.inventory.get('ready')
                    and self.inventory.get('reliable') and not self.inventory.get('use_failed')
                    and str(index) not in self.inventory.get('alchemy_slots', ())
                    and not record.get('locked') and not record.get('limited_time')
