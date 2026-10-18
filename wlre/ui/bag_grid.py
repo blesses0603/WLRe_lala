@@ -14,8 +14,13 @@ COLUMNS = 6
 ROWS = 4
 PAGE_SIZE = COLUMNS * ROWS
 ICON_SIZE = 64
-SLOT_BG = PANEL
-SLOT_ACTIVE = '#21445a'
+# The nested hyperspace storage tab has a shorter drawable area than the main
+# inventory. Never squeeze four rows of 64px icons into that small space.
+STORAGE_ROWS = 2
+STORAGE_ICON_SIZE = 60
+SLOT_HEIGHT = 88
+SLOT_BG = '#132d40'
+SLOT_ACTIVE = '#244f67'
 
 
 def visible_items(inventory, query=''):
@@ -60,9 +65,14 @@ def item_details(inventory, index, record):
 class BagGrid(ttk.Frame):
     """Roomy icon pages with a compact bottom details strip."""
 
-    def __init__(self, parent, icons, use_item, read_only=False, title='背包格位'):
+    def __init__(self, parent, icons, use_item, read_only=False, title='背包格位', compact=False):
         super().__init__(parent)
         self.read_only = read_only
+        self.compact = compact
+        self.columns = COLUMNS
+        self.row_count = STORAGE_ROWS if compact else ROWS
+        self.page_size = self.columns * self.row_count
+        self.icon_size = STORAGE_ICON_SIZE if compact else ICON_SIZE
         self.icons = icons
         self.use_item = use_item
         self.rows = []
@@ -91,11 +101,11 @@ class BagGrid(ttk.Frame):
         self.board = ttk.Frame(shell)
         self.board.grid(row=1, column=0, sticky='nsew')
         self.cells = []
-        for row in range(ROWS):
-            self.board.grid_rowconfigure(row, weight=1, uniform='bagrow')
-        for column in range(COLUMNS):
-            self.board.grid_columnconfigure(column, weight=1, uniform='bagcolumn')
-        for position in range(PAGE_SIZE):
+        for row in range(self.row_count):
+            self.board.grid_rowconfigure(row, weight=1, minsize=SLOT_HEIGHT, uniform='bagrow')
+        for column in range(self.columns):
+            self.board.grid_columnconfigure(column, weight=1, minsize=self.icon_size + 24, uniform='bagcolumn')
+        for position in range(self.page_size):
             self.cells.append(self._new_cell(position))
 
         pager = ttk.Frame(shell)
@@ -133,18 +143,20 @@ class BagGrid(ttk.Frame):
             buttons.grid_remove()
 
         self.hover_text = tk.StringVar(value='點擊圖示查看道具詳情')
-        ttk.Label(shell, textvariable=self.hover_text, style='Muted.TLabel').grid(
-            row=4, column=0, sticky='w', pady=(0, 2))
+        if not self.compact:
+            ttk.Label(shell, textvariable=self.hover_text, style='Muted.TLabel').grid(
+                row=4, column=0, sticky='w', pady=(0, 2))
         self._clear_card()
 
     def _new_cell(self, position):
-        row, col = divmod(position, COLUMNS)
+        row, col = divmod(position, self.columns)
         frame = tk.Frame(self.board, bg=SLOT_BG, borderwidth=0,
-                         highlightthickness=0, cursor='hand2')
+                         highlightthickness=1, highlightbackground='#3a627a',
+                         highlightcolor=CYAN, cursor='hand2')
         frame.grid(row=row, column=col, sticky='nsew', padx=4, pady=4)
         frame.grid_propagate(False)
         icon = tk.Label(frame, bg=SLOT_BG, bd=0, cursor='hand2')
-        icon.place(relx=0.5, rely=0.5, anchor='center')
+        icon.place(relx=0.5, rely=0.46, anchor='center')
         count = tk.Label(frame, bg=SLOT_BG, fg='#f9e6b5', bd=0, font=('TkDefaultFont', 10, 'bold'))
         count.place(relx=0.97, rely=0.96, anchor='se')
         entry = {'frame': frame, 'icon': icon, 'count': count, 'index': None}
@@ -160,7 +172,7 @@ class BagGrid(ttk.Frame):
         index = str(iid)[3:] if str(iid).startswith('bag') else None
         if index is not None and 'bag' + index in self.bag_map:
             self.index_selected = index
-            self.page = next((n // PAGE_SIZE for n, row in enumerate(self.rows) if row[0] == index), self.page)
+            self.page = next((n // self.page_size for n, row in enumerate(self.rows) if row[0] == index), self.page)
             self._paint()
 
     def render(self, inventory, query=''):
@@ -171,7 +183,7 @@ class BagGrid(ttk.Frame):
         self.bag_map = {'bag' + index: item for index, item, _name in rows}
         if self.index_selected is not None and 'bag' + self.index_selected not in self.bag_map:
             self.index_selected = None
-        pages = max(1, math.ceil(len(rows) / PAGE_SIZE))
+        pages = max(1, math.ceil(len(rows) / self.page_size))
         self.page = min(self.page, pages - 1)
         capacity = self.inventory.get('capacity')
         self.summary.set(f"{len(rows)} / {capacity if capacity is not None else '?'} 格")
@@ -188,7 +200,7 @@ class BagGrid(ttk.Frame):
         return self.bag_map
 
     def change_page(self, direction):
-        pages = max(1, math.ceil(len(self.rows) / PAGE_SIZE))
+        pages = max(1, math.ceil(len(self.rows) / self.page_size))
         self.page = min(max(0, self.page + direction), pages - 1)
         self.page_label.set(f'{self.page + 1} / {pages}')
         self._signature = None
@@ -196,7 +208,7 @@ class BagGrid(ttk.Frame):
 
     def _paint(self):
         self._images = []
-        page_rows = self.rows[self.page * PAGE_SIZE: (self.page + 1) * PAGE_SIZE]
+        page_rows = self.rows[self.page * self.page_size: (self.page + 1) * self.page_size]
         for position, cell in enumerate(self.cells):
             row = page_rows[position] if position < len(page_rows) else None
             index = row[0] if row else None
@@ -205,10 +217,10 @@ class BagGrid(ttk.Frame):
             bg = SLOT_ACTIVE if selected else SLOT_BG
             for widget in (cell['frame'], cell['icon'], cell['count']):
                 widget.configure(bg=bg)
-            cell['frame'].configure(bg=bg)
+            cell['frame'].configure(bg=bg, highlightbackground=CYAN if selected else '#3a627a')
             if row:
                 _index, item, _name = row
-                photo = self.icons.get(item['item_id'], ICON_SIZE)
+                photo = self.icons.get(item['item_id'], self.icon_size)
                 self._images.append(photo)
                 cell['icon'].configure(image=photo)
                 cell['count'].configure(text=str(item.get('count', 0)))
