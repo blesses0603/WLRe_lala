@@ -4,6 +4,7 @@ import tkinter as tk
 from tkinter import ttk, font as tkfont
 from wlre.ui.halo_button import HaloButton
 from wlre.ui.button_art import settings_button, bag_button, recovery_button
+from wlre.ui.function_icons import action_icon_photo
 from wlre.core.efficiency import rates, progress, forecast
 from wlre.services.battle.party import own_team, player_name
 from wlre.services.battle.party_guard import missing
@@ -162,9 +163,20 @@ class OverviewPanel(ttk.Frame):
                 elif key=='role':callback=app.open_resources;text='包包'
                 elif key=='supply':callback=lambda:self.open_panel(None,settings=True);text='設定'
                 else:continue
-                button=(recovery_button(tools,callback) if key=='supply' else
-                        bag_button(tools,callback) if key=='role' else
-                        ttk.Button(tools,text=text,width=4,command=callback,padding=(3,2)))
+                if key in ('party', 'alchemy', 'crafting', 'efficiency'):
+                    # The same 1262 game sprites used by the main tabs, without
+                    # a synthetic backing plate. Text remains available to Tk.
+                    icon_title={'party':'組隊', 'alchemy':'煉金',
+                                'crafting':'製作', 'efficiency':'經驗效率'}[key]
+                    photo=action_icon_photo(tools,icon_title)
+                    button=ttk.Button(tools,text=title,image=photo,compound='none',
+                                      width=0,style='Icon.Tab.TButton',padding=(2,1),
+                                      command=callback)
+                    button._action_icon=photo
+                else:
+                    button=(recovery_button(tools,callback) if key=='supply' else
+                            bag_button(tools,callback) if key=='role' else
+                            ttk.Button(tools,text=text,width=4,command=callback,padding=(3,2)))
                 button.pack(side='left')
                 if key=='role':
                     ttk.Button(tools, text='配點', width=4, command=app.open_attributes,
