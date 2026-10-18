@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-2022]
+        os: [ubuntu-latest, windows-2022, macos-15]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     defaults:
@@ -46,6 +46,12 @@ jobs:
       - name: Windows tests and GUI smoke test
         if: runner.os == 'Windows'
         run: |
+          python -m unittest discover -s tests -q
+          python WLRE_Client.py --smoke-test-gui
+      - name: macOS tests and native GUI smoke test
+        if: runner.os == 'macOS'
+        run: |
+          python -c 'import platform, tkinter; print("macOS:", platform.mac_ver()[0], "arch:", platform.machine(), "Tk:", tkinter.TkVersion)'
           python -m unittest discover -s tests -q
           python WLRE_Client.py --smoke-test-gui
       - name: Validate packaged resources and build plan
