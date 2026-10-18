@@ -24,6 +24,9 @@ def apply_session_event(state, event):
     elif kind == 'event_end':
         state.event_flow={**state.event_flow,'blocked':False,'awaiting_response':False,'last_source':'S20-8'}
 
+    elif kind == "initial_data_complete":
+        state.initial_data_complete = True
+
     if kind == "attribute_set":
         # Protocol 8 values are replacements, not deltas. Preserve param
         # because skill/skill-EXP updates use it as a separate namespace.
