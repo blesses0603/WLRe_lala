@@ -95,7 +95,11 @@
 | [event_log.py](../wlre/core/event_log.py) | 將處理事件轉為本機事件紀錄文字。 |
 | [inventory_updates.py](../wlre/core/inventory_updates.py) | 權威物品記錄新增／合併與庫存一致性檢查。 |
 | [maintenance.py](../wlre/core/maintenance.py) | 每兩小時的快取清理計時器；不是戰後物品維護。 |
-| [state.py](../wlre/core/state.py) | State 欄位、事件套用、位置證據與快照。 |
+| [state.py](../wlre/core/state.py) | 單一寫入者狀態、原始服務更新順序、公開 apply 與安全快照。 |
+| [state_events.py](../wlre/core/state_events.py) | 世界／戰鬥／登入事件互斥分派，確保本地事件只交由一個領域處理。 |
+| [state_world_events.py](../wlre/core/state_world_events.py) | 世界角色、位置、移動回覆、幾何變化及附近位置快取。 |
+| [state_battle_events.py](../wlre/core/state_battle_events.py) | 戰鬥開始、回合、單位能力、攻擊事件與戰鬥結束。 |
+| [state_session_events.py](../wlre/core/state_session_events.py) | 登入、事件阻塞、S8 原始能力值與未知事件計數。 |
 | [state_ownership.py](../wlre/core/state_ownership.py) | 單一寫入執行緒、巢狀容器保護與服務欄位修改範圍。 |
 
 ## wlre/network：連線與協定
