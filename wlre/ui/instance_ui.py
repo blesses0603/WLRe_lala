@@ -244,6 +244,9 @@ class InstanceModePage(ttk.Frame):
                          or room.get('members', 0) < room['capacity']))
         self.join_button.state(['!disabled'] if joinable else ['disabled'])
         self.leave_button.state(['!disabled'] if self._leave_ready else ['disabled'])
+        if self.cooperative and hasattr(self, 'standby_button'):
+            self.standby_button.state(
+                ['!disabled'] if self._standby_ready else ['disabled'])
 
     def open_join_dialog(self):
         room = self.selected_room()
