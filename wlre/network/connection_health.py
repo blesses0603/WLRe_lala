@@ -34,7 +34,7 @@ class ConnectionHealth:
     def received(self):
         self.last_packet = self.clock(); self.last_received_at = self.wall(); self.packets += 1
 
-    def publish(self, force=False, reason=None, error=None):
+    def publish(self, force=False, reason=None, error=None, *, error_packet=None, error_stage=None):
         now = self.clock()
         if not force and self.last_emit is not None and now-self.last_emit < self.interval: return
         self.last_emit = now
@@ -49,8 +49,15 @@ class ConnectionHealth:
             # A code location is useful for client_error; exception text and locals are private.
             event['error_type'],event['error_frames']=safe_exception_location(
                 type(error),error.__traceback__)
+            # Only trusted 8-bit wire header fields. Unknown or malformed context is omitted.
+            if (isinstance(error_packet, tuple) and len(error_packet) == 2
+                    and all(type(v) is int and 0 <= v <= 255 for v in error_packet)
+                    and error_stage in ('decode', 'state_apply', 'event_handling')):
+                event['packet_main'],event['packet_sub']=error_packet
+                event['packet_stage']=error_stage
         self.emit(event)
 
-    def close(self, reason, error=None):
+    def close(self, reason, error=None, *, error_packet=None, error_stage=None):
         self.closed = True
-        self.publish(force=True, reason=reason, error=error)
+        self.publish(force=True, reason=reason, error=error,
+                     error_packet=error_packet, error_stage=error_stage)

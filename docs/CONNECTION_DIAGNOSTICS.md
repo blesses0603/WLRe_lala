@@ -63,3 +63,16 @@ health 記錄 `periodic_cleanup display_events_removed=N` 與 `periodic_cleanup 
 - 僅從 Python traceback 的程式碼物件提取 **檔案 basename、行號、函式名**；**不存放**例外訊息、原始 traceback 字串、source code、frame locals、使用者絕對路徑、帳密、遊戲封包、聊天內容。
 - Log 僅在修正後的新版本重新啟動並發生異常時提供新欄位，無法逆向補全 10 月 18～19 日既有 Log。
 - 這次變更是**精準定位所需的記錄修復**，不是聲稱已找到或排除全部既存 `client_error` 根因。驗收應先跑測試，並於之後實機遇到問題時對照新 Log。
+
+## 2026-10-19：領獎後封包診斷補強
+
+- 若網路執行緒處理單一伺服器封包時出錯，健康 Log 的 `connection_exception` 追加純數值 `packet_main=31 packet_sub=19` 及固定處理階段 `packet_stage=decode`（也可能是 `state_apply` 或 `event_handling`）。保留 PR #24 的錯誤型別及程式位置記錄。
+- 只在已知封包並已確認拋例外時加入此資訊；連線讀取失敗、一般逾時、正常停止或未有可辨識封包的錯誤不會推測封包 ID。
+- 仍不記錄封包位元組、欄位、聊天、帳密、例外文字與完整路徑，沿用 `%LOCALAPPDATA%\\WLRE_LaLa\\diagnostics` 的每檔 1 MiB／兩份輪替。
+- 配合修正官方 1262 S31-19 任務更新封包（50 組資料加末尾 Boolean）的解析缺漏；測試涵蓋領獎結果接任務更新、截斷資料拒絕、精確錯誤封包定位及隱私防護。**無法由舊 Log 確認先前錯誤必然是 S31-19，也不代表真實伺服器已驗收。**
+
+## 2026-10-19：新 Log 之 S31-15 解析錯誤
+
+新增 `health-23484.log` 於 19:01:16 顯示 `connection_exception type=ProtocolError ... packet_main=31 packet_sub=15 packet_stage=decode`。這確認 PR #25 的安全封包定位已在使用者端生效，也指出一處有別於 S31-19 的問題：官方 Lua `RevExpeditionStart` 不讀取 S31-15 本文，而原解析器 `r.end()` 拒絕非空本文。
+
+本項只放寬 S31-15 官方未解析本文的消耗方式（只保留數字長度，不保存資料本體）；其餘封包維持嚴格欄位讀取／結尾檢查，並加入模擬實際 TCP 接收的回歸案例。此修正不影響 PR #24／#25 的隱私保護，且不代表實服派遣、領獎、重新派遣等端到端結果已通過實機驗收。

@@ -66,8 +66,17 @@ class Diagnostics:
             value.get('errno') if isinstance(value.get('errno'),int) else 'none',bool(value.get('keepalive')))
         # These fields are generated from traceback code objects, never from error strings.
         if status=='closed' and reason in ('client_error','network_error') and value.get('error_type'):
-            self.logger.info('connection_exception type=%s frames=%s',
-                value['error_type'],value.get('error_frames','none'))
+            # Never trust arbitrary event strings as log metadata.
+            main, sub = value.get('packet_main'), value.get('packet_sub')
+            stage = value.get('packet_stage')
+            if (type(main) is int and 0 <= main <= 255 and
+                    type(sub) is int and 0 <= sub <= 255 and
+                    stage in ('decode', 'state_apply', 'event_handling')):
+                self.logger.info('connection_exception type=%s frames=%s packet_main=%d packet_sub=%d packet_stage=%s',
+                    value['error_type'],value.get('error_frames','none'),main,sub,stage)
+            else:
+                self.logger.info('connection_exception type=%s frames=%s',
+                    value['error_type'],value.get('error_frames','none'))
 
     def dropped(self,count):self.logger.info('display_events_skipped=%d',count)
 
