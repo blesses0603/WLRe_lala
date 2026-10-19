@@ -36,10 +36,13 @@ def apply_instances(state, event):
         # notification; room state is confirmed by S85-5 or S186-3.
         if mode == 'main':
             data['status'] = ('%s回覆：%s' % (event['action'], '成功，等待房間同步' if code == 0 else '拒絕代碼 %d' % code))
+            if event['action'] == 'join' and code == 0 and data.get('room') is not None:
+                data['status'] = '已加入一般副本房間（伺服器確認）'
             if event['action'] == 'create' and code == 0 and data.get('room') is not None:
                 data['status'] = '房間建立完成（伺服器已同步）'
         else:
             data['status'] = ('協力創房／扣點已確認' if code == 9 and data.get('room') is not None
+                              else '已加入協力房間（伺服器確認）' if code == 10 and data.get('room') is not None
                               else '協力事件通知：代碼 %d（待房間資料確認）' % code)
     elif kind == 'instance_phase':
         phase = event['kind']
