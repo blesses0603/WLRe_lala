@@ -38,7 +38,7 @@ class DocumentationAndReleaseAudit(unittest.TestCase):
         self.assertIn("releases/tag/v0.5.0", readme)
         self.assertIn("不是正式發布", changelog)
 
-    def test_actions_run_regressions_and_manual_native_builds(self):
+    def test_actions_run_regressions_with_manual_native_packaging(self):
         daily = (ROOT / ".github/workflows/test.yml").read_text(encoding="utf-8")
         native = (ROOT / ".github/workflows/desktop-packaging.yml").read_text(encoding="utf-8")
         release = (ROOT / ".github/workflows/release-windows.yml").read_text(encoding="utf-8")

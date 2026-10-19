@@ -1,8 +1,9 @@
 name: Native desktop packaging verification
 
-# Development PRs use test.yml; native builds are expensive and opt-in.
-# Run this manually from Actions when an EXE/APP is needed for device testing.
-# Official version tags use release-windows.yml to build and publish Releases.
+# Development and preview builds run from source (run_client.bat) with
+# automatic cross-platform regressions in test.yml, never auto-compile Nuitka.
+# Opt-in native EXE/APP verification: Actions > Run workflow.
+# Release tags build and publish native installers using release-windows.yml.
 on:
   workflow_dispatch:
 

@@ -51,7 +51,7 @@ BAT 會列出選中的版本、位元數、路徑及 Tk 版本；找不到可用
 ## 第 09 項：建置驗證分層
 
 1. **三平台原始碼回歸**：`.github/workflows/test.yml` 在每次 PR／main 提交皆自動執行 Linux、Windows、macOS 完整單元測試、原始碼 GUI 冒煙測試與 dry-run；這些原始碼測試不代表已產生可執行 EXE／APP。
-2. **原生打包驗證**：`.github/workflows/desktop-packaging.yml` **不再隨 PR 推送自動執行**，只在 Actions `Run workflow` 手動觸發；在 Windows x64、macOS arm64、macOS Intel x64 真正編譯 Nuitka，啟動編譯後產物作資源自檢及可執行的 GUI 冒煙測試，並驗證 ZIP CRC。macOS 另確認 Mach-O 架構與 `codesign --verify --deep --strict`，Intel GitHub Runner 的 GUI 限制如後述。
+2. **原生打包驗證**：`.github/workflows/desktop-packaging.yml` 不在任何 PR／main 提交時自動執行，只有使用者需要預先取得 EXE／APP 時，才從 Actions `Run workflow` 手動觸發；在 Windows x64、macOS arm64、macOS Intel x64 真正編譯 Nuitka，啟動編譯後產物作資源自檢及可執行的 GUI 冒煙測試，並驗證 ZIP CRC。macOS 另確認 Mach-O 架構與 `codesign --verify --deep --strict`，Intel GitHub Runner 的 GUI 限制如後述。
 3. **人工驗收**：需在使用者的 Windows 桌面及 Mac Finder 驗證實際操作；Apple Developer ID 公證、Gatekeeper 與正式伺服器連線不屬自動 CI 能證明的事項。
 
 macOS Intel 的 GitHub hosted runner 曾在原始碼 Tk GUI 冒煙測試逾時；CI 明確使用 `WLRE_NATIVE_GUI_SMOKE=0` 停用 **Intel 虛擬機的 GUI 視窗檢查**，但仍要求完整單元測試、原生編譯、編譯後 APP 的資源自檢、Mach-O 架構檢查、簽章與 ZIP 完整性。Intel 使用者電腦上的實際 APP GUI 啟動**尚未驗證**，需人工驗收。macOS Apple Silicon 的 CI GUI 冒煙測試維持啟用。
@@ -67,23 +67,19 @@ macOS Intel 的 GitHub hosted runner 曾在原始碼 Tk GUI 冒煙測試逾時�
 - **第一次全新編譯通常不會因快取而變快**，重複建置且 C 原始碼和編譯器選項足夠相似時才可能命中。快取結果會在 GitHub Actions 日誌中顯示，可用各次 Nuitka 編譯時間比較；沒有測量前不宣稱百分比改善。
 - 此次加速不移除任何圖片、JSON、ZIP、Tk 插件或 `--include-package=wlre`，仍要求完整編譯後自檢與跨平台回歸測試通過。若遇到記憶體不足，可指定 `--jobs 2`。
 
-## GitHub Actions 完整跨平台驗證（2026-10-19 開發／發布分流）
+## GitHub Actions 開發測試／正式打包分流（2026-10-19）
 
 - 使用者確認不再限制 GitHub Actions 額度，因此 `Main and PR tests` 改回一般 PR/main 提交同時驗證 Linux、Windows、macOS。
-- `Native desktop packaging verification` **只允許手動**觸發 Windows x64、macOS arm64／Intel x64 原生編譯。Draft PR、一般 PR 更新及 main 更新都不自動進行 Nuitka 編譯。
+- `Native desktop packaging verification` 僅接受 `workflow_dispatch` 手動執行 Windows x64、macOS arm64／Intel x64；任何 PR 更新都不自動原生打包。
 - 發版標籤 `vX.Y.Z` 照常由 `Windows and macOS Nuitka Release` 自動進行正式發行。一般 PR 驗證不是 Release，不會自行建立標籤或發布新版本。
-- 平日查看該 Commit 的三平台原始碼測試；正式發版或手動建置時，再查看 Nuitka 編譯、資源自檢、封裝完整性與工作流程產物。沒有實際執行成功的項目不得記為通過。
+- 一般 Commit 檢查三平台原始碼測試；正式 Release 或手動打包時才核對 Nuitka 編譯、資源自檢、封裝完整性與工作流程產物。沒有實際執行成功的項目不得記為通過。
 - Mac Intel 實機 Finder GUI、Apple Developer ID 公證、Windows 使用者電腦互動及正式遊戲伺服器端到端仍屬人工驗收，CI 不能取代。
 
 
-### PR #23 起採用的開發與發版規則
+### 固定執行規則
 
-| 時機 | `test.yml` 三平台測試 | `desktop-packaging.yml` EXE／APP | `release-windows.yml` 發版 |
-| --- | --- | --- | --- |
-| Draft PR 開發中 | 自動 | **不自動** | 不執行 |
-| PR 準備合併 | 自動 | 依需要手動 | 不執行 |
-| main 一般更新 | 自動 | **不自動** | 不執行 |
-| 提前需要安裝檔測試 | 保留自動測試 | 在 Actions 選擇本工作流程，按 `Run workflow`，選擇欲測試的分支 | 不執行 |
-| 正式版 `vX.Y.Z` 標籤 | 發版流程內另有完整回歸 | 不必額外執行手動驗證 | 標籤觸發跨平台建置與 Release |
-
-**注意：** 本次只改 PR 分支上的工作流程；若 GitHub 預設分支仍保留舊自動打包規則，其他尚未套用此修改的 PR 仍可能按舊設定執行。舊版已排隊／執行中的打包任務也不會因修改 YAML 自動取消。
+- **Windows 開發預覽**：以 `run_client.bat` 執行 Python 原始碼，無須 Nuitka。macOS 開發預覽以 `run_client.command` 執行。
+- **PR／main 每次更新**：由 `.github/workflows/test.yml` 自動執行 Windows／Linux／macOS 測試與打包規劃的 `--dry-run`；`--dry-run` 不會產生 EXE／APP。
+- **需要提前取得原生安裝包**：開啟 GitHub Actions 的 `Native desktop packaging verification`，手動選擇分支再按 `Run workflow`。
+- **正式 Release**：以 `vX.Y.Z` 標籤觸發 `.github/workflows/release-windows.yml`，執行正式 Windows EXE 與 macOS APP 原生打包並建立發行版本。
+- 歷史上已啟動的舊打包工作不會因修改 YAML 自動取消；舊紀錄須另行刪除。本次改動不合併尚未驗收的副本／協力功能。
