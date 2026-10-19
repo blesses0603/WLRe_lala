@@ -19,6 +19,7 @@
    好友度低於設定值才可自動補充，至少補到設定值與任務需求較高者。自動選擇優先以較少物品達標，同數量時減少溢出；單一種類不足但總恢復量足夠時，逐批使用不同種類，每批均等待確認後再續用。指定單一種類時不換用其他種類。不取用小屋儲物櫃，不購買物品，不解除物品鎖定；不足時停止。
 5. C31-27 送出後，必須同時確認好友度達標與對應背包格位扣除，才送 C31-15。出發亦須等待對應任務及成員的 S31-18／13 確認，不預先修改本機派遣狀態。
 6. 自動領獎開啟時，優先處理已到期隊伍，包含不符合新派遣時間或成功率門檻的既有任務。依伺服器同步的剩餘分鐘數計時，到期前不會領取；使用 C31-16 與隊伍索引逐隊結算，不使用一鍵全領。
+   S31-19 任務表更新使用 50 組（索引 UInt8、任務 UInt16）後接一個 Boolean 顯示旗標；完整消耗後才執行封包結尾檢查，避免伺服器結算後刷新任務表時引發 `ProtocolError`。
 7. 依實際任務的一般與特殊獎勵保守計算空格需求，不依賴已有物品可堆疊的假設。官方 1262 版全部任務最多需要預留 2 格。背包資料不可靠或空間不足時等待，清出空間後自動繼續；不刪除物品。未知獎勵類型不自動領取。
 8. S31-16 領獎回覆須與目前隊伍索引相符，並確認實際獎勵物品數量已入包，才視為領取完成。允許物品更新早於結算回覆。只領到貨幣或經驗等非物品獎勵時不等待額外物品事件。夥伴閒置狀態仍依伺服器更新，之後才能再次派遣。
 9. 派遣、領獎或補好友度操作 20 秒未確認會停止且不重送；停止按鈕不會撤回已送出的操作。未確認狀態需重新登入同步。斷線停止自動化。
@@ -39,4 +40,4 @@
 
 ## 協定來源
 
-`Lua/Logic/ExpeditionMgr.lua`（`SendQuestClaim`／`CheckCanSendClaim`／`RevExpeditionResult`）、`Lua/Logic/Protocols/Protocols_031.lua`、`Lua/Data/AdventureData.lua`、`Lua/Data/AwardData.lua`、`Lua/UI/Logic/UIExpedition.lua`、`Lua/Common/Define.lua`、`Lua/Common/Text.lua`、`Lua/Logic/Bag.lua`。C31-15：任務 UInt16、四個夥伴 ID UInt16、支援物品筆數（本次固定 0）。C31-16：隊伍索引 UInt8；S31-16：結果 UInt8、隊伍索引 UInt8、日誌與歷史 ID 各 UInt16，後接每筆 9 bytes 的獎勵（種類 UInt8、ID UInt32、數量 UInt32）。C31-27：駐紮所索引 UInt8、筆數 UInt8，每筆來源 UInt8（背包=1）、格位 UInt16、物品 ID UInt16、數量 UInt16。任務 `spanTime` 與 S31 隊伍剩餘時間均為分鐘，先依原版計算並四捨五入減免後分鐘數，再換算為秒供門檻比較。
+`Lua/Logic/ExpeditionMgr.lua`（`SendQuestClaim`／`CheckCanSendClaim`／`RevExpeditionResult`）、`Lua/Logic/Protocols/Protocols_031.lua`、`Lua/Data/AdventureData.lua`、`Lua/Data/AwardData.lua`、`Lua/UI/Logic/UIExpedition.lua`、`Lua/Common/Define.lua`、`Lua/Common/Text.lua`、`Lua/Logic/Bag.lua`。C31-15：任務 UInt16、四個夥伴 ID UInt16、支援物品筆數（本次固定 0）。C31-16：隊伍索引 UInt8；S31-16：結果 UInt8、隊伍索引 UInt8、日誌與歷史 ID 各 UInt16，後接每筆 9 bytes 的獎勵（種類 UInt8、ID UInt32、數量 UInt32）。 S31-19：50 組（索引 UInt8、任務 UInt16），末尾 Boolean（1 byte）；與官方 `RevExpeditionQuestUpdate` 1262 邏輯一致。C31-27：駐紮所索引 UInt8、筆數 UInt8，每筆來源 UInt8（背包=1）、格位 UInt16、物品 ID UInt16、數量 UInt16。任務 `spanTime` 與 S31 隊伍剩餘時間均為分鐘，先依原版計算並四捨五入減免後分鐘數，再換算為秒供門檻比較。

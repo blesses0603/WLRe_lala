@@ -65,6 +65,34 @@ class HealthTests(unittest.TestCase):
             self.assertNotIn('fixture-secret',text)
             self.assertNotIn('secret-payload',text)
 
+    def test_packet_attribution_excludes_payload_and_untrusted_fields(self):
+        def fail():
+            raise ValueError('secret-account-content')
+        try: fail()
+        except ValueError as exc:
+            self.health.close('client_error',exc,error_packet=(31,19),error_stage='decode')
+        event=self.events[-1]
+        self.assertEqual((event['packet_main'],event['packet_sub'],event['packet_stage']),
+                         (31,19,'decode'))
+        self.assertNotIn('secret-account-content',str(event))
+        with tempfile.TemporaryDirectory() as directory:
+            d=Diagnostics(directory);d.connection(event);d.close()
+            logged=d.path.read_text(encoding='utf8')
+            self.assertIn('packet_main=31 packet_sub=19 packet_stage=decode',logged)
+            self.assertNotIn('secret-account-content',logged)
+
+        # The handler must omit unknown/untrusted packet context.
+        for bad in ((-1,19),(256,19),(True,19),('secret',19),(31,),None):
+            with self.subTest(bad=bad):
+                other=ConnectionHealth(self.events.append,clock=self.clock.mono,wall=self.clock.utc)
+                try: fail()
+                except ValueError as exc:
+                    other.close('client_error',exc,error_packet=bad,error_stage='decode')
+                self.assertNotIn('packet_main',self.events[-1])
+        no_context=ConnectionHealth(self.events.append,clock=self.clock.mono,wall=self.clock.utc)
+        no_context.close('server_closed',error_packet=(31,19),error_stage='decode')
+        self.assertNotIn('packet_main',self.events[-1])
+
     def test_ui_ages_data_even_when_worker_stops_publishing(self):
         monitor=ConnectionStatus(clock=self.clock.mono)
         self.health.received();self.health.publish(force=True);monitor.update(self.events[-1])
@@ -143,6 +171,48 @@ class ClientHealthIntegration(unittest.TestCase):
         self.assertNotIn('fixture-password',str(terminal[0]))
         self.assertEqual(events[-1]['type'],'connection_closed')
 
+
+    def test_truncated_expedition_update_reports_packet_number_instead_of_payload(self):
+        from wlre.network.client import run_client
+        from wlre.network.wire import Packet, encode, ProtocolError
+        # The 1262 S31-19 packet requires 50 entries plus one Boolean.
+        # Deliberately omit the Boolean and verify the failure is attributable.
+        entries=b''.join(bytes((i,0,0)) for i in range(1,51))
+        connection=Mock()
+        connection.__enter__=Mock(return_value=connection)
+        connection.__exit__=Mock(return_value=False)
+        connection.recv.side_effect=[encode(Packet(31,19,entries),0)]
+        events=[]
+        with patch('wlre.network.client.socket.create_connection',return_value=connection):
+            with self.assertRaises(ProtocolError):
+                run_client('fixture.invalid',1,{'rx_xor':0,'tx_xor':0},events.append,duration=None)
+        terminal=[e for e in events if e.get('status')=='closed' and e.get('type')=='connection_health']
+        self.assertEqual(len(terminal),1)
+        self.assertEqual(terminal[0]['reason'],'client_error')
+        self.assertEqual((terminal[0]['packet_main'],terminal[0]['packet_sub'],terminal[0]['packet_stage']),
+                         (31,19,'decode'))
+        self.assertIn('expedition.py:',terminal[0]['error_frames'])
+        self.assertNotIn('payload',str(terminal[0]))
+        self.assertEqual(events[-1]['reason'],'client_error')
+
+    def test_failed_state_apply_reports_own_stage_not_decode(self):
+        from wlre.network.client import run_client
+        from wlre.network.wire import Packet,encode
+        from wlre.core.state import State
+        connection=Mock()
+        connection.__enter__=Mock(return_value=connection)
+        connection.__exit__=Mock(return_value=False)
+        connection.recv.side_effect=[encode(Packet(63,5),0)]
+        events=[]
+        with (patch('wlre.network.client.socket.create_connection',return_value=connection),
+              patch.object(State,'apply',side_effect=ValueError('secret-state'))):
+            with self.assertRaises(ValueError):
+                run_client('fixture.invalid',1,{'rx_xor':0,'tx_xor':0},events.append,duration=None)
+        terminal=[e for e in events if e.get('status')=='closed' and e.get('type')=='connection_health']
+        self.assertEqual(len(terminal),1)
+        self.assertEqual((terminal[0]['packet_main'],terminal[0]['packet_sub'],terminal[0]['packet_stage']),
+                         (63,5,'state_apply'))
+        self.assertNotIn('secret-state',str(terminal[0]))
 
 class PollRecovery(unittest.TestCase):
     def test_callback_failure_does_not_end_polling_and_next_cycle_recovers(self):

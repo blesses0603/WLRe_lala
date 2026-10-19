@@ -311,6 +311,57 @@ class ExpeditionClaiming(ExpeditionFixture, unittest.TestCase):
         self.assertFalse(self.state.expedition['enabled'])
         self.assertEqual(self.service.tick(self.state, 100), [])
 
+    def test_quest_refresh_after_auto_claim_consumes_official_show_flag(self):
+        # Official 1262 ExpeditionMgr.RevExpeditionQuestUpdate reads 50
+        # (index:u8, quest:u16) pairs AND one ReadBoolean() show flag.
+        self.service.start(self.state, self.settings)
+        sent, = self.service.tick(self.state, 10)
+        self.assertEqual((sent.main, sent.sub, sent.payload), (31, 16, bytes((1,))))
+        claim = Writer().u8(1).u8(1).u16(0).u16(0).u8(10).u32(34014).u32(2)
+        self.event(decode(Packet(31, 16, claim.build())))
+        self.assertIsNotNone(self.service.pending)
+
+        entries = b''.join(Writer().u8(i).u16(i if i <= 2 else 0).build()
+                           for i in range(1, 51))
+        for flag in (0, 1):
+            update = decode(Packet(31, 19, entries + bytes([flag])))
+            self.assertEqual(update['show'], bool(flag))
+            self.assertEqual(update['quests']['1'], 1)
+            self.assertEqual(update['quests']['50'], 0)
+            self.event(update)
+            self.assertIsNotNone(self.service.pending)
+        self.event({'type': 'bag_add', 'item': {'index': 3, 'item_id': 34014, 'count': 2}})
+        self.assertEqual(self.state.expedition['claimed'], 1)
+        self.assertIsNone(self.service.pending)
+        for malformed in (entries, entries + bytes((1,0))):
+            with self.assertRaises(ProtocolError):
+                decode(Packet(31, 19, malformed))
+
+    def test_quest_refresh_packet_after_claim_does_not_cause_client_error(self):
+        from unittest.mock import Mock
+        from wlre.network.client import run_client
+        from wlre.network.wire import encode
+        result = Writer().u8(1).u8(1).u16(0).u16(0).u8(10).u32(34014).u32(2).build()
+        entries = b''.join(Writer().u8(i).u16(i if i <= 2 else 0).build()
+                           for i in range(1, 51)) + bytes((1,))
+        connection = Mock()
+        connection.__enter__ = Mock(return_value=connection)
+        connection.__exit__ = Mock(return_value=False)
+        connection.recv.side_effect = [
+            encode(Packet(31, 16, result), 0),
+            encode(Packet(31, 19, entries), 0),
+            b'',
+        ]
+        events = []
+        with patch('wlre.network.client.socket.create_connection', return_value=connection):
+            state = run_client('fixture.invalid', 1, {'rx_xor': 0, 'tx_xor': 0},
+                               events.append, duration=None)
+        self.assertEqual(state.phase, 'disconnected')
+        self.assertIn('expedition_quests', [e.get('type') for e in events])
+        self.assertEqual([e.get('reason') for e in events if e.get('type') == 'connection_closed'],
+                         ['server_closed'])
+        self.assertFalse(any(e.get('reason') == 'client_error' for e in events))
+
     def test_reward_wire_is_structured_and_catalog_has_capacity_metadata(self):
         w = Writer().u8(1).u8(1).u16(0).u16(0).u8(10).u32(34014).u32(2)
         self.assertEqual(decode(Packet(31, 16, w.build()))['rewards'], [self.award])
