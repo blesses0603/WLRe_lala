@@ -44,6 +44,8 @@ class InstanceNavigation(unittest.TestCase):
                     [page.entries.heading(column, 'text') for column in page.columns],
                     ['房間／副本', '人數／條件', '公開狀態'],
                 )
+                self.assertEqual(len(page.catalog_table.get_children()),
+                                 3 if page.cooperative else 27)
                 self.assertTrue(page.enter_button.instate(['disabled']))
         self.assertFalse(self.errors, self.errors)
 

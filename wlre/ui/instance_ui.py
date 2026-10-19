@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import ttk
 
 from wlre.ui.rounded_notebook import RoundedNotebook
+from wlre.services.instance_browser import entries_for
 
 
 class InstanceModePage(ttk.Frame):
@@ -17,9 +18,45 @@ class InstanceModePage(ttk.Frame):
         ttk.Label(self, text=title, style='Heading.TLabel').pack(anchor='w', pady=(2, 6))
         self.note = tk.StringVar(value='尚未查詢房間。請登入後手動更新。')
         ttk.Label(self, textvariable=self.note, style='Muted.TLabel', anchor='w').pack(fill='x', pady=(0, 10))
+        self.catalog_records = entries_for(self.mode)
+        ttk.Label(self, text="1262 官方副本清單（靜態資料，非房間即時狀態）",
+                  style='Muted.TLabel').pack(anchor='w', pady=(0, 3))
+        self.catalog_columns = ('id', 'name', 'level', 'players', 'time')
+        catalog_host = ttk.Frame(self)
+        catalog_host.pack(fill='x', pady=(0, 4))
+        self.catalog_table = ttk.Treeview(
+            catalog_host, columns=self.catalog_columns,
+            show='headings', selectmode='browse', height=7)
+        for field, title, width in (
+            ('id', 'ID', 48), ('name', '官方中文名稱／版本', 210),
+            ('level', '等級', 66), ('players', '人數', 76),
+            ('time', '時間', 80)
+        ):
+            self.catalog_table.heading(field, text=title)
+            self.catalog_table.column(field, width=width, anchor='w', stretch=True)
+        scroll = ttk.Scrollbar(catalog_host, orient='vertical',
+                               command=self.catalog_table.yview)
+        self.catalog_table.configure(yscrollcommand=scroll.set)
+        self.catalog_table.pack(side='left', fill='x', expand=True)
+        scroll.pack(side='right', fill='y')
+        for index, record in enumerate(self.catalog_records):
+            variant = (' (版本 %s)' % record['variant']) if record['variant'] else ''
+            members = ('%s～%s' % (record['min_members'], record['max_members'])
+                       if record['max_members'] else '依活動')
+            duration = ('%s 分' % record['time_minutes']
+                        if record['time_minutes'] else '依活動')
+            self.catalog_table.insert('', 'end', iid='catalog_%s' % index,
+                values=(record['id'], record['name'] + variant,
+                        record['min_level'] or '依活動', members, duration))
+        self.catalog_detail = tk.StringVar(value='點選官方副本名稱可查看來源 ID 與獎勵資料筆數。')
+        ttk.Label(self, textvariable=self.catalog_detail,
+                  style='Muted.TLabel').pack(fill='x', pady=(0, 5))
+        self.catalog_table.bind('<<TreeviewSelect>>', self.on_catalog_selected)
+        ttk.Label(self, text='伺服器房間清單', style='Muted.TLabel').pack(
+            anchor='w', pady=(0, 2))
         self.columns = ('name', 'requirement', 'status')
         self.entries = ttk.Treeview(
-            self, columns=self.columns, show='headings', selectmode='browse', height=10
+            self, columns=self.columns, show='headings', selectmode='browse', height=5
         )
         for key, heading, width in (
             ('name', '房間／副本', 240),
@@ -39,6 +76,16 @@ class InstanceModePage(ttk.Frame):
         self.refresh_button.pack(side='left')
         self.enter_button = ttk.Button(controls, text='進入副本', state='disabled')
         self.enter_button.pack(side='right')
+
+    def on_catalog_selected(self, _event=None):
+        selection = self.catalog_table.selection()
+        if not selection:
+            return
+        index = int(selection[0].removeprefix('catalog_'))
+        record = self.catalog_records[index]
+        self.catalog_detail.set(
+            '副本 ID %s｜場景 %s｜獎勵資料 %s 筆；是否可進入仍以伺服器為準' %
+            (record['id'], record['map_id'], len(record['awards'])))
 
     def refresh_rooms(self):
         if self.app is not None and self.app.live_active:
