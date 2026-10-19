@@ -1,6 +1,7 @@
 """Transport evidence only; silence is uncertain, never proof of logout."""
 import socket
 import time
+from wlre.core.diagnostics import safe_exception_location
 
 QUIET_AFTER = 120
 
@@ -40,10 +41,15 @@ class ConnectionHealth:
         age = max(0, now-(self.last_packet if self.last_packet is not None else self.started))
         status = ('closed' if self.closed else 'quiet' if age >= self.quiet_after else
                   'receiving' if self.last_packet is not None else 'waiting')
-        self.emit(dict(type='connection_health', status=status, age=age,
+        event=dict(type='connection_health', status=status, age=age,
             last_received_at=self.last_received_at, packets=self.packets, keepalive=self.keepalive,
             reason=reason, error_type=type(error).__name__ if error is not None else None,
-            errno=getattr(error, 'errno', None)))
+            errno=getattr(error, 'errno', None))
+        if self.closed and error is not None:
+            # A code location is useful for client_error; exception text and locals are private.
+            event['error_type'],event['error_frames']=safe_exception_location(
+                type(error),error.__traceback__)
+        self.emit(event)
 
     def close(self, reason, error=None):
         self.closed = True
