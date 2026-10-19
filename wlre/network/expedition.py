@@ -59,7 +59,10 @@ def decode_expedition(packet):
     elif sub == 18:
         event = {'type': 'expedition_team', 'team': team(r)}
     elif sub == 19:
-        event = {'type': 'expedition_quests', 'quests': {str(r.u8()): r.u16() for _ in range(50)}}
+        # ExpeditionMgr.RevExpeditionQuestUpdate (1262) reads 50 (index, quest)
+        # pairs followed by a mandatory ReadBoolean() refresh/show flag.
+        event = {'type': 'expedition_quests', 'quests': {str(r.u8()): r.u16() for _ in range(50)},
+                 'show': bool(r.u8())}
     elif sub in (20, 25):
         event = {'type': 'expedition_rejected', 'code': r.u8(), 'source': sub}
     elif sub == 21:
