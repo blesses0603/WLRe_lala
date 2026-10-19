@@ -4,11 +4,17 @@ def defaults():
         'main': {'ready': False, 'rooms': [], 'room': None, 'members': [],
                  'phase': 'idle', 'status': '尚未查詢房間', 'remaining_minutes': None,
                  'objectives': {}, 'completed': False,
-                 'create_pending': None, 'create_uncertain': False, 'create_result': None},
+                 'create_pending': None, 'create_uncertain': False, 'create_result': None,
+                 'join_pending': None, 'join_uncertain': False, 'join_result': None,
+                 'leave_pending': None, 'leave_uncertain': False, 'leave_result': None,
+                 'list_updated_at': None},
         'coop': {'ready': False, 'rooms': [], 'room': None, 'members': [],
                  'phase': 'idle', 'status': '尚未查詢房間', 'fight_count': None,
                  'reward': None, 'standby': None,
-                 'create_pending': None, 'create_uncertain': False, 'create_result': None},
+                 'create_pending': None, 'create_uncertain': False, 'create_result': None,
+                 'join_pending': None, 'join_uncertain': False, 'join_result': None,
+                 'leave_pending': None, 'leave_uncertain': False, 'leave_result': None,
+                 'list_updated_at': None},
     }
 
 
@@ -21,6 +27,8 @@ def apply_instances(state, event):
     if kind == 'instance_room_list':
         data['rooms'] = list(event['rooms'])
         data['ready'] = True
+        import time
+        data['list_updated_at'] = time.monotonic()
         data['status'] = '已同步房間清單（%d 間）' % len(event['rooms'])
     elif kind == 'instance_result':
         code = event['code']
@@ -124,5 +132,7 @@ def apply_instances(state, event):
     elif kind == 'instance_standby':
         data['standby'] = event['standby']
     # Resolve only after the authoritative room event has been applied.
-    from wlre.services.instance_creation import resolve
-    resolve(state, event)
+    from wlre.services.instance_creation import resolve as resolve_create
+    from wlre.services.instance_room_flow import resolve as resolve_room
+    resolve_create(state, event)
+    resolve_room(state, event)
