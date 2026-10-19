@@ -87,6 +87,7 @@ class InstanceModePage(ttk.Frame):
         self.create_button.pack(side='left', padx=(10, 0))
         self._creation_ready = False
         self._standby_ready = False
+        self._start_ready = False
         self.join_button = ttk.Button(
             controls, text='加入房間', command=self.open_join_dialog, state='disabled')
         self.join_button.pack(side='left', padx=(10, 0))
@@ -102,6 +103,11 @@ class InstanceModePage(ttk.Frame):
                 value='出戰夥伴：沿用一般戰鬥設定（尚未同步）')
             ttk.Label(self, textvariable=self.companion_note,
                       style='Muted.TLabel').pack(anchor='w')
+        if not self.cooperative:
+            self.start_button = ttk.Button(
+                controls, text='房主開始挑戰',
+                command=self.request_start, state='disabled')
+            self.start_button.pack(side='left', padx=(8, 0))
         self.enter_button = ttk.Button(controls, text='進入副本', state='disabled')
         self.enter_button.pack(side='right')
 
@@ -244,6 +250,9 @@ class InstanceModePage(ttk.Frame):
                          or room.get('members', 0) < room['capacity']))
         self.join_button.state(['!disabled'] if joinable else ['disabled'])
         self.leave_button.state(['!disabled'] if self._leave_ready else ['disabled'])
+        if not self.cooperative and hasattr(self, 'start_button'):
+            self.start_button.state(
+                ['!disabled'] if self._start_ready else ['disabled'])
         if self.cooperative and hasattr(self, 'standby_button'):
             self.standby_button.state(
                 ['!disabled'] if self._standby_ready else ['disabled'])
@@ -351,6 +360,25 @@ class InstanceModePage(ttk.Frame):
         self.app.send({'type': 'instance_coop_standby', 'mode': 'coop',
                        'standby': target})
 
+    def request_start(self):
+        if (self.cooperative or not self._start_ready or
+                self.app is None or not self.app.live_active):
+            return
+        current = self._room_data.get('room') or {}
+        room_id = current.get('room_id')
+        if not room_id:
+            return
+        if not messagebox.askyesno(
+                '確認開始副本',
+                '房間 #%s：確定由房主開始挑戰嗎？\\n'
+                '將沿用角色目前正常出戰的夥伴。\\n'
+                '送出後只等待伺服器確認，不會自動重送。' % room_id,
+                parent=self.winfo_toplevel()):
+            return
+        self._start_ready = False
+        self._update_room_buttons()
+        self.app.send({'type': 'instance_start', 'mode': 'main'})
+
     def refresh_rooms(self):
         if self.app is not None and self.app.live_active:
             self.app.send({'type': 'instance_refresh', 'mode': self.mode})
@@ -369,9 +397,9 @@ class InstanceModePage(ttk.Frame):
         def blocked(part):
             return (part.get('room') is not None
                     or any(part.get(k) is not None for k in
-                           ('create_pending','join_pending','leave_pending','standby_pending'))
+                           ('create_pending','join_pending','leave_pending','standby_pending','start_pending'))
                     or any(part.get(k) for k in
-                           ('create_uncertain','join_uncertain','leave_uncertain','standby_uncertain')))
+                           ('create_uncertain','join_uncertain','leave_uncertain','standby_uncertain','start_uncertain')))
         active = bool(live) and not blocked(data) and not blocked(other)
         updated = data.get('list_updated_at')
         fresh = (updated is not None and
@@ -380,13 +408,13 @@ class InstanceModePage(ttk.Frame):
         self._leave_ready = (
             bool(live) and data.get('room') is not None
             and not any(data.get(k) is not None for k in
-                        ('create_pending','join_pending','leave_pending','standby_pending'))
+                        ('create_pending','join_pending','leave_pending','standby_pending','start_pending'))
             and not any(data.get(k) for k in
-                        ('create_uncertain','join_uncertain','leave_uncertain','standby_uncertain'))
+                        ('create_uncertain','join_uncertain','leave_uncertain','standby_uncertain','start_uncertain'))
             and not any(other.get(k) is not None for k in
-                        ('create_pending','join_pending','leave_pending','standby_pending'))
+                        ('create_pending','join_pending','leave_pending','standby_pending','start_pending'))
             and not any(other.get(k) for k in
-                        ('create_uncertain','join_uncertain','leave_uncertain','standby_uncertain'))
+                        ('create_uncertain','join_uncertain','leave_uncertain','standby_uncertain','start_uncertain'))
             and (self.cooperative and not data.get('standby')
                  or not self.cooperative and data.get('phase') == 'waiting'))
         member_data = data.get('members') or []
@@ -400,20 +428,44 @@ class InstanceModePage(ttk.Frame):
             and data.get('phase') == 'waiting'
             and type(current_room.get('standby')) is bool
             and not any(data.get(k) is not None for k in
-                        ('create_pending','join_pending','leave_pending','standby_pending'))
+                        ('create_pending','join_pending','leave_pending','standby_pending','start_pending'))
             and not any(data.get(k) for k in
-                        ('create_uncertain','join_uncertain','leave_uncertain','standby_uncertain'))
+                        ('create_uncertain','join_uncertain','leave_uncertain','standby_uncertain','start_uncertain'))
             and not any(other.get(k) is not None for k in
-                        ('create_pending','join_pending','leave_pending','standby_pending'))
+                        ('create_pending','join_pending','leave_pending','standby_pending','start_pending'))
             and not any(other.get(k) for k in
-                        ('create_uncertain','join_uncertain','leave_uncertain','standby_uncertain')))
+                        ('create_uncertain','join_uncertain','leave_uncertain','standby_uncertain','start_uncertain')))
+        # Normal-dungeon start is host only. S85-4 roster must agree with
+        # the room count, and the official StageData minimum must be met.
+        stage = next((record for record in self.catalog_records
+                      if record['kind'] == 1 and
+                      record['map_id'] == current_room.get('room_id')), None)
+        valid_roster = (type(current_room.get('members')) is int
+                        and current_room['members'] == len(member_data)
+                        and any(member.get('role_id') == local_role_id
+                                for member in member_data))
+        min_reached = (stage is not None and valid_roster
+                       and stage['min_members'] <= len(member_data)
+                       <= stage['max_members'])
+        self._start_ready = (
+            not self.cooperative and bool(live) and min_reached
+            and data.get('phase') == 'waiting'
+            and current_room.get('host_id') == local_role_id
+            and not any(part.get(k) is not None
+                        for part in (data, other)
+                        for k in ('create_pending', 'join_pending',
+                                  'leave_pending', 'standby_pending', 'start_pending'))
+            and not any(part.get(k)
+                        for part in (data, other)
+                        for k in ('create_uncertain', 'join_uncertain',
+                                  'leave_uncertain', 'standby_uncertain', 'start_uncertain')))
         self._creation_ready = (
             bool(live) and not data.get('create_pending')
             and not data.get('create_uncertain') and not data.get('room')
             and not other.get('create_pending')
             and not other.get('create_uncertain') and not other.get('room')
-            and not any(data.get(k) for k in ('join_pending','leave_pending','join_uncertain','leave_uncertain','standby_pending','standby_uncertain'))
-            and not any(other.get(k) for k in ('join_pending','leave_pending','join_uncertain','leave_uncertain','standby_pending','standby_uncertain')))
+            and not any(data.get(k) for k in ('join_pending','leave_pending','join_uncertain','leave_uncertain','standby_pending','standby_uncertain','start_pending','start_uncertain'))
+            and not any(other.get(k) for k in ('join_pending','leave_pending','join_uncertain','leave_uncertain','standby_pending','standby_uncertain','start_pending','start_uncertain')))
         self._update_create_button()
         self.refresh_button.state(['!disabled'] if live else ['disabled'])
         self.note.set(data.get('status', '尚未查詢房間') if live else '尚未連線，無法查詢副本房間')
