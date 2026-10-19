@@ -1,4 +1,5 @@
 """Main/cooperative instance browser using only verified server snapshots."""
+import time
 import tkinter as tk
 from tkinter import ttk, messagebox
 
@@ -66,6 +67,12 @@ class InstanceModePage(ttk.Frame):
             self.entries.heading(key, text=heading)
             self.entries.column(key, width=width, stretch=True, anchor='w')
         self.entries.pack(fill='both', expand=True)
+        self.entries.bind('<<TreeviewSelect>>', self.on_room_selected)
+        self._room_rows = []
+        self._join_ready = False
+        self._leave_ready = False
+        self._room_data = {}
+        self._room_other = {}
         self.details = tk.StringVar(value='沒有已確認的副本房間；進入與領獎功能尚未開放。')
         ttk.Label(self, textvariable=self.details, style='Muted.TLabel',
                   anchor='w').pack(fill='x', pady=(10, 8))
@@ -79,6 +86,12 @@ class InstanceModePage(ttk.Frame):
             state='disabled')
         self.create_button.pack(side='left', padx=(10, 0))
         self._creation_ready = False
+        self.join_button = ttk.Button(
+            controls, text='加入房間', command=self.open_join_dialog, state='disabled')
+        self.join_button.pack(side='left', padx=(10, 0))
+        self.leave_button = ttk.Button(
+            controls, text='離開房間', command=self.request_leave, state='disabled')
+        self.leave_button.pack(side='left', padx=(6, 0))
         self.enter_button = ttk.Button(controls, text='進入副本', state='disabled')
         self.enter_button.pack(side='right')
 
@@ -202,33 +215,170 @@ class InstanceModePage(ttk.Frame):
         dialog.grab_set()
         dialog.focus_set()
 
+    def selected_room(self):
+        selected = self.entries.selection()
+        if not selected:
+            return None
+        try:
+            return self._room_rows[int(selected[0].removeprefix('room_'))]
+        except (IndexError, ValueError, KeyError):
+            return None
+
+    def on_room_selected(self, _event=None):
+        self._update_room_buttons()
+
+    def _update_room_buttons(self):
+        room = self.selected_room()
+        joinable = (self._join_ready and room is not None
+                    and (room.get('capacity') is None
+                         or room.get('members', 0) < room['capacity']))
+        self.join_button.state(['!disabled'] if joinable else ['disabled'])
+        self.leave_button.state(['!disabled'] if self._leave_ready else ['disabled'])
+
+    def open_join_dialog(self):
+        room = self.selected_room()
+        if not self._join_ready or room is None or self.app is None or not self.app.live_active:
+            return
+        updated = self._room_data.get('list_updated_at')
+        if updated is None or not 0 <= time.monotonic() - updated <= 120:
+            messagebox.showwarning('房間清單過期', '請重新更新伺服器房間清單。',
+                                   parent=self.winfo_toplevel())
+            return
+        root = self.winfo_toplevel()
+        dialog = tk.Toplevel(root)
+        dialog.title('加入副本房間')
+        dialog.transient(root)
+        dialog.resizable(False, False)
+        form = ttk.Frame(dialog, padding=16)
+        form.pack(fill='both', expand=True)
+        ttk.Label(form, text='房間 #%s（%s）' %
+                  (room['room_id'], '公開' if room['public'] else '私人'),
+                  style='Heading.TLabel').pack(anchor='w', pady=(0, 8))
+        if self.cooperative:
+            ttk.Label(form, text='協力加入可能消耗點數／門票，請確認。',
+                      style='Muted.TLabel').pack(anchor='w', pady=(0, 8))
+        secret = tk.StringVar()
+        if not room['public']:
+            ttk.Label(form, text='私人房間密碼（4 位 ASCII 數字）').pack(anchor='w')
+            ttk.Entry(form, textvariable=secret, show='*', width=18).pack(
+                anchor='w', pady=(0, 8))
+        buttons = ttk.Frame(form)
+        buttons.pack(fill='x')
+
+        def submit():
+            if not self._join_ready or not self.app.live_active:
+                messagebox.showwarning('房間狀態', '房間狀態已變更，請重新整理。',
+                                       parent=dialog)
+                return
+            password = secret.get()
+            if not room['public'] and (
+                    len(password) != 4 or not password.isascii()
+                    or not password.isdecimal() or password == '0000'):
+                messagebox.showwarning('私人密碼', '請輸入四位 ASCII 數字，不能為 0000。',
+                                       parent=dialog)
+                return
+            warning = ('協力加入可能消耗點數或門票。\\n'
+                       if self.cooperative else '')
+            if not messagebox.askyesno(
+                    '確認加入', warning + '要加入房間 #%s 嗎？\\n'
+                    '只會送出一次，結果不明時請重新登入同步。' % room['room_id'],
+                    parent=dialog):
+                return
+            command = {'type': 'instance_join', 'mode': self.mode,
+                       'room_id': room['room_id'], 'password': password}
+            if self.cooperative:
+                command['confirm_cost'] = True
+            else:
+                command['sn'] = room['sn']
+            self._join_ready = False
+            self._update_room_buttons()
+            secret.set('')
+            dialog.destroy()
+            self.app.send(command)
+        ttk.Button(buttons, text='取消', command=dialog.destroy).pack(side='right')
+        ttk.Button(buttons, text='確認加入', command=submit).pack(
+            side='right', padx=(0, 8))
+        dialog.grab_set()
+        dialog.focus_set()
+
+    def request_leave(self):
+        if not self._leave_ready or self.app is None or not self.app.live_active:
+            return
+        current = self._room_data.get('room') or {}
+        if not current.get('room_id'):
+            return
+        if not messagebox.askyesno('確認離開副本房間',
+                                   '確定離開房間 #%s？\\n需要伺服器回覆才算成功。'
+                                   % current['room_id'],
+                                   parent=self.winfo_toplevel()):
+            return
+        self._leave_ready = False
+        self._update_room_buttons()
+        self.app.send({'type': 'instance_leave', 'mode': self.mode})
+
     def refresh_rooms(self):
         if self.app is not None and self.app.live_active:
             self.app.send({'type': 'instance_refresh', 'mode': self.mode})
 
     def render(self, data, *, live=False, other=None):
         other = other or {}
+        self._room_data = dict(data)
+        self._room_other = dict(other)
+        def blocked(part):
+            return (part.get('room') is not None
+                    or any(part.get(k) is not None for k in
+                           ('create_pending','join_pending','leave_pending'))
+                    or any(part.get(k) for k in
+                           ('create_uncertain','join_uncertain','leave_uncertain')))
+        active = bool(live) and not blocked(data) and not blocked(other)
+        updated = data.get('list_updated_at')
+        fresh = (updated is not None and
+                 0 <= time.monotonic() - updated <= 120)
+        self._join_ready = active and data.get('ready') and fresh
+        self._leave_ready = (
+            bool(live) and data.get('room') is not None
+            and not any(data.get(k) is not None for k in
+                        ('create_pending','join_pending','leave_pending'))
+            and not any(data.get(k) for k in
+                        ('create_uncertain','join_uncertain','leave_uncertain'))
+            and not any(other.get(k) is not None for k in
+                        ('create_pending','join_pending','leave_pending'))
+            and not any(other.get(k) for k in
+                        ('create_uncertain','join_uncertain','leave_uncertain'))
+            and (self.cooperative and not data.get('standby')
+                 or not self.cooperative and data.get('phase') == 'waiting'))
         self._creation_ready = (
             bool(live) and not data.get('create_pending')
             and not data.get('create_uncertain') and not data.get('room')
             and not other.get('create_pending')
-            and not other.get('create_uncertain') and not other.get('room'))
+            and not other.get('create_uncertain') and not other.get('room')
+            and not any(data.get(k) for k in ('join_pending','leave_pending','join_uncertain','leave_uncertain'))
+            and not any(other.get(k) for k in ('join_pending','leave_pending','join_uncertain','leave_uncertain')))
         self._update_create_button()
         self.refresh_button.state(['!disabled'] if live else ['disabled'])
         self.note.set(data.get('status', '尚未查詢房間') if live else '尚未連線，無法查詢副本房間')
         rooms = data.get('rooms', ())
         # Refresh a small, bounded list; never invent known dungeon names.
+        previous = self.selected_room()
+        key = (previous['room_id'], previous.get('sn')) if previous else None
         self.entries.delete(*self.entries.get_children())
-        for room in rooms:
+        self._room_rows = list(rooms)
+        matched = None
+        for index, room in enumerate(rooms):
             room_id = room['room_id']
             capacity = room.get('capacity')
             count = room.get('members', 0)
             occupancy = '%s/%s 人' % (count, capacity) if capacity is not None else '%s 人' % count
-            self.entries.insert('', 'end', values=(
+            self.entries.insert('', 'end', iid='room_%s' % index, values=(
                 '房間 #%s' % room_id,
                 occupancy,
                 '公開' if room.get('public') else '私人',
             ))
+            if key == (room_id, room.get('sn')):
+                matched = 'room_%s' % index
+        if matched is not None:
+            self.entries.selection_set(matched)
+        self._update_room_buttons()
         current = data.get('room')
         if current is not None:
             count = len(data.get('members') or ())
