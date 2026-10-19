@@ -45,6 +45,13 @@ def _guard(state):
         raise ProtocolError('角色或世界同步未完成，不能領取獎勵')
     if state.battle.get('active') or state.event_flow.get('blocked'):
         raise ProtocolError('戰鬥或伺服器事件進行中，禁止領獎')
+    post = state.battle.get('post_event') or {}
+    if post and post.get('status') != 'completed':
+        raise ProtocolError('請等到戰後事件確實完成才可領獎')
+    if any((state.maintenance.get('pending'), state.maintenance.get('uncertain'),
+            state.expedition.get('pending'), state.alchemy.get('pending'),
+            state.crafting.get('pending'))):
+        raise ProtocolError('仍有背包／其他工作中的操作待確認，暫停領獎')
     if state.instances['main'].get('room') is not None:
         raise ProtocolError('仍在一般副本房間，不能操作協力領獎')
     for data in state.instances.values():

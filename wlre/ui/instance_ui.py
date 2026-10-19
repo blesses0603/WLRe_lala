@@ -705,6 +705,11 @@ class InstancePanel(ttk.Frame):
         activity_blocked = (
             bool((state.get('battle') or {}).get('active'))
             or bool((state.get('event_flow') or {}).get('blocked'))
+            or bool((state.get('battle') or {}).get('post_event')
+                    and (state.get('battle') or {})['post_event'].get('status') != 'completed')
+            or any((state.get(k) or {}).get('pending') for k in
+                   ('maintenance', 'expedition', 'alchemy', 'crafting'))
+            or bool((state.get('maintenance') or {}).get('uncertain'))
             or any((state.get(k) or {}).get('enabled')
                    for k in ('auto_battle', 'roaming', 'alchemy', 'expedition'))
             or bool((state.get('crafting') or {}).get('auto_continue'))

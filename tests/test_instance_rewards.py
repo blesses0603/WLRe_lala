@@ -163,6 +163,19 @@ class CompletionAndRewards(unittest.TestCase):
         self.assertTrue(_safe_bag(state))
         self.assertEqual(tick(state), [Packet(186, 10)])
 
+    def test_does_not_claim_during_postbattle_or_other_pending_tasks(self):
+        state, logic = ready()
+        status(state)
+        action(logic, state, 'instance_auto_reward', enabled=True)
+        state.battle['post_event'] = {'status': 'cooperative_wait'}
+        self.assertEqual(tick(state), [])
+        self.assertIsNone(state.instances['coop']['claim_pending'])
+        state.battle['post_event']['status'] = 'completed'
+        state.maintenance['pending'] = {'started': 1}
+        self.assertEqual(tick(state), [])
+        state.maintenance['pending'] = None
+        self.assertEqual(tick(state), [Packet(186, 10)])
+
     def test_pending_timeout_disconnect_freeze_auto_and_manual(self):
         state, logic = ready()
         status(state)
