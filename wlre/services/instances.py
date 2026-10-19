@@ -7,7 +7,8 @@ def defaults():
                  'create_pending': None, 'create_uncertain': False, 'create_result': None,
                  'join_pending': None, 'join_uncertain': False, 'join_result': None,
                  'leave_pending': None, 'leave_uncertain': False, 'leave_result': None,
-                 'list_updated_at': None},
+                 'list_updated_at': None,
+                 'start_pending': None, 'start_uncertain': False, 'start_result': None},
         'coop': {'ready': False, 'rooms': [], 'room': None, 'members': [],
                  'phase': 'idle', 'status': '尚未查詢房間', 'fight_count': None,
                  'reward': None, 'standby': None,
@@ -140,6 +141,8 @@ def apply_instances(state, event):
     from wlre.services.instance_creation import resolve as resolve_create
     from wlre.services.instance_room_flow import resolve as resolve_room
     from wlre.services.instance_standby import resolve as resolve_standby
+    from wlre.services.instance_start import resolve as resolve_start
     resolve_create(state, event)
     resolve_room(state, event)
     resolve_standby(state, event)
+    resolve_start(state, event)

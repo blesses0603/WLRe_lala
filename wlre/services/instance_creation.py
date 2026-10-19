@@ -46,8 +46,8 @@ def create(state, command, now=None):
     if mode not in ('main', 'coop'):
         raise ProtocolError('副本類型無效')
     if any(part.get('room') is not None or any(
-           part.get(k) is not None for k in ('create_pending', 'join_pending', 'leave_pending', 'standby_pending'))
-           or any(part.get(k) for k in ('create_uncertain','join_uncertain','leave_uncertain','standby_uncertain'))
+           part.get(k) is not None for k in ('create_pending', 'join_pending', 'leave_pending', 'standby_pending', 'start_pending'))
+           or any(part.get(k) for k in ('create_uncertain','join_uncertain','leave_uncertain','standby_uncertain','start_uncertain'))
            for part in state.instances.values()):
         raise ProtocolError('已有房間／創房結果待確認；請勿重複建立')
     if state.battle.get('active') or state.event_flow.get('blocked'):

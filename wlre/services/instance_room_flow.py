@@ -110,10 +110,10 @@ def leave(state, command, now=None):
     _activity_guard(state, False)
     for part in state.instances.values():
         if any(part.get(k) is not None
-               for k in ('create_pending', 'join_pending', 'leave_pending', 'standby_pending')):
+               for k in ('create_pending', 'join_pending', 'leave_pending', 'standby_pending', 'start_pending')):
             raise ProtocolError('房間操作仍待確認，不能離房或重複送出')
         if any(part.get(k)
-               for k in ('create_uncertain', 'join_uncertain', 'leave_uncertain', 'standby_uncertain')):
+               for k in ('create_uncertain', 'join_uncertain', 'leave_uncertain', 'standby_uncertain', 'start_uncertain')):
             raise ProtocolError('房間操作結果不明，請重新登入同步')
     room = data.get('room')
     if not isinstance(room, dict) or not room.get('room_id'):
