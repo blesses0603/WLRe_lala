@@ -362,6 +362,41 @@ class ExpeditionClaiming(ExpeditionFixture, unittest.TestCase):
                          ['server_closed'])
         self.assertFalse(any(e.get('reason') == 'client_error' for e in events))
 
+    def test_s31_15_start_ack_ignores_opaque_body_per_official_lua(self):
+        # ExpeditionMgr.RevExpeditionStart (1262) performs UI work only and
+        # does not read the S31-15 packet body. No body data may leak into events.
+        for payload in (b'', bytes((0,)), bytes((0xA5, 0x04, 0x7F))):
+            with self.subTest(body_length=len(payload)):
+                event=decode(Packet(31,15,payload))
+                self.assertEqual(event,{'type':'expedition_started',
+                                         'extension_bytes':len(payload)})
+                self.event(event)
+                self.assertNotIn('payload',str(event))
+
+    def test_s31_15_ack_with_extra_bytes_does_not_disconnect_client(self):
+        from unittest.mock import Mock
+        from wlre.network.client import run_client
+        from wlre.network.wire import encode
+        connection=Mock()
+        connection.__enter__=Mock(return_value=connection)
+        connection.__exit__=Mock(return_value=False)
+        connection.recv.side_effect=[
+            encode(Packet(31,15,bytes((1,2,3))),0),
+            b'',
+        ]
+        events=[]
+        with patch('wlre.network.client.socket.create_connection',return_value=connection):
+            state=run_client('fixture.invalid',1,{'rx_xor':0,'tx_xor':0},
+                             events.append,duration=None)
+        self.assertEqual(state.phase,'disconnected')
+        starts=[e for e in events if e.get('type')=='expedition_started']
+        self.assertEqual(len(starts),1)
+        self.assertEqual(starts[0]['extension_bytes'],3)
+        closures=[e for e in events if e.get('type')=='connection_closed']
+        self.assertEqual([e['reason'] for e in closures],['server_closed'])
+        self.assertFalse(any(e.get('reason')=='client_error' for e in events))
+        self.assertFalse(any('packet_main' in e for e in events))
+
     def test_reward_wire_is_structured_and_catalog_has_capacity_metadata(self):
         w = Writer().u8(1).u8(1).u16(0).u16(0).u8(10).u32(34014).u32(2)
         self.assertEqual(decode(Packet(31, 16, w.build()))['rewards'], [self.award])

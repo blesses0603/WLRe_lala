@@ -38,6 +38,12 @@
 - 不自動存入／領出駐紮所夥伴。取消勾選「自動領獎」時，需手動領取遠征結果，夥伴才可再次派遣。
 - 協定以 1262 Lua 靜態核對，資料表已使用使用者提供的官方實際資源驗證；尚未實測正式服派遣。
 
+## S31-15 出發回覆相容性（2026-10-19）
+
+新診斷 Log `health-23484.log` 於 19:01:16 記錄 `ProtocolError`、`packet_main=31 packet_sub=15 packet_stage=decode`，並定位 `expedition.py:72 > wire.py:50:end`。官方 1262 `ExpeditionMgr.RevExpeditionStart` 只做 UI 提示與隊伍切換，**不解析任何 S31-15 本文欄位**。舊版 LaLa 雖然不讀取欄位，卻對本文執行嚴格 `r.end()`，當伺服器包含額外位元組時會直接以 `client_error` 結束連線。
+
+現在只針對 **S31-15** 略過官方未定義、未解讀的本文，事件只附帶其長度 `extension_bytes`，不保存原始封包內容或推測未知欄位用途。**S31-16、S31-19 與其他已知資料結構仍維持嚴格長度驗證**，不更改遠征領獎時序、結果確認或失敗重試策略。測試驗證空本文、非空本文與完整連線接收流程皆不因這種格式差異發生 `client_error`；仍須正式伺服器實機驗證。
+
 ## 協定來源
 
 `Lua/Logic/ExpeditionMgr.lua`（`SendQuestClaim`／`CheckCanSendClaim`／`RevExpeditionResult`）、`Lua/Logic/Protocols/Protocols_031.lua`、`Lua/Data/AdventureData.lua`、`Lua/Data/AwardData.lua`、`Lua/UI/Logic/UIExpedition.lua`、`Lua/Common/Define.lua`、`Lua/Common/Text.lua`、`Lua/Logic/Bag.lua`。C31-15：任務 UInt16、四個夥伴 ID UInt16、支援物品筆數（本次固定 0）。C31-16：隊伍索引 UInt8；S31-16：結果 UInt8、隊伍索引 UInt8、日誌與歷史 ID 各 UInt16，後接每筆 9 bytes 的獎勵（種類 UInt8、ID UInt32、數量 UInt32）。 S31-19：50 組（索引 UInt8、任務 UInt16），末尾 Boolean（1 byte）；與官方 `RevExpeditionQuestUpdate` 1262 邏輯一致。C31-27：駐紮所索引 UInt8、筆數 UInt8，每筆來源 UInt8（背包=1）、格位 UInt16、物品 ID UInt16、數量 UInt16。任務 `spanTime` 與 S31 隊伍剩餘時間均為分鐘，先依原版計算並四捨五入減免後分鐘數，再換算為秒供門檻比較。
