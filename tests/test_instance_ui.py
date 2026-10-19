@@ -42,7 +42,7 @@ class InstanceNavigation(unittest.TestCase):
                 self.assertEqual(page.entries.get_children(), ())
                 self.assertEqual(
                     [page.entries.heading(column, 'text') for column in page.columns],
-                    ['副本名稱', '進入條件', '狀態'],
+                    ['房間／副本', '人數／條件', '公開狀態'],
                 )
                 self.assertTrue(page.enter_button.instate(['disabled']))
         self.assertFalse(self.errors, self.errors)
@@ -57,3 +57,37 @@ class InstanceNavigation(unittest.TestCase):
                 page.enter_button.invoke()
             send.assert_not_called()
         self.assertFalse(self.errors, self.errors)
+
+    def test_room_snapshots_and_safe_manual_refresh(self):
+        from wlre.core.state import State
+        panel = self.app.instance_panel
+        self.app.live_active = True
+        state = State().snapshot()
+        state['instances']['main'].update(
+            ready=True, status='房間清單同步完成',
+            rooms=[{'room_id': 101, 'members': 2, 'public': True}])
+        state['instances']['coop'].update(
+            ready=True, rooms=[{'room_id': 202, 'members': 1,
+                                'capacity': 4, 'public': False}])
+        panel.render(state, live=True)
+        self.assertEqual(len(panel.main_page.entries.get_children()), 1)
+        self.assertEqual(len(panel.coop_page.entries.get_children()), 1)
+        self.assertEqual(
+            panel.main_page.entries.item(panel.main_page.entries.get_children()[0], 'values')[0],
+            '房間 #101',
+        )
+        with patch.object(self.app, 'send') as send:
+            panel.main_page.refresh_button.invoke()
+            panel.coop_page.refresh_button.invoke()
+            self.assertEqual(send.call_count, 2)
+            self.assertEqual(send.call_args_list[0].args[0],
+                             {'type': 'instance_refresh', 'mode': 'main'})
+            self.assertEqual(send.call_args_list[1].args[0],
+                             {'type': 'instance_refresh', 'mode': 'coop'})
+            panel.main_page.enter_button.invoke()
+            panel.coop_page.enter_button.invoke()
+            self.assertEqual(send.call_count, 2)
+        panel.render(State().snapshot(), live=False)
+        self.assertTrue(panel.main_page.refresh_button.instate(['disabled']))
+        self.assertTrue(panel.coop_page.enter_button.instate(['disabled']))
+        self.assertEqual(panel.coop_page.entries.get_children(), ())
