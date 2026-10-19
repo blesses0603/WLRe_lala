@@ -51,7 +51,7 @@ def build_dashboard(app):
     left_tabs.add(app.companion_panel,text='夥伴出戰')
     app.expedition_panel=ExpeditionPanel(left_tabs,app)
     left_tabs.add(app.expedition_panel,text='遠征')
-    app.instance_panel=InstancePanel(left_tabs)
+    app.instance_panel=InstancePanel(left_tabs,app)
     left_tabs.add(app.instance_panel,text='副本')
     app.party_guard_panel=PartyGuardPanel(app.party_panel.guard_host,app,compact=True)
     app.party_guard_panel.pack(fill='both',expand=True)
