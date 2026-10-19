@@ -94,7 +94,7 @@ python -m tools.build.build_nuitka --dry-run
 
 - [整體架構](docs/ARCHITECTURE.md) · [模組索引](docs/STRUCTURE.md) · [介面配置](docs/UI_LAYOUT.md) · [重構進度](docs/REFACTOR_CHECKLIST.md) · [第 10 項稽核](docs/PHASE10_AUDIT.md)
 - [遠征](docs/EXPEDITION.md) · [戰後維護](docs/MAINTENANCE.md) · [配點](docs/attribute_points_1262.md) · [超空間袋](docs/room_storage_1262.md)
-- [協定](docs/PROTOCOLS.md) · [連線診斷](docs/CONNECTION_DIAGNOSTICS.md) · [建置與發佈](docs/NUITKA_BUILD.md)
+- [協定](docs/PROTOCOLS.md) · [副本／協力正式服驗收清單](docs/INSTANCE_ACCEPTANCE_V051.md) · [連線診斷](docs/CONNECTION_DIAGNOSTICS.md) · [建置與發佈](docs/NUITKA_BUILD.md)
 
 ## v0.5.0 參考版本
 
