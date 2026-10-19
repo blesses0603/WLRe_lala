@@ -107,17 +107,14 @@ class InstanceModePage(ttk.Frame):
         record = self._selected_catalog()
         eligible = (self._creation_ready and record is not None
                     and record['kind'] in (1, 2))
-        # Named co-op events require official follower selection (item 04).
-        if record is not None and record['kind'] == 2 and record['variant'] == 2:
-            eligible = False
         self.create_button.state(['!disabled'] if eligible else ['disabled'])
 
     def open_create_dialog(self):
         record = self._selected_catalog()
         if not self._creation_ready or record is None:
             return
-        if record['kind'] not in (1, 2) or (record['kind'] == 2 and record['variant'] == 2):
-            messagebox.showinfo('協力副本', '指定夥伴活動需要先完成夥伴資格驗證。',
+        if record['kind'] not in (1, 2):
+            messagebox.showinfo('副本', '此副本類型尚不支援創建房間。',
                                 parent=self.winfo_toplevel())
             return
         root = self.winfo_toplevel()
@@ -189,7 +186,7 @@ class InstanceModePage(ttk.Frame):
             }
             if self.cooperative:
                 command.update(dungeon_id=record['id'], player_count=count,
-                               confirm_cost=True)
+                               confirm_cost=True, confirm_partner=True)
             else:
                 command['map_id'] = record['map_id']
             # This is only a local click guard; network-thread pending state

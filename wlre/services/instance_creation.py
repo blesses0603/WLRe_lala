@@ -79,9 +79,14 @@ def create(state, command, now=None):
         if command.get('confirm_cost') is not True:
             raise ProtocolError('協力創房可能消耗門票或點數，請確認後再送出')
         if row['variant'] == 2:
-            # The original UI requires a separate specified-follower check.
-            # The dedicated chooser/eligibility flow is item 04. Never bypass it.
-            raise ProtocolError('指定夥伴協力活動需完成第 04 項驗證，暫不可創房')
+            event = row.get('cooperative_event') or {}
+            follower_ids = event.get('follower_ids') or ()
+            reward = event.get('follower_reward') or {}
+            # UIDungeonPartner.TryOpen only displays its optional dialog
+            # when a specified follower reward exists AND at least one NPC.
+            if reward.get('kind', 0) != 0 and any(follower_ids):
+                if command.get('confirm_partner') is not True:
+                    raise ProtocolError('請先確認指定夥伴獎勵條件')
         capacity = command.get('player_count')
         packet = create_coop_room(dungeon_id, capacity, public=public, password=password)
         expected = {'dungeon_id': dungeon_id, 'kind': row['variant'],
