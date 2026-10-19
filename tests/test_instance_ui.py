@@ -50,6 +50,33 @@ class InstanceNavigation(unittest.TestCase):
                 self.assertTrue(page.enter_button.instate(['disabled']))
         self.assertFalse(self.errors, self.errors)
 
+    def test_compact_window_keeps_room_actions_above_the_lists(self):
+        # The report came from a 720p screenshot: room buttons were originally
+        # packed after expanding listings and clipped by the bottom chat.
+        self.root.geometry('1140x640')
+        panel = self.app.instance_panel
+        self.app.left_tabs.select(panel)
+        self.root.update()
+        for page in (panel.main_page, panel.coop_page):
+            with self.subTest(mode=page.mode):
+                panel.tabs.select(page)
+                self.root.update()
+                for button in (page.create_button, page.refresh_button,
+                               page.join_button, page.leave_button):
+                    self.assertTrue(button.winfo_ismapped())
+                    self.assertLess(
+                        button.winfo_rooty() + button.winfo_height(),
+                        page.catalog_table.winfo_rooty())
+                self.assertLess(
+                    page.create_button.winfo_rooty() + page.create_button.winfo_height(),
+                    page.winfo_rooty() + page.winfo_height())
+                if page.cooperative:
+                    self.assertTrue(page.claim_button.winfo_ismapped())
+                    self.assertLess(
+                        page.claim_button.winfo_rooty() + page.claim_button.winfo_height(),
+                        page.catalog_table.winfo_rooty())
+        self.assertFalse(self.errors, self.errors)
+
     def test_unverified_entry_never_sends_game_commands(self):
         panel = self.app.instance_panel
         self.app.left_tabs.select(panel)
