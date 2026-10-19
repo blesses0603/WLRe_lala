@@ -77,14 +77,20 @@ class InstanceModePage(ttk.Frame):
         self.note = tk.StringVar(value='尚未查詢房間。請登入後手動更新。')
         ttk.Label(self, textvariable=self.note, style='Muted.TLabel', anchor='w').pack(fill='x', pady=(0, 10))
         self.catalog_records = entries_for(self.mode)
-        # Pin room actions above both listings: chat can clip the page bottom.
+        # Both the official catalog and live rooms remain visible at 720p.
+        self.body = ttk.Panedwindow(self,orient='horizontal')
+        self.body.pack(fill='both',expand=True,pady=(4,0))
+        self.catalog_column=ttk.Frame(self.body,padding=(0,0,6,0))
+        self.room_column=ttk.Frame(self.body,padding=(6,0,0,0))
+        self.body.add(self.catalog_column,weight=3)
+        self.body.add(self.room_column,weight=2)
         self.catalog_heading = ttk.Label(
-            self, text="1262 官方副本清單（靜態資料，非房間即時狀態）",
+            self.catalog_column, text="1262 官方副本清單（選擇後建立房間）",
             style='Muted.TLabel')
         self.catalog_heading.pack(anchor='w', pady=(0, 3))
         self.catalog_columns = ('id', 'name', 'level', 'players', 'time')
-        catalog_host = ttk.Frame(self)
-        catalog_host.pack(fill='x', pady=(0, 4))
+        catalog_host = ttk.Frame(self.catalog_column)
+        catalog_host.pack(fill='both', expand=True, pady=(0, 4))
         self.catalog_table = ttk.Treeview(
             catalog_host, columns=self.catalog_columns,
             show='headings', selectmode='browse',
@@ -99,7 +105,7 @@ class InstanceModePage(ttk.Frame):
         scroll = ttk.Scrollbar(catalog_host, orient='vertical',
                                command=self.catalog_table.yview)
         self.catalog_table.configure(yscrollcommand=scroll.set)
-        self.catalog_table.pack(side='left', fill='x', expand=True)
+        self.catalog_table.pack(side='left', fill='both', expand=True)
         scroll.pack(side='right', fill='y')
         for index, record in enumerate(self.catalog_records):
             variant = (' (版本 %s)' % record['variant']) if record['variant'] else ''
@@ -111,26 +117,33 @@ class InstanceModePage(ttk.Frame):
                 values=(record['id'], record['name'] + variant,
                         record['min_level'] or '依活動', members, duration))
         self.catalog_detail = tk.StringVar(value='點選官方副本名稱可查看來源 ID 與獎勵資料筆數。')
-        ttk.Label(self, textvariable=self.catalog_detail,
-                  style='Muted.TLabel').pack(fill='x', pady=(0, 5))
+        ttk.Label(self.catalog_column, textvariable=self.catalog_detail,
+                  style='Muted.TLabel',wraplength=530).pack(fill='x', pady=(0, 5))
         self.catalog_table.bind('<<TreeviewSelect>>', self.on_catalog_selected)
-        ttk.Label(self, text='伺服器目前開放的房間（選取後可加入）',
+        ttk.Label(self.room_column, text='伺服器房間清單（選取後加入）',
                   style='Muted.TLabel').pack(anchor='w',pady=(0,2))
         self.room_list_note=tk.StringVar(value='尚未同步伺服器房間清單')
-        ttk.Label(self,textvariable=self.room_list_note,
-                  style='Muted.TLabel').pack(anchor='w',fill='x',pady=(0,3))
+        ttk.Label(self.room_column,textvariable=self.room_list_note,
+                  style='Muted.TLabel',wraplength=380).pack(
+                      anchor='w',fill='x',pady=(0,3))
         self.columns = ('name', 'requirement', 'status')
+        room_host=ttk.Frame(self.room_column)
+        room_host.pack(fill='both',expand=True)
         self.entries = ttk.Treeview(
-            self, columns=self.columns, show='headings', selectmode='browse', height=5
-        )
+            room_host, columns=self.columns, show='headings',
+            selectmode='browse', height=5)
         for key, heading, width in (
-            ('name', '房間／副本', 240),
-            ('requirement', '人數／條件', 220),
-            ('status', '公開狀態', 150),
+            ('name', '房間／副本', 165),
+            ('requirement', '人數／條件', 110),
+            ('status', '公開狀態', 90),
         ):
             self.entries.heading(key, text=heading)
             self.entries.column(key, width=width, stretch=True, anchor='w')
-        self.entries.pack(fill='both', expand=True)
+        room_scroll=ttk.Scrollbar(room_host,orient='vertical',
+                                   command=self.entries.yview)
+        self.entries.configure(yscrollcommand=room_scroll.set)
+        room_scroll.pack(side='right',fill='y')
+        self.entries.pack(side='left',fill='both',expand=True)
         self.entries.bind('<<TreeviewSelect>>', self.on_room_selected)
         self._room_rows = []
         self._join_ready = False
@@ -138,11 +151,12 @@ class InstanceModePage(ttk.Frame):
         self._room_data = {}
         self._room_other = {}
         self.details = tk.StringVar(value='沒有已確認的副本房間；進入與領獎功能尚未開放。')
-        ttk.Label(self, textvariable=self.details, style='Muted.TLabel',
-                  anchor='w').pack(fill='x', pady=(10, 8))
+        ttk.Label(self.room_column, textvariable=self.details,
+                  style='Muted.TLabel',wraplength=380,
+                  anchor='w').pack(fill='x', pady=(8, 2))
         controls = ttk.Frame(self)
-        # The buttons remain visible in a compact (720p) main window.
-        controls.pack(fill='x', before=self.catalog_heading, pady=(0, 5))
+        # Buttons stay visible above the two resizable columns.
+        controls.pack(fill='x', before=self.body, pady=(0, 5))
         self.refresh_button = ttk.Button(
             controls, text='更新房間清單', command=self.refresh_rooms, state='disabled')
         self.refresh_button.pack(side='left')
@@ -178,10 +192,10 @@ class InstanceModePage(ttk.Frame):
                 value='出戰夥伴：沿用一般戰鬥設定（尚未同步）')
             ttk.Label(self, textvariable=self.companion_note,
                       style='Muted.TLabel').pack(
-                          anchor='w', before=self.catalog_heading)
+                          anchor='w', before=self.body)
             reward_controls = ttk.Frame(self)
             reward_controls.pack(
-                fill='x', before=self.catalog_heading, pady=(3, 2))
+                fill='x', before=self.body, pady=(3, 2))
             self.claim_button = ttk.Button(
                 reward_controls, text='領取免費協力獎勵',
                 command=self.request_reward_claim, state='disabled')
@@ -196,7 +210,7 @@ class InstanceModePage(ttk.Frame):
             self.auto_reward_button.pack(side='left', padx=(8, 0))
             self.reward_note = tk.StringVar(value='獎勵：等待 S186-11 同步；不會自動購買付費寶箱')
             ttk.Label(self, textvariable=self.reward_note, style='Muted.TLabel',
-                      anchor='w').pack(fill='x', before=self.catalog_heading)
+                      anchor='w').pack(fill='x', before=self.body)
         if not self.cooperative:
             self.start_button = ttk.Button(
                 controls, text='房主開始挑戰',

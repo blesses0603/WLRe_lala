@@ -91,8 +91,8 @@ class InstanceNavigation(unittest.TestCase):
         state = State(phase='world_ready', initial_data_complete=True).snapshot()
         state['player']['role_id'] = 678
         state['expedition']['enabled'] = True
-        panel.render(state, live=True)
         self.app.open_instances()
+        panel.render(state, live=True)
         panel.tabs.select(panel.coop_page)
         page = panel.coop_page
         page.catalog_table.selection_set('catalog_2')  # 1262 coop ID 28
