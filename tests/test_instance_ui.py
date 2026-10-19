@@ -3,6 +3,7 @@ import os
 import tkinter as tk
 import unittest
 from unittest.mock import patch
+from tkinter import ttk
 
 from wlre.ui.gui import App
 
@@ -59,6 +60,67 @@ class InstanceNavigation(unittest.TestCase):
                 page.enter_button.invoke()
             send.assert_not_called()
         self.assertFalse(self.errors, self.errors)
+
+    def test_creation_enabled_only_when_ready_and_catalog_selected(self):
+        from wlre.core.state import State
+        panel = self.app.instance_panel
+        self.app.live_active = True
+        state = State().snapshot()
+        panel.render(state, live=True)
+        self.assertTrue(panel.main_page.create_button.instate(['disabled']))
+        panel.main_page.catalog_table.selection_set('catalog_0')
+        panel.main_page.on_catalog_selected()
+        self.assertTrue(panel.main_page.create_button.instate(['!disabled']))
+        panel.coop_page.catalog_table.selection_set('catalog_1')
+        panel.coop_page.on_catalog_selected()
+        self.assertTrue(panel.coop_page.create_button.instate(['!disabled']))
+        state['instances']['main']['create_pending'] = {'map_id': 30012}
+        panel.render(state, live=True)
+        self.assertTrue(panel.main_page.create_button.instate(['disabled']))
+        self.assertTrue(panel.coop_page.create_button.instate(['disabled']))
+        state['instances']['main']['create_pending'] = None
+        state['instances']['coop']['create_uncertain'] = True
+        panel.render(state, live=True)
+        self.assertTrue(panel.main_page.create_button.instate(['disabled']))
+        panel.render(State().snapshot(), live=False)
+        self.assertTrue(panel.coop_page.create_button.instate(['disabled']))
+
+    def test_create_dialog_requires_confirm_before_send(self):
+        from wlre.core.state import State
+        panel = self.app.instance_panel
+        self.app.live_active = True
+        panel.render(State().snapshot(), live=True)
+        page = panel.main_page
+        page.catalog_table.selection_set('catalog_0')
+        page.on_catalog_selected()
+        def visit(widget):
+            yield widget
+            for child in widget.winfo_children():
+                yield from visit(child)
+        with patch.object(self.app, 'send') as send:
+            with patch('wlre.ui.instance_ui.messagebox.askyesno', return_value=False):
+                page.open_create_dialog()
+                dialog = next(w for w in self.root.winfo_children()
+                              if isinstance(w, tk.Toplevel) and w.title() == '建立副本房間')
+                confirm = next(w for w in visit(dialog)
+                               if isinstance(w, ttk.Button)
+                               and w.cget('text') == '確認建立')
+                confirm.invoke()
+                send.assert_not_called()
+                dialog.destroy()
+            with patch('wlre.ui.instance_ui.messagebox.askyesno', return_value=True):
+                page.open_create_dialog()
+                dialog = next(w for w in self.root.winfo_children()
+                              if isinstance(w, tk.Toplevel) and w.title() == '建立副本房間')
+                confirm = next(w for w in visit(dialog)
+                               if isinstance(w, __import__('tkinter.ttk').ttk.Button)
+                               and w.cget('text') == '確認建立')
+                confirm.invoke()
+                send.assert_called_once_with({
+                    'type': 'instance_create', 'mode': 'main', 'public': True,
+                    'password': '', 'map_id': 30012
+                })
+        self.assertTrue(page.create_button.instate(['disabled']))
 
     def test_room_snapshots_and_safe_manual_refresh(self):
         from wlre.core.state import State
