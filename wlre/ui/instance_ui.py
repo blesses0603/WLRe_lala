@@ -5,6 +5,63 @@ from tkinter import ttk, messagebox
 
 from wlre.ui.rounded_notebook import RoundedNotebook
 from wlre.services.instance_browser import entries_for
+from wlre.services.battle.party import own_team
+
+
+def creation_block_reasons(state, mode, live):
+    """Only describe existing safety locks; never relax room-create guards."""
+    if not live:
+        return ('未連線，請先登入',)
+    reasons = []
+    player = state.get('player') or {}
+    if (state.get('phase') != 'world_ready' or
+            state.get('initial_data_complete') is not True or
+            not player.get('role_id')):
+        reasons.append('角色或世界資料尚未完成同步')
+    instances = state.get('instances') or {}
+    operations = {
+        'create': '創房', 'join': '加入房間', 'leave': '離開房間',
+        'standby': '協力準備', 'start': '開始挑戰',
+        'enter': '入場', 'claim': '領獎', 'cancel': '取消寶箱'
+    }
+    for name, label in (('main', '主要'), ('coop', '協力')):
+        info = instances.get(name) or {}
+        if info.get('room') is not None:
+            reasons.append('仍在%s副本房間，請先離開' % label)
+        for op, text in operations.items():
+            if info.get(op + '_pending') is not None:
+                reasons.append('%s%s仍待伺服器確認' % (label, text))
+            if (info.get(op + '_uncertain') or
+                    op in ('claim', 'cancel') and info.get('reward_uncertain')):
+                reasons.append('%s%s結果不明，請重新登入同步' % (label, text))
+    battle = state.get('battle') or {}
+    if battle.get('active'):
+        reasons.append('正在戰鬥中')
+    if (state.get('event_flow') or {}).get('blocked'):
+        reasons.append('伺服器事件尚未結束')
+    post = battle.get('post_event') or {}
+    if post and post.get('status') != 'completed':
+        reasons.append('戰後事件尚未完成')
+    for name, key, message in (
+        ('maintenance', 'pending', '修理／整理等待回覆'),
+        ('maintenance', 'uncertain', '修理／整理結果不明'),
+        ('expedition', 'pending', '遠征等待回覆'),
+        ('alchemy', 'pending', '煉金等待回覆'),
+        ('crafting', 'pending', '製作等待回覆'),
+        ('auto_battle', 'enabled', '自動戰鬥仍開啟，請先停止'),
+        ('roaming', 'enabled', '自動移動仍開啟，請先停止'),
+        ('alchemy', 'enabled', '自動煉金仍開啟，請先停止'),
+        ('crafting', 'auto_continue', '自動製作仍開啟，請先停止'),
+        ('expedition', 'enabled', '自動遠征仍開啟，請先停止'),
+    ):
+        if (state.get(name) or {}).get(key):
+            reasons.append(message)
+    if mode == 'coop':
+        if own_team(state):
+            reasons.append('協力創房前請先退出一般隊伍')
+        if ((instances.get('coop') or {}).get('reward') or {}).get('open_reward'):
+            reasons.append('協力寶箱尚未處理')
+    return tuple(dict.fromkeys(reasons))
 
 
 class InstanceModePage(ttk.Frame):
@@ -90,6 +147,11 @@ class InstanceModePage(ttk.Frame):
             controls, text='建立公開／私人房間', command=self.open_create_dialog,
             state='disabled')
         self.create_button.pack(side='left', padx=(10, 0))
+        self.creation_hint = tk.StringVar(value='建立房間：請先選擇官方副本')
+        self._creation_block_reasons = ()
+        self.creation_hint_label = ttk.Label(
+            self, textvariable=self.creation_hint, style='Muted.TLabel', anchor='w')
+        self.creation_hint_label.pack(fill='x', after=controls, pady=(0, 3))
         self._creation_ready = False
         self._standby_ready = False
         self._start_ready = False
@@ -167,6 +229,18 @@ class InstanceModePage(ttk.Frame):
         eligible = (self._creation_ready and record is not None
                     and record['kind'] in (1, 2))
         self.create_button.state(['!disabled'] if eligible else ['disabled'])
+        if record is None:
+            self.creation_hint.set('建立房間：請先點選官方副本清單的項目')
+        elif record['kind'] not in (1, 2):
+            self.creation_hint.set('此副本種類尚不支援建立房間')
+        elif eligible:
+            self.creation_hint.set('已選「%s」，可以建立公開／私人房間' % record['name'])
+        else:
+            reasons = self._creation_block_reasons
+            reason = '；'.join(reasons[:2]) if reasons else '請等待伺服器同步並檢查角色狀態'
+            if len(reasons) > 2:
+                reason += '（另有 %d 項限制）' % (len(reasons) - 2)
+            self.creation_hint.set('無法建立「%s」：%s' % (record['name'], reason))
 
     def open_create_dialog(self):
         record = self._selected_catalog()
@@ -485,10 +559,12 @@ class InstanceModePage(ttk.Frame):
 
     def render(self, data, *, live=False, other=None,
                local_role_id=None, active_npc_id=None, local_scene=None,
-               activity_blocked=False, inventory=None):
+               activity_blocked=False, inventory=None,
+               creation_reasons=()):
         other = other or {}
         self._room_data = dict(data)
         self._room_other = dict(other)
+        self._creation_block_reasons = tuple(creation_reasons)
         if self.cooperative:
             companion = ('NPC ID %s' % active_npc_id
                          if isinstance(active_npc_id, int) and active_npc_id > 0
@@ -783,9 +859,11 @@ class InstancePanel(ttk.Frame):
         self.main_page.render(instances.get('main', {}), live=live,
                               other=instances.get('coop', {}),
                               local_role_id=local_role, active_npc_id=active_npc,
-                              local_scene=player.get('scene'), activity_blocked=activity_blocked)
+                              local_scene=player.get('scene'), activity_blocked=activity_blocked,
+                              creation_reasons=creation_block_reasons(state, 'main', live))
         self.coop_page.render(instances.get('coop', {}), live=live,
                               other=instances.get('main', {}),
                               local_role_id=local_role, active_npc_id=active_npc,
                               local_scene=player.get('scene'), activity_blocked=activity_blocked,
-                              inventory=state.get('inventory') or {})
+                              inventory=state.get('inventory') or {},
+                              creation_reasons=creation_block_reasons(state, 'coop', live))
