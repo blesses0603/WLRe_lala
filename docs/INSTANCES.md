@@ -65,7 +65,7 @@
 - [ ] 02 建立公開／私人房間（已編寫 UI、指令、S85／S186 ACK、逾時鎖與回歸測試，剩正式伺服器實測）
 - [ ] 03 加入或離開房間（已編寫一般／協力 UI、加入／離開、S85／S186 ACK、逾時安全鎖與回歸測試，待正式伺服器實測）
 - [ ] 04 協力準備／取消準備（已編寫 C186-7、房主／滿員限制、伺服器回覆與 GUI，沿用既有出戰夥伴，剩正式伺服器實測）
-- [ ] 05 房主開始挑戰（尚未開放操作）
+- [ ] 05 房主開始挑戰（已完成一般副本 C85-7／S85-5、房主與最低人數檢查、操作 UI、逾時保護與回歸測試；協力沿用 04，待正式伺服器實測）
 - [ ] 06 進入副本戰鬥（尚未開放操作，保留原有戰鬥與事件閘）
 - [ ] 07 自動完成與領取獎勵（尚未實作，不可盲目重送或推測發獎）
 
@@ -147,3 +147,22 @@
 - `tests/test_instance_standby.py` 涵蓋正式封包、滿員／房主、S186-3、S186-20、超時與斷線、跨模式保護、UI 操作及既有出戰夥伴完全不變。
 
 **本次完成範圍：程式功能已提交 PR #23，仍屬 Draft。沒有在正式遊戲伺服器執行配對或副本戰鬥，需實機驗收後才能勾選。**
+
+## 第 05 項：房主開始挑戰（2026-10-19）
+
+**1262 原版核對：** `Lua/UI/Logic/UICheckPlayerList.lua` 的 `OnClick_Event_Confirm` 分開處理兩種模式：
+
+- **一般副本**：檢查 `Dungeon.GetDungeonManagerId() == Role.playerRoleId`，並確認 `stageData[roomId].minDup <= table.Count(roleData)` 才呼叫 `Dungeon.SendStartDungeon()`。其 C85-7 為**空內容封包**，不帶地圖、成員或夥伴 ID。
+- **協力副本**：仍呼叫 `CooperateEventManger.SendSetStatus(id, isStandby)`（C186-7），這是第 04 項已實作的準備／取消準備；**原版沒有另一個協力開始封包**，不得再次送出或重複扣點。
+- 一般副本收到 `S85-5 kind=3` 才是伺服器正式開始。發送 C85-7 只標記 `start_pending`，不得提前顯示已成功或自動進入副本（第 06 項尚未完成）。
+
+### LaLa 新增與安全限制
+
+- `wlre/services/instance_start.py`：房主身分、世界資料初始化、狀態 `waiting`、官方靜態 `map_id` 與 `min_members`／`max_members`、S85-4 已核對的完整成員清單、人數一致性和其他活動衝突檢查。
+- `wlre/ui/instance_ui.py`：一般副本增加「房主開始挑戰」按鈕，符合上述條件才啟用；操作前再次確認。協力頁面沿用「準備／開始配對」，不新增第二個開始按鈕。
+- `wlre/services/instances.py`：`start_pending`、`start_uncertain`、`start_result`，透過 S85-5 kind 3 判定結果，並保留原始 `phase=started`。
+- `wlre/network/commands.py`、`service_scheduler.py` 與 `client.py`：手動 `instance_start`、20 秒單調時計逾時、斷線結果不明鎖、跨模式創房／入房／離房／協力準備互斥；**從不自動重送，也不發 C19-1／C19-2 夥伴切換封包**。
+- `tests/test_instance_start.py`：C85-7 確切 bytes、房主／隊員、最低人數與資料完整性、S85-5 kind 3、離房、逾時、斷線、互斥操作、GUI 確認與夥伴 ID 不變。
+- 本 PR 已重新跟進最新 main，保留 PR #25／#26 遠征資料及連線診斷修復。
+
+**完成界線：第 05 項程式已提交、CI 依 PR 最終 Head 驗收，但尚未由正式伺服器／玩家帳號進行完整啟動與進入戰鬥測試，因此不標為已實服驗收。**
