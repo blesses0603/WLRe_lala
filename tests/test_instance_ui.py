@@ -77,6 +77,31 @@ class InstanceNavigation(unittest.TestCase):
                         page.catalog_table.winfo_rooty())
         self.assertFalse(self.errors, self.errors)
 
+    def test_creation_disabled_reason_for_selected_coop_dungeon(self):
+        from wlre.core.state import State
+        self.app.live_active = True
+        panel = self.app.instance_panel
+        state = State(phase='world_ready', initial_data_complete=True).snapshot()
+        state['player']['role_id'] = 678
+        state['expedition']['enabled'] = True
+        panel.render(state, live=True)
+        self.app.left_tabs.select(panel)
+        panel.tabs.select(panel.coop_page)
+        page = panel.coop_page
+        page.catalog_table.selection_set('catalog_2')  # 1262 coop ID 28
+        page.on_catalog_selected()
+        self.root.geometry('1140x640')
+        self.root.update()
+        self.assertTrue(page.create_button.instate(['disabled']))
+        self.assertIn('自動遠征仍開啟', page.creation_hint.get())
+        self.assertTrue(page.creation_hint_label.winfo_ismapped())
+        self.assertLess(page.creation_hint_label.winfo_rooty(),
+                        page.catalog_table.winfo_rooty())
+        state['expedition']['enabled'] = False
+        panel.render(state, live=True)
+        self.assertTrue(page.create_button.instate(['!disabled']))
+        self.assertIn('可以建立公開／私人房間', page.creation_hint.get())
+
     def test_unverified_entry_never_sends_game_commands(self):
         panel = self.app.instance_panel
         self.app.left_tabs.select(panel)
