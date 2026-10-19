@@ -316,7 +316,7 @@ class ExpeditionClaiming(ExpeditionFixture, unittest.TestCase):
         # (index:u8, quest:u16) pairs AND one ReadBoolean() show flag.
         self.service.start(self.state, self.settings)
         sent, = self.service.tick(self.state, 10)
-        self.assertEqual((sent.main, sent.sub, sent.payload), (31, 16, b'\\x01'))
+        self.assertEqual((sent.main, sent.sub, sent.payload), (31, 16, bytes((1,))))
         claim = Writer().u8(1).u8(1).u16(0).u16(0).u8(10).u32(34014).u32(2)
         self.event(decode(Packet(31, 16, claim.build())))
         self.assertIsNotNone(self.service.pending)
@@ -333,7 +333,7 @@ class ExpeditionClaiming(ExpeditionFixture, unittest.TestCase):
         self.event({'type': 'bag_add', 'item': {'index': 3, 'item_id': 34014, 'count': 2}})
         self.assertEqual(self.state.expedition['claimed'], 1)
         self.assertIsNone(self.service.pending)
-        for malformed in (entries, entries + b'\\x01\\x00'):
+        for malformed in (entries, entries + bytes((1,0))):
             with self.assertRaises(ProtocolError):
                 decode(Packet(31, 19, malformed))
 
@@ -343,7 +343,7 @@ class ExpeditionClaiming(ExpeditionFixture, unittest.TestCase):
         from wlre.network.wire import encode
         result = Writer().u8(1).u8(1).u16(0).u16(0).u8(10).u32(34014).u32(2).build()
         entries = b''.join(Writer().u8(i).u16(i if i <= 2 else 0).build()
-                           for i in range(1, 51)) + b'\\x01'
+                           for i in range(1, 51)) + bytes((1,))
         connection = Mock()
         connection.__enter__ = Mock(return_value=connection)
         connection.__exit__ = Mock(return_value=False)
