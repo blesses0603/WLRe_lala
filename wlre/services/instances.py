@@ -3,10 +3,12 @@ def defaults():
     return {
         'main': {'ready': False, 'rooms': [], 'room': None, 'members': [],
                  'phase': 'idle', 'status': '尚未查詢房間', 'remaining_minutes': None,
-                 'objectives': {}, 'completed': False},
+                 'objectives': {}, 'completed': False,
+                 'create_pending': None, 'create_uncertain': False, 'create_result': None},
         'coop': {'ready': False, 'rooms': [], 'room': None, 'members': [],
                  'phase': 'idle', 'status': '尚未查詢房間', 'fight_count': None,
-                 'reward': None, 'standby': None},
+                 'reward': None, 'standby': None,
+                 'create_pending': None, 'create_uncertain': False, 'create_result': None},
     }
 
 
@@ -118,3 +120,6 @@ def apply_instances(state, event):
         data['fight_count'] = event['count']
     elif kind == 'instance_standby':
         data['standby'] = event['standby']
+    # Resolve only after the authoritative room event has been applied.
+    from wlre.services.instance_creation import resolve
+    resolve(state, event)

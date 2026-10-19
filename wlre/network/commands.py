@@ -3,6 +3,7 @@ from wlre.services.coordination import command_reason
 import time
 from wlre.network.wire import ProtocolError
 from wlre.network.instances import list_request
+from wlre.services.instance_creation import create as create_instance
 from wlre.services.battle.party import team_command, own_team
 from wlre.services.battle.attribute_points import allocation as build_allocation, begin as begin_allocation
 from wlre.services.battle.companions import command as companion_command
@@ -32,6 +33,8 @@ def dispatch(logic,command,state):
     reason=command_reason(state,command,maintenance_pending=bool(logic.maintenance.pending),
                           maintenance_uncertain=logic.maintenance.uncertain)
     if reason:raise ProtocolError(reason)
+    if kind == 'instance_create':
+        return create_instance(state, command)
     if kind == 'instance_refresh':
         if state.phase != 'world_ready' or not state.player.get('role_id'):
             raise ProtocolError('請先完成角色登入才能查詢副本房間')

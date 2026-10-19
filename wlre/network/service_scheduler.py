@@ -3,6 +3,7 @@ import time
 from wlre.network.state_updates import notify_state
 from wlre.network.protocol import decode_outbound_movement
 from wlre.services.battle.party import expire as expire_team
+from wlre.services.instance_creation import expire as expire_instance_create
 
 def advance_services(logic,state,send_command,send_raw,emit,on_state):
     state.assert_writer()
@@ -16,6 +17,8 @@ def advance_services(logic,state,send_command,send_raw,emit,on_state):
     for packet in logic.expedition.tick(state,time.monotonic()):
         send_command(packet)
     if before_expedition != (state.expedition['status'], state.expedition['pending'], state.expedition['enabled']) and on_state:
+        notify_state(on_state,state)
+    if expire_instance_create(state) and on_state:
         notify_state(on_state,state)
     before_craft=(state.crafting['status'],state.crafting['pending'],state.crafting['revision'],state.crafting['auto_continue'],repr(state.crafting.get('local_plan')))
     for packet in logic.crafting.tick(state,time.monotonic()):send_command(packet)

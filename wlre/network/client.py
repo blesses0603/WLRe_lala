@@ -208,6 +208,8 @@ class SessionLogic:
     def disconnect(self,state):
         """Freeze uncertain bag requests and disable intent before final publication."""
         state.assert_writer()
+        from wlre.services.instance_creation import disconnect as instance_disconnect
+        instance_disconnect(state)
         if any(state.inventory.get('holds',{}).values()):
             state.inventory['reliable']=False
             for owner in list(state.inventory['holds']):reservations.uncertain(state.inventory,owner)
@@ -289,7 +291,7 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
                     try:
                         for packet in logic.command(command, state):
                             _send_command_packet(connection,packet,profile['tx_xor'],state,emit,on_state)
-                        if command.get('type') in ('team','start_alchemy','stop_alchemy','reset_efficiency','craft','start_expedition','stop_expedition','allocate_points') and on_state:notify_state(on_state,state)
+                        if command.get('type') in ('team','start_alchemy','stop_alchemy','reset_efficiency','craft','start_expedition','stop_expedition','allocate_points','instance_create') and on_state:notify_state(on_state,state)
                         if command.get('type') in ('start_auto_battle','stop_auto_battle','set_party_guard'):
                             emit({'type':'auto_battle_status',**state.auto_battle})
                             if on_state:notify_state(on_state,state)
