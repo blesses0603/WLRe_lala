@@ -85,3 +85,12 @@
 - 已補單元與 GUI 測試；必須再以 GitHub Actions 驗證跨平台及 Nuitka 包含資源檔。
 
 更新至此：七項清單僅第 01 項（正式靜態清單）勾選，創房、入房、協力準備、房主開始、實際副本戰鬥與自動領獎仍未實作。
+
+## 房間操作封包預備層（仍未對正式伺服器開放）
+
+來源 `Dungeon.lua`、`CooperateEventManger.lua`：
+
+- 一般 C85-3 公開創房：`mapId:u16,public=1:u8,password=0:u16,recruit=0:u8`；私人：`mapId:u16,public=0:u8,password:u16`。
+- 協力 C186-1：`playerCount:u8,kind:u8,npcIdx:u8,public:u8,password:u32,recruit=0:u8`；活動 27／28 使用從原始資料核對的 `npcIdx=1/2`，協力對戰 21 使用 0。
+- 一般 C85-5 加入：`roomId:u16,SN:u16[,privatePassword:u16]`；協力 C186-4：`roomId:u16,password:u32`；離開 C85-6 或 C186-5 為空內容。
+- `wlre/network/instance_actions.py` 僅提供封包 builder 與嚴格參數驗證，**未加入手動指令路由、不會自行送出**。創房及加入可能涉及點數／門票消耗，需完成 S85／S186 回覆、角色狀態、超時不重送與費用確認後才解鎖 UI。此時七項清單的 02／03 項仍不得標為完成。
