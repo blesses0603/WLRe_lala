@@ -12,6 +12,7 @@ from wlre.core.activity import decode_activity
 from wlre.services.items.crafting import decode_crafting
 from wlre.services.items.room_storage import decode_storage
 from wlre.network.expedition import decode_expedition
+from wlre.network.instances import decode_instances
 
 ENUMS = json.loads(RESOURCE_ROOT.joinpath("enums.json").read_text(encoding="utf-8"))
 ATTR_NAMES = {v: k for k, v in ENUMS["EAttribute"].items()}
@@ -63,7 +64,7 @@ def use_field_item(item_id,index,npc_index):
 def decode(packet, local_role_id=None):
     chat=decode_chat(packet,local_role_id)
     if chat is not None:return chat
-    extra=(decode_storage(packet) or decode_expedition(packet) or decode_recovery(packet)
+    extra=(decode_instances(packet) or decode_storage(packet) or decode_expedition(packet) or decode_recovery(packet)
            or decode_guild(packet) or decode_activity(packet) or decode_crafting(packet))
     if extra is not None:return extra
     r = Reader(packet.payload)

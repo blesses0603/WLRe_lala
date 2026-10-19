@@ -2,6 +2,7 @@
 from wlre.services.coordination import command_reason
 import time
 from wlre.network.wire import ProtocolError
+from wlre.network.instances import list_request
 from wlre.services.battle.party import team_command, own_team
 from wlre.services.battle.attribute_points import allocation as build_allocation, begin as begin_allocation
 from wlre.services.battle.companions import command as companion_command
@@ -31,6 +32,12 @@ def dispatch(logic,command,state):
     reason=command_reason(state,command,maintenance_pending=bool(logic.maintenance.pending),
                           maintenance_uncertain=logic.maintenance.uncertain)
     if reason:raise ProtocolError(reason)
+    if kind == 'instance_refresh':
+        if state.phase != 'world_ready' or not state.player.get('role_id'):
+            raise ProtocolError('請先完成角色登入才能查詢副本房間')
+        if state.battle.get('active') or state.event_flow.get('blocked'):
+            raise ProtocolError('戰鬥或事件處理中不可查詢副本房間')
+        return [list_request(command.get('mode'))]
     if kind == 'allocate_points':
         if state.phase != 'world_ready' or not state.player.get('role_id'):
             raise ProtocolError('角色尚未完成登入同步')
