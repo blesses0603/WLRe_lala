@@ -38,7 +38,7 @@ class DocumentationAndReleaseAudit(unittest.TestCase):
         self.assertIn("releases/tag/v0.5.0", readme)
         self.assertIn("不是正式發布", changelog)
 
-    def test_actions_run_full_regressions_and_native_pr_builds(self):
+    def test_actions_run_regressions_with_manual_native_packaging(self):
         daily = (ROOT / ".github/workflows/test.yml").read_text(encoding="utf-8")
         native = (ROOT / ".github/workflows/desktop-packaging.yml").read_text(encoding="utf-8")
         release = (ROOT / ".github/workflows/release-windows.yml").read_text(encoding="utf-8")
@@ -49,9 +49,13 @@ class DocumentationAndReleaseAudit(unittest.TestCase):
         self.assertIn('tools.build.build_macos --arch x64 --dry-run', daily)
         self.assertIn("workflow_dispatch:", native)
         native_triggers = native.split("on:\n", 1)[1].split("\npermissions:", 1)[0]
-        self.assertIn("pull_request:", native_triggers)
-        self.assertIn("tools/build/**", native_triggers)
+        self.assertNotIn("pull_request:", native_triggers)
+        self.assertNotIn("push:", native_triggers)
+        self.assertIn("workflow_dispatch:", native_triggers)
+        self.assertIn("pull_request:", daily)
+        self.assertIn("branches: [main]", daily)
         self.assertIn("tags:", release)
+        self.assertIn("workflow_dispatch:", release)
         self.assertIn("build_macos:", release)
 
     def test_legacy_compatibility_and_experience_regressions_retained(self):

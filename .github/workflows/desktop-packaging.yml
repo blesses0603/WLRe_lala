@@ -1,21 +1,10 @@
 name: Native desktop packaging verification
 
-# Verify native Windows EXE and macOS APP on packaging-related pull requests.
-# Tags and official releases still use release-windows.yml.
+# Development and preview builds run from source (run_client.bat) with
+# automatic cross-platform regressions in test.yml, never auto-compile Nuitka.
+# Opt-in native EXE/APP verification: Actions > Run workflow.
+# Release tags build and publish native installers using release-windows.yml.
 on:
-  pull_request:
-    paths:
-      - '.github/workflows/desktop-packaging.yml'
-      - '.github/workflows/release-windows.yml'
-      - '.github/workflows/test.yml'
-      - 'tools/build/**'
-      - 'wlre/**'
-      - 'WLRE_Client.py'
-      - 'requirements*.txt'
-      - 'tests/test_*build*.py'
-      - 'tests/test_release*.py'
-      - 'tests/test_repository_hygiene.py'
-      - 'docs/NUITKA_BUILD.md'
   workflow_dispatch:
 
 permissions:

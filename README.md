@@ -8,6 +8,8 @@
 
 ## v0.6.0 更新重點
 
+**開發與發版測試規則**：Windows 預覽版執行 `run_client.bat`；每次 PR／main 更新自動跑 Windows、Linux、macOS 回歸測試，不會自動觸發 Nuitka 原生打包。若需要提前取得 EXE／APP，可在 Actions 手動執行 `Native desktop packaging verification`；正式 `vX.Y.Z` Release 才自動編譯並發布。[詳細建置規則](docs/NUITKA_BUILD.md)
+
 以下依**已合併到 main 的程式碼**整理，列出新增功能、改善與模組拆分。完成功能程式碼並不等於已通過正式伺服器端到端驗證。
 
 ### 新增功能

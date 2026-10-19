@@ -60,12 +60,11 @@ class NativeArchitectureTests(unittest.TestCase):
 
 
 class WorkflowVerificationTests(unittest.TestCase):
-    def test_native_compilation_runs_on_relevant_prs_and_remains_manually_dispatchable(self):
+    def test_native_compilation_is_manual_only_and_remains_fully_tested(self):
         workflow = (ROOT / '.github/workflows/desktop-packaging.yml').read_text(encoding='utf8')
         event_block = workflow.split('on:\n', 1)[1].split('\npermissions:', 1)[0]
         self.assertIn('workflow_dispatch:', event_block)
-        self.assertIn('pull_request:', event_block)
-        self.assertIn('tools/build/**', event_block)
+        self.assertNotIn('pull_request:', event_block)
         self.assertNotIn('push:', event_block)
         daily = (ROOT / '.github/workflows/test.yml').read_text(encoding='utf8')
         self.assertIn('pull_request:', daily)
