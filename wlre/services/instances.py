@@ -15,8 +15,10 @@ def _clear_coop_round(data):
     data['battle_active'] = False
     data['completed'] = False
     data['completion_source'] = None
-    data['received_awards'] = []
-    data['mail_notice'] = False
+    if not (data.get('claim_pending') or data.get('cancel_pending')
+            or data.get('reward_uncertain')):
+        data['received_awards'] = []
+        data['mail_notice'] = False
 
 
 def defaults():
@@ -245,6 +247,7 @@ def apply_instances(state, event):
     elif kind == 'instance_fight_count':
         data['fight_count'] = event['count']
         data['fight_consumed_battle'] = None
+        data['last_fight_victory'] = None
     elif kind == 'instance_standby':
         data['standby'] = event['standby']
     # Resolve only after the authoritative room event has been applied.

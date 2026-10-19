@@ -630,8 +630,20 @@ class InstanceModePage(ttk.Frame):
                         for part in (data, other)
                         for k in ('create_uncertain', 'join_uncertain', 'leave_uncertain',
                                   'standby_uncertain', 'start_uncertain', 'enter_uncertain')))
+        # Apply the same cross-mode pending/uncertain reward locks as the
+        # network services. Disabled buttons must not imply a safe operation.
+        all_modes = (data, other)
+        reward_locked = any(
+            part.get(k) for part in all_modes
+            for k in ('claim_pending', 'cancel_pending', 'reward_uncertain'))
+        if reward_locked or activity_blocked:
+            self._leave_ready = False
+            self._standby_ready = False
+            self._start_ready = False
+            self._enter_ready = False
         self._creation_ready = (
-            bool(live) and not data.get('create_pending')
+            bool(live) and not reward_locked and not activity_blocked
+            and not data.get('create_pending')
             and not data.get('create_uncertain') and not data.get('room')
             and not other.get('create_pending')
             and not other.get('create_uncertain') and not other.get('room')
