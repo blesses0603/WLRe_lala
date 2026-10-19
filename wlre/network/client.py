@@ -262,6 +262,8 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
     health = ConnectionHealth(emit)
     cleanup_timer = PeriodicCleanup()
     closed_reason = 'duration'; closed_error = None
+    failed_packet = None
+    failed_stage = None
     try:
         with socket.create_connection((host, port), timeout=timeout) as connection:
             if tcp_keepalive: health.keepalive = configure_keepalive(connection)
@@ -314,14 +316,24 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
                     closed_reason = 'server_closed'
                     break
                 for packet in parser.feed(raw):
-                    event = decode(packet,state.player.get('role_id'))
-                    health.received()
-                    state.apply(event)
-                    emit(event)
-                    if request:
-                        for response in logic.receive(event, state):
-                            _send(connection, response, profile['tx_xor'], emit)
-                    if on_state and event['type'] != 'unimplemented': notify_state(on_state,state)
+                    # Record only numerical packet IDs and the stage of processing.
+                    # Do not record packet bytes, decoded values, exception text or credentials.
+                    stage = 'decode'
+                    try:
+                        event = decode(packet,state.player.get('role_id'))
+                        stage = 'state_apply'
+                        health.received()
+                        state.apply(event)
+                        stage = 'event_handling'
+                        emit(event)
+                        if request:
+                            for response in logic.receive(event, state):
+                                _send(connection, response, profile['tx_xor'], emit)
+                        if on_state and event['type'] != 'unimplemented': notify_state(on_state,state)
+                    except Exception:
+                        failed_packet = (packet.main, packet.sub)
+                        failed_stage = stage
+                        raise
                 event_replies=logic.flush_events(state) if request else []
                 for response in event_replies:_send(connection,response,profile['tx_xor'],emit)
                 if event_replies and on_state:notify_state(on_state,state)
@@ -339,6 +351,7 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
         state.phase = 'disconnected'
         if on_state:notify_state(on_state,state,force=True)
         if closed_error is None and stop_event.is_set():closed_reason='stopped'
-        health.close(closed_reason,closed_error)
+        health.close(closed_reason,closed_error,
+                     error_packet=failed_packet, error_stage=failed_stage)
         emit({'type': 'connection_closed', 'last_phase': last_phase, 'reason': closed_reason})
     return state
