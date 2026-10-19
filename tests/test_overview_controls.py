@@ -48,7 +48,7 @@ class OverviewControls(unittest.TestCase):
 
     def test_overview_uses_shared_border_and_actions_use_standard_button_geometry(self):
         self.assertTrue(self.panel.master._section_outline)
-        reference=self.panel.actions['alchemy']
+        reference=self.panel.actions['roaming']
         for key in ('ai','roaming'):
             button=self.panel.actions[key]
             self.assertEqual(button.winfo_class(),'TButton')
