@@ -8,7 +8,9 @@ def defaults():
                  'join_pending': None, 'join_uncertain': False, 'join_result': None,
                  'leave_pending': None, 'leave_uncertain': False, 'leave_result': None,
                  'list_updated_at': None,
-                 'start_pending': None, 'start_uncertain': False, 'start_result': None},
+                 'start_pending': None, 'start_uncertain': False, 'start_result': None,
+                 'enter_pending': None, 'enter_uncertain': False, 'enter_result': None,
+                 'entered_scene': None, 'battle_active': False},
         'coop': {'ready': False, 'rooms': [], 'room': None, 'members': [],
                  'phase': 'idle', 'status': '尚未查詢房間', 'fight_count': None,
                  'reward': None, 'standby': None,
@@ -16,13 +18,17 @@ def defaults():
                  'create_pending': None, 'create_uncertain': False, 'create_result': None,
                  'join_pending': None, 'join_uncertain': False, 'join_result': None,
                  'leave_pending': None, 'leave_uncertain': False, 'leave_result': None,
-                 'list_updated_at': None},
+                 'list_updated_at': None, 'match_kind': None, 'battle_active': False},
     }
 
 
 def apply_instances(state, event):
     mode = event.get('mode')
     if mode not in ('main', 'coop') or not event.get('type', '').startswith('instance_'):
+        # Existing world/battle events can independently establish location
+        # and fighting, without owning or changing their core handlers.
+        from wlre.services.instance_entry import observe as observe_entry
+        observe_entry(state, event)
         return
     data = state.instances[mode]
     kind = event['type']
@@ -67,12 +73,15 @@ def apply_instances(state, event):
     elif kind == 'instance_members':
         room_id = event['room_id']
         if mode == 'coop':
+            old_room_id = (data.get('room') or {}).get('room_id')
             data['room'] = {'room_id': room_id, 'kind': event['kind'],
                             'npc_id': event['npc_id'], 'capacity': event['capacity'],
                             'standby': event['standby']}
-            data['phase'] = 'waiting'
+            if data.get('phase') not in ('matched', 'combat') or old_room_id != room_id:
+                data['phase'] = 'waiting'
             data['standby'] = event['standby']
-            data['status'] = '協力房間與成員已同步'
+            if data.get('phase') == 'waiting':
+                data['status'] = '協力房間與成員已同步'
         elif data.get('room') is None or data['room'].get('room_id') != room_id:
             # Do not associate a room roster with an unrelated session.
             return
@@ -146,3 +155,5 @@ def apply_instances(state, event):
     resolve_room(state, event)
     resolve_standby(state, event)
     resolve_start(state, event)
+    from wlre.services.instance_entry import observe as observe_entry
+    observe_entry(state, event)

@@ -12,7 +12,7 @@ from wlre.services.instance_browser import entries_for
 from wlre.services.instance_room_flow import _activity_guard
 
 START_TIMEOUT = 20.0
-OPERATIONS = ('create', 'join', 'leave', 'standby', 'start')
+OPERATIONS = ('create', 'join', 'leave', 'standby', 'start', 'enter')
 
 
 def _pending_or_uncertain(state):

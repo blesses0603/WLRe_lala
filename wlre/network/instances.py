@@ -106,7 +106,18 @@ def _coop(packet):
         if code in (16, 19):
             role_id = r.u32()
         elif code in (17, 18):
-            return None  # Nested battle rosters not independently verified.
+            # Official 1262 co-op opponent-matching notification. Its nested
+            # roster is not independently decoded, so consume it as opaque.
+            if not r.remaining:
+                return None
+            count = r.u8()
+            if not 1 <= count <= 8:
+                return None
+            r.take(r.remaining)
+            event = {'type': 'instance_coop_match', 'mode': 'coop',
+                     'kind': code, 'opponent_count': count}
+            r.end()
+            return event
         else:
             role_id = None
         event = {'type': 'instance_result', 'mode': 'coop', 'code': code,

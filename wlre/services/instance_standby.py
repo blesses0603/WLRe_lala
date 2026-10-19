@@ -11,7 +11,7 @@ from wlre.network.wire import Packet, ProtocolError, Writer
 from wlre.services.instance_room_flow import _activity_guard
 
 TIMEOUT = 20.0
-_OPERATIONS = ('create', 'join', 'leave', 'standby', 'start')
+_OPERATIONS = ('create', 'join', 'leave', 'standby', 'start', 'enter')
 
 
 def _no_unresolved_room_actions(state):
