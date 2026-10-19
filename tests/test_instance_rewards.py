@@ -210,6 +210,7 @@ class CompletionAndRewards(unittest.TestCase):
         state.instances['coop']['fight_count'] = 3
         state.battle_count = 1
         state.battle = {'active': True, 'war_style': 16, 'winner_side': 1}
+        state.battle_units['4:1'] = {'col': 4, 'row': 1, 'pid': 678}
         event = {'type': 'fight_exit', 'role_id': 678}
         state.apply(event)
         with patch('wlre.network.client.time.monotonic', return_value=100):

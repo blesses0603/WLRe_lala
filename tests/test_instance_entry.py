@@ -133,7 +133,9 @@ class Entry(unittest.TestCase):
         coop['room'] = {'room_id': 77, 'standby': True}
         coop['standby'] = True
         coop['phase'] = 'waiting'
-        event = decode(Packet(186, 2, b'\x11\x01' + b'\x00' * 22))
+        roster = (Writer().u32(901).u8(5).u8(1).u8(0).u8(1)
+                  .u32(0).u32(0).u8(0).build())
+        event = decode(Packet(186, 2, b'\x11\x01' + roster))
         self.assertEqual(event['type'], 'instance_coop_match')
         state.apply(event)
         self.assertEqual(coop['phase'], 'matched')

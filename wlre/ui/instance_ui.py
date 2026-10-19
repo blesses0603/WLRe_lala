@@ -671,18 +671,65 @@ class InstanceModePage(ttk.Frame):
         if current is not None:
             count = len(data.get('members') or ())
             status = '目前房間 #%s' % current.get('room_id', '待確認')
-            self.details.set('%s；已知成員 %s 人，階段：%s；%s' % (
+            self.details.set('%s；已知成員 %s 人，階段：%s；%s%s' % (
                 status, count, data.get('phase', '待確認'),
-                data.get('status', '等待伺服器同步')))
+                data.get('status', '等待伺服器同步'),
+                '；' + instance_details(data, self.cooperative, local_role_id)
+                if instance_details(data, self.cooperative, local_role_id) else ''))
         elif self.cooperative and data.get('reward'):
             current_reward = data['reward']
-            self.details.set('協力獎勵旗標 %s，已完成 %s／%s 場；以伺服器回覆為準' % (
+            self.details.set('協力獎勵旗標 %s，已完成 %s／%s 場；%s' % (
                 current_reward['reward_mark'], current_reward['win_stage'],
-                current_reward['reward_count']))
+                current_reward['reward_count'],
+                instance_details(data, True, local_role_id) or '以伺服器回覆為準'))
         else:
-            self.details.set('未加入房間；進入、準備、領獎功能仍待正式伺服器驗證。')
+            self.details.set(
+                instance_details(data, self.cooperative, local_role_id)
+                or '未加入房間；進入、準備、領獎功能仍待正式伺服器驗證。')
         # Only a deliberate user click on a live, confirmed started room can enter.
         self.enter_button.state(['!disabled'] if self._enter_ready else ['disabled'])
+
+
+def instance_details(data, cooperative=False, local_role_id=None):
+    """Show only actual server notifications, without invented rewards."""
+    parts = []
+    if cooperative:
+        remaining = data.get('fight_count')
+        if type(remaining) is int:
+            parts.append('剩餘場次 %s' % remaining)
+        if data.get('completed'):
+            parts.append('協力場次已由伺服器確認完成')
+        awards = data.get('received_awards') or ()
+        if awards:
+            parts.append('伺服器獎品收據：' + '、'.join(
+                '種類%s 物品%s ×%s' % (a['kind'], a['id'], a['value']) for a in awards))
+            parts.append('背包實際入帳仍需同步核對')
+        if data.get('claim_result') == 'server_closed_unverified_awards':
+            parts.append('寶箱已關閉但尚未確認實際獎品，請檢查背包／信箱')
+        if data.get('mail_notice'):
+            parts.append('伺服器通知獎品寄送信箱')
+    else:
+        obj = data.get('objectives') or {}
+        targets = obj.get('targets') or {}
+        if targets:
+            parts.append('擊殺目標：' + '、'.join(
+                '#%s NPC%s %s/%s' % (idx, row.get('npc_id', '?'),
+                                     row.get('kills', 0), row.get('required', '?'))
+                for idx, row in sorted(targets.items())))
+        boss = obj.get('boss') or {}
+        if boss:
+            parts.append('Boss NPC%s：%s' % (
+                boss.get('npc_id', '?'), '已擊敗' if boss.get('defeated') else '未擊敗'))
+        score = (obj.get('scores') or {}).get(str(local_role_id))
+        if score:
+            parts.append('個人積分：小怪 %s／Boss %s' %
+                         (score.get('normal', 0), score.get('boss', 0)))
+        if obj.get('records'):
+            parts.append('新式副本結算紀錄：%s 人（依 S85-21-100）' %
+                         len(obj['records']))
+        if data.get('completed'):
+            parts.append('副本完成：伺服器已確認')
+    return '；'.join(parts)
 
 
 class InstancePanel(ttk.Frame):
