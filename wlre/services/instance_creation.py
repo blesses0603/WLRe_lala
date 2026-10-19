@@ -58,7 +58,7 @@ def create(state, command, now=None):
         raise ProtocolError('請先停止自動戰鬥、移動、製作、煉金或遠征')
     if mode == 'coop' and own_team(state):
         raise ProtocolError('協力創房前請先離開一般隊伍')
-    if mode == 'coop' and state.instances['coop'].get('reward', {}).get('open_reward'):
+    if (mode == 'coop' and (state.instances['coop'].get('reward') or {}).get('open_reward')):
         raise ProtocolError('協力獎勵待處理，不可建立房間')
     public = command.get('public')
     password = _validated_password(public, command.get('password'))
