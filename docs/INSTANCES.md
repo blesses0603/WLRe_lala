@@ -10,11 +10,63 @@
 
 - `DungeonData_C`：副本 ID、類型、難度／分組、地圖 ID、NPC、16 格獎勵與加倍／特殊旗標。
 - `CooperateEventData_C`：協力種類與描述 ID、場次、標記、四個指定夥伴與額外獎勵。
-- `StageData_C`：場景文字 ID、最低等級、最少／最多人數、時間限制與房間數。
+- `ScenesData_C`（由 `StageData:New` 解析）：場景文字 ID、最低等級、最少／最多人數、時間限制與房間數。
 
-來源：上傳的 `WLRE_Lua_1262_Decoded_Analysis(1).zip` 中 `Lua/Data/{DungeonData,CooperateEventData,StageData,AwardData}.lua`。透過 `wlre.services.instance_catalog.catalog(dungeon, cooperative, stage, names)` 提供已抽出的原始表位元組。對無法取得的表與文字不建立假資料，不自行推測名稱、開放狀態或獎勵。
+來源：上傳的 `WLRE_Lua_1262_Decoded_Analysis(1).zip` 中 `Lua/Data/{DungeonData,CooperateEventData,StageData,AwardData}.lua`。透過 `wlre.services.instance_catalog.catalog(dungeon, cooperative, scenes, names)` 提供已抽出的原始表位元組。對無法取得的表與文字不建立假資料，不自行推測名稱、開放狀態或獎勵。
 
 ## 後續實施準則
 
 原版一般副本使用 C/S85；協力使用 C/S186。**封包格式核對、在測試模擬下正確收發**不等於已通過正式伺服器測試。涉及建立、加入、開始、領獎或付費操作時，必須以當前角色／隊伍／事件狀態及回覆為準，逾時不可盲目重送。
-\n## 第 03 階段：S85 / S186 連線與唯讀房間列表\n\n- 嚴格解碼兩種房間列表、成員、階段、倒數、協力獎勵狀態；未知子協定保持未實作，不推測封包。\n- 手動按「更新房間清單」送出官方 C85-1 或 C186-17；不自動輪詢，戰鬥與事件中阻擋查詢。\n- 房間建立、加入、離開、開始、副本進入、準備與領獎尚未開放，避免在正式服上誤操作。\n\n## 第 04 階段：狀態與介面綁定\n\n- State.instances 各自保存一般／協力的房間、成員、階段、計時與獎勵旗標。僅根據伺服器資料更新，不採本機樂觀加入／扣獎。\n- 主要／協力次分頁呈現伺服器房間，未取得官方地圖文字時只顯示房間 ID。退出與角色登入重設狀態；不跨帳號沿用。\n- 尚未實現建立房間、配對、指定寵物、通關自動化及獎勵領取；這些操作仍需官方流程與實服驗證。\n\n## 第 05 階段：回歸與安全驗收\n\n- 單元測試涵蓋 1262 三種二進位表解析、16 筆獎勵與四個指定夥伴、缺料／尾端長度拒絕。\n- S85 與 S186 房間列表、建立／加入回覆、成員同步、退出、倒數、協力獎勵、非同步狀態安全邊界。\n- GUI 測試驗證兩模式清單刷新與按鈕限制，沒有未經核對的建立、進入或領獎操作。\n- Windows/Linux/macOS GitHub Actions 及 Nuitka 驗證結果以 PR 下最新工作流程為準，不宣稱實服端到端測試。\n
+
+## 第 03 階段：S85 / S186 連線與唯讀房間列表
+
+- 嚴格解碼兩種房間列表、成員、階段、倒數、協力獎勵狀態；未知子協定保持未實作，不推測封包。
+- 手動按「更新房間清單」送出官方 C85-1 或 C186-17；不自動輪詢，戰鬥與事件中阻擋查詢。
+- 房間建立、加入、離開、開始、副本進入、準備與領獎尚未開放，避免在正式服上誤操作。
+
+## 第 04 階段：狀態與介面綁定
+
+- State.instances 各自保存一般／協力的房間、成員、階段、計時與獎勵旗標。僅根據伺服器資料更新，不採本機樂觀加入／扣獎。
+- 主要／協力次分頁呈現伺服器房間，未取得官方地圖文字時只顯示房間 ID。退出與角色登入重設狀態；不跨帳號沿用。
+- 尚未實現建立房間、配對、指定寵物、通關自動化及獎勵領取；這些操作仍需官方流程與實服驗證。
+
+## 第 05 階段：回歸與安全驗收
+
+- 單元測試涵蓋 1262 三種二進位表解析、16 筆獎勵與四個指定夥伴、缺料／尾端長度拒絕。
+- S85 與 S186 房間列表、建立／加入回覆、成員同步、退出、倒數、協力獎勵、非同步狀態安全邊界。
+- GUI 測試驗證兩模式清單刷新與按鈕限制，沒有未經核對的建立、進入或領獎操作。
+- Windows/Linux/macOS GitHub Actions 及 Nuitka 驗證結果以 PR 下最新工作流程為準，不宣稱實服端到端測試。
+
+## 2026-10-19 已上傳 ManifestFiles 解析結果（1262）
+
+使用者提供的 `DataPackage_1262.rar`（只含 16,830 位元組的 Manifest）與
+`MainPackage_1262.rar`（只含 2,549,190 位元組的 Manifest）均可讀取，
+**但均不含實際的 `BundleFiles/**/__data`**。因此目前無法產出官方副本名稱表。
+
+1262 `Lua/Logic/Data.lua` 明確呼叫
+`GameDataList["ScenesData_C"] = this.OnLoadSceneData`，而
+`OnLoadSceneData` 逐筆呼叫 `StageData:New(binaryReader)`。
+因此 **`ScenesData_C` 才是 `parse_stages` 的輸入**，並非 `StageData_C`。
+
+| 正式資源 | Bundle | Manifest hash | 大小 |
+| --- | --- | --- | ---: |
+| `CooperateEventData_C` | `datapackage_data_c.bundle` | `e600b2b2ef3044fc5e5a7ff3641d1df8` | 4,732 |
+| `DungeonData_C` / `DungeonRewardData_C` | `datapackage_data_d.bundle` | `014e88153786c77eaed00d04ec29f8a3` | 39,020 |
+| `ScenesData_C` / `StageMapData_C` | `datapackage_data_s.bundle` | `b470fcf69d58da6ac1a7c899068b2bf4` | 428,919 |
+| `TextData_C` / `TextData_SC_C` | `datapackage_data_t.bundle` | `277be57613f8b1306fc645c63835b2ee` | 3,619,162 |
+
+上述 hash 來自 `DataPackage` 官方 Manifest 的 bundle 表，用以定位安裝路徑：
+`<遊戲>_Data/yoo/DataPackage/BundleFiles/<hash前兩碼>/<hash>/__data`。
+不應把 Manifest `.bytes` 當成表本身，也不應自行生成不存在的官方名稱。
+
+## 副本七項開發清單
+
+- [ ] 01 完整官方繁體中文副本清單（等候 4 個實際 Bundle 提取）
+- [ ] 02 建立公開／私人房間（待正式服操作及 ACK 安全驗收）
+- [ ] 03 加入或離開房間（目前已有唯讀房間／成員同步）
+- [ ] 04 協力準備與指定夥伴（已有原始資料格式，尚未開放操作）
+- [ ] 05 房主開始挑戰（尚未開放操作）
+- [ ] 06 進入副本戰鬥（尚未開放操作，保留原有戰鬥與事件閘）
+- [ ] 07 自動完成與領取獎勵（尚未實作，不可盲目重送或推測發獎）
+
+這份清單以**可在正式伺服器實際使用且完成驗收**為勾選標準。

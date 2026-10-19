@@ -68,7 +68,7 @@ def parse_cooperative_events(data):
 
 
 def parse_stages(data):
-    """Only retain verified StageData fields needed by the instance browser."""
+    """Read ScenesData_C records via StageData:New (Lua/Logic/Data.lua)."""
     r = Reader(data)
     result = {}
     for _ in range(_count(r)):
@@ -120,7 +120,7 @@ def catalog(dungeon_data, cooperative_data, stage_data, names=None):
             entry['cooperative_event'] = events.get(dungeon['npc_id'])
         entries.append(entry)
     return {'version': 1262, 'verified_binary_layout': True,
-            'source': 'DungeonData_C / CooperateEventData_C / StageData_C',
+            'source': 'DungeonData_C / CooperateEventData_C / ScenesData_C',
             'records': entries, 'cooperative_events': list(events.values())}
 
 
