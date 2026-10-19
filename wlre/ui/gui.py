@@ -207,6 +207,7 @@ class App(LoginController,AccountController):
         if not self.save_saved_login():return
         self.password.set('')
         self.entered_world=False
+        self.hide_instances()
         self.update_role_choices([])
         self.connection_monitor.reset()
         self.connection_status.set('正在連線與驗證帳號…')
@@ -248,6 +249,23 @@ class App(LoginController,AccountController):
     def select_role(self):
         index=self.role_map.get(self.role_choice.get())
         if index:self.send({'type':'select_role','index':index})
+
+    def open_instances(self):
+        """Reopen the same floating panel, preserving selections and state."""
+        self.assert_ui_thread()
+        if not self.instance_window.winfo_exists():
+            return
+        self.instance_window.deiconify()
+        self.instance_window.lift()
+        self.instance_window.focus_set()
+        self.instance_panel.render(self.snapshot,live=self.live_active)
+
+    def hide_instances(self):
+        """Hiding the popout never sends a network request or clears state."""
+        self.assert_ui_thread()
+        view=getattr(self,'instance_window',None)
+        if view is not None and view.winfo_exists():
+            view.withdraw()
 
     def open_resources(self):
         self.resource_windows.append(ResourceView(self))
@@ -424,6 +442,7 @@ class App(LoginController,AccountController):
         elif latest:self.render(latest)
         if status_override:self.status.set(chinese(status_override))
         if session_finished:
+            self.hide_instances()
             self.live_active=False
             self.password.set('')
             self.update_role_choices([])

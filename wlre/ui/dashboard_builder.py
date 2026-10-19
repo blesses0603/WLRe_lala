@@ -51,8 +51,32 @@ def build_dashboard(app):
     left_tabs.add(app.companion_panel,text='夥伴出戰')
     app.expedition_panel=ExpeditionPanel(left_tabs,app)
     left_tabs.add(app.expedition_panel,text='遠征')
-    app.instance_panel=InstancePanel(left_tabs,app)
-    left_tabs.add(app.instance_panel,text='副本')
+    # Sidebar '副本' becomes an entry point. The real content is resizable.
+    app.instance_launcher=ttk.Frame(left_tabs,padding=16)
+    left_tabs.add(app.instance_launcher,text='副本')
+    ttk.Label(app.instance_launcher,text='副本／協力管理',
+              style='Heading.TLabel').pack(anchor='w',pady=(0,8))
+    ttk.Label(app.instance_launcher,
+              text='以獨立視窗查看副本清單、建立與加入房間。'
+                   '不再受主畫面的聊天、地圖區裁切。',
+              style='Muted.TLabel',wraplength=440).pack(
+                  anchor='w',fill='x',pady=(0,12))
+    app.open_instance_button=ttk.Button(
+        app.instance_launcher,text='開啟副本／協力視窗',command=app.open_instances)
+    app.open_instance_button.pack(anchor='w',pady=(0,8))
+    app.instance_window=tk.Toplevel(root)
+    app.instance_window.withdraw()
+    app.instance_window.title('飄流Re:LaLa · 副本／協力房間管理')
+    sw,sh=root.winfo_screenwidth(),root.winfo_screenheight()
+    width=min(1060,max(760,sw-100))
+    height=min(650,max(480,sh-120))
+    app.instance_window.geometry(
+        f'{width}x{height}+{max(0,(sw-width)//2)}+{max(0,(sh-height)//2)}')
+    app.instance_window.minsize(min(width,760),min(height,460))
+    app.instance_window.resizable(True,True)
+    app.instance_window.protocol('WM_DELETE_WINDOW',app.hide_instances)
+    app.instance_panel=InstancePanel(app.instance_window,app)
+    app.instance_panel.pack(fill='both',expand=True)
     app.party_guard_panel=PartyGuardPanel(app.party_panel.guard_host,app,compact=True)
     app.party_guard_panel.pack(fill='both',expand=True)
     if app.party_guard_load_error:app.party_guard_panel.note.set('名單讀取失敗，未啟用：'+app.party_guard_load_error)
@@ -63,9 +87,13 @@ def build_dashboard(app):
     app.efficiency_panel=EfficiencyPanel(left_tabs,app)
     left_tabs.add(app.efficiency_panel,text='經驗效率',align='right')
     app.crafting_panel.configure(padding=6)
-    for page in (overview,app.party_panel,app.companion_panel,app.expedition_panel,app.instance_panel,app.alchemy_panel,app.crafting_panel,app.efficiency_panel):
+    for page in (overview,app.party_panel,app.companion_panel,app.expedition_panel,app.instance_launcher,app.alchemy_panel,app.crafting_panel,app.efficiency_panel):
         page._section_outline=True
-    left_tabs.bind('<<NotebookTabChanged>>',lambda e:app.refresh_selected(),add='+')
+    def _on_left_tab_changed(event):
+        app.refresh_selected()
+        if left_tabs.select()==str(app.instance_launcher):
+            app.open_instances()
+    left_tabs.bind('<<NotebookTabChanged>>',_on_left_tab_changed,add='+')
     app.overview_panel.update_state({})
     app.home_map=HomeMap(right,app.pick_map_destination,app.open_navigation,on_move=app.walk,on_portal=lambda portal_id:app.send({'type':'portal_direct','portal_id':portal_id}),show_status=False,compact=True)
     app.home_map.configure(width=380,height=320)

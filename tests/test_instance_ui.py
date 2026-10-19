@@ -25,11 +25,15 @@ class InstanceNavigation(unittest.TestCase):
 
     def test_main_entry_and_two_subtabs_are_navigable(self):
         panel = self.app.instance_panel
-        self.assertTrue(panel._section_outline)
-        self.assertEqual(self.app.left_tabs.tab(panel, 'text'), '副本')
-        self.app.left_tabs.buttons[str(panel)].invoke()
+        launcher=self.app.instance_launcher
+        self.assertTrue(launcher._section_outline)
+        self.assertEqual(self.app.left_tabs.tab(launcher,'text'),'副本')
+        self.assertEqual(self.app.instance_window.state(),'withdrawn')
+        self.app.left_tabs.buttons[str(launcher)].invoke()
         self.root.update()
-        self.assertEqual(self.app.left_tabs.select(), str(panel))
+        self.assertEqual(self.app.left_tabs.select(),str(launcher))
+        self.assertEqual(self.app.instance_window.state(),'normal')
+        self.assertEqual(str(panel.winfo_toplevel()),str(self.app.instance_window))
         self.assertEqual(
             [panel.tabs.tab(page, 'text') for page in panel.tabs.tabs()],
             ['主要', '協力'],
@@ -51,11 +55,11 @@ class InstanceNavigation(unittest.TestCase):
         self.assertFalse(self.errors, self.errors)
 
     def test_compact_window_keeps_room_actions_above_the_lists(self):
-        # The report came from a 720p screenshot: room buttons were originally
-        # packed after expanding listings and clipped by the bottom chat.
-        self.root.geometry('1140x640')
+        # The sidebar remains fixed, but the instance view now owns its
+        # resizable window, independent from chat and the main dashboard.
         panel = self.app.instance_panel
-        self.app.left_tabs.select(panel)
+        self.app.open_instances()
+        self.app.instance_window.geometry('1000x590')
         self.root.update()
         for page in (panel.main_page, panel.coop_page):
             with self.subTest(mode=page.mode):
@@ -70,6 +74,9 @@ class InstanceNavigation(unittest.TestCase):
                 self.assertLess(
                     page.create_button.winfo_rooty() + page.create_button.winfo_height(),
                     page.winfo_rooty() + page.winfo_height())
+                self.assertTrue(page.entries.winfo_ismapped())
+                self.assertTrue(page.room_list_note.get())
+                self.assertGreater(page.entries.winfo_height(),1)
                 if page.cooperative:
                     self.assertTrue(page.claim_button.winfo_ismapped())
                     self.assertLess(
@@ -84,13 +91,13 @@ class InstanceNavigation(unittest.TestCase):
         state = State(phase='world_ready', initial_data_complete=True).snapshot()
         state['player']['role_id'] = 678
         state['expedition']['enabled'] = True
+        self.app.open_instances()
         panel.render(state, live=True)
-        self.app.left_tabs.select(panel)
         panel.tabs.select(panel.coop_page)
         page = panel.coop_page
         page.catalog_table.selection_set('catalog_2')  # 1262 coop ID 28
         page.on_catalog_selected()
-        self.root.geometry('1140x640')
+        self.app.instance_window.geometry('1000x590')
         self.root.update()
         self.assertTrue(page.create_button.instate(['disabled']))
         self.assertIn('自動遠征仍開啟', page.creation_hint.get())
@@ -102,9 +109,30 @@ class InstanceNavigation(unittest.TestCase):
         self.assertTrue(page.create_button.instate(['!disabled']))
         self.assertIn('可以建立公開／私人房間', page.creation_hint.get())
 
+    def test_window_close_and_reopen_preserves_selection(self):
+        panel=self.app.instance_panel
+        self.app.open_instances()
+        panel.tabs.select(panel.coop_page)
+        page=panel.coop_page
+        page.catalog_table.selection_set('catalog_2')
+        page.on_catalog_selected()
+        self.root.update()
+        with patch.object(self.app,'send') as send:
+            self.app.instance_window.event_generate('<Escape>')  # harmless
+            self.app.hide_instances()
+            self.assertEqual(self.app.instance_window.state(),'withdrawn')
+            self.assertFalse(page.winfo_ismapped())
+            self.app.open_instance_button.invoke()
+            self.root.update()
+            self.assertEqual(self.app.instance_window.state(),'normal')
+            self.assertEqual(panel.tabs.select(),str(page))
+            self.assertEqual(page.catalog_table.selection(),('catalog_2',))
+            send.assert_not_called()
+        self.assertFalse(self.errors,self.errors)
+
     def test_unverified_entry_never_sends_game_commands(self):
         panel = self.app.instance_panel
-        self.app.left_tabs.select(panel)
+        self.app.open_instances()
         with patch.object(self.app, 'send') as send:
             for page in (panel.main_page, panel.coop_page):
                 panel.tabs.select(page)
