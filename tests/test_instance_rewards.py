@@ -96,6 +96,21 @@ class CompletionAndRewards(unittest.TestCase):
         self.assertEqual(state.instances['coop']['claim_result'],
                          'server_closed_unverified_awards')
 
+    def test_previous_award_receipt_never_confirms_new_empty_response(self):
+        state, logic = ready()
+        status(state)
+        action(logic, state, 'instance_reward_claim', action='free')
+        state.apply(decode(Packet(186, 10, Writer().u8(10).u32(1234).u32(1).build())))
+        self.assertEqual(len(state.instances['coop']['received_awards']), 1)
+        status(state, 0, 0)
+        status(state, 1, 1)
+        action(logic, state, 'instance_reward_claim', action='free')
+        self.assertEqual(state.instances['coop']['received_awards'], [])
+        state.apply(decode(Packet(186, 10)))
+        status(state, 0, 0)
+        self.assertEqual(state.instances['coop']['claim_result'],
+                         'server_closed_unverified_awards')
+
     def test_paid_reward_never_claimed_and_cancel_is_manual(self):
         state, logic = ready()
         action(logic, state, 'instance_auto_reward', enabled=True)

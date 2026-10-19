@@ -106,6 +106,8 @@ def claim(state, command, now=None):
     now = time.monotonic() if now is None else now
     data['claim_pending'] = {'fingerprint': fingerprint, 'started': now}
     data['claim_result'] = None
+    # Never treat awards from a previous successful chest as a new receipt.
+    data['received_awards'] = []
     data['reward_handled_fingerprint'] = fingerprint
     data['status'] = '已要求領取免費協力獎勵，等待 S186-10／S186-11；不可重複領取'
     return [Packet(186, 10)]
