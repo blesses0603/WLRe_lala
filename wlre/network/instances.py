@@ -66,6 +66,29 @@ def _main(packet):
         if kind != 1:
             return None
         event = {'type': 'instance_time', 'mode': 'main', 'minutes': r.u32()}
+    elif sub == 10:
+        # 1262 Protocols_085.lua, Dungeon.KillEnemy / Set*Score.
+        kind = r.u8()
+        if kind == 1:
+            event = {'type': 'instance_objective', 'mode': 'main', 'kind': kind,
+                     'index': r.u8(), 'kills': r.u8(), 'killer': r.unicode8()}
+        elif kind == 2:
+            event = {'type': 'instance_objective', 'mode': 'main', 'kind': kind,
+                     'defeated': r.u8() == 1, 'killer': r.unicode8()}
+        elif kind == 3:
+            event = {'type': 'instance_objective', 'mode': 'main', 'kind': kind,
+                     'index': r.u8(), 'required': r.u8(), 'npc_id': r.u16()}
+        elif kind == 4:
+            event = {'type': 'instance_objective', 'mode': 'main', 'kind': kind,
+                     'npc_id': r.u16()}
+        elif kind in (5, 6):
+            count = r.u8()
+            if count > 16:
+                raise ProtocolError('S85-10 積分人數異常')
+            event = {'type': 'instance_objective', 'mode': 'main', 'kind': kind,
+                     'role_ids': [r.u32() for _ in range(count)]}
+        else:
+            return None
     elif sub == 12:
         event = {'type': 'instance_member_left', 'mode': 'main',
                  'count': r.u8(), 'role_id': r.u32(), 'host_id': r.u32(),
@@ -106,16 +129,25 @@ def _coop(packet):
         if code in (16, 19):
             role_id = r.u32()
         elif code in (17, 18):
-            # Official 1262 co-op opponent-matching notification. Its nested
-            # roster is not independently decoded, so consume it as opaque.
-            if not r.remaining:
-                return None
+            # CooperateEventManger.RevPKNPCInfo / RevPKPlayerInfo (1262).
             count = r.u8()
             if not 1 <= count <= 8:
-                return None
-            r.take(r.remaining)
+                raise ProtocolError('S186-2 協力配對人數異常')
+            if code == 17:
+                opponents = []
+                for _ in range(count):
+                    role_id = r.u32()
+                    r.take(4)  # level, element, sex, head
+                    r.take(8)  # palettes 1 and 5
+                    r.unicode8()
+                    opponents.append(role_id)
+            else:
+                first = [r.u32() for _ in range(count)]
+                second = [r.u32() for _ in range(count)]
+                opponents = first + second
             event = {'type': 'instance_coop_match', 'mode': 'coop',
-                     'kind': code, 'opponent_count': count}
+                     'kind': code, 'opponent_count': count,
+                     'roster_role_ids': opponents}
             r.end()
             return event
         else:
