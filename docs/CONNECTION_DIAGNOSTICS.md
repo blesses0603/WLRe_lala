@@ -70,3 +70,9 @@ health 記錄 `periodic_cleanup display_events_removed=N` 與 `periodic_cleanup 
 - 只在已知封包並已確認拋例外時加入此資訊；連線讀取失敗、一般逾時、正常停止或未有可辨識封包的錯誤不會推測封包 ID。
 - 仍不記錄封包位元組、欄位、聊天、帳密、例外文字與完整路徑，沿用 `%LOCALAPPDATA%\\WLRE_LaLa\\diagnostics` 的每檔 1 MiB／兩份輪替。
 - 配合修正官方 1262 S31-19 任務更新封包（50 組資料加末尾 Boolean）的解析缺漏；測試涵蓋領獎結果接任務更新、截斷資料拒絕、精確錯誤封包定位及隱私防護。**無法由舊 Log 確認先前錯誤必然是 S31-19，也不代表真實伺服器已驗收。**
+
+## 2026-10-19：新 Log 之 S31-15 解析錯誤
+
+新增 `health-23484.log` 於 19:01:16 顯示 `connection_exception type=ProtocolError ... packet_main=31 packet_sub=15 packet_stage=decode`。這確認 PR #25 的安全封包定位已在使用者端生效，也指出一處有別於 S31-19 的問題：官方 Lua `RevExpeditionStart` 不讀取 S31-15 本文，而原解析器 `r.end()` 拒絕非空本文。
+
+本項只放寬 S31-15 官方未解析本文的消耗方式（只保留數字長度，不保存資料本體）；其餘封包維持嚴格欄位讀取／結尾檢查，並加入模擬實際 TCP 接收的回歸案例。此修正不影響 PR #24／#25 的隱私保護，且不代表實服派遣、領獎、重新派遣等端到端結果已通過實機驗收。
