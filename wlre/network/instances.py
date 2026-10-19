@@ -110,10 +110,33 @@ def _main(packet):
         elif kind == 2:
             event = {'type': 'instance_new_info', 'mode': 'main',
                      'kind': kind, 'count': r.u32()}
-        elif kind in (6, 99, 100, 101, 102):
+        elif kind == 3:
+            event = {'type': 'instance_new_info', 'mode': 'main', 'kind': kind,
+                     'index': r.u8(), 'npc_id': r.u16(),
+                     'required': r.u8(), 'kills': r.u8()}
+        elif kind == 4:
+            event = {'type': 'instance_new_info', 'mode': 'main', 'kind': kind,
+                     'index': r.u8(), 'member_count': r.u8(),
+                     'killer': r.unicode8()}
+        elif kind == 5:
+            event = {'type': 'instance_new_info', 'mode': 'main', 'kind': kind,
+                     'npc_id': r.u16()}
+        elif kind == 98:
+            event = {'type': 'instance_new_info', 'mode': 'main', 'kind': kind,
+                     'text_id': r.u16(), 'player_name': r.unicode8(),
+                     'npc_id': r.u16()}
+        elif kind == 100:
+            # DungeonInfo:SetRecordInfo, count * [role:u32,boss:u8,normal:u8].
+            count = r.u8()
+            if count > 16:
+                raise ProtocolError('S85-21-100 結算人數異常')
+            rows = [{'role_id': r.u32(), 'boss': r.u8(), 'normal': r.u8()}
+                    for _ in range(count)]
+            event = {'type': 'instance_new_info', 'mode': 'main',
+                     'kind': kind, 'records': rows}
+        elif kind in (6, 99, 101, 102):
             event = {'type': 'instance_new_info', 'mode': 'main', 'kind': kind}
         else:
-            # Other subtypes have richer unverified payloads.
             return None
     else:
         return None

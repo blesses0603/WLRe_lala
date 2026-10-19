@@ -207,12 +207,28 @@ def apply_instances(state, event):
             data['remaining_minutes'] = event['remaining']
         elif subkind == 2:
             data['member_count'] = event['count']
+        elif subkind == 3:
+            row = data.setdefault('objectives', {}).setdefault('targets', {}).setdefault(event['index'], {})
+            row.update(npc_id=event['npc_id'], required=event['required'],
+                       kills=min(event['kills'], event['required']))
+        elif subkind == 4:
+            row = data.setdefault('objectives', {}).setdefault('targets', {}).get(event['index'])
+            if row is not None:
+                row['kills'] = min(row.get('required', 0), row.get('kills', 0) + 1)
+                row['last_killer'] = event['killer']
+        elif subkind == 5:
+            data['last_target_npc_id'] = event['npc_id']
+        elif subkind == 98:
+            data['challenge_notice'] = {'text_id': event['text_id'],
+                                        'player_name': event['player_name'],
+                                        'npc_id': event['npc_id']}
         elif subkind == 6:
             data['room'] = None
             data['members'] = []
             data['objectives'] = {}
             data['phase'] = 'idle'
         elif subkind == 100:
+            data.setdefault('objectives', {})['records'] = list(event.get('records', []))
             data['completed'] = True
             data['completion_source'] = 'S85-21-100'
             data['phase'] = 'completed'
