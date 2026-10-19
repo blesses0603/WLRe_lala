@@ -3,6 +3,12 @@ import time
 from wlre.network.state_updates import notify_state
 from wlre.network.protocol import decode_outbound_movement
 from wlre.services.battle.party import expire as expire_team
+from wlre.services.instance_creation import expire as expire_instance_create
+from wlre.services.instance_room_flow import expire as expire_instance_room
+from wlre.services.instance_standby import expire as expire_instance_standby
+from wlre.services.instance_start import expire as expire_instance_start
+from wlre.services.instance_entry import expire as expire_instance_entry
+from wlre.services.instance_rewards import tick as tick_instance_rewards, expire as expire_instance_rewards
 
 def advance_services(logic,state,send_command,send_raw,emit,on_state):
     state.assert_writer()
@@ -17,6 +23,22 @@ def advance_services(logic,state,send_command,send_raw,emit,on_state):
         send_command(packet)
     if before_expedition != (state.expedition['status'], state.expedition['pending'], state.expedition['enabled']) and on_state:
         notify_state(on_state,state)
+    if expire_instance_create(state) and on_state:
+        notify_state(on_state,state)
+    if expire_instance_room(state) and on_state:
+        notify_state(on_state,state)
+    if expire_instance_standby(state) and on_state:
+        notify_state(on_state,state)
+    if expire_instance_start(state) and on_state:
+        notify_state(on_state,state)
+    if expire_instance_entry(state) and on_state:
+        notify_state(on_state,state)
+    if expire_instance_rewards(state) and on_state:
+        notify_state(on_state,state)
+    for packet in tick_instance_rewards(state):
+        send_command(packet)
+        if on_state:
+            notify_state(on_state,state)
     before_craft=(state.crafting['status'],state.crafting['pending'],state.crafting['revision'],state.crafting['auto_continue'],repr(state.crafting.get('local_plan')))
     for packet in logic.crafting.tick(state,time.monotonic()):send_command(packet)
     if before_craft!=(state.crafting['status'],state.crafting['pending'],state.crafting['revision'],state.crafting['auto_continue'],repr(state.crafting.get('local_plan'))) and on_state:notify_state(on_state,state)

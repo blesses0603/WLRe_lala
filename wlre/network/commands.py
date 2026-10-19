@@ -2,6 +2,17 @@
 from wlre.services.coordination import command_reason
 import time
 from wlre.network.wire import ProtocolError
+from wlre.network.instances import list_request
+from wlre.services.instance_creation import create as create_instance
+from wlre.services.instance_room_flow import join as join_instance, leave as leave_instance
+from wlre.services.instance_standby import set_standby as coop_standby
+from wlre.services.instance_start import start as start_instance
+from wlre.services.instance_entry import enter as enter_instance
+from wlre.services.instance_rewards import (
+    set_auto as instance_reward_auto,
+    claim as instance_reward_claim,
+    cancel as instance_reward_cancel,
+)
 from wlre.services.battle.party import team_command, own_team
 from wlre.services.battle.attribute_points import allocation as build_allocation, begin as begin_allocation
 from wlre.services.battle.companions import command as companion_command
@@ -31,6 +42,30 @@ def dispatch(logic,command,state):
     reason=command_reason(state,command,maintenance_pending=bool(logic.maintenance.pending),
                           maintenance_uncertain=logic.maintenance.uncertain)
     if reason:raise ProtocolError(reason)
+    if kind == 'instance_create':
+        return create_instance(state, command)
+    if kind == 'instance_join':
+        return join_instance(state, command)
+    if kind == 'instance_leave':
+        return leave_instance(state, command)
+    if kind == 'instance_coop_standby':
+        return coop_standby(state, command)
+    if kind == 'instance_start':
+        return start_instance(state, command)
+    if kind == 'instance_enter':
+        return enter_instance(state, command)
+    if kind == 'instance_auto_reward':
+        return instance_reward_auto(state, command)
+    if kind == 'instance_reward_claim':
+        return instance_reward_claim(state, command)
+    if kind == 'instance_reward_cancel':
+        return instance_reward_cancel(state, command)
+    if kind == 'instance_refresh':
+        if state.phase != 'world_ready' or not state.player.get('role_id'):
+            raise ProtocolError('請先完成角色登入才能查詢副本房間')
+        if state.battle.get('active') or state.event_flow.get('blocked'):
+            raise ProtocolError('戰鬥或事件處理中不可查詢副本房間')
+        return [list_request(command.get('mode'))]
     if kind == 'allocate_points':
         if state.phase != 'world_ready' or not state.player.get('role_id'):
             raise ProtocolError('角色尚未完成登入同步')

@@ -21,6 +21,7 @@ from wlre.services.items.field_supply import FieldSupply
 from wlre.services.items.post_battle_maintenance import PostBattleMaintenance
 from wlre.services.social.chat import sent_event
 from wlre.network.protocol import login, select_role, decode
+from wlre.network.instances import member_request
 from wlre.network.command_envelope import validate_command, rejected_command_type
 from wlre.network.outbound_observations import observed_outbound
 from wlre.core.state import State
@@ -107,6 +108,8 @@ class SessionLogic:
         self.post_battle_due = None
         self.battle_exit_key = None
         self.announced_war_style = None
+        self.last_main_roster_room = None
+        self.last_coop_roster_refresh = (None, float('-inf'))
 
     def receive(self, event, state):
         state.assert_writer()
@@ -124,6 +127,26 @@ class SessionLogic:
                 self.portal_travel.cancel(state,'隊員跟隨隊長')
         self.movement.observe(event,state)
         self.portal_travel.observe(event,state,self.movement)
+        # Original Dungeon.SetPlayerDungeonInfo immediately asks C85-4 for
+        # authoritative roster after S85-5 kind 1; once per joined room.
+        if kind == 'instance_phase' and event.get('mode') == 'main':
+            if event.get('kind') in (2, 4):
+                self.last_main_roster_room = None
+            elif (event.get('kind') == 1 and self.world_acknowledged
+                  and event.get('room_id') != self.last_main_roster_room):
+                self.last_main_roster_room = event['room_id']
+                outgoing.append(member_request('main', event['room_id']))
+        # Original S186-6 asks client to request C186-8 for its own room.
+        if kind == 'instance_member_refresh_request' and self.world_acknowledged:
+            room = state.instances['coop'].get('room') or {}
+            rid = event.get('room_id')
+            if rid == room.get('room_id') and rid:
+                moment = time.monotonic()
+                old_room, old_time = self.last_coop_roster_refresh
+                if rid != old_room or moment - old_time >= 1:
+                    outgoing.append(member_request('coop', rid))
+                    self.last_coop_roster_refresh = (rid, moment)
+
         if (self.world_acknowledged and kind == "position_snapshot"
                 and event["role_id"] == state.player.get("role_id")):
             # Stage.ReceiveChangeMap / Role.OnPlayerAppear. Own packets only.
@@ -158,8 +181,28 @@ class SessionLogic:
             # FightOver waits EndTime=2.5, then SendServerEvent calls C20-6 00.
             # Cooperative event fights have an additional wait-UI/count branch.
             if state.battle.get('war_style')==16:
-                state.battle['post_event']={'status':'cooperative_wait',
-                    'reason':'協力事件戰鬥的等待／場次分支尚未實作，未自動回覆'}
+                # Official FightManager: 5-second UICooperateWait before the
+                # next round when multiple co-op fights remain. Do not infer
+                # victory from winner_side alone; same C20-6 event applies
+                # to both winning and losing cases, delay only when count>1.
+                count=state.instances['coop'].get('fight_count')
+                if (type(count) is int and count>1
+                        and state.battle.get('winner_side') in (1,2)):
+                    delay=5.0
+                elif type(count) is int and count>=1:
+                    delay=2.5
+                else:
+                    delay=None
+                if delay is None:
+                    state.battle['post_event']={'status':'cooperative_wait',
+                        'reason':'協力戰鬥場次尚未由 S186-15 同步，暫停自動接續'}
+                else:
+                    self.post_battle_due=time.monotonic()+delay
+                    state.battle['post_event']={'status':'cooperative_wait',
+                        'reason':'依 1262 官方協力場次等待，接續事件一次',
+                        'delay_seconds':delay}
+                    state.event_flow={**state.event_flow,'blocked':True,
+                        'last_source':'協力戰後安全等待，準備 C20-6 00'}
             else:
                 self.post_battle_due=time.monotonic()+2.5
                 state.battle['post_event']={'status':'exit_delay','source':kind,'delay_seconds':2.5}
@@ -208,6 +251,18 @@ class SessionLogic:
     def disconnect(self,state):
         """Freeze uncertain bag requests and disable intent before final publication."""
         state.assert_writer()
+        from wlre.services.instance_creation import disconnect as instance_disconnect
+        instance_disconnect(state)
+        from wlre.services.instance_room_flow import disconnect as room_disconnect
+        room_disconnect(state)
+        from wlre.services.instance_standby import disconnect as standby_disconnect
+        standby_disconnect(state)
+        from wlre.services.instance_start import disconnect as start_disconnect
+        start_disconnect(state)
+        from wlre.services.instance_entry import disconnect as entry_disconnect
+        entry_disconnect(state)
+        from wlre.services.instance_rewards import disconnect as reward_disconnect
+        reward_disconnect(state)
         if any(state.inventory.get('holds',{}).values()):
             state.inventory['reliable']=False
             for owner in list(state.inventory['holds']):reservations.uncertain(state.inventory,owner)
@@ -291,7 +346,7 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
                     try:
                         for packet in logic.command(command, state):
                             _send_command_packet(connection,packet,profile['tx_xor'],state,emit,on_state)
-                        if command.get('type') in ('team','start_alchemy','stop_alchemy','reset_efficiency','craft','start_expedition','stop_expedition','allocate_points') and on_state:notify_state(on_state,state)
+                        if command.get('type') in ('team','start_alchemy','stop_alchemy','reset_efficiency','craft','start_expedition','stop_expedition','allocate_points','instance_create','instance_join','instance_leave','instance_coop_standby','instance_start','instance_enter','instance_auto_reward','instance_reward_claim','instance_reward_cancel') and on_state:notify_state(on_state,state)
                         if command.get('type') in ('start_auto_battle','stop_auto_battle','set_party_guard'):
                             emit({'type':'auto_battle_status',**state.auto_battle})
                             if on_state:notify_state(on_state,state)
@@ -316,8 +371,8 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
                     closed_reason = 'server_closed'
                     break
                 for packet in parser.feed(raw):
-                    # Record only numerical packet IDs and the stage of processing.
-                    # Do not record packet bytes, decoded values, exception text or credentials.
+                    # Only retain numeric packet IDs and handling stage, no credentials
+                    # or raw payload. This preserves main's PR #25/#26 diagnostics.
                     stage = 'decode'
                     try:
                         event = decode(packet,state.player.get('role_id'))

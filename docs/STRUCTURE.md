@@ -1,6 +1,6 @@
 # 目錄與模組索引
 
-對照基礎：目前 GitHub main 的目錄與模組，應用版本 0.5.0。本索引描述目前目錄；完整的啟動、資料流、狀態所有權、帳號保存與改善順序，請先閱讀 [整體架構](ARCHITECTURE.md)。
+對照基礎：目前 GitHub main 的目錄與模組，原始架構基準版本 0.5.0，目前副本／協力開發版為 0.5.1，下次預定正式 Release 為 0.6.0。本索引描述目前目錄；完整的啟動、資料流、狀態所有權、帳號保存與改善順序，請先閱讀 [整體架構](ARCHITECTURE.md)。
 
 ## 根目錄
 
@@ -16,7 +16,7 @@
 | `tests/` | unittest 測試。 |
 | `docs/` | 架構、介面、協定與驗證說明。 |
 | `.github/workflows/test.yml` | main／PR 自動執行 Linux、Windows、macOS 三平台完整單元測試與 GUI 冒煙測試。 |
-| `.github/workflows/desktop-packaging.yml` | 建置相關 PR 自動執行 Windows x64／macOS arm64／Intel x64 原生 Nuitka 驗證，亦可手動觸發。 |
+| `.github/workflows/desktop-packaging.yml` | 只允許使用者在 Actions 手動執行 Windows x64／macOS arm64／Intel x64 原生 Nuitka 驗證；一般 PR／main 不自動觸發。 |
 | `.github/workflows/release-windows.yml` | Windows 與 macOS 共用發版工作流程，檔名仍保留 windows。 |
 
 ## wlre：套件入口

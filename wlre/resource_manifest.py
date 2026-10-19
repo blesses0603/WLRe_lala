@@ -6,7 +6,7 @@ import zipfile
 DATA_SUFFIXES={'.json','.zip','.png','.ico'}
 REQUIRED_RESOURCES=(
     'alchemy_catalog.json','combat_catalog.json','crafting_catalog.json','default_profile.json',
-    'emoji_catalog.json','emoji_images.zip','enums.json','expedition_catalog.json','graph_origins.json',
+    'emoji_catalog.json','emoji_images.zip','enums.json','expedition_catalog.json','instance_catalog_1262.json','graph_origins.json',
     'item_icon_coverage.json','item_icon_map.json','item_icons.zip','item_stackable.json',
     'map_names.json','navigation_data.zip','normal_attack_data.json','portals.json',
     'server_list.json','smallmaps.zip','stage_coordinates.json',

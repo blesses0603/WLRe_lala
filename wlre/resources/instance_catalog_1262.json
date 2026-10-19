@@ -1,0 +1,1600 @@
+{
+  "version": 1262,
+  "verified_source": true,
+  "source": "User-provided WLRE_1262_Instance_Bundles.zip; 1262 DungeonData_C, ScenesData_C, CooperateEventData_C, TextData_C",
+  "source_asset_sha256": {
+    "DungeonData_C": "4743f7703403c556f635a630775d318052306f879d3ee3dbb29626ca9b5f56b9",
+    "ScenesData_C": "c44a6775ead03d5c7f44902217589bc22dfdef05589d9db609640fe8c65a9725",
+    "CooperateEventData_C": "4adb067093d3961436065c1244bdf621e870ce0e320fbe4153f031ae6a37406e",
+    "TextData_C": "5b2d0a7e4e5048a629630e490c8c1e1bb1498f840b754087d59de28951d9aaf0"
+  },
+  "counts": {
+    "dungeon_records": 30,
+    "scenes": 1336,
+    "cooperative_events": 2,
+    "traditional_chinese_texts": 39901,
+    "unique_dungeon_ids": 24
+  },
+  "note": "Award entries are [1-based slot,kind,id,value]. Zero entries are omitted. Difficulty variant values kept as raw official paraKind. Display names are static catalog records, not live server availability.",
+  "records": [
+    {
+      "id": 1,
+      "kind": 1,
+      "variant": 0,
+      "map_id": 30012,
+      "name": "水果劇團",
+      "min_level": 10,
+      "min_members": 2,
+      "max_members": 6,
+      "time_minutes": 15,
+      "room_count": 10,
+      "is_open": true,
+      "npc_id": 41000,
+      "awards": [
+        [
+          1,
+          10,
+          63002,
+          5
+        ],
+        [
+          2,
+          10,
+          57270,
+          1
+        ]
+      ]
+    },
+    {
+      "id": 2,
+      "kind": 1,
+      "variant": 0,
+      "map_id": 30016,
+      "name": "十二生肖的考驗",
+      "min_level": 20,
+      "min_members": 2,
+      "max_members": 6,
+      "time_minutes": 15,
+      "room_count": 10,
+      "is_open": true,
+      "npc_id": 41000,
+      "awards": [
+        [
+          1,
+          10,
+          63002,
+          10
+        ],
+        [
+          2,
+          10,
+          32177,
+          5
+        ],
+        [
+          3,
+          10,
+          34330,
+          1
+        ],
+        [
+          4,
+          10,
+          34331,
+          1
+        ],
+        [
+          5,
+          10,
+          34474,
+          1
+        ]
+      ]
+    },
+    {
+      "id": 3,
+      "kind": 1,
+      "variant": 0,
+      "map_id": 30000,
+      "name": "史萊姆居地",
+      "min_level": 30,
+      "min_members": 2,
+      "max_members": 8,
+      "time_minutes": 15,
+      "room_count": 10,
+      "is_open": true,
+      "npc_id": 41000,
+      "awards": [
+        [
+          1,
+          10,
+          63002,
+          15
+        ],
+        [
+          2,
+          10,
+          34080,
+          1
+        ],
+        [
+          3,
+          10,
+          34140,
+          1
+        ],
+        [
+          4,
+          10,
+          35135,
+          1
+        ],
+        [
+          5,
+          10,
+          35136,
+          1
+        ]
+      ]
+    },
+    {
+      "id": 4,
+      "kind": 1,
+      "variant": 0,
+      "map_id": 30002,
+      "name": "幽靈之地",
+      "min_level": 40,
+      "min_members": 2,
+      "max_members": 10,
+      "time_minutes": 30,
+      "room_count": 10,
+      "is_open": true,
+      "npc_id": 41000,
+      "awards": [
+        [
+          1,
+          10,
+          63002,
+          20
+        ],
+        [
+          2,
+          10,
+          32177,
+          10
+        ],
+        [
+          3,
+          10,
+          34474,
+          2
+        ],
+        [
+          4,
+          10,
+          34009,
+          1
+        ],
+        [
+          5,
+          10,
+          34010,
+          1
+        ]
+      ]
+    },
+    {
+      "id": 5,
+      "kind": 1,
+      "variant": 0,
+      "map_id": 30018,
+      "name": "馬利大進擊",
+      "min_level": 40,
+      "min_members": 2,
+      "max_members": 8,
+      "time_minutes": 15,
+      "room_count": 10,
+      "is_open": true,
+      "npc_id": 40273,
+      "awards": [
+        [
+          1,
+          10,
+          63002,
+          20
+        ],
+        [
+          2,
+          10,
+          34080,
+          1
+        ],
+        [
+          3,
+          10,
+          32311,
+          1
+        ],
+        [
+          4,
+          10,
+          34085,
+          1
+        ],
+        [
+          5,
+          10,
+          32177,
+          10
+        ],
+        [
+          6,
+          10,
+          34140,
+          1
+        ]
+      ]
+    },
+    {
+      "id": 6,
+      "kind": 1,
+      "variant": 0,
+      "map_id": 30004,
+      "name": "黑暗祭司藏身地",
+      "min_level": 50,
+      "min_members": 2,
+      "max_members": 12,
+      "time_minutes": 30,
+      "room_count": 10,
+      "is_open": true,
+      "npc_id": 41000,
+      "awards": [
+        [
+          1,
+          10,
+          63002,
+          25
+        ],
+        [
+          2,
+          10,
+          34080,
+          2
+        ],
+        [
+          3,
+          10,
+          32311,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 7,
+      "kind": 1,
+      "variant": 1,
+      "map_id": 30019,
+      "name": "埃及祭司的陰謀",
+      "min_level": 50,
+      "min_members": 6,
+      "max_members": 12,
+      "time_minutes": 25,
+      "room_count": 10,
+      "is_open": true,
+      "npc_id": 12076,
+      "awards": [
+        [
+          1,
+          10,
+          56734,
+          1
+        ],
+        [
+          2,
+          10,
+          12506,
+          1
+        ],
+        [
+          3,
+          10,
+          11120,
+          1
+        ],
+        [
+          4,
+          10,
+          12507,
+          1
+        ],
+        [
+          5,
+          10,
+          10074,
+          1
+        ]
+      ]
+    },
+    {
+      "id": 7,
+      "kind": 1,
+      "variant": 2,
+      "map_id": 30048,
+      "name": "埃及祭司的陰謀",
+      "min_level": 50,
+      "min_members": 6,
+      "max_members": 12,
+      "time_minutes": 25,
+      "room_count": 10,
+      "is_open": true,
+      "npc_id": 12076,
+      "awards": [
+        [
+          1,
+          10,
+          35007,
+          1
+        ],
+        [
+          2,
+          10,
+          56935,
+          1
+        ],
+        [
+          3,
+          10,
+          34978,
+          1
+        ],
+        [
+          4,
+          10,
+          34246,
+          1
+        ],
+        [
+          5,
+          10,
+          12506,
+          1
+        ],
+        [
+          6,
+          10,
+          11120,
+          1
+        ],
+        [
+          7,
+          10,
+          12507,
+          1
+        ],
+        [
+          8,
+          10,
+          10074,
+          1
+        ]
+      ]
+    },
+    {
+      "id": 8,
+      "kind": 1,
+      "variant": 0,
+      "map_id": 30015,
+      "name": "海底全動員",
+      "min_level": 50,
+      "min_members": 2,
+      "max_members": 12,
+      "time_minutes": 15,
+      "room_count": 10,
+      "is_open": true,
+      "npc_id": 40193,
+      "awards": [
+        [
+          1,
+          10,
+          63002,
+          25
+        ],
+        [
+          2,
+          10,
+          32177,
+          15
+        ],
+        [
+          3,
+          10,
+          22219,
+          1
+        ],
+        [
+          4,
+          10,
+          25200,
+          1
+        ],
+        [
+          5,
+          10,
+          33034,
+          1
+        ],
+        [
+          6,
+          10,
+          34026,
+          1
+        ],
+        [
+          7,
+          10,
+          34009,
+          1
+        ],
+        [
+          8,
+          10,
+          34010,
+          1
+        ],
+        [
+          9,
+          10,
+          34011,
+          1
+        ],
+        [
+          10,
+          10,
+          34012,
+          1
+        ]
+      ]
+    },
+    {
+      "id": 9,
+      "kind": 1,
+      "variant": 0,
+      "map_id": 30008,
+      "name": "亞歷山大帝",
+      "min_level": 60,
+      "min_members": 2,
+      "max_members": 8,
+      "time_minutes": 20,
+      "room_count": 10,
+      "is_open": true,
+      "npc_id": 40071,
+      "awards": [
+        [
+          1,
+          10,
+          63002,
+          30
+        ],
+        [
+          2,
+          10,
+          34080,
+          2
+        ],
+        [
+          3,
+          10,
+          25596,
+          1
+        ],
+        [
+          4,
+          10,
+          25597,
+          1
+        ]
+      ]
+    },
+    {
+      "id": 10,
+      "kind": 1,
+      "variant": 0,
+      "map_id": 30011,
+      "name": "侏儸紀牧場",
+      "min_level": 60,
+      "min_members": 2,
+      "max_members": 12,
+      "time_minutes": 15,
+      "room_count": 10,
+      "is_open": true,
+      "npc_id": 40095,
+      "awards": [
+        [
+          1,
+          10,
+          63002,
+          30
+        ],
+        [
+          2,
+          10,
+          34140,
+          1
+        ],
+        [
+          3,
+          10,
+          25218,
+          1
+        ],
+        [
+          4,
+          10,
+          34139,
+          1
+        ],
+        [
+          5,
+          10,
+          34090,
+          1
+        ],
+        [
+          6,
+          10,
+          34138,
+          1
+        ],
+        [
+          7,
+          10,
+          34091,
+          1
+        ],
+        [
+          8,
+          10,
+          32177,
+          15
+        ],
+        [
+          9,
+          10,
+          34138,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 11,
+      "kind": 1,
+      "variant": 0,
+      "map_id": 30006,
+      "name": "討伐黃巾賊",
+      "min_level": 70,
+      "min_members": 2,
+      "max_members": 15,
+      "time_minutes": 30,
+      "room_count": 10,
+      "is_open": true,
+      "npc_id": 41000,
+      "awards": [
+        [
+          1,
+          10,
+          63002,
+          35
+        ],
+        [
+          2,
+          10,
+          34147,
+          1
+        ],
+        [
+          3,
+          10,
+          34089,
+          1
+        ],
+        [
+          4,
+          10,
+          34139,
+          1
+        ],
+        [
+          5,
+          10,
+          34091,
+          2
+        ],
+        [
+          6,
+          10,
+          34091,
+          1
+        ],
+        [
+          7,
+          10,
+          34090,
+          1
+        ],
+        [
+          8,
+          10,
+          34138,
+          1
+        ],
+        [
+          9,
+          10,
+          34011,
+          1
+        ]
+      ]
+    },
+    {
+      "id": 12,
+      "kind": 1,
+      "variant": 0,
+      "map_id": 30009,
+      "name": "十八銅人陣",
+      "min_level": 80,
+      "min_members": 2,
+      "max_members": 10,
+      "time_minutes": 10,
+      "room_count": 25,
+      "is_open": true,
+      "npc_id": 19222,
+      "awards": [
+        [
+          1,
+          10,
+          63002,
+          40
+        ],
+        [
+          2,
+          10,
+          34124,
+          1
+        ],
+        [
+          3,
+          10,
+          32312,
+          3
+        ],
+        [
+          4,
+          10,
+          25598,
+          1
+        ]
+      ]
+    },
+    {
+      "id": 13,
+      "kind": 1,
+      "variant": 0,
+      "map_id": 30020,
+      "name": "勇闖火燄山",
+      "min_level": 80,
+      "min_members": 2,
+      "max_members": 12,
+      "time_minutes": 20,
+      "room_count": 25,
+      "is_open": true,
+      "npc_id": 40313,
+      "awards": [
+        [
+          1,
+          10,
+          63002,
+          40
+        ],
+        [
+          2,
+          1,
+          1,
+          10000
+        ],
+        [
+          3,
+          10,
+          15064,
+          1
+        ],
+        [
+          4,
+          10,
+          19053,
+          1
+        ],
+        [
+          5,
+          10,
+          32329,
+          3
+        ],
+        [
+          6,
+          10,
+          34124,
+          1
+        ],
+        [
+          7,
+          10,
+          34131,
+          1
+        ]
+      ]
+    },
+    {
+      "id": 14,
+      "kind": 1,
+      "variant": 0,
+      "map_id": 30014,
+      "name": "拯救藍星人",
+      "min_level": 90,
+      "min_members": 2,
+      "max_members": 12,
+      "time_minutes": 15,
+      "room_count": 30,
+      "is_open": true,
+      "npc_id": 14173,
+      "awards": [
+        [
+          1,
+          10,
+          63002,
+          45
+        ],
+        [
+          2,
+          1,
+          1,
+          15000
+        ],
+        [
+          3,
+          10,
+          34080,
+          3
+        ],
+        [
+          4,
+          10,
+          34131,
+          1
+        ],
+        [
+          5,
+          10,
+          34147,
+          1
+        ],
+        [
+          6,
+          10,
+          23153,
+          1
+        ],
+        [
+          7,
+          10,
+          32177,
+          20
+        ]
+      ]
+    },
+    {
+      "id": 15,
+      "kind": 1,
+      "variant": 0,
+      "map_id": 30007,
+      "name": "伊賀與甲賀",
+      "min_level": 90,
+      "min_members": 2,
+      "max_members": 17,
+      "time_minutes": 40,
+      "room_count": 30,
+      "is_open": true,
+      "npc_id": 19034,
+      "awards": [
+        [
+          1,
+          10,
+          63002,
+          45
+        ],
+        [
+          2,
+          10,
+          33051,
+          1
+        ],
+        [
+          3,
+          10,
+          34131,
+          1
+        ],
+        [
+          4,
+          10,
+          34147,
+          1
+        ],
+        [
+          5,
+          10,
+          34089,
+          1
+        ],
+        [
+          6,
+          10,
+          10073,
+          1
+        ]
+      ]
+    },
+    {
+      "id": 16,
+      "kind": 1,
+      "variant": 1,
+      "map_id": 30010,
+      "name": "本能寺之變",
+      "min_level": 90,
+      "min_members": 6,
+      "max_members": 15,
+      "time_minutes": 35,
+      "room_count": 25,
+      "is_open": true,
+      "npc_id": 41000,
+      "awards": [
+        [
+          1,
+          10,
+          63002,
+          45
+        ],
+        [
+          2,
+          10,
+          11115,
+          1
+        ],
+        [
+          3,
+          10,
+          11116,
+          1
+        ],
+        [
+          4,
+          10,
+          34139,
+          1
+        ],
+        [
+          5,
+          10,
+          34089,
+          1
+        ],
+        [
+          6,
+          10,
+          34085,
+          1
+        ]
+      ]
+    },
+    {
+      "id": 16,
+      "kind": 1,
+      "variant": 2,
+      "map_id": 30042,
+      "name": "本能寺之變",
+      "min_level": 90,
+      "min_members": 6,
+      "max_members": 15,
+      "time_minutes": 35,
+      "room_count": 25,
+      "is_open": true,
+      "npc_id": 41000,
+      "awards": [
+        [
+          1,
+          10,
+          63002,
+          60
+        ],
+        [
+          2,
+          10,
+          11115,
+          1
+        ],
+        [
+          3,
+          10,
+          11116,
+          1
+        ],
+        [
+          4,
+          10,
+          34139,
+          1
+        ],
+        [
+          5,
+          10,
+          34089,
+          1
+        ],
+        [
+          6,
+          10,
+          34143,
+          1
+        ]
+      ]
+    },
+    {
+      "id": 17,
+      "kind": 1,
+      "variant": 1,
+      "map_id": 30013,
+      "name": "里見八勇者",
+      "min_level": 100,
+      "min_members": 6,
+      "max_members": 12,
+      "time_minutes": 25,
+      "room_count": 25,
+      "is_open": true,
+      "npc_id": 41000,
+      "awards": [
+        [
+          1,
+          10,
+          63002,
+          50
+        ],
+        [
+          2,
+          10,
+          63066,
+          1
+        ],
+        [
+          3,
+          10,
+          63067,
+          1
+        ],
+        [
+          4,
+          10,
+          34131,
+          1
+        ],
+        [
+          5,
+          10,
+          34139,
+          1
+        ],
+        [
+          6,
+          10,
+          34088,
+          1
+        ]
+      ]
+    },
+    {
+      "id": 17,
+      "kind": 1,
+      "variant": 2,
+      "map_id": 30043,
+      "name": "里見八勇者",
+      "min_level": 100,
+      "min_members": 6,
+      "max_members": 12,
+      "time_minutes": 25,
+      "room_count": 25,
+      "is_open": true,
+      "npc_id": 41000,
+      "awards": [
+        [
+          1,
+          10,
+          63002,
+          65
+        ],
+        [
+          2,
+          10,
+          63066,
+          5
+        ],
+        [
+          3,
+          10,
+          63067,
+          5
+        ],
+        [
+          4,
+          10,
+          34143,
+          1
+        ],
+        [
+          5,
+          10,
+          34139,
+          1
+        ]
+      ]
+    },
+    {
+      "id": 18,
+      "kind": 1,
+      "variant": 1,
+      "map_id": 30021,
+      "name": "大梵天王的挑戰",
+      "min_level": 110,
+      "min_members": 6,
+      "max_members": 12,
+      "time_minutes": 40,
+      "room_count": 25,
+      "is_open": true,
+      "npc_id": 41000,
+      "awards": [
+        [
+          1,
+          10,
+          63002,
+          55
+        ],
+        [
+          2,
+          1,
+          1,
+          15000
+        ],
+        [
+          3,
+          10,
+          34139,
+          1
+        ],
+        [
+          4,
+          10,
+          34088,
+          1
+        ],
+        [
+          5,
+          10,
+          34185,
+          2
+        ],
+        [
+          6,
+          10,
+          34438,
+          2
+        ],
+        [
+          7,
+          10,
+          34138,
+          2
+        ],
+        [
+          8,
+          10,
+          34012,
+          1
+        ]
+      ]
+    },
+    {
+      "id": 18,
+      "kind": 1,
+      "variant": 2,
+      "map_id": 30045,
+      "name": "大梵天王的挑戰",
+      "min_level": 110,
+      "min_members": 6,
+      "max_members": 12,
+      "time_minutes": 40,
+      "room_count": 25,
+      "is_open": true,
+      "npc_id": 41000,
+      "awards": [
+        [
+          1,
+          10,
+          63002,
+          70
+        ],
+        [
+          2,
+          1,
+          1,
+          15000
+        ],
+        [
+          3,
+          10,
+          34139,
+          1
+        ],
+        [
+          4,
+          10,
+          34143,
+          2
+        ],
+        [
+          5,
+          10,
+          35102,
+          2
+        ],
+        [
+          6,
+          10,
+          34091,
+          1
+        ],
+        [
+          7,
+          10,
+          34090,
+          1
+        ],
+        [
+          8,
+          10,
+          34138,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 19,
+      "kind": 1,
+      "variant": 1,
+      "map_id": 30025,
+      "name": "封印空間",
+      "min_level": 120,
+      "min_members": 8,
+      "max_members": 16,
+      "time_minutes": 40,
+      "room_count": 25,
+      "is_open": true,
+      "npc_id": 41004,
+      "awards": [
+        [
+          1,
+          10,
+          63002,
+          60
+        ],
+        [
+          2,
+          1,
+          1,
+          20000
+        ],
+        [
+          3,
+          10,
+          19056,
+          1
+        ],
+        [
+          4,
+          10,
+          11152,
+          1
+        ],
+        [
+          5,
+          10,
+          34185,
+          2
+        ],
+        [
+          6,
+          10,
+          32329,
+          4
+        ],
+        [
+          7,
+          10,
+          34139,
+          1
+        ],
+        [
+          8,
+          10,
+          34080,
+          4
+        ]
+      ]
+    },
+    {
+      "id": 19,
+      "kind": 1,
+      "variant": 2,
+      "map_id": 30046,
+      "name": "封印空間",
+      "min_level": 120,
+      "min_members": 8,
+      "max_members": 16,
+      "time_minutes": 40,
+      "room_count": 25,
+      "is_open": true,
+      "npc_id": 41004,
+      "awards": [
+        [
+          1,
+          10,
+          63002,
+          75
+        ],
+        [
+          2,
+          1,
+          1,
+          20000
+        ],
+        [
+          3,
+          10,
+          19056,
+          1
+        ],
+        [
+          4,
+          10,
+          11152,
+          1
+        ],
+        [
+          5,
+          10,
+          34143,
+          2
+        ],
+        [
+          6,
+          10,
+          32329,
+          6
+        ],
+        [
+          7,
+          10,
+          34139,
+          1
+        ]
+      ]
+    },
+    {
+      "id": 20,
+      "kind": 1,
+      "variant": 1,
+      "map_id": 30039,
+      "name": "隱密的兵器庫",
+      "min_level": 130,
+      "min_members": 6,
+      "max_members": 12,
+      "time_minutes": 40,
+      "room_count": 25,
+      "is_open": true,
+      "npc_id": 30356,
+      "awards": [
+        [
+          1,
+          10,
+          63002,
+          65
+        ],
+        [
+          2,
+          1,
+          1,
+          50000
+        ],
+        [
+          3,
+          10,
+          57060,
+          3
+        ],
+        [
+          4,
+          10,
+          25652,
+          1
+        ],
+        [
+          5,
+          10,
+          25657,
+          1
+        ],
+        [
+          6,
+          10,
+          25651,
+          1
+        ],
+        [
+          7,
+          10,
+          25656,
+          1
+        ],
+        [
+          8,
+          10,
+          25650,
+          1
+        ],
+        [
+          9,
+          10,
+          25655,
+          1
+        ],
+        [
+          10,
+          10,
+          25649,
+          1
+        ],
+        [
+          11,
+          10,
+          25654,
+          1
+        ],
+        [
+          12,
+          10,
+          25648,
+          1
+        ],
+        [
+          13,
+          10,
+          25653,
+          1
+        ],
+        [
+          14,
+          10,
+          32329,
+          6
+        ],
+        [
+          15,
+          10,
+          32311,
+          8
+        ]
+      ]
+    },
+    {
+      "id": 20,
+      "kind": 1,
+      "variant": 2,
+      "map_id": 30047,
+      "name": "隱密的兵器庫",
+      "min_level": 130,
+      "min_members": 6,
+      "max_members": 12,
+      "time_minutes": 40,
+      "room_count": 25,
+      "is_open": true,
+      "npc_id": 30356,
+      "awards": [
+        [
+          1,
+          10,
+          63002,
+          80
+        ],
+        [
+          2,
+          1,
+          1,
+          50000
+        ],
+        [
+          3,
+          10,
+          57060,
+          3
+        ],
+        [
+          4,
+          10,
+          25652,
+          1
+        ],
+        [
+          5,
+          10,
+          25657,
+          1
+        ],
+        [
+          6,
+          10,
+          25651,
+          1
+        ],
+        [
+          7,
+          10,
+          25656,
+          1
+        ],
+        [
+          8,
+          10,
+          25650,
+          1
+        ],
+        [
+          9,
+          10,
+          25655,
+          1
+        ],
+        [
+          10,
+          10,
+          32329,
+          9
+        ]
+      ]
+    },
+    {
+      "id": 21,
+      "kind": 2,
+      "variant": 1,
+      "map_id": 20001,
+      "name": "協力對戰",
+      "min_level": 10,
+      "min_members": 2,
+      "max_members": 4,
+      "time_minutes": 0,
+      "room_count": 0,
+      "is_open": true,
+      "npc_id": 0,
+      "awards": [
+        [
+          1,
+          10,
+          56931,
+          1
+        ],
+        [
+          2,
+          10,
+          56932,
+          1
+        ]
+      ]
+    },
+    {
+      "id": 26,
+      "kind": 3,
+      "variant": 1,
+      "map_id": 30040,
+      "name": "深淵領主",
+      "min_level": 0,
+      "min_members": 0,
+      "max_members": 0,
+      "time_minutes": 30,
+      "room_count": 0,
+      "is_open": true,
+      "npc_id": 12076,
+      "awards": []
+    },
+    {
+      "id": 27,
+      "kind": 2,
+      "variant": 2,
+      "map_id": 20000,
+      "name": "黑薔薇之影",
+      "min_level": 50,
+      "min_members": 2,
+      "max_members": 4,
+      "time_minutes": 0,
+      "room_count": 0,
+      "is_open": true,
+      "npc_id": 1,
+      "awards": [
+        [
+          1,
+          10,
+          57065,
+          1
+        ]
+      ],
+      "cooperative_event": {
+        "id": 1,
+        "fight_count": 3,
+        "follower_ids": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "name": "黑薔薇之影",
+        "follower_reward": {
+          "kind": 0,
+          "id": 0,
+          "value": 0
+        }
+      }
+    },
+    {
+      "id": 28,
+      "kind": 2,
+      "variant": 2,
+      "map_id": 20000,
+      "name": "萬聖鬼武來襲",
+      "min_level": 50,
+      "min_members": 2,
+      "max_members": 4,
+      "time_minutes": 0,
+      "room_count": 0,
+      "is_open": true,
+      "npc_id": 2,
+      "awards": [
+        [
+          1,
+          10,
+          57892,
+          1
+        ]
+      ],
+      "cooperative_event": {
+        "id": 2,
+        "fight_count": 3,
+        "follower_ids": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "name": "萬聖鬼武來襲",
+        "follower_reward": {
+          "kind": 0,
+          "id": 0,
+          "value": 0
+        }
+      }
+    }
+  ]
+}
