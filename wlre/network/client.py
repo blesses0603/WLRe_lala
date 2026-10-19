@@ -21,6 +21,7 @@ from wlre.services.items.field_supply import FieldSupply
 from wlre.services.items.post_battle_maintenance import PostBattleMaintenance
 from wlre.services.social.chat import sent_event
 from wlre.network.protocol import login, select_role, decode
+from wlre.network.instances import member_request
 from wlre.network.command_envelope import validate_command, rejected_command_type
 from wlre.network.outbound_observations import observed_outbound
 from wlre.core.state import State
@@ -107,6 +108,8 @@ class SessionLogic:
         self.post_battle_due = None
         self.battle_exit_key = None
         self.announced_war_style = None
+        self.last_main_roster_room = None
+        self.last_coop_roster_refresh = (None, float('-inf'))
 
     def receive(self, event, state):
         state.assert_writer()
@@ -124,6 +127,26 @@ class SessionLogic:
                 self.portal_travel.cancel(state,'隊員跟隨隊長')
         self.movement.observe(event,state)
         self.portal_travel.observe(event,state,self.movement)
+        # Original Dungeon.SetPlayerDungeonInfo immediately asks C85-4 for
+        # authoritative roster after S85-5 kind 1; once per joined room.
+        if kind == 'instance_phase' and event.get('mode') == 'main':
+            if event.get('kind') in (2, 4):
+                self.last_main_roster_room = None
+            elif (event.get('kind') == 1 and self.world_acknowledged
+                  and event.get('room_id') != self.last_main_roster_room):
+                self.last_main_roster_room = event['room_id']
+                outgoing.append(member_request('main', event['room_id']))
+        # Original S186-6 asks client to request C186-8 for its own room.
+        if kind == 'instance_member_refresh_request' and self.world_acknowledged:
+            room = state.instances['coop'].get('room') or {}
+            rid = event.get('room_id')
+            if rid == room.get('room_id') and rid:
+                moment = time.monotonic()
+                old_room, old_time = self.last_coop_roster_refresh
+                if rid != old_room or moment - old_time >= 1:
+                    outgoing.append(member_request('coop', rid))
+                    self.last_coop_roster_refresh = (rid, moment)
+
         if (self.world_acknowledged and kind == "position_snapshot"
                 and event["role_id"] == state.player.get("role_id")):
             # Stage.ReceiveChangeMap / Role.OnPlayerAppear. Own packets only.

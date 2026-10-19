@@ -183,6 +183,23 @@ class InstanceJoinLeave(unittest.TestCase):
         self.assertIsNone(other.instances['main']['join_pending'])
         self.assertTrue(other.instances['main']['join_uncertain'])
 
+    def test_official_member_refresh_requests_do_not_send_for_other_room(self):
+        state, logic = session()
+        state.apply(decode(Packet(85, 5, Writer().u8(1).u8(1)
+                                .u16(30012).u8(2).u32(1111).build())))
+        event = decode(Packet(85, 5, Writer().u8(1).u8(1)
+                              .u16(30012).u8(2).u32(1111).build()))
+        self.assertEqual(logic.receive(event, state),
+                         [Packet(85, 4, Writer().u16(30012).build())])
+        self.assertEqual(logic.receive(event, state), [])
+        state.apply(decode(coop_members()))
+        wrong = decode(Packet(186, 6, Writer().u16(999).build()))
+        self.assertEqual(logic.receive(wrong, state), [])
+        correct = decode(Packet(186, 6, Writer().u16(91).build()))
+        self.assertEqual(logic.receive(correct, state),
+                         [Packet(186, 8, Writer().u16(91).build())])
+        self.assertEqual(logic.receive(correct, state), [])
+
     def test_stale_server_list_and_other_activities(self):
         state, logic = session()
         state.apply(decode(main_list()))

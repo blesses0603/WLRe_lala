@@ -127,6 +127,9 @@ def _coop(packet):
                  'created': is_created, 'joined': is_joined,
                  'standby': standby != 0, 'kind': kind, 'npc_id': npc_id,
                  'capacity': capacity, 'members': members}
+    elif sub == 6:
+        event = {'type': 'instance_member_refresh_request', 'mode': 'coop',
+                 'room_id': r.u16()}
     elif sub == 11:
         event = {'type': 'instance_reward_status', 'mode': 'coop',
                  'reward_count': r.u8(), 'win_stage': r.u8(),
