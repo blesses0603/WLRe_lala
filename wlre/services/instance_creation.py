@@ -153,7 +153,7 @@ def expire(state, now=None):
     changed = False
     for data in state.instances.values():
         pending = data.get('create_pending')
-        if pending is not None and now - pending['started'] >= CREATE_TIMEOUT:
+        if pending is not None and now >= pending['started'] + CREATE_TIMEOUT:
             data['create_pending'] = None
             data['create_uncertain'] = True
             data['status'] = '創房逾時且結果不明；已禁止重送，請重新登入同步房間狀態'

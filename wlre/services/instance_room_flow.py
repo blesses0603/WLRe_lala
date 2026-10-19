@@ -190,7 +190,7 @@ def expire(state, now=None):
         for operation, timeout in (('join', JOIN_TIMEOUT), ('leave', LEAVE_TIMEOUT)):
             key = operation + '_pending'
             pending = data.get(key)
-            if pending is not None and now - pending['started'] >= timeout:
+            if pending is not None and now >= pending['started'] + timeout:
                 data[key] = None
                 data[operation + '_uncertain'] = True
                 data['status'] = ('加入' if operation == 'join' else '離開') + (
