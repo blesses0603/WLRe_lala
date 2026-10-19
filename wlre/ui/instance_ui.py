@@ -77,13 +77,17 @@ class InstanceModePage(ttk.Frame):
         self.note = tk.StringVar(value='尚未查詢房間。請登入後手動更新。')
         ttk.Label(self, textvariable=self.note, style='Muted.TLabel', anchor='w').pack(fill='x', pady=(0, 10))
         self.catalog_records = entries_for(self.mode)
-        # Both the official catalog and live rooms remain visible at 720p.
-        self.body = ttk.Panedwindow(self,orient='horizontal')
+        # Static 3:2 grid: both lists stay visible but users cannot drag
+        # a separator or change their sizes independently.
+        self.body=ttk.Frame(self)
         self.body.pack(fill='both',expand=True,pady=(4,0))
+        self.body.columnconfigure(0,weight=3,uniform='instance-columns')
+        self.body.columnconfigure(1,weight=2,uniform='instance-columns')
+        self.body.rowconfigure(0,weight=1)
         self.catalog_column=ttk.Frame(self.body,padding=(0,0,6,0))
         self.room_column=ttk.Frame(self.body,padding=(6,0,0,0))
-        self.body.add(self.catalog_column,weight=3)
-        self.body.add(self.room_column,weight=2)
+        self.catalog_column.grid(row=0,column=0,sticky='nsew')
+        self.room_column.grid(row=0,column=1,sticky='nsew')
         self.catalog_heading = ttk.Label(
             self.catalog_column, text="1262 官方副本清單（選擇後建立房間）",
             style='Muted.TLabel')
@@ -155,7 +159,7 @@ class InstanceModePage(ttk.Frame):
                   style='Muted.TLabel',wraplength=380,
                   anchor='w').pack(fill='x', pady=(8, 2))
         controls = ttk.Frame(self)
-        # Buttons stay visible above the two resizable columns.
+        # Buttons stay visible above the two non-adjustable columns.
         controls.pack(fill='x', before=self.body, pady=(0, 5))
         self.refresh_button = ttk.Button(
             controls, text='更新房間清單', command=self.refresh_rooms, state='disabled')

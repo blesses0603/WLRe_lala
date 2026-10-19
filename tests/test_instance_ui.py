@@ -55,11 +55,9 @@ class InstanceNavigation(unittest.TestCase):
         self.assertFalse(self.errors, self.errors)
 
     def test_compact_window_keeps_room_actions_above_the_lists(self):
-        # The sidebar remains fixed, but the instance view now owns its
-        # resizable window, independent from chat and the main dashboard.
+        # A fixed-size popout must show both official and live room tables.
         panel = self.app.instance_panel
         self.app.open_instances()
-        self.app.instance_window.geometry('1000x590')
         self.root.update()
         for page in (panel.main_page, panel.coop_page):
             with self.subTest(mode=page.mode):
@@ -97,7 +95,6 @@ class InstanceNavigation(unittest.TestCase):
         page = panel.coop_page
         page.catalog_table.selection_set('catalog_2')  # 1262 coop ID 28
         page.on_catalog_selected()
-        self.app.instance_window.geometry('1000x590')
         self.root.update()
         self.assertTrue(page.create_button.instate(['disabled']))
         self.assertIn('自動遠征仍開啟', page.creation_hint.get())
@@ -108,6 +105,28 @@ class InstanceNavigation(unittest.TestCase):
         panel.render(state, live=True)
         self.assertTrue(page.create_button.instate(['!disabled']))
         self.assertIn('可以建立公開／私人房間', page.creation_hint.get())
+
+    def test_fixed_window_and_non_draggable_columns(self):
+        self.app.open_instances()
+        self.root.update()
+        window=self.app.instance_window
+        self.assertEqual(tuple(int(x) for x in window.resizable()),(0,0))
+        self.assertEqual(window.minsize(),window.maxsize())
+        self.assertLessEqual(window.winfo_width(),1040)
+        self.assertLessEqual(window.winfo_height(),600)
+        for page in (self.app.instance_panel.main_page,
+                     self.app.instance_panel.coop_page):
+            self.app.instance_panel.tabs.select(page)
+            self.root.update()
+            self.assertIsInstance(page.body,ttk.Frame)
+            self.assertNotIsInstance(page.body,ttk.Panedwindow)
+            self.assertEqual(page.catalog_column.winfo_manager(),'grid')
+            self.assertEqual(page.room_column.winfo_manager(),'grid')
+            self.assertEqual(page.catalog_column.grid_info()['column'],0)
+            self.assertEqual(page.room_column.grid_info()['column'],1)
+            self.assertTrue(page.entries.winfo_ismapped())
+            self.assertTrue(page.catalog_table.winfo_ismapped())
+        self.assertFalse(self.errors,self.errors)
 
     def test_window_close_and_reopen_preserves_selection(self):
         panel=self.app.instance_panel

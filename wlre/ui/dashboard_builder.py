@@ -51,7 +51,7 @@ def build_dashboard(app):
     left_tabs.add(app.companion_panel,text='夥伴出戰')
     app.expedition_panel=ExpeditionPanel(left_tabs,app)
     left_tabs.add(app.expedition_panel,text='遠征')
-    # Sidebar '副本' becomes an entry point. The real content is resizable.
+    # Sidebar '副本' opens a separate, fixed-size room management window.
     app.instance_launcher=ttk.Frame(left_tabs,padding=16)
     left_tabs.add(app.instance_launcher,text='副本')
     ttk.Label(app.instance_launcher,text='副本／協力管理',
@@ -68,12 +68,14 @@ def build_dashboard(app):
     app.instance_window.withdraw()
     app.instance_window.title('飄流Re:LaLa · 副本／協力房間管理')
     sw,sh=root.winfo_screenwidth(),root.winfo_screenheight()
-    width=min(1060,max(760,sw-100))
-    height=min(650,max(480,sh-120))
+    # Fit 720p without allowing users to resize the room-management window.
+    width=min(1040,max(760,sw-80))
+    height=min(600,max(480,sh-110))
     app.instance_window.geometry(
         f'{width}x{height}+{max(0,(sw-width)//2)}+{max(0,(sh-height)//2)}')
-    app.instance_window.minsize(min(width,760),min(height,460))
-    app.instance_window.resizable(True,True)
+    app.instance_window.minsize(width,height)
+    app.instance_window.maxsize(width,height)
+    app.instance_window.resizable(False,False)
     app.instance_window.protocol('WM_DELETE_WINDOW',app.hide_instances)
     app.instance_panel=InstancePanel(app.instance_window,app)
     app.instance_panel.pack(fill='both',expand=True)
