@@ -148,7 +148,10 @@ class App(LoginController,AccountController):
         events=self.events
         def work():
             try: function()
-            except Exception as exc: events.put(('error',str(exc)))
+            except Exception as exc:
+                # Network errors before verification and after session cleanup also need a trace.
+                self.diagnostics.worker_error(type(exc),exc.__traceback__)
+                events.put(('error',str(exc)))
             finally: events.put(('finished',None))
         self.worker=threading.Thread(target=work,daemon=True)
         self.worker.start()

@@ -44,6 +44,27 @@ class HealthTests(unittest.TestCase):
         event=self.events[-1]
         self.assertEqual(event['status'],'closed');self.assertEqual(event['errno'],errno.ECONNRESET)
         self.assertNotIn('secret',str(event))
+    def test_client_error_contains_only_safe_code_locations(self):
+        def fail():
+            raise RuntimeError('password=fixture-secret, packet=secret-payload')
+        try: fail()
+        except RuntimeError as exc:
+            self.health.close('client_error',exc)
+        event=self.events[-1]
+        self.assertEqual(event['error_type'],'RuntimeError')
+        self.assertIn('test_connection_health.py:',event['error_frames'])
+        self.assertNotIn('fixture-secret',str(event))
+        self.assertNotIn('secret-payload',str(event))
+        with tempfile.TemporaryDirectory() as directory:
+            health_log=Diagnostics(directory)
+            health_log.connection(event)
+            health_log.close()
+            text=health_log.path.read_text(encoding='utf8')
+            self.assertIn('connection_exception type=RuntimeError',text)
+            self.assertIn('test_connection_health.py:',text)
+            self.assertNotIn('fixture-secret',text)
+            self.assertNotIn('secret-payload',text)
+
     def test_ui_ages_data_even_when_worker_stops_publishing(self):
         monitor=ConnectionStatus(clock=self.clock.mono)
         self.health.received();self.health.publish(force=True);monitor.update(self.events[-1])
@@ -104,6 +125,25 @@ class ClientHealthIntegration(unittest.TestCase):
         self.assertEqual(events[-1]['reason'],'server_closed')
         self.assertEqual(state.phase,'disconnected');self.assertEqual(snapshots[-1]['phase'],'disconnected')
 
+    def test_uncaught_client_error_is_visible_to_diagnostics(self):
+        from wlre.network.client import run_client
+        connection=Mock()
+        connection.__enter__=Mock(return_value=connection)
+        connection.__exit__=Mock(return_value=False)
+        connection.recv.side_effect=ValueError('fixture-password must never appear in logs')
+        events=[]
+        with patch('wlre.network.client.socket.create_connection',return_value=connection):
+            with self.assertRaises(ValueError):
+                run_client('fixture.invalid',1,{'rx_xor':0,'tx_xor':0},events.append,duration=None)
+        terminal=[event for event in events if event.get('type')=='connection_health' and event['status']=='closed']
+        self.assertEqual(len(terminal),1)
+        self.assertEqual(terminal[0]['reason'],'client_error')
+        self.assertEqual(terminal[0]['error_type'],'ValueError')
+        self.assertIn('client.py:',terminal[0]['error_frames'])
+        self.assertNotIn('fixture-password',str(terminal[0]))
+        self.assertEqual(events[-1]['type'],'connection_closed')
+
+
 class PollRecovery(unittest.TestCase):
     def test_callback_failure_does_not_end_polling_and_next_cycle_recovers(self):
         from collections import deque
@@ -122,6 +162,25 @@ class PollRecovery(unittest.TestCase):
         App.poll(app)
         self.assertEqual(app.render.call_args.args[0],{'value':2})
         app.root.after.assert_called_with(50,app.poll)
+    def test_background_exception_written_to_health_log_without_message(self):
+        from types import SimpleNamespace
+        from wlre.ui.gui import App
+        with tempfile.TemporaryDirectory() as directory:
+            diagnostics=Diagnostics(directory)
+            app=SimpleNamespace(worker=None,events=queue.Queue(),diagnostics=diagnostics)
+            def failure_before_session():
+                raise RuntimeError('login-password=fixture-secret')
+            self.assertTrue(App.background(app,failure_before_session))
+            app.worker.join(timeout=5)
+            self.assertFalse(app.worker.is_alive())
+            diagnostics.close()
+            text=diagnostics.path.read_text(encoding='utf8')
+            self.assertIn('worker_exception count=1 type=RuntimeError',text)
+            self.assertIn('test_connection_health.py:',text)
+            self.assertNotIn('fixture-secret',text)
+            self.assertEqual(app.events.get_nowait()[0],'error')
+            self.assertEqual(app.events.get_nowait()[0],'finished')
+
     def test_health_log_records_location_without_error_message(self):
         with tempfile.TemporaryDirectory() as directory:
             d=Diagnostics(directory)
