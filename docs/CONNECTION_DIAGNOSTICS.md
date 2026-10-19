@@ -52,3 +52,14 @@ ui_callback_error count=1 type=KeyError frames=gui.py:行號:函數
 health 記錄 `periodic_cleanup display_events_removed=N` 與 `periodic_cleanup positions_removed=N`，只含清理數量。電腦休眠期間不喚醒；恢復後到期時執行一次，不補跑多次清理。Python 釋放資料後，作業系統顯示的程序記憶體不一定立即下降。
 
 假時鐘測試確認 7,199 秒不清、7,200 秒清理及下一週期再清理，並確認自身位置、近期顯示事件、聊天與重要通知保留；不是實際等待兩小時的 Windows 驗收。
+
+## 2026-10-19：跨日 client_error 追查補強（獨立修復 PR）
+
+2026-10-18 至 10-19 的使用者 Log 曾多次出現 `connection=closed reason=client_error`，但舊 Log 未保存造成錯誤的 Python 例外位置，**無法只靠舊 Log 判斷根因**。這次只補齊診斷資料，不推測特定遊戲封包，也不變更遊戲協定、斷線重連、登入、遠征或副本行為。
+
+- `connection_exception type=ValueError frames=client.py:行號:函式 > ...`：網路執行緒在 `client_error` 或 `network_error` 結束時，安全記下原始例外類型及最後六個程式位置。
+- `worker_exception count=N type=ValueError frames=...`：網路工作執行緒發生異常時會記錄；也涵蓋開始主連線前的登入驗證、連線清理階段等錯誤。
+- 舊版 `connection=...`、`ui_callback_error`、效能統計格式與原本每檔 **1 MiB、兩份輪替** 不變；存放於相同的 `%LOCALAPPDATA%\\WLRE_LaLa\\diagnostics` 目錄。
+- 僅從 Python traceback 的程式碼物件提取 **檔案 basename、行號、函式名**；**不存放**例外訊息、原始 traceback 字串、source code、frame locals、使用者絕對路徑、帳密、遊戲封包、聊天內容。
+- Log 僅在修正後的新版本重新啟動並發生異常時提供新欄位，無法逆向補全 10 月 18～19 日既有 Log。
+- 這次變更是**精準定位所需的記錄修復**，不是聲稱已找到或排除全部既存 `client_error` 根因。驗收應先跑測試，並於之後實機遇到問題時對照新 Log。
