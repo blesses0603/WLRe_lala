@@ -10,7 +10,8 @@ def defaults():
                  'list_updated_at': None,
                  'start_pending': None, 'start_uncertain': False, 'start_result': None,
                  'enter_pending': None, 'enter_uncertain': False, 'enter_result': None,
-                 'entered_scene': None, 'battle_active': False},
+                 'entered_scene': None, 'battle_active': False,
+                 'completion_source': None},
         'coop': {'ready': False, 'rooms': [], 'room': None, 'members': [],
                  'phase': 'idle', 'status': '尚未查詢房間', 'fight_count': None,
                  'reward': None, 'standby': None,
@@ -18,15 +19,20 @@ def defaults():
                  'create_pending': None, 'create_uncertain': False, 'create_result': None,
                  'join_pending': None, 'join_uncertain': False, 'join_result': None,
                  'leave_pending': None, 'leave_uncertain': False, 'leave_result': None,
-                 'list_updated_at': None, 'match_kind': None, 'battle_active': False},
+                 'list_updated_at': None, 'match_kind': None, 'battle_active': False,
+                 'completed': False, 'completion_source': None,
+                 'auto_claim_enabled': False, 'auto_claim_note': '',
+                 'claim_pending': None, 'claim_result': None,
+                 'cancel_pending': None, 'cancel_result': None,
+                 'reward_uncertain': False, 'reward_handled_fingerprint': None,
+                 'received_awards': [], 'mail_notice': False},
     }
 
 
 def apply_instances(state, event):
     mode = event.get('mode')
     if mode not in ('main', 'coop') or not event.get('type', '').startswith('instance_'):
-        # Existing world/battle events can independently establish location
-        # and fighting, without owning or changing their core handlers.
+        # Existing battle/world events only inform instance state; no fake wins.
         from wlre.services.instance_entry import observe as observe_entry
         observe_entry(state, event)
         return
@@ -60,6 +66,9 @@ def apply_instances(state, event):
             data['phase'] = 'idle'
             data['status'] = '已離開副本房間' if phase == 2 else '已被移出副本房間'
         elif phase == 1:
+            if mode == 'main':
+                data['completed'] = False
+                data['completion_source'] = None
             data['room'] = {'room_id': event['room_id'], 'host_id': event['host_id'],
                             'members': event['count']}
             data['members'] = []
@@ -109,8 +118,9 @@ def apply_instances(state, event):
         data['remaining_minutes'] = event['minutes']
     elif kind == 'instance_completed':
         data['completed'] = True
+        data['completion_source'] = 'S85-15'
         data['phase'] = 'completed'
-        data['status'] = '伺服器通知副本完成，獎勵待另外確認'
+        data['status'] = '伺服器已確認一般副本完成；不需額外送出通關指令'
     elif kind == 'instance_min_players':
         data['status'] = '伺服器通知已達最低進入人數'
     elif kind == 'instance_new_info':
@@ -131,8 +141,10 @@ def apply_instances(state, event):
             data['members'] = []
             data['phase'] = 'idle'
         elif subkind == 100:
+            data['completed'] = True
+            data['completion_source'] = 'S85-21-100'
             data['phase'] = 'completed'
-            data['status'] = '新式副本完成，獎勵待另行確認'
+            data['status'] = '伺服器通知新式副本已完成；不自動推測獎勵'
         elif subkind in (99, 101, 102):
             data['status'] = '新式副本狀態通知：%d' % subkind
     elif kind == 'instance_reward_status':
@@ -157,3 +169,5 @@ def apply_instances(state, event):
     resolve_start(state, event)
     from wlre.services.instance_entry import observe as observe_entry
     observe_entry(state, event)
+    from wlre.services.instance_rewards import resolve as resolve_rewards
+    resolve_rewards(state, event)

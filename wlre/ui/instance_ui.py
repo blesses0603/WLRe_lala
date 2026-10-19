@@ -89,6 +89,10 @@ class InstanceModePage(ttk.Frame):
         self._standby_ready = False
         self._start_ready = False
         self._enter_ready = False
+        self._claim_ready = False
+        self._cancel_ready = False
+        self._auto_toggle_ready = False
+        self._auto_enabled = False
         self.join_button = ttk.Button(
             controls, text='加入房間', command=self.open_join_dialog, state='disabled')
         self.join_button.pack(side='left', padx=(10, 0))
@@ -104,6 +108,23 @@ class InstanceModePage(ttk.Frame):
                 value='出戰夥伴：沿用一般戰鬥設定（尚未同步）')
             ttk.Label(self, textvariable=self.companion_note,
                       style='Muted.TLabel').pack(anchor='w')
+            reward_controls = ttk.Frame(self)
+            reward_controls.pack(fill='x', pady=(7, 3))
+            self.claim_button = ttk.Button(
+                reward_controls, text='領取免費協力獎勵',
+                command=self.request_reward_claim, state='disabled')
+            self.claim_button.pack(side='left')
+            self.cancel_reward_button = ttk.Button(
+                reward_controls, text='放棄目前寶箱',
+                command=self.request_reward_cancel, state='disabled')
+            self.cancel_reward_button.pack(side='left', padx=(8, 0))
+            self.auto_reward_button = ttk.Button(
+                reward_controls, text='開啟免費獎勵自動領取',
+                command=self.request_auto_reward, state='disabled')
+            self.auto_reward_button.pack(side='left', padx=(8, 0))
+            self.reward_note = tk.StringVar(value='獎勵：等待 S186-11 同步；不會自動購買付費寶箱')
+            ttk.Label(self, textvariable=self.reward_note, style='Muted.TLabel',
+                      anchor='w').pack(fill='x')
         if not self.cooperative:
             self.start_button = ttk.Button(
                 controls, text='房主開始挑戰',
@@ -259,6 +280,10 @@ class InstanceModePage(ttk.Frame):
             self.standby_button.state(
                 ['!disabled'] if self._standby_ready else ['disabled'])
         self.enter_button.state(['!disabled'] if self._enter_ready else ['disabled'])
+        if self.cooperative and hasattr(self, 'claim_button'):
+            self.claim_button.state(['!disabled'] if self._claim_ready else ['disabled'])
+            self.cancel_reward_button.state(['!disabled'] if self._cancel_ready else ['disabled'])
+            self.auto_reward_button.state(['!disabled'] if self._auto_toggle_ready else ['disabled'])
 
     def open_join_dialog(self):
         room = self.selected_room()
@@ -400,13 +425,60 @@ class InstanceModePage(ttk.Frame):
         self._update_room_buttons()
         self.app.send({'type': 'instance_enter', 'mode': 'main'})
 
+    def request_reward_claim(self):
+        if (not self.cooperative or not self._claim_ready or self.app is None
+                or not self.app.live_active):
+            return
+        if not messagebox.askyesno(
+                '確認領取免費寶箱',
+                '確定領取伺服器目前顯示的免費協力獎勵？\n'
+                '包包已同步且預留四格；操作逾時或結果不明不會重送。',
+                parent=self.winfo_toplevel()):
+            return
+        self._claim_ready = False
+        self._update_room_buttons()
+        self.app.send({'type': 'instance_reward_claim', 'mode': 'coop',
+                       'action': 'free'})
+
+    def request_reward_cancel(self):
+        if (not self.cooperative or not self._cancel_ready or self.app is None
+                or not self.app.live_active):
+            return
+        if not messagebox.askyesno(
+                '確認放棄協力獎勵',
+                '確定放棄目前的協力寶箱嗎？此操作可能無法復原。\n'
+                '不會購買付費寶箱，取消要求只會送出一次。',
+                parent=self.winfo_toplevel()):
+            return
+        self._cancel_ready = False
+        self._update_room_buttons()
+        self.app.send({'type': 'instance_reward_cancel', 'mode': 'coop',
+                       'confirm_cancel': True})
+
+    def request_auto_reward(self):
+        if (not self.cooperative or not self._auto_toggle_ready or self.app is None
+                or not self.app.live_active):
+            return
+        enabled = not self._auto_enabled
+        if enabled and not messagebox.askyesno(
+                '啟用自動免費領獎',
+                '只在收到免費寶箱 S186-11、包包可靠同步且有至少四格空位'
+                '時自動領取一次。\n不會購買付費寶箱、不會自動重送。'
+                '\n本設定僅對本次登入有效，確定啟用？',
+                parent=self.winfo_toplevel()):
+            return
+        self._auto_toggle_ready = False
+        self._update_room_buttons()
+        self.app.send({'type': 'instance_auto_reward', 'mode': 'coop',
+                       'enabled': enabled})
+
     def refresh_rooms(self):
         if self.app is not None and self.app.live_active:
             self.app.send({'type': 'instance_refresh', 'mode': self.mode})
 
     def render(self, data, *, live=False, other=None,
                local_role_id=None, active_npc_id=None, local_scene=None,
-               activity_blocked=False):
+               activity_blocked=False, inventory=None):
         other = other or {}
         self._room_data = dict(data)
         self._room_other = dict(other)
@@ -419,9 +491,11 @@ class InstanceModePage(ttk.Frame):
         def blocked(part):
             return (part.get('room') is not None
                     or any(part.get(k) is not None for k in
-                           ('create_pending','join_pending','leave_pending','standby_pending','start_pending', 'enter_pending'))
+                           ('create_pending','join_pending','leave_pending','standby_pending','start_pending', 'enter_pending',
+                            'claim_pending', 'cancel_pending'))
                     or any(part.get(k) for k in
-                           ('create_uncertain','join_uncertain','leave_uncertain','standby_uncertain','start_uncertain', 'enter_uncertain')))
+                           ('create_uncertain','join_uncertain','leave_uncertain','standby_uncertain','start_uncertain', 'enter_uncertain',
+                            'reward_uncertain')))
         active = bool(live) and not blocked(data) and not blocked(other)
         updated = data.get('list_updated_at')
         fresh = (updated is not None and
@@ -457,6 +531,65 @@ class InstanceModePage(ttk.Frame):
                         ('create_pending','join_pending','leave_pending','standby_pending','start_pending', 'enter_pending'))
             and not any(other.get(k) for k in
                         ('create_uncertain','join_uncertain','leave_uncertain','standby_uncertain','start_uncertain', 'enter_uncertain')))
+        inventory = inventory or {}
+        reward = data.get('reward') or {}
+        bag_capacity = inventory.get('capacity')
+        bag_items = inventory.get('items')
+        safe_bag = (
+            inventory.get('ready') is True and inventory.get('reliable') is True
+            and type(bag_capacity) is int and 1 <= bag_capacity <= 255
+            and isinstance(bag_items, dict)
+            and bag_capacity - len(bag_items) >= 4
+            and not any(inventory.get(k) for k in (
+                'holds', 'alchemy_slots', 'expedition_slots', 'maintenance_slots'))
+            and not any((inventory.get('reserved') or {}).values())
+            and not (inventory.get('field_supply') or {}).get('pending')
+        )
+        reward_busy = any(data.get(k) for k in (
+            'claim_pending', 'cancel_pending', 'reward_uncertain'))
+        reward_operation_busy = any(
+            part.get(k) is not None for part in (data, other)
+            for k in ('create_pending', 'join_pending', 'leave_pending',
+                      'standby_pending', 'start_pending', 'enter_pending'))
+        reward_operation_busy = reward_operation_busy or any(
+            part.get(k) for part in (data, other)
+            for k in ('create_uncertain', 'join_uncertain', 'leave_uncertain',
+                      'standby_uncertain', 'start_uncertain', 'enter_uncertain'))
+        can_reward = (self.cooperative and bool(live) and not activity_blocked
+                      and not reward_busy and not reward_operation_busy
+                      and not other.get('room'))
+        reward_fp = (reward.get('reward_count'), reward.get('win_stage'),
+                     reward.get('open_reward'), reward.get('reward_mark'),
+                     reward.get('npc_id')) if reward else None
+        self._auto_enabled = bool(data.get('auto_claim_enabled'))
+        self._auto_toggle_ready = (
+            self.cooperative and bool(live) and not data.get('reward_uncertain'))
+        self._claim_ready = (
+            can_reward and safe_bag and reward.get('open_reward') == 1
+            and type(reward.get('reward_mark')) is int
+            and reward['reward_mark'] & 1 != 0
+            and data.get('reward_handled_fingerprint') != reward_fp)
+        self._cancel_ready = (
+            can_reward and reward.get('open_reward') in (1, 2)
+            and data.get('reward_handled_fingerprint') != reward_fp)
+        if self.cooperative:
+            self.auto_reward_button.configure(
+                text='關閉免費獎勵自動領取' if self._auto_enabled
+                else '開啟免費獎勵自動領取')
+            if reward.get('open_reward') == 2:
+                reward_text = '付費寶箱待處理；不會自動購買或扣點'
+            elif reward.get('open_reward') == 1:
+                reward_text = '免費寶箱待領' if safe_bag else '免費寶箱待領；包包空位未確認'
+            elif reward:
+                reward_text = '獎勵已同步，目前沒有開啟的寶箱'
+            else:
+                reward_text = '尚未收到 S186-11 協力獎勵狀態'
+            if data.get('claim_pending') or data.get('cancel_pending'):
+                reward_text = '獎勵操作待伺服器確認，不可重送'
+            elif data.get('reward_uncertain'):
+                reward_text = '獎勵操作結果不明，請重新登入確認'
+            self.reward_note.set('獎勵：%s；自動領取%s' %
+                                 (reward_text, '開' if self._auto_enabled else '關'))
         # Normal-dungeon start is host only. S85-4 roster must agree with
         # the room count, and the official StageData minimum must be met.
         stage = next((record for record in self.catalog_records
@@ -542,9 +675,10 @@ class InstanceModePage(ttk.Frame):
                 status, count, data.get('phase', '待確認'),
                 data.get('status', '等待伺服器同步')))
         elif self.cooperative and data.get('reward'):
-            reward = data['reward']
-            self.details.set('協力獎勵旗標 %s，已完成階段 %s；領獎功能未開放' % (
-                reward['reward_mark'], reward['win_stage']))
+            current_reward = data['reward']
+            self.details.set('協力獎勵旗標 %s，已完成 %s／%s 場；以伺服器回覆為準' % (
+                current_reward['reward_mark'], current_reward['win_stage'],
+                current_reward['reward_count']))
         else:
             self.details.set('未加入房間；進入、準備、領獎功能仍待正式伺服器驗證。')
         # Only a deliberate user click on a live, confirmed started room can enter.
@@ -582,4 +716,5 @@ class InstancePanel(ttk.Frame):
         self.coop_page.render(instances.get('coop', {}), live=live,
                               other=instances.get('main', {}),
                               local_role_id=local_role, active_npc_id=active_npc,
-                              local_scene=player.get('scene'), activity_blocked=activity_blocked)
+                              local_scene=player.get('scene'), activity_blocked=activity_blocked,
+                              inventory=state.get('inventory') or {})

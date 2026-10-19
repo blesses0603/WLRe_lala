@@ -181,8 +181,28 @@ class SessionLogic:
             # FightOver waits EndTime=2.5, then SendServerEvent calls C20-6 00.
             # Cooperative event fights have an additional wait-UI/count branch.
             if state.battle.get('war_style')==16:
-                state.battle['post_event']={'status':'cooperative_wait',
-                    'reason':'協力事件戰鬥的等待／場次分支尚未實作，未自動回覆'}
+                # Official FightManager: 5-second UICooperateWait before the
+                # next round when multiple co-op fights remain. Do not infer
+                # victory from winner_side alone; same C20-6 event applies
+                # to both winning and losing cases, delay only when count>1.
+                count=state.instances['coop'].get('fight_count')
+                if (type(count) is int and count>1
+                        and state.battle.get('winner_side') in (1,2)):
+                    delay=5.0
+                elif type(count) is int and count>=1:
+                    delay=2.5
+                else:
+                    delay=None
+                if delay is None:
+                    state.battle['post_event']={'status':'cooperative_wait',
+                        'reason':'協力戰鬥場次尚未由 S186-15 同步，暫停自動接續'}
+                else:
+                    self.post_battle_due=time.monotonic()+delay
+                    state.battle['post_event']={'status':'cooperative_wait',
+                        'reason':'依 1262 官方協力場次等待，接續事件一次',
+                        'delay_seconds':delay}
+                    state.event_flow={**state.event_flow,'blocked':True,
+                        'last_source':'協力戰後安全等待，準備 C20-6 00'}
             else:
                 self.post_battle_due=time.monotonic()+2.5
                 state.battle['post_event']={'status':'exit_delay','source':kind,'delay_seconds':2.5}
@@ -241,6 +261,8 @@ class SessionLogic:
         start_disconnect(state)
         from wlre.services.instance_entry import disconnect as entry_disconnect
         entry_disconnect(state)
+        from wlre.services.instance_rewards import disconnect as reward_disconnect
+        reward_disconnect(state)
         if any(state.inventory.get('holds',{}).values()):
             state.inventory['reliable']=False
             for owner in list(state.inventory['holds']):reservations.uncertain(state.inventory,owner)
@@ -324,7 +346,7 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
                     try:
                         for packet in logic.command(command, state):
                             _send_command_packet(connection,packet,profile['tx_xor'],state,emit,on_state)
-                        if command.get('type') in ('team','start_alchemy','stop_alchemy','reset_efficiency','craft','start_expedition','stop_expedition','allocate_points','instance_create','instance_join','instance_leave','instance_coop_standby','instance_start','instance_enter') and on_state:notify_state(on_state,state)
+                        if command.get('type') in ('team','start_alchemy','stop_alchemy','reset_efficiency','craft','start_expedition','stop_expedition','allocate_points','instance_create','instance_join','instance_leave','instance_coop_standby','instance_start','instance_enter','instance_auto_reward','instance_reward_claim','instance_reward_cancel') and on_state:notify_state(on_state,state)
                         if command.get('type') in ('start_auto_battle','stop_auto_battle','set_party_guard'):
                             emit({'type':'auto_battle_status',**state.auto_battle})
                             if on_state:notify_state(on_state,state)

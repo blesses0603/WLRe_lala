@@ -11,11 +11,13 @@ from wlre.network.wire import Packet, ProtocolError, Writer
 from wlre.services.instance_room_flow import _activity_guard
 
 TIMEOUT = 20.0
-_OPERATIONS = ('create', 'join', 'leave', 'standby', 'start', 'enter')
+_OPERATIONS = ('create', 'join', 'leave', 'standby', 'start', 'enter', 'claim', 'cancel')
 
 
 def _no_unresolved_room_actions(state):
     for data in state.instances.values():
+        if data.get('reward_uncertain'):
+            raise ProtocolError('協力領獎結果不明，暫停其他副本操作')
         for operation in _OPERATIONS:
             if data.get(operation + '_pending') is not None:
                 raise ProtocolError('房間操作尚待伺服器確認，暫不可切換協力準備')

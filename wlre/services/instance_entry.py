@@ -10,11 +10,13 @@ from wlre.services.instance_browser import entries_for
 from wlre.services.instance_room_flow import _activity_guard
 
 ENTRY_TIMEOUT = 45.0
-OPERATIONS = ('create', 'join', 'leave', 'standby', 'start', 'enter')
+OPERATIONS = ('create', 'join', 'leave', 'standby', 'start', 'enter', 'claim', 'cancel')
 
 
 def _no_unresolved_operations(state):
     for data in state.instances.values():
+        if data.get('reward_uncertain'):
+            raise ProtocolError('協力領獎結果不明，暫停其他副本操作')
         for operation in OPERATIONS:
             if data.get(operation + '_pending') is not None:
                 raise ProtocolError('副本操作正在等待伺服器，禁止重複操作')

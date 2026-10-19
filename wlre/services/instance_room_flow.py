@@ -35,9 +35,9 @@ def _busy(state):
     return any(
         data.get('room') is not None
         or any(data.get(k) is not None for k in (
-            'create_pending', 'join_pending', 'leave_pending', 'standby_pending', 'enter_pending', 'start_pending'))
+            'create_pending', 'join_pending', 'leave_pending', 'standby_pending', 'enter_pending', 'start_pending', 'claim_pending', 'cancel_pending'))
         or any(data.get(k) for k in (
-            'create_uncertain', 'join_uncertain', 'leave_uncertain', 'standby_uncertain', 'enter_uncertain', 'start_uncertain'))
+            'create_uncertain', 'join_uncertain', 'leave_uncertain', 'standby_uncertain', 'enter_uncertain', 'start_uncertain', 'reward_uncertain'))
         for data in state.instances.values()
     )
 
@@ -110,10 +110,10 @@ def leave(state, command, now=None):
     _activity_guard(state, False)
     for part in state.instances.values():
         if any(part.get(k) is not None
-               for k in ('create_pending', 'join_pending', 'leave_pending', 'standby_pending', 'start_pending', 'enter_pending')):
+               for k in ('create_pending', 'join_pending', 'leave_pending', 'standby_pending', 'start_pending', 'claim_pending', 'cancel_pending', 'enter_pending')):
             raise ProtocolError('房間操作仍待確認，不能離房或重複送出')
         if any(part.get(k)
-               for k in ('create_uncertain', 'join_uncertain', 'leave_uncertain', 'standby_uncertain', 'start_uncertain', 'enter_uncertain')):
+               for k in ('create_uncertain', 'join_uncertain', 'leave_uncertain', 'standby_uncertain', 'start_uncertain', 'reward_uncertain', 'enter_uncertain')):
             raise ProtocolError('房間操作結果不明，請重新登入同步')
     room = data.get('room')
     if not isinstance(room, dict) or not room.get('room_id'):

@@ -141,6 +141,14 @@ def _coop(packet):
     elif sub == 6:
         event = {'type': 'instance_member_refresh_request', 'mode': 'coop',
                  'room_id': r.u16()}
+    elif sub == 10:
+        # Protocols_186.lua: up to 4 AwardData; kind:u8,id:u32,value:u32.
+        # Empty means only a closed dialog, NOT evidence of real awards.
+        if r.remaining % 9 or r.remaining > 36:
+            raise ProtocolError('S186-10 獎勵格式異常（必須為 0～4 筆各 9 位元組）')
+        rewards = [{'kind': r.u8(), 'id': r.u32(), 'value': r.u32()}
+                   for _ in range(r.remaining // 9)]
+        event = {'type': 'instance_reward_receipt', 'mode': 'coop', 'awards': rewards}
     elif sub == 11:
         event = {'type': 'instance_reward_status', 'mode': 'coop',
                  'reward_count': r.u8(), 'win_stage': r.u8(),

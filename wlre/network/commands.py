@@ -8,6 +8,11 @@ from wlre.services.instance_room_flow import join as join_instance, leave as lea
 from wlre.services.instance_standby import set_standby as coop_standby
 from wlre.services.instance_start import start as start_instance
 from wlre.services.instance_entry import enter as enter_instance
+from wlre.services.instance_rewards import (
+    set_auto as instance_reward_auto,
+    claim as instance_reward_claim,
+    cancel as instance_reward_cancel,
+)
 from wlre.services.battle.party import team_command, own_team
 from wlre.services.battle.attribute_points import allocation as build_allocation, begin as begin_allocation
 from wlre.services.battle.companions import command as companion_command
@@ -49,6 +54,12 @@ def dispatch(logic,command,state):
         return start_instance(state, command)
     if kind == 'instance_enter':
         return enter_instance(state, command)
+    if kind == 'instance_auto_reward':
+        return instance_reward_auto(state, command)
+    if kind == 'instance_reward_claim':
+        return instance_reward_claim(state, command)
+    if kind == 'instance_reward_cancel':
+        return instance_reward_cancel(state, command)
     if kind == 'instance_refresh':
         if state.phase != 'world_ready' or not state.player.get('role_id'):
             raise ProtocolError('請先完成角色登入才能查詢副本房間')
