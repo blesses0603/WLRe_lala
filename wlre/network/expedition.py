@@ -47,7 +47,11 @@ def decode_expedition(packet):
         event.update(level=r.u8(), exp=r.u32())
         r.take(27)
     elif sub == 15:
-        event = {'type': 'expedition_started'}
+        # Official 1262 ExpeditionMgr.RevExpeditionStart reads no body fields.
+        # Acknowledge the event and skip opaque extension bytes, if supplied.
+        # Other S31 layouts remain strictly validated by r.end().
+        event = {'type': 'expedition_started', 'extension_bytes': r.remaining}
+        r.take(r.remaining)
     elif sub == 16:
         event = {'type': 'expedition_result', 'result': r.u8(), 'index': r.u8(),
                  'journal': r.u16(), 'history': r.u16()}
