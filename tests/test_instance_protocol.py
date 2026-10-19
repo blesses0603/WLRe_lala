@@ -91,7 +91,10 @@ class InstanceWire(unittest.TestCase):
             with self.subTest(packet=packet), self.assertRaises(ProtocolError):
                 decode(packet)
         self.assertEqual(decode(Packet(186, 14, b'x'))['type'], 'unimplemented')
-        self.assertEqual(decode(Packet(85, 21, b'\x03x'))['type'], 'unimplemented')
+        # S85-21 kind 3 is now a verified objective layout; truncation must
+        # fail closed rather than be silently classified as unsupported.
+        with self.assertRaises(ProtocolError):
+            decode(Packet(85, 21, b'\x03x'))
 
     def test_instance_state_isolation(self):
         a, b = State(), State()

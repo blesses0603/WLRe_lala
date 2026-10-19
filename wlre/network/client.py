@@ -181,18 +181,8 @@ class SessionLogic:
             # FightOver waits EndTime=2.5, then SendServerEvent calls C20-6 00.
             # Cooperative event fights have an additional wait-UI/count branch.
             if state.battle.get('war_style')==16:
-                # Official FightManager: 5-second UICooperateWait before the
-                # next round when multiple co-op fights remain. Do not infer
-                # victory from winner_side alone; same C20-6 event applies
-                # to both winning and losing cases, delay only when count>1.
-                count=state.instances['coop'].get('fight_count')
-                if (type(count) is int and count>1
-                        and state.battle.get('winner_side') in (1,2)):
-                    delay=5.0
-                elif type(count) is int and count>=1:
-                    delay=2.5
-                else:
-                    delay=None
+                from wlre.services.instance_combat import consume_coop_fight
+                delay = consume_coop_fight(state)
                 if delay is None:
                     state.battle['post_event']={'status':'cooperative_wait',
                         'reason':'協力戰鬥場次尚未由 S186-15 同步，暫停自動接續'}
