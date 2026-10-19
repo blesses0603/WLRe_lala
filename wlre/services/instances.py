@@ -11,6 +11,7 @@ def defaults():
         'coop': {'ready': False, 'rooms': [], 'room': None, 'members': [],
                  'phase': 'idle', 'status': '尚未查詢房間', 'fight_count': None,
                  'reward': None, 'standby': None,
+                 'standby_pending': None, 'standby_uncertain': False, 'standby_result': None,
                  'create_pending': None, 'create_uncertain': False, 'create_result': None,
                  'join_pending': None, 'join_uncertain': False, 'join_result': None,
                  'leave_pending': None, 'leave_uncertain': False, 'leave_result': None,
@@ -69,6 +70,7 @@ def apply_instances(state, event):
                             'npc_id': event['npc_id'], 'capacity': event['capacity'],
                             'standby': event['standby']}
             data['phase'] = 'waiting'
+            data['standby'] = event['standby']
             data['status'] = '協力房間與成員已同步'
         elif data.get('room') is None or data['room'].get('room_id') != room_id:
             # Do not associate a room roster with an unrelated session.
@@ -137,5 +139,7 @@ def apply_instances(state, event):
     # Resolve only after the authoritative room event has been applied.
     from wlre.services.instance_creation import resolve as resolve_create
     from wlre.services.instance_room_flow import resolve as resolve_room
+    from wlre.services.instance_standby import resolve as resolve_standby
     resolve_create(state, event)
     resolve_room(state, event)
+    resolve_standby(state, event)

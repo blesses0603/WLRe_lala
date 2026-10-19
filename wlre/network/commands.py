@@ -5,6 +5,7 @@ from wlre.network.wire import ProtocolError
 from wlre.network.instances import list_request
 from wlre.services.instance_creation import create as create_instance
 from wlre.services.instance_room_flow import join as join_instance, leave as leave_instance
+from wlre.services.instance_standby import set_standby as coop_standby
 from wlre.services.battle.party import team_command, own_team
 from wlre.services.battle.attribute_points import allocation as build_allocation, begin as begin_allocation
 from wlre.services.battle.companions import command as companion_command
@@ -40,6 +41,8 @@ def dispatch(logic,command,state):
         return join_instance(state, command)
     if kind == 'instance_leave':
         return leave_instance(state, command)
+    if kind == 'instance_coop_standby':
+        return coop_standby(state, command)
     if kind == 'instance_refresh':
         if state.phase != 'world_ready' or not state.player.get('role_id'):
             raise ProtocolError('請先完成角色登入才能查詢副本房間')
