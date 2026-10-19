@@ -1,9 +1,10 @@
 """1262-verified candidate room packet construction.
 
 Layouts: Lua/Logic/Dungeon.lua C85-{3,5,6,7,9}; Lua/Logic/
-CooperateEventManger.lua C186-{1,4,5,7,10}. These builders never send.
-UI/command dispatch remain locked until server ACK state and eligibility
-checks are verified. No passwords or recruitment text are logged.
+CooperateEventManger.lua C186-{1,4,5,7,10}. Packet builders themselves never send. Only the guarded manual
+instance_create command (with authoritative ACK and timeout handling) can
+send creation packets. Join/leave and combat remain disabled. No passwords
+or recruitment text are logged.
 """
 from wlre.network.wire import Packet, Writer, ProtocolError
 from wlre.services.instance_browser import entries_for

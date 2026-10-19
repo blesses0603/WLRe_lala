@@ -1,4 +1,4 @@
-"""Room packet builders are Lua-verified but have no direct network dispatch."""
+"""Room packet formats and invalid manual-request protection."""
 import unittest
 
 from wlre.network.instance_actions import (
@@ -58,8 +58,8 @@ class DungeonRoomActionBytes(unittest.TestCase):
         with self.assertRaises(ProtocolError):
             join_coop_room(8, public=False, password=-1)
 
-    def test_builder_does_not_change_network_commands(self):
-        # Integration remains deliberately opt-in until server ACK validation.
+    def test_creation_is_denied_before_world_initialization(self):
+        # A creator packet must never be sent before server world ACK.
         from wlre.core.state import State
         from wlre.network.client import SessionLogic
         s = State(phase='world_ready')
