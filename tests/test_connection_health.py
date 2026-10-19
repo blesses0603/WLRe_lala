@@ -204,8 +204,8 @@ class ClientHealthIntegration(unittest.TestCase):
         connection.__exit__=Mock(return_value=False)
         connection.recv.side_effect=[encode(Packet(63,5),0)]
         events=[]
-        with patch('wlre.network.client.socket.create_connection',return_value=connection), \\
-             patch.object(State,'apply',side_effect=ValueError('secret-state')):
+        with (patch('wlre.network.client.socket.create_connection',return_value=connection),
+              patch.object(State,'apply',side_effect=ValueError('secret-state'))):
             with self.assertRaises(ValueError):
                 run_client('fixture.invalid',1,{'rx_xor':0,'tx_xor':0},events.append,duration=None)
         terminal=[e for e in events if e.get('status')=='closed' and e.get('type')=='connection_health']
