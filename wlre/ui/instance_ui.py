@@ -88,7 +88,7 @@ class InstanceModePage(ttk.Frame):
         self.catalog_table = ttk.Treeview(
             catalog_host, columns=self.catalog_columns,
             show='headings', selectmode='browse',
-            height=4 if cooperative else 5)
+            height=6 if cooperative else 8)
         for field, title, width in (
             ('id', 'ID', 48), ('name', '官方中文名稱／版本', 210),
             ('level', '等級', 66), ('players', '人數', 76),
@@ -114,11 +114,14 @@ class InstanceModePage(ttk.Frame):
         ttk.Label(self, textvariable=self.catalog_detail,
                   style='Muted.TLabel').pack(fill='x', pady=(0, 5))
         self.catalog_table.bind('<<TreeviewSelect>>', self.on_catalog_selected)
-        ttk.Label(self, text='伺服器房間清單', style='Muted.TLabel').pack(
-            anchor='w', pady=(0, 2))
+        ttk.Label(self, text='伺服器目前開放的房間（選取後可加入）',
+                  style='Muted.TLabel').pack(anchor='w',pady=(0,2))
+        self.room_list_note=tk.StringVar(value='尚未同步伺服器房間清單')
+        ttk.Label(self,textvariable=self.room_list_note,
+                  style='Muted.TLabel').pack(anchor='w',fill='x',pady=(0,3))
         self.columns = ('name', 'requirement', 'status')
         self.entries = ttk.Treeview(
-            self, columns=self.columns, show='headings', selectmode='browse', height=3
+            self, columns=self.columns, show='headings', selectmode='browse', height=5
         )
         for key, heading, width in (
             ('name', '房間／副本', 240),
@@ -251,7 +254,7 @@ class InstanceModePage(ttk.Frame):
                                 parent=self.winfo_toplevel())
             return
         root = self.winfo_toplevel()
-        dialog = tk.Toplevel(root)
+        dialog = tk.Toplevel(self.app.root if self.app is not None else root)
         dialog.title('建立副本房間')
         dialog.transient(root)
         dialog.resizable(False, False)
@@ -376,7 +379,7 @@ class InstanceModePage(ttk.Frame):
                                    parent=self.winfo_toplevel())
             return
         root = self.winfo_toplevel()
-        dialog = tk.Toplevel(root)
+        dialog = tk.Toplevel(self.app.root if self.app is not None else root)
         dialog.title('加入副本房間')
         dialog.transient(root)
         dialog.resizable(False, False)
@@ -736,6 +739,14 @@ class InstanceModePage(ttk.Frame):
         self.refresh_button.state(['!disabled'] if live else ['disabled'])
         self.note.set(data.get('status', '尚未查詢房間') if live else '尚未連線，無法查詢副本房間')
         rooms = data.get('rooms', ())
+        if not live:
+            self.room_list_note.set('尚未連線，請登入後更新房間清單')
+        elif not data.get('ready'):
+            self.room_list_note.set('尚未更新房間清單，請點選上方「更新房間清單」')
+        elif rooms:
+            self.room_list_note.set('伺服器已同步 %d 間房，點選房間即可加入' % len(rooms))
+        else:
+            self.room_list_note.set('伺服器目前沒有可加入的房間，可以選擇副本後自行建立')
         # Refresh a small, bounded list; never invent known dungeon names.
         previous = self.selected_room()
         key = (previous['room_id'], previous.get('sn')) if previous else None
