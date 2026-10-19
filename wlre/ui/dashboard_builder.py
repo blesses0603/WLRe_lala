@@ -10,6 +10,7 @@ from wlre.services.battle import party_guard
 from wlre.ui.services_ui import PartyPanel, AlchemyPanel
 from wlre.ui.companion_ui import CompanionPanel
 from wlre.ui.expedition_ui import ExpeditionPanel
+from wlre.ui.instance_ui import InstancePanel
 from wlre.ui.party_guard_ui import PartyGuardPanel
 from wlre.ui.crafting_ui import CraftingPanel
 from wlre.ui.efficiency_ui import EfficiencyPanel
@@ -50,6 +51,8 @@ def build_dashboard(app):
     left_tabs.add(app.companion_panel,text='夥伴出戰')
     app.expedition_panel=ExpeditionPanel(left_tabs,app)
     left_tabs.add(app.expedition_panel,text='遠征')
+    app.instance_panel=InstancePanel(left_tabs)
+    left_tabs.add(app.instance_panel,text='副本')
     app.party_guard_panel=PartyGuardPanel(app.party_panel.guard_host,app,compact=True)
     app.party_guard_panel.pack(fill='both',expand=True)
     if app.party_guard_load_error:app.party_guard_panel.note.set('名單讀取失敗，未啟用：'+app.party_guard_load_error)
@@ -60,7 +63,7 @@ def build_dashboard(app):
     app.efficiency_panel=EfficiencyPanel(left_tabs,app)
     left_tabs.add(app.efficiency_panel,text='經驗效率',align='right')
     app.crafting_panel.configure(padding=6)
-    for page in (overview,app.party_panel,app.companion_panel,app.expedition_panel,app.alchemy_panel,app.crafting_panel,app.efficiency_panel):
+    for page in (overview,app.party_panel,app.companion_panel,app.expedition_panel,app.instance_panel,app.alchemy_panel,app.crafting_panel,app.efficiency_panel):
         page._section_outline=True
     left_tabs.bind('<<NotebookTabChanged>>',lambda e:app.refresh_selected(),add='+')
     app.overview_panel.update_state({})
