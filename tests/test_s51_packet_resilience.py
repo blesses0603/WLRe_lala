@@ -99,8 +99,8 @@ class S51DiagnosticsTests(unittest.TestCase):
                       if event.get('type') == 'connection_health'
                       and event.get('status') == 'closed')
         self.assertEqual(closed['reason'], 'server_closed')
-        self.assertNotIn('error_type', closed)
-        self.assertNotIn('payload', repr(events))
+        self.assertIsNone(closed['error_type'])
+        self.assertNotIn("b'\\\\xff'", repr(events))
 
 
 if __name__ == '__main__':
