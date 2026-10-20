@@ -4,9 +4,10 @@ from wlre.ui.function_icons import icon_photo
 
 
 class RoundedNotebook(ttk.Frame):
-    def __init__(self, parent, borderless=True, icons=False, **kwargs):
+    def __init__(self, parent, borderless=True, icons=False, image_loader=None, **kwargs):
         super().__init__(parent, **kwargs)
         self.icons=icons
+        self.image_loader=image_loader
         style = ttk.Style(self)
         style.configure('PillBody.TNotebook', borderwidth=0, tabmargins=0)
         style.layout('PillBody.TNotebook.Tab', [])
@@ -76,7 +77,9 @@ class RoundedNotebook(ttk.Frame):
             options = self.book.tab(page)
             if options['state'] == 'hidden':
                 continue
-            image=icon_photo(self,options['text']) if self.icons else None
+            image=(self.image_loader(self,options['text'])
+                   if self.image_loader is not None else
+                   icon_photo(self,options['text']) if self.icons else None)
             button = ttk.Button(self.bar, text=options['text'], style='Icon.Tab.TButton' if image else 'Pill.Tab.TButton',
                                 command=self.click_handlers.get(page,lambda p=page: self.select(p)), takefocus=True, width=0)
             if image:

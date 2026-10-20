@@ -4,6 +4,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 
 from wlre.ui.rounded_notebook import RoundedNotebook
+from wlre.ui.instance_menu_icons import menu_icon_photo
 from wlre.services.instance_browser import entries_for
 from wlre.services.battle.party import own_team
 
@@ -861,7 +862,8 @@ class InstancePanel(ttk.Frame):
 
     def __init__(self, parent, app=None):
         super().__init__(parent, padding=6)
-        self.tabs = RoundedNotebook(self, borderless=True)
+        self.tabs = RoundedNotebook(self, borderless=True,
+                                    image_loader=menu_icon_photo)
         self.tabs.pack(fill='both', expand=True)
         self.main_page = InstanceModePage(self.tabs, cooperative=False, app=app)
         self.coop_page = InstanceModePage(self.tabs, cooperative=True, app=app)
