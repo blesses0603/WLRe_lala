@@ -116,10 +116,13 @@ def apply_instances(state, event):
             old_room_id = (data.get('room') or {}).get('room_id')
             if old_room_id != room_id:
                 _clear_coop_round(data)
-                # Do not confuse a previous chest with a new session.
-                # Unresolved reward operations must keep their evidence.
-                if not (data.get('claim_pending') or data.get('cancel_pending')
-                        or data.get('reward_uncertain')):
+                # S186-11 can precede the first S186-3 room snapshot.
+                # An unknown old room is not evidence of a different session.
+                # Only an observed transition between two different room IDs
+                # may clear a settled old reward; never clear uncertain claims.
+                if (old_room_id is not None and
+                        not (data.get('claim_pending') or data.get('cancel_pending')
+                             or data.get('reward_uncertain'))):
                     data['reward'] = None
                     data['reward_handled_fingerprint'] = None
                     data['claim_result'] = None
