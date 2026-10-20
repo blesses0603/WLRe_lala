@@ -26,6 +26,7 @@ class Diagnostics:
         self.last=0;self.errors=0;self.worker_errors=0
         self.last_connection=None;self.connection_logged=None;self.last_error=None;self.error_logged=None
         self.battle_invalid_count=0;self.battle_invalid_logged=None
+        self.ai_status_logged={}
         root=Path(base) if base is not None else user_data_root()/'diagnostics'
         self.path=root/f'health-{os.getpid()}.log'
         try:
@@ -98,6 +99,41 @@ class Diagnostics:
             'protocol_warning packet_main=51 packet_sub=1 reason=invalid_record_length '
             'payload_bytes=%d complete_records=%d trailing_bytes=%d count=%d',
             size, size // 7, tail, self.battle_invalid_count)
+        return True
+
+    def auto_battle_status(self, value):
+        """Rate-limited, allowlisted AI state, without roles, skills or commands."""
+        allowed = ('disabled', 'armed', 'paused', 'waiting', 'submitted',
+                   'blocked', 'healing', 'waiting_heal', 'maintenance')
+        if (not isinstance(value, dict) or value.get('type') != 'auto_battle_status'
+                or value.get('status') not in allowed
+                or type(value.get('enabled')) is not bool
+                or type(value.get('battle_active')) is not bool):
+            return False
+        style, round_number, living = (
+            value.get('battle_war_style'), value.get('battle_round'),
+            value.get('owned_living'))
+        if (style is not None and (type(style) is not int or not 0 <= style <= 255)
+                or round_number is not None and
+                (type(round_number) is not int or not 0 <= round_number <= 65535)
+                or type(living) is not int or not 0 <= living <= 32):
+            return False
+        status = value['status']
+        signature = (status, bool(value['enabled']), bool(value['battle_active']),
+                     style, bool(round_number), living)
+        now = time.monotonic()
+        previous = self.ai_status_logged.get(signature)
+        if previous is not None and now - previous < 60:
+            return False
+        if len(self.ai_status_logged) >= 32:
+            self.ai_status_logged.clear()
+        self.ai_status_logged[signature] = now
+        self.logger.info(
+            'auto_battle state=%s enabled=%d battle_active=%d war_style=%s '
+            'round=%s owned_living=%d',
+            status, value['enabled'], value['battle_active'],
+            style if style is not None else 'none',
+            round_number if round_number is not None else 'none', living)
         return True
 
     def dropped(self,count):self.logger.info('display_events_skipped=%d',count)
