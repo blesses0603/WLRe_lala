@@ -86,8 +86,12 @@ def create(state, command, now=None):
         # must not be represented as automatically granted.
         capacity = command.get('player_count')
         packet = create_coop_room(dungeon_id, capacity, public=public, password=password)
+        # Match the exact C186-1 / S186-3 event NPC index. Named events
+        # (IDs 27 and 28) use 1 and 2, not zero.
         expected = {'dungeon_id': dungeon_id, 'kind': row['variant'],
-                    'npc_id': 0}
+                    'npc_id': row['npc_id'] if row['variant'] == 2 else 0}
+        # Keep only public activity identity for late, server-proven recovery.
+        state.instances[mode]['create_attempt'] = dict(expected)
     state.instances[mode]['create_pending'] = {
         **expected, 'started': now, 'ack': False, 'public': public}
     state.instances[mode]['create_result'] = None
@@ -101,10 +105,13 @@ def resolve(state, event):
         return
     data = state.instances[mode]
     pending = data.get('create_pending')
-    if not pending:
+    attempt = pending or data.get('create_attempt')
+    if not attempt:
         return
     kind = event.get('type')
     if mode == 'main':
+        if not pending:
+            return
         if kind == 'instance_result' and event.get('action') == 'create':
             code = event['code']
             data['create_result'] = code
@@ -123,24 +130,35 @@ def resolve(state, event):
             data['create_result'] = 0
             data['status'] = '建立副本房間成功（已確認房主與房間 ID）'
     else:
-        if kind == 'instance_result':
+        if kind == 'instance_result' and pending:
             code = event['code']
             if code in COOP_REJECTIONS:
                 data['create_result'] = code
                 data['create_pending'] = None
+                data['create_attempt'] = None
                 data['status'] = '伺服器拒絕協力創房：' + COOP_REJECTIONS[code]
             elif code == 9:
                 pending['ack'] = True
                 data['create_result'] = 9
                 data['status'] = '協力創房／扣點回覆成功，等待房間同步'
-        elif (kind == 'instance_members' and event.get('created') is True
-              and event.get('room_id') and event.get('kind') == pending['kind']
-              and event.get('npc_id') == pending['npc_id']
-              and any(m.get('role_id') == state.player.get('role_id')
-                      for m in event.get('members', ()))):
-            data['create_pending'] = None
-            data['create_result'] = 9
-            data['status'] = '協力房間建立成功（已收到伺服器房主資料）'
+        elif kind == 'instance_members':
+            members = event.get('members') or ()
+            host_id = event.get('host_id')
+            if host_id is None and members:
+                host_id = members[0].get('role_id')
+            # A trusted S186-3 room roster proves successful creation even
+            # when the first created=True notification was missed. Only the
+            # matching activity AND first-slot host can resolve a timeout.
+            if (type(event.get('room_id')) is int and event['room_id'] > 0
+                    and event.get('kind') == attempt['kind']
+                    and event.get('npc_id') == attempt['npc_id']
+                    and host_id == state.player.get('role_id')
+                    and members and members[0].get('role_id') == host_id):
+                data['create_pending'] = None
+                data['create_uncertain'] = False
+                data['create_attempt'] = None
+                data['create_result'] = 9
+                data['status'] = '協力創房成功，已由伺服器房主與活動資訊確認'
 
 
 def expire(state, now=None):
