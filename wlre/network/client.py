@@ -42,6 +42,7 @@ def post_battle_trace(state, phase):
     remaining = state.instances.get('coop', {}).get('fight_count')
     return {
         'type': 'post_battle_trace', 'phase': phase,
+        'battle_count': state.battle_count,
         'war_style': state.battle.get('war_style'),
         'delay_seconds': delay,
         'fight_count_known': type(remaining) is int and remaining >= 0,
