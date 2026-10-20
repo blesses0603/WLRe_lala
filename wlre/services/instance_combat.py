@@ -19,14 +19,24 @@ def own_victory(state):
 
 
 def consume_coop_fight(state):
-    """Consume one known match exactly once, return 5, 2.5 or None seconds."""
+    """Return official post-fight delay; unknown fight count uses normal 2.5s.
+
+    The 1262 client checks whether FightCount > 1. A missing S186-15
+    is not evidence that a new cooperative match should be started,
+    but it must not suppress FightManager.SendServerEvent indefinitely.
+    """
     data = state.instances['coop']
     battle_id = state.battle_count
     if data.get('fight_consumed_battle') == battle_id:
         return None
     count = data.get('fight_count')
     if type(count) is not int or count < 1:
-        return None
+        # Official CheckFightCount() returns false for the default count=0;
+        # FightOver() then calls SendServerEvent() after the normal exit delay.
+        # Preserve the unknown state and do not speculate on a victory/next fight.
+        data['fight_consumed_battle'] = battle_id
+        data['last_fight_victory'] = None
+        return 2.5
     data['fight_consumed_battle'] = battle_id
     data['fight_count'] = count - 1
     won = own_victory(state)
