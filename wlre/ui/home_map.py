@@ -23,7 +23,14 @@ class HomeMap(ttk.Frame):
         self.on_portal=on_portal
         self.maps=SmallMaps()
         self.portals=Portals()
-        self.npc_index=NPCIndex()
+        try:
+            self.npc_index=NPCIndex()
+            self.npc_index_error=False
+        except (OSError,ValueError,UnicodeError):
+            # A corrupt optional catalogue must never crash the whole client
+            # or silently enable an unverified NPC interaction.
+            self.npc_index=None
+            self.npc_index_error=True
         self.npc_rows=[]
         self.selected_npc=None
         self.portal_rows=[]
@@ -139,7 +146,8 @@ class HomeMap(ttk.Frame):
         self.selected_npc=None
         self.portal_list.delete(0,'end')
         self.npc_list.delete(0,'end')
-        self.npc_message.set('選取 NPC 查看名稱、座標與事件索引核對狀態。')
+        self.npc_message.set('NPC 索引檔無效：已停用索引資料。' if self.npc_index_error
+                             else '選取 NPC 查看名稱、座標與事件索引核對狀態。')
         self.list_rows=[]
         for p in self.portal_rows:
             prefix='↩ 返回：' if recovery else ('◎ ' if p.get('direct_eligible') else '○ ')
