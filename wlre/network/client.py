@@ -183,16 +183,14 @@ class SessionLogic:
             if state.battle.get('war_style')==16:
                 from wlre.services.instance_combat import consume_coop_fight
                 delay = consume_coop_fight(state)
-                if delay is None:
-                    state.battle['post_event']={'status':'cooperative_wait',
-                        'reason':'協力戰鬥場次尚未由 S186-15 同步，暫停自動接續'}
-                else:
-                    self.post_battle_due=time.monotonic()+delay
-                    state.battle['post_event']={'status':'cooperative_wait',
-                        'reason':'依 1262 官方協力場次等待，接續事件一次',
-                        'delay_seconds':delay}
-                    state.event_flow={**state.event_flow,'blocked':True,
-                        'last_source':'協力戰後安全等待，準備 C20-6 00'}
+                # A missing S186-15 follows the official FightOver default
+                # branch (2.5s), never an infinite local waiting state.
+                self.post_battle_due=time.monotonic()+delay
+                state.battle['post_event']={'status':'cooperative_wait',
+                    'reason':'依 1262 官方協力戰後延遲，接續伺服器事件一次',
+                    'delay_seconds':delay}
+                state.event_flow={**state.event_flow,'blocked':True,
+                    'last_source':'協力戰後安全等待，準備 C20-6 00'}
             else:
                 self.post_battle_due=time.monotonic()+2.5
                 state.battle['post_event']={'status':'exit_delay','source':kind,'delay_seconds':2.5}
