@@ -2,6 +2,7 @@
 from functools import lru_cache
 from PIL import Image, ImageDraw, ImageOps, ImageTk
 from wlre.paths import RESOURCE_ROOT
+from wlre.ui.instance_menu_icons import menu_icon_photo
 
 ICONS={'主頁':'MainIcon_041', '組隊':'MainIcon_005', '夥伴出戰':'MainIcon_010',
        '遠征':'MainIcon_038', '煉金':'MainIcon_007', '製作':'MainIcon_011',
@@ -34,5 +35,9 @@ def action_icon_photo(widget, title, size=24):
 
 
 def icon_photo(widget, title, size=34):
+    if title=='副本':
+        official=menu_icon_photo(widget,title,size)
+        if official is not None:
+            return official
     name=ICONS.get(title)
     return ImageTk.PhotoImage(icon_image(name,size),master=widget) if name else None

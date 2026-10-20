@@ -68,7 +68,7 @@ class OptimizedWindow(unittest.TestCase):
         state=State().snapshot()
         with patch.object(self.app.alchemy_panel,'render') as renderer:
             self.app.render(state);renderer.assert_not_called()
-            self.app.left_tabs.select(self.app.alchemy_panel);self.root.update()
+            self.app.open_feature('alchemy');self.root.update()
             renderer.assert_called()
         self.app.left_tabs.select(self.app.overview_panel.master);self.root.update()
 

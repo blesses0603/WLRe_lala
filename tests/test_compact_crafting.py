@@ -11,7 +11,7 @@ class CompactCrafting(unittest.TestCase):
     def setUp(self):
         self.root=tk.Tk();self.app=App(self.root);self.errors=[]
         self.root.report_callback_exception=lambda *args:self.errors.append(args)
-        self.app.show_main();self.app.left_tabs.select(self.app.crafting_panel);self.root.update()
+        self.app.show_main();self.app.open_feature('crafting');self.root.update()
         self.panel=self.app.crafting_panel;self.browser=self.panel.browser
 
     def tearDown(self):

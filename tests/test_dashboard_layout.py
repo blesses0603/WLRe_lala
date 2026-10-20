@@ -34,7 +34,7 @@ class DashboardLayout(unittest.TestCase):
         self.root.update()
 
     def test_party_tables_have_no_visible_scrollbars(self):
-        self.app.left_tabs.select(self.app.party_panel)
+        self.app.open_feature('party')
         self.root.update()
         for tree in (self.app.party_panel.members, self.app.party_panel.requests):
             with self.subTest(table=str(tree)):
@@ -78,8 +78,9 @@ class DashboardLayout(unittest.TestCase):
 
     def test_all_main_pages_have_a_visible_shared_outer_border(self):
         theme=self.app.theme
-        for page in (self.app.overview_panel.master,self.app.party_panel,
-                     self.app.alchemy_panel,self.app.crafting_panel,self.app.efficiency_panel):
+        for page in (self.app.overview_panel.master,self.app.party_launcher,
+                     self.app.alchemy_launcher,self.app.crafting_launcher,
+                     self.app.efficiency_launcher):
             with self.subTest(page=str(page)):
                 self.app.left_tabs.select(page);self.root.update()
                 data=theme.windows[str(self.root)];data['signature']=None;theme.paint(self.root)
@@ -103,7 +104,7 @@ class DashboardLayout(unittest.TestCase):
         self.app.write('fixture-while-battle-visible')
         self.assertTrue(self.app.formation.winfo_ismapped());self.assertTrue(self.app.chat_panel.winfo_ismapped())
         self.assertTrue(self.app.home_map.winfo_ismapped())
-        self.app.left_tabs.select(self.app.party_panel);self.root.update()
+        self.app.open_feature('party');self.root.update()
         self.assertTrue(self.app.party_guard_panel.winfo_ismapped())
         self.assertLessEqual(self.app.party_guard_panel.winfo_rooty()+self.app.party_guard_panel.winfo_height(),self.app.party_panel.winfo_rooty()+self.app.party_panel.winfo_height())
         self.assertEqual(tkfont.nametofont('TkDefaultFont',root=self.root).cget('size'),-14)
@@ -139,8 +140,11 @@ class DashboardLayout(unittest.TestCase):
                 self.assertEqual(str(button.cget('compound')),'none')
                 self.assertIsNotNone(button._action_icon)
                 button.invoke();self.root.update()
-                expected=getattr(self.app,destination)
-                self.assertEqual(self.app.left_tabs.select(),str(expected))
+                key=destination.removesuffix('_panel')
+                if key=='efficiency':key='efficiency'
+                self.assertEqual(self.app.feature_windows[key].state(),'normal')
+                self.assertEqual(self.app.left_tabs.select(),
+                                 str(self.app.overview_panel.master))
         self.app.left_tabs.select(panel.master);self.root.update()
         self.assertFalse(self.errors,self.errors)
 
