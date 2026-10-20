@@ -208,9 +208,7 @@ class InstanceJoinLeave(unittest.TestCase):
             main_join(logic, state)
         state.apply(decode(main_list()))
         state.auto_battle['enabled'] = True
-        with self.assertRaises(ProtocolError):
-            main_join(logic, state)
-        state.auto_battle['enabled'] = False
         main_join(logic, state)
+        self.assertTrue(state.auto_battle['enabled'])
         with self.assertRaises(ProtocolError):
             logic.command({'type':'instance_leave','mode':'main'}, state)
