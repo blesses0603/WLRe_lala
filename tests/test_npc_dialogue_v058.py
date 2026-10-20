@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import patch
 
 from wlre.core.state import State
-from wlre.network.npc_dialogue import decode_effect, request_npc, advance_npc
+from wlre.network.npc_dialogue import decode_effect, request_npc, advance_npc, close_npc_choice
 from wlre.network.protocol import decode
 from wlre.network.wire import Packet, ProtocolError
 from wlre.services.world.npc_catalog import NPCIndex
@@ -56,6 +56,36 @@ class NPCDialogueTests(unittest.TestCase):
         state.apply(decode(Packet(20,10,b'')))
         self.assertEqual(state.npc_dialogue['phase'],'continue')
         self.assertTrue(state.event_flow['blocked'])
+
+    def test_manual_choice_close_requires_server_effect_and_confirmation(self):
+        state=State()
+        state.player={'scene':100}
+        state.npc_dialogue={'active':True,'phase':'requesting','scene':100}
+        state.apply(decode(s20_effect(6,9)))
+        self.assertEqual(state.npc_dialogue['effect_type'],6)
+        with self.assertRaises(ProtocolError):
+            close_npc_choice(state,{'confirmed':False})
+        self.assertEqual(close_npc_choice(state,{'confirmed':True}),
+                         [Packet(20,9,b'\x28')])
+        self.assertTrue(state.event_flow['blocked'])
+        self.assertEqual(state.npc_dialogue['phase'],'closing')
+        with self.assertRaises(ProtocolError):
+            close_npc_choice(state,{'confirmed':True})
+        state.apply(decode(Packet(20,8,b'')))
+        self.assertFalse(state.npc_dialogue['active'])
+
+    def test_choice_close_denied_if_scene_changed_or_not_choice(self):
+        state=State()
+        state.player={'scene':101}
+        state.npc_dialogue={'active':True,'phase':'choice_unavailable',
+                            'scene':100,'effect_type':6}
+        with self.assertRaises(ProtocolError):
+            close_npc_choice(state,{'confirmed':True})
+        state.player={'scene':100}
+        state.npc_dialogue={'active':True,'phase':'effect_unavailable',
+                            'scene':100,'effect_type':6}
+        with self.assertRaises(ProtocolError):
+            close_npc_choice(state,{'confirmed':True})
 
     def test_server_out_of_range_unblocks(self):
         state=State()

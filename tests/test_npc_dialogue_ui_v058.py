@@ -39,6 +39,34 @@ class NPCDialogueUITests(unittest.TestCase):
             self.root.tk.call('after','cancel',job)
         self.root.destroy()
 
+    def test_known_text_is_only_displayed_with_valid_catalog(self):
+        self.map.npc_talks={456:'這是測試對話，不是正式遊戲文字。'}
+        state={**self.ready_state,
+               'event_flow':{'blocked':True},
+               'npc_dialogue':{'active':True,'phase':'talk',
+                               'scene':12903,'text_id':456}}
+        self.map.set_state(state)
+        self.assertIn('這是測試對話',self.map.npc_message.get())
+        self.assertEqual(str(self.map.npc_text_button.cget('state')),'normal')
+        with patch('wlre.ui.home_map.messagebox.showinfo') as popup:
+            self.map.view_npc_text()
+        self.assertEqual(popup.call_count,1)
+        self.assertIn('這是測試對話',popup.call_args.args[1])
+
+    def test_close_choice_requires_confirmation(self):
+        state={**self.ready_state,
+               'event_flow':{'blocked':True},
+               'npc_dialogue':{'active':True,'phase':'choice_unavailable',
+                               'scene':12903,'effect_type':6,'option_index':15}}
+        self.map.set_state(state)
+        self.assertEqual(str(self.map.npc_close_button.cget('state')),'normal')
+        with patch('wlre.ui.home_map.messagebox.askyesno',return_value=False):
+            self.map.close_npc_option()
+        self.send.assert_not_called()
+        with patch('wlre.ui.home_map.messagebox.askyesno',return_value=True):
+            self.map.close_npc_option()
+        self.send.assert_called_once_with({'type':'npc_close_choice','confirmed':True})
+
     def test_unverified_npc_never_enables_packet(self):
         self.npc['verified']=False
         self.map.update_npc_buttons()

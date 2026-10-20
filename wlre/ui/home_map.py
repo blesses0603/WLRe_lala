@@ -304,7 +304,7 @@ class HomeMap(ttk.Frame):
                 text_id=dialogue.get('text_id')
                 content=dialogue_text(self.npc_talks,text_id)
                 if content is not None:
-                    excerpt=content.replace('\\r','').replace('\\n',' ')[:85]
+                    excerpt=content.replace('\r','').replace('\n',' ')[:85]
                     self.npc_message.set(f'對話 ID {text_id}：{excerpt}'
                         + ('…（可查看全文）' if len(content)>85 else ''))
                 else:
@@ -315,7 +315,7 @@ class HomeMap(ttk.Frame):
             elif phase=='choice_unavailable':
                 self.npc_message.set(
                     f"選項索引 {dialogue.get('option_index')} 尚無可信資料；"
-                    "已停止送出，必要時請重新登入同步。")
+                    "不會自行選擇；可手動按「關閉選項」，或重新登入同步。")
             elif phase=='closing':
                 self.npc_message.set('已要求關閉選項，等待伺服器 S20-8；不自動重送。')
             elif phase=='effect_unavailable':

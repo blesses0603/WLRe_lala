@@ -7,6 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from tools.resources.import_npc_talks import convert
 from wlre.services.world.npc_talk import (
     parse_talk_data, make_catalog, load_catalog, dialogue_text,
 )
@@ -58,6 +59,19 @@ class TalkDataTests(unittest.TestCase):
         odd[2:4]=struct.pack('<H',3)
         with self.assertRaises(ValueError):
             parse_talk_data(struct.pack('<i',1)+bytes(odd))
+
+    def test_importer_writes_optional_gzip_and_refuses_overwrite(self):
+        raw=struct.pack('<i',1)+sample_record(997,'正式來源必須獨立驗證',0)
+        with tempfile.TemporaryDirectory() as td:
+            source=Path(td)/'TalkData_C.bytes'
+            output=Path(td)/'npc_talk_1262.json.gz'
+            source.write_bytes(raw)
+            count,digest=convert(source,output)
+            self.assertEqual(count,1)
+            self.assertEqual(digest,hashlib.sha256(raw).hexdigest())
+            self.assertEqual(load_catalog(output)[997],'正式來源必須獨立驗證')
+            with self.assertRaises(FileExistsError):
+                convert(source,output)
 
     def test_malformed_catalog_is_rejected(self):
         raw=struct.pack('<i',1)+sample_record()
