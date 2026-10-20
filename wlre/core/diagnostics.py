@@ -25,7 +25,7 @@ class Diagnostics:
         self.logger=logging.Logger('wlre-health');self.logger.propagate=False
         self.last=0;self.errors=0;self.worker_errors=0
         self.last_connection=None;self.connection_logged=None;self.last_error=None;self.error_logged=None
-        self.battle_invalid_count=0;self.battle_invalid_logged=None
+        self.battle_invalid_count=0;self.battle_invalid_logged={}
         self.ai_status_logged={}
         self.post_battle_logged=set()
         root=Path(base) if base is not None else user_data_root()/'diagnostics'
@@ -82,30 +82,46 @@ class Diagnostics:
                     value['error_type'],value.get('error_frames','none'))
 
     def battle_attribute_invalid(self, value):
-        """Rate-limited, numeric-only evidence for a discarded S51-1 update."""
+        """Log discarded S51-1 shapes and safe battle context without raw bytes."""
         if not isinstance(value, dict) or value.get('type') != 'battle_attribute_invalid':
             return False
         size, tail = value.get('payload_bytes'), value.get('trailing_bytes')
+        count = value.get('battle_count')
+        style = value.get('battle_war_style')
+        active = value.get('battle_active')
         if (type(value.get('main')) is not int or value['main'] != 51 or
                 type(value.get('sub')) is not int or value['sub'] != 1 or
                 type(size) is not int or not 0 <= size <= 65533 or
-                type(tail) is not int or not 1 <= tail <= 6 or tail != size % 7):
+                type(tail) is not int or not 1 <= tail <= 6 or tail != size % 7 or
+                count is not None and (type(count) is not int or not 0 <= count <= 100000000) or
+                style is not None and (type(style) is not int or not 0 <= style <= 255) or
+                active is not None and type(active) is not bool):
             return False
         self.battle_invalid_count += 1
         now = time.monotonic()
-        if self.battle_invalid_logged is not None and now - self.battle_invalid_logged < 60:
+        signature = (size, tail, style, active)
+        previous = self.battle_invalid_logged.get(signature)
+        if previous is not None and now - previous < 60:
             return False
-        self.battle_invalid_logged = now
+        if len(self.battle_invalid_logged) >= 32:
+            self.battle_invalid_logged.clear()
+        self.battle_invalid_logged[signature] = now
         self.logger.info(
             'protocol_warning packet_main=51 packet_sub=1 reason=invalid_record_length '
-            'payload_bytes=%d complete_records=%d trailing_bytes=%d count=%d',
-            size, size // 7, tail, self.battle_invalid_count)
+            'payload_bytes=%d complete_records=%d trailing_bytes=%d count=%d '
+            'battle_count=%s war_style=%s battle_active=%s',
+            size, size // 7, tail, self.battle_invalid_count,
+            count if count is not None else 'none',
+            style if style is not None else 'none',
+            int(active) if active is not None else 'none')
         return True
 
     def auto_battle_status(self, value):
-        """Rate-limited, allowlisted AI state, without roles, skills or commands."""
+        """Rate-limit per battle instead of hiding new fights for 60 seconds."""
         allowed = ('disabled', 'armed', 'paused', 'waiting', 'submitted',
                    'blocked', 'healing', 'waiting_heal', 'maintenance')
+        sources = ('none', 'manual', 'disconnect', 'maintenance_uncertain',
+                   'field_supply_uncertain', 'death_guard', 'other')
         if (not isinstance(value, dict) or value.get('type') != 'auto_battle_status'
                 or value.get('status') not in allowed
                 or type(value.get('enabled')) is not bool
@@ -114,27 +130,50 @@ class Diagnostics:
         style, round_number, living = (
             value.get('battle_war_style'), value.get('battle_round'),
             value.get('owned_living'))
+        count = value.get('battle_count', 0)
+        source = value.get('stop_source', 'none')
         if (style is not None and (type(style) is not int or not 0 <= style <= 255)
                 or round_number is not None and
                 (type(round_number) is not int or not 0 <= round_number <= 65535)
-                or type(living) is not int or not 0 <= living <= 32):
+                or type(living) is not int or not 0 <= living <= 32
+                or type(count) is not int or not 0 <= count <= 100000000
+                or source not in sources):
             return False
         status = value['status']
-        signature = (status, bool(value['enabled']), bool(value['battle_active']),
-                     style, bool(round_number), living)
+        signature = (count, status, value['enabled'], value['battle_active'],
+                     style, round_number, living, source)
         now = time.monotonic()
         previous = self.ai_status_logged.get(signature)
         if previous is not None and now - previous < 60:
             return False
-        if len(self.ai_status_logged) >= 32:
+        if len(self.ai_status_logged) >= 96:
             self.ai_status_logged.clear()
         self.ai_status_logged[signature] = now
         self.logger.info(
             'auto_battle state=%s enabled=%d battle_active=%d war_style=%s '
-            'round=%s owned_living=%d',
+            'round=%s owned_living=%d battle_count=%d stop_source=%s',
             status, value['enabled'], value['battle_active'],
             style if style is not None else 'none',
-            round_number if round_number is not None else 'none', living)
+            round_number if round_number is not None else 'none', living,
+            count, source)
+        return True
+
+    def maintenance_trace(self, value):
+        """Accept only generated status codes and bounded numeric context."""
+        if not isinstance(value, dict) or value.get('type') != 'maintenance_trace':
+            return False
+        phase, action = value.get('phase'), value.get('action')
+        elapsed, count, completed = (value.get('elapsed_s'), value.get('battle_count'),
+                                     value.get('completed'))
+        if (phase not in ('idle', 'checking', 'pending', 'uncertain')
+                or action not in ('none', 'repair', 'sell', 'delete')
+                or type(elapsed) is not int or not 0 <= elapsed <= 3600
+                or type(count) is not int or not 0 <= count <= 100000000
+                or type(completed) is not int or not 0 <= completed <= 100000000):
+            return False
+        self.logger.info(
+            'maintenance phase=%s action=%s elapsed_s=%d battle_count=%d completed=%d',
+            phase, action, elapsed, count, completed)
         return True
 
     def post_battle_trace(self, value):

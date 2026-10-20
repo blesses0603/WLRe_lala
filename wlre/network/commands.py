@@ -122,7 +122,7 @@ def dispatch(logic,command,state):
         logic.auto_battle.start(state,command.get('settings',{}))
         return []
     if kind == 'stop_auto_battle':
-        logic.auto_battle.stop(state)
+        logic.auto_battle.stop(state,source='manual')
         return []
     if kind == 'portal_walk':
         if logic.roaming.enabled:logic.roaming.stop(state,logic.movement,'改為前往傳送點')

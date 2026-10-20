@@ -40,6 +40,7 @@ class PostBattleMaintenance:
 
     def __init__(self):
         self.pending=None;self.uncertain=False;self.settle_key=None;self.settle_due=0
+        self.trace_key=None;self.trace_at=None
 
     @writes('maintenance')
     def status(self,state,text,**fields):
@@ -51,7 +52,7 @@ class PostBattleMaintenance:
         reservations.uncertain(state.inventory,'maintenance')
         self.uncertain=True;state.inventory['use_failed']=True
         self.status(state,text+'；請重新登入同步',checking=False)
-        logic.auto_battle.stop(state,text);logic.roaming.stop(state,logic.movement,text)
+        logic.auto_battle.stop(state,text,source='maintenance_uncertain');logic.roaming.stop(state,logic.movement,text)
 
     @writes('maintenance')
     def observe(self,event,state):

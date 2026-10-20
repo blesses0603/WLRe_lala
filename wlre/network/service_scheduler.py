@@ -23,18 +23,51 @@ def auto_battle_status_event(state):
         'battle_war_style': battle.get('war_style'),
         'battle_round': battle.get('round'),
         'battle_active': bool(battle.get('active')),
+        'battle_count': state.battle_count,
         'owned_living': owned_living,
     }
+
+
+def maintenance_trace_event(state, logic, now):
+    """Expose only action class and elapsed time, never slots, items or names."""
+    guard = logic.maintenance
+    pending = guard.pending
+    phase = ('uncertain' if guard.uncertain else 'pending' if pending
+             else 'checking' if state.maintenance.get('checking') else 'idle')
+    action = pending.get('action') if pending else 'none'
+    if action not in ('repair', 'sell', 'delete'):
+        action = 'none'
+    elapsed = 0
+    if pending and type(pending.get('due')) in (int, float):
+        elapsed = max(0, min(3600, int(now - (pending['due'] - guard.timeout))))
+    return {'type': 'maintenance_trace', 'phase': phase, 'action': action,
+            'elapsed_s': elapsed, 'battle_count': state.battle_count,
+            'completed': state.maintenance.get('completed', 0)}
 
 
 def advance_services(logic,state,send_command,send_raw,emit,on_state):
     state.assert_writer()
     before_maintenance=state.maintenance
-    for packet in logic.maintenance.tick(state,logic,time.monotonic()):
+    before_maintenance_ai=state.auto_battle
+    maintenance_now=time.monotonic()
+    for packet in logic.maintenance.tick(state,logic,maintenance_now):
         send_command(packet)
     if state.maintenance != before_maintenance:
         emit({'type':'maintenance_status',**state.maintenance})
         if on_state:notify_state(on_state,state)
+    # A maintenance timeout may stop AI inside maintenance.tick, before the AI tick.
+    if state.auto_battle is not before_maintenance_ai:
+        emit(auto_battle_status_event(state))
+        if on_state:notify_state(on_state,state)
+    trace=maintenance_trace_event(state,logic,maintenance_now)
+    trace_key=(trace['phase'],trace['action'],trace['battle_count'],trace['completed'])
+    guard=logic.maintenance
+    if (trace_key != guard.trace_key or
+            trace['phase'] in ('pending', 'uncertain') and
+            (guard.trace_at is None or maintenance_now - guard.trace_at >= 10)):
+        guard.trace_key=trace_key
+        guard.trace_at=maintenance_now
+        emit(trace)
     before_expedition = (state.expedition['status'], state.expedition['pending'], state.expedition['enabled'])
     for packet in logic.expedition.tick(state,time.monotonic()):
         send_command(packet)
@@ -63,7 +96,7 @@ def advance_services(logic,state,send_command,send_raw,emit,on_state):
     if supply_event:
         emit(supply_event)
         if logic.field_supply.uncertain:
-            logic.auto_battle.stop(state,supply_event['reason'])
+            logic.auto_battle.stop(state,supply_event['reason'],source='field_supply_uncertain')
             logic.roaming.stop(state,logic.movement,'補給結果未確認')
             emit(auto_battle_status_event(state))
         if on_state:notify_state(on_state,state)

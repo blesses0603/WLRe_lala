@@ -438,6 +438,8 @@ class App(LoginController,AccountController):
                 if hasattr(self, 'diagnostics'): self.diagnostics.battle_attribute_invalid(data)
             elif kind=='event' and data.get('type') == 'post_battle_trace':
                 if hasattr(self, 'diagnostics'): self.diagnostics.post_battle_trace(data)
+            elif kind=='event' and data.get('type') == 'maintenance_trace':
+                if hasattr(self, 'diagnostics'): self.diagnostics.maintenance_trace(data)
             elif kind=='session_finished':session_finished=True
             elif kind=='state':latest=data
             elif kind=='error':

@@ -101,3 +101,12 @@ health 記錄 `periodic_cleanup display_events_removed=N` 與 `periodic_cleanup 
 - 1262 `FightManager.FightOver` 在無剩餘多場勝利等待條件時直接接續事件；LaLa 原有 `S186-15` 未到即永久等候的分支與此不符。新版本採保守的一次接續：未知場次為官方一般退場 2.5 秒；已知仍需等待的勝利場次 5 秒。發送的是既有 `C20-6 00`，沒有新增未知封包、重送、開始或領獎動作。
 - 新版 Log 例如 `post_battle phase=scheduled battle_count=1 war_style=16 delay_s=2.5 fight_count_known=0`、`post_battle phase=sent...`、`post_battle phase=completed...`。三階段使用可信程式產生的白名單、數字／布林欄位，依戰鬥計數與階段去重，保留原 Log 輪替；不包含角色 ID／暱稱、隊友、道具、密碼、封包本文與使用者提供的任意文字。
 - 若只看到 `scheduled`：檢查接續計時與連線；若有 `sent` 無 `completed`：只能表示本機已發送 `C20-6 00`，仍須伺服器回覆才知道後續情況，不允許自動重送；若新戰鬥開始亦可由 AI 新回合證據確認。正式服實測仍待進行。
+
+
+## 2026-10-20：health-25804 戰後診斷補強（v0.5.6）
+
+- 18:25:54 再次看到協力戰鬥 `S51-1 payload_bytes=10 trailing_bytes=3`，屬同一型態的非 7 bytes 整倍數異常。繼續整包安全略過、不影響其他封包解碼；新 Log 補上匿名 `battle_count`、`war_style` 和 `battle_active`，按封包長度及戰鬥類型節流。**尚不能判定是協定擴充還是伺服器資料異常。**
+- 18:26:03～18:26:23 三次協力戰後接續均有 `post_battle sent`，第三次收到 `completed`；18:26:24 AI 開始顯示 `maintenance`，18:27:19 變成 `disabled`。舊 Log 無法區分使用者關閉、維護操作逾時與其他原因。
+- 新增 `maintenance phase=pending action=repair elapsed_s=5 battle_count=3 completed=0` 等白名單日誌，只記等待秒數與操作類別。狀態改變即記，pending／uncertain 持續等待時約每 10 秒記一次；原有每檔 1 MiB／2 份輪替維持不變。
+- 新增 `auto_battle ... battle_count=3 stop_source=manual`，停止來源只允許 `none/manual/disconnect/maintenance_uncertain/field_supply_uncertain/death_guard/other`，不記任何自由文字原因。同一回合／場次仍節流，跨場不隱藏。
+- 修正只增加診斷證據，不移除安全鎖、不自動補發修理／整理、事件 C20-6 或 AI 戰鬥指令。正式服仍需確認是否持續出現相同 S51-1 格式、維護狀態是否由伺服器確認解除。
