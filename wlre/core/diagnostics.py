@@ -136,6 +136,26 @@ class Diagnostics:
             round_number if round_number is not None else 'none', living)
         return True
 
+    def post_battle_trace(self, value):
+        """Log only allowlisted continuation stages, never packet text or IDs."""
+        if not isinstance(value, dict) or value.get('type') != 'post_battle_trace':
+            return False
+        phase = value.get('phase')
+        if phase not in ('scheduled', 'sent', 'completed'):
+            return False
+        style = value.get('war_style')
+        delay = value.get('delay_seconds')
+        known = value.get('fight_count_known')
+        if (style is not None and (type(style) is not int or not 0 <= style <= 255)
+                or delay is not None and
+                (type(delay) not in (int, float) or delay not in (2.5, 5.0))
+                or type(known) is not bool):
+            return False
+        self.logger.info('post_battle phase=%s war_style=%s delay_s=%s fight_count_known=%d',
+                         phase, style if style is not None else 'none',
+                         delay if delay is not None else 'none', known)
+        return True
+
     def dropped(self,count):self.logger.info('display_events_skipped=%d',count)
 
     def close(self):
