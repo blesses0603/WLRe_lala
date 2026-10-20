@@ -31,7 +31,8 @@ class InstanceNavigation(unittest.TestCase):
         self.assertEqual(self.app.instance_window.state(),'withdrawn')
         self.app.left_tabs.buttons[str(launcher)].invoke()
         self.root.update()
-        self.assertEqual(self.app.left_tabs.select(),str(launcher))
+        self.assertEqual(self.app.left_tabs.select(),
+                         str(self.app.overview_panel.master))
         self.assertEqual(self.app.instance_window.state(),'normal')
         self.assertEqual(str(panel.winfo_toplevel()),str(self.app.instance_window))
         self.assertEqual(

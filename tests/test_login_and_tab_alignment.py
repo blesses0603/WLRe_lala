@@ -13,15 +13,17 @@ class LoginAndTabAlignment(unittest.TestCase):
         self.root.destroy()
 
     def test_efficiency_is_right_aligned_and_survives_badge_rebuild(self):
-        tabs=self.app.left_tabs;page=str(self.app.efficiency_panel)
+        tabs=self.app.left_tabs;page=str(self.app.efficiency_launcher)
         for rebuild in (False,True):
-            if rebuild:tabs.tab(self.app.party_panel,text='組隊（1）');self.root.update()
+            if rebuild:tabs.tab(self.app.party_launcher,text='組隊（1）');self.root.update()
             button=tabs.buttons[page]
             self.assertEqual(button.pack_info()['side'],'right')
             self.assertEqual(button.winfo_x()+button.winfo_width(),tabs.bar.winfo_width())
-            self.assertGreater(button.winfo_x(),tabs.buttons[str(self.app.crafting_panel)].winfo_x())
-            button.invoke();self.root.update();self.assertEqual(tabs.select(),page)
-        tabs._step(page,-1);self.assertEqual(tabs.select(),str(self.app.crafting_panel))
+            self.assertGreater(button.winfo_x(),tabs.buttons[str(self.app.crafting_launcher)].winfo_x())
+            button.invoke();self.root.update()
+            self.assertEqual(self.app.feature_windows['efficiency'].state(),'normal')
+            self.assertEqual(tabs.select(),str(self.app.overview_panel.master))
+        tabs._step(page,-1);self.assertEqual(tabs.select(),str(self.app.crafting_launcher))
 
     def test_login_has_no_verification_toggle_and_always_verifies_before_login(self):
         self.app.show_login();self.root.update()

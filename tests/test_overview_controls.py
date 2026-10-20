@@ -39,7 +39,7 @@ class OverviewControls(unittest.TestCase):
     def test_hidden_animation_pauses_and_disconnect_clears_halo(self):
         self.state['auto_battle']['enabled']=True;self.app.render(self.state);self.root.update()
         button=self.panel.actions['ai']
-        self.app.left_tabs.select(self.app.crafting_panel);self.root.update()
+        self.app.left_tabs.select(self.app.crafting_launcher);self.root.update()
         self.assertIsNone(button.job)
         self.app.left_tabs.select(self.panel.master);self.root.update()
         self.assertIsNotNone(button.job)
