@@ -115,7 +115,10 @@ def apply_instances(state, event):
         if mode == 'coop':
             old_room_id = (data.get('room') or {}).get('room_id')
             if old_room_id != room_id:
-                _clear_coop_round(data)
+                # Do not also reset reward-based completion evidence when the
+                # first room snapshot follows an already received S186-11.
+                if old_room_id is not None or data.get('reward') is None:
+                    _clear_coop_round(data)
                 # S186-11 can precede the first S186-3 room snapshot.
                 # An unknown old room is not evidence of a different session.
                 # Only an observed transition between two different room IDs
