@@ -279,7 +279,7 @@ class SessionLogic:
         self.crafting.disconnect(state)
         self.alchemy.stop(state,'連線結束')
         self.portal_travel.cancel(state,'連線結束，已取消傳點移動')
-        self.auto_battle.stop(state,'連線結束')
+        self.auto_battle.stop(state,'連線結束',source='disconnect')
         self.roaming.stop(state,self.movement,'連線結束')
 
 
@@ -383,6 +383,10 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
                     stage = 'decode'
                     try:
                         event = decode(packet,state.player.get('role_id'))
+                        if event.get('type') == 'battle_attribute_invalid':
+                            event.update(battle_count=state.battle_count,
+                                         battle_war_style=state.battle.get('war_style'),
+                                         battle_active=bool(state.battle.get('active')))
                         stage = 'state_apply'
                         health.received()
                         state.apply(event)
