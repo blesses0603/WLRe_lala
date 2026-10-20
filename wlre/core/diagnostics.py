@@ -25,6 +25,7 @@ class Diagnostics:
         self.logger=logging.Logger('wlre-health');self.logger.propagate=False
         self.last=0;self.errors=0;self.worker_errors=0
         self.last_connection=None;self.connection_logged=None;self.last_error=None;self.error_logged=None
+        self.battle_invalid_count=0;self.battle_invalid_logged=None
         root=Path(base) if base is not None else user_data_root()/'diagnostics'
         self.path=root/f'health-{os.getpid()}.log'
         try:
