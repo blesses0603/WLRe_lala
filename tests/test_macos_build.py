@@ -136,5 +136,5 @@ class BundledGuiSmokeTest(unittest.TestCase):
         import subprocess
         result = subprocess.run([sys.executable, str(build_macos.ROOT / 'WLRE_Client.py'),
                                  '--smoke-test-gui'], capture_output=True, text=True,
-                                encoding='utf8', timeout=90)
+                                encoding='utf8', timeout=45)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
