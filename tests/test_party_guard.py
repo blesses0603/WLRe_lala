@@ -93,9 +93,30 @@ class BattleEscape(unittest.TestCase):
         s,l=battle();l.auto_battle.tick(s,l,0);key,units=l.round_key,set(l.sent_units)
         l.command({'type':'set_party_guard','settings':config(False)},s)
         self.assertEqual((l.round_key,l.sent_units),(key,units));self.assertEqual(l.auto_battle.tick(s,l,1),[])
-    def test_special_battle_still_pauses(self):
-        s,l=battle();s.battle['war_style']=16;self.assertEqual(l.auto_battle.tick(s,l,0),[])
-        self.assertEqual(s.auto_battle['status'],'paused')
+    def test_cooperative_event_uses_normal_auto_battle_commands(self):
+        s,l=battle()
+        s.battle['war_style']=16  # Official 1262 FWS_CooperateEventFight
+        packets=l.auto_battle.tick(s,l,0)
+        self.assertEqual(len(packets),2)
+        self.assertTrue(all((p.main,p.sub)==(50,1) for p in packets))
+        self.assertEqual(s.auto_battle['status'],'submitted')
+        self.assertEqual(l.auto_battle.tick(s,l,1),[])  # No double-send in one round
+        s.battle['round']=2
+        self.assertEqual(len(l.auto_battle.tick(s,l,2)),2)
+
+    def test_regular_and_void_dungeon_rounds_remain_supported(self):
+        for style in (1,22):
+            with self.subTest(war_style=style):
+                s,l=battle();s.battle['war_style']=style
+                self.assertEqual(len(l.auto_battle.tick(s,l,0)),2)
+                self.assertEqual(s.auto_battle['status'],'submitted')
+
+    def test_official_special_battle_exclusions_still_pause(self):
+        for style in (21,23,24):
+            with self.subTest(war_style=style):
+                s,l=battle();s.battle['war_style']=style
+                self.assertEqual(l.auto_battle.tick(s,l,0),[])
+                self.assertEqual(s.auto_battle['status'],'paused')
     def test_new_session_has_no_stale_team(self):
         s,l=battle((111,222,333,444));fresh=State();fresh.player=copy.deepcopy(s.player)
         self.assertEqual([m['role_id'] for m in party_guard.missing(fresh.snapshot(),config())],[222,333,444])

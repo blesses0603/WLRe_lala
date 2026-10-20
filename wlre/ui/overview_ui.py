@@ -8,6 +8,7 @@ from wlre.ui.function_icons import action_icon_photo
 from wlre.core.efficiency import rates, progress, forecast
 from wlre.services.battle.party import own_team, player_name
 from wlre.services.battle.party_guard import missing
+from wlre.services.battle.auto_battle import summary as ai_summary
 
 
 def health(stats):
@@ -74,7 +75,9 @@ def summarize(state, live, guard, now=None):
     battling=state.get('battle',{}).get('active',False)
     ai=state.get('auto_battle',{})
     roaming=state.get('roaming',{})
-    ai_text=('戰鬥中...' if battling else '等待戰鬥...') if ai.get('enabled') else '未啟用'
+    # Reflect the actual AI state instead of implying it can submit commands
+    # merely because a battle is active (especially in dungeon/co-op fights).
+    ai_text=ai_summary(ai) if ai.get('enabled') else '未啟用'
     if not roaming.get('enabled'):
         roaming_text='未啟用'
     elif battling:
