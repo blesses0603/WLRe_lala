@@ -135,6 +135,14 @@ def decode(packet, local_role_id=None):
             event.update(stage=r.u8(), fight_number=r.u8())
         event["units"] = [battle_unit(r) for _ in range(r.u8())]
     elif key == (51, 1):
+        # 1262 FightManager.RevChangeAttrib reads fixed 7-byte records.
+        # A partial record cannot be attributed safely to a battle unit.
+        # Discard the entire malformed update rather than applying a
+        # possibly incomplete HP/SP snapshot or closing the connection.
+        if r.remaining % 7:
+            return dict(event, type="battle_attribute_invalid",
+                        payload_bytes=r.remaining, complete_records=r.remaining // 7,
+                        trailing_bytes=r.remaining % 7)
         values = []
         while r.remaining:
             values.append({"col": r.u8(), "row": r.u8(), "kind": r.u8(), "value": r.u32()})

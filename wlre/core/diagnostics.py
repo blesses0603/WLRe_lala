@@ -25,6 +25,7 @@ class Diagnostics:
         self.logger=logging.Logger('wlre-health');self.logger.propagate=False
         self.last=0;self.errors=0;self.worker_errors=0
         self.last_connection=None;self.connection_logged=None;self.last_error=None;self.error_logged=None
+        self.battle_invalid_count=0;self.battle_invalid_logged=None
         root=Path(base) if base is not None else user_data_root()/'diagnostics'
         self.path=root/f'health-{os.getpid()}.log'
         try:
@@ -77,6 +78,27 @@ class Diagnostics:
             else:
                 self.logger.info('connection_exception type=%s frames=%s',
                     value['error_type'],value.get('error_frames','none'))
+
+    def battle_attribute_invalid(self, value):
+        """Rate-limited, numeric-only evidence for a discarded S51-1 update."""
+        if not isinstance(value, dict) or value.get('type') != 'battle_attribute_invalid':
+            return False
+        size, tail = value.get('payload_bytes'), value.get('trailing_bytes')
+        if (type(value.get('main')) is not int or value['main'] != 51 or
+                type(value.get('sub')) is not int or value['sub'] != 1 or
+                type(size) is not int or not 0 <= size <= 65533 or
+                type(tail) is not int or not 1 <= tail <= 6 or tail != size % 7):
+            return False
+        self.battle_invalid_count += 1
+        now = time.monotonic()
+        if self.battle_invalid_logged is not None and now - self.battle_invalid_logged < 60:
+            return False
+        self.battle_invalid_logged = now
+        self.logger.info(
+            'protocol_warning packet_main=51 packet_sub=1 reason=invalid_record_length '
+            'payload_bytes=%d complete_records=%d trailing_bytes=%d count=%d',
+            size, size // 7, tail, self.battle_invalid_count)
+        return True
 
     def dropped(self,count):self.logger.info('display_events_skipped=%d',count)
 

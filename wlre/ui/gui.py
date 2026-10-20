@@ -434,6 +434,8 @@ class App(LoginController,AccountController):
             elif kind=='event' and data.get('type') == 'periodic_cleanup':
                 if hasattr(self, 'diagnostics'):
                     self.diagnostics.logger.info('periodic_cleanup positions_removed=%d', data['positions_removed'])
+            elif kind=='event' and data.get('type') == 'battle_attribute_invalid':
+                if hasattr(self, 'diagnostics'): self.diagnostics.battle_attribute_invalid(data)
             elif kind=='session_finished':session_finished=True
             elif kind=='state':latest=data
             elif kind=='error':
