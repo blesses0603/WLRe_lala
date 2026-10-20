@@ -48,11 +48,16 @@ def maintenance_trace_event(state, logic, now):
 def advance_services(logic,state,send_command,send_raw,emit,on_state):
     state.assert_writer()
     before_maintenance=state.maintenance
+    before_maintenance_ai=state.auto_battle
     maintenance_now=time.monotonic()
     for packet in logic.maintenance.tick(state,logic,maintenance_now):
         send_command(packet)
     if state.maintenance != before_maintenance:
         emit({'type':'maintenance_status',**state.maintenance})
+        if on_state:notify_state(on_state,state)
+    # A maintenance timeout may stop AI inside maintenance.tick, before the AI tick.
+    if state.auto_battle is not before_maintenance_ai:
+        emit(auto_battle_status_event(state))
         if on_state:notify_state(on_state,state)
     trace=maintenance_trace_event(state,logic,maintenance_now)
     trace_key=(trace['phase'],trace['action'],trace['battle_count'],trace['completed'])
