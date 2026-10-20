@@ -12,6 +12,7 @@ from wlre.services.world.navigation import Repository, NavigationError
 from wlre.services.world.map_names import map_label, parse_map_id
 from wlre.services.world.portals import Portals, nearest_marker
 from wlre.services.world.portal_policy import allowed_rows, destination_problem
+from wlre.services.world.npc_catalog import NPCIndex, scene_npcs, npc_detail
 
 
 class HomeMap(ttk.Frame):
@@ -22,6 +23,9 @@ class HomeMap(ttk.Frame):
         self.on_portal=on_portal
         self.maps=SmallMaps()
         self.portals=Portals()
+        self.npc_index=NPCIndex()
+        self.npc_rows=[]
+        self.selected_npc=None
         self.portal_rows=[]
         self.selected_portal=None
         self.audit_window=None
@@ -48,16 +52,31 @@ class HomeMap(ttk.Frame):
         sidebar.pack(side='left',fill='y',padx=(0,8))
         sidebar.pack_propagate(False)
         lists=RoundedNotebook(sidebar)
+        self.portal_tab=ttk.Frame(lists)
         self.npc_tab=ttk.Frame(lists)
         self.monster_tab=ttk.Frame(lists)
+        lists.add(self.portal_tab,text='傳點')
         lists.add(self.npc_tab,text='NPC')
         lists.add(self.monster_tab,text='怪物')
-        self.portal_list=tk.Listbox(self.npc_tab,exportselection=False,background='#203f53',foreground='#f4e4b5',selectbackground='#e5d9ad',selectforeground='#243b4d',borderwidth=0,highlightthickness=0,activestyle='none',font=('Microsoft JhengHei UI',-14))
-        bar=ttk.Scrollbar(self.npc_tab,orient='vertical',command=self.portal_list.yview)
+        self.portal_list=tk.Listbox(self.portal_tab,exportselection=False,background='#203f53',foreground='#f4e4b5',selectbackground='#e5d9ad',selectforeground='#243b4d',borderwidth=0,highlightthickness=0,activestyle='none',font=('Microsoft JhengHei UI',-14))
+        bar=ttk.Scrollbar(self.portal_tab,orient='vertical',command=self.portal_list.yview)
         self.portal_list.configure(yscrollcommand=bar.set)
         bar.pack(side='right',fill='y');self.portal_list.pack(fill='both',expand=True)
         self.portal_list.bind('<<ListboxSelect>>',self.choose_portal)
         self.portal_list.bind('<Double-Button-1>',lambda event:self.go_portal())
+        self.npc_message=tk.StringVar(value='選取 NPC 查看資料；目前不會觸發遊戲事件。')
+        ttk.Label(self.npc_tab,textvariable=self.npc_message,style='Muted.TLabel',
+                  wraplength=120).pack(side='bottom',fill='x',padx=2,pady=3)
+        npc_bar=ttk.Scrollbar(self.npc_tab,orient='vertical')
+        npc_bar.pack(side='right',fill='y')
+        self.npc_list=tk.Listbox(self.npc_tab,exportselection=False,background='#203f53',
+                                 foreground='#f4e4b5',selectbackground='#e5d9ad',
+                                 selectforeground='#243b4d',borderwidth=0,
+                                 highlightthickness=0,font=('Microsoft JhengHei UI',-14))
+        self.npc_list.configure(yscrollcommand=npc_bar.set)
+        npc_bar.configure(command=self.npc_list.yview)
+        self.npc_list.pack(fill='both',expand=True)
+        self.npc_list.bind('<<ListboxSelect>>',self.choose_npc)
         self.monster_list=tk.Listbox(self.monster_tab,exportselection=False,background='#203f53',foreground='#e5eff4',borderwidth=0,highlightthickness=0,font=('Microsoft JhengHei UI',-14))
         mbar=ttk.Scrollbar(self.monster_tab,orient='vertical',command=self.monster_list.yview)
         self.monster_list.configure(yscrollcommand=mbar.set)
@@ -117,7 +136,10 @@ class HomeMap(ttk.Frame):
         recovery=self.image is None
         self.portal_rows=allowed_rows(self.portals,self.selected_id,self.maps,recovery=recovery)
         self.selected_portal=None
+        self.selected_npc=None
         self.portal_list.delete(0,'end')
+        self.npc_list.delete(0,'end')
+        self.npc_message.set('選取 NPC 查看名稱、座標與事件索引核對狀態。')
         self.list_rows=[]
         for p in self.portal_rows:
             prefix='↩ 返回：' if recovery else ('◎ ' if p.get('direct_eligible') else '○ ')
@@ -125,13 +147,17 @@ class HomeMap(ttk.Frame):
             self.list_rows.append(p)
         self.monster_list.delete(0,'end')
         self.monster_rows=[]
-        for e in self.portals.data.get('entities',{}).get(str(self.selected_id),[]):
-            if e['kind']==0:
-                self.portal_list.insert('end','◆ '+e['name']);self.list_rows.append(e)
-            else:
+        entities=self.portals.data.get('entities',{}).get(str(self.selected_id),[])
+        self.npc_rows=scene_npcs(self.selected_id,entities,self.npc_index)
+        for npc in self.npc_rows:
+            marker='◆' if npc['verified'] else '◇'
+            self.npc_list.insert('end',f"{marker} {npc['name']}")
+        for e in entities:
+            if e['kind']!=0:
                 self.monster_list.insert('end',f"Lv.{e['level'] if e['level'] is not None else '?'} {e['name']}")
                 self.monster_rows.append(e)
-        if not self.list_rows:self.portal_list.insert('end','（沒有已確認的返回出口）' if recovery else '（來源未列 NPC／傳點）')
+        if not self.list_rows:self.portal_list.insert('end','（沒有已確認的返回出口）' if recovery else '（來源未列傳點）')
+        if not self.npc_rows:self.npc_list.insert('end','（本場景尚無 NPC 資料）')
         if not self.monster_rows:self.monster_list.insert('end','（來源未列怪物）')
         ready=sum(bool(p.get('direct_eligible')) for p in self.portal_rows)
         if recovery:
@@ -152,13 +178,28 @@ class HomeMap(ttk.Frame):
         selected=self.portal_list.curselection()
         if not selected or selected[0]>=len(self.list_rows):return
         p=self.list_rows[selected[0]]
-        if 'source' in p:
-            self.select_portal(p)
-        else:
-            self.selected_portal=None;self.update_portal_button()
-            self.portal_status.set(p['name']+'｜NPC 位置參考；雙擊小地圖即可移動。')
-            if p['x'] is not None:self.on_pick(self.selected_id,p['x'],p['y'])
-            self.draw()
+        self.select_portal(p)
+
+    def choose_npc(self,event=None):
+        selected=self.npc_list.curselection()
+        if not selected or selected[0]>=len(self.npc_rows):return
+        npc=self.npc_rows[selected[0]]
+        self.select_npc(npc)
+        if npc['x'] is not None and 0<=npc['x']<=65535 and 0<=npc['y']<=65535:
+            self.on_pick(self.selected_id,npc['x'],npc['y'])
+
+    def select_npc(self,npc):
+        self.selected_npc=npc
+        self.selected_portal=None
+        self.portal_list.selection_clear(0,'end')
+        self.update_portal_button()
+        self.npc_list.selection_clear(0,'end')
+        pos=next((i for i,row in enumerate(self.npc_rows) if row is npc),None)
+        if pos is not None:
+            self.npc_list.selection_set(pos)
+            self.npc_list.see(pos)
+        self.npc_message.set(npc_detail(npc))
+        self.draw()
 
     def choose_monster(self,event=None):
         selected=self.monster_list.curselection()
@@ -170,6 +211,8 @@ class HomeMap(ttk.Frame):
         self.draw()
 
     def select_portal(self,p):
+        self.selected_npc=None
+        self.npc_list.selection_clear(0,'end')
         self.selected_portal=p
         self.portal_list.selection_clear(0,'end')
         self.portal_list.selection_set(self.list_rows.index(p))
@@ -257,6 +300,20 @@ class HomeMap(ttk.Frame):
                 spiral.extend((px+math.cos(angle)*radius,py+math.sin(angle)*radius))
             self.canvas.create_line(*spiral,fill=color,width=2,smooth=True)
             if selected:self.canvas.create_text(px,py-14,text=p['name'],fill='white',anchor='s')
+        for npc in self.npc_rows:
+            x,y=npc['x'],npc['y']
+            if x is None or y is None or not 0<=x<=65535 or not 0<=y<=65535:
+                continue
+            u,v=self.projection.packet_to_pixel(x,y)
+            if not 0<=u<=1024 or not 0<=v<=1024:
+                continue
+            px,py=self.screen_pixel(u,v)
+            selected=npc is self.selected_npc
+            radius=5 if selected else 3
+            self.canvas.create_oval(px-radius,py-radius,px+radius,py+radius,
+                                    fill='#be8bec',outline='#fff3c1' if selected else '')
+            if selected:
+                self.canvas.create_text(px,py-12,text=npc['name'],fill='white',anchor='s')
         location=self.state.get('location',{})
         fix=location.get('confirmed')
         displayed=current_position(self.state)
@@ -285,7 +342,22 @@ class HomeMap(ttk.Frame):
         if marker is not None:
             self.select_portal(marker)
             return False
+        # NPC markers are position references, not walk or event commands.
+        npc_candidates=[]
+        for npc in self.npc_rows:
+            if npc['x'] is None or npc['y'] is None or not 0<=npc['x']<=65535 or not 0<=npc['y']<=65535:
+                continue
+            u,v=self.projection.packet_to_pixel(npc['x'],npc['y'])
+            if not 0<=u<=1024 or not 0<=v<=1024:
+                continue
+            px,py=self.screen_pixel(u,v)
+            if math.hypot(px-event.x,py-event.y)<=8:
+                npc_candidates.append((math.hypot(px-event.x,py-event.y),npc))
+        if npc_candidates:
+            self.select_npc(min(npc_candidates,key=lambda x:x[0])[1])
+            return False
         self.selected_portal=None
+        self.selected_npc=None
         self.update_portal_button()
         left,top,scale=self.view()
         u,v=(event.x-left)/scale,(event.y-top)/scale
