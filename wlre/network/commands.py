@@ -70,8 +70,8 @@ def dispatch(logic,command,state):
         if state.phase != 'world_ready' or not state.player.get('role_id'):
             raise ProtocolError('角色尚未完成登入同步')
         if (state.battle.get('active') or state.event_flow.get('blocked')
-                or state.auto_battle.get('enabled') or state.roaming.get('enabled')):
-            raise ProtocolError('戰鬥、事件或自動活動中不可配點，請先停止')
+                or state.roaming.get('enabled')):
+            raise ProtocolError('戰鬥、事件或自動移動中不可配點，請先等待或停止移動')
         if not state.knowledge.get('player', {}).get('ready'):
             raise ProtocolError('請等待角色能力同步')
         if state.attribute_allocation['pending'] or state.attribute_allocation['uncertain']:
