@@ -50,9 +50,8 @@ class TalkDataTests(unittest.TestCase):
             struct.pack('<i',1)+row[:-1],
             struct.pack('<i',1)+row+b'\0',
             struct.pack('<i',-1),
-            struct.pack('<i',1)+sample_record(text='\ud800'),
         ]
-        for bad in cases[:-1]:
+        for bad in cases:
             with self.subTest(size=len(bad)),self.assertRaises(ValueError):
                 parse_talk_data(bad)
         odd=bytearray(row)

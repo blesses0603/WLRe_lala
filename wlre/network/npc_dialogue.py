@@ -64,6 +64,27 @@ def request_npc(state, command):
     return [Packet(20, 1, Writer().u16(index).build())]
 
 
+def close_npc_choice(state, command):
+    """Close an unsupported option list using official C20-9 value 40.
+
+    Explicit confirmation and a known S20 effect_type=6 are required.
+    This is not option selection; do not send '3' + index without Eve data.
+    """
+    info = state.npc_dialogue
+    if command.get('confirmed') is not True:
+        raise ProtocolError('關閉 NPC 選項必須由使用者確認')
+    if (not info.get('active') or info.get('phase') != 'choice_unavailable'
+            or info.get('effect_type') != 6
+            or state.player.get('scene') != info.get('scene')
+            or state.battle.get('active')):
+        raise ProtocolError('目前沒有可安全關閉的 NPC 選項')
+    state.npc_dialogue = {**info, 'phase': 'closing'}
+    state.event_flow = {**state.event_flow, 'blocked': True,
+                        'awaiting_response': True,
+                        'last_source': 'C20-9 40（手動關閉選項）'}
+    return [Packet(20, 9, b'\x28')]
+
+
 def advance_npc(state):
     """Manual one-step C20-6 00. Unknown choices never produce C20-9."""
     info = state.npc_dialogue

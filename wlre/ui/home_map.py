@@ -13,6 +13,7 @@ from wlre.services.world.map_names import map_label, parse_map_id
 from wlre.services.world.portals import Portals, nearest_marker
 from wlre.services.world.portal_policy import allowed_rows, destination_problem
 from wlre.services.world.npc_catalog import NPCIndex, scene_npcs, npc_detail
+from wlre.services.world.npc_talk import load_catalog as load_npc_talks, dialogue_text
 
 
 class HomeMap(ttk.Frame):
@@ -33,6 +34,14 @@ class HomeMap(ttk.Frame):
             # or silently enable an unverified NPC interaction.
             self.npc_index=None
             self.npc_index_error=True
+        # TalkData is optional until the genuine TalkData_C binary is supplied.
+        # Never invent game text from numeric S20 identifiers.
+        try:
+            self.npc_talks=load_npc_talks()
+            self.npc_talk_error=False
+        except (OSError,ValueError,UnicodeError,EOFError):
+            self.npc_talks={}
+            self.npc_talk_error=True
         self.npc_rows=[]
         self.selected_npc=None
         self.portal_rows=[]
@@ -78,6 +87,12 @@ class HomeMap(ttk.Frame):
                   wraplength=120).pack(side='bottom',fill='x',padx=2,pady=3)
         npc_bar=ttk.Scrollbar(self.npc_tab,orient='vertical')
         npc_bar.pack(side='right',fill='y')
+        self.npc_text_button=ttk.Button(self.npc_tab,text='查看對話全文',
+                                      command=self.view_npc_text,state='disabled')
+        self.npc_text_button.pack(side='bottom',fill='x',pady=2)
+        self.npc_close_button=ttk.Button(self.npc_tab,text='關閉選項',
+                                       command=self.close_npc_option,state='disabled')
+        self.npc_close_button.pack(side='bottom',fill='x',pady=2)
         self.npc_next_button=ttk.Button(self.npc_tab,text='下一段對話',command=self.next_npc,state='disabled')
         self.npc_next_button.pack(side='bottom',fill='x',pady=2)
         self.npc_talk_button=ttk.Button(self.npc_tab,text='手動互動 NPC',command=self.interact_npc,state='disabled')
@@ -238,6 +253,15 @@ class HomeMap(ttk.Frame):
                   and dialogue.get('scene')==player.get('scene')
                   and dialogue.get('phase') in ('talk','continue'))
         self.npc_next_button.configure(state='normal' if can_next else 'disabled')
+        can_close=(self.on_npc_next is not None and dialogue.get('active')
+                   and dialogue.get('phase')=='choice_unavailable'
+                   and dialogue.get('effect_type')==6
+                   and dialogue.get('scene')==player.get('scene')
+                   and not battle.get('active'))
+        self.npc_close_button.configure(state='normal' if can_close else 'disabled')
+        can_view=(dialogue.get('active') and dialogue.get('phase')=='talk'
+                  and dialogue_text(self.npc_talks,dialogue.get('text_id')) is not None)
+        self.npc_text_button.configure(state='normal' if can_view else 'disabled')
 
     def interact_npc(self):
         npc=self.selected_npc
@@ -255,19 +279,45 @@ class HomeMap(ttk.Frame):
         if str(self.npc_next_button.cget('state'))=='normal':
             self.on_npc_next({'type':'npc_next'})
 
+    def close_npc_option(self):
+        if str(self.npc_close_button.cget('state'))!='normal':
+            return
+        if not messagebox.askyesno('確認關閉 NPC 選項',
+                '使用官方 C20-9 40 關閉這個選項清單，不選擇任何選項。'
+                '\n需等待伺服器 S20-8；逾時不會重送。確定嗎？',parent=self):
+            return
+        self.on_npc_next({'type':'npc_close_choice','confirmed':True})
+
+    def view_npc_text(self):
+        dialogue=self.state.get('npc_dialogue',{})
+        if dialogue.get('active') and dialogue.get('phase')=='talk':
+            text=dialogue_text(self.npc_talks,dialogue.get('text_id'))
+            if text is not None:
+                messagebox.showinfo('NPC 對話（官方文字 ID '+str(dialogue['text_id'])+'）',
+                                    text or '（空白對話）',parent=self)
+
     def show_dialogue_status(self):
         dialogue=self.state.get('npc_dialogue',{})
         if dialogue.get('active'):
             phase=dialogue.get('phase')
             if phase=='talk':
-                self.npc_message.set(
-                    f"對話文字 ID {dialogue.get('text_id')}；尚無正式文字表，請按「下一段對話」手動接續。")
+                text_id=dialogue.get('text_id')
+                content=dialogue_text(self.npc_talks,text_id)
+                if content is not None:
+                    excerpt=content.replace('\\r','').replace('\\n',' ')[:85]
+                    self.npc_message.set(f'對話 ID {text_id}：{excerpt}'
+                        + ('…（可查看全文）' if len(content)>85 else ''))
+                else:
+                    self.npc_message.set(
+                        f"對話文字 ID {text_id}；尚無已驗證的文字表，請手動接續。")
             elif phase=='continue':
                 self.npc_message.set('伺服器允許繼續，請按下一段對話。')
             elif phase=='choice_unavailable':
                 self.npc_message.set(
                     f"選項索引 {dialogue.get('option_index')} 尚無可信資料；"
                     "已停止送出，必要時請重新登入同步。")
+            elif phase=='closing':
+                self.npc_message.set('已要求關閉選項，等待伺服器 S20-8；不自動重送。')
             elif phase=='effect_unavailable':
                 self.npc_message.set('收到未支援的事件效果；停止自動接續，必要時重新登入。')
             else:
