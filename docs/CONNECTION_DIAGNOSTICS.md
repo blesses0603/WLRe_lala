@@ -76,3 +76,12 @@ health 記錄 `periodic_cleanup display_events_removed=N` 與 `periodic_cleanup 
 新增 `health-23484.log` 於 19:01:16 顯示 `connection_exception type=ProtocolError ... packet_main=31 packet_sub=15 packet_stage=decode`。這確認 PR #25 的安全封包定位已在使用者端生效，也指出一處有別於 S31-19 的問題：官方 Lua `RevExpeditionStart` 不讀取 S31-15 本文，而原解析器 `r.end()` 拒絕非空本文。
 
 本項只放寬 S31-15 官方未解析本文的消耗方式（只保留數字長度，不保存資料本體）；其餘封包維持嚴格欄位讀取／結尾檢查，並加入模擬實際 TCP 接收的回歸案例。此修正不影響 PR #24／#25 的隱私保護，且不代表實服派遣、領獎、重新派遣等端到端結果已通過實機驗收。
+
+
+## 2026-10-20：S51-1 戰鬥屬性封包容錯與診斷
+
+- 依官方 1262 `FightManager.RevChangeAttrib`，`S51-1` 每筆資料固定 7 bytes（`col:u8`、`row:u8`、`kind:u8`、`value:u32`）。空封包為合法無操作，完整封包仍按原規則更新戰鬥屬性。
+- 當 payload 長度不是 7 的倍數時，不把任何前綴筆數套用至戰鬥單位／HP／SP，也不讓此種單一異常封包觸發 `ProtocolError` 結束連線。此處僅對 `S51-1` 做局部容錯，其他封包仍維持嚴格解碼、傳輸框架驗證與原有錯誤處理。
+- 異常封包會由連線工作執行緒送出 `battle_attribute_invalid` 事件（僅 `main/sub`、`payload_bytes`、`complete_records`、`trailing_bytes`），桌面診斷寫入 `protocol_warning packet_main=51 packet_sub=1 reason=invalid_record_length payload_bytes=8 complete_records=1 trailing_bytes=1 count=1` 形式的紀錄。相同類型在 60 秒內合併記錄，累計數持續增加。這不是網路斷線診斷，正常結束仍會紀錄原先的連線狀態。
+- 診斷採數字欄位白名單與界限驗證；不記封包原文、帳密、聊天、角色名稱、例外文字或絕對檔案路徑。保留原本 1 MiB／兩份輪替設定。
+- **限制**：本次只容錯「封包已完整到達、但 S51-1 本文長度非 7 倍數」的狀況；若實際官方伺服器使用尚未辨識的擴充格式，需取得去識別化證據再確認。不得將略過資料當作已同步成功，也不因此自動補送、重連或開始協力。正式服實機驗收仍待執行。
