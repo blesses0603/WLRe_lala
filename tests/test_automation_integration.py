@@ -218,7 +218,11 @@ class CraftingIntegration(unittest.TestCase):
     def test_add_locks_ingredients_until_ack_and_all_deductions(self):
         self.add();allocations=copy.deepcopy(self.logic.crafting.pending['allocations'])
         self.assertTrue(self.state.inventory['holds']['crafting'])
-        with self.assertRaises(ProtocolError):self.logic.command({'type':'start_auto_battle'},self.state)
+        # Enabling AI is just intent outside combat; held craft ingredients
+        # remain reserved until their authoritative deductions arrive.
+        self.assertEqual(self.logic.command({'type':'start_auto_battle'},self.state),[])
+        self.assertTrue(self.state.auto_battle['enabled'])
+        self.assertTrue(self.state.inventory['holds']['crafting'])
         self.ack();self.assertIsNotNone(self.logic.crafting.pending)
         for row in allocations:self.event({'type':'bag_delete','index':row['index'],'count':row['count']})
         self.assertIsNone(self.logic.crafting.pending)
