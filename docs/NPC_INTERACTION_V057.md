@@ -15,7 +15,7 @@
 - 位置參考與已核對的事件 NPC 以不同標示顯示；來源未核對時不推測 `npc_index`。
 - 仍保留怪物清單與小地圖原始縮放/角色位置/路徑繪製。
 
-## 官方 1262 Eve 實際解析結果（完整 JSON 尚未提交 PR）
+## 官方 1262 Eve 實際解析結果（完整資料已提交 PR）
 
 2026-10-20 已從上傳的官方 `Eve_1262.bundle`（MD5：`81af690395d5e6a233afa9a664e2c555`）擷取 TextAsset `Eve`，依 `Data.OnLoadEventData`、`ReadSceneEvent` 及 `EventData.NewNpc` 讀取 `Ver_EveFmt=115` 的 1,256 個場景及 10,879 筆 NPC，場景偏移、資料邊界及索引唯一性檢查均無錯誤。
 
@@ -24,9 +24,9 @@
 - 原始 `name` 是長度前綴的 Big5 編輯器名稱，很多筆只是 `Npc`，並非正式顯示名稱；UI 應優先用既有 NPC ID 名稱對照。
 - 有部分 `eventNumber` 不等於 `mapNumber`，代表共用同一份場景事件內容，不是解析錯誤。
 
-完整 `npc_event_index_1262.json`、全 NPC CSV、buyKind 候選 CSV 和可重現的解析工具已另行提供使用者，**本 PR 尚未包含大型 JSON 資料檔**。使用者可將 JSON 複製到 `wlre/resources/npc_event_index_1262.json`，重新啟動後才會顯示官方來源索引；該檔不在當前 PR 的預裝資源中。請勿把沒有真實來源的自填 JSON 當成已核對資料。
+**完整 10,879 筆 NPC 已內建於本 PR**：`wlre/resources/npc_event_index_1262.json.gz`（gzip 無損 JSON，124,521 bytes）。LaLa 直接讀取並驗證來源 MD5、1262 版本、場景數及 NPC 數，不須使用者另行下載或手動複製。離線研究用完整 JSON／CSV／擷取腳本仍保留於獨立分析包。若壓縮資料遺失或損壞，小地圖會安全退回位置參考模式，不送出任何未核對 NPC 指令。
 
-以下僅為資料格式範例（非真實 NPC 紀錄）：
+以下僅為可獨立使用的 `.json` 測試格式範例（非真實 NPC 紀錄）；正式內建使用對應的 `.json.gz`：
 
 ```json
 {
