@@ -10,6 +10,23 @@ from wlre.services.instance_start import expire as expire_instance_start
 from wlre.services.instance_entry import expire as expire_instance_entry
 from wlre.services.instance_rewards import tick as tick_instance_rewards, expire as expire_instance_rewards
 
+def auto_battle_status_event(state):
+    """Publish only numeric, session-local battle evidence for safe diagnostics."""
+    battle = state.battle
+    pid = state.player.get('role_id')
+    owned_living = sum(
+        1 for unit in state.battle_units.values()
+        if pid is not None and (unit.get('pid') == pid or unit.get('master_id') == pid)
+        and unit.get('hp', 0) > 0 and not unit.get('exited'))
+    return {
+        'type': 'auto_battle_status', **state.auto_battle,
+        'battle_war_style': battle.get('war_style'),
+        'battle_round': battle.get('round'),
+        'battle_active': bool(battle.get('active')),
+        'owned_living': owned_living,
+    }
+
+
 def advance_services(logic,state,send_command,send_raw,emit,on_state):
     state.assert_writer()
     before_maintenance=state.maintenance
@@ -48,12 +65,12 @@ def advance_services(logic,state,send_command,send_raw,emit,on_state):
         if logic.field_supply.uncertain:
             logic.auto_battle.stop(state,supply_event['reason'])
             logic.roaming.stop(state,logic.movement,'補給結果未確認')
-            emit({'type':'auto_battle_status',**state.auto_battle})
+            emit(auto_battle_status_event(state))
         if on_state:notify_state(on_state,state)
     before_ai=state.auto_battle
     ai_packets=logic.auto_battle.tick(state,logic,time.monotonic())
     if state.auto_battle is not before_ai:
-        emit({'type':'auto_battle_status',**state.auto_battle})
+        emit(auto_battle_status_event(state))
         if on_state:notify_state(on_state,state)
     for packet in ai_packets:send_command(packet)
     before_services=(state.alchemy['status'],state.alchemy['pending'],state.alchemy['completed'],state.party['status'])
