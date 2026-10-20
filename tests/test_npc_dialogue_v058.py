@@ -50,6 +50,13 @@ class NPCDialogueTests(unittest.TestCase):
         self.assertEqual(state.npc_dialogue['phase'],'ended')
         self.assertFalse(state.event_flow['blocked'])
 
+    def test_initial_server_continuation_is_manual_only(self):
+        state=State()
+        state.npc_dialogue={'active':True,'phase':'requesting','scene':100}
+        state.apply(decode(Packet(20,10,b'')))
+        self.assertEqual(state.npc_dialogue['phase'],'continue')
+        self.assertTrue(state.event_flow['blocked'])
+
     def test_server_out_of_range_unblocks(self):
         state=State()
         state.npc_dialogue={'active':True,'phase':'requesting','scene':100}

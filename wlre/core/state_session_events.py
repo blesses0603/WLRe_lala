@@ -36,7 +36,7 @@ def apply_session_event(state, event):
         state.event_flow={**state.event_flow,'blocked':True,'awaiting_response':False,
                          'last_source':f"S20-{event['sub']}"}
         if (state.npc_dialogue.get('active')
-                and state.npc_dialogue.get('phase')=='awaiting_reply'):
+                and state.npc_dialogue.get('phase') in ('requesting','awaiting_reply')):
             state.npc_dialogue={**state.npc_dialogue,'phase':'continue'}
     elif kind == 'event_end':
         state.event_flow={**state.event_flow,'blocked':False,'awaiting_response':False,'last_source':'S20-8'}
