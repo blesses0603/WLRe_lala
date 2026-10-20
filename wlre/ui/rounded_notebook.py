@@ -24,6 +24,7 @@ class RoundedNotebook(ttk.Frame):
         self.book = ttk.Notebook(self, style=body_style)
         self.book.pack(fill='both', expand=True)
         self.buttons = {}
+        self.click_handlers={}
         self.right_pages=set()
         self.book.bind('<<NotebookTabChanged>>', self._changed)
         self.book.enable_traversal()
@@ -77,7 +78,7 @@ class RoundedNotebook(ttk.Frame):
                 continue
             image=icon_photo(self,options['text']) if self.icons else None
             button = ttk.Button(self.bar, text=options['text'], style='Icon.Tab.TButton' if image else 'Pill.Tab.TButton',
-                                command=lambda p=page: self.select(p), takefocus=True, width=0)
+                                command=self.click_handlers.get(page,lambda p=page: self.select(p)), takefocus=True, width=0)
             if image:
                 button.configure(image=image,compound='none')
                 button._function_icon=image

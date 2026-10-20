@@ -15,6 +15,8 @@ from wlre.core.diagnostics import Diagnostics
 from wlre.ui.event_queue import DisplayQueue
 from wlre.ui.session_bridge import SessionBridge
 from wlre.ui.connection_status import ConnectionStatus
+from wlre.ui.feature_windows import WINDOWS
+from wlre.ui.window_layout import center_on_main
 from wlre.services.world.map_names import map_label
 from wlre.services.battle.battle_commands import owned_units, slot
 from wlre.services.world.display_position import current_position
@@ -207,7 +209,7 @@ class App(LoginController,AccountController):
         if not self.save_saved_login():return
         self.password.set('')
         self.entered_world=False
-        self.hide_instances()
+        self.hide_all_features()
         self.update_role_choices([])
         self.connection_monitor.reset()
         self.connection_status.set('正在連線與驗證帳號…')
@@ -250,22 +252,43 @@ class App(LoginController,AccountController):
         index=self.role_map.get(self.role_choice.get())
         if index:self.send({'type':'select_role','index':index})
 
-    def open_instances(self):
-        """Reopen the same floating panel, preserving selections and state."""
+    def open_feature(self,key):
+        """Single non-modal window per feature, centered on the main dashboard."""
         self.assert_ui_thread()
-        if not self.instance_window.winfo_exists():
+        window=self.feature_windows[key]
+        if not window.winfo_exists():
             return
-        self.instance_window.deiconify()
-        self.instance_window.lift()
-        self.instance_window.focus_set()
-        self.instance_panel.render(self.snapshot,live=self.live_active)
+        center_on_main(window,self.root,*WINDOWS[key][1:])
+        window.deiconify()
+        window.lift()
+        window.focus_set()
+        panel=getattr(self,{
+            'party':'party_panel','companion':'companion_panel',
+            'expedition':'expedition_panel','instance':'instance_panel',
+            'alchemy':'alchemy_panel','crafting':'crafting_panel',
+            'efficiency':'efficiency_panel'}[key])
+        if key=='instance':
+            panel.render(self.snapshot,live=self.live_active)
+        elif key=='efficiency':
+            panel.update_state(self.snapshot)
+        elif hasattr(panel,'render'):
+            panel.render(self.snapshot)
+
+    def hide_feature(self,key):
+        self.assert_ui_thread()
+        window=getattr(self,'feature_windows',{}).get(key)
+        if window is not None and window.winfo_exists():
+            window.withdraw()
+
+    def hide_all_features(self):
+        for key in tuple(getattr(self,'feature_windows',{})):
+            self.hide_feature(key)
+
+    def open_instances(self):
+        self.open_feature('instance')
 
     def hide_instances(self):
-        """Hiding the popout never sends a network request or clears state."""
-        self.assert_ui_thread()
-        view=getattr(self,'instance_window',None)
-        if view is not None and view.winfo_exists():
-            view.withdraw()
+        self.hide_feature('instance')
 
     def open_resources(self):
         self.resource_windows.append(ResourceView(self))
@@ -312,7 +335,9 @@ class App(LoginController,AccountController):
         else:
             requests=sum(v.get('status')=='pending' for v in state.get('party',{}).get('requests',{}).values())
             badge=f'組隊（{requests}）' if requests else '組隊'
-            if self.left_tabs.tab(self.party_panel,'text')!=badge:self.left_tabs.tab(self.party_panel,text=badge)
+            launcher=self.feature_launchers['party']
+            if self.left_tabs.tab(launcher,'text')!=badge:
+                self.left_tabs.tab(launcher,text=badge)
         if self.party_guard_panel.winfo_ismapped():self.party_guard_panel.update_state(state)
         if self.alchemy_panel.winfo_ismapped():self.alchemy_panel.render(state)
         self.crafting_panel.render(state)
@@ -442,7 +467,7 @@ class App(LoginController,AccountController):
         elif latest:self.render(latest)
         if status_override:self.status.set(chinese(status_override))
         if session_finished:
-            self.hide_instances()
+            self.hide_all_features()
             self.live_active=False
             self.password.set('')
             self.update_role_choices([])

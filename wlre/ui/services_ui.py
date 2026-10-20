@@ -92,7 +92,9 @@ class PartyPanel(ttk.Frame):
         self.target_combo.configure(values=tuple(self.targets));self.flag.configure(text='關閉組隊' if party.get('enabled_requested',party.get('enabled')) else '開啟組隊',command=lambda:self.act('flag',enabled=not party.get('enabled_requested',party.get('enabled'))))
         count=sum(v['status']=='pending' for v in party.get('requests',{}).values())
         label=f'組隊（{count}）' if count else '組隊'
-        if str(self) in self.app.left_tabs.tabs() and self.app.left_tabs.tab(self,'text')!=label:self.app.left_tabs.tab(self,text=label)
+        launcher=getattr(self.app,'feature_launchers',{}).get('party')
+        if launcher is not None and self.app.left_tabs.tab(launcher,'text')!=label:
+            self.app.left_tabs.tab(launcher,text=label)
         self.update_buttons()
 
 

@@ -11,6 +11,7 @@ from wlre.ui.services_ui import PartyPanel, AlchemyPanel
 from wlre.ui.companion_ui import CompanionPanel
 from wlre.ui.expedition_ui import ExpeditionPanel
 from wlre.ui.instance_ui import InstancePanel
+from wlre.ui.feature_windows import make_feature
 from wlre.ui.party_guard_ui import PartyGuardPanel
 from wlre.ui.crafting_ui import CraftingPanel
 from wlre.ui.efficiency_ui import EfficiencyPanel
@@ -45,57 +46,38 @@ def build_dashboard(app):
     except (OSError,ValueError,TypeError) as exc:app.party_guard_load_error=str(exc)
     app.ai_status=tk.StringVar(value='已停止')
     app.roaming_status=tk.StringVar(value='已停止')
-    app.party_panel=PartyPanel(left_tabs,app)
-    left_tabs.add(app.party_panel,text='組隊')
-    app.companion_panel=CompanionPanel(left_tabs,app)
-    left_tabs.add(app.companion_panel,text='夥伴出戰')
-    app.expedition_panel=ExpeditionPanel(left_tabs,app)
-    left_tabs.add(app.expedition_panel,text='遠征')
-    # Sidebar '副本' opens a separate, fixed-size room management window.
-    app.instance_launcher=ttk.Frame(left_tabs,padding=16)
-    left_tabs.add(app.instance_launcher,text='副本')
-    ttk.Label(app.instance_launcher,text='副本／協力管理',
-              style='Heading.TLabel').pack(anchor='w',pady=(0,8))
-    ttk.Label(app.instance_launcher,
-              text='以獨立視窗查看副本清單、建立與加入房間。'
-                   '不再受主畫面的聊天、地圖區裁切。',
-              style='Muted.TLabel',wraplength=440).pack(
-                  anchor='w',fill='x',pady=(0,12))
-    app.open_instance_button=ttk.Button(
-        app.instance_launcher,text='開啟副本／協力視窗',command=app.open_instances)
-    app.open_instance_button.pack(anchor='w',pady=(0,8))
-    app.instance_window=tk.Toplevel(root)
-    app.instance_window.withdraw()
-    app.instance_window.title('飄流Re:LaLa · 副本／協力房間管理')
-    sw,sh=root.winfo_screenwidth(),root.winfo_screenheight()
-    # Fit 720p without allowing users to resize the room-management window.
-    width=min(1040,max(760,sw-80))
-    height=min(600,max(480,sh-110))
-    app.instance_window.geometry(
-        f'{width}x{height}+{max(0,(sw-width)//2)}+{max(0,(sh-height)//2)}')
-    app.instance_window.minsize(width,height)
-    app.instance_window.maxsize(width,height)
-    app.instance_window.resizable(False,False)
-    app.instance_window.protocol('WM_DELETE_WINDOW',app.hide_instances)
-    app.instance_panel=InstancePanel(app.instance_window,app)
-    app.instance_panel.pack(fill='both',expand=True)
+    app.feature_windows={}
+    app.feature_launchers={}
+    app.party_launcher,app.party_panel=make_feature(app,'party','組隊',PartyPanel)
+    app.companion_launcher,app.companion_panel=make_feature(
+        app,'companion','夥伴出戰',CompanionPanel)
+    app.expedition_launcher,app.expedition_panel=make_feature(
+        app,'expedition','遠征',ExpeditionPanel)
+    app.instance_launcher,app.instance_panel=make_feature(
+        app,'instance','副本',InstancePanel)
+    app.instance_window=app.feature_windows['instance']
+    app.open_instance_button=next(
+        widget for widget in app.instance_launcher.winfo_children()
+        if isinstance(widget,ttk.Button))
     app.party_guard_panel=PartyGuardPanel(app.party_panel.guard_host,app,compact=True)
     app.party_guard_panel.pack(fill='both',expand=True)
-    if app.party_guard_load_error:app.party_guard_panel.note.set('名單讀取失敗，未啟用：'+app.party_guard_load_error)
-    app.alchemy_panel=AlchemyPanel(left_tabs,app)
-    left_tabs.add(app.alchemy_panel,text='煉金')
-    app.crafting_panel=CraftingPanel(left_tabs,app)
-    left_tabs.add(app.crafting_panel,text='製作')
-    app.efficiency_panel=EfficiencyPanel(left_tabs,app)
-    left_tabs.add(app.efficiency_panel,text='經驗效率',align='right')
+    if app.party_guard_load_error:
+        app.party_guard_panel.note.set('名單讀取失敗，未啟用：'+app.party_guard_load_error)
+    app.alchemy_launcher,app.alchemy_panel=make_feature(
+        app,'alchemy','煉金',AlchemyPanel)
+    app.crafting_launcher,app.crafting_panel=make_feature(
+        app,'crafting','製作',CraftingPanel)
+    app.efficiency_launcher,app.efficiency_panel=make_feature(
+        app,'efficiency','經驗效率',EfficiencyPanel,align='right')
     app.crafting_panel.configure(padding=6)
-    for page in (overview,app.party_panel,app.companion_panel,app.expedition_panel,app.instance_launcher,app.alchemy_panel,app.crafting_panel,app.efficiency_panel):
+    for page in (overview,*app.feature_launchers.values()):
         page._section_outline=True
-    def _on_left_tab_changed(event):
-        app.refresh_selected()
-        if left_tabs.select()==str(app.instance_launcher):
-            app.open_instances()
-    left_tabs.bind('<<NotebookTabChanged>>',_on_left_tab_changed,add='+')
+    # Clicking a launcher keeps the main overview visible and opens its window.
+    for key,launcher in app.feature_launchers.items():
+        left_tabs.click_handlers[str(launcher)]=lambda k=key:app.open_feature(k)
+    left_tabs._rebuild()
+    left_tabs.bind('<<NotebookTabChanged>>',
+                   lambda event:app.refresh_selected(),add='+')
     app.overview_panel.update_state({})
     app.home_map=HomeMap(right,app.pick_map_destination,app.open_navigation,on_move=app.walk,on_portal=lambda portal_id:app.send({'type':'portal_direct','portal_id':portal_id}),show_status=False,compact=True)
     app.home_map.configure(width=380,height=320)

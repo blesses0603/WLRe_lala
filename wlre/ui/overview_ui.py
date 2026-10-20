@@ -205,7 +205,13 @@ class OverviewPanel(ttk.Frame):
         if settings:
             editor=self.open_ai_settings()
             editor.tabs.select(editor.recovery_tab)
-        else:self.app.left_tabs.select(getattr(self.app,name))
+        else:
+            key={'party_panel':'party','expedition_panel':'expedition',
+                 'alchemy_panel':'alchemy','crafting_panel':'crafting',
+                 'efficiency_panel':'efficiency','companion_panel':'companion',
+                 'instance_panel':'instance'}.get(name)
+            if key is not None:self.app.open_feature(key)
+            else:self.app.left_tabs.select(getattr(self.app,name))
 
     def update_state(self,state):
         self.state=state;self.refresh()
