@@ -58,8 +58,8 @@ def preview_block_reason(snapshot, *, live=True):
         return "戰鬥中不可配點"
     if snapshot.get("event_flow", {}).get("blocked"):
         return "遊戲事件尚未結束，不能配點"
-    if any(snapshot.get(key, {}).get("enabled") for key in ("auto_battle", "roaming")):
-        return "請先停止自動戰鬥或徘徊再配點"
+    if snapshot.get("roaming", {}).get("enabled"):
+        return "請先停止自動徘徊再配點"
     return ""
 
 
