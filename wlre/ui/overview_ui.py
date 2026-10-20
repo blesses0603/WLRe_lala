@@ -8,6 +8,7 @@ from wlre.ui.function_icons import action_icon_photo
 from wlre.core.efficiency import rates, progress, forecast
 from wlre.services.battle.party import own_team, player_name
 from wlre.services.battle.party_guard import missing
+from wlre.services.battle.auto_battle import summary as ai_summary
 
 
 def health(stats):
