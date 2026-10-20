@@ -444,6 +444,8 @@ class App(LoginController,AccountController):
             elif kind=='message':self.write(data);status_override=data
             elif kind=='event':
                 event=data;event_kind=event['type']
+                if event_kind=='auto_battle_status' and hasattr(self,'diagnostics'):
+                    self.diagnostics.auto_battle_status(event)
                 context=latest if latest is not None else self.snapshot
                 self.chat_panel.handle_event(event,context)
                 if (event_kind=='command_rejected' and event.get('command_type')=='allocate_points'
