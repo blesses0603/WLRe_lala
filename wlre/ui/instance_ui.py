@@ -66,6 +66,63 @@ def creation_block_reasons(state, mode, live):
     return tuple(dict.fromkeys(reasons))
 
 
+def room_headcount_status(mode, data, local_role_id=None, *, can_begin=False):
+    """Summarize a server-confirmed room's numbers, never infer readiness.
+
+    Normal dungeons use the official StageData minimum, not room capacity.
+    Co-op requires every S186-3 slot occupied. This is UI-only; the command
+    service remains the final source of start/standby authorization.
+    """
+    title = '協力副本' if mode == 'coop' else '一般副本'
+    room = data.get('room')
+    if not isinstance(room, dict) or not room:
+        return title + '：尚未加入房間，等待伺服器房間及成員資訊'
+
+    members = data.get('members')
+    count = len(members) if isinstance(members, (list, tuple)) else 0
+    if mode == 'coop':
+        capacity = room.get('capacity')
+        if type(capacity) is not int or not 1 <= capacity <= 8:
+            return '協力副本：房間容量尚未同步，暫不能判定是否滿員'
+        prefix = '協力副本：目前 %d/%d 人' % (count, capacity)
+        host = room.get('host_id')
+        if host is None and count:
+            host = members[0].get('role_id')
+        verified = (isinstance(members, (list, tuple))
+                    and count <= capacity and bool(count)
+                    and members[0].get('role_id') == host
+                    and host is not None)
+        if not verified:
+            return prefix + '；伺服器房主／成員名單尚未完整同步'
+        if count < capacity:
+            return prefix + '，尚缺 %d 人（協力須滿員）' % (capacity - count)
+        if room.get('standby') is True:
+            return prefix + '，已滿員；房間已進入準備狀態'
+        if can_begin:
+            return prefix + '，已滿員；房主可以準備／開始配對'
+        return prefix + '，已滿員；等待房主或其他開始條件確認'
+
+    stage = next((row for row in entries_for('main')
+                  if row['kind'] == 1 and row['map_id'] == room.get('room_id')),
+                 None)
+    if stage is None:
+        return '一般副本：尚未確認此房間所屬的官方副本，無法判定最低人數'
+    minimum, maximum = stage['min_members'], stage['max_members']
+    prefix = '一般副本：目前 %d/%d 人' % (count, minimum)
+    expected = room.get('members')
+    if (type(expected) is not int or count != expected
+            or not isinstance(members, (list, tuple))
+            or not any(member.get('role_id') == local_role_id for member in members)):
+        return prefix + '；伺服器成員名單尚未完整同步'
+    if count < minimum:
+        return prefix + '，尚缺 %d 人（上限 %d 人）' % (minimum - count, maximum)
+    if count > maximum:
+        return prefix + '；超出官方人數上限，請等待成員重新同步'
+    if can_begin:
+        return prefix + '，已達最低人數（上限 %d 人）；房主可以開始挑戰' % maximum
+    return prefix + '，已達最低人數（上限 %d 人）；等待房主或其他開始條件確認' % maximum
+
+
 class InstanceModePage(ttk.Frame):
     """Room browser; mutations remain locked pending official live validation."""
 
@@ -175,6 +232,12 @@ class InstanceModePage(ttk.Frame):
         self.creation_hint_label = ttk.Label(
             self, textvariable=self.creation_hint, style='Muted.TLabel', anchor='w')
         self.creation_hint_label.pack(fill='x', after=controls, pady=(0, 3))
+        self.headcount_note = tk.StringVar(value='房間人數：等待伺服器同步')
+        self.headcount_label = ttk.Label(
+            self, textvariable=self.headcount_note,
+            style='Muted.TLabel', anchor='w')
+        self.headcount_label.pack(
+            fill='x', after=self.creation_hint_label, pady=(0, 4))
         self._creation_ready = False
         self._standby_ready = False
         self._start_ready = False
@@ -763,6 +826,9 @@ class InstanceModePage(ttk.Frame):
             and not any(data.get(k) for k in ('join_pending','leave_pending','join_uncertain','leave_uncertain','standby_pending','standby_uncertain','start_pending', 'enter_pending','start_uncertain', 'enter_uncertain'))
             and not any(other.get(k) for k in ('join_pending','leave_pending','join_uncertain','leave_uncertain','standby_pending','standby_uncertain','start_pending', 'enter_pending','start_uncertain', 'enter_uncertain')))
         self._update_create_button()
+        self.headcount_note.set(room_headcount_status(
+            self.mode, data, local_role_id,
+            can_begin=self._standby_ready if self.cooperative else self._start_ready))
         if self.cooperative:
             if not live:
                 explanation = '尚未登入'
