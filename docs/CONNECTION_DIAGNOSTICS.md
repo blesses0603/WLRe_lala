@@ -110,3 +110,12 @@ health 記錄 `periodic_cleanup display_events_removed=N` 與 `periodic_cleanup 
 - 新增 `maintenance phase=pending action=repair elapsed_s=5 battle_count=3 completed=0` 等白名單日誌，只記等待秒數與操作類別。狀態改變即記，pending／uncertain 持續等待時約每 10 秒記一次；原有每檔 1 MiB／2 份輪替維持不變。
 - 新增 `auto_battle ... battle_count=3 stop_source=manual`，停止來源只允許 `none/manual/disconnect/maintenance_uncertain/field_supply_uncertain/death_guard/other`，不記任何自由文字原因。同一回合／場次仍節流，跨場不隱藏。
 - 修正只增加診斷證據，不移除安全鎖、不自動補發修理／整理、事件 C20-6 或 AI 戰鬥指令。正式服仍需確認是否持續出現相同 S51-1 格式、維護狀態是否由伺服器確認解除。
+
+## 2026-10-21：協力獎勵與房間生命週期匿名追查（v0.5.7）
+
+- `health-10508.log` 在 06:45:52 有第三場協力戰後 `post_battle=sent/completed`，無 `client_error`。舊版健康 Log 未追蹤 S186-11，不能據此判斷是未收到封包，還是本機先收到獎勵卻被後續房間快照覆蓋。
+- 官方 1262 `CooperateEventManger.RevRewardStatus` 讀取 S186-11 五個欄位，`RevMemberInfo` 接收 S186-3 房間名單；到達順序不能假定。修正首次 S186-3 到達時誤清除先前 S186-11 的獎勵與通關證據。只有從**已知舊房間**切換至不同房間，才依舊有安全策略清除已確定的舊狀態。
+- 新版健康 Log `coop_state` 只記錄固定來源 `source=instance_reward_status`（S186-11）、`source=instance_members`（S186-3）、`source=event_end` 等，與 `phase`、`room_known`、`standby`、`reward_known`、`open_reward`（0/1/2）、`completed`、`reward_uncertain`、`pending`、`event_blocked`、`post_event`、`battle_count`。不含角色或房號、實際獎勵、封包原文及例外訊息；相同狀態 60 秒去重。
+- 若觀察到 `source=instance_reward_status reward_known=1` 後，`instance_members` 變成 `reward_known=0`，就能回查資料清除路徑；如果沒有該來源，仍不能單靠健康 Log 宣稱伺服器從未發過封包。
+- `phase=matched` 和準備旗標不代表伺服器已可離房。**只有 S186-11 已確認整場完成且 `OpenReward=0`**、戰鬥及事件真正解除後，才開放手動離房，並等待 S186-13 回覆，不主動重發或繞過寶箱領取。
+- CI 模擬與完整遊戲伺服器實測分開驗收，所有結算與實際獎品入包仍以正式伺服器為準。
