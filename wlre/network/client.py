@@ -49,6 +49,47 @@ def post_battle_trace(state, phase):
     }
 
 
+COOP_TRACE_SOURCES = frozenset((
+    'instance_members', 'instance_phase', 'instance_reward_status',
+    'instance_reward_receipt', 'instance_standby', 'instance_coop_match',
+    'battle_start', 'fight_exit', 'battle_unit_exit', 'event_end',
+))
+
+
+def coop_state_trace(state, source):
+    """Anonymous server/lifecycle evidence; never emit room IDs or rewards."""
+    if source not in COOP_TRACE_SOURCES:
+        return None
+    coop = state.instances['coop']
+    reward = coop.get('reward')
+    room = coop.get('room')
+    phase = coop.get('phase')
+    if phase not in ('idle', 'waiting', 'started', 'matched', 'combat', 'completed'):
+        phase = 'unknown'
+    post = (state.battle.get('post_event') or {}).get('status', 'none')
+    if post not in ('none', 'cooperative_wait', 'exit_delay',
+                    'awaiting_response', 'completed'):
+        post = 'unknown'
+    open_reward = reward.get('open_reward') if isinstance(reward, dict) else None
+    if type(open_reward) is not int or open_reward not in (0, 1, 2):
+        open_reward = None
+    standby = room.get('standby') if isinstance(room, dict) else None
+    if type(standby) is not bool:
+        standby = None
+    pending = any(coop.get(key) is not None for key in (
+        'create_pending', 'join_pending', 'leave_pending', 'standby_pending',
+        'start_pending', 'enter_pending', 'claim_pending', 'cancel_pending'))
+    return {
+        'type': 'coop_state_trace', 'source': source, 'phase': phase,
+        'room_known': isinstance(room, dict), 'standby': standby,
+        'reward_known': isinstance(reward, dict), 'open_reward': open_reward,
+        'completed': coop.get('completed') is True,
+        'reward_uncertain': bool(coop.get('reward_uncertain')),
+        'pending': pending, 'event_blocked': bool(state.event_flow.get('blocked')),
+        'post_event': post, 'battle_count': state.battle_count,
+    }
+
+
 class LoginRejected(ProtocolError):
     pass
 
@@ -401,6 +442,13 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
                                 emit(post_battle_trace(state, 'scheduled'))
                             elif event['type'] == 'event_end' and state.battle.get('post_event'):
                                 emit(post_battle_trace(state, 'completed'))
+                        if (event['type'] in COOP_TRACE_SOURCES
+                                and (event['type'].startswith('instance_')
+                                     and event.get('mode') == 'coop'
+                                     or state.instances['coop'].get('room') is not None
+                                     or state.instances['coop'].get('reward') is not None
+                                     or state.battle.get('war_style') == 16)):
+                            emit(coop_state_trace(state, event['type']))
                         if on_state and event['type'] != 'unimplemented': notify_state(on_state,state)
                     except Exception:
                         failed_packet = (packet.main, packet.sub)
