@@ -33,6 +33,7 @@ class Health25804Tests(unittest.TestCase):
     def test_manual_and_maintenance_auto_stop_sources(self):
         state = State()
         logic = SessionLogic()
+        logic.world_acknowledged = True
         logic.auto_battle.start(state, defaults())
         logic.command({'type': 'stop_auto_battle'}, state)
         self.assertEqual(state.auto_battle['stop_source'], 'manual')
