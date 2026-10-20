@@ -96,7 +96,9 @@ class GlassTheme:
         widget = event.widget
         if isinstance(widget, ttk.Treeview) and 'LockedTableColumns' not in widget.bindtags():
             widget.bindtags(('LockedTableColumns',) + widget.bindtags())
-        if isinstance(widget, (tk.Tk, tk.Toplevel)):
+        if isinstance(widget, tk.Tk) or (
+                isinstance(widget, tk.Toplevel) and widget.winfo_viewable()):
+            # Avoid painting withdrawn feature windows before the user opens them.
             self.attach(widget)
         try:
             top = widget.winfo_toplevel()
@@ -154,9 +156,10 @@ class GlassTheme:
         for item in (bar, badge, caption):
             item.bind('<Button-1>', start)
             item.bind('<B1-Motion>', drag)
-            item.bind('<ButtonRelease-1>', lambda event: origin.clear())
+            item.bind('<ButtonRelease-1>', lambda event=None: origin.clear())
         window.overrideredirect(True)
-        window.bind('<Map>', lambda event: self.restore(window, event), add='+')
+        window.bind('<Map>', lambda event=None: self.restore(window, event)
+                    if event is not None else None, add='+')
         window._glass_chrome = bar
         window.after_idle(lambda: self.windows_chrome(window))
 

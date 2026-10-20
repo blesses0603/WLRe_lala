@@ -5,6 +5,7 @@ from tkinter import ttk, messagebox
 
 from wlre.ui.rounded_notebook import RoundedNotebook
 from wlre.ui.instance_menu_icons import menu_icon_photo
+from wlre.ui.window_layout import configure_dialog
 from wlre.services.instance_browser import entries_for
 from wlre.services.battle.party import own_team
 
@@ -276,7 +277,7 @@ class InstanceModePage(ttk.Frame):
         dialog = tk.Toplevel(self.app.root if self.app is not None else root)
         dialog.title('建立副本房間')
         dialog.transient(root)
-        dialog.resizable(False, False)
+        configure_dialog(dialog,470,355 if self.cooperative else 315)
         form = ttk.Frame(dialog, padding=16)
         form.pack(fill='both', expand=True)
         ttk.Label(form, text=record['name'], style='Heading.TLabel').pack(
@@ -401,7 +402,7 @@ class InstanceModePage(ttk.Frame):
         dialog = tk.Toplevel(self.app.root if self.app is not None else root)
         dialog.title('加入副本房間')
         dialog.transient(root)
-        dialog.resizable(False, False)
+        configure_dialog(dialog,460,250 if self.cooperative else 210)
         form = ttk.Frame(dialog, padding=16)
         form.pack(fill='both', expand=True)
         ttk.Label(form, text='房間 #%s（%s）' %
