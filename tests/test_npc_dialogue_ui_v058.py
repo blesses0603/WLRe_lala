@@ -25,7 +25,7 @@ class NPCDialogueUITests(unittest.TestCase):
         self.map.npc_list.insert('end',self.npc['name'])
         self.ready_state={
             'phase':'world_ready',
-            'player':{'scene':12903,'role_id':33},
+            'player':{'scene':12903,'role_id':33,'x':120,'y':80},
             'location':{'confirmed_is_current':True,'confirmed':{'scene':12903}},
             'event_flow':{'blocked':False},
             'battle':{},'npc_dialogue':{},
