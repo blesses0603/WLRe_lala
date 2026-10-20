@@ -81,6 +81,11 @@ def load_catalog(path=None):
             or not isinstance(data.get('records'), dict)
             or len(data['records']) > MAX_ENTRIES):
         raise ValueError('NPC 對話索引版本或來源欄位錯誤')
+    if path == RESOURCE_ROOT / CATALOG_NAME:
+        from wlre.services.world.npc_asset_install import ASSETS
+        _,_,_,source_digest,expected_count=ASSETS[CATALOG_NAME]
+        if (data['source_sha256']!=source_digest or len(data['records'])!=expected_count):
+            raise ValueError('官方 NPC 文字索引的來源／筆數不符')
     normalized = {}
     for key, row in data['records'].items():
         if (not isinstance(key, str) or not key.isdecimal() or

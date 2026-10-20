@@ -9,7 +9,7 @@ REQUIRED_RESOURCES=(
     'alchemy_catalog.json','combat_catalog.json','crafting_catalog.json','default_profile.json',
     'emoji_catalog.json','emoji_images.zip','enums.json','expedition_catalog.json','instance_catalog_1262.json','graph_origins.json',
     'item_icon_coverage.json','item_icon_map.json','item_icons.zip','item_stackable.json',
-    'map_names.json','navigation_data.zip','normal_attack_data.json','npc_event_index_1262.json.gz','portals.json',
+    'map_names.json','navigation_data.zip','normal_attack_data.json','npc_event_index_1262.json.gz','npc_battle_talk_1262.json.gz','portals.json',
     'server_list.json','smallmaps.zip','stage_coordinates.json',
     'assets/app.ico','assets/exp_background.png',
     *('assets/buttons/'+name+'.png' for name in (
