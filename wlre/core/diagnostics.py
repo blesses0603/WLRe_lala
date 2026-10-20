@@ -28,6 +28,7 @@ class Diagnostics:
         self.battle_invalid_count=0;self.battle_invalid_logged={}
         self.ai_status_logged={}
         self.post_battle_logged=set()
+        self.coop_state_logged={}
         root=Path(base) if base is not None else user_data_root()/'diagnostics'
         self.path=root/f'health-{os.getpid()}.log'
         try:
@@ -202,6 +203,50 @@ class Diagnostics:
         self.logger.info('post_battle phase=%s battle_count=%d war_style=%s delay_s=%s fight_count_known=%d',
                          phase, count, style if style is not None else 'none',
                          delay if delay is not None else 'none', known)
+        return True
+
+    def coop_state_trace(self, value):
+        """Record safe co-op lifecycle booleans/enums, never identifiers or awards."""
+        if not isinstance(value, dict) or value.get('type') != 'coop_state_trace':
+            return False
+        sources = ('instance_members', 'instance_phase', 'instance_reward_status',
+                   'instance_reward_receipt', 'instance_standby', 'instance_coop_match',
+                   'battle_start', 'fight_exit', 'battle_unit_exit', 'event_end')
+        phases = ('idle', 'waiting', 'started', 'matched', 'combat', 'completed', 'unknown')
+        post_stages = ('none', 'cooperative_wait', 'exit_delay',
+                       'awaiting_response', 'completed', 'unknown')
+        source, phase, post = value.get('source'), value.get('phase'), value.get('post_event')
+        standby, open_reward = value.get('standby'), value.get('open_reward')
+        booleans = ('room_known', 'reward_known', 'completed', 'reward_uncertain',
+                    'pending', 'event_blocked')
+        count = value.get('battle_count')
+        if (source not in sources or phase not in phases or post not in post_stages
+                or standby is not None and type(standby) is not bool
+                or open_reward is not None and
+                    (type(open_reward) is not int or open_reward not in (0, 1, 2))
+                or any(type(value.get(field)) is not bool for field in booleans)
+                or not value['reward_known'] and open_reward is not None
+                or type(count) is not int or not 0 <= count <= 100000000):
+            return False
+        signature = (source, phase, post, standby, open_reward, count,
+                     *(value[field] for field in booleans))
+        now = time.monotonic()
+        previous = self.coop_state_logged.get(signature)
+        if previous is not None and now - previous < 60:
+            return False
+        if len(self.coop_state_logged) >= 128:
+            self.coop_state_logged.clear()
+        self.coop_state_logged[signature] = now
+        self.logger.info(
+            'coop_state source=%s phase=%s room_known=%d standby=%s '
+            'reward_known=%d open_reward=%s completed=%d reward_uncertain=%d '
+            'pending=%d event_blocked=%d post_event=%s battle_count=%d',
+            source, phase, value['room_known'],
+            'none' if standby is None else int(standby),
+            value['reward_known'],
+            'none' if open_reward is None else open_reward,
+            value['completed'], value['reward_uncertain'],
+            value['pending'], value['event_blocked'], post, count)
         return True
 
     def dropped(self,count):self.logger.info('display_events_skipped=%d',count)

@@ -8,6 +8,7 @@ from wlre.ui.instance_menu_icons import menu_icon_photo
 from wlre.ui.window_layout import configure_dialog
 from wlre.services.instance_browser import entries_for
 from wlre.services.battle.party import own_team
+from wlre.services.instance_room_flow import coop_completed_no_chest
 
 
 def creation_block_reasons(state, mode, live):
@@ -30,6 +31,9 @@ def creation_block_reasons(state, mode, live):
         info = instances.get(name) or {}
         if info.get('room') is not None:
             reasons.append('仍在%s副本房間，請先離開' % label)
+            if (name == 'coop' and info.get('phase') == 'matched'
+                    and info.get('reward') is None):
+                reasons.append('協力戰後尚未同步 S186-11 獎勵狀態')
         for op, text in operations.items():
             if info.get(op + '_pending') is not None:
                 reasons.append('%s%s仍待伺服器確認' % (label, text))
@@ -683,7 +687,8 @@ class InstanceModePage(ttk.Frame):
                         ('create_pending','join_pending','leave_pending','standby_pending','start_pending', 'enter_pending'))
             and not any(other.get(k) for k in
                         ('create_uncertain','join_uncertain','leave_uncertain','standby_uncertain','start_uncertain', 'enter_uncertain'))
-            and (self.cooperative and not data.get('standby')
+            and (self.cooperative and
+                 (not data.get('standby') or coop_completed_no_chest(data))
                  or not self.cooperative and data.get('phase') == 'waiting'))
         member_data = data.get('members') or []
         current_room = data.get('room') or {}
@@ -759,6 +764,8 @@ class InstanceModePage(ttk.Frame):
                 reward_text = '獎勵已同步，目前沒有開啟的寶箱'
             else:
                 reward_text = '尚未收到 S186-11 協力獎勵狀態'
+                if data.get('phase') == 'matched' and data.get('room') is not None:
+                    reward_text += '；戰後房間仍待伺服器確認，不能推定可領獎'
             if data.get('claim_pending') or data.get('cancel_pending'):
                 reward_text = '獎勵操作待伺服器確認，不可重送'
             elif data.get('reward_uncertain'):
@@ -848,7 +855,9 @@ class InstanceModePage(ttk.Frame):
             elif len(member_data) < room_capacity:
                 explanation = '等待成員到齊：%d/%d 人' % (len(member_data), room_capacity)
             elif data.get('phase') != 'waiting':
-                explanation = '房間階段：%s，尚不能開始' % data.get('phase')
+                explanation = ('戰後房間尚未恢復準備狀態；確認獎勵後才可離房'
+                               if data.get('phase') == 'matched'
+                               else '房間階段：%s，尚不能開始' % data.get('phase'))
             elif reward_locked or activity_blocked:
                 explanation = '其他活動或獎勵操作尚未結束'
             elif self._standby_ready:

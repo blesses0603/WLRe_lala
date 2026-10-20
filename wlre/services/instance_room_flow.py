@@ -104,6 +104,21 @@ def join(state, command, now=None):
     return [packet]
 
 
+def coop_completed_no_chest(data):
+    """Permit a manual post-coop leave only on authoritative finished/no-chest evidence.
+
+    A local winner or an empty reward snapshot is not server proof.
+    """
+    reward = data.get('reward')
+    return (data.get('phase') == 'matched'
+            and data.get('completed') is True
+            and isinstance(reward, dict)
+            and type(reward.get('open_reward')) is int
+            and reward['open_reward'] == 0
+            and not (data.get('claim_pending') or data.get('cancel_pending')
+                     or data.get('reward_uncertain')))
+
+
 def leave(state, command, now=None):
     now = time.monotonic() if now is None else now
     mode = command.get('mode')
@@ -121,8 +136,8 @@ def leave(state, command, now=None):
         raise ProtocolError('目前沒有已確認的房間')
     if mode == 'main' and data.get('phase') != 'waiting':
         raise ProtocolError('一般副本僅可於等待階段離開房間')
-    if mode == 'coop' and data.get('standby'):
-        raise ProtocolError('協力準備中不能直接離房，請先取消準備')
+    if mode == 'coop' and data.get('standby') and not coop_completed_no_chest(data):
+        raise ProtocolError('協力準備中或獎勵尚未確認，不能直接離房；請先同步伺服器狀態')
     data['leave_pending'] = {'room_id': room['room_id'], 'started': now}
     data['leave_result'] = None
     data['status'] = '已要求離開房間，等待伺服器確認'
