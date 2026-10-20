@@ -4,7 +4,7 @@ import math
 import tkinter as tk
 from wlre.ui.window_layout import configure_dialog
 from wlre.ui.rounded_notebook import RoundedNotebook
-from tkinter import ttk
+from tkinter import ttk, messagebox
 from PIL import Image,ImageTk
 from wlre.ui.minimap import SmallMaps
 from wlre.services.world.display_position import current_position
@@ -16,11 +16,13 @@ from wlre.services.world.npc_catalog import NPCIndex, scene_npcs, npc_detail
 
 
 class HomeMap(ttk.Frame):
-    def __init__(self,parent,on_pick,on_navigation,on_move=None,on_portal=None,status_parent=None,show_status=True,compact=False):
+    def __init__(self,parent,on_pick,on_navigation,on_move=None,on_portal=None,status_parent=None,show_status=True,compact=False,on_npc=None,on_npc_next=None):
         super().__init__(parent,padding=8 if compact else 12)
         self.on_pick,self.on_navigation=on_pick,on_navigation
         self.on_move=on_move
         self.on_portal=on_portal
+        self.on_npc=on_npc
+        self.on_npc_next=on_npc_next
         self.maps=SmallMaps()
         self.portals=Portals()
         try:
@@ -76,6 +78,10 @@ class HomeMap(ttk.Frame):
                   wraplength=120).pack(side='bottom',fill='x',padx=2,pady=3)
         npc_bar=ttk.Scrollbar(self.npc_tab,orient='vertical')
         npc_bar.pack(side='right',fill='y')
+        self.npc_next_button=ttk.Button(self.npc_tab,text='下一段對話',command=self.next_npc,state='disabled')
+        self.npc_next_button.pack(side='bottom',fill='x',pady=2)
+        self.npc_talk_button=ttk.Button(self.npc_tab,text='手動互動 NPC',command=self.interact_npc,state='disabled')
+        self.npc_talk_button.pack(side='bottom',fill='x',pady=2)
         self.npc_list=tk.Listbox(self.npc_tab,exportselection=False,background='#203f53',
                                  foreground='#f4e4b5',selectbackground='#e5d9ad',
                                  selectforeground='#243b4d',borderwidth=0,
@@ -207,7 +213,69 @@ class HomeMap(ttk.Frame):
             self.npc_list.selection_set(pos)
             self.npc_list.see(pos)
         self.npc_message.set(npc_detail(npc))
+        self.update_npc_buttons()
         self.draw()
+
+    def update_npc_buttons(self):
+        npc=self.selected_npc
+        current=self.state or {}
+        player=current.get('player',{})
+        loc=current.get('location',{})
+        confirmed=loc.get('confirmed') or {}
+        battle=current.get('battle',{})
+        dialogue=current.get('npc_dialogue',{})
+        post=(battle.get('post_event') or {}).get('status')
+        moving=(current.get('local_movement') or {}).get('status') in ('running','finished')
+        can_start=(self.on_npc is not None and npc is not None and npc.get('verified')
+                   and npc.get('event_count',0)>0 and current.get('phase')=='world_ready'
+                   and npc.get('scene')==player.get('scene')==confirmed.get('scene')
+                   and loc.get('confirmed_is_current') and not moving
+                   and not current.get('roaming',{}).get('enabled')
+                   and not battle.get('active') and post in (None,'completed')
+                   and not current.get('event_flow',{}).get('blocked'))
+        self.npc_talk_button.configure(state='normal' if can_start else 'disabled')
+        can_next=(self.on_npc_next is not None and dialogue.get('active')
+                  and dialogue.get('scene')==player.get('scene')
+                  and dialogue.get('phase') in ('talk','continue'))
+        self.npc_next_button.configure(state='normal' if can_next else 'disabled')
+
+    def interact_npc(self):
+        npc=self.selected_npc
+        if npc is None or str(self.npc_talk_button.cget('state'))!='normal':
+            return
+        if not messagebox.askyesno('確認 NPC 互動',
+                '只送出一次官方 C20-1。NPC 事件可能啟動戰鬥、任務或未支援的選項。'
+                '\n不會自動靠近、購物或重送封包。確定要互動嗎？',parent=self):
+            return
+        self.on_npc({'type':'npc_start','confirmed':True,'scene':npc['scene'],
+                     'npc_index':npc['npc_index'],'npc_id':npc['npc_id'],
+                     'x':npc['x'],'y':npc['y']})
+
+    def next_npc(self):
+        if str(self.npc_next_button.cget('state'))=='normal':
+            self.on_npc_next({'type':'npc_next'})
+
+    def show_dialogue_status(self):
+        dialogue=self.state.get('npc_dialogue',{})
+        if dialogue.get('active'):
+            phase=dialogue.get('phase')
+            if phase=='talk':
+                self.npc_message.set(
+                    f"對話文字 ID {dialogue.get('text_id')}；尚無正式文字表，請按「下一段對話」手動接續。")
+            elif phase=='continue':
+                self.npc_message.set('伺服器允許繼續，請按下一段對話。')
+            elif phase=='choice_unavailable':
+                self.npc_message.set(
+                    f"選項索引 {dialogue.get('option_index')} 尚無可信資料；"
+                    "已停止送出，必要時請重新登入同步。")
+            elif phase=='effect_unavailable':
+                self.npc_message.set('收到未支援的事件效果；停止自動接續，必要時重新登入。')
+            else:
+                self.npc_message.set('等待 NPC 伺服器回覆中；不自動重送。')
+        elif dialogue.get('phase')=='ended':
+            self.npc_message.set('NPC 事件已由伺服器 S20-8 確認結束。')
+        elif dialogue.get('phase')=='rejected':
+            self.npc_message.set('NPC 事件被伺服器拒絕：'+dialogue.get('reason',''))
 
     def choose_monster(self,event=None):
         selected=self.monster_list.curselection()
@@ -390,6 +458,8 @@ class HomeMap(ttk.Frame):
         scene=self.state.get('player',{}).get('scene')
         if scene is not None and (force or scene!=self.selected_id):
             self.show_map(scene)
+        self.update_npc_buttons()
+        self.show_dialogue_status()
         travel=self.state.get('portal_travel',{})
         if travel and travel.get('scene')==scene:self.portal_status.set(travel.get('name','')+'｜'+travel.get('reason',''))
         nav=self.state.get('navigation',{})

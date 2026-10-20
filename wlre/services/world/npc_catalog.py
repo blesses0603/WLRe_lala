@@ -140,5 +140,5 @@ def npc_detail(row):
               and row.get('y') is not None else '位置未確認')
     if row.get('verified'):
         return (f'{coords}｜事件索引 {row["npc_index"]} 已核對，'
-                + ('無互動事件' if row.get('event_count') == 0 else '對話待開放'))
+                + ('無互動事件' if row.get('event_count') == 0 else '手動事件可嘗試（選項／商店未開放）'))
     return f'{coords}｜索引未核對，不會送出對話封包'

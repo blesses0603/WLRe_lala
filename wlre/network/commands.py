@@ -45,8 +45,9 @@ def dispatch(logic,command,state):
     if reason:raise ProtocolError(reason)
     if kind == 'npc_start': return request_npc(state,command)
     if kind == 'npc_next':
+        packets=advance_npc(state)
         logic.pending_event=False
-        return advance_npc(state)
+        return packets
     if kind == 'instance_create':
         return create_instance(state, command)
     if kind == 'instance_join':
