@@ -28,7 +28,11 @@ def smoke_test_gui():
     try:
         app = App(root)
         app.show_main()
-        root.update()
+        # In unattended macOS runners Cocoa's full event pump can block
+        # on hidden Toplevel transitions. This entry-point smoke check needs
+        # initial widget geometry, not an unbounded live event loop.
+        # Windows/Linux unit tests exercise real Map/Configure callbacks.
+        root.update_idletasks()
         if errors:
             raise RuntimeError('GUI callback failed: ' + str(errors))
         if not app.overview_panel.winfo_ismapped():
