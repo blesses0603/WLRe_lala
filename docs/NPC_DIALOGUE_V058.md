@@ -42,3 +42,18 @@
 - 如果索引存在，NPC 對話顯示已匯入的文字與「查看全文」；不存在或檔案不合法時維持文字 ID，**不會顯示捏造的文字**，也不影響其他功能。
 - 官方 \`EInteractListResult.CLOSE = 40\`；玩家於型別 6 的未知選項可手動確認關閉，單次 \`C20-9 0x28\` 後等待伺服器 S20-8，不重試、不推定伺服器成功。
 - **一般選項選擇仍停用**：必須有真實 Eve interactDatas 並核對場景、選項排列與 formKind 才能評估 \`C20-9\` 對應值。型別 2／3 是商品商店，不屬於本階段。
+
+
+## v0.5.9 官方 1262 繁中資料整合（2026-10-21）
+
+- 使用者提供的 `TalkData_C` 29,873 筆來源 SHA256 `df9d98d268cc8cb26a109f50aee90405eefe2328c5862447f9297cb67ead45be`；`TextData_C` 39,901 筆 SHA256 `5b2d0a7e4e5048a629630e490c8c1e1bb1498f840b754087d59de28951d9aaf0`；`NpcTalkData_C` 16 組、94 筆 SHA256 `9de2f789e7f194148959457e7a1fc4744bf3378d62fdaff54ce51efe28499bb8`。
+- GitHub 已提交 `wlre/resources/npc_battle_talk_1262.json.gz`（653 bytes）、`npc_1262_sources.json`、分離的 `TextData_C` 與戰鬥 NPC 查詢程式及測試。
+- 完整官方文字資產尚未進 GitHub；可用先前產出的 `WLRE_1262_NPC_繁中資料索引包.zip` 依下面兩行本機安裝。
+
+```powershell
+py -m tools.resources.install_npc_text_1262 "WLRE_1262_NPC_繁中資料索引包.zip" --check
+py -m tools.resources.install_npc_text_1262 "WLRE_1262_NPC_繁中資料索引包.zip"
+```
+
+- 匯入器不修改遊戲目錄、只允許三份已核對的原始 gzip，拒絕來源與 SHA-256 不符、拒絕不明覆寫（除非 `--replace`）。打包器會包含執行前已放入 `wlre/resources` 的 .gz。
+- 戰鬥 NPC ID 屬 `TextData_C`，不可直接用 `TalkData_C` 查詢；選項資料仍需完整驗證 Eve `interactDatas`，未授權封包保持停用。正式服尚未實機驗收。
