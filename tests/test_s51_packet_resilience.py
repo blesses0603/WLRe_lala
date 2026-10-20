@@ -24,7 +24,8 @@ class S51ProtocolTests(unittest.TestCase):
             {'col': 1, 'row': 0, 'kind': 26, 'value': 19},
         ])
         state = State()
-        state.battle_units['1:0'] = {'col': 1, 'row': 0, 'hp': 100, 'sp': 40}
+        state.player['role_id'] = 17
+        state.battle_units['1:0'] = {'col': 1, 'row': 0, 'pid': 17, 'hp': 100, 'sp': 40}
         state.apply(event)
         self.assertEqual((state.battle_units['1:0']['hp'],
                           state.battle_units['1:0']['sp']), (73, 19))
@@ -47,7 +48,8 @@ class S51ProtocolTests(unittest.TestCase):
                 self.assertNotIn('values', event)
                 self.assertNotIn('payload', event)
                 state = State()
-                state.battle_units['1:0'] = {'col': 1, 'row': 0, 'hp': 100}
+                state.player['role_id'] = 17
+                state.battle_units['1:0'] = {'col': 1, 'row': 0, 'pid': 17, 'hp': 100}
                 state.apply(event)
                 self.assertEqual(state.battle_units['1:0']['hp'], 100)
 
