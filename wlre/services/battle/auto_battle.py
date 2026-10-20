@@ -167,10 +167,11 @@ class AutoBattle:
     @writes('auto_battle')
     def start(self,state,settings):
         self.settings=validate(settings);self.field_wait_key=None;self.enabled=True;self.key=None;self.failed_key=None;self.decided=set()
-        self.status(state,'armed','等待新回合／本回合可操作單位')
+        self.status(state,'armed','等待新回合／本回合可操作單位',stop_source='none')
     @writes('auto_battle')
-    def stop(self,state,reason='使用者停止AI'):
-        self.enabled=False;self.status(state,'disabled',reason)
+    def stop(self,state,reason='使用者停止AI',*,source='other'):
+        # Numeric-only diagnostics use a trusted source code, never free-text reasons.
+        self.enabled=False;self.status(state,'disabled',reason,stop_source=source)
     @writes('auto_battle')
     def tick(self,state,logic,now):
         if not self.enabled or not logic.world_acknowledged:return []
@@ -180,7 +181,7 @@ class AutoBattle:
         snap=state.snapshot();all_owned=owned_units(snap,False);pid=state.player.get('role_id')
         death_check=battle.get('active') or (state.battle_count>0 and battle.get('post_event',{}).get('status')!='completed')
         if death_check and any(u.get('hp',1)<=0 and self.settings['bPlayerDieCloseAI' if u['pid']==pid else 'bNPCDieCloseAI'] for u in all_owned):
-            self.stop(state,'設定的角色／夥伴陣亡停機條件成立');logic.roaming.stop(state,logic.movement,'AI陣亡停機');return []
+            self.stop(state,'設定的角色／夥伴陣亡停機條件成立',source='death_guard');logic.roaming.stop(state,logic.movement,'AI陣亡停機');return []
         if not battle.get('active') or battle.get('round',0)<=0:
             if self.settings['field_heal'] and not battle.get('active'):
                 packets=self.heal_field(state,logic,now)
