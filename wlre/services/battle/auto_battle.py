@@ -186,7 +186,10 @@ class AutoBattle:
                 packets=self.heal_field(state,logic,now)
                 if packets is not None:return packets
             self.status(state,'armed','等待戰鬥回合');return []
-        if battle.get('war_style') in (16,21,23,24):
+        # 1262 AutoPlay.AutoFight excludes only BossAmbush, EventTrial and
+        # StarApexBattle. Cooperative event fights (war_style=16) are supported
+        # by the ordinary round/owned-unit command flow and must not be paused.
+        if battle.get('war_style') in (21,23,24):
             self.status(state,'paused','此特殊戰鬥尚未開放自動下令');return []
         key=(state.battle_count,battle['round'])
         if key!=self.key:
