@@ -20,7 +20,12 @@ def apply_session_event(state, event):
         if effect is not None:
             if state.npc_dialogue.get('active'):
                 effect_type=effect['effect_type']
+                talk_history=list(state.npc_dialogue.get('history') or [])
+                if effect_type == 1 and type(effect.get('mean_number')) is int:
+                    talk_history.append(effect['mean_number'])
+                    talk_history=talk_history[-50:]
                 state.npc_dialogue={**state.npc_dialogue,
+                    'history':talk_history,
                     'phase': ('talk' if effect_type==1 else
                               'choice_unavailable' if effect_type==6 else 'effect_unavailable'),
                     'effect_type':effect_type,
@@ -42,11 +47,11 @@ def apply_session_event(state, event):
         state.event_flow={**state.event_flow,'blocked':False,'awaiting_response':False,'last_source':'S20-8'}
 
         if state.npc_dialogue.get('active'):
-            state.npc_dialogue={'active':False,'phase':'ended'}
+            state.npc_dialogue={**state.npc_dialogue,'active':False,'phase':'ended'}
     elif kind == 'event_rejected' and state.npc_dialogue.get('active'):
         state.event_flow={**state.event_flow,'blocked':False,'awaiting_response':False,
                           'last_source':'S20-74'}
-        state.npc_dialogue={'active':False,'phase':'rejected','reason':event.get('reason','')}
+        state.npc_dialogue={**state.npc_dialogue,'active':False,'phase':'rejected','reason':event.get('reason','')}
     elif kind == "initial_data_complete":
         state.initial_data_complete = True
 

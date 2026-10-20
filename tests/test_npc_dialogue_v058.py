@@ -50,6 +50,19 @@ class NPCDialogueTests(unittest.TestCase):
         self.assertEqual(state.npc_dialogue['phase'],'ended')
         self.assertFalse(state.event_flow['blocked'])
 
+    def test_bounded_dialogue_history_retained_after_server_end(self):
+        state=State()
+        state.player={'scene':100}
+        state.npc_dialogue={'active':True,'phase':'requesting','scene':100,'history':[]}
+        for num in range(55):
+            state.apply(decode(s20_effect(1,10001+num)))
+        self.assertEqual(len(state.npc_dialogue['history']),50)
+        self.assertEqual(state.npc_dialogue['history'][0],10006)
+        self.assertEqual(state.npc_dialogue['history'][-1],10055)
+        state.apply(decode(Packet(20,8,b'')))
+        self.assertEqual(state.npc_dialogue['phase'],'ended')
+        self.assertEqual(len(state.npc_dialogue['history']),50)
+
     def test_initial_server_continuation_is_manual_only(self):
         state=State()
         state.npc_dialogue={'active':True,'phase':'requesting','scene':100}

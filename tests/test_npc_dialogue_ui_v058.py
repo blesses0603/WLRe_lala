@@ -53,6 +53,24 @@ class NPCDialogueUITests(unittest.TestCase):
         self.assertEqual(popup.call_count,1)
         self.assertIn('這是測試對話',popup.call_args.args[1])
 
+    def test_history_window_is_read_only_and_has_trusted_text(self):
+        self.map.npc_talks={10001:'要。',10002:'不要。'}
+        state={**self.ready_state,'event_flow':{'blocked':False},
+               'npc_dialogue':{'active':False,'phase':'ended',
+                               'history':[10001,10002,65432]}}
+        self.map.set_state(state)
+        self.assertEqual(str(self.map.npc_history_button.cget('state')),'normal')
+        self.map.view_npc_history()
+        self.root.update()
+        view=self.map.npc_history_window
+        content=view.winfo_children()[0].winfo_children()[1]
+        text=content.get('1.0','end')
+        self.assertIn('要。',text)
+        self.assertIn('不要。',text)
+        self.assertIn('65432',text)
+        self.assertEqual(str(content.cget('state')),'disabled')
+        view.destroy()
+
     def test_close_choice_requires_confirmation(self):
         state={**self.ready_state,
                'event_flow':{'blocked':True},

@@ -57,3 +57,12 @@ py -m tools.resources.install_npc_text_1262 "WLRE_1262_NPC_繁中資料索引包
 
 - 匯入器不修改遊戲目錄、只允許三份已核對的原始 gzip，拒絕來源與 SHA-256 不符、拒絕不明覆寫（除非 `--replace`）。打包器會包含執行前已放入 `wlre/resources` 的 .gz。
 - 戰鬥 NPC ID 屬 `TextData_C`，不可直接用 `TalkData_C` 查詢；選項資料仍需完整驗證 Eve `interactDatas`，未授權封包保持停用。正式服尚未實機驗收。
+
+
+## v0.5.10 直接收到的 GitHub 資料與對話 UI（2026-10-21）
+
+- 已在 PR #41 驗證上傳檔：`npc_talk_1262.json.gz` 886,406 bytes / Git Blob `231ffd7d92b142bfd2c7c34b1c69a4e2ed782403`；`npc_text_1262.json.gz` 757,105 bytes / Git Blob `2c38dec80539355fee4f94d94bc467c856746837`，與原始上傳 ZIP 完全相同。
+- 已將兩份檔案列為 `REQUIRED_RESOURCES`，打包失敗不得宣稱成品可顯示完整繁體中文。載入時核對完整 SHA-256，避免只核對來源欄位與筆數卻漏掉內容竄改。
+- 手動 NPC 對話在收到 S20-1～6 類型 1、具可信文字 ID 時，保留最近 50 個 ID，結束或拒絕後可在「本輪對話紀錄」查看本次內容；開始新 NPC 對話即清空上一輪紀錄。只呈現原始文字，不推測 NPC 選項或伺服器端條件。
+- 選項 `interactDatas` 的原始 Eve 二進位資料仍需獨立核實，`C20-9` 一般選擇及商店操作繼續停用；本次未改動戰鬥 AI／協力／副本邏輯。
+- 自動化單元測試與 GitHub Actions 驗收不等於遊戲正式伺服器驗收。

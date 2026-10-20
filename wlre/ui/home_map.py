@@ -42,6 +42,7 @@ class HomeMap(ttk.Frame):
         except (OSError,ValueError,UnicodeError,EOFError):
             self.npc_talks={}
             self.npc_talk_error=True
+        self.npc_history_window=None
         self.npc_rows=[]
         self.selected_npc=None
         self.portal_rows=[]
@@ -87,6 +88,9 @@ class HomeMap(ttk.Frame):
                   wraplength=120).pack(side='bottom',fill='x',padx=2,pady=3)
         npc_bar=ttk.Scrollbar(self.npc_tab,orient='vertical')
         npc_bar.pack(side='right',fill='y')
+        self.npc_history_button=ttk.Button(self.npc_tab,text='本輪對話紀錄',
+                                  command=self.view_npc_history,state='disabled')
+        self.npc_history_button.pack(side='bottom',fill='x',pady=2)
         self.npc_text_button=ttk.Button(self.npc_tab,text='查看對話全文',
                                       command=self.view_npc_text,state='disabled')
         self.npc_text_button.pack(side='bottom',fill='x',pady=2)
@@ -263,6 +267,8 @@ class HomeMap(ttk.Frame):
         can_view=(dialogue.get('active') and dialogue.get('phase')=='talk'
                   and dialogue_text(self.npc_talks,dialogue.get('text_id')) is not None)
         self.npc_text_button.configure(state='normal' if can_view else 'disabled')
+        history=dialogue.get('history') or []
+        self.npc_history_button.configure(state='normal' if history else 'disabled')
 
     def interact_npc(self):
         npc=self.selected_npc
@@ -296,6 +302,39 @@ class HomeMap(ttk.Frame):
             if text is not None:
                 messagebox.showinfo('NPC 對話（官方文字 ID '+str(dialogue['text_id'])+'）',
                                     text or '（空白對話）',parent=self)
+
+    def view_npc_history(self):
+        """Read-only, bounded record of this manually started dialogue."""
+        history=(self.state.get('npc_dialogue',{}).get('history') or [])[-50:]
+        if not history:
+            return
+        if self.npc_history_window is not None:
+            try:
+                if self.npc_history_window.winfo_exists():
+                    self.npc_history_window.destroy()
+            except tk.TclError:
+                pass
+        win=tk.Toplevel(self)
+        self.npc_history_window=win
+        win.title('NPC 本輪對話紀錄')
+        win.geometry('560x360')
+        panel=ttk.Frame(win,padding=10)
+        panel.pack(fill='both',expand=True)
+        scroll=ttk.Scrollbar(panel,orient='vertical')
+        scroll.pack(side='right',fill='y')
+        content=tk.Text(panel,wrap='word',yscrollcommand=scroll.set,
+                        background='#203f53',foreground='#f4e4b5',
+                        borderwidth=0,highlightthickness=0,
+                        font=('Microsoft JhengHei UI',11))
+        content.pack(side='left',fill='both',expand=True)
+        scroll.configure(command=content.yview)
+        for number,text_id in enumerate(history,1):
+            text=dialogue_text(self.npc_talks,text_id)
+            content.insert('end',f'{number:02d}. 對話 ID {text_id}\n'
+                + (text if text is not None else '（未取得對應原文）')
+                + '\n\n')
+        content.configure(state='disabled')
+        win.transient(self.winfo_toplevel())
 
     def show_dialogue_status(self):
         dialogue=self.state.get('npc_dialogue',{})

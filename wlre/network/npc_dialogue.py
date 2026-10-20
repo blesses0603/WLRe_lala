@@ -57,7 +57,7 @@ def request_npc(state, command):
     # Never auto-walk: the server's S20-74 checks real interaction distance.
     state.npc_dialogue = {
         'active': True, 'phase': 'requesting', 'scene': scene,
-        'npc_id': npc_id, 'npc_index': index,
+        'npc_id': npc_id, 'npc_index': index, 'history': [],
     }
     state.event_flow = {**state.event_flow, 'blocked': True,
                         'awaiting_response': True, 'last_source': 'C20-1 手動 NPC'}

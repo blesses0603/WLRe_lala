@@ -15,6 +15,11 @@ from wlre.services.world.npc_asset_install import ASSETS, MAX_UNCOMPRESSED
 def _catalog(filename, expected_source, path=None):
     target=Path(path) if path is not None else RESOURCE_ROOT/filename
     if not target.is_file():return {}
+    if path is None:
+        expected_digest, expected_size, _, _, _ = ASSETS[filename]
+        if (target.stat().st_size != expected_size
+                or hashlib.sha256(target.read_bytes()).hexdigest() != expected_digest):
+            raise ValueError('官方 1262 本地化檔案 SHA-256 或大小不符')
     with gzip.open(target,'rb') as stream:
         data=stream.read(MAX_UNCOMPRESSED+1)
     if len(data)>MAX_UNCOMPRESSED:raise ValueError('本地化資源解壓超出限制')
