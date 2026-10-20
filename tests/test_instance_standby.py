@@ -144,6 +144,8 @@ class StandbyUI(unittest.TestCase):
         self.app.instance_panel.render(data, live=True)
         self.assertIn('NPC ID 1555', self.page.companion_note.get())
         self.assertTrue(self.page.standby_button.instate(['!disabled']))
+        self.assertIn('2/2 人，已滿員', self.page.headcount_note.get())
+        self.assertIn('房主可以準備', self.page.headcount_note.get())
         with patch.object(self.app, 'send') as send:
             with patch('wlre.ui.instance_ui.messagebox.askyesno', return_value=False):
                 self.page.standby_button.invoke()
@@ -168,6 +170,7 @@ class StandbyUI(unittest.TestCase):
         self.assertTrue(self.page.standby_button.instate(['disabled']))
         self.app.instance_panel.render(self.data(full=False), live=True)
         self.assertTrue(self.page.standby_button.instate(['disabled']))
+        self.assertIn('1/2 人，尚缺 1 人', self.page.headcount_note.get())
         pending = self.data()
         pending['instances']['coop']['standby_pending'] = {
             'room_id': 91, 'started': 0, 'target': True}

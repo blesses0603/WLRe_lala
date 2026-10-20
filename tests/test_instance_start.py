@@ -124,6 +124,8 @@ class StartChallengeUI(unittest.TestCase):
         data = self.snapshot()
         self.app.instance_panel.render(data, live=True)
         self.assertTrue(self.page.start_button.instate(['!disabled']))
+        self.assertIn('已達最低人數', self.page.headcount_note.get())
+        self.assertIn('房主可以開始挑戰', self.page.headcount_note.get())
         with patch.object(self.app, 'send') as send:
             with patch('wlre.ui.instance_ui.messagebox.askyesno', return_value=False):
                 self.page.start_button.invoke()
@@ -140,6 +142,7 @@ class StartChallengeUI(unittest.TestCase):
             with self.subTest(opts=opts):
                 self.app.instance_panel.render(self.snapshot(**opts), live=True)
                 self.assertTrue(self.page.start_button.instate(['disabled']))
+                self.assertNotIn('房主可以開始挑戰', self.page.headcount_note.get())
         data = self.snapshot()
         data['instances']['main']['start_pending'] = {
             'room_id': 30012, 'started': 0}
