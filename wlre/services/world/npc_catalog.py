@@ -102,6 +102,5 @@ def npc_detail(row):
     coords = (f'({row["x"]}, {row["y"]})' if row.get('x') is not None
               and row.get('y') is not None else '位置未確認')
     if row.get('verified'):
-        return (f'{row["name"]}｜{coords}｜事件 NPC 索引 {row["npc_index"]} 已核對；'
-                'NPC 對話及商店請待第二階段開放')
-    return f'{row["name"]}｜{coords}｜僅位置參考，尚未核對事件 NPC 索引；不會送出對話封包'
+        return f'{coords}｜事件索引 {row["npc_index"]} 已核對，對話待開放'
+    return f'{coords}｜索引未核對，不會送出對話封包'
