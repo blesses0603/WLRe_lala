@@ -43,6 +43,17 @@ class CompanionCommands(unittest.TestCase):
                 if change == 'offline': state.phase = 'disconnected'
                 with self.assertRaises(ProtocolError): self.logic.command(self.value, state)
 
+    def test_armed_ai_does_not_block_companion_deployment_outside_combat(self):
+        self.state.auto_battle['enabled'] = True
+        packet, = self.logic.command(self.value, self.state)
+        self.assertEqual((packet.main, packet.sub), (19, 1))
+        self.assertTrue(self.state.auto_battle['enabled'])
+        # Once in a real battle, deployment remains forbidden.
+        busy = copy.deepcopy(self.state)
+        busy.battle['active'] = True
+        with self.assertRaises(ProtocolError):
+            self.logic.command(self.value, busy)
+
     def test_duplicate_commands_and_resting_wrong_companion_are_rejected(self):
         with self.assertRaises(ProtocolError):
             self.logic.command({**self.value, 'action': 'rest'}, self.state)
