@@ -27,6 +27,7 @@ class Diagnostics:
         self.last_connection=None;self.connection_logged=None;self.last_error=None;self.error_logged=None
         self.battle_invalid_count=0;self.battle_invalid_logged=None
         self.ai_status_logged={}
+        self.post_battle_logged=set()
         root=Path(base) if base is not None else user_data_root()/'diagnostics'
         self.path=root/f'health-{os.getpid()}.log'
         try:
@@ -113,7 +114,8 @@ class Diagnostics:
         style, round_number, living = (
             value.get('battle_war_style'), value.get('battle_round'),
             value.get('owned_living'))
-        if (style is not None and (type(style) is not int or not 0 <= style <= 255)
+        if (type(count) is not int or not 1 <= count <= 100000000
+                or style is not None and (type(style) is not int or not 0 <= style <= 255)
                 or round_number is not None and
                 (type(round_number) is not int or not 0 <= round_number <= 65535)
                 or type(living) is not int or not 0 <= living <= 32):
@@ -143,6 +145,7 @@ class Diagnostics:
         phase = value.get('phase')
         if phase not in ('scheduled', 'sent', 'completed'):
             return False
+        count = value.get('battle_count')
         style = value.get('war_style')
         delay = value.get('delay_seconds')
         known = value.get('fight_count_known')
@@ -151,8 +154,14 @@ class Diagnostics:
                 (type(delay) not in (int, float) or delay not in (2.5, 5.0))
                 or type(known) is not bool):
             return False
-        self.logger.info('post_battle phase=%s war_style=%s delay_s=%s fight_count_known=%d',
-                         phase, style if style is not None else 'none',
+        signature=(count,phase)
+        if signature in self.post_battle_logged:
+            return False
+        if len(self.post_battle_logged) >= 64:
+            self.post_battle_logged.clear()
+        self.post_battle_logged.add(signature)
+        self.logger.info('post_battle phase=%s battle_count=%d war_style=%s delay_s=%s fight_count_known=%d',
+                         phase, count, style if style is not None else 'none',
                          delay if delay is not None else 'none', known)
         return True
 
