@@ -35,6 +35,19 @@ from wlre.network.commands import dispatch
 from wlre.services.items import reservations
 
 
+def post_battle_trace(state, phase):
+    """Small, numeric-only evidence; never include roles, packets or commands."""
+    event = state.battle.get('post_event') or {}
+    delay = event.get('delay_seconds')
+    remaining = state.instances.get('coop', {}).get('fight_count')
+    return {
+        'type': 'post_battle_trace', 'phase': phase,
+        'war_style': state.battle.get('war_style'),
+        'delay_seconds': delay,
+        'fight_count_known': type(remaining) is int and remaining >= 0,
+    }
+
+
 class LoginRejected(ProtocolError):
     pass
 
@@ -326,7 +339,10 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
                 if expire_allocation(state) and on_state:notify_state(on_state,state)
                 if isinstance(on_state,StatePublisher):on_state.flush(state)
                 event_replies=logic.flush_events(state) if request else []
-                for response in event_replies:_send(connection,response,profile['tx_xor'],emit)
+                for response in event_replies:
+                    _send(connection,response,profile['tx_xor'],emit)
+                    if (response.main, response.sub) == (20, 6):
+                        emit(post_battle_trace(state, 'sent'))
                 if event_replies and on_state:notify_state(on_state,state)
                 for _ in range(20):
                     try: command = commands.get_nowait()
@@ -374,13 +390,22 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
                         if request:
                             for response in logic.receive(event, state):
                                 _send(connection, response, profile['tx_xor'], emit)
+                            if (event['type'] in ('fight_exit', 'battle_unit_exit')
+                                    and (state.battle.get('post_event') or {}).get('status')
+                                    in ('cooperative_wait', 'exit_delay')):
+                                emit(post_battle_trace(state, 'scheduled'))
+                            elif event['type'] == 'event_end' and state.battle.get('post_event'):
+                                emit(post_battle_trace(state, 'completed'))
                         if on_state and event['type'] != 'unimplemented': notify_state(on_state,state)
                     except Exception:
                         failed_packet = (packet.main, packet.sub)
                         failed_stage = stage
                         raise
                 event_replies=logic.flush_events(state) if request else []
-                for response in event_replies:_send(connection,response,profile['tx_xor'],emit)
+                for response in event_replies:
+                    _send(connection,response,profile['tx_xor'],emit)
+                    if (response.main, response.sub) == (20, 6):
+                        emit(post_battle_trace(state, 'sent'))
                 if event_replies and on_state:notify_state(on_state,state)
             if not stop_event.is_set(): parser.finish()
             else: closed_reason = 'stopped'
