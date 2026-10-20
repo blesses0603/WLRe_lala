@@ -51,7 +51,7 @@ class PostBattleMaintenance:
         reservations.uncertain(state.inventory,'maintenance')
         self.uncertain=True;state.inventory['use_failed']=True
         self.status(state,text+'；請重新登入同步',checking=False)
-        logic.auto_battle.stop(state,text);logic.roaming.stop(state,logic.movement,text)
+        logic.auto_battle.stop(state,text,source='maintenance_uncertain');logic.roaming.stop(state,logic.movement,text)
 
     @writes('maintenance')
     def observe(self,event,state):
