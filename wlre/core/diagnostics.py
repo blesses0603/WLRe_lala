@@ -27,6 +27,7 @@ class Diagnostics:
         self.last_connection=None;self.connection_logged=None;self.last_error=None;self.error_logged=None
         self.battle_invalid_count=0;self.battle_invalid_logged=None
         self.ai_status_logged={}
+        self.post_battle_logged=set()
         root=Path(base) if base is not None else user_data_root()/'diagnostics'
         self.path=root/f'health-{os.getpid()}.log'
         try:
@@ -134,6 +135,34 @@ class Diagnostics:
             status, value['enabled'], value['battle_active'],
             style if style is not None else 'none',
             round_number if round_number is not None else 'none', living)
+        return True
+
+    def post_battle_trace(self, value):
+        """Log only allowlisted continuation stages, never packet text or IDs."""
+        if not isinstance(value, dict) or value.get('type') != 'post_battle_trace':
+            return False
+        phase = value.get('phase')
+        if phase not in ('scheduled', 'sent', 'completed'):
+            return False
+        count = value.get('battle_count')
+        style = value.get('war_style')
+        delay = value.get('delay_seconds')
+        known = value.get('fight_count_known')
+        if (type(count) is not int or not 1 <= count <= 100000000
+                or style is not None and (type(style) is not int or not 0 <= style <= 255)
+                or delay is not None and
+                (type(delay) not in (int, float) or delay not in (2.5, 5.0))
+                or type(known) is not bool):
+            return False
+        signature=(count,phase)
+        if signature in self.post_battle_logged:
+            return False
+        if len(self.post_battle_logged) >= 64:
+            self.post_battle_logged.clear()
+        self.post_battle_logged.add(signature)
+        self.logger.info('post_battle phase=%s battle_count=%d war_style=%s delay_s=%s fight_count_known=%d',
+                         phase, count, style if style is not None else 'none',
+                         delay if delay is not None else 'none', known)
         return True
 
     def dropped(self,count):self.logger.info('display_events_skipped=%d',count)

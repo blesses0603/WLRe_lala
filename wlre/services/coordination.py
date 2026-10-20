@@ -5,7 +5,7 @@ ignores auto-battle/roaming intent, but waits for actual combat or shared bag us
 """
 STOP_COMMANDS=frozenset(('stop_auto_battle','stop_roaming','stop_walk','stop_expedition',
                          'stop_crafting','stop_alchemy','chat','reset_efficiency'))
-CRAFT_CONFLICTS=frozenset(('start_roaming','start_auto_battle','start_alchemy',
+CRAFT_CONFLICTS=frozenset(('start_roaming','start_alchemy',
                          'field_item','field_storage','learned_action','battle_item'))
 
 
@@ -25,8 +25,8 @@ def command_reason(state,command,*,maintenance_pending=False,maintenance_uncerta
     if kind in CRAFT_CONFLICTS and craft_busy(state):
         return '請先停止製作接續，並等待目前製作操作回覆'
     if kind=='allocate_points' and (state.battle.get('active') or state.event_flow.get('blocked')
-            or state.auto_battle.get('enabled') or state.roaming.get('enabled')):
-        return '戰鬥、事件或自動活動中不可配點，請先停止'
+            or state.roaming.get('enabled')):
+        return '戰鬥、事件或自動移動中不可配點，請先等待或停止移動'
     return ''
 
 
@@ -55,7 +55,7 @@ def reason(state,service):
         if service=='alchemy' and active(state.expedition):return '等待遠征操作確認'
     elif service=='crafting':
         if expedition_busy(state):return '請先停止遠征自動派遣，並等待目前遠征操作確認'
-        if state.alchemy.get('enabled') or active(state.alchemy) or state.auto_battle.get('enabled') or state.roaming.get('enabled'):
-            return '請先停止煉金、徘徊與自動戰鬥'
+        if state.alchemy.get('enabled') or active(state.alchemy) or state.roaming.get('enabled'):
+            return '請先停止煉金或徘徊'
     if active(state.inventory.get('field_supply',{})):return '請先等待補給結果確認'
     return ''

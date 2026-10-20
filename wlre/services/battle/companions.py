@@ -34,8 +34,10 @@ def problem(state, index, npc_id, action):
         return '請等待伺服器事件結束'
     if state.get('activities'):
         return '請先結束目前活動再操作夥伴'
-    if any(state.get(key, {}).get('enabled') for key in ('auto_battle', 'roaming')):
-        return '請先停止自動戰鬥與徘徊'
+    # An armed AI is idle outside combat; deployment remains forbidden during
+    # an actual battle, post-event or active roaming movement.
+    if state.get('roaming', {}).get('enabled'):
+        return '請先停止自動徘徊'
     if state.get('crafting', {}).get('pending') or state.get('crafting', {}).get('auto_continue'):
         return '請先停止製作並等待目前操作回覆'
     active = knowledge.get('active_npc_id') == npc_id

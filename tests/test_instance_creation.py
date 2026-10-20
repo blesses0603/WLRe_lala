@@ -138,11 +138,10 @@ class RoomCreation(unittest.TestCase):
         with self.assertRaises(ProtocolError):
             main_create(logic, state)
         state.battle['active'] = False
+        # AI intent without an active fight must not prohibit entering rooms.
         state.auto_battle['enabled'] = True
-        with self.assertRaises(ProtocolError):
-            main_create(logic, state)
-        state.auto_battle['enabled'] = False
         coop_create(logic, state)
+        self.assertTrue(state.auto_battle['enabled'])
         with self.assertRaises(ProtocolError):
             main_create(logic, state)
         state2, logic2 = ready()

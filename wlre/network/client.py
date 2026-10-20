@@ -35,6 +35,20 @@ from wlre.network.commands import dispatch
 from wlre.services.items import reservations
 
 
+def post_battle_trace(state, phase):
+    """Small, numeric-only evidence; never include roles, packets or commands."""
+    event = state.battle.get('post_event') or {}
+    delay = event.get('delay_seconds')
+    remaining = state.instances.get('coop', {}).get('fight_count')
+    return {
+        'type': 'post_battle_trace', 'phase': phase,
+        'battle_count': state.battle_count,
+        'war_style': state.battle.get('war_style'),
+        'delay_seconds': delay,
+        'fight_count_known': type(remaining) is int and remaining >= 0,
+    }
+
+
 class LoginRejected(ProtocolError):
     pass
 
@@ -183,16 +197,14 @@ class SessionLogic:
             if state.battle.get('war_style')==16:
                 from wlre.services.instance_combat import consume_coop_fight
                 delay = consume_coop_fight(state)
-                if delay is None:
-                    state.battle['post_event']={'status':'cooperative_wait',
-                        'reason':'協力戰鬥場次尚未由 S186-15 同步，暫停自動接續'}
-                else:
-                    self.post_battle_due=time.monotonic()+delay
-                    state.battle['post_event']={'status':'cooperative_wait',
-                        'reason':'依 1262 官方協力場次等待，接續事件一次',
-                        'delay_seconds':delay}
-                    state.event_flow={**state.event_flow,'blocked':True,
-                        'last_source':'協力戰後安全等待，準備 C20-6 00'}
+                # A missing S186-15 follows the official FightOver default
+                # branch (2.5s), never an infinite local waiting state.
+                self.post_battle_due=time.monotonic()+delay
+                state.battle['post_event']={'status':'cooperative_wait',
+                    'reason':'依 1262 官方協力戰後延遲，接續伺服器事件一次',
+                    'delay_seconds':delay}
+                state.event_flow={**state.event_flow,'blocked':True,
+                    'last_source':'協力戰後安全等待，準備 C20-6 00'}
             else:
                 self.post_battle_due=time.monotonic()+2.5
                 state.battle['post_event']={'status':'exit_delay','source':kind,'delay_seconds':2.5}
@@ -328,7 +340,10 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
                 if expire_allocation(state) and on_state:notify_state(on_state,state)
                 if isinstance(on_state,StatePublisher):on_state.flush(state)
                 event_replies=logic.flush_events(state) if request else []
-                for response in event_replies:_send(connection,response,profile['tx_xor'],emit)
+                for response in event_replies:
+                    _send(connection,response,profile['tx_xor'],emit)
+                    if (response.main, response.sub) == (20, 6):
+                        emit(post_battle_trace(state, 'sent'))
                 if event_replies and on_state:notify_state(on_state,state)
                 for _ in range(20):
                     try: command = commands.get_nowait()
@@ -376,13 +391,22 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
                         if request:
                             for response in logic.receive(event, state):
                                 _send(connection, response, profile['tx_xor'], emit)
+                            if (event['type'] in ('fight_exit', 'battle_unit_exit')
+                                    and (state.battle.get('post_event') or {}).get('status')
+                                    in ('cooperative_wait', 'exit_delay')):
+                                emit(post_battle_trace(state, 'scheduled'))
+                            elif event['type'] == 'event_end' and state.battle.get('post_event'):
+                                emit(post_battle_trace(state, 'completed'))
                         if on_state and event['type'] != 'unimplemented': notify_state(on_state,state)
                     except Exception:
                         failed_packet = (packet.main, packet.sub)
                         failed_stage = stage
                         raise
                 event_replies=logic.flush_events(state) if request else []
-                for response in event_replies:_send(connection,response,profile['tx_xor'],emit)
+                for response in event_replies:
+                    _send(connection,response,profile['tx_xor'],emit)
+                    if (response.main, response.sub) == (20, 6):
+                        emit(post_battle_trace(state, 'sent'))
                 if event_replies and on_state:notify_state(on_state,state)
             if not stop_event.is_set(): parser.finish()
             else: closed_reason = 'stopped'

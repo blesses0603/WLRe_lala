@@ -35,7 +35,6 @@ class AttributeUiGuardTests(unittest.TestCase):
             ({'knowledge': {'player': {'ready': False}}}, '同步'),
             ({'battle': {'active': True}}, '戰鬥'),
             ({'event_flow': {'blocked': True}}, '事件'),
-            ({'auto_battle': {'enabled': True}}, '停止'),
             ({'roaming': {'enabled': True}}, '停止'),
             ({'attribute_allocation': {**defaults(), 'pending': True}}, '尚未確認'),
             ({'attribute_allocation': {**defaults(), 'uncertain': True}}, '重新登入'),
@@ -44,6 +43,7 @@ class AttributeUiGuardTests(unittest.TestCase):
             with self.subTest(delta=delta):
                 state = {**base, **delta}
                 self.assertIn(expected, preview_block_reason(state))
+        self.assertEqual(preview_block_reason({**base, 'auto_battle': {'enabled': True}}), '')
         self.assertIn('連線', preview_block_reason(base, live=False))
 
     def test_switching_equal_stat_characters_drops_staged_spend(self):

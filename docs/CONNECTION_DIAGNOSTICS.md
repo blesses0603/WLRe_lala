@@ -93,3 +93,11 @@ health 記錄 `periodic_cleanup display_events_removed=N` 與 `periodic_cleanup 
 - 核對官方 1262 Lua 與程式可確認，LaLa 原有 `war_style=16` 人工禁止自動下令屬於不符合官方 `AutoPlay.AutoFight` 排除清單的限制。修正後仍須本機玩家已啟用 AI，且伺服器權威確認 `battle_active`、`round > 0` 和本機存活單位。
 - 新版健康 Log 例如 `auto_battle state=armed enabled=1 battle_active=0 war_style=none round=none owned_living=0`；狀態白名單只記 `disabled/armed/paused/waiting/submitted/blocked/healing/waiting_heal/maintenance`，加上布林旗標、數字戰鬥類型、回合、存活單位數。相同狀態每 60 秒最多紀錄一次，僅保留有界鍵數；不記角色 ID／名字、對手、技能、指令、封包本文、自由輸入原因或帳號。沿用現有日誌輪替與目錄。
 - 這項診斷可解釋 AI 為何沒有在目前回合準備動作，但 `submitted` 僅代表本機準備送出指令，不等於伺服器已接受或戰鬥成功；仍須依正式伺服器回覆與實測確認。
+
+
+## 2026-10-20：協力戰鬥結束後未接續（v0.5.5）
+
+- `health-3428.log` 17:49:58 記錄 `auto_battle` 的 `armed → submitted → waiting`；17:50:03 記錄 `battle_active=0 → armed`。這證明 AI 本機有產生回合行動，而戰鬥後回到待命；但舊 Log 無 `post_battle` 記錄，不能證明 `C20-6 00` 已送出或下一戰已開啟。
+- 1262 `FightManager.FightOver` 在無剩餘多場勝利等待條件時直接接續事件；LaLa 原有 `S186-15` 未到即永久等候的分支與此不符。新版本採保守的一次接續：未知場次為官方一般退場 2.5 秒；已知仍需等待的勝利場次 5 秒。發送的是既有 `C20-6 00`，沒有新增未知封包、重送、開始或領獎動作。
+- 新版 Log 例如 `post_battle phase=scheduled battle_count=1 war_style=16 delay_s=2.5 fight_count_known=0`、`post_battle phase=sent...`、`post_battle phase=completed...`。三階段使用可信程式產生的白名單、數字／布林欄位，依戰鬥計數與階段去重，保留原 Log 輪替；不包含角色 ID／暱稱、隊友、道具、密碼、封包本文與使用者提供的任意文字。
+- 若只看到 `scheduled`：檢查接續計時與連線；若有 `sent` 無 `completed`：只能表示本機已發送 `C20-6 00`，仍須伺服器回覆才知道後續情況，不允許自動重送；若新戰鬥開始亦可由 AI 新回合證據確認。正式服實測仍待進行。

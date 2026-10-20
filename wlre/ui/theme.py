@@ -117,8 +117,13 @@ class GlassTheme:
             window.iconbitmap(str(ASSETS / 'app.ico'))
         self.windows[key] = {'job': None, 'signature': None, 'widgets': {}}
         self.add_chrome(window)
-        window.bind('<Configure>', lambda event: self.configured(window,event), add='+')
-        window.bind('<Destroy>', lambda event: self.destroyed(window, event), add='+')
+        # Some Tk/Tcl callback paths invoke a registered binding without a
+        # positional event object. Ignore those synthetic invocations, while
+        # preserving normal <Configure>/<Destroy> lifecycle handling.
+        window.bind('<Configure>', lambda event=None: self.configured(window,event)
+                    if event is not None else None, add='+')
+        window.bind('<Destroy>', lambda event=None: self.destroyed(window,event)
+                    if event is not None else None, add='+')
         self.schedule(window)
 
     def add_chrome(self, window):

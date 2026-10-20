@@ -226,15 +226,27 @@ class CompletionAndRewards(unittest.TestCase):
             self.assertEqual(logic.flush_events(state), [])
         self.assertFalse(state.instances['coop']['completed'])
 
-    def test_unknown_fight_count_does_not_guess_continuation(self):
+    def test_unknown_fight_count_follows_official_default_continuation_once(self):
         state, logic = ready()
         state.battle_count = 1
         state.battle = {'active': True, 'war_style': 16, 'winner_side': 1}
         event = {'type': 'fight_exit', 'role_id': 678}
         state.apply(event)
-        logic.receive(event, state)
-        self.assertIsNone(logic.post_battle_due)
+        with patch('wlre.network.client.time.monotonic', return_value=100):
+            logic.receive(event, state)
+        self.assertEqual(logic.post_battle_due, 102.5)
         self.assertEqual(state.battle['post_event']['status'], 'cooperative_wait')
+        self.assertEqual(state.battle['post_event']['delay_seconds'], 2.5)
+        self.assertTrue(state.event_flow['blocked'])
+        self.assertIsNone(state.instances['coop']['fight_count'])
+        with patch('wlre.network.client.time.monotonic', return_value=102.49):
+            self.assertEqual(logic.flush_events(state), [])
+        with patch('wlre.network.client.time.monotonic', return_value=102.5):
+            self.assertEqual(logic.flush_events(state), [Packet(20, 6, b'\x00')])
+        with patch('wlre.network.client.time.monotonic', return_value=103):
+            self.assertEqual(logic.flush_events(state), [])
+        # One continuation is not evidence of completing an instance.
+        self.assertFalse(state.instances['coop']['completed'])
 
 
 @unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt',
