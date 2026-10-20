@@ -13,6 +13,7 @@ from wlre.services.items.crafting import decode_crafting
 from wlre.services.items.room_storage import decode_storage
 from wlre.network.expedition import decode_expedition
 from wlre.network.instances import decode_instances
+from wlre.network.npc_dialogue import decode_effect as decode_npc_effect
 
 ENUMS = json.loads(RESOURCE_ROOT.joinpath("enums.json").read_text(encoding="utf-8"))
 ATTR_NAMES = {v: k for k, v in ENUMS["EAttribute"].items()}
@@ -96,7 +97,11 @@ def decode(packet, local_role_id=None):
     if packet.main==20 and packet.sub in (7,10,11,13,14,15,16,17):
         r.take(r.remaining)
         return dict(event,type='event_continue_permission',extension_bytes=len(packet.payload))
-    if packet.main == 20 and packet.sub in (1,2,3,4,5,6,9,12,46,58,67,70):
+    if packet.main == 20 and packet.sub in (1,2,3,4,5,6):
+        # Invalid effects remain blocking, without disconnecting the client.
+        return dict(event,type='event_active',npc_effect=decode_npc_effect(packet.payload),
+                    payload_bytes=len(packet.payload))
+    if packet.main == 20 and packet.sub in (9,12,46,58,67,70):
         # These branches require event/UI processing in the original client.
         # Mark the server gate; do not auto-advance unsupported dialogue or choices.
         r.take(r.remaining)

@@ -19,6 +19,7 @@ from wlre.services.battle.companions import command as companion_command
 from wlre.services.items.recovery import storage_plan, storage_packet
 from wlre.services.social.chat import chat_packet
 from wlre.network.protocol import select_role, attack, cast_skill, use_battle_item, use_field_item
+from wlre.network.npc_dialogue import request_npc, advance_npc
 from wlre.services.items.combat_resources import learned_command, food_command, reserve, field_context
 from wlre.services.items import reservations
 import copy
@@ -42,6 +43,10 @@ def dispatch(logic,command,state):
     reason=command_reason(state,command,maintenance_pending=bool(logic.maintenance.pending),
                           maintenance_uncertain=logic.maintenance.uncertain)
     if reason:raise ProtocolError(reason)
+    if kind == 'npc_start': return request_npc(state,command)
+    if kind == 'npc_next':
+        logic.pending_event=False
+        return advance_npc(state)
     if kind == 'instance_create':
         return create_instance(state, command)
     if kind == 'instance_join':

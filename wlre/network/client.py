@@ -176,7 +176,9 @@ class SessionLogic:
             if self.announced_war_style is not None:
                 state.battle['war_style']=self.announced_war_style
                 self.announced_war_style=None
-        if kind=='event_continue_permission':self.pending_event=True
+        if kind=='event_continue_permission':
+            # Preserve prior automatic event handling unless manually interacting.
+            self.pending_event=not state.npc_dialogue.get('active')
         elif kind=='event_end':
             self.pending_event=False
             self.post_battle_due=None
@@ -236,7 +238,7 @@ class SessionLogic:
             if time.monotonic()<self.post_battle_due:return []
             self.post_battle_due=None
             self.pending_event=True
-        if not self.pending_event or not self.world_acknowledged:return []
+        if not self.pending_event or not self.world_acknowledged or state.npc_dialogue.get('active'):return []
         self.pending_event=False
         if state.battle.get('post_event'):
             state.battle['post_event']['status']='awaiting_response'
@@ -353,7 +355,7 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
                             _send_command_packet(connection,packet,profile['tx_xor'],state,emit,on_state)
                         if command.get('type') in ('start_auto_battle', 'stop_auto_battle'):
                             emit(auto_battle_status_event(state))
-                        if command.get('type') in ('team','start_alchemy','stop_alchemy','reset_efficiency','craft','start_expedition','stop_expedition','allocate_points','instance_create','instance_join','instance_leave','instance_coop_standby','instance_start','instance_enter','instance_auto_reward','instance_reward_claim','instance_reward_cancel') and on_state:notify_state(on_state,state)
+                        if command.get('type') in ('team','start_alchemy','stop_alchemy','reset_efficiency','craft','start_expedition','stop_expedition','allocate_points','instance_create','instance_join','instance_leave','instance_coop_standby','instance_start','instance_enter','instance_auto_reward','instance_reward_claim','instance_reward_cancel','npc_start','npc_next') and on_state:notify_state(on_state,state)
                         if command.get('type') in ('start_auto_battle','stop_auto_battle','set_party_guard'):
                             emit({'type':'auto_battle_status',**state.auto_battle})
                             if on_state:notify_state(on_state,state)
