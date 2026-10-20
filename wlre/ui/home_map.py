@@ -26,7 +26,7 @@ class HomeMap(ttk.Frame):
         try:
             self.npc_index=NPCIndex()
             self.npc_index_error=False
-        except (OSError,ValueError,UnicodeError):
+        except (OSError,ValueError,UnicodeError,EOFError):
             # A corrupt optional catalogue must never crash the whole client
             # or silently enable an unverified NPC interaction.
             self.npc_index=None
