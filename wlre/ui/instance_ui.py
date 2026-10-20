@@ -199,6 +199,10 @@ class InstanceModePage(ttk.Frame):
             ttk.Label(self, textvariable=self.companion_note,
                       style='Muted.TLabel').pack(
                           anchor='w', before=self.body)
+            self.standby_note = tk.StringVar(value='協力準備：等待房間同步')
+            ttk.Label(self, textvariable=self.standby_note,
+                      style='Muted.TLabel').pack(
+                          anchor='w', before=self.body)
             reward_controls = ttk.Frame(self)
             reward_controls.pack(
                 fill='x', before=self.body, pady=(3, 2))
@@ -624,9 +628,12 @@ class InstanceModePage(ttk.Frame):
         room_capacity = current_room.get('capacity')
         full = (isinstance(room_capacity, int) and room_capacity > 0
                 and len(member_data) == room_capacity)
+        host_id = (current_room['host_id'] if 'host_id' in current_room
+                   else member_data[0].get('role_id') if member_data else None)
         self._standby_ready = (
             self.cooperative and bool(live) and full
-            and member_data[0].get('role_id') == local_role_id
+            and host_id == local_role_id
+            and member_data[0].get('role_id') == host_id
             and data.get('phase') == 'waiting'
             and type(current_room.get('standby')) is bool
             and not any(data.get(k) is not None for k in
@@ -756,6 +763,35 @@ class InstanceModePage(ttk.Frame):
             and not any(data.get(k) for k in ('join_pending','leave_pending','join_uncertain','leave_uncertain','standby_pending','standby_uncertain','start_pending', 'enter_pending','start_uncertain', 'enter_uncertain'))
             and not any(other.get(k) for k in ('join_pending','leave_pending','join_uncertain','leave_uncertain','standby_pending','standby_uncertain','start_pending', 'enter_pending','start_uncertain', 'enter_uncertain')))
         self._update_create_button()
+        if self.cooperative:
+            if not live:
+                explanation = '尚未登入'
+            elif not current_room:
+                explanation = '尚未加入協力房間'
+            elif data.get('create_pending') is not None:
+                explanation = '創房仍待伺服器確認；請勿重複創房'
+            elif data.get('create_uncertain'):
+                explanation = '創房結果仍不明；請重新登入同步，不要重複扣點'
+            elif data.get('standby_pending') is not None:
+                explanation = '已送出準備要求，等待伺服器房間狀態回覆'
+            elif data.get('standby_uncertain'):
+                explanation = '準備結果不明；請重新登入確認'
+            elif not member_data or host_id != local_role_id:
+                explanation = '目前不是伺服器確認的房主，只有房主可開始'
+            elif type(room_capacity) is not int or room_capacity <= 0:
+                explanation = '房間容量尚未同步'
+            elif len(member_data) < room_capacity:
+                explanation = '等待成員到齊：%d/%d 人' % (len(member_data), room_capacity)
+            elif data.get('phase') != 'waiting':
+                explanation = '房間階段：%s，尚不能開始' % data.get('phase')
+            elif reward_locked or activity_blocked:
+                explanation = '其他活動或獎勵操作尚未結束'
+            elif self._standby_ready:
+                explanation = '房主與成員 %d/%d 已確認，可以按準備／開始配對' % (
+                    len(member_data), room_capacity)
+            else:
+                explanation = '有其他房間操作未確認；請查看上方狀態'
+            self.standby_note.set('協力準備：' + explanation)
         self.refresh_button.state(['!disabled'] if live else ['disabled'])
         self.note.set(data.get('status', '尚未查詢房間') if live else '尚未連線，無法查詢副本房間')
         rooms = data.get('rooms', ())

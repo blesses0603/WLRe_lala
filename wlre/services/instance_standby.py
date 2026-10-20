@@ -49,8 +49,11 @@ def set_standby(state, command, now=None):
     if type(capacity) is not int or not 1 <= capacity <= 8:
         raise ProtocolError('協力房間人數尚未同步')
     # Original UI uses MyRoom.Member[1].ID as the host identity.
-    if not members or members[0].get('role_id') != state.player.get('role_id'):
-        raise ProtocolError('只有房主可以準備／取消準備')
+    host_id = room['host_id'] if 'host_id' in room else (
+        members[0].get('role_id') if members else None)
+    if (not members or host_id != state.player.get('role_id')
+            or members[0].get('role_id') != host_id):
+        raise ProtocolError('只有伺服器確認的房主可以準備／取消準備')
     if len(members) != capacity:
         raise ProtocolError('需要全員到齊才能切換準備狀態')
     current = room.get('standby')
