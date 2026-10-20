@@ -24,7 +24,7 @@ class NPCDialogueTests(unittest.TestCase):
         self.assertEqual(event['npc_effect']['effect_type'], 1)
         self.assertEqual(event['npc_effect']['event_no'], 70)
         self.assertEqual(decode_effect(s20_effect().payload+b'\xaa')['extension_bytes'], 1)
-        for size in range(17):
+        for size in range(18):
             self.assertIsNone(decode(Packet(20,1,b'\x00'*size))['npc_effect'])
 
     def test_ordinary_server_effect_does_not_take_over_manual_session(self):

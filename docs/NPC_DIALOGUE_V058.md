@@ -3,7 +3,7 @@
 ## 官方資料核對
 
 - 1262 Lua/Logic/EventManager.lua 的 SendNpcEvent 使用 C20-1 / UInt16 場景索引；SendAskServerEvent 使用 C20-6 / 0。
-- EventManager.ReceiveEventResult 對 S20-1～6 依序讀取 diagnosis(U8)、groupNumber(U16)、number(U8)、type(U8)、class(U8)、parameter(U16)、style(U8)、value(U32)、meanNumber(U16)、conditionNumber(U8)、eventNo(U16)，共 17 bytes。
+- EventManager.ReceiveEventResult 對 S20-1～6 依序讀取 diagnosis(U8)、groupNumber(U16)、number(U8)、type(U8)、class(U8)、parameter(U16)、style(U8)、value(U32)、meanNumber(U16)、conditionNumber(U8)、eventNo(U16)，共 18 bytes。
 - type=1 的 meanNumber 是 TalkData 文字 ID；type=6 則是場景 interactDatas 的索引，不是可直接送出的選項值。
 - S20-8 表示事件結束；S20-74 伺服器回覆互動距離／場景／索引錯誤。
 - 官方 NPCController 採 Unity 世界距離 1.6 檢查，和目前地圖格坐標尚無可信換算。LaLa 不假設使用者靠近、不自動走路，遠距離由伺服器拒絕。

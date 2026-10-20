@@ -4,8 +4,8 @@ from wlre.services.world.npc_catalog import NPCIndex
 
 
 def decode_effect(payload):
-    """Official EventManager.ReceiveEventResult S20-1..6 fixed 17-byte header."""
-    if len(payload) < 17:
+    """Official EventManager.ReceiveEventResult S20-1..6 fixed 18-byte header."""
+    if len(payload) < 18:
         return None
     r = Reader(payload)
     result = {
