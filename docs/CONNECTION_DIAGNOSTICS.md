@@ -85,3 +85,11 @@ health 記錄 `periodic_cleanup display_events_removed=N` 與 `periodic_cleanup 
 - 異常封包會由連線工作執行緒送出 `battle_attribute_invalid` 事件（僅 `main/sub`、`payload_bytes`、`complete_records`、`trailing_bytes`），桌面診斷寫入 `protocol_warning packet_main=51 packet_sub=1 reason=invalid_record_length payload_bytes=8 complete_records=1 trailing_bytes=1 count=1` 形式的紀錄。相同類型在 60 秒內合併記錄，累計數持續增加。這不是網路斷線診斷，正常結束仍會紀錄原先的連線狀態。
 - 診斷採數字欄位白名單與界限驗證；不記封包原文、帳密、聊天、角色名稱、例外文字或絕對檔案路徑。保留原本 1 MiB／兩份輪替設定。
 - **限制**：本次只容錯「封包已完整到達、但 S51-1 本文長度非 7 倍數」的狀況；若實際官方伺服器使用尚未辨識的擴充格式，需取得去識別化證據再確認。不得將略過資料當作已同步成功，也不因此自動補送、重連或開始協力。正式服實機驗收仍待執行。
+
+
+## 2026-10-20：副本／協力自動戰鬥診斷（v0.5.4）
+
+- 針對新提供的 `health-15596.log`，於 13:06:24 實際觀察到一筆 S51-1 `payload_bytes=10 trailing_bytes=3` 的 `protocol_warning`，後續仍於 13:09:55 收到封包並保持 `connection=receiving`，未見 `client_error`。此 Log 沒有 AI 狀態欄位，**不能單憑這份 Log 證實 AI 被哪種條件擋住**。
+- 核對官方 1262 Lua 與程式可確認，LaLa 原有 `war_style=16` 人工禁止自動下令屬於不符合官方 `AutoPlay.AutoFight` 排除清單的限制。修正後仍須本機玩家已啟用 AI，且伺服器權威確認 `battle_active`、`round > 0` 和本機存活單位。
+- 新版健康 Log 例如 `auto_battle state=armed enabled=1 battle_active=0 war_style=none round=none owned_living=0`；狀態白名單只記 `disabled/armed/paused/waiting/submitted/blocked/healing/waiting_heal/maintenance`，加上布林旗標、數字戰鬥類型、回合、存活單位數。相同狀態每 60 秒最多紀錄一次，僅保留有界鍵數；不記角色 ID／名字、對手、技能、指令、封包本文、自由輸入原因或帳號。沿用現有日誌輪替與目錄。
+- 這項診斷可解釋 AI 為何沒有在目前回合準備動作，但 `submitted` 僅代表本機準備送出指令，不等於伺服器已接受或戰鬥成功；仍須依正式伺服器回覆與實測確認。
