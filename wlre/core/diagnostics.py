@@ -114,8 +114,7 @@ class Diagnostics:
         style, round_number, living = (
             value.get('battle_war_style'), value.get('battle_round'),
             value.get('owned_living'))
-        if (type(count) is not int or not 1 <= count <= 100000000
-                or style is not None and (type(style) is not int or not 0 <= style <= 255)
+        if (style is not None and (type(style) is not int or not 0 <= style <= 255)
                 or round_number is not None and
                 (type(round_number) is not int or not 0 <= round_number <= 65535)
                 or type(living) is not int or not 0 <= living <= 32):
@@ -149,7 +148,8 @@ class Diagnostics:
         style = value.get('war_style')
         delay = value.get('delay_seconds')
         known = value.get('fight_count_known')
-        if (style is not None and (type(style) is not int or not 0 <= style <= 255)
+        if (type(count) is not int or not 1 <= count <= 100000000
+                or style is not None and (type(style) is not int or not 0 <= style <= 255)
                 or delay is not None and
                 (type(delay) not in (int, float) or delay not in (2.5, 5.0))
                 or type(known) is not bool):
