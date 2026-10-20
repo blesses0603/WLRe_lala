@@ -50,7 +50,6 @@ def creation_block_reasons(state, mode, live):
         ('expedition', 'pending', '遠征等待回覆'),
         ('alchemy', 'pending', '煉金等待回覆'),
         ('crafting', 'pending', '製作等待回覆'),
-        ('auto_battle', 'enabled', '自動戰鬥仍開啟，請先停止'),
         ('roaming', 'enabled', '自動移動仍開啟，請先停止'),
         ('alchemy', 'enabled', '自動煉金仍開啟，請先停止'),
         ('crafting', 'auto_continue', '自動製作仍開啟，請先停止'),
@@ -987,7 +986,7 @@ class InstancePanel(ttk.Frame):
                    ('maintenance', 'expedition', 'alchemy', 'crafting'))
             or bool((state.get('maintenance') or {}).get('uncertain'))
             or any((state.get(k) or {}).get('enabled')
-                   for k in ('auto_battle', 'roaming', 'alchemy', 'expedition'))
+                   for k in ('roaming', 'alchemy', 'expedition'))
             or bool((state.get('crafting') or {}).get('auto_continue'))
         )
         self.main_page.render(instances.get('main', {}), live=live,
