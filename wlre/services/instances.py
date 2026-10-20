@@ -37,6 +37,7 @@ def defaults():
         'coop': {'ready': False, 'rooms': [], 'room': None, 'members': [],
                  'phase': 'idle', 'status': '尚未查詢房間', 'fight_count': None, 'fight_consumed_battle': None, 'last_fight_victory': None,
                  'reward': None, 'standby': None,
+                  'create_attempt': None,
                  'standby_pending': None, 'standby_uncertain': False, 'standby_result': None,
                  'create_pending': None, 'create_uncertain': False, 'create_result': None,
                  'join_pending': None, 'join_uncertain': False, 'join_result': None,
@@ -125,6 +126,7 @@ def apply_instances(state, event):
                     data['cancel_result'] = None
             data['room'] = {'room_id': room_id, 'kind': event['kind'],
                             'npc_id': event['npc_id'], 'capacity': event['capacity'],
+                            'host_id': event.get('host_id'),
                             'standby': event['standby']}
             if data.get('phase') not in ('matched', 'combat') or old_room_id != room_id:
                 data['phase'] = 'waiting'

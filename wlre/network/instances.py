@@ -183,13 +183,17 @@ def _coop(packet):
         if capacity > 8:
             raise ProtocolError('S186-3 成員容量異常')
         members = []
-        for _ in range(capacity):
+        host_id = None
+        for slot in range(capacity):
             entry = {'role_id': r.u32(), 'status': r.u8(),
                      'hp': r.u32(), 'max_hp': r.u32(),
                      'sp': r.u32(), 'max_sp': r.u32()}
+            if slot == 0:
+                host_id = entry['role_id']
             if entry['role_id']:
                 members.append(entry)
         event = {'type': 'instance_members', 'mode': 'coop', 'room_id': room_id,
+                 'host_id': host_id,
                  'created': is_created, 'joined': is_joined,
                  'standby': standby != 0, 'kind': kind, 'npc_id': npc_id,
                  'capacity': capacity, 'members': members}
