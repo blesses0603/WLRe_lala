@@ -51,10 +51,11 @@ def _activity_guard(state, joining):
     post = state.battle.get('post_event') or {}
     if post and post.get('status') != 'completed':
         raise ProtocolError('請先完成戰後事件')
-    if any((state.auto_battle.get('enabled'), state.roaming.get('enabled'),
-            state.alchemy.get('enabled'), state.crafting.get('auto_continue'),
-            state.expedition.get('enabled'))):
-        raise ProtocolError('請先停止自動戰鬥、移動、遠征、煉金與製作')
+    # AI intent may remain enabled outside a real battle; room mutations still
+    # wait for actual combat, event flow, movement and unfinished operations.
+    if any((state.roaming.get('enabled'), state.alchemy.get('enabled'),
+            state.crafting.get('auto_continue'), state.expedition.get('enabled'))):
+        raise ProtocolError('請先停止自動移動、遠征、煉金與製作')
     if joining and state.activities:
         raise ProtocolError('請先結束其他活動')
 
