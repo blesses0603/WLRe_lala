@@ -62,6 +62,21 @@ class NPCCatalogTests(unittest.TestCase):
             self.assertEqual((rows[0]['npc_id'], rows[0]['npc_index']),
                              (987, 2))
 
+    def test_official_zero_event_npc_is_valid(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path=Path(folder)/'npcs.json'
+            verified_index_file(path, {'12903': [{
+                'index': 7, 'npc_id': 18001, 'x': 600, 'y': 700,
+                'event_count': 0, 'event_ids': [], 'name': 'Npc',
+                'base_define': 4, 'buy_kind': 0
+            }]})
+            rows=scene_npcs(12903, [], NPCIndex(path))
+            self.assertEqual(len(rows), 1)
+            self.assertTrue(rows[0]['verified'])
+            self.assertEqual(rows[0]['event_count'], 0)
+            self.assertNotEqual(rows[0]['name'], 'Npc')
+            self.assertIn('無互動事件', npc_detail(rows[0]))
+
     def test_bad_source_duplicate_index_and_invalid_types_fail_closed(self):
         valid = {'index': 2, 'npc_id': 123, 'x': 4, 'y': 5,
                  'event_count': 1}
@@ -74,7 +89,7 @@ class NPCCatalogTests(unittest.TestCase):
                 {'version': 1262, 'source': 'EventData.NewNpc', 'scenes': {
                     '100': [{**valid, 'index': True}]}},
                 {'version': 1262, 'source': 'EventData.NewNpc', 'scenes': {
-                    '100': [{**valid, 'event_count': 0}]}},
+                    '100': [{**valid, 'event_count': 2, 'event_ids': [1]}]}},
             ):
                 path.write_text(json.dumps(payload), encoding='utf-8')
                 with self.subTest(source=payload['source']), self.assertRaises(ValueError):
