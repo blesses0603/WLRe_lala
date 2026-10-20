@@ -11,6 +11,7 @@ NPC ID, MapActionNpcData, or portal IDs.
 import json
 from pathlib import Path
 from wlre.paths import RESOURCE_ROOT
+from wlre.services.items.catalog import CAT
 
 
 SOURCE = 'EventData.NewNpc'
@@ -23,7 +24,10 @@ def _valid_index(row):
             and type(row.get('npc_id')) is int and 0 < row['npc_id'] <= 4294967295
             and type(row.get('x')) is int and 0 <= row['x'] <= 4294967295
             and type(row.get('y')) is int and 0 <= row['y'] <= 4294967295
-            and type(row.get('event_count')) is int and 0 < row['event_count'] <= 255)
+            and type(row.get('event_count')) is int and 0 <= row['event_count'] <= 255
+            and (('event_ids' not in row) or (isinstance(row['event_ids'], list)
+                 and len(row['event_ids']) == row['event_count']
+                 and all(type(v) is int and 0 <= v <= 255 for v in row['event_ids']))))
 
 
 class NPCIndex:
@@ -50,6 +54,13 @@ class NPCIndex:
 
     def for_scene(self, scene):
         return list(self.scenes.get(str(scene), []))
+
+
+def display_name(npc_id, event_name=''):
+    official=CAT.get('npcs', {}).get(str(npc_id), {}).get('name', '')
+    if official: return str(official)[:100]
+    if event_name and event_name not in ('Npc', 'NPC'): return str(event_name)[:100]
+    return f'NPC #{npc_id}'
 
 
 def scene_npcs(scene, entities, index=None):
@@ -80,7 +91,9 @@ def scene_npcs(scene, entities, index=None):
             'scene': scene, 'x': x, 'y': y, 'npc_id': npc_id,
             'npc_index': match['index'] if match else None,
             'event_count': match['event_count'] if match else None,
-            'verified': match is not None,
+            'verified': match is not None, 'event_ids': list(match.get('event_ids', [])) if match else [],
+            'buy_kind': match.get('buy_kind', 0) if match else 0,
+            'base_define': match.get('base_define') if match else None,
             'source': SOURCE if match else 'map_position_reference',
         })
     # Some verified NPCs are not covered by the old marker file. Preserve them
@@ -90,10 +103,11 @@ def scene_npcs(scene, entities, index=None):
         if (v['index'], v['npc_id']) in known:
             continue
         rows.append({
-            'name': str(v.get('name') or f'NPC #{v["npc_id"]}')[:100],
+            'name': display_name(v['npc_id'], v.get('name')),
             'scene': scene, 'x': v['x'], 'y': v['y'], 'npc_id': v['npc_id'],
             'npc_index': v['index'], 'event_count': v['event_count'],
-            'verified': True, 'source': SOURCE,
+            'verified': True, 'source': SOURCE, 'event_ids': list(v.get('event_ids', [])),
+            'buy_kind': v.get('buy_kind', 0), 'base_define': v.get('base_define'),
         })
     return rows
 
@@ -102,5 +116,6 @@ def npc_detail(row):
     coords = (f'({row["x"]}, {row["y"]})' if row.get('x') is not None
               and row.get('y') is not None else '位置未確認')
     if row.get('verified'):
-        return f'{coords}｜事件索引 {row["npc_index"]} 已核對，對話待開放'
+        return (f'{coords}｜事件索引 {row["npc_index"]} 已核對，'
+                + ('無互動事件' if row.get('event_count') == 0 else '對話待開放'))
     return f'{coords}｜索引未核對，不會送出對話封包'
