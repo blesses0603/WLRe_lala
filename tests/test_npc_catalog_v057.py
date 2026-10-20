@@ -1,4 +1,5 @@
 """NPC phase-1: distinguish location references and actual EventData indices."""
+import gzip
 import json
 import os
 from pathlib import Path
@@ -8,6 +9,7 @@ import unittest
 from unittest.mock import Mock
 
 from wlre.services.world.npc_catalog import NPCIndex, scene_npcs, npc_detail
+from wlre.paths import RESOURCE_ROOT
 
 
 def verified_index_file(path, scenes):
@@ -17,6 +19,25 @@ def verified_index_file(path, scenes):
 
 
 class NPCCatalogTests(unittest.TestCase):
+    def test_bundled_official_eve_index(self):
+        index = NPCIndex()
+        self.assertTrue(index.path.is_file())
+        self.assertEqual(index.path.name, 'npc_event_index_1262.json.gz')
+        self.assertEqual(len(index.scenes), 1256)
+        self.assertEqual(sum(map(len, index.scenes.values())), 10879)
+        rows=[v for group in index.scenes.values() for v in group]
+        self.assertEqual(sum(row['event_count'] > 0 for row in rows), 8014)
+        self.assertEqual(sum(row['event_count'] == 0 for row in rows), 2865)
+        self.assertEqual(sum(row.get('buy_kind', 0) != 0 for row in rows), 32)
+
+    def test_gzip_catalog_decodes_without_loss(self):
+        source = RESOURCE_ROOT/'npc_event_index_1262.json.gz'
+        with gzip.open(source, 'rt', encoding='utf-8') as stream:
+            data=json.load(stream)
+        self.assertEqual(data['version'], 1262)
+        self.assertEqual(data['source'], 'EventData.NewNpc')
+        self.assertEqual(data['bundle_md5'], '81af690395d5e6a233afa9a664e2c555')
+
     def test_position_only_marker_never_fabricates_event_index(self):
         rows = scene_npcs(100, [{
             'kind': 0, 'name': '行商', 'index': 99,
@@ -109,6 +130,8 @@ class NPCSceneUITests(unittest.TestCase):
         self.map = HomeMap(self.root, self.pick, Mock(),
                            on_move=self.move, on_portal=self.portal, compact=True)
         self.map.pack(fill='both', expand=True)
+        # Isolate the single-marker fixture from the now-bundled NPC roster.
+        self.map.npc_index=None
         self.map.portals.data['entities']['12903'] = [{
             'kind': 0, 'name': '行商', 'x': 120, 'y': 80,
             'index': 123, 'npc_id': 900
