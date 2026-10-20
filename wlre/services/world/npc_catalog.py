@@ -4,10 +4,12 @@ Official 1262 EventData.NewNpc has an index (u16), id (u32),
 coordinates (u32/u32) and eventCount. MapActionNpcData instead belongs
 to extra NPCs using C195-3, *not* ordinary C20-1 interaction.
 
-The optional npc_event_index_1262.json must be independently extracted and
-verified against EventData.NewNpc. Never infer indices from list position,
-NPC ID, MapActionNpcData, or portal IDs.
+The bundled npc_event_index_1262.json.gz is extracted from official Eve 1262.
+An explicit .json path remains supported for test fixtures or independent
+verification. Never infer indices from list position, NPC ID, MapActionNpcData,
+or portal IDs.
 """
+import gzip
 import json
 from pathlib import Path
 from wlre.paths import RESOURCE_ROOT
@@ -32,14 +34,32 @@ def _valid_index(row):
 
 class NPCIndex:
     def __init__(self, path=None):
-        self.path = Path(path) if path is not None else RESOURCE_ROOT/'npc_event_index_1262.json'
+        self.path = Path(path) if path is not None else RESOURCE_ROOT/'npc_event_index_1262.json.gz'
         self.scenes = {}
         if not self.path.is_file():
+            if path is None:
+                raise FileNotFoundError('官方 NPC 資料尚未隨套件安裝')
             return
-        data = json.loads(self.path.read_text(encoding='utf-8'))
+        if self.path.suffix == '.gz':
+            # Bound decompression before JSON parsing to reject corrupt or
+            # maliciously expanded resource data.
+            with gzip.open(self.path, 'rb') as stream:
+                raw = stream.read(16 * 1024 * 1024 + 1)
+            if len(raw) > 16 * 1024 * 1024:
+                raise ValueError('NPC 索引檔超過安全上限')
+            data = json.loads(raw.decode('utf-8'))
+        else:
+            data = json.loads(self.path.read_text(encoding='utf-8'))
         if (not isinstance(data, dict) or data.get('version') != FORMAT_VERSION
                 or data.get('source') != SOURCE or not isinstance(data.get('scenes'), dict)):
             raise ValueError('NPC 索引表不是官方 1262 EventData.NewNpc 格式')
+        if path is None:
+            if (data.get('scene_count') != 1256 or data.get('npc_count') != 10879
+                    or data.get('bundle_md5') != '81af690395d5e6a233afa9a664e2c555'):
+                raise ValueError('預裝 NPC 資料來源或數量不符官方 Eve 1262')
+            if len(data['scenes']) != data['scene_count']:
+                raise ValueError('NPC 場景數量不符')
+        total = 0
         for scene, records in data['scenes'].items():
             if not scene.isdecimal() or not 0 <= int(scene) <= 65535 or not isinstance(records, list):
                 raise ValueError('NPC 場景索引資料格式錯誤')
@@ -50,7 +70,10 @@ class NPCIndex:
                 if not _valid_index(record) or record['index'] in indices:
                     raise ValueError('NPC 資料無效或索引重複')
                 indices.add(record['index'])
+            total += len(records)
             self.scenes[scene] = [dict(record) for record in records]
+        if path is None and total != data['npc_count']:
+            raise ValueError('NPC 索引資料總數不符')
 
     def for_scene(self, scene):
         return list(self.scenes.get(str(scene), []))
