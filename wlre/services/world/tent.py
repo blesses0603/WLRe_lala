@@ -9,6 +9,7 @@ from wlre.core.state_ownership import writes
 from wlre.network.wire import Packet, ProtocolError, Reader, Writer
 
 TIMEOUT = 15.0
+HOUSE_SCENES = frozenset((10299, 10298, 10000))  # 1262 Define.lua FurSysSceneNum
 
 
 def defaults():
@@ -74,13 +75,24 @@ def _visible(t, data, scene):
              x=data['x'], y=data['y'], kind=data['kind'], make=data['make'])
     if t.get('pending') and t['pending']['action'] == 'open':
         t.update(pending=None, uncertain=False)
-    t['status'] = '自家帳篷已由伺服器確認展開'
+    t['status'] = ('等待進入自家帳篷的伺服器確認'
+                   if t.get('pending') and t['pending']['action'] == 'enter'
+                   else '自家帳篷已由伺服器確認展開')
 
 
 def _removed(t):
     t.update(visible=False, deployed_scene=None, tent_id=None,
              x=None, y=None, inside=False, pending=None,
              uncertain=False, status='伺服器已確認收起帳篷')
+
+
+def _confirm_enter(t, scene):
+    pending = t.get('pending')
+    if (pending and pending['action'] == 'enter'
+            and pending.get('furniture_received')
+            and scene in HOUSE_SCENES):
+        t.update(pending=None, uncertain=False, inside=True,
+                 status='已進入自家帳篷（伺服器場景與家具確認）')
 
 
 def apply_tent(state, event):
@@ -98,6 +110,7 @@ def apply_tent(state, event):
             t['status'] = ('已切換場景，等待自家帳篷內部資料確認'
                            if t.get('pending') and t['pending']['action'] == 'enter'
                            else '已切換場景，等待本場景帳篷資料')
+            _confirm_enter(t, scene)
         return
     if kind == 'tent_added':
         if pid is not None and event['tent']['owner_id'] == pid:
@@ -131,8 +144,10 @@ def apply_tent(state, event):
     elif (event.get('room_action') == 'snapshot' and pid is not None
           and event.get('owner') == pid and t.get('pending')
           and t['pending']['action'] == 'enter'):
-        t.update(pending=None, uncertain=False, inside=True,
-                 status='已取得自家帳篷家具資料（伺服器確認）')
+        t['pending']['furniture_received'] = True
+        _confirm_enter(t, state.player.get('scene'))
+        if t['pending']:
+            t['status'] = '自家帳篷家具已收到，等待房屋場景確認'
 
 
 @writes('tent')
@@ -160,14 +175,14 @@ def command(state, instruction, now=None):
     if action == 'open':
         if t['deployed_scene'] is not None:
             raise ProtocolError('已有展開帳篷紀錄；請確認是否需收起，或重新登入同步')
-        if t['inside']:
+        if t['inside'] or state.player.get('scene') in HOUSE_SCENES:
             raise ProtocolError('在小屋內不能展開帳篷')
         packet = Packet(65, 6)
         label = '展開'
     elif action == 'close':
         if t['deployed_scene'] is None:
             raise ProtocolError('尚未收到自家帳篷展開證據，不能直接收起')
-        if t['inside']:
+        if t['inside'] or state.player.get('scene') in HOUSE_SCENES:
             raise ProtocolError('在自己的小屋內不能收起帳篷')
         packet = Packet(65, 2)
         label = '收起'
