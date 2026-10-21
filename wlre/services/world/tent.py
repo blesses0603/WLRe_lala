@@ -9,7 +9,17 @@ from wlre.core.state_ownership import writes
 from wlre.network.wire import Packet, ProtocolError, Reader, Writer
 
 TIMEOUT = 15.0
-HOUSE_SCENES = frozenset((10299, 10298, 10000))  # 1262 Define.lua FurSysSceneNum
+HOUSE_SCENES = frozenset((10299, 10298, 10000))  # 1262 家具基礎場景模型
+HOUSE_SCENE_MIN = 63501  # Define.lua RetainMinSceneNum
+HOUSE_SCENE_MAX = 65500  # Define.lua RetainMaxSceneNum
+
+
+def is_dynamic_house_scene(scene):
+    return type(scene) is int and HOUSE_SCENE_MIN <= scene <= HOUSE_SCENE_MAX
+
+
+def is_house_scene(scene):
+    return is_dynamic_house_scene(scene) or scene in HOUSE_SCENES
 
 
 def defaults():
@@ -90,7 +100,7 @@ def _confirm_enter(t, scene):
     pending = t.get('pending')
     if (pending and pending['action'] == 'enter'
             and pending.get('furniture_received')
-            and scene in HOUSE_SCENES):
+            and is_house_scene(scene)):
         t.update(pending=None, uncertain=False, inside=True,
                  status='已進入自家帳篷（伺服器場景與家具確認）')
 
@@ -100,16 +110,19 @@ def apply_tent(state, event):
     kind = event['type']
     pid = state.player.get('role_id')
     if kind == 'world_player':
-        state.tent = {**defaults(), 'scene': state.player.get('scene')}
+        scene = state.player.get('scene')
+        state.tent = {**defaults(), 'scene': scene,
+                      'status': ('已在住宅場景，等待自家家具資料確認'
+                                 if is_house_scene(scene) else '帳篷狀態待伺服器同步')}
         return
     if kind == 'position_snapshot' and event.get('role_id') == pid:
         scene = event['scene']
         if t['scene'] != scene:
             t.update(scene=scene, scene_known=False, visible=False,
                      inside=False)
-            t['status'] = ('已切換場景，等待自家帳篷內部資料確認'
-                           if t.get('pending') and t['pending']['action'] == 'enter'
-                           else '已切換場景，等待本場景帳篷資料')
+            t['status'] = ('已到住宅場景，等待自家家具資料確認'
+                           if is_house_scene(scene) else
+                           '已切換場景，等待本場景帳篷資料')
             _confirm_enter(t, scene)
         return
     if kind == 'tent_added':
@@ -142,12 +155,17 @@ def apply_tent(state, event):
     elif kind == 'tent_appearance':
         t.update(kind=event['kind'], make=event['make'])
     elif (event.get('room_action') == 'snapshot' and pid is not None
-          and event.get('owner') == pid and t.get('pending')
-          and t['pending']['action'] == 'enter'):
-        t['pending']['furniture_received'] = True
-        _confirm_enter(t, state.player.get('scene'))
-        if t['pending']:
-            t['status'] = '自家帳篷家具已收到，等待房屋場景確認'
+          and event.get('owner') == pid):
+        pending = t.get('pending')
+        if pending and pending['action'] == 'enter':
+            pending['furniture_received'] = True
+            _confirm_enter(t, state.player.get('scene'))
+            if t.get('pending'):
+                t['status'] = '自家帳篷家具已收到，等待住宅場景確認'
+        elif is_house_scene(state.player.get('scene')) and not pending:
+            # S3-1 初始位置在住宅時沒有進入請求，仍需 S62-4 所有權佐證。
+            t.update(inside=True, uncertain=False,
+                     status='已在自家帳篷（住宅場景與家具資料已確認）')
 
 
 @writes('tent')
@@ -175,14 +193,14 @@ def command(state, instruction, now=None):
     if action == 'open':
         if t['deployed_scene'] is not None:
             raise ProtocolError('已有展開帳篷紀錄；請確認是否需收起，或重新登入同步')
-        if t['inside'] or state.player.get('scene') in HOUSE_SCENES:
+        if t['inside'] or is_house_scene(state.player.get('scene')):
             raise ProtocolError('在小屋內不能展開帳篷')
         packet = Packet(65, 6)
         label = '展開'
     elif action == 'close':
         if t['deployed_scene'] is None:
             raise ProtocolError('尚未收到自家帳篷展開證據，不能直接收起')
-        if t['inside'] or state.player.get('scene') in HOUSE_SCENES:
+        if t['inside'] or is_house_scene(state.player.get('scene')):
             raise ProtocolError('在自己的小屋內不能收起帳篷')
         packet = Packet(65, 2)
         label = '收起'
@@ -216,6 +234,8 @@ def activity_text(t):
         return '帳篷｜已進入自家帳篷'
     if t.get('visible'):
         return f"帳篷｜已展開（{t.get('x')}、{t.get('y')}）"
+    if is_house_scene(t.get('scene')):
+        return '帳篷｜住宅場景已抵達，等待自家家具資料確認'
     if t.get('deployed_scene') is not None:
         return '帳篷｜曾在其他場景展開，現況待確認'
     if t.get('scene_known'):
