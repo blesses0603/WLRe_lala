@@ -225,6 +225,7 @@ class App(LoginController,AccountController):
         self.efficiency_panel.update_state({})
         self.companion_panel.render({})
         self.expedition_panel.render({})
+        self.daily_tasks_panel.render({})
         self.instance_panel.render({}, live=False)
         self.overview_panel.update_state({})
         self.live_active=True
@@ -264,7 +265,8 @@ class App(LoginController,AccountController):
         window.focus_set()
         panel=getattr(self,{
             'party':'party_panel','companion':'companion_panel',
-            'expedition':'expedition_panel','instance':'instance_panel',
+            'expedition':'expedition_panel','daily_tasks':'daily_tasks_panel',
+            'instance':'instance_panel',
             'alchemy':'alchemy_panel','crafting':'crafting_panel',
             'efficiency':'efficiency_panel'}[key])
         if key=='instance':
@@ -330,6 +332,7 @@ class App(LoginController,AccountController):
         if self.overview_panel.winfo_ismapped():self.overview_panel.update_state(state)
         if self.companion_panel.winfo_ismapped():self.companion_panel.render(state)
         self.expedition_panel.render(state)
+        if self.daily_tasks_panel.winfo_ismapped():self.daily_tasks_panel.render(state)
         self.instance_panel.render(state, live=self.live_active)
         if self.party_panel.winfo_ismapped():self.party_panel.render(state)
         else:
