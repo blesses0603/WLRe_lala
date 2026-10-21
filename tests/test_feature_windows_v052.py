@@ -59,14 +59,15 @@ class SecondaryFeatures(unittest.TestCase):
 
     def test_every_non_home_tab_is_a_launcher(self):
         self.assertEqual(tuple(self.app.feature_windows),tuple(WINDOWS))
-        self.assertEqual(len(self.app.feature_launchers),7)
+        self.assertEqual(len(self.app.feature_launchers),len(WINDOWS))
         self.assertEqual(
             [self.app.left_tabs.tab(t,'text') for t in self.app.left_tabs.tabs()],
-            ['主頁','組隊','夥伴出戰','遠征','副本','煉金','製作','經驗效率'])
+            ['主頁','組隊','夥伴出戰','遠征','每日任務','副本','煉金','製作','經驗效率'])
         for key in WINDOWS:
             panel=getattr(self.app, {
                 'party':'party_panel','companion':'companion_panel',
-                'expedition':'expedition_panel','instance':'instance_panel',
+                'expedition':'expedition_panel','daily_tasks':'daily_tasks_panel',
+                'instance':'instance_panel',
                 'alchemy':'alchemy_panel','crafting':'crafting_panel',
                 'efficiency':'efficiency_panel'}[key])
             self.assertEqual(panel.winfo_toplevel(),
