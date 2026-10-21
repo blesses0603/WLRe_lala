@@ -10,7 +10,7 @@ REQUIRED_RESOURCES=(
     'emoji_catalog.json','emoji_images.zip','enums.json','expedition_catalog.json','instance_catalog_1262.json','graph_origins.json',
     'item_icon_coverage.json','item_icon_map.json','item_icons.zip','item_stackable.json',
     'map_names.json','navigation_data.zip','normal_attack_data.json','npc_event_index_1262.json.gz','npc_battle_talk_1262.json.gz',
-    'npc_talk_1262.json.gz','npc_text_1262.json.gz','portals.json',
+    'npc_talk_1262.json.gz','npc_text_1262.json.gz','npc_interact_1262.json.gz','portals.json',
     'server_list.json','smallmaps.zip','stage_coordinates.json',
     'assets/app.ico','assets/exp_background.png',
     *('assets/buttons/'+name+'.png' for name in (
@@ -52,6 +52,12 @@ def validate_resources(root):
                 if (path.stat().st_size != expected_size
                         or hashlib.sha256(path.read_bytes()).hexdigest() != expected_sha):
                     raise RuntimeError('1262 NPC 原始文字檔案雜湊不符：'+path.name)
+            if path.name == 'npc_interact_1262.json.gz':
+                import hashlib
+                from wlre.services.world.npc_interact import EXPECTED_SHA256
+                if (path.stat().st_size != 19914
+                        or hashlib.sha256(path.read_bytes()).hexdigest() != EXPECTED_SHA256):
+                    raise RuntimeError('官方 1262 NPC 選項索引 SHA-256 或大小不符')
             with gzip.open(path,'rb') as stream:
                 raw=stream.read(16*1024*1024+1)
             if len(raw)>16*1024*1024:

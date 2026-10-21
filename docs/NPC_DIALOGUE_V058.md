@@ -78,3 +78,11 @@ py -m tools.resources.install_npc_text_1262 "WLRE_1262_NPC_繁中資料索引包
 - 唯讀來源檔 npc_interact_1262.json.gz：19,914 bytes，SHA-256 37bba3db9ec06cc4838bec99a2fb16d6b49f7064edcfc46e59bf30ac08888592。此檔尚未提交 GitHub；需下載本次附件並透過 GitHub 網頁上傳 PR #41 分支的 wlre/resources/。
 - 選項只有收到 S20-1～6 的 effectType=6、與當前場景及索引一致、formKind=1、kind=3、dataBaseKind=1、繁中文字 ID 有效，並由使用者二次確認才會送出一次。其餘情況嚴格拒絕。
 - 正式伺服器劇情分支、戰鬥與物品效果尚未驗收。PR 保持 Draft，不合併 main。
+
+
+## v0.5.12 整合驗證與正式資源內建（2026-10-21）
+
+- 已核對使用者原始 `npc_interact_1262.json.gz` 19,914 bytes，SHA-256 `37bba3db9ec06cc4838bec99a2fb16d6b49f7064edcfc46e59bf30ac08888592`，Git Blob SHA `8d8cde2583bd6b0c6a020e1714d10196a22b6a5c`；與提供的 ZIP 完全一致。
+- 該官方 Eve 1262 選項索引已併入整合分支並列為 `REQUIRED_RESOURCES`，Windows／macOS 打包時缺少檔案、大小或 SHA-256 不符將無法通過資源驗證。
+- `NPCInteractIndex` 仍會在受損情況下安全停用，正式伺服器上未知選項或商店交易不會被自動啟用。
+- 由於最新 main 同時有協力獎勵與戰後鎖定修正，本整合分支保留相關程式與 `tests/test_coop_reward_lifecycle_v057.py`，以 GitHub Actions 三平台測試為合併前檢查。即使 CI 成功，仍須正式伺服器手動 E2E 驗收。

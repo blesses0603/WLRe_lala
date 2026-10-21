@@ -1,4 +1,4 @@
-"""The official Eve index is optional until separately uploaded into PR #41."""
+"""Official Eve 1262 index is now bundled and checked during tests."""
 import unittest
 from wlre.paths import RESOURCE_ROOT
 from wlre.services.world.npc_interact import NAME, NPCInteractIndex
@@ -8,10 +8,7 @@ class RealEveInteractRegression(unittest.TestCase):
     def test_original_eve_index_or_safe_absence(self):
         path=RESOURCE_ROOT / NAME
         index=NPCInteractIndex()
-        if not path.is_file():
-            self.assertEqual(index.scenes,{})
-            self.assertIsNone(index.get(10000,1))
-            return
+        self.assertTrue(path.is_file(), '官方 Eve 1262 NPC 選項索引應隨版本內建')
         self.assertEqual(len(index.scenes),505)
         self.assertEqual(sum(len(s) for s in index.scenes.values()),1622)
         from wlre.services.world.npc_talk import load_catalog
