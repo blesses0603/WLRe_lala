@@ -24,9 +24,10 @@ class NPCShopCatalogueTests(unittest.TestCase):
                     cat=shop_catalog(scene,index,index=idx)
                     self.assertIsNotNone(cat,(scene,index))
                     self.assertFalse(cat['verified_prices'])
+                    self.assertTrue(cat['item_data_verified'])
                     self.assertEqual(cat['form_kind'],row['form_kind'])
                     self.assertTrue(cat['products'])
-                    self.assertTrue(all(p['price_gold'] is None and
+                    self.assertTrue(all(type(p['price_gold']) is int and
                                         p['buy_enabled'] is False
                                         for p in cat['products']))
                     self.assertEqual(
@@ -44,6 +45,8 @@ class NPCShopCatalogueTests(unittest.TestCase):
         draft=draft_purchase(shop,1,2)
         self.assertEqual(draft['item_id'],32297)
         self.assertEqual(draft['count'],2)
+        self.assertEqual(draft['base_unit_gold'],750)
+        self.assertEqual(draft['base_total_gold'],1500)
         self.assertIsNone(draft['total_gold'])
         self.assertFalse(draft['enabled'])
         for wrong_count in (True,-1,0,10000,1.4):

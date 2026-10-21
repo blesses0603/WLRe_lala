@@ -30,3 +30,14 @@
 ## 下一階段所需的來源
 
 可沿用以前的 AssetStudioMod 或 UnityPy 搜尋器，從 DataPackage/MainPackage 的 BundleFiles 掃描 TextAsset 名稱 ItemData_C，保留原始 bytes 與掃描報告。不要從資料庫或一般文字 ID 推算價格。完成可靠 ItemData_C 解碼並擷取金幣同步封包後，才能啟用真正的購買與販售。
+
+
+## v0.5.14 原始 ItemData_C 來源驗證與 UI 基礎價整合（2026-10-21）
+
+- 來自使用者上傳 `ItemData_搜尋結果.zip`，TextAsset 為 `ItemData_C`，原始 3,157,231 bytes、SHA-256 `5fea03839a3e737ff33c5462fc553ab88966de5b02d1c95d71d3ffb54351ece1`。
+- 完整依 `Lua/Data/ItemData.lua` 的 `ItemData:New` 解碼 11,287 筆，4 組 bodyType 顏色/圖號欄位及剩餘所有欄位均消耗；ID 零重複，檔案結尾剩餘 0 bytes。
+- Eve 1262 的 65 組商店共 309 筆商品欄位，215 種不同物品 ID，**所有 215 種都有 ItemData_C 物品資料**；既有商店資料的商品順序、C20-9 關閉語意不變。
+- 將完整官方來源轉成 **派生欄位索引** `wlre/resources/npc_item_data_1262.json.gz`，11,287 筆，112,854 bytes，SHA-256 `94f45d1b0e4f8c8587219b5c87c3a7e5f65b5573487a1e8d4d7f64f35e2ceb17`。只收錄名稱、基礎買價、NPC 收購價、restrict、openUsed、needLevel，並保留來源檔 SHA，未包含原始完整遊戲二進位。
+- `ItemData.CanSale` 對應 restrict bit5（0x0010），全物品中 5,301 筆禁止賣給 NPC。UI 會逐筆標示「不可賣給 NPC」；不會因資料表有 sellPrice 就允許賣出。
+- 價格若實際享有折扣，`ItemData.price` 只是官方**基礎價**，不是伺服器最終扣款額。角色列表具原始 gold 欄位，但並非下單時的可靠即時金額；尚缺交易後權威同步和對帳。保留購買/販售指令拒絕，僅 UI 價格唯讀。
+- 資料缺失、SHA 錯誤、結構不符，UI 退回價格未知，購物永遠不會因此開放；原生打包必要資源檢查將拒絕不正確資料。

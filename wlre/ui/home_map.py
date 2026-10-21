@@ -16,6 +16,7 @@ from wlre.services.world.npc_catalog import NPCIndex, scene_npcs, npc_detail
 from wlre.services.world.npc_talk import load_catalog as load_npc_talks, dialogue_text
 from wlre.services.world.npc_interact import NPCInteractIndex
 from wlre.services.world.npc_shop import shop_catalog
+from wlre.services.world.npc_item_data import item_catalog, sellable
 
 
 class HomeMap(ttk.Frame):
@@ -338,12 +339,12 @@ class HomeMap(ttk.Frame):
                 pass
         win=tk.Toplevel(self)
         self.npc_shop_window=win
-        win.title('NPC '+catalog['title']+'（商品預覽／交易尚未啟用）')
+        win.title('NPC '+catalog['title']+'（官方價格預覽／交易未啟用）')
         win.geometry('680x440')
         win.transient(self.winfo_toplevel())
         body=ttk.Frame(win,padding=12)
         body.pack(fill='both',expand=True)
-        ttk.Label(body,text=catalog['title']+'｜商品 ID 已由官方 Eve 1262 核對',
+        ttk.Label(body,text=catalog['title']+'｜商品 ID：Eve 1262；金額：ItemData_C 基礎價',
                   wraplength=640).pack(fill='x',pady=(0,6))
         tabs=ttk.Notebook(body)
         tabs.pack(fill='both',expand=True)
@@ -365,27 +366,34 @@ class HomeMap(ttk.Frame):
             return tree
         items=add_grid(offers,('index','id','name','price'),(
             ('index','商品索引',85),('id','官方物品 ID',105),
-            ('name','已知名稱（可能未收錄）',260),('price','金幣單價',125)))
+            ('name','官方物品名稱',260),('price','金幣基礎價',125)))
         for row in catalog['products']:
             items.insert('','end',values=(row['offer_index'],row['item_id'],
-                         row['name'],'待官方 ItemData_C'))
+                         row['name'],row['price_gold'] if row['price_gold'] is not None else '資料未核實'))
         bag=add_grid(owned,('slot','id','name','count','sale'),(
             ('slot','格位',70),('id','物品 ID',95),('name','物品名稱',230),
-            ('count','數量',75),('sale','NPC 收購價',120)))
-        from wlre.services.items.catalog import item_name
+            ('count','數量',75),('sale','NPC 收購價／限制',150)))
+        try:
+            verified_items=item_catalog()
+        except (OSError,ValueError,EOFError,UnicodeError):
+            verified_items={}
         inv=self.state.get('inventory',{})
         if inv.get('ready') and inv.get('reliable'):
             for slot,record in sorted(inv.get('items',{}).items(),
                                       key=lambda x:int(x[0])):
                 item_id=record.get('item_id')
                 if type(item_id) is int:
-                    bag.insert('','end',values=(slot,item_id,item_name(item_id),
-                               record.get('count',0),'待官方 ItemData_C'))
+                    official=verified_items.get(item_id)
+                    sale=(('不可賣給 NPC' if not sellable(official)
+                           else str(official['sell_price'])) if official else '來源未核實')
+                    bag.insert('','end',values=(slot,item_id,
+                               official['name'] if official else f'物品 {item_id}',
+                               record.get('count',0),sale))
         else:
             ttk.Label(owned,text='背包尚未由伺服器可靠同步，不顯示推定可售商品。').pack()
         ttk.Label(body,text=catalog['reason'],wraplength=640,
                   foreground='#ad5b32').pack(fill='x',pady=6)
-        ttk.Label(body,text='已核對 C27-1 購買、C27-3 販售封包結構；尚未啟用任何付款或販售指令。',
+        ttk.Label(body,text='顯示 ItemData_C 官方基礎價；實際折扣後價格和當前持有金幣尚待同步。禁止購買或販售。',
                   wraplength=640).pack(fill='x')
         ttk.Button(body,text='關閉商店（需伺服器確認）',
                    command=lambda:self.close_npc_shop_dialog(catalog)).pack(fill='x',pady=(8,0))
@@ -546,8 +554,8 @@ class HomeMap(ttk.Frame):
             elif phase=='choice_unavailable' and (
                     (shop_catalog(dialogue.get('scene'),dialogue.get('option_index'),
                      index=self.npc_interacts) is not None)):
-                self.npc_message.set('NPC 商店已開啟：可查看商品與背包唯讀資訊；'
-                                     '尚無 ItemData_C 售價與金幣同步，不會購買或販售。')
+                self.npc_message.set('NPC 商店已開啟：可查看官方商品基礎價與不可販售標記；'
+                                     '折扣與金幣同步未確認，不會購買或販售。')
             elif phase=='closing_shop':
                 self.npc_message.set('已要求關閉 NPC 商店，等待伺服器確認；不會重送。')
             elif phase=='choice_unavailable':
