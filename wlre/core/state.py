@@ -15,6 +15,7 @@ from wlre.core.activity import apply_activity
 from wlre.services.items.crafting import defaults as craft_defaults, room_defaults, apply_crafting
 from wlre.services.items.room_storage import defaults as storage_defaults, apply_storage
 from wlre.services.expedition import defaults as expedition_defaults, apply_expedition
+from wlre.services.daily_tasks import defaults as daily_task_defaults, apply_daily_tasks
 from wlre.services.instances import defaults as instance_defaults, apply_instances
 from wlre.services.battle.attribute_points import defaults as points_defaults, apply_event as apply_points_event
 
@@ -63,6 +64,7 @@ class State:
     party: dict = field(default_factory=party_defaults)
     alchemy: dict = field(default_factory=alchemy_defaults)
     expedition: dict = field(default_factory=expedition_defaults)
+    daily_tasks: dict = field(default_factory=daily_task_defaults)
     instances: dict = field(default_factory=instance_defaults)
 
     def __post_init__(self):
@@ -148,6 +150,7 @@ class State:
         apply_points_event(self,event)
         apply_party(self,event)
         apply_expedition(self,event)
+        apply_daily_tasks(self,event)
         apply_instances(self,event)
         dispatch_local(self, event, affects_navigation=affects_navigation)
         observe_efficiency(self,event)
