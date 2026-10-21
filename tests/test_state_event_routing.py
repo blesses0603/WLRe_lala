@@ -17,7 +17,9 @@ class StateEventRoutingTests(unittest.TestCase):
         self.assertFalse(WORLD_KINDS & SESSION_KINDS)
         self.assertFalse(BATTLE_KINDS & SESSION_KINDS)
         self.assertIn('event_rejected', SESSION_KINDS)
-        self.assertEqual(len(WORLD_KINDS | BATTLE_KINDS | SESSION_KINDS), 26)
+        self.assertTrue({'gold_snapshot','gold_delta','gold_limit'} <= SESSION_KINDS)
+        # Three official S26 gold event variants extend the previous 26 cases.
+        self.assertEqual(len(WORLD_KINDS | BATTLE_KINDS | SESSION_KINDS), 29)
 
     def test_service_update_order_and_single_router_call(self):
         state = State()

@@ -56,6 +56,11 @@ def decode_live(packet,r,event):
         while r.remaining:event['items'].append(item_save(r,r.u8()))
     elif key==(23,6):event.update(type='bag_add',item=item_save(r,r.u8()),source=r.u16())
     elif key==(23,9):event.update(type='bag_delete',index=r.u8(),count=r.u8(),show_message=r.u8())
+    elif key==(27,1):
+        # Official Protocols_027.lua: result is one byte.
+        # Result 0 acknowledges purchase processing, NOT balance/inventory sync.
+        result=r.u8()
+        event.update(type='shop_purchase_result',result=result)
     elif key==(27,6):
         event.update(type='bag_sell',gold=r.u32(),index=r.u8(),count=r.u8())
     elif key==(27,8):event.update(type='sale_notice',result=r.u8())

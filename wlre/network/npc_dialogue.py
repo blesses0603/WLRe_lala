@@ -78,6 +78,15 @@ def close_npc_choice(state, command):
             or state.player.get('scene') != info.get('scene')
             or state.battle.get('active')):
         raise ProtocolError('目前沒有可安全關閉的 NPC 選項')
+    from wlre.services.world.npc_interact import NPCInteractIndex
+    try:
+        row=NPCInteractIndex().get(info['scene'],info.get('option_index'))
+    except (ValueError, OSError, EOFError, UnicodeError) as exc:
+        raise ProtocolError('無法驗證 NPC 商店選單，不送出一般關閉封包') from exc
+    if row is not None and row['form_kind'] in (2,3):
+        raise ProtocolError('商店必須使用專屬關閉指令，不使用一般選項關閉值')
+    if type(info.get('scene')) is not int:
+        raise ProtocolError('NPC 對話場景尚未確認')
     state.npc_dialogue = {**info, 'phase': 'closing'}
     state.event_flow = {**state.event_flow, 'blocked': True,
                         'awaiting_response': True,
@@ -128,6 +137,35 @@ def choose_npc_option(state, command):
                         'awaiting_response': True,
                         'last_source': 'C20-9 已確認一般 NPC 選項'}
     return [Packet(20, 9, bytes([value]))]
+
+
+
+def close_npc_shop(state, command):
+    """Official EventManager.SendCloseShop: C20-9, *empty* payload.
+
+    This only closes a verified manually-opened weapon/item shop. Never
+    mistake shop shutdown for a purchase or the generic C20-9 40 response.
+    """
+    if command.get('confirmed') is not True:
+        raise ProtocolError('請先確認關閉 NPC 商店')
+    info=state.npc_dialogue
+    if (not info.get('active') or info.get('phase')!='choice_unavailable'
+            or info.get('effect_type')!=6 or
+            type(info.get('scene')) is not int or
+            state.player.get('scene')!=info['scene'] or
+            state.battle.get('active')):
+        raise ProtocolError('目前沒有可安全關閉的商店事件')
+    from wlre.services.world.npc_shop import shop_catalog
+    try:
+        current=shop_catalog(info['scene'],info.get('option_index'))
+    except (ValueError,OSError,EOFError,UnicodeError) as exc:
+        raise ProtocolError('官方商店來源校驗失敗，不送出封包') from exc
+    if current is None:
+        raise ProtocolError('目前事件不是經驗證的武器／道具商店')
+    state.npc_dialogue={**info,'phase':'closing_shop'}
+    state.event_flow={**state.event_flow,'blocked':True,'awaiting_response':True,
+                      'last_source':'C20-9 空內容（人工關閉商店）'}
+    return [Packet(20,9,b'')]
 
 
 def advance_npc(state):

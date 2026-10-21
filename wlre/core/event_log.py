@@ -78,6 +78,20 @@ def lines(event,state):
         if event['kind']==35:return [f"角色等級更新：{event['value']} 級"]
         return []
     if kind=='world_player':return ['已登入角色：'+event['player']['name']] if event['player']['role_id']==pid else []
+    if kind=='shop_purchase_result':
+        texts={0:'伺服器回報購買成功（尚須核對金幣／背包同步）',
+               1:'伺服器拒絕購買：金幣不足',2:'伺服器拒絕購買：背包空間不足',
+               3:'伺服器拒絕購買：數量超出限制',4:'伺服器回報購買失敗'}
+        return [texts.get(event['result'],f"伺服器購買回覆：代碼 {event['result']}")]
+    if kind=='sale_notice':
+        return ['伺服器回報販售成功（需核對背包／金幣同步）' if event['result']==1
+                else '伺服器回報販售失敗或狀態不明']
+    if kind=='gold_snapshot':
+        return ['角色金幣已由伺服器完成初始同步']
+    if kind=='gold_delta':
+        return ['角色金幣變更已由伺服器回覆']
+    if kind=='gold_limit':
+        return ['伺服器金幣上限通知；金額待重新同步']
     if kind=='bag_add':return [f"獲得道具：{item_name(event['item']['item_id'])} ×{event['item']['count']}"]
     if kind=='alchemy_result':return [f"煉金結果：{item_name(event['item_id'])} ×{event['count']}"]
     if kind=='alchemy_space_error':return ['煉金失敗：包包空間不足']

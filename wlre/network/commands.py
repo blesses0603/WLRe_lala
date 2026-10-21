@@ -19,7 +19,7 @@ from wlre.services.battle.companions import command as companion_command
 from wlre.services.items.recovery import storage_plan, storage_packet
 from wlre.services.social.chat import chat_packet
 from wlre.network.protocol import select_role, attack, cast_skill, use_battle_item, use_field_item
-from wlre.network.npc_dialogue import request_npc, advance_npc, close_npc_choice, choose_npc_option
+from wlre.network.npc_dialogue import request_npc, advance_npc, close_npc_choice, choose_npc_option, close_npc_shop
 from wlre.services.items.combat_resources import learned_command, food_command, reserve, field_context
 from wlre.services.items import reservations
 import copy
@@ -55,6 +55,12 @@ def dispatch(logic,command,state):
         packets=choose_npc_option(state,command)
         logic.pending_event=False
         return packets
+    if kind == 'npc_close_shop':
+        packets=close_npc_shop(state,command)
+        logic.pending_event=False
+        return packets
+    if kind in ('npc_shop_buy','npc_shop_sell'):
+        raise ProtocolError('官方 ItemData_C 售價／販售限制與伺服器金幣尚未同步，商店交易目前禁止送出')
     if kind == 'npc_close_choice':
         packets=close_npc_choice(state,command)
         logic.pending_event=False
