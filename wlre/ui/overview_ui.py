@@ -9,6 +9,7 @@ from wlre.core.efficiency import rates, progress, forecast
 from wlre.services.battle.party import own_team, player_name
 from wlre.services.battle.party_guard import missing
 from wlre.services.battle.auto_battle import summary as ai_summary
+from wlre.services.world.tent import activity_text as tent_activity_text
 
 
 def health(stats):
@@ -51,7 +52,9 @@ def summarize(state, live, guard, now=None):
     elif supply.get('pending'):activity.append('等待補給確認')
     activity.extend(state.get('activities',{}))
     if not live:activity=['已離線｜以下為最後收到的資料']
-    elif not activity:activity=['待機｜自動功能狀態見下方']
+    else:
+        activity.insert(0,tent_activity_text(state.get('tent',{})))
+        if len(activity)==1:activity.append('待機｜自動功能狀態見下方')
     alchemy=state.get('alchemy',{});craft=state.get('crafting',{})
     supply_text=('結果未確認' if supply.get('uncertain') else '等待確認' if supply.get('pending') else '已確認' if supply.get('status')=='confirmed' else '尚無補給紀錄')
     if supply.get('reason'):supply_text+='｜'+supply['reason']
@@ -147,6 +150,13 @@ class OverviewPanel(ttk.Frame):
             self.cards[key]=frame
             ttk.Label(frame,text=title,style='Section.TLabel',anchor='w').grid(row=0,column=0,sticky='w')
             tools=ttk.Frame(frame);tools.grid(row=0,column=1,sticky='e')
+            if key=='activity':
+                self.tent_toggle_button=ttk.Button(tools,text='展開帳篷',
+                    command=self.toggle_tent,padding=(3,2))
+                self.tent_toggle_button.pack(side='left',padx=(0,4))
+                self.tent_enter_button=ttk.Button(tools,text='進入',
+                    command=lambda:self.app.send({'type':'tent','action':'enter'}),padding=(3,2))
+                self.tent_enter_button.pack(side='left')
             value=tk.StringVar();self.values[key]=value
             label=ttk.Label(frame,textvariable=value,justify='left',anchor='w')
             label.grid(row=1,column=0,columnspan=2,sticky='nsew',pady=(2,0))
@@ -187,6 +197,11 @@ class OverviewPanel(ttk.Frame):
             self.actions[key]=button
         self.after(1000,self.tick)
 
+    def toggle_tent(self):
+        tent=self.app.snapshot.get('tent',{})
+        action='close' if tent.get('deployed_scene') is not None else 'open'
+        self.app.send({'type':'tent','action':action})
+
     def open_ai_settings(self):
         from wlre.ui.auto_battle_ui import open_settings
         return open_settings(self.app)
@@ -221,6 +236,8 @@ class OverviewPanel(ttk.Frame):
 
     def refresh(self):
         state=getattr(self,'state',{})
+        tent=state.get('tent',{})
+        self.tent_toggle_button.configure(text=('收起帳篷' if tent.get('deployed_scene') is not None else '展開帳篷'))
         for key,section in (('ai','auto_battle'),('roaming','roaming'),('expedition','expedition')):
             self.actions[key].set_active(self.app.live_active and state.get(section,{}).get('enabled',False))
         values=summarize(getattr(self,'state',{}),self.app.live_active,self.app.ai_settings.get('party_guard',{}))
