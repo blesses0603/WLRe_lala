@@ -182,3 +182,15 @@ Packet capture import/replay/profile extraction and standalone packet inspection
 - The XOR frame reader continues to support fragmented and coalesced frames.
   This refactor is *not* a new live-server wire-compatibility claim and does
   not add speculative commands or network retries.
+
+
+## v0.5.17 1262 帳篷操作（來源與保守限制）
+
+依使用者提供的 `Lua/Logic/Bag.lua`、`Lua/Logic/Stage.lua`、`Lua/Logic/Protocols/Protocols_065.lua` 及 `Lua/Common/Define.lua` 核對：
+- `Bag.SendOpenCamp` 傳送無內容 C65-6；`Bag.SendCloseCamp` 傳送無內容 C65-2。
+- `Stage.SendClickCamp(id)` 傳送 C65-1 + ownerId:u32；只對目前場景 S65-1/3 確認的自家帳篷開放操作。
+- S65-1：單筆 16 bytes，ownerId:u32、tentId:u16、x:u32、y:u32、kind:u8、make:u8；S65-3 為同格式多筆場景帳篷清單，S65-4 為收起玩家 ID:u32。
+- S65-2 為本場景帳篷數量上限；S65-8 為無法進入；S65-16 伺服器錯誤代碼，代碼 2 對應無帳篷標記。
+- 原版家具場景 `FurSysSceneNum` 為 10299／10298／10000；只有進入指令之後的家具場景與自家 S62-4 家具資料兩者均確認，才顯示「已進入」。
+- 本機未知其他場景帳篷實際狀態；缺少伺服器確認時不自行改變已展開／收起或製作排程。操作逾時不盲目重送，重新登入以取得新資料。
+- 未取得正式伺服器 E2E 證據；不宣稱場景搭帳篷限制、任務標記或帳篷跨圖狀態已完整驗證。
