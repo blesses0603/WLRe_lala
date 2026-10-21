@@ -52,6 +52,8 @@ class State:
     event_flow: dict = field(default_factory=lambda:{'blocked':False,'awaiting_response':False,
                                 'last_source':None,'requests_sent':0})
     npc_dialogue: dict = field(default_factory=lambda:{'active':False,'phase':'idle'})
+    gold: dict = field(default_factory=lambda:{
+        'ready':False,'reliable':False,'amount':None,'revision':0,'source':None})
     inventory: dict = field(default_factory=lambda:{'ready':False,'reliable':False,'items':{},'reserved':{},'revision':0,'use_failed':False})
     knowledge: dict = field(default_factory=lambda:{'player':{'ready':False,'skills':{},'stats':{}},'companions':{},'companions_ready':False,'active_npc_id':None})
     auto_battle: dict = field(default_factory=lambda:{'enabled':False,'status':'disabled','reason':''})

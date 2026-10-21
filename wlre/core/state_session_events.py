@@ -3,6 +3,7 @@ SESSION_KINDS = frozenset((
     'login_result', 'role_list_available', 'movement_stop', 'event_active',
     'event_continue_permission', 'event_end', 'initial_data_complete',
     'attribute_set', 'unimplemented', 'event_rejected',
+    'gold_snapshot', 'gold_delta', 'gold_limit',
 ))
 
 
@@ -13,6 +14,27 @@ def apply_session_event(state, event):
     elif kind == "role_list_available":
         state.phase = "role_selection"
         state.roles = event.get("roles", [])
+        state.gold={'ready':False,'reliable':False,'amount':None,'revision':0,'source':None}
+    elif kind == 'gold_snapshot':
+        amount=event['amount']
+        state.gold={'ready':True,'reliable':True,'amount':amount,
+                    'revision':state.gold.get('revision',0)+1,'source':'S26-4'}
+    elif kind == 'gold_delta':
+        gold=state.gold
+        amount=gold.get('amount')
+        if not gold.get('ready') or not gold.get('reliable') or type(amount) is not int:
+            state.gold={**gold,'ready':False,'reliable':False,'amount':None,
+                        'source':'S26 增減早於初始化'}
+        else:
+            value=amount+event['delta']
+            if value<0 or value>0xffffffff:
+                state.gold={**gold,'reliable':False,'amount':None,
+                            'source':'S26 金幣增減溢位／不足'}
+            else:
+                state.gold={**gold,'amount':value,'revision':gold['revision']+1,
+                            'source':'S26-'+str(event['sub'])}
+    elif kind == 'gold_limit':
+        state.gold={**state.gold,'reliable':False,'source':'S26-3 金幣上限未知'}
     elif kind == 'movement_stop':
         state.event_flow={**state.event_flow,'blocked':True,'last_source':f"S6-2 kind={event['kind']}"}
     elif kind == 'event_active':

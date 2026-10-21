@@ -86,6 +86,12 @@ def lines(event,state):
     if kind=='sale_notice':
         return ['伺服器回報販售成功（需核對背包／金幣同步）' if event['result']==1
                 else '伺服器回報販售失敗或狀態不明']
+    if kind=='gold_snapshot':
+        return ['角色金幣已由伺服器完成初始同步']
+    if kind=='gold_delta':
+        return ['角色金幣變更已由伺服器回覆']
+    if kind=='gold_limit':
+        return ['伺服器金幣上限通知；金額待重新同步']
     if kind=='bag_add':return [f"獲得道具：{item_name(event['item']['item_id'])} ×{event['item']['count']}"]
     if kind=='alchemy_result':return [f"煉金結果：{item_name(event['item_id'])} ×{event['count']}"]
     if kind=='alchemy_space_error':return ['煉金失敗：包包空間不足']

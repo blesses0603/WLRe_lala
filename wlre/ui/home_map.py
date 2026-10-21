@@ -391,6 +391,12 @@ class HomeMap(ttk.Frame):
                                record.get('count',0),sale))
         else:
             ttk.Label(owned,text='背包尚未由伺服器可靠同步，不顯示推定可售商品。').pack()
+        gold=self.state.get('gold',{})
+        if gold.get('ready') and gold.get('reliable') and type(gold.get('amount')) is int:
+            balance=f"目前金幣：{gold['amount']:,}（伺服器 S26 同步；不代表已可交易）"
+        else:
+            balance='目前金幣：尚未收到可信 S26 初始化／增減回覆'
+        ttk.Label(body,text=balance,wraplength=640).pack(fill='x',pady=(8,0))
         ttk.Label(body,text=catalog['reason'],wraplength=640,
                   foreground='#ad5b32').pack(fill='x',pady=6)
         ttk.Label(body,text='顯示 ItemData_C 官方基礎價；實際折扣後價格和當前持有金幣尚待同步。禁止購買或販售。',

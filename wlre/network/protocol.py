@@ -88,6 +88,24 @@ def decode(packet, local_role_id=None):
     if decode_social(packet,r,event):
         r.end()
         return event
+    # Official 1262 Protocols_026.lua: Gold initialization and signed deltas.
+    # Never use role-list gold as a live transaction authorization.
+    if key in ((26,1),(26,2)):
+        amount=r.u32()
+        flag=r.u8()
+        if flag not in (0,1):
+            raise ProtocolError('S26 金幣通知旗標無效')
+        r.end()
+        return dict(event,type='gold_delta',
+                    delta=amount if packet.sub==1 else -amount,
+                    notify=bool(flag))
+    if key==(26,4):
+        amount=r.u32()
+        r.end()
+        return dict(event,type='gold_snapshot',amount=amount)
+    if key==(26,3):
+        r.take(r.remaining)
+        return dict(event,type='gold_limit')
     if decode_live(packet,r,event):
         r.end()
         return event
