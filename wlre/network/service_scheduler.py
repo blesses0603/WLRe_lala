@@ -9,6 +9,7 @@ from wlre.services.instance_standby import expire as expire_instance_standby
 from wlre.services.instance_start import expire as expire_instance_start
 from wlre.services.instance_entry import expire as expire_instance_entry
 from wlre.services.instance_rewards import tick as tick_instance_rewards, expire as expire_instance_rewards
+from wlre.services.world.tent import expire as expire_tent
 
 def auto_battle_status_event(state):
     """Publish only numeric, session-local battle evidence for safe diagnostics."""
@@ -72,6 +73,8 @@ def advance_services(logic,state,send_command,send_raw,emit,on_state):
     for packet in logic.expedition.tick(state,time.monotonic()):
         send_command(packet)
     if before_expedition != (state.expedition['status'], state.expedition['pending'], state.expedition['enabled']) and on_state:
+        notify_state(on_state,state)
+    if expire_tent(state) and on_state:
         notify_state(on_state,state)
     if expire_instance_create(state) and on_state:
         notify_state(on_state,state)
