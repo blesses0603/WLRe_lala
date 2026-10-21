@@ -91,6 +91,9 @@ def classify(evidence, *, kind, start_packet, item_id, count, expected_gold_delt
     if not records:
         return {'status':'pending','reason':'未觀測到付款、背包或結果回覆'}
     result_kind='shop_purchase_result' if kind=='buy' else 'sale_notice'
+    if any(e.get('type') in ('shop_purchase_result','sale_notice')
+           and e.get('type') != result_kind for e in records):
+        return {'status':'uncertain','reason':'觀測窗口包含其他種類交易結果，無法唯一歸屬'}
     results=[e for e in records if e['type']==result_kind]
     if len(results)>1:
         return {'status':'uncertain','reason':'交易結果可能重複或包含其他交易'}

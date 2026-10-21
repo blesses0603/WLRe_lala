@@ -70,6 +70,17 @@ class ShopEvidenceTests(unittest.TestCase):
         self.assertEqual(s.gold['amount'],5008)
         self.assertNotIn('7',s.inventory['items'])
 
+    def test_mixed_purchase_and_sale_results_are_ambiguous(self):
+        s=self.ready_state()
+        start=s.packet_count
+        s.apply(decode(Packet(26,2,(750).to_bytes(4,'little')+b'\0')))
+        s.apply({'type':'bag_add','item':{'index':1,'item_id':32297,'count':1}})
+        s.apply(decode(Packet(27,8,b'\x01')))
+        s.apply(decode(Packet(27,1,b'\x00')))
+        result=classify(s.shop_evidence,kind='buy',start_packet=start,
+                        item_id=32297,count=1,expected_gold_delta=-750)
+        self.assertEqual(result['status'],'uncertain')
+
     def test_s27_sale_without_s26_is_pending(self):
         s=self.ready_state()
         s.apply({'type':'bag_add','item':{'index':7,'item_id':32297,'count':1}})
