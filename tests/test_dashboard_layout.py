@@ -80,7 +80,7 @@ class DashboardLayout(unittest.TestCase):
         theme=self.app.theme
         for page in (self.app.overview_panel.master,self.app.party_launcher,
                      self.app.alchemy_launcher,self.app.crafting_launcher,
-                     self.app.efficiency_launcher):
+                     self.app.efficiency_launcher,self.app.daily_tasks_launcher):
             with self.subTest(page=str(page)):
                 self.app.left_tabs.select(page);self.root.update()
                 data=theme.windows[str(self.root)];data['signature']=None;theme.paint(self.root)
@@ -95,7 +95,7 @@ class DashboardLayout(unittest.TestCase):
 
     def test_right_tabs_map_size_and_party_settings(self):
         self.assertEqual([self.app.left_tabs.tab(t,'text') for t in self.app.left_tabs.tabs()],
-                         ['主頁','組隊','夥伴出戰','遠征','副本','煉金','製作','經驗效率'])
+                         ['主頁','組隊','夥伴出戰','遠征','每日任務','副本','煉金','製作','經驗效率'])
         self.assertEqual([self.app.activity_tabs.tab(t,'text') for t in self.app.activity_tabs.tabs()],['事件紀錄','戰場陣形'])
         self.assertEqual((self.app.home_map.winfo_width(),self.app.home_map.winfo_height()),(380,320))
         self.assertTrue(self.app.home_map.portal_list.winfo_ismapped())
