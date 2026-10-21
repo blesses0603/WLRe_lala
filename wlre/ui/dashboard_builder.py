@@ -79,7 +79,7 @@ def build_dashboard(app):
     left_tabs.bind('<<NotebookTabChanged>>',
                    lambda event:app.refresh_selected(),add='+')
     app.overview_panel.update_state({})
-    app.home_map=HomeMap(right,app.pick_map_destination,app.open_navigation,on_move=app.walk,on_portal=lambda portal_id:app.send({'type':'portal_direct','portal_id':portal_id}),show_status=False,compact=True)
+    app.home_map=HomeMap(right,app.pick_map_destination,app.open_navigation,on_move=app.walk,on_portal=lambda portal_id:app.send({'type':'portal_direct','portal_id':portal_id}),on_npc=app.send,on_npc_next=app.send,show_status=False,compact=True)
     app.home_map.configure(width=380,height=320)
     app.home_map.grid(row=0,column=0,sticky='nw')
     app.home_map.grid_propagate(False)
