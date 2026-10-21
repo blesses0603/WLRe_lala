@@ -19,7 +19,7 @@ from wlre.services.battle.companions import command as companion_command
 from wlre.services.items.recovery import storage_plan, storage_packet
 from wlre.services.social.chat import chat_packet
 from wlre.network.protocol import select_role, attack, cast_skill, use_battle_item, use_field_item
-from wlre.network.npc_dialogue import request_npc, advance_npc, close_npc_choice
+from wlre.network.npc_dialogue import request_npc, advance_npc, close_npc_choice, choose_npc_option
 from wlre.services.items.combat_resources import learned_command, food_command, reserve, field_context
 from wlre.services.items import reservations
 import copy
@@ -49,6 +49,10 @@ def dispatch(logic,command,state):
         return packets
     if kind == 'npc_next':
         packets=advance_npc(state)
+        logic.pending_event=False
+        return packets
+    if kind == 'npc_choose':
+        packets=choose_npc_option(state,command)
         logic.pending_event=False
         return packets
     if kind == 'npc_close_choice':

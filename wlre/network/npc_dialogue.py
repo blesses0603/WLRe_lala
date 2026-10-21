@@ -85,6 +85,51 @@ def close_npc_choice(state, command):
     return [Packet(20, 9, b'\x28')]
 
 
+def choose_npc_option(state, command):
+    """Explicit verified normal-choice C20-9 (decimal ASCII '30' + position).
+
+    The Lua UIDialog uses zero-based displayed kind=3 button order, *not* the
+    database item id or its text id. A single attempt blocks further sending.
+    """
+    if command.get('confirmed') is not True:
+        raise ProtocolError('需確認本次 NPC 選項；可能觸發任務或其他效果')
+    info = state.npc_dialogue
+    if (not info.get('active') or info.get('phase') != 'choice_unavailable'
+            or info.get('effect_type') != 6
+            or type(info.get('scene')) is not int
+            or state.player.get('scene') != info['scene']
+            or state.battle.get('active')):
+        raise ProtocolError('目前不在可選擇的一般 NPC 對話中')
+    if (type(command.get('scene')) is not int or command['scene'] != info['scene']
+            or type(command.get('interact_index')) is not int
+            or command['interact_index'] != info.get('option_index')
+            or type(command.get('choice')) is not int
+            or not 0 <= command['choice'] <= 9
+            or type(command.get('text_id')) is not int):
+        raise ProtocolError('NPC 選項 ID 或場景已失效')
+    from wlre.services.world.npc_interact import NPCInteractIndex
+    from wlre.services.world.npc_talk import load_catalog
+    try:
+        options = NPCInteractIndex().choices(info['scene'], info['option_index'],
+                                             load_catalog())
+    except (ValueError, OSError, EOFError, UnicodeError) as exc:
+        raise ProtocolError('官方 NPC 選項來源無法驗證，不允許送出') from exc
+    if options is None or command['choice'] >= len(options['options']):
+        raise ProtocolError('未知或商店型 NPC 選項，已拒絕')
+    selected = options['options'][command['choice']]
+    if selected['text_id'] != command['text_id']:
+        raise ProtocolError('對話已變更或選項身分不一致')
+    value = int('3' + str(command['choice']))
+    if not 0 <= value <= 255:
+        raise ProtocolError('NPC 選項回覆超出封包範圍')
+    state.npc_dialogue = {**info, 'phase': 'awaiting_choice',
+                          'selected_choice': command['choice']}
+    state.event_flow = {**state.event_flow, 'blocked': True,
+                        'awaiting_response': True,
+                        'last_source': 'C20-9 已確認一般 NPC 選項'}
+    return [Packet(20, 9, bytes([value]))]
+
+
 def advance_npc(state):
     """Manual one-step C20-6 00. Unknown choices never produce C20-9."""
     info = state.npc_dialogue

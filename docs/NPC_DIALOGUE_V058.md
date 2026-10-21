@@ -66,3 +66,15 @@ py -m tools.resources.install_npc_text_1262 "WLRE_1262_NPC_繁中資料索引包
 - 手動 NPC 對話在收到 S20-1～6 類型 1、具可信文字 ID 時，保留最近 50 個 ID，結束或拒絕後可在「本輪對話紀錄」查看本次內容；開始新 NPC 對話即清空上一輪紀錄。只呈現原始文字，不推測 NPC 選項或伺服器端條件。
 - 選項 `interactDatas` 的原始 Eve 二進位資料仍需獨立核實，`C20-9` 一般選擇及商店操作繼續停用；本次未改動戰鬥 AI／協力／副本邏輯。
 - 自動化單元測試與 GitHub Actions 驗收不等於遊戲正式伺服器驗收。
+
+
+## v0.5.11 官方 Eve interactDatas 解析與一般選項
+
+- 原始資源：Eve_1262.bundle，MD5 81af690395d5e6a233afa9a664e2c555。
+- 解析統計：1,256 場景、10,879 NPC、1,622 互動選單（505 場景）、formKind=1 一般 1,557、formKind=2 武器商店 19、formKind=3 道具商店 46。
+- 選單欄位依官方 Lua EventData.NewInteract，包含 index:u16、name:20bytes、formKind:u8、linkNumber:u16、subItemNumber:u8、subItem 每筆 id:u8、dataBaseId:u16、dataBaseKind:u8、kind:u8。每個場景另外存在 44 bytes 非 Lua NewInteract 定義的尾端資料，不當作選項來源。
+- UIDialog 的 kind=3 顯示按鈕依畫面順序使用 0-based parameter；EventManager.SendInteractListResult 將其組成數值 30、31、32 等 1 byte C20-9 回覆。文字 ID、subItem.id 或整份清單索引都不能直接當回覆值。
+- 已對照官方 TalkData_C，1,554 組一般選單所有資料通過保守核對。3 組一般選單資料來源／結構不明及 65 組商店仍禁用；商店與一般選項功能分離。
+- 唯讀來源檔 npc_interact_1262.json.gz：19,914 bytes，SHA-256 37bba3db9ec06cc4838bec99a2fb16d6b49f7064edcfc46e59bf30ac08888592。此檔尚未提交 GitHub；需下載本次附件並透過 GitHub 網頁上傳 PR #41 分支的 wlre/resources/。
+- 選項只有收到 S20-1～6 的 effectType=6、與當前場景及索引一致、formKind=1、kind=3、dataBaseKind=1、繁中文字 ID 有效，並由使用者二次確認才會送出一次。其餘情況嚴格拒絕。
+- 正式伺服器劇情分支、戰鬥與物品效果尚未驗收。PR 保持 Draft，不合併 main。

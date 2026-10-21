@@ -71,6 +71,45 @@ class NPCDialogueUITests(unittest.TestCase):
         self.assertEqual(str(content.cget('state')),'disabled')
         view.destroy()
 
+    def test_official_normal_choice_requires_confirmation(self):
+        self.map.npc_talks={50063:'是否要進入小遊戲呢？',
+                            10001:'要。',10002:'不要。'}
+        self.map.npc_interacts.scenes={12903:{1:{
+            'index':1,'form_kind':1,'link_number':1,'items':[
+                {'id':1,'text_id':50063,'database_kind':1,'kind':1},
+                {'id':2,'text_id':10001,'database_kind':1,'kind':3},
+                {'id':3,'text_id':10002,'database_kind':1,'kind':3},
+                {'id':4,'text_id':50063,'database_kind':1,'kind':4},
+            ]}}}
+        state={**self.ready_state,'event_flow':{'blocked':True},
+               'npc_dialogue':{'active':True,'phase':'choice_unavailable',
+                               'scene':12903,'effect_type':6,'option_index':1}}
+        self.map.set_state(state)
+        self.assertEqual(str(self.map.npc_options_button.cget('state')),'normal')
+        self.map.show_npc_choices()
+        self.root.update()
+        self.assertTrue(self.map.npc_choice_window.winfo_exists())
+        choice=self.map.npc_interacts.choices(12903,1,self.map.npc_talks)
+        with patch('wlre.ui.home_map.messagebox.askyesno',return_value=False):
+            self.map.choose_npc_reply(choice,choice['options'][0])
+        self.send.assert_not_called()
+        with patch('wlre.ui.home_map.messagebox.askyesno',return_value=True):
+            self.map.choose_npc_reply(choice,choice['options'][1])
+        self.send.assert_called_once_with({
+            'type':'npc_choose','confirmed':True,
+            'scene':12903,'interact_index':1,'choice':1,'text_id':10002})
+
+    def test_shop_option_does_not_enable_choose_button(self):
+        self.map.npc_interacts.scenes={12903:{1:{
+            'index':1,'form_kind':3,'link_number':0,'items':[]}}}
+        state={**self.ready_state,'event_flow':{'blocked':True},
+               'npc_dialogue':{'active':True,'phase':'choice_unavailable',
+                               'scene':12903,'effect_type':6,'option_index':1}}
+        self.map.set_state(state)
+        self.assertEqual(str(self.map.npc_options_button.cget('state')),'disabled')
+        self.map.show_npc_choices()
+        self.send.assert_not_called()
+
     def test_close_choice_requires_confirmation(self):
         state={**self.ready_state,
                'event_flow':{'blocked':True},

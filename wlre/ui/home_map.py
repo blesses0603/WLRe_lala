@@ -14,6 +14,7 @@ from wlre.services.world.portals import Portals, nearest_marker
 from wlre.services.world.portal_policy import allowed_rows, destination_problem
 from wlre.services.world.npc_catalog import NPCIndex, scene_npcs, npc_detail
 from wlre.services.world.npc_talk import load_catalog as load_npc_talks, dialogue_text
+from wlre.services.world.npc_interact import NPCInteractIndex
 
 
 class HomeMap(ttk.Frame):
@@ -42,6 +43,14 @@ class HomeMap(ttk.Frame):
         except (OSError,ValueError,UnicodeError,EOFError):
             self.npc_talks={}
             self.npc_talk_error=True
+        try:
+            self.npc_interacts=NPCInteractIndex()
+            self.npc_interact_error=False
+        except (OSError,ValueError,UnicodeError,EOFError):
+            self.npc_interacts=NPCInteractIndex.__new__(NPCInteractIndex)
+            self.npc_interacts.scenes={}
+            self.npc_interact_error=True
+        self.npc_choice_window=None
         self.npc_history_window=None
         self.npc_rows=[]
         self.selected_npc=None
@@ -88,6 +97,9 @@ class HomeMap(ttk.Frame):
                   wraplength=120).pack(side='bottom',fill='x',padx=2,pady=3)
         npc_bar=ttk.Scrollbar(self.npc_tab,orient='vertical')
         npc_bar.pack(side='right',fill='y')
+        self.npc_options_button=ttk.Button(self.npc_tab,text='查看／選擇選項',
+                                   command=self.show_npc_choices,state='disabled')
+        self.npc_options_button.pack(side='bottom',fill='x',pady=2)
         self.npc_history_button=ttk.Button(self.npc_tab,text='本輪對話紀錄',
                                   command=self.view_npc_history,state='disabled')
         self.npc_history_button.pack(side='bottom',fill='x',pady=2)
@@ -269,6 +281,13 @@ class HomeMap(ttk.Frame):
         self.npc_text_button.configure(state='normal' if can_view else 'disabled')
         history=dialogue.get('history') or []
         self.npc_history_button.configure(state='normal' if history else 'disabled')
+        choices=(self.npc_interacts.choices(dialogue.get('scene'),
+                 dialogue.get('option_index'), self.npc_talks)
+                 if dialogue.get('active') and dialogue.get('phase')=='choice_unavailable'
+                 and dialogue.get('scene')==player.get('scene') and not battle.get('active')
+                 else None)
+        self.npc_options_button.configure(
+            state='normal' if choices is not None and self.on_npc_next is not None else 'disabled')
 
     def interact_npc(self):
         npc=self.selected_npc
@@ -285,6 +304,69 @@ class HomeMap(ttk.Frame):
     def next_npc(self):
         if str(self.npc_next_button.cget('state'))=='normal':
             self.on_npc_next({'type':'npc_next'})
+
+    def show_npc_choices(self):
+        dialogue=self.state.get('npc_dialogue',{})
+        if str(self.npc_options_button.cget('state'))!='normal':
+            return
+        options=self.npc_interacts.choices(dialogue.get('scene'),
+                        dialogue.get('option_index'), self.npc_talks)
+        if options is None:
+            return
+        # Never allow old dialogs to remain actionable after a state change.
+        if self.npc_choice_window is not None:
+            try:
+                if self.npc_choice_window.winfo_exists():
+                    self.npc_choice_window.destroy()
+            except tk.TclError:
+                pass
+        win=tk.Toplevel(self)
+        self.npc_choice_window=win
+        win.title('NPC 互動選項（一般對話）')
+        win.geometry('520x360')
+        win.transient(self.winfo_toplevel())
+        panel=ttk.Frame(win,padding=12)
+        panel.pack(fill='both',expand=True)
+        ttk.Label(panel,text=options['title'],wraplength=470).pack(fill='x',pady=(0,8))
+        frame=ttk.Frame(panel)
+        frame.pack(fill='both',expand=True)
+        canvas=tk.Canvas(frame,highlightthickness=0,background='#203f53')
+        scroll=ttk.Scrollbar(frame,orient='vertical',command=canvas.yview)
+        contents=ttk.Frame(canvas)
+        contents.bind('<Configure>',lambda e:canvas.configure(scrollregion=canvas.bbox('all')))
+        canvas.create_window((0,0),window=contents,anchor='nw')
+        canvas.configure(yscrollcommand=scroll.set)
+        scroll.pack(side='right',fill='y')
+        canvas.pack(side='left',fill='both',expand=True)
+        for choice in options['options']:
+            label=choice['text']
+            btn=ttk.Button(contents,text=label,command=lambda item=choice:
+                           self.choose_npc_reply(options,item),width=48)
+            btn.pack(fill='x',pady=3)
+        ttk.Label(panel,text='僅手動確認後送出一次；任務效果由伺服器決定。',
+                  wraplength=470).pack(fill='x',pady=(8,0))
+
+    def choose_npc_reply(self, options, item):
+        dialogue=self.state.get('npc_dialogue',{})
+        if (not dialogue.get('active') or dialogue.get('phase')!='choice_unavailable'
+                or dialogue.get('scene')!=options['scene']
+                or dialogue.get('option_index')!=options['index']
+                or self.state.get('battle',{}).get('active')):
+            return
+        fresh=self.npc_interacts.choices(options['scene'],options['index'],self.npc_talks)
+        if fresh!=options or item not in options['options']:
+            return
+        if not messagebox.askyesno('確認 NPC 選項',
+                f"你選擇：「{item['text']}」\n此操作可能觸發任務、物品或戰鬥效果。"
+                "\n只會發送一次，不會自動重試。確定送出嗎？",
+                parent=self.npc_choice_window or self):
+            return
+        if self.npc_choice_window is not None and self.npc_choice_window.winfo_exists():
+            self.npc_choice_window.destroy()
+            self.npc_choice_window=None
+        self.on_npc_next({'type':'npc_choose','confirmed':True,
+                          'scene':options['scene'],'interact_index':options['index'],
+                          'choice':item['choice'],'text_id':item['text_id']})
 
     def close_npc_option(self):
         if str(self.npc_close_button.cget('state'))!='normal':
@@ -356,6 +438,8 @@ class HomeMap(ttk.Frame):
                 self.npc_message.set(
                     f"選項索引 {dialogue.get('option_index')} 尚無可信資料；"
                     "不會自行選擇；可手動按「關閉選項」，或重新登入同步。")
+            elif phase=='awaiting_choice':
+                self.npc_message.set('已送出一般 NPC 選項；等待伺服器回覆，不會重送。')
             elif phase=='closing':
                 self.npc_message.set('已要求關閉選項，等待伺服器 S20-8；不自動重送。')
             elif phase=='effect_unavailable':
