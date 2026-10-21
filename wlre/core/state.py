@@ -13,6 +13,7 @@ from wlre.services.items.alchemy import defaults as alchemy_defaults
 from wlre.core.efficiency import defaults as efficiency_defaults, observe as observe_efficiency
 from wlre.core.activity import apply_activity
 from wlre.services.items.crafting import defaults as craft_defaults, room_defaults, apply_crafting
+from wlre.services.world.tent import defaults as tent_defaults, apply_tent
 from wlre.services.items.room_storage import defaults as storage_defaults, apply_storage
 from wlre.services.expedition import defaults as expedition_defaults, apply_expedition
 from wlre.services.instances import defaults as instance_defaults, apply_instances
@@ -31,6 +32,7 @@ class State:
     activities: dict = field(default_factory=dict)
     crafting: dict = field(default_factory=craft_defaults)
     furniture: dict = field(default_factory=room_defaults)
+    tent: dict = field(default_factory=tent_defaults)
     efficiency: dict = field(default_factory=efficiency_defaults)
     phase: str = "disconnected"
     attributes: dict = field(default_factory=dict)
@@ -150,6 +152,7 @@ class State:
         apply_expedition(self,event)
         apply_instances(self,event)
         dispatch_local(self, event, affects_navigation=affects_navigation)
+        apply_tent(self,event)
         observe_efficiency(self,event)
 
     def snapshot(self):
