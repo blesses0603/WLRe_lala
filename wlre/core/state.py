@@ -10,6 +10,7 @@ from wlre.services.items.recovery import apply_recovery
 from wlre.services.items.combat_resources import apply_live
 from wlre.services.battle.party import party_defaults, apply_party
 from wlre.services.items.alchemy import defaults as alchemy_defaults
+from wlre.services.world.npc_shop_evidence import defaults as shop_evidence_defaults, observe as observe_shop_evidence
 from wlre.core.efficiency import defaults as efficiency_defaults, observe as observe_efficiency
 from wlre.core.activity import apply_activity
 from wlre.services.items.crafting import defaults as craft_defaults, room_defaults, apply_crafting
@@ -52,6 +53,7 @@ class State:
     event_flow: dict = field(default_factory=lambda:{'blocked':False,'awaiting_response':False,
                                 'last_source':None,'requests_sent':0})
     npc_dialogue: dict = field(default_factory=lambda:{'active':False,'phase':'idle'})
+    shop_evidence: dict = field(default_factory=shop_evidence_defaults)
     gold: dict = field(default_factory=lambda:{
         'ready':False,'reliable':False,'amount':None,'revision':0,'source':None})
     inventory: dict = field(default_factory=lambda:{'ready':False,'reliable':False,'items':{},'reserved':{},'revision':0,'use_failed':False})
@@ -152,6 +154,7 @@ class State:
         apply_expedition(self,event)
         apply_instances(self,event)
         dispatch_local(self, event, affects_navigation=affects_navigation)
+        observe_shop_evidence(self,event)
         observe_efficiency(self,event)
 
     def snapshot(self):

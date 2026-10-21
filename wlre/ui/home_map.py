@@ -340,7 +340,7 @@ class HomeMap(ttk.Frame):
         win=tk.Toplevel(self)
         self.npc_shop_window=win
         win.title('NPC '+catalog['title']+'（官方價格預覽／交易未啟用）')
-        win.geometry('680x440')
+        win.geometry('680x475')
         win.transient(self.winfo_toplevel())
         body=ttk.Frame(win,padding=12)
         body.pack(fill='both',expand=True)
@@ -397,6 +397,18 @@ class HomeMap(ttk.Frame):
         else:
             balance='目前金幣：尚未收到可信 S26 初始化／增減回覆'
         ttk.Label(body,text=balance,wraplength=640).pack(fill='x',pady=(8,0))
+        evidence=self.state.get('shop_evidence',{})
+        history=evidence.get('events') or []
+        packet_labels={'bag_snapshot':'S23-5','bag_add':'S23-6',
+                       'bag_delete':'S23-9','bag_sell':'S27-6',
+                       'gold_snapshot':'S26-4','gold_delta':'S26-1/2',
+                       'gold_limit':'S26-3','shop_purchase_result':'S27-1',
+                       'sale_notice':'S27-8'}
+        latest='、'.join(packet_labels.get(entry.get('type'),'其他')
+                        for entry in history[-5:]) if history else '尚無'
+        ttk.Label(body,text='最近交易相關伺服器封包：'+latest+
+                  '。此為觀測紀錄，不代表交易已結算。',
+                  wraplength=640).pack(fill='x',pady=(5,0))
         ttk.Label(body,text=catalog['reason'],wraplength=640,
                   foreground='#ad5b32').pack(fill='x',pady=6)
         ttk.Label(body,text='顯示 ItemData_C 官方基礎價；實際折扣後價格和當前持有金幣尚待同步。禁止購買或販售。',
