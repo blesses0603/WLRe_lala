@@ -12,6 +12,7 @@ FIELDS={
     'expedition':frozenset(('expedition','inventory')),
     'alchemy':frozenset(('alchemy','inventory')),
     'crafting':frozenset(('crafting','inventory')),
+    'tent':frozenset(('tent',)),
     'field_supply':frozenset(('inventory','potion_storage')),
     'maintenance':frozenset(('maintenance','inventory')),
     'auto_battle':frozenset(('auto_battle','inventory')),

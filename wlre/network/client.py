@@ -396,7 +396,7 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
                             _send_command_packet(connection,packet,profile['tx_xor'],state,emit,on_state)
                         if command.get('type') in ('start_auto_battle', 'stop_auto_battle'):
                             emit(auto_battle_status_event(state))
-                        if command.get('type') in ('team','start_alchemy','stop_alchemy','reset_efficiency','craft','start_expedition','stop_expedition','allocate_points','instance_create','instance_join','instance_leave','instance_coop_standby','instance_start','instance_enter','instance_auto_reward','instance_reward_claim','instance_reward_cancel','npc_start','npc_next','npc_close_choice','npc_choose','npc_close_shop') and on_state:notify_state(on_state,state)
+                        if command.get('type') in ('team','start_alchemy','stop_alchemy','reset_efficiency','craft','start_expedition','stop_expedition','allocate_points','instance_create','instance_join','instance_leave','instance_coop_standby','instance_start','instance_enter','instance_auto_reward','instance_reward_claim','instance_reward_cancel','npc_start','npc_next','npc_close_choice','npc_choose','npc_close_shop','tent') and on_state:notify_state(on_state,state)
                         if command.get('type') in ('start_auto_battle','stop_auto_battle','set_party_guard'):
                             emit({'type':'auto_battle_status',**state.auto_battle})
                             if on_state:notify_state(on_state,state)
