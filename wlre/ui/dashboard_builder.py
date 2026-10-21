@@ -10,6 +10,7 @@ from wlre.services.battle import party_guard
 from wlre.ui.services_ui import PartyPanel, AlchemyPanel
 from wlre.ui.companion_ui import CompanionPanel
 from wlre.ui.expedition_ui import ExpeditionPanel
+from wlre.ui.daily_tasks_ui import DailyTaskPanel
 from wlre.ui.instance_ui import InstancePanel
 from wlre.ui.feature_windows import make_feature
 from wlre.ui.party_guard_ui import PartyGuardPanel
@@ -53,6 +54,8 @@ def build_dashboard(app):
         app,'companion','夥伴出戰',CompanionPanel)
     app.expedition_launcher,app.expedition_panel=make_feature(
         app,'expedition','遠征',ExpeditionPanel)
+    app.daily_tasks_launcher,app.daily_tasks_panel=make_feature(
+        app,'daily_tasks','每日任務',DailyTaskPanel)
     app.instance_launcher,app.instance_panel=make_feature(
         app,'instance','副本',InstancePanel)
     app.instance_window=app.feature_windows['instance']
