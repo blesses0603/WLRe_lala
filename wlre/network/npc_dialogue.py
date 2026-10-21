@@ -78,6 +78,8 @@ def close_npc_choice(state, command):
             or state.player.get('scene') != info.get('scene')
             or state.battle.get('active')):
         raise ProtocolError('目前沒有可安全關閉的 NPC 選項')
+    if type(info.get('scene')) is not int:
+        raise ProtocolError('NPC 對話場景尚未確認')
     state.npc_dialogue = {**info, 'phase': 'closing'}
     state.event_flow = {**state.event_flow, 'blocked': True,
                         'awaiting_response': True,

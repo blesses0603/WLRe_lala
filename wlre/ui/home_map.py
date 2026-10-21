@@ -15,6 +15,7 @@ from wlre.services.world.portal_policy import allowed_rows, destination_problem
 from wlre.services.world.npc_catalog import NPCIndex, scene_npcs, npc_detail
 from wlre.services.world.npc_talk import load_catalog as load_npc_talks, dialogue_text
 from wlre.services.world.npc_interact import NPCInteractIndex
+from wlre.services.world.npc_shop import shop_catalog
 
 
 class HomeMap(ttk.Frame):
@@ -50,6 +51,7 @@ class HomeMap(ttk.Frame):
             self.npc_interacts=NPCInteractIndex.__new__(NPCInteractIndex)
             self.npc_interacts.scenes={}
             self.npc_interact_error=True
+        self.npc_shop_window=None
         self.npc_choice_window=None
         self.npc_history_window=None
         self.npc_rows=[]
@@ -97,6 +99,9 @@ class HomeMap(ttk.Frame):
                   wraplength=120).pack(side='bottom',fill='x',padx=2,pady=3)
         npc_bar=ttk.Scrollbar(self.npc_tab,orient='vertical')
         npc_bar.pack(side='right',fill='y')
+        self.npc_shop_button=ttk.Button(self.npc_tab,text='查看 NPC 商店',
+                                  command=self.show_npc_shop,state='disabled')
+        self.npc_shop_button.pack(side='bottom',fill='x',pady=2)
         self.npc_options_button=ttk.Button(self.npc_tab,text='查看／選擇選項',
                                    command=self.show_npc_choices,state='disabled')
         self.npc_options_button.pack(side='bottom',fill='x',pady=2)
@@ -275,7 +280,15 @@ class HomeMap(ttk.Frame):
                    and dialogue.get('effect_type')==6
                    and dialogue.get('scene')==player.get('scene')
                    and not battle.get('active'))
-        self.npc_close_button.configure(state='normal' if can_close else 'disabled')
+        known_shop=(self.npc_interacts.get(dialogue.get('scene'),dialogue.get('option_index'))
+                    if can_close else None)
+        is_shop=bool(known_shop and known_shop['form_kind'] in (2,3))
+        self.npc_close_button.configure(state='normal' if can_close and not is_shop else 'disabled')
+        current_shop=(shop_catalog(dialogue.get('scene'),dialogue.get('option_index'),
+                      index=self.npc_interacts) if is_shop else None)
+        self.npc_shop_button.configure(
+            state='normal' if is_shop and current_shop and self.on_npc_next is not None
+            else 'disabled')
         can_view=(dialogue.get('active') and dialogue.get('phase')=='talk'
                   and dialogue_text(self.npc_talks,dialogue.get('text_id')) is not None)
         self.npc_text_button.configure(state='normal' if can_view else 'disabled')
@@ -304,6 +317,102 @@ class HomeMap(ttk.Frame):
     def next_npc(self):
         if str(self.npc_next_button.cget('state'))=='normal':
             self.on_npc_next({'type':'npc_next'})
+
+    def show_npc_shop(self):
+        """Read-only shop listing backed by official Eve; never send purchases."""
+        if str(self.npc_shop_button.cget('state'))!='normal':
+            return
+        info=self.state.get('npc_dialogue',{})
+        if (not info.get('active') or info.get('phase')!='choice_unavailable'
+                or self.state.get('player',{}).get('scene')!=info.get('scene')):
+            return
+        catalog=shop_catalog(info.get('scene'),info.get('option_index'),
+                             index=self.npc_interacts)
+        if catalog is None:
+            return
+        if self.npc_shop_window is not None:
+            try:
+                if self.npc_shop_window.winfo_exists():
+                    self.npc_shop_window.destroy()
+            except tk.TclError:
+                pass
+        win=tk.Toplevel(self)
+        self.npc_shop_window=win
+        win.title('NPC '+catalog['title']+'（商品預覽／交易尚未啟用）')
+        win.geometry('680x440')
+        win.transient(self.winfo_toplevel())
+        body=ttk.Frame(win,padding=12)
+        body.pack(fill='both',expand=True)
+        ttk.Label(body,text=catalog['title']+'｜商品 ID 已由官方 Eve 1262 核對',
+                  wraplength=640).pack(fill='x',pady=(0,6))
+        tabs=ttk.Notebook(body)
+        tabs.pack(fill='both',expand=True)
+        offers=ttk.Frame(tabs)
+        owned=ttk.Frame(tabs)
+        tabs.add(offers,text='購買商品（唯讀）')
+        tabs.add(owned,text='背包／販售預覽（唯讀）')
+        def add_grid(parent,columns,widths):
+            frame=ttk.Frame(parent)
+            frame.pack(fill='both',expand=True,pady=5)
+            tree=ttk.Treeview(frame,columns=columns,show='headings',selectmode='browse')
+            for key,title,width in widths:
+                tree.heading(key,text=title)
+                tree.column(key,width=width,anchor='w')
+            scroll=ttk.Scrollbar(frame,orient='vertical',command=tree.yview)
+            tree.configure(yscrollcommand=scroll.set)
+            scroll.pack(side='right',fill='y')
+            tree.pack(side='left',fill='both',expand=True)
+            return tree
+        items=add_grid(offers,('index','id','name','price'),(
+            ('index','商品索引',85),('id','官方物品 ID',105),
+            ('name','已知名稱（可能未收錄）',260),('price','金幣單價',125)))
+        for row in catalog['products']:
+            items.insert('','end',values=(row['offer_index'],row['item_id'],
+                         row['name'],'待官方 ItemData_C'))
+        bag=add_grid(owned,('slot','id','name','count','sale'),(
+            ('slot','格位',70),('id','物品 ID',95),('name','物品名稱',230),
+            ('count','數量',75),('sale','NPC 收購價',120)))
+        from wlre.services.items.catalog import item_name
+        inv=self.state.get('inventory',{})
+        if inv.get('ready') and inv.get('reliable'):
+            for slot,record in sorted(inv.get('items',{}).items(),
+                                      key=lambda x:int(x[0])):
+                item_id=record.get('item_id')
+                if type(item_id) is int:
+                    bag.insert('','end',values=(slot,item_id,item_name(item_id),
+                               record.get('count',0),'待官方 ItemData_C'))
+        else:
+            ttk.Label(owned,text='背包尚未由伺服器可靠同步，不顯示推定可售商品。').pack()
+        ttk.Label(body,text=catalog['reason'],wraplength=640,
+                  foreground='#ad5b32').pack(fill='x',pady=6)
+        ttk.Label(body,text='已核對 C27-1 購買、C27-3 販售封包結構；尚未啟用任何付款或販售指令。',
+                  wraplength=640).pack(fill='x')
+        ttk.Button(body,text='關閉商店（需伺服器確認）',
+                   command=lambda:self.close_npc_shop_dialog(catalog)).pack(fill='x',pady=(8,0))
+        win.protocol('WM_DELETE_WINDOW',lambda:self.close_npc_shop_dialog(catalog))
+
+    def close_npc_shop_dialog(self,catalog):
+        info=self.state.get('npc_dialogue',{})
+        if (not info.get('active') or info.get('phase')!='choice_unavailable'
+                or info.get('effect_type')!=6
+                or info.get('scene')!=catalog['scene']
+                or info.get('option_index')!=catalog['interact_index']
+                or self.state.get('battle',{}).get('active')
+                or self.on_npc_next is None):
+            return
+        current=shop_catalog(info['scene'],info['option_index'],
+                             index=self.npc_interacts)
+        if current!=catalog:
+            return
+        if not messagebox.askyesno('確認關閉商店',
+                '官方 C20-9 空內容關閉商店，不會購買／出售任何物品。'
+                '\n只送出一次，需等待伺服器 S20-8；確認關閉嗎？',
+                parent=self.npc_shop_window or self):
+            return
+        if self.npc_shop_window is not None and self.npc_shop_window.winfo_exists():
+            self.npc_shop_window.destroy()
+            self.npc_shop_window=None
+        self.on_npc_next({'type':'npc_close_shop','confirmed':True})
 
     def show_npc_choices(self):
         dialogue=self.state.get('npc_dialogue',{})
@@ -434,6 +543,13 @@ class HomeMap(ttk.Frame):
                         f"對話文字 ID {text_id}；尚無已驗證的文字表，請手動接續。")
             elif phase=='continue':
                 self.npc_message.set('伺服器允許繼續，請按下一段對話。')
+            elif phase=='choice_unavailable' and (
+                    (shop_catalog(dialogue.get('scene'),dialogue.get('option_index'),
+                     index=self.npc_interacts) is not None)):
+                self.npc_message.set('NPC 商店已開啟：可查看商品與背包唯讀資訊；'
+                                     '尚無 ItemData_C 售價與金幣同步，不會購買或販售。')
+            elif phase=='closing_shop':
+                self.npc_message.set('已要求關閉 NPC 商店，等待伺服器確認；不會重送。')
             elif phase=='choice_unavailable':
                 self.npc_message.set(
                     f"選項索引 {dialogue.get('option_index')} 尚無可信資料；"
