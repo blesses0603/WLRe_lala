@@ -72,6 +72,16 @@ class NPCInteractTests(unittest.TestCase):
         self.assertTrue(state.event_flow['awaiting_response'])
         with self.assertRaises(ProtocolError):self.attempt(state,cmd)
 
+    def test_server_continue_after_choice_remains_manual(self):
+        from wlre.network.protocol import decode
+        state=self.make_state()
+        cmd={'confirmed':True,'scene':10000,'interact_index':1,
+             'choice':0,'text_id':10001}
+        self.attempt(state,cmd)
+        state.apply(decode(Packet(20,10,b'')))
+        self.assertEqual(state.npc_dialogue['phase'],'continue')
+        self.assertFalse(state.event_flow['awaiting_response'])
+
     def test_reject_unverified_scene_index_shop_stale_and_unconfirmed(self):
         good={'confirmed':True,'scene':10000,'interact_index':1,
               'choice':0,'text_id':10001}
