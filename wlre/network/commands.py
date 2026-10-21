@@ -22,6 +22,7 @@ from wlre.network.protocol import select_role, attack, cast_skill, use_battle_it
 from wlre.network.npc_dialogue import request_npc, advance_npc, close_npc_choice, choose_npc_option, close_npc_shop
 from wlre.services.items.combat_resources import learned_command, food_command, reserve, field_context
 from wlre.services.items import reservations
+from wlre.services.world.tent import command as tent_command
 import copy
 from wlre.services.battle.party_guard import validate as validate_party_guard
 from wlre.services.battle.combat import normal_skill, NORMALS
@@ -118,6 +119,9 @@ def dispatch(logic,command,state):
         logic.last_companion_time = now
         return [packet]
     if kind in ('start_auto_battle','start_roaming','battle_item'):logic.field_supply.check()
+    if kind == 'tent':return tent_command(state,command)
+    if kind=='craft' and command.get('action')=='enter':
+        return tent_command(state,{'action':'enter'})
     if kind=='craft':return logic.crafting.command(state,command)
     if kind=='reset_efficiency':
         from wlre.core.efficiency import defaults, observe
