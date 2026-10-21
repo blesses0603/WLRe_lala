@@ -11,6 +11,7 @@ class DailyTaskPanel(ttk.Frame):
     def __init__(self, parent, app):
         super().__init__(parent, padding=14)
         self.app = app
+        self._signature = None
         ttk.Label(self, text="每日／每週任務", style="Heading.TLabel").pack(anchor="w")
         self.status = tk.StringVar(value="尚未收到伺服器每日任務狀態")
         ttk.Label(self, textvariable=self.status, style="Muted.TLabel",
@@ -30,6 +31,19 @@ class DailyTaskPanel(ttk.Frame):
 
     def render(self, state):
         daily = state.get("daily_tasks") or {}
+        signature = (
+            daily.get("ready"), daily.get("groups_ready"),
+            daily.get("daily_group"), daily.get("weekly_group"),
+            daily.get("daily_value"), daily.get("weekly_value"),
+            tuple(daily.get("daily_progress") or ()),
+            tuple(daily.get("weekly_progress") or ()),
+            daily.get("daily_done_mark"),
+            tuple(daily.get("weekly_done_mark") or ()),
+            daily.get("last_notice"),
+        )
+        if signature == self._signature:
+            return
+        self._signature = signature
         self.table.delete(*self.table.get_children())
         if not daily.get("ready"):
             self.status.set("每日任務尚未同步。未登入或伺服器尚未發送 S124-1。")
