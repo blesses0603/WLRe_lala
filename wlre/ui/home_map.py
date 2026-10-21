@@ -10,6 +10,7 @@ from wlre.ui.minimap import SmallMaps
 from wlre.services.world.display_position import current_position
 from wlre.services.world.navigation import Repository, NavigationError
 from wlre.services.world.map_names import map_label, parse_map_id
+from wlre.services.world.tent import is_dynamic_house_scene
 from wlre.services.world.portals import Portals, nearest_marker
 from wlre.services.world.portal_policy import allowed_rows, destination_problem
 from wlre.services.world.npc_catalog import NPCIndex, scene_npcs, npc_detail
@@ -175,7 +176,9 @@ class HomeMap(ttk.Frame):
                 self.note.set(map_label(self.selected_id)+'｜原始小地圖')
             else:
                 self.projection=None
-                self.note.set(map_label(self.selected_id)+'｜沒有原始小地圖；請使用左側返回出口。')
+                self.note.set((map_label(self.selected_id)+'｜沒有靜態小地圖，離屋出口尚未驗證。'
+                               if is_dynamic_house_scene(self.selected_id)
+                               else map_label(self.selected_id)+'｜沒有原始小地圖；請使用左側返回出口。'))
         except (OSError,ValueError,KeyError) as exc:
             self.image=None;self.mesh=None;self.projection=None
             self.note.set(str(exc))
@@ -184,7 +187,9 @@ class HomeMap(ttk.Frame):
 
     def refresh_portals(self):
         recovery=self.image is None
-        self.portal_rows=allowed_rows(self.portals,self.selected_id,self.maps,recovery=recovery)
+        # 住宅實例 ID 隨伺服器分配，不能套用任何靜態地圖的門編號。
+        self.portal_rows=([] if is_dynamic_house_scene(self.selected_id)
+                          else allowed_rows(self.portals,self.selected_id,self.maps,recovery=recovery))
         self.selected_portal=None
         self.selected_npc=None
         self.portal_list.delete(0,'end')
@@ -207,11 +212,15 @@ class HomeMap(ttk.Frame):
             if e['kind']!=0:
                 self.monster_list.insert('end',f"Lv.{e['level'] if e['level'] is not None else '?'} {e['name']}")
                 self.monster_rows.append(e)
-        if not self.list_rows:self.portal_list.insert('end','（沒有已確認的返回出口）' if recovery else '（來源未列傳點）')
+        if not self.list_rows:self.portal_list.insert('end',
+            '（住宅出口未驗證）' if is_dynamic_house_scene(self.selected_id)
+            else '（沒有已確認的返回出口）' if recovery else '（來源未列傳點）')
         if not self.npc_rows:self.npc_list.insert('end','（本場景尚無 NPC 資料）')
         if not self.monster_rows:self.monster_list.insert('end','（來源未列怪物）')
         ready=sum(bool(p.get('direct_eligible')) for p in self.portal_rows)
-        if recovery:
+        if is_dynamic_house_scene(self.selected_id):
+            text='住宅動態場景：原版離屋封包尚未驗證；請使用官方遊戲的住宅出入口離開，不會猜測傳點。'
+        elif recovery:
             text=(f'此圖沒有小地圖；左側保留 {ready} 個返回有圖地圖的出口。' if ready
                   else '此圖沒有小地圖，來源未列可確認的返回出口；請使用官方客戶端離開。')
         else:
@@ -663,8 +672,11 @@ class HomeMap(ttk.Frame):
         self._resize_job=None
         self.canvas.delete('all')
         if not self.projection:
+            message=('等待角色地圖同步…' if self.selected_id is None
+                     else '住宅動態場景\n尚無經伺服器驗證的離屋出口\n請由官方遊戲的住宅出入口離開' if is_dynamic_house_scene(self.selected_id)
+                     else '此場景沒有原始小地圖\n請從左側清單選擇返回出口\n地圖圖示與座標操作已停用')
             self.canvas.create_text(self.canvas.winfo_width()/2,self.canvas.winfo_height()/2,
-                                    text=('等待角色地圖同步…' if self.selected_id is None else '此場景沒有原始小地圖\n請從左側清單選擇返回出口\n地圖圖示與座標操作已停用'),fill='#c8d3dc',font=('Microsoft JhengHei UI',-14),justify='center')
+                                    text=message,fill='#c8d3dc',font=('Microsoft JhengHei UI',-14),justify='center')
             return
         left,top,scale=self.view()
         size=max(1,round(1024*scale))
