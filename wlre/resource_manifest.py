@@ -1,14 +1,16 @@
 """Shared required assets and package-data rules for runtime and native builds."""
+import gzip
 import json
 from pathlib import Path
 import zipfile
 
-DATA_SUFFIXES={'.json','.zip','.png','.ico'}
+DATA_SUFFIXES={'.json','.zip','.gz','.png','.ico'}
 REQUIRED_RESOURCES=(
     'alchemy_catalog.json','combat_catalog.json','crafting_catalog.json','default_profile.json',
     'emoji_catalog.json','emoji_images.zip','enums.json','expedition_catalog.json','instance_catalog_1262.json','graph_origins.json',
     'item_icon_coverage.json','item_icon_map.json','item_icons.zip','item_stackable.json',
-    'map_names.json','navigation_data.zip','normal_attack_data.json','portals.json',
+    'map_names.json','navigation_data.zip','normal_attack_data.json','npc_event_index_1262.json.gz','npc_battle_talk_1262.json.gz',
+    'npc_talk_1262.json.gz','npc_text_1262.json.gz','npc_interact_1262.json.gz','portals.json',
     'server_list.json','smallmaps.zip','stage_coordinates.json',
     'assets/app.ico','assets/exp_background.png',
     *('assets/buttons/'+name+'.png' for name in (
@@ -41,6 +43,26 @@ def validate_resources(root):
         if not path.is_file():continue
         if path.suffix=='.json':
             with path.open(encoding='utf8') as stream:json.load(stream)
+        elif path.suffix=='.gz':
+            if path.name in ('npc_talk_1262.json.gz','npc_text_1262.json.gz',
+                             'npc_battle_talk_1262.json.gz'):
+                import hashlib
+                from wlre.services.world.npc_asset_install import ASSETS
+                expected_sha, expected_size, _, _, _ = ASSETS[path.name]
+                if (path.stat().st_size != expected_size
+                        or hashlib.sha256(path.read_bytes()).hexdigest() != expected_sha):
+                    raise RuntimeError('1262 NPC 原始文字檔案雜湊不符：'+path.name)
+            if path.name == 'npc_interact_1262.json.gz':
+                import hashlib
+                from wlre.services.world.npc_interact import EXPECTED_SHA256
+                if (path.stat().st_size != 19914
+                        or hashlib.sha256(path.read_bytes()).hexdigest() != EXPECTED_SHA256):
+                    raise RuntimeError('官方 1262 NPC 選項索引 SHA-256 或大小不符')
+            with gzip.open(path,'rb') as stream:
+                raw=stream.read(16*1024*1024+1)
+            if len(raw)>16*1024*1024:
+                raise RuntimeError('Compressed resource exceeds size limit: '+path.name)
+            json.loads(raw.decode('utf8'))
         elif path.suffix=='.zip':
             with zipfile.ZipFile(path) as archive:
                 bad=archive.testzip()
