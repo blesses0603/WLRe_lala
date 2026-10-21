@@ -109,7 +109,7 @@ class DynamicHouseSceneTests(unittest.TestCase):
         change_scene(state, 12170)
         self.assertFalse(state.tent['inside'])
         self.assertFalse(state.tent['visible'])
-        self.assertIn('等待', activity_text(state.tent))
+        self.assertIn('待同步', activity_text(state.tent))
 
     def test_other_owner_snapshot_does_not_confirm_enter(self):
         state = world()
