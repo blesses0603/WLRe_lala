@@ -9,7 +9,7 @@ from wlre.core.efficiency import rates, progress, forecast
 from wlre.services.battle.party import own_team, player_name
 from wlre.services.battle.party_guard import missing
 from wlre.services.battle.auto_battle import summary as ai_summary
-from wlre.services.world.tent import activity_text as tent_activity_text
+from wlre.services.world.tent import activity_text as tent_activity_text, is_house_scene
 
 
 def health(stats):
@@ -237,7 +237,15 @@ class OverviewPanel(ttk.Frame):
     def refresh(self):
         state=getattr(self,'state',{})
         tent=state.get('tent',{})
-        self.tent_toggle_button.configure(text=('收起帳篷' if tent.get('deployed_scene') is not None else '展開帳篷'))
+        house=is_house_scene(state.get('player',{}).get('scene'))
+        ready=(self.app.live_active and state.get('phase')=='world_ready'
+               and not tent.get('pending') and not tent.get('uncertain'))
+        self.tent_toggle_button.configure(
+            text=('收起帳篷' if tent.get('deployed_scene') is not None else '展開帳篷'),
+            state='normal' if ready and not house else 'disabled')
+        self.tent_enter_button.configure(state=(
+            'normal' if ready and not house and tent.get('visible')
+            and tent.get('scene')==state.get('player',{}).get('scene') else 'disabled'))
         for key,section in (('ai','auto_battle'),('roaming','roaming'),('expedition','expedition')):
             self.actions[key].set_active(self.app.live_active and state.get(section,{}).get('enabled',False))
         values=summarize(getattr(self,'state',{}),self.app.live_active,self.app.ai_settings.get('party_guard',{}))
