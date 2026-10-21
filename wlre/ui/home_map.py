@@ -181,7 +181,8 @@ class HomeMap(ttk.Frame):
                                else map_label(self.selected_id)+'｜沒有原始小地圖；請使用左側返回出口。'))
         except (OSError,ValueError,KeyError) as exc:
             self.image=None;self.mesh=None;self.projection=None
-            self.note.set(str(exc))
+            self.note.set((map_label(self.selected_id)+'｜沒有靜態小地圖，離屋出口尚未驗證。'
+                           if is_dynamic_house_scene(self.selected_id) else str(exc)))
         self.refresh_portals()
         self.draw()
 
