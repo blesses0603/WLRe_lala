@@ -3,6 +3,7 @@ from wlre.paths import RESOURCE_ROOT
 import json
 import re
 from functools import lru_cache
+from wlre.services.world.tent import is_dynamic_house_scene
 
 
 @lru_cache(maxsize=1)
@@ -20,6 +21,8 @@ def parse_map_id(value):
 
 def map_label(value):
     sid=parse_map_id(value)
+    if is_dynamic_house_scene(sid):
+        return f'住宅動態場景({sid})'
     return f"{data()['maps'].get(str(sid),'未知地圖')}({sid})"
 
 
