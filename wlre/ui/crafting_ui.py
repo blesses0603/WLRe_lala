@@ -54,7 +54,7 @@ class CraftingPanel(ttk.Frame):
             if not item_id:raise ProtocolError('請選擇配方')
             if not data.get('player'):raise ProtocolError('請先登入角色')
             recipe,allocations,_=recipe_plan(state,item_id,count)
-        except (ValueError,KeyError) as exc:self.status.set(str(exc));return
+        except (ValueError,KeyError,ProtocolError,AttributeError) as exc:self.status.set(str(exc));return
         text=f"製作：{item_name(item_id)} ×{recipe['output']*count}\n設備：{item_name(recipe['tool_id'])}\n背包消耗："+'、'.join(f"{item_name(a['item_id'])} ×{a['count']}" for a in allocations)
         if not messagebox.askyesno('加入製作排程',text+'\n\n確認送出？',parent=self.app.root):return
         self.app.send({'type':'craft','action':'add','item_id':item_id,'count':count})
