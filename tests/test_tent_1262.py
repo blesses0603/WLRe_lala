@@ -46,7 +46,7 @@ class TentProtocol1262Tests(unittest.TestCase):
         self.assertEqual(decode(Packet(65, 8), 91)['type'], 'tent_entry_denied')
         self.assertEqual(decode(Packet(65, 16, b'\x02'), 91)['code'], 2)
         self.assertFalse(decode(Packet(65, 7, b'\x01\x00'), 91)['access_open'])
-        self.assertIsNone(decode(Packet(65, 2, b'\x01'), 91))
+        self.assertEqual(decode(Packet(65, 2, b'\x01'), 91)['type'], 'unimplemented')
 
 
 class TentStateAndCommandsTests(unittest.TestCase):
