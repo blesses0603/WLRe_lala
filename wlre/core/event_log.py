@@ -34,6 +34,11 @@ def lines(event,state):
     if kind=='connection_closed':return ['連線已關閉']
     if kind=='command_rejected':return ['操作未送出：'+chinese(event['error'])]
     if not pid:return []
+    if kind == 'tent_added' and event['tent']['owner_id'] == pid:return ['自家帳篷已在目前場景展開']
+    if kind == 'tent_removed' and event['owner_id'] == pid:return ['自家帳篷已由伺服器收起']
+    if kind == 'tent_limit':return ['展開帳篷失敗：本場景帳篷數已達上限']
+    if kind == 'tent_entry_denied':return ['伺服器拒絕進入帳篷']
+    if kind == 'tent_error':return ['帳篷伺服器錯誤：'+str(event['code'])]
     if kind.startswith('craft_'):
         names={'craft_snapshot':'家具製作排程已同步','craft_added':'已加入製作排程','craft_started':'開始製作','craft_paused':'暫停製作','craft_completed':'製作完成','craft_deleted':'製作排程已移除','craft_swapped':'製作順序回覆已收到','craft_human':'製作夥伴已同步'}
         return [event.get('reason') or names.get(kind,'製作資料已更新')]
