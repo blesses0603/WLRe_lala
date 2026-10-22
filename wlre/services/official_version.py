@@ -81,7 +81,7 @@ def _game_resource_number(version):
     Timestamps distinguish manifests within one game revision; LaLa's current
     compatibility baseline only records the numbered game resource revision.
     """
-    match = re.fullmatch(r"(\\d+)(?:_20\\d{2}(?:_\\d{2}){6})?", version)
+    match = re.fullmatch(r"(\d+)(?:_20\d{2}(?:_\d{2}){6})?", version)
     return int(match.group(1)) if match else None
 
 
