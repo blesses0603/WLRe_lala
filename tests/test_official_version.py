@@ -74,7 +74,11 @@ class OfficialResourceVersionTests(unittest.TestCase):
 
     def test_supported_client_and_future_client(self):
         new_map = RESOURCE_MAP[:-1] + b',{"ExeVer":"1.4.0","DataVer":"1.3.22"}]'
-        self.assertIn("1.4.0", parse_resource_path(new_map)["newer_exe_versions"])
+        parsed = parse_resource_path(new_map)
+        self.assertIn("1.4.0", parsed["newer_exe_versions"])
+        self.assertEqual(parsed["supported_data_version"], "1.3.21")
+        self.assertEqual(parsed["data_version"], "1.3.22")
+        self.assertEqual(parsed["selected_exe_version"], "1.4.0")
 
     def test_complete_remote_lookup_fiddler_1275(self):
         observed = {RESOURCE_MAP_URL: RESOURCE_MAP, MAIN: MAIN_VALUE, DATA: DATA_VALUE}
