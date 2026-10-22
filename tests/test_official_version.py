@@ -214,7 +214,7 @@ class OfficialResourceVersionTests(unittest.TestCase):
         self.assertEqual(
             parse_resource_path(gzip.compress(RESOURCE_MAP))["data_version"],
             "1.3.21")
-        with self.assertRaisesRegex(InvalidResourceBody, r"HTML.*35 bytes"):
+        with self.assertRaisesRegex(InvalidResourceBody, r"HTML.*34 bytes"):
             parse_resource_path(b"<html><body>HTTP 200</body></html>")
         with self.assertRaisesRegex(InvalidResourceBody, "gzip 格式無效"):
             parse_resource_path(b"\x1f\x8binvalid")
@@ -246,7 +246,7 @@ class OfficialResourceVersionTests(unittest.TestCase):
             result = check_official_game_resources(fetcher=fetch)
         self.assertEqual(result["status"], "unverified")
         self.assertIsNone(result["resource_path"])
-        self.assertIn("非 JSON", result["reason"] if "非 JSON" in result["reason"] else "HTML")
+        self.assertIn("HTML", result["reason"])
         self.assertEqual(len(calls), 2)
 
     def test_no_sources_are_not_false_success(self):
