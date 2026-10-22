@@ -7,7 +7,9 @@ configured; otherwise the result is unverified, not a fabricated match.
 """
 import os
 
-from wlre.services.official_version import BASELINE, check_official_versions
+from wlre.services.official_version import (
+    BASELINE, check_official_versions, check_official_pc_versions,
+)
 
 
 def configured_sources(environ=None):
@@ -19,7 +21,8 @@ def configured_sources(environ=None):
     }
 
 
-def run_prelogin_check(sources=None, *, checker=check_official_versions):
+def run_prelogin_check(sources=None, *, checker=check_official_versions,
+                       discovery_checker=check_official_pc_versions):
     """Compare remote resource versions with LaLa's 1262 compatibility baseline.
 
     Explicit observed differences block login, even when the other endpoint
@@ -27,8 +30,11 @@ def run_prelogin_check(sources=None, *, checker=check_official_versions):
     No game credentials or files are accessed.
     """
     if sources is None:
-        sources = configured_sources()
-    remote = checker(sources)
+        # Automatic three-stage discovery (no setup, no local game files).
+        remote = discovery_checker()
+    else:
+        # Explicit URLs retained for diagnostics/tests only.
+        remote = checker(sources)
     packages = remote.get("packages", {})
     confirmed_change = (
         remote.get("status") == "resources_changed" or
@@ -53,8 +59,8 @@ def run_prelogin_check(sources=None, *, checker=check_official_versions):
     else:
         status = "unverified"
         message = (
-            "官方遊戲資源版本無法驗證：尚未確認完整公開查詢網址，"
-            "或查詢失敗／資料不完整。此結果不代表已同步最新版。"
+            "官方遊戲資源版本無法驗證：官方版本設定或資源查詢失敗。"
+            "此結果不代表已同步最新版。"
         )
     return {
         "status": status,
