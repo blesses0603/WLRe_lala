@@ -1,21 +1,26 @@
-"""Optional command-line inspection; sends only HTTPS GET to approved official CDN."""
+"""CLI: verify live official PC versions before any game login."""
 import argparse
 import json
-from wlre.services.official_version import check_official_versions, check_official_pc_versions
+
+from wlre.services.game_version_gate import run_prelogin_check
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="官方 PC 遊戲資源版本三階段線上查詢")
-    parser.add_argument("--main-url", help="已確認的官方 MainPackage .version/.txt/.json URL")
-    parser.add_argument("--data-url", help="已確認的官方 DataPackage .version/.txt/.json URL")
-    parser.add_argument("--strict", action="store_true", help="未能確認相同資源版本時以非零結束")
+    parser = argparse.ArgumentParser(description="官方 PC YooAsset 三階段線上版本查詢")
+    parser.add_argument("--main-url", help="進階診斷：已驗證的 MainPackage URL")
+    parser.add_argument("--data-url", help="進階診斷：已驗證的 DataPackage URL")
+    parser.add_argument("--strict", action="store_true",
+                        help="版本有異動回傳 1，無法驗證回傳 2")
     args = parser.parse_args(argv)
-    sources = {"MainPackage": args.main_url, "DataPackage": args.data_url}
-    result = (check_official_versions(sources) if any(sources.values())
-              else check_official_pc_versions())
+    if args.main_url or args.data_url:
+        result = run_prelogin_check({
+            "MainPackage": args.main_url, "DataPackage": args.data_url})
+    else:
+        result = run_prelogin_check()
     print(json.dumps(result, ensure_ascii=False, indent=2))
-    return (0 if not args.strict or result["status"] == "same_resources" else
-            1 if result["status"] == "resources_changed" else 2)
+    if not args.strict:
+        return 0
+    return {"version_identifiers_match": 0, "blocked": 1}.get(result["status"], 2)
 
 
 if __name__ == "__main__":
