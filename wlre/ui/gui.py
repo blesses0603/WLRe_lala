@@ -31,9 +31,10 @@ from wlre.services.world.movement_display import movement_summary
 from wlre.ui.dashboard_builder import build_dashboard
 from wlre.ui.login_controller import LoginController
 from wlre.ui.account_controller import AccountController
+from wlre.ui.version_gate_controller import VersionGateController
 
 
-class App(LoginController,AccountController):
+class App(LoginController,AccountController,VersionGateController):
     def __init__(self, root):
         self.root=root
         self._ui_thread=threading.get_ident()
@@ -71,6 +72,7 @@ class App(LoginController,AccountController):
         self.map_target_scene=None
         self.last_movement_check=None
         self.initialize_login()
+        self.initialize_version_gate()
         self.connection_monitor=ConnectionStatus()
         self.connection_status=tk.StringVar(value='尚未連線')
         self.status=tk.StringVar(value='載入設定中…')
@@ -86,6 +88,7 @@ class App(LoginController,AccountController):
         self.load_saved_login()
         root.protocol('WM_DELETE_WINDOW',self.close)
         self.show_login()
+        root.after(1,self.start_version_check)
         root.after(50,self.poll)
 
     def assert_ui_thread(self):
@@ -194,6 +197,7 @@ class App(LoginController,AccountController):
 
     def connect(self):
         self.assert_ui_thread()
+        if not self.can_login_after_version_check():return
         if not self.profile:
             messagebox.showinfo('尚無設定','請先匯入登入封包或載入連線設定。',parent=self.dialog_parent());return
         if self.worker and self.worker.is_alive():return
@@ -391,6 +395,7 @@ class App(LoginController,AccountController):
         self.refresh_battle_selection()
 
     def poll(self):
+        self.drain_version_checks()
         failed=False
         try:
             App._poll_once(self)
@@ -484,7 +489,8 @@ class App(LoginController,AccountController):
             self.show_login()
             # Do not restore a stale role list when reopening after disconnect.
             self.update_role_choices([])
-            self.connect_button.configure(state='normal')
+            self._set_login_gate_button()
+            self.start_version_check()
         elif latest and self.live_active and latest.get('phase')=='world_ready' and latest.get('player'):
             if not self.entered_world:self.show_main()
         if hasattr(self.events,'take_dropped'):
