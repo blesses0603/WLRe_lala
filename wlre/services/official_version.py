@@ -75,11 +75,23 @@ def fetch_version(url, *, timeout=5, opener=None):
     return parse_version(body)
 
 
+def _game_resource_number(version):
+    """Handle numbered YooAsset package names such as 1275_2026_10_21_18_29_38_49.
+
+    Timestamps distinguish manifests within one game revision; LaLa's current
+    compatibility baseline only records the numbered game resource revision.
+    """
+    match = re.fullmatch(r"(\\d+)(?:_20\\d{2}(?:_\\d{2}){6})?", version)
+    return int(match.group(1)) if match else None
+
+
 def compare_versions(local, remote):
     if local == remote:
         return "same"
-    if local.isdecimal() and remote.isdecimal():
-        return "newer" if int(remote) > int(local) else "older"
+    old_version, new_version = _game_resource_number(local), _game_resource_number(remote)
+    if old_version is not None and new_version is not None:
+        return ("same" if new_version == old_version else
+                "newer" if new_version > old_version else "older")
     return "different"  # Non-numeric YooAsset versions are opaque identifiers.
 
 
