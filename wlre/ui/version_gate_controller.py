@@ -1,11 +1,16 @@
 """Tk-safe, official-REMOTE-only game version verification before login."""
+import os
 import queue
 import threading
 import time
 import tkinter as tk
 from tkinter import messagebox, ttk
+from wlre import __version__
+from wlre.services.lala_updater import (
+    UpdateError, check_lala_release, download_verified_release,
+)
 
-from wlre.services.game_version_gate import configured_sources, run_prelogin_check
+from wlre.services.game_version_gate import run_prelogin_check
 from wlre.ui.window_layout import configure_dialog
 
 
@@ -24,6 +29,13 @@ class VersionGateController:
         self._version_main = tk.StringVar(value="等待官方查詢")
         self._version_data = tk.StringVar(value="等待官方查詢")
         self._version_remote = tk.StringVar(value="尚未驗證")
+        self._version_path = tk.StringVar(value="尚未確認官方資源路徑")
+        self._lala_release_text = tk.StringVar(value=f"LaLa v{__version__} · 等待 GitHub Release 查詢")
+        self._lala_update_messages = queue.SimpleQueue()
+        self._lala_update_generation = 0
+        self._lala_update_info = None
+        self._lala_update_busy = False
+        self._lala_downloaded = None
 
     def show_version_check(self):
         """Only show credential UI after this separate window is acknowledged."""
@@ -42,7 +54,7 @@ class VersionGateController:
         window = tk.Toplevel(self.root)
         self.version_window = window
         window.title("飄流Re:LaLa · 官方線上版本檢測")
-        configure_dialog(window, 720, 440)
+        configure_dialog(window, 740, 530)
         window.protocol("WM_DELETE_WINDOW", self.close)
         window.resizable(False, False)
 
@@ -62,12 +74,30 @@ class VersionGateController:
         for label, var in (("LaLa 支援資源", self._version_baseline),
                            ("MainPackage", self._version_main),
                            ("DataPackage", self._version_data),
-                           ("查詢狀態", self._version_remote)):
+                           ("查詢狀態", self._version_remote),
+                           ("資源路徑版本", self._version_path)):
             row = ttk.Frame(details)
             row.pack(fill="x", pady=2)
             ttk.Label(row, text=label, width=16).pack(side="left")
             ttk.Label(row, textvariable=var, wraplength=500,
                       justify="left").pack(side="left", fill="x", expand=True)
+
+        updates = ttk.LabelFrame(body, text="LaLa 程式自身版本（GitHub 正式發行版）", padding=(12, 10))
+        updates.pack(fill="x", pady=(11, 0))
+        ttk.Label(updates, textvariable=self._lala_release_text, wraplength=650,
+                  justify="left").pack(anchor="w", fill="x")
+        controls = ttk.Frame(updates)
+        controls.pack(fill="x", pady=(6, 0))
+        ttk.Button(controls, text="重新確認 LaLa 版本",
+                   command=self.start_lala_release_check).pack(side="left")
+        self._lala_download_button = ttk.Button(
+            controls, text="下載並驗證新版", command=self.download_lala_release)
+        self._lala_download_button.pack(side="left", padx=(8, 0))
+        self._lala_download_button.configure(state="disabled")
+        self._lala_open_button = ttk.Button(
+            controls, text="開啟更新資料夾", command=self.open_lala_update_folder)
+        self._lala_open_button.pack(side="left", padx=(8, 0))
+        self._lala_open_button.configure(state="disabled")
 
         self._version_progress = ttk.Progressbar(body, mode="indeterminate")
         self._version_progress.pack(fill="x", pady=(14, 7))
@@ -109,6 +139,8 @@ class VersionGateController:
             else:
                 variable.set(f"{value} · 與 1262 不同")
 
+        path = remote.get("resource_path") or {}
+        self._version_path.set(path.get("resource_path_version") or "無法確認")
         source_status = remote.get("status")
         self._version_remote.set({
             "same_resources": "兩個官方資源版本識別值均符合 1262",
@@ -180,6 +212,9 @@ class VersionGateController:
         self.version_gate_text.set("向官方更新來源查詢資源版本；LaLa 支援基準 1262…")
         self._set_login_gate_button()
         self._render_version_window()
+        # Both channels are independent; a GitHub outage never changes the
+        # official game resource login decision.
+        self.start_lala_release_check()
 
         def worker():
             try:
@@ -197,6 +232,7 @@ class VersionGateController:
             try:
                 generation, result = self._version_gate_messages.get_nowait()
             except queue.Empty:
+                self._drain_lala_update_messages()
                 return
             if generation != self._version_gate_generation or self._closing:
                 continue
@@ -208,6 +244,92 @@ class VersionGateController:
             self._render_version_window()
             if result.get("blocked") and not self.live_active:
                 self.show_version_check()
+
+    def start_lala_release_check(self):
+        if self._closing:
+            return
+        self._lala_update_generation += 1
+        generation = self._lala_update_generation
+        self._lala_update_info = None
+        self._lala_downloaded = None
+        self._lala_update_busy = True
+        self._lala_release_text.set(f"LaLa v{__version__} · 正在確認 GitHub 正式發布版本…")
+        self._lala_download_button.configure(state="disabled")
+        self._lala_open_button.configure(state="disabled")
+
+        def worker():
+            try:
+                result = check_lala_release()
+                self._lala_update_messages.put((generation, "check", result))
+            except (UpdateError, OSError, ValueError):
+                self._lala_update_messages.put((generation, "error", "無法查詢 GitHub Release，請稍後重試。"))
+        threading.Thread(target=worker, name="lala-release-check", daemon=True).start()
+
+    def download_lala_release(self):
+        info = self._lala_update_info
+        if (self._closing or self._lala_update_busy or not info
+                or info.get("status") != "update_available"):
+            return
+        if not messagebox.askyesno(
+                "確認下載 LaLa 更新",
+                f"下載 {info['published']} 並驗證 ZIP SHA-256？\n"
+                "更新包將存入使用者資料夾，不會覆蓋執行中的 LaLa。",
+                parent=self.dialog_parent()):
+            return
+        self._lala_update_busy = True
+        generation = self._lala_update_generation
+        self._lala_release_text.set("下載中，完成後會驗證官方 SHA-256 與 ZIP 完整性…")
+        self._lala_download_button.configure(state="disabled")
+
+        def worker():
+            try:
+                archive = download_verified_release(info)
+                self._lala_update_messages.put((generation, "download", str(archive)))
+            except (UpdateError, OSError, ValueError):
+                self._lala_update_messages.put((generation, "error", "更新包下載或完整性驗證失敗；不會替換任何程式。"))
+        threading.Thread(target=worker, name="lala-release-download", daemon=True).start()
+
+    def _drain_lala_update_messages(self):
+        while True:
+            try:
+                generation, kind, value = self._lala_update_messages.get_nowait()
+            except queue.Empty:
+                break
+            if generation != self._lala_update_generation or self._closing:
+                continue
+            self._lala_update_busy = False
+            if kind == "check":
+                self._lala_update_info = value
+                if value["status"] == "update_available":
+                    self._lala_release_text.set(
+                        f"LaLa v{__version__} → {value['published']} 已正式發布，可下載驗證。")
+                    self._lala_download_button.configure(state="normal")
+                else:
+                    self._lala_release_text.set(
+                        f"LaLa v{__version__} · GitHub 最新正式版 {value['published']}；目前無較新正式更新。")
+            elif kind == "download":
+                self._lala_downloaded = value
+                self._lala_release_text.set("更新包已完成 SHA-256／ZIP 驗證。請關閉 LaLa 後從資料夾安裝新版。")
+                self._lala_open_button.configure(state="normal")
+            else:
+                self._lala_release_text.set(value)
+                if self._lala_update_info and self._lala_update_info.get("status") == "update_available":
+                    self._lala_download_button.configure(state="normal")
+
+    def open_lala_update_folder(self):
+        if not self._lala_downloaded:
+            return
+        from pathlib import Path
+        from subprocess import Popen
+        folder = str(Path(self._lala_downloaded).parent)
+        try:
+            if os.name == "nt":
+                os.startfile(folder)
+            elif os.name == "posix":
+                import sys
+                Popen(["open" if sys.platform == "darwin" else "xdg-open", folder])
+        except OSError:
+            messagebox.showinfo("更新資料夾", folder, parent=self.dialog_parent())
 
     def can_login_after_version_check(self):
         """Authoritative App.connect guard, even when invoked without button."""
@@ -226,10 +348,7 @@ class VersionGateController:
             return False
         # A previously checked official version can go stale while browsing
         # login settings. Never use an expired online result as a login pass.
-        sources = configured_sources()
-        if any(sources.values()) and (
-                not self._version_gate_checked or
-                time.monotonic() - self._version_gate_checked > 300):
+        if not self._version_gate_checked or time.monotonic() - self._version_gate_checked > 300:
             self.start_version_check()
             messagebox.showinfo("版本重新檢查",
                                 "上次官方版本檢查已過期，請重新確認檢測結果。",
