@@ -1,50 +1,65 @@
-# WLRe_LaLa｜電腦版登入前檢查官方線上遊戲資源版本
+# 電腦版：官方 YooAsset 版本閘門 + LaLa 正式版更新檢測
 
-## 檢測目標：官方伺服器，不是本機遊戲或 LaLa 版本
+## 目標與兩種版本的區別
 
-LaLa 目前支援的 **遊戲資源基準為 1262**（與 LaLa 應用程式版本 `v0.5.17` 完全不同）。
+- **官方遊戲資源（1262 相容基準）**：用來判斷登入是否需要暫停，來源是官方 Fiddler 實際觀察的三個 HTTPS 端點，不讀取電腦上的遊戲檔案。
+- **LaLa 程式自身（目前 v0.5.17 開發候選）**：由 `wlre.__version__` 定義；只和 **blesses0603/WLRe_lala GitHub 正式 Release** 比較；不拿開發中 PR、main 或標籤當已發布更新。兩種版本完全不能混比。
+- 使用者提供的 1262 MainPackage／DataPackage Manifest 可以供**離線內容差異分析**，但登入前只需要內建 `{"MainPackage":"1262","DataPackage":"1262"}`。目前不嵌入官方 BundleFiles 或 Manifest 原始二進位，以避免體積與版權問題。
 
-啟動 LaLa 時先顯示獨立「官方伺服器遊戲資源版本檢測」視窗。工具需從已核實的**官方公開更新來源**取得 MainPackage 和 DataPackage 當前版本字串，再與內建的 1262 相比。檢測完全不讀取本機遊戲安裝目錄、Unity Manifest、LaLa EXE 版本、帳密或登入封包；使用者不必安裝原版遊戲，亦不必選取檔案。
+## 官方 YooAsset 實際三階段來源
 
-| 官方查詢結果 | 登入前動作 |
-| --- | --- |
-| 官方兩個資源版本都等於 1262 | 顯示版本識別值符合基準，進入登入畫面；不表示協定相容性已驗證 |
-| 官方任一資源版本不同於 1262 | **停在檢測視窗，禁止進入登入頁與送出登入封包；提示請等待 LaLa 更新** |
-| 來源未設定、斷網、URL 未確認、只有部分成功且沒有確認版本異動 | **明確顯示「無法驗證」**，須由使用者按「了解風險，繼續登入」才能進入登入頁；絕不可顯示「已同步」 |
-| 正在查詢 | 檢測視窗顯示進度、停用登入入口 |
+來源證據：2026-10-22 官方遊戲 Fiddler Everywhere 實際連線，網域 `wlreftp.chinesegamer.net`、HTTP 200、TLS：
 
-檢測採背景工作執行，避免 Tk 主執行緒凍結；按「重新查詢官方版本」會撤銷之前登入許可，過期工作結果不會覆蓋新的檢測結果。登入按鈕本身以 `App.connect()` 重新確認檢測許可；已設定遠端來源時，查詢超過 5 分鐘則必須重檢。
+1. `https://wlreftp.chinesegamer.net/WLN/TW/ResourcePath_PC.dat`：回傳 `[{"ExeVer":"1.1.3","DataVer":"1.3.21"}, {"ExeVer":"1.1.4","DataVer":"1.3.21"}, {"ExeVer":"1.2.0","DataVer":"1.3.21"}, {"ExeVer":"1.3.0","DataVer":"1.3.21"}]`。
+2. 解析映射，使用目前已確認官方 PC ExeVer `1.3.0`；若公告的新遊戲 ExeVer 有不同 DataVer，採最新版本的資源路徑並直接標記需要等待 LaLa 相容性更新，避免永遠查舊 `1.3.21` 目錄。
+3. `https://wlreftp.chinesegamer.net/WLN/TW/1.3.21/ResourcesPC/AssetBundle/MainPackage.version`。2026-10-22 觀測回覆 `1275_2026_10_21_18_29_38_49`。
+4. `https://wlreftp.chinesegamer.net/WLN/TW/1.3.21/ResourcesPC/AssetBundle/DataPackage.version`。2026-10-22 觀測回覆 `1275_2026_10_21_18_27_33_84`。
 
-## 官方版本查詢網址：仍待確認
+以上回覆只代表**當時**已觀測到的值，不得寫死為未來官方最新版本。每次啟動／重新查詢都使用 HTTPS GET 查公開檔案，不需遊戲帳密。下載請求附帶隨機時間參數、no-cache/no-store 標頭降低 CDN 快取誤用風險；但不能保證 CDN 任意延遲都不存在。
 
-已分析的遊戲 1262 `global-metadata.dat` 內包含
-`https://wlreupload.chinesegamer.net/wln/TW/`，但這只是候選 CDN 根目錄，**不是已核實可取得當前版本的 URL**。
+只允許 `wlreftp.chinesegamer.net` 的已觀測 URL 型態、TLS、不帶帳密/非預期參數/任意路徑。最多讀取 4 KiB，遇到錯誤格式、轉址、過大檔案不當成版本一致；查不到映射時**不使用上次快取**當最新版本。這裡不使用 `wlreupload.chinesegamer.net` 的舊猜測路徑。
 
-先前提供的封包擷取包含 `wlreftp.chinesegamer.net` 連線資訊，但一般 HTTPS 封包看不到加密的請求檔案路徑；不能因此推測 `.version` 完整網址。**不允許猜網址或暴力掃描官方伺服器**。
+### 登入前行為
 
-確認來源後，可在電腦環境中設定：
+| 官方證據 | 結果 |
+|---|---|
+| MainPackage 和 DataPackage 都是 1262 且路徑無異動 | 版本識別值一致，顯示登入按鈕 |
+| 任一 Package 與 1262 不同，或官方新版資源路徑不同 | **停止登入、顯示「請等待 LaLa 更新」** |
+| 官方來源失敗／版本不完整，且沒有已確認的異動 | **顯示「無法驗證」**，需要使用者明確確認風險才可進入登入頁 |
+| 正在查詢 | 不可登入；UI 由 Tk 主執行緒維護 |
+
+`App.connect()` 也會檢查版本閘門；超過 5 分鐘須重新檢測。1275 是已知不相容**資源版本基準**，不宣稱全部遊戲協定一定失效。
+
+## LaLa 程式更新：自動檢測、經確認後下載驗證
+
+啟動版本檢測視窗時另開背景執行緒讀取 GitHub API：
+
+`https://api.github.com/repos/blesses0603/WLRe_lala/releases/latest`
+
+只接受已發布、非預覽 Release 的 `vX.Y.Z`，使用數字式三段比較。例如目前開發版 0.5.17 **不得降版**至正式 v0.5.0。需有目前作業系統對應 ZIP 與 `SHA256SUMS.txt`，且 URL 必須是正確 GitHub Repository + Tag + 預期檔名。
+
+如確有較新 Release，登入前視窗顯示新版與「下載並驗證新版」；使用者同意後：
+
+1. 先讀取發布的 `SHA256SUMS.txt`，比對唯一對應的 ZIP SHA-256 值。
+2. 分段下載到 LaLa 使用者資料下 `updates/<tag>/*.partial`（有容量上限），計算 SHA-256 與 ZIP CRC。
+3. 驗證安裝包結構與 ZIP 路徑安全，通過後以原子重新命名保存在 `updates/<tag>/`。
+4. 顯示「開啟更新資料夾」，使用者**關閉舊 LaLa 後**另行解壓、啟動新版。不可直接覆蓋執行中的 EXE、變更登入資料或靜默執行新檔案。
+
+**狀態定義：** 此階段是**自動查新版 + 需同意的安全下載準備**；尚未實作已驗證的無人值守原位替換／回滾安裝，不可以宣稱「新版已自動安裝成功」。若網路離線或 GitHub API 無法存取，只影響 LaLa 更新提示，不會替換遊戲資源檢查結果。
+
+檔案來源同源校驗：GitHub 的 SHA256SUMS 和 ZIP 都來自同一 Release，能偵測損壞或錯誤來源；但並非額外的軟體簽章或抵禦 GitHub 帳號被接管的證明。
+
+## 測試與驗收
 
 ```powershell
-$env:WLRE_OFFICIAL_MAIN_VERSION_URL = "https://<官方已驗證的 MainPackage 完整版本端點>"
-$env:WLRE_OFFICIAL_DATA_VERSION_URL = "https://<官方已驗證的 DataPackage 完整版本端點>"
-```
-
-上述為格式示意，**不是可直接使用的正式 URL**。目前 `wlre/services/official_version.py` 只允許已觀測到的 `wlreupload.chinesegamer.net` /wln/TW/ HTTPS 版本文字或 JSON 檔案路徑，具 5 秒 timeout、4 KiB 回應上限及轉址主機驗證。若實際端點是其他官方主機，須先取得確切證據後再調整白名單與解析格式。
-
-## 如何找正式來源（不讀取本機版本）
-
-- `tools/find_official_version_urls.ps1` 是**診斷用途**，只搜尋原版遊戲的 Log 中可能出現的更新請求 URL，並移除 URL query/fragment，避免洩露 Session Token；**這個檔案不參與 LaLa 每次登入前的版本判斷**。
-- 如原版遊戲日誌沒有網址，請從官方遊戲的更新階段確認實際連線請求及回應格式，或尋找官方公開文件。找到完整 URL 前，程式必須保持「無法驗證」。
-- 官方遊戲維護公告可以當提示，但不應直接當作 MainPackage/DataPackage 的實際版號或協定相容性證據。
-
-## 驗收
-
-```powershell
-python -m unittest discover -s tests -p "test_game_version_gate.py" -v
 python -m unittest discover -s tests -p "test_official_version.py" -v
+python -m unittest discover -s tests -p "test_game_version_gate.py" -v
+python -m unittest discover -s tests -p "test_lala_updater.py" -v
 python -m unittest discover -s tests -p "test_prelogin_version_window.py" -v
 ```
 
-測試要覆蓋以下保證：本機遊戲即使存在 1275 Manifest，也不能單獨造成封鎖；只有**可信官方遠端來源**確認 1275 與 1262 不符才阻擋登入。尚未取得真正官方 URL 前，模擬回應測試不能宣稱完成正式伺服器 E2E 驗收。
+官方查詢 CLI：`python -m tools.check_official_version --strict`，狀態碼 0 為一致、1 為異動、2 為未知。
 
-此改動僅限 Windows/macOS 電腦版，**不修改 Android、不合併 main、不發布 Release**。現行開發版號仍為 v0.5.17。
+測試利用模擬 HTTPS 回應，覆蓋：官方 1.3.21→1275、未來路徑改版、斷線不誤判、非法主機拒絕、版本回應嚴格比對；LaLa 發布檢查不降版、錯誤下載連結拒絕、SHA256 和 ZIP 驗證。CI 通過不等於使用者 Windows 原版環境測試通過，也不等於官方正式服登入 E2E 完成。
+
+**範圍：只改電腦版 PR #48，不改 Android、不合併 main、不建立 Tag/Release。**
