@@ -1,15 +1,17 @@
 """Offline tests based on the user's observed Fiddler PC requests."""
 import io
+import gzip
 import socket
 import unittest
 from urllib.error import HTTPError, URLError
+from unittest.mock import patch
 
 from wlre.services.official_version import (
     BASELINE, BASELINE_MANIFEST, RESOURCE_MAP_URL, VersionSourceError,
     check_official_game_resources, check_official_versions, compare_versions,
     fetch_bytes, fetch_version, official_package_urls,
     parse_resource_path, parse_version, validate_source,
-    _request_problem,
+    _request_problem, InvalidResourceBody,
 )
 
 RESOURCE_MAP = b'''[
@@ -204,6 +206,48 @@ class OfficialResourceVersionTests(unittest.TestCase):
         with self.assertRaisesRegex(VersionSourceError, "HTTP 429"):
             fetch_bytes(MAIN, opener=opener)
         self.assertEqual(len(called), 1)
+
+    def test_map_utf16_and_gzip_and_bad_html_diagnostics(self):
+        self.assertEqual(
+            parse_resource_path(RESOURCE_MAP.decode("utf-8").encode("utf-16"))["data_version"],
+            "1.3.21")
+        self.assertEqual(
+            parse_resource_path(gzip.compress(RESOURCE_MAP))["data_version"],
+            "1.3.21")
+        with self.assertRaisesRegex(InvalidResourceBody, r"HTML.*35 bytes"):
+            parse_resource_path(b"<html><body>HTTP 200</body></html>")
+        with self.assertRaisesRegex(InvalidResourceBody, "gzip 格式無效"):
+            parse_resource_path(b"\x1f\x8binvalid")
+        with self.assertRaisesRegex(InvalidResourceBody, "不是可讀 JSON"):
+            parse_resource_path(b"\xff\xfe\xff")
+
+    def test_live_resource_map_http200_html_falls_back_to_canonical_url(self):
+        requests = []
+        def observed(url, **kwargs):
+            requests.append((url, kwargs))
+            if url == RESOURCE_MAP_URL:
+                return (RESOURCE_MAP if kwargs.get("cache_bust") is False
+                        else b"<html>WAF cache error</html>")
+            return MAIN_VALUE if url == MAIN else DATA_VALUE
+        with patch("wlre.services.official_version.fetch_bytes", side_effect=observed) as fetch:
+            got = check_official_game_resources(fetcher=fetch)
+        self.assertEqual(got["status"], "resources_changed")
+        self.assertEqual(got["resource_path"], "1.3.21")
+        self.assertEqual(requests[0][0], RESOURCE_MAP_URL)
+        self.assertEqual(requests[1], (RESOURCE_MAP_URL, {"cache_bust": False}))
+        self.assertEqual(len(requests), 4)
+
+    def test_invalid_map_fallback_failure_stays_unknown_not_1262(self):
+        calls = []
+        def observed(url, **kwargs):
+            calls.append((url, kwargs))
+            return b"<html>200 but blocked</html>"
+        with patch("wlre.services.official_version.fetch_bytes", side_effect=observed) as fetch:
+            result = check_official_game_resources(fetcher=fetch)
+        self.assertEqual(result["status"], "unverified")
+        self.assertIsNone(result["resource_path"])
+        self.assertIn("非 JSON", result["reason"] if "非 JSON" in result["reason"] else "HTML")
+        self.assertEqual(len(calls), 2)
 
     def test_no_sources_are_not_false_success(self):
         self.assertEqual(check_official_versions()["status"], "unverified")
