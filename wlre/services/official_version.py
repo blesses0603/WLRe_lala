@@ -14,6 +14,12 @@ from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 BASELINE = {"MainPackage": "1262", "DataPackage": "1262"}
+# Exact versions from the two user-provided 1262 YooAsset manifest filename pairs.
+# No copyrighted Unity asset binaries are bundled into the application.
+BASELINE_MANIFEST = {
+    "MainPackage": "1262_2026_10_14_15_02_22_47",
+    "DataPackage": "1262_2026_10_14_15_00_34_84",
+}
 # This is the official GAME executable identity from the Fiddler DataVer map,
 # not the LaLa program version, and never read from the user's installed game.
 SUPPORTED_OFFICIAL_EXE_VERSION = "1.3.0"
@@ -166,7 +172,8 @@ def official_package_urls(data_version):
     }
 
 
-def check_official_versions(sources=None, *, fetcher=fetch_version):
+def check_official_versions(sources=None, *, fetcher=fetch_version,
+                            strict_manifest=False):
     sources = sources or {}
     results = {}
     for package, baseline in BASELINE.items():
@@ -177,8 +184,19 @@ def check_official_versions(sources=None, *, fetcher=fetch_version):
             continue
         try:
             remote = fetcher(url)
-            results[package] = {"baseline": baseline, "remote": remote,
-                                "comparison": compare_versions(baseline, remote)}
+            comparison = compare_versions(baseline, remote)
+            if strict_manifest:
+                # The full YooAsset manifest identity changes on republish even
+                # when the numeric resource revision is held at 1262.
+                if remote == BASELINE_MANIFEST[package]:
+                    comparison = "same"
+                elif remote == baseline:
+                    comparison = "unverified"  # A bare integer cannot verify identity.
+                elif comparison == "same":
+                    comparison = "different"
+            results[package] = {"baseline": baseline,
+                                "baseline_manifest": BASELINE_MANIFEST[package],
+                                "remote": remote, "comparison": comparison}
         except (VersionSourceError, OSError, ValueError):
             results[package] = {"baseline": baseline, "remote": None,
                                 "comparison": "unverified", "reason": "官方版號無法驗證"}
