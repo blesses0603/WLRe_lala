@@ -139,8 +139,10 @@ class VersionGateController:
             else:
                 variable.set(f"{value} · 與 1262 不同")
 
-        path = remote.get("resource_path") or {}
-        self._version_path.set(path.get("resource_path_version") or "無法確認")
+        path = remote.get("resource_path")
+        value = path if isinstance(path, str) else (
+            path.get("resource_path_version") if isinstance(path, dict) else None)
+        self._version_path.set(value or "無法確認")
         source_status = remote.get("status")
         self._version_remote.set({
             "same_resources": "兩個官方資源版本識別值均符合 1262",
