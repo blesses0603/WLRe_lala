@@ -109,7 +109,11 @@ def run_prelogin_check(selected=None, sources=None):
             "DataPackage": os.getenv("WLRE_OFFICIAL_DATA_VERSION_URL"),
         }
     remote = check_official_versions(sources)
-    blocked = local["status"] == "changed" or remote["status"] == "resources_changed"
+    # A confirmed changed package is sufficient to block, even if the other
+    # endpoint is unavailable; partial unverified must not suppress evidence.
+    remote_changed = any(item.get("comparison") in ("newer", "older", "different")
+                         for item in remote.get("packages", {}).values())
+    blocked = local["status"] == "changed" or remote_changed
     if blocked:
         message = "偵測到遊戲資源版本異動（LaLa 基準 1262），禁止登入；請等待 LaLa 更新與相容性驗證。"
         status = "blocked"
