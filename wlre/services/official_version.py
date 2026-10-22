@@ -278,10 +278,11 @@ def official_package_urls(data_version):
 
 
 def check_official_versions(sources=None, *, fetcher=fetch_version,
-                            strict_manifest=False):
+                            strict_manifest=False, package_order=None):
     sources = sources or {}
     results = {}
-    for package, baseline in BASELINE.items():
+    for package in (package_order or BASELINE):
+        baseline = BASELINE[package]
         url = sources.get(package)
         if not url:
             results[package] = {"baseline": baseline, "remote": None,
@@ -342,11 +343,14 @@ def check_official_game_resources(*, fetcher=fetch_bytes, exe_version=SUPPORTED_
             "checked_at_utc": checked_at,
             "protocol_compatibility": "unverified", "read_only": True}
     urls = official_package_urls(path["data_version"])
+    # The game first determines DataVer, then queries DataPackage.version.
+    # The existing MainPackage compatibility check follows the same DataVer.
     result = check_official_versions(urls, fetcher=lambda url: parse_version(fetcher(url)),
-                                     strict_manifest=True)
+                                     strict_manifest=True,
+                                     package_order=("DataPackage", "MainPackage"))
     result["resource_path"] = path["data_version"]
     result["failed_stage"] = next(
-        (pkg + ".version" for pkg in BASELINE
+        (pkg + ".version" for pkg in ("DataPackage", "MainPackage")
          if result["packages"][pkg]["comparison"] == "unverified"), None)
     result["official_exe_version"] = exe_version
     result["newer_official_client"] = bool(path["newer_exe_versions"])
