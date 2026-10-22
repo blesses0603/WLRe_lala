@@ -22,9 +22,10 @@ def response(main="1262", data="1262", *, state="same_resources"):
 
 
 class RemoteGameVersionTests(unittest.TestCase):
-    def test_missing_official_urls_never_claims_a_match(self):
+    def test_official_discovery_failure_never_claims_a_match(self):
         with patch.dict("os.environ", {}, clear=True):
-            result = run_prelogin_check()
+            result = run_prelogin_check(
+                discovery_checker=lambda: {"status": "unverified", "packages": {}})
         self.assertFalse(result["blocked"])
         self.assertEqual(result["status"], "unverified")
         self.assertEqual(result["source"], "official_remote_only")
@@ -39,6 +40,16 @@ class RemoteGameVersionTests(unittest.TestCase):
                 "MainPackage": "https://example.invalid/a",
                 "DataPackage": "https://example.invalid/b",
             })
+
+    def test_default_uses_remote_discovery_not_environment(self):
+        calls = []
+        def discover():
+            calls.append("three_stage")
+            return response("1275", "1275", state="resources_changed")
+        with patch.dict("os.environ", {"WLRE_GAME_YOO_ROOT": "/absent"}, clear=True):
+            result = run_prelogin_check(discovery_checker=discover)
+        self.assertEqual(calls, ["three_stage"])
+        self.assertTrue(result["blocked"])
 
     def test_remote_1262_equal_not_assume_protocol_match(self):
         got = run_prelogin_check({}, checker=lambda _: response())
@@ -79,7 +90,8 @@ class RemoteGameVersionTests(unittest.TestCase):
             root.mkdir(parents=True)
             (root / "MainPackage_1275_2026_10_21_18_29_38_49.bytes").touch()
             with patch.dict("os.environ", {"WLRE_GAME_YOO_ROOT": folder}, clear=True):
-                got = run_prelogin_check()
+                got = run_prelogin_check(
+                    discovery_checker=lambda: {"status": "unverified", "packages": {}})
             self.assertEqual(got["status"], "unverified")
             self.assertNotIn("local", got)
             self.assertFalse(got["blocked"])
