@@ -3,7 +3,7 @@ import io
 import unittest
 
 from wlre.services.official_version import (
-    BASELINE, RESOURCE_MAP_URL, VersionSourceError,
+    BASELINE, BASELINE_MANIFEST, RESOURCE_MAP_URL, VersionSourceError,
     check_official_game_resources, check_official_versions, compare_versions,
     fetch_bytes, fetch_version, official_package_urls,
     parse_resource_path, parse_version, validate_source,
@@ -115,6 +115,22 @@ class OfficialResourceVersionTests(unittest.TestCase):
         got = check_official_game_resources(fetcher=fetcher)
         self.assertEqual(got["status"], "unverified")
         self.assertEqual(got["packages"]["MainPackage"]["comparison"], "newer")
+
+    def test_embedded_1262_manifest_identifiers_detect_republish(self):
+        self.assertEqual(BASELINE_MANIFEST["MainPackage"], "1262_2026_10_14_15_02_22_47")
+        self.assertEqual(BASELINE_MANIFEST["DataPackage"], "1262_2026_10_14_15_00_34_84")
+        known = {RESOURCE_MAP_URL: RESOURCE_MAP,
+                 MAIN: BASELINE_MANIFEST["MainPackage"].encode(),
+                 DATA: BASELINE_MANIFEST["DataPackage"].encode()}
+        same = check_official_game_resources(fetcher=lambda url: known[url])
+        self.assertEqual(same["status"], "same_resources")
+        known[MAIN] = b"1262_2026_10_22_11_00_00_00"
+        changed = check_official_game_resources(fetcher=lambda url: known[url])
+        self.assertEqual(changed["status"], "resources_changed")
+        self.assertEqual(changed["packages"]["MainPackage"]["comparison"], "different")
+        known[MAIN] = b"1262"
+        unknown = check_official_game_resources(fetcher=lambda url: known[url])
+        self.assertEqual(unknown["status"], "unverified")
 
     def test_version_parse_and_compare(self):
         self.assertEqual(parse_version(b"1262"), "1262")
