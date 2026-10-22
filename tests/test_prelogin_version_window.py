@@ -3,6 +3,7 @@ import os
 import tkinter as tk
 import unittest
 from unittest.mock import patch
+from tkinter import ttk
 
 from wlre.ui.gui import App
 from wlre.ui.version_gate_controller import VersionGateController
@@ -106,7 +107,44 @@ class PreloginVersionWindowTests(unittest.TestCase):
         window_bottom = window.winfo_rooty() + window.winfo_height()
         button_bottom = button.winfo_rooty() + button.winfo_height()
         self.assertLessEqual(button_bottom, window_bottom)
-        self.assertTrue(hasattr(self.app, "_version_canvas"))
+        self.assertFalse(hasattr(self.app, "_version_canvas"))
+        self.assertTrue(hasattr(self.app, "_version_body"))
+        self.assertFalse(any(
+            isinstance(child, (tk.Canvas, ttk.Scrollbar))
+            for child in self.app.version_window.winfo_children()
+        ))
+
+    def test_compact_version_window_has_no_scrollbars_or_blank_canvas(self):
+        self.deliver(official_result("1275", "1275", "blocked"))
+        self.root.update()
+        window = self.app.version_window
+        widgets = []
+
+        def collect(parent):
+            for child in parent.winfo_children():
+                widgets.append(child)
+                collect(child)
+
+        collect(window)
+        self.assertFalse(any(isinstance(w, tk.Canvas) for w in widgets))
+        self.assertFalse(any(isinstance(w, __import__("tkinter").ttk.Scrollbar)
+                             for w in widgets))
+        self.assertLessEqual(window.winfo_height(), 480)
+        self.assertTrue(self.app._version_continue_button.winfo_ismapped())
+        self.assertTrue(self.app._lala_download_button.winfo_ismapped())
+        self.assertTrue(self.app._lala_open_button.winfo_ismapped())
+        self.assertIn("1275", self.app._version_main.get())
+        self.assertIn("1275", self.app._version_data.get())
+
+    def test_compact_window_data_above_pinned_footer(self):
+        self.deliver(official_result("1275", "1275", "blocked"))
+        self.root.update()
+        body = self.app._version_body
+        button = self.app._version_continue_button
+        self.assertLess(body.winfo_rooty(), button.winfo_rooty())
+        self.assertLessEqual(
+            body.winfo_rooty() + body.winfo_height(),
+            button.winfo_rooty())
 
     def test_reopen_revokes_previous_approval(self):
         self.deliver(official_result(status="unverified"))
