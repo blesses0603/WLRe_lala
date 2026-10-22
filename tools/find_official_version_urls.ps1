@@ -15,12 +15,12 @@ if (Test-Path -LiteralPath $game) {
 
 # Only retain URLs belonging to official ChineseGamer domains; strip queries/fragments.
 $found = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-$pattern = 'https?://[^\s"<>''\]+'
+$pattern = 'https?://[^\s"<>]+'
 foreach ($file in ($logs | Select-Object -Unique)) {
     try {
         Get-Content -LiteralPath $file -ErrorAction Stop | ForEach-Object {
             foreach ($item in [regex]::Matches($_, $pattern)) {
-                $candidate = $item.Value.TrimEnd('.',',',')',']')
+                $candidate = $item.Value.TrimEnd('.',',',')',']',"'")
                 try {
                     $uri = [Uri]$candidate
                     $hostName = $uri.DnsSafeHost.ToLowerInvariant()
