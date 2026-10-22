@@ -38,7 +38,13 @@ class VersionGateController:
         self._lala_downloaded = None
 
     def show_version_check(self):
-        """Only show credential UI after this separate window is acknowledged."""
+        """Compact, single-page version review before exposing credentials.
+
+        No scrollable Tk canvas: the global artwork renderer does not repaint
+        plain Canvas surfaces, which previously produced a large opaque slab.
+        Keep footer actions separate from informational labels and never pack
+        content into a fixed-height canvas.
+        """
         if self._closing:
             return
         if self.login_window is not None and self.login_window.winfo_exists():
@@ -54,94 +60,93 @@ class VersionGateController:
         window = tk.Toplevel(self.root)
         self.version_window = window
         window.title("飄流Re:LaLa · 官方線上版本檢測")
-        configure_dialog(window, 760, 620)
+        configure_dialog(window, 810, 480)
         window.protocol("WM_DELETE_WINDOW", self.close)
         window.resizable(False, False)
 
-        # Keep the actions visible even on high-DPI/small screens. The main
-        # content scrolls; the fixed footer never gets clipped by text growth.
-        shell = ttk.Frame(window)
+        # Native ttk panels participate in LaLa's existing glass-background
+        # compositor; unlike a standalone Canvas they do not obscure artwork.
+        shell = ttk.Frame(window, padding=(20, 8, 20, 10))
         shell.pack(fill="both", expand=True)
-        footer = ttk.Frame(shell, padding=(19, 8))
+
+        # Anchor the buttons BEFORE the data sections, so changing error text,
+        # translation length or display scale cannot push them offscreen.
+        footer = ttk.Frame(shell)
         footer.pack(side="bottom", fill="x")
-        ttk.Separator(footer, orient="horizontal").pack(fill="x", pady=(0, 8))
+        ttk.Separator(footer, orient="horizontal").pack(fill="x", pady=(0, 6))
         self._version_progress = ttk.Progressbar(footer, mode="indeterminate")
-        self._version_progress.pack(fill="x", pady=(0, 6))
-        ttk.Label(
-            footer, text="版本查詢不需要帳號或密碼。查詢失敗會標示原因。",
-            style="Muted.TLabel", wraplength=690,
-        ).pack(anchor="w")
+        self._version_progress.pack(fill="x", pady=(0, 5))
+        ttk.Label(footer, text="僅查官方公開版本，不需要遊戲帳號或密碼。",
+                  style="Muted.TLabel").pack(anchor="w", pady=(0, 7))
+
         actions = ttk.Frame(footer)
-        actions.pack(fill="x", pady=(9, 0))
-        for col in range(3):
-            actions.columnconfigure(col, weight=1, uniform="version_gate_action")
+        actions.pack(fill="x")
+        for column in range(3):
+            actions.columnconfigure(column, weight=1, uniform="version_actions")
         ttk.Button(actions, text="結束程式", command=self.close).grid(
-            row=0, column=0, sticky="ew", padx=(0, 7))
+            row=0, column=0, sticky="ew", padx=(0, 5))
         ttk.Button(actions, text="重新查詢官方版本",
                    command=self.start_version_check).grid(
-            row=0, column=1, sticky="ew", padx=(0, 7))
+            row=0, column=1, sticky="ew", padx=5)
         self._version_continue_button = ttk.Button(
             actions, text="進入登入畫面", command=self.continue_to_login)
-        self._version_continue_button.grid(row=0, column=2, sticky="ew")
+        self._version_continue_button.grid(
+            row=0, column=2, sticky="ew", padx=(5, 0))
 
-        content = ttk.Frame(shell)
-        content.pack(side="top", fill="both", expand=True)
-        style_bg = (ttk.Style(window).lookup("TFrame", "background") or
-                    window.cget("background"))
-        canvas = tk.Canvas(content, background=style_bg, borderwidth=0,
-                           highlightthickness=0, takefocus=True)
-        scrollbar = ttk.Scrollbar(content, orient="vertical", command=canvas.yview)
-        canvas.configure(yscrollcommand=scrollbar.set)
-        scrollbar.pack(side="right", fill="y")
-        canvas.pack(side="left", fill="both", expand=True)
-        self._version_canvas = canvas
-        body = ttk.Frame(canvas, padding=(20, 14))
-        inner = canvas.create_window((0, 0), window=body, anchor="nw")
-        body.bind("<Configure>", lambda _event: canvas.configure(
-            scrollregion=canvas.bbox("all")))
-        canvas.bind("<Configure>", lambda event: canvas.itemconfigure(
-            inner, width=event.width))
-        window.bind("<MouseWheel>", lambda event: canvas.yview_scroll(
-            -1 if event.delta > 0 else 1, "units"))
-        window.bind("<Button-4>", lambda _event: canvas.yview_scroll(-1, "units"))
-        window.bind("<Button-5>", lambda _event: canvas.yview_scroll(1, "units"))
-        ttk.Label(body, text="官方伺服器遊戲資源版本檢測",
+        # Single compact content column, sized naturally rather than
+        # scrolling through a tall, partly empty embedded window.
+        body = ttk.Frame(shell)
+        body.pack(side="top", fill="x", pady=(3, 0))
+        self._version_body = body
+        ttk.Label(body, text="官方資源版本檢測",
                   font=("TkDefaultFont", 16, "bold")).pack(anchor="w")
-        ttk.Label(body, text="只查詢官方線上 YooAsset 版本，不讀取本機遊戲檔案",
-                  style="Muted.TLabel").pack(anchor="w", pady=(4, 14))
+        ttk.Label(body, text="線上取得 DataVer，再比對 DataPackage／MainPackage 與 LaLa 1262 基準",
+                  style="Muted.TLabel").pack(anchor="w", pady=(2, 8))
+
         ttk.Label(body, textvariable=self._version_heading,
-                  font=("TkDefaultFont", 11, "bold")).pack(anchor="w", pady=(0, 7))
+                  font=("TkDefaultFont", 11, "bold")).pack(anchor="w")
         ttk.Label(body, textvariable=self.version_gate_text,
-                  wraplength=650, justify="left").pack(anchor="w", fill="x", pady=(0, 13))
+                  wraplength=730, justify="left").pack(
+                      anchor="w", fill="x", pady=(2, 8))
 
-        details = ttk.LabelFrame(body, text="線上版本比較", padding=(12, 9))
+        details = ttk.LabelFrame(body, text="官方遊戲資源（唯讀）", padding=(12, 6))
         details.pack(fill="x")
-        for label, var in (("LaLa 支援資源", self._version_baseline),
-                           ("MainPackage", self._version_main),
-                           ("DataPackage", self._version_data),
-                           ("查詢狀態", self._version_remote),
-                           ("資源路徑版本", self._version_path)):
-            row = ttk.Frame(details)
-            row.pack(fill="x", pady=2)
-            ttk.Label(row, text=label, width=16).pack(side="left")
-            ttk.Label(row, textvariable=var, wraplength=500,
-                      justify="left").pack(side="left", fill="x", expand=True)
+        details.columnconfigure(1, weight=1)
+        for index, (label, variable) in enumerate((
+                ("資源路徑 DataVer", self._version_path),
+                ("DataPackage", self._version_data),
+                ("MainPackage", self._version_main),
+                ("LaLa 支援基準", self._version_baseline),
+                ("檢查結果", self._version_remote))):
+            ttk.Label(details, text=label, width=19,
+                      anchor="w").grid(row=index, column=0,
+                                       sticky="nw", pady=2)
+            ttk.Label(details, textvariable=variable,
+                      wraplength=555, justify="left").grid(
+                          row=index, column=1, sticky="ew", pady=2)
 
-        updates = ttk.LabelFrame(body, text="LaLa 程式自身版本（GitHub 正式發行版）", padding=(12, 10))
-        updates.pack(fill="x", pady=(11, 0))
-        ttk.Label(updates, textvariable=self._lala_release_text, wraplength=650,
-                  justify="left").pack(anchor="w", fill="x")
+        updates = ttk.LabelFrame(body, text="LaLa 程式更新（GitHub 正式 Release）",
+                                 padding=(12, 7))
+        updates.pack(fill="x", pady=(9, 0))
+        ttk.Label(updates, textvariable=self._lala_release_text,
+                  wraplength=730, justify="left").pack(anchor="w", fill="x")
+
         controls = ttk.Frame(updates)
-        controls.pack(fill="x", pady=(6, 0))
+        controls.pack(fill="x", pady=(5, 0))
+        for column in range(3):
+            controls.columnconfigure(column, weight=1, uniform="lala_update_actions")
         ttk.Button(controls, text="重新確認 LaLa 版本",
-                   command=self.start_lala_release_check).pack(side="left")
+                   command=self.start_lala_release_check).grid(
+                       row=0, column=0, sticky="ew", padx=(0, 5))
         self._lala_download_button = ttk.Button(
             controls, text="下載並驗證新版", command=self.download_lala_release)
-        self._lala_download_button.pack(side="left", padx=(8, 0))
+        self._lala_download_button.grid(
+            row=0, column=1, sticky="ew", padx=5)
         self._lala_download_button.configure(state="disabled")
         self._lala_open_button = ttk.Button(
             controls, text="開啟更新資料夾", command=self.open_lala_update_folder)
-        self._lala_open_button.pack(side="left", padx=(8, 0))
+        self._lala_open_button.grid(
+            row=0, column=2, sticky="ew", padx=(5, 0))
         self._lala_open_button.configure(state="disabled")
 
         self._render_version_window()
