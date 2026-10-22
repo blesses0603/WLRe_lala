@@ -155,6 +155,8 @@ class VersionGateController:
             messagebox.showinfo("已連線", "請先中斷連線再重新檢查版本。",
                                 parent=self.dialog_parent())
             return
+        self._version_gate_entry_approved = False
+        self._set_login_gate_button()
         self.show_version_check()
         self.start_version_check()
 
