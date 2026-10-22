@@ -230,7 +230,8 @@ def check_official_game_resources(*, fetcher=fetch_bytes, exe_version=SUPPORTED_
             "checked_at_utc": checked_at,
             "protocol_compatibility": "unverified", "read_only": True}
     urls = official_package_urls(path["data_version"])
-    result = check_official_versions(urls, fetcher=lambda url: parse_version(fetcher(url)))
+    result = check_official_versions(urls, fetcher=lambda url: parse_version(fetcher(url)),
+                                     strict_manifest=True)
     result["resource_path"] = path["data_version"]
     result["official_exe_version"] = exe_version
     result["newer_official_client"] = bool(path["newer_exe_versions"])
