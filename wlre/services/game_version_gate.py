@@ -16,18 +16,21 @@ _PATTERN = re.compile(
 _PACKAGES = tuple(BASELINE)
 
 
-def find_yoo_root(selected=None):
+def find_yoo_root(selected=None, *, strict=False):
     """Search explicit, saved and bounded local installation candidates only."""
     candidates = []
     if selected:
         candidates.append(Path(selected))
+    if strict and not selected:
+        return None
     env = os.getenv("WLRE_GAME_YOO_ROOT")
-    if env:
-        candidates.append(Path(env))
-    for base in (Path(sys.executable).resolve().parent, Path.cwd()):
-        candidates.extend((base, base.parent, base.parent.parent))
-    # A previously reported installation layout; no filesystem-wide crawl.
-    candidates.append(Path("D:/Program Files/D/wlre"))
+    if not strict:
+        if env:
+            candidates.append(Path(env))
+        for base in (Path(sys.executable).resolve().parent, Path.cwd()):
+            candidates.extend((base, base.parent, base.parent.parent))
+        # A previously reported installation layout; no filesystem-wide crawl.
+        candidates.append(Path("D:/Program Files/D/wlre"))
     seen = set()
     for candidate in candidates:
         try:
