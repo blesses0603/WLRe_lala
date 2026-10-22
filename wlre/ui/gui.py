@@ -395,7 +395,9 @@ class App(LoginController,AccountController,VersionGateController):
         self.refresh_battle_selection()
 
     def poll(self):
-        self.drain_version_checks()
+        # Legacy event-loop tests use minimal App surrogates without version state.
+        if hasattr(self, '_version_gate_messages'):
+            VersionGateController.drain_version_checks(self)
         failed=False
         try:
             App._poll_once(self)
