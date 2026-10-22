@@ -1,12 +1,15 @@
 """Offline tests based on the user's observed Fiddler PC requests."""
 import io
+import socket
 import unittest
+from urllib.error import HTTPError, URLError
 
 from wlre.services.official_version import (
     BASELINE, BASELINE_MANIFEST, RESOURCE_MAP_URL, VersionSourceError,
     check_official_game_resources, check_official_versions, compare_versions,
     fetch_bytes, fetch_version, official_package_urls,
     parse_resource_path, parse_version, validate_source,
+    _request_problem,
 )
 
 RESOURCE_MAP = b'''[
@@ -154,6 +157,53 @@ class OfficialResourceVersionTests(unittest.TestCase):
             return FakeResponse(b"1262", "https://evil.example.com/test")
         with self.assertRaises(VersionSourceError):
             fetch_version(MAIN, opener=redirect)
+
+    def test_error_diagnostics_identify_stage_without_leaking_url(self):
+        def failed_map(url):
+            raise VersionSourceError("DNS 無法解析官方網域")
+        result = check_official_game_resources(fetcher=failed_map)
+        self.assertEqual(result["status"], "unverified")
+        self.assertEqual(result["failed_stage"], "ResourcePath_PC.dat")
+        self.assertIn("DNS", result["reason"])
+        self.assertNotIn("https://", result["reason"])
+
+        def failed_main(url):
+            if url == RESOURCE_MAP_URL:
+                return RESOURCE_MAP
+            if url == MAIN:
+                raise VersionSourceError("TLS 憑證驗證失敗")
+            return DATA_VALUE
+        result = check_official_game_resources(fetcher=failed_main)
+        self.assertEqual(result["failed_stage"], "MainPackage.version")
+        self.assertEqual(result["packages"]["MainPackage"]["reason"], "TLS 憑證驗證失敗")
+        self.assertEqual(result["packages"]["DataPackage"]["comparison"], "newer")
+
+    def test_network_failure_categories(self):
+        self.assertIn("DNS", _request_problem(URLError(socket.gaierror(-2, "name unknown"))))
+        self.assertIn("HTTP 403", _request_problem(HTTPError(MAIN, 403, "Forbidden", {}, None)))
+        self.assertEqual(_request_problem(TimeoutError()), "連線逾時")
+
+    def test_cdn_query_rejection_retries_canonical_once(self):
+        called = []
+        def opener(req, timeout):
+            called.append(req.full_url)
+            if "?" in req.full_url:
+                raise HTTPError(req.full_url, 403, "cache parameter rejected", {}, None)
+            return FakeResponse(b"1275_2026_10_21_18_29_38_49", req.full_url)
+        data = fetch_bytes(MAIN, opener=opener)
+        self.assertEqual(data, MAIN_VALUE)
+        self.assertEqual(len(called), 2)
+        self.assertTrue(called[0].startswith(MAIN + "?"))
+        self.assertEqual(called[1], MAIN)
+
+    def test_nonrecoverable_http_status_does_not_repeat_requests(self):
+        called = []
+        def opener(req, timeout):
+            called.append(req.full_url)
+            raise HTTPError(req.full_url, 429, "Too Many Requests", {}, None)
+        with self.assertRaisesRegex(VersionSourceError, "HTTP 429"):
+            fetch_bytes(MAIN, opener=opener)
+        self.assertEqual(len(called), 1)
 
     def test_no_sources_are_not_false_success(self):
         self.assertEqual(check_official_versions()["status"], "unverified")
