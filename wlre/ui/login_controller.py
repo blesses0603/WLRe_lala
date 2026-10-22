@@ -35,12 +35,20 @@ class LoginController:
         window=tk.Toplevel(self.root)
         self.login_window=window
         window.title('飄流Re:LaLa  =By赤寧= · 登入／選角')
-        configure_dialog(window,900,580)
+        configure_dialog(window,900,630)
         window.resizable(False,False)
         window.protocol('WM_DELETE_WINDOW',self.close_login)
         self.login_tab=ttk.Frame(window,padding=12)
         self.login_tab.pack(fill='both',expand=True)
         heading(self.login_tab,'登入與選角','選擇帳號與分流，登入後再選取角色。')
+        version_row=ttk.Frame(self.login_tab)
+        version_row.pack(fill='x',pady=(0,6))
+        ttk.Label(version_row,textvariable=self.version_gate_text,wraplength=580,
+                  style='Muted.TLabel',justify='left').pack(side='left',fill='x',expand=True)
+        ttk.Button(version_row,text='重新檢查',command=self.start_version_check,
+                   padding=(3,2)).pack(side='right',padx=(4,0))
+        ttk.Button(version_row,text='遊戲目錄',command=self.choose_version_folder,
+                   padding=(3,2)).pack(side='right',padx=(4,0))
         connection_tools=ttk.Frame(self.login_tab)
         connection_tools.pack(fill='x',pady=(0,6))
         for text,callback in [('載入設定',self.load_profile),
@@ -85,7 +93,7 @@ class LoginController:
         ttk.Label(self.login_tab,textvariable=self.connection_status,wraplength=620).pack(fill='x')
         ttk.Label(self.login_tab,text='選角後等待世界資料同步完成，將自動開啟主頁。',style='Muted.TLabel').pack(anchor='w')
         self.update_role_choices(self.snapshot.get('roles',[]))
-        self.connect_button.configure(state='disabled' if self.live_active else 'normal')
+        self._set_login_gate_button()
         window.lift()
         window.focus_set()
 
