@@ -1,72 +1,53 @@
-"""Check the *official remote* YooAsset versions before allowing LaLa login.
+"""Remote official game resource compatibility gate; baseline 1262.
 
-The LaLa-supported baseline is 1262. Local installation versions, LaLa app
-version, cached manifests and game install paths are NEVER consulted.
-An official endpoint must first be independently verified and explicitly
-configured; otherwise the result is unverified, not a fabricated match.
+Do not read the local Unity installation, LaLa binary or disk ManifestFiles.
 """
-import os
-
 from wlre.services.official_version import (
-    BASELINE, check_official_versions, check_official_pc_versions,
+    BASELINE, RESOURCE_MAP_URL, check_official_game_resources, check_official_versions,
 )
 
 
 def configured_sources(environ=None):
-    """Only trusted version URLs supplied by deployment/user configuration."""
-    env = os.environ if environ is None else environ
-    return {
-        "MainPackage": env.get("WLRE_OFFICIAL_MAIN_VERSION_URL") or None,
-        "DataPackage": env.get("WLRE_OFFICIAL_DATA_VERSION_URL") or None,
-    }
+    """The public verified root; per-package paths are resolved dynamically."""
+    return {"ResourcePath_PC.dat": RESOURCE_MAP_URL}
 
 
-def run_prelogin_check(sources=None, *, checker=check_official_versions,
-                       discovery_checker=check_official_pc_versions):
-    """Compare remote resource versions with LaLa's 1262 compatibility baseline.
+def run_prelogin_check(sources=None, *, checker=None):
+    """Check official source and block upon a confirmed incompatible revision.
 
-    Explicit observed differences block login, even when the other endpoint
-    cannot be checked. Missing/failed endpoints are UNKNOWN, never synced.
-    No game credentials or files are accessed.
+    Explicit sources/checker are reserved for offline regression tests/CLI.
+    Normal GUI startup always performs the ResourcePath_PC.dat lookup.
     """
-    if sources is None:
-        # Automatic three-stage discovery (no setup, no local game files).
-        remote = discovery_checker()
+    if checker is not None:
+        remote = checker(sources or {})
+    elif sources is not None:
+        remote = check_official_versions(sources)
     else:
-        # Explicit URLs retained for diagnostics/tests only.
-        remote = checker(sources)
+        remote = check_official_game_resources()
     packages = remote.get("packages", {})
-    confirmed_change = (
+    package_changed = (
         remote.get("status") == "resources_changed" or
-        any(info.get("comparison") in {"newer", "older", "different"}
-            for info in packages.values())
+        any(item.get("comparison") in ("newer", "older", "different")
+            for item in packages.values())
     )
-    all_same = (remote.get("status") == "same_resources" and
-                all(packages.get(package, {}).get("comparison") == "same"
-                    for package in BASELINE))
-    if confirmed_change:
+    client_changed = bool(remote.get("newer_official_client"))
+    blocked = package_changed or client_changed
+    all_same = (
+        remote.get("status") == "same_resources" and
+        all(packages.get(package, {}).get("comparison") == "same" for package in BASELINE)
+    )
+    if blocked:
         status = "blocked"
-        message = (
-            "官方伺服器資源版本已與 LaLa 支援的 1262 不同，"
-            "禁止登入；請等待 LaLa 更新與相容性驗證。"
-        )
+        if client_changed and not package_changed:
+            message = "官方遊戲客戶端版本已有變更，請等待 LaLa 更新與相容性確認；禁止登入。"
+        else:
+            message = "官方遊戲資源版本已與 LaLa 支援的 1262 不同，禁止登入；請等待 LaLa 更新與相容性驗證。"
     elif all_same:
         status = "version_identifiers_match"
-        message = (
-            "官方 MainPackage／DataPackage 版本識別值均符合 1262；"
-            "遊戲協定是否相容仍須另外驗證。"
-        )
+        message = ("官方 MainPackage／DataPackage 版本識別值均符合 1262；"
+                   "遊戲協定相容性仍須另外驗證。")
     else:
         status = "unverified"
-        message = (
-            "官方遊戲資源版本無法驗證：官方版本設定或資源查詢失敗。"
-            "此結果不代表已同步最新版。"
-        )
-    return {
-        "status": status,
-        "blocked": confirmed_change,
-        "message": message,
-        "remote": remote,
-        "baseline": dict(BASELINE),
-        "source": "official_remote_only",
-    }
+        message = "官方版本無法完整驗證，可能是網路失敗或更新資料不足；不代表已同步官方最新版本。"
+    return {"status": status, "blocked": blocked, "message": message,
+            "remote": remote, "baseline": dict(BASELINE), "source": "official_remote_only"}
