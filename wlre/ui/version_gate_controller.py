@@ -60,6 +60,9 @@ class VersionGateController:
         window = tk.Toplevel(self.root)
         self.version_window = window
         window.title("飄流Re:LaLa · 官方線上版本檢測")
+        # The wallpaper remains visible but no longer competes with version
+        # identifiers or warning text. Only this window gets the darker tint.
+        window._glass_background_dim = 0.79
         configure_dialog(window, 810, 480)
         window.protocol("WM_DELETE_WINDOW", self.close)
         window.resizable(False, False)
@@ -109,8 +112,15 @@ class VersionGateController:
                   wraplength=730, justify="left").pack(
                       anchor="w", fill="x", pady=(2, 8))
 
-        details = ttk.LabelFrame(body, text="官方遊戲資源（唯讀）", padding=(12, 6))
+        # A title above a single painted section avoids the native
+        # TLabelframe notch + glass outline which created the double border.
+        ttk.Label(body, text="官方遊戲資源（唯讀）",
+                  style="Section.TLabel").pack(anchor="w", pady=(0, 3))
+        details = ttk.Frame(body, padding=(14, 9))
+        details._section_outline = True
+        details._surface_fill = (6, 20, 36, 226)
         details.pack(fill="x")
+        self._version_resource_panel = details
         details.columnconfigure(1, weight=1)
         for index, (label, variable) in enumerate((
                 ("資源路徑 DataVer", self._version_path),
@@ -125,9 +135,13 @@ class VersionGateController:
                       wraplength=555, justify="left").grid(
                           row=index, column=1, sticky="ew", pady=2)
 
-        updates = ttk.LabelFrame(body, text="LaLa 程式更新（GitHub 正式 Release）",
-                                 padding=(12, 7))
-        updates.pack(fill="x", pady=(9, 0))
+        ttk.Label(body, text="LaLa 程式更新（GitHub 正式 Release）",
+                  style="Section.TLabel").pack(anchor="w", pady=(9, 3))
+        updates = ttk.Frame(body, padding=(14, 9))
+        updates._section_outline = True
+        updates._surface_fill = (6, 20, 36, 226)
+        updates.pack(fill="x")
+        self._version_release_panel = updates
         ttk.Label(updates, textvariable=self._lala_release_text,
                   wraplength=730, justify="left").pack(anchor="w", fill="x")
 
