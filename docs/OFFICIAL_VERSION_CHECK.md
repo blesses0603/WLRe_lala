@@ -1,80 +1,50 @@
-# 官方遊戲資源版本檢測｜第一階段（唯讀、尚待確認實際 Manifest URL）
+# WLRe_LaLa｜電腦版登入前檢查官方線上遊戲資源版本
 
-## 證據與限制
+## 檢測目標：官方伺服器，不是本機遊戲或 LaLa 版本
 
-- 從使用者提供的 **1262** `global-metadata.dat` 看到 `https://wlreupload.chinesegamer.net/wln/TW/`，這是**候選官方資源主機目錄**，**不是**已確認可下載的 Manifest 端點。
-- 1262 `Lua/Logic/Resource.lua` 使用 `CGResource.DownloadAndLoadAssets(0)` 並監控下載錯誤及版本錯誤。IL2CPP metadata 含 `UpdatePackageVersion`、`PackageManifest` 等符號；無法由此推定實際版本檔路徑。
-- 官方首頁 `https://wlre.chinesegamer.net/` 可用來人工追蹤更新，**公告內容不能用來證明協定相容**。
-- 現階段**禁止**把公開版本路徑的推測值當成已驗證網址；1262 為本專案基準，不代表官方目前版本。
+LaLa 目前支援的 **遊戲資源基準為 1262**（與 LaLa 應用程式版本 `v0.5.17` 完全不同）。
 
-## 執行方式（桌面與 Android 的 Python 原始碼開發環境）
+啟動 LaLa 時先顯示獨立「官方伺服器遊戲資源版本檢測」視窗。工具需從已核實的**官方公開更新來源**取得 MainPackage 和 DataPackage 當前版本字串，再與內建的 1262 相比。檢測完全不讀取本機遊戲安裝目錄、Unity Manifest、LaLa EXE 版本、帳密或登入封包；使用者不必安裝原版遊戲，亦不必選取檔案。
 
-```bash
-python -m tools.check_official_version
-```
+| 官方查詢結果 | 登入前動作 |
+| --- | --- |
+| 官方兩個資源版本都等於 1262 | 顯示版本識別值符合基準，進入登入畫面；不表示協定相容性已驗證 |
+| 官方任一資源版本不同於 1262 | **停在檢測視窗，禁止進入登入頁與送出登入封包；提示請等待 LaLa 更新** |
+| 來源未設定、斷網、URL 未確認、只有部分成功且沒有確認版本異動 | **明確顯示「無法驗證」**，須由使用者按「了解風險，繼續登入」才能進入登入頁；絕不可顯示「已同步」 |
+| 正在查詢 | 檢測視窗顯示進度、停用登入入口 |
 
-未設定可確認的網址時回應 `unverified`，不會嘗試亂猜或掃描路徑；可在取得可信的官方 MainPackage/DataPackage `.version` 網址後執行：
+檢測採背景工作執行，避免 Tk 主執行緒凍結；按「重新查詢官方版本」會撤銷之前登入許可，過期工作結果不會覆蓋新的檢測結果。登入按鈕本身以 `App.connect()` 重新確認檢測許可；已設定遠端來源時，查詢超過 5 分鐘則必須重檢。
 
-```bash
-python -m tools.check_official_version --main-url 'https://wlreupload.chinesegamer.net/wln/TW/<已確認的MainPackage檔案>.version' --data-url 'https://wlreupload.chinesegamer.net/wln/TW/<已確認的DataPackage檔案>.version' --strict
-```
+## 官方版本查詢網址：仍待確認
 
-上述路徑為**填寫格式示意**，非實際可用 URL；請不要直接執行帶 `<...>` 的示例。只向官方 host 的 `/wln/TW/` 路徑發出唯讀 HTTPS GET，5 秒 timeout、4 KiB 回應大小上限、不帶帳號密碼、不發遊戲封包、拒絕跳轉至其他主機。
+已分析的遊戲 1262 `global-metadata.dat` 內包含
+`https://wlreupload.chinesegamer.net/wln/TW/`，但這只是候選 CDN 根目錄，**不是已核實可取得當前版本的 URL**。
 
-`status` 僅是**資源版本識別值**的比較：
+先前提供的封包擷取包含 `wlreftp.chinesegamer.net` 連線資訊，但一般 HTTPS 封包看不到加密的請求檔案路徑；不能因此推測 `.version` 完整網址。**不允許猜網址或暴力掃描官方伺服器**。
 
-- `same_resources`：兩個已驗證來源的版本字串都等於本專案 1262 基準，**不保證**伺服器協定、活動與帳號狀態相容。
-- `resources_changed`：至少一個取得的版本字串不等於 1262，且兩個來源皆可確認，需另行比對 Lua、資料庫與封包。
-- `unverified`：網址未知、只有部分來源成功、回應不符預期或連線失敗；**不得**顯示已同步。
-
-`--strict` 下 0 = 相同資源版本、1 = 資源變更、2 = 無法驗證。非 strict 模式提供可查看的 JSON 報告，無論版本狀態均退出 0。
-
-## 第二階段待辦
-
-1. 從最新官方原版客戶端可驗證的更新流程取得 **PC/Android 各自的完整 `.version` URL**，記錄 HTTPS 實際回應及版本格式，確認是否為公開唯讀資源。
-2. 將驗證過的來源設為各平台不同配置，再整合到 GUI 設定頁與 Android 主畫面，非同步更新狀態、保留最近一次成功檢測時間，網路錯誤時轉成 `unverified`。
-3. 確認是否需要第二層 Manifest 雜湊比較以避免僅版本字串相同卻資源不同。
-4. 新增在 GitHub Actions 定期唯讀執行的流程；來源未確認前不啟用排程，不暴力探測伺服器。
-
-本階段**沒有**進行正式伺服器端對端驗證、沒有修改遊戲協定或自動升級官方資料，且不要求更新桌面／Android 程式版本號。
-
-
-## 電腦版第二階段：登入前 1262 強制版本閘門
-
-此階段**僅修改電腦版**。不涉及 Android，且不改變程式版號、遊戲封包或帳密儲存。
-
-### 啟用流程
-
-1. 開啟 `WLRe_LaLa` 後自動以背景執行緒掃描原版遊戲 `*_Data/yoo/MainPackage/ManifestFiles` 與 `DataPackage/ManifestFiles`；檢查完成前「登入」按鈕不可使用。
-2. 自動尋找失敗時，在登入頁按「遊戲目錄」選擇遊戲資料夾或 `*_Data/yoo`，設定只保存在 LaLa 使用者本機資料目錄的 `official_game_yoo_root.txt`；不儲存遊戲帳密。
-3. 檢測 `MainPackage_1262_...bytes` / `.hash` 成對、`DataPackage_1262_...bytes` / `.hash` 成對，選擇觀測到的**最高完整檔案版本**，避免誤把 1076 等較舊快取當成新版。
-4. **只要其中任一資源包的最高完整檔名版本不等於 1262**，標示「遊戲版本異動，禁止登入，請等待 LaLa 更新與相容性驗證」，停用按鈕，也在 `App.connect` 執行前重掃本機清單並封鎖，阻止繞過介面的登入請求。
-5. 官方遠端版本來源尚未驗證。若未找到本機資料、資料不完整或沒有已確認的遠端 URL，顯示「無法完整驗證」；此情況**不會冒充已同步**，但不會因為單純斷網或未設定目錄就一律停用既有登入。
-6. 如已由官方客戶端實證 `.version` 來源，可透過 **`WLRE_OFFICIAL_MAIN_VERSION_URL`** 和 **`WLRE_OFFICIAL_DATA_VERSION_URL`** 環境變數指定，沿用第一階段白名單 HTTPS 唯讀檢測；**任何一個遠端來源明確顯示與 1262 不同就禁止登入**，即使另一個來源不可用。未取得完整官方 URL 之前不可自行猜測。
-7. 顯示「重新檢查」按鈕，並在登入嘗試時重掃本機；已設定雙遠端來源且上次檢測超過五分鐘，會先重新檢測再允許新登入。
-
-**限制：** 檔名版本不是包體的完整 SHA-256 驗證；舊快取可能仍在目錄中，取最高完整版本是保守選擇。即使 1262 與線上版本字串相同，也不能保證伺服器協定相容。
-
-### 如何擷取正式版本查詢網址
-
-原版遊戲啟動並進入更新檢查階段（**不要登入帳號**）後，在 PowerShell 於專案根目錄執行：
+確認來源後，可在電腦環境中設定：
 
 ```powershell
-.\tools\find_official_version_urls.ps1
+$env:WLRE_OFFICIAL_MAIN_VERSION_URL = "https://<官方已驗證的 MainPackage 完整版本端點>"
+$env:WLRE_OFFICIAL_DATA_VERSION_URL = "https://<官方已驗證的 DataPackage 完整版本端點>"
 ```
 
-腳本會只讀搜尋 `%USERPROFILE%\AppData\LocalLow\**\Player.log` 與已知遊戲安裝路徑下的 Log，擷取官方 `chinesegamer.net` 網域、包含 Manifest／version／package／update 等字樣的 URL，並將**可能包含 Token 的 query/fragment 移除**後保存成 `WLRE_官方版本網址候選.txt`。如無候選 URL，可能官方不將完整 URL 記錄在日誌中；此時尚需從官方客戶端可見的更新連線事件中確認，不能使用未經驗證的猜測網址。
+上述為格式示意，**不是可直接使用的正式 URL**。目前 `wlre/services/official_version.py` 只允許已觀測到的 `wlreupload.chinesegamer.net` /wln/TW/ HTTPS 版本文字或 JSON 檔案路徑，具 5 秒 timeout、4 KiB 回應上限及轉址主機驗證。若實際端點是其他官方主機，須先取得確切證據後再調整白名單與解析格式。
 
-首次擷取到 URL 後，仍需在不登入帳號的情況下確認來源真正為官網、HTTPS 回傳正常、內容為正式資源版本字串，才能寫入檢測來源配置。不要傳送含有帳號密碼、Session Cookie 或授權 Token 的完整封包日誌。
+## 如何找正式來源（不讀取本機版本）
 
-## 第三階段：獨立登入前版本檢測視窗（桌面版）
+- `tools/find_official_version_urls.ps1` 是**診斷用途**，只搜尋原版遊戲的 Log 中可能出現的更新請求 URL，並移除 URL query/fragment，避免洩露 Session Token；**這個檔案不參與 LaLa 每次登入前的版本判斷**。
+- 如原版遊戲日誌沒有網址，請從官方遊戲的更新階段確認實際連線請求及回應格式，或尋找官方公開文件。找到完整 URL 前，程式必須保持「無法驗證」。
+- 官方遊戲維護公告可以當提示，但不應直接當作 MainPackage/DataPackage 的實際版號或協定相容性證據。
 
-- LaLa 啟動時先建立獨立的「官方遊戲資源版本檢測」視窗，**登入表單會先隱藏**。
-- 顯示預設 1262、MainPackage／DataPackage 已偵測到的本機版號、遊戲資源路徑、官方遠端版號是否可驗證。
-- 背景檢查期間顯示不定進度條，且「進入登入畫面」按鈕停用；沒有使用遊戲帳號或封包。
-- **確認版本異動**時停留在版本視窗，顯示「遊戲版本異動 · 請等待 LaLa 更新」並禁止進入登入頁；同時保留原本的 `App.connect()` 實際連線前再次掃描及阻擋。
-- **遠端無法驗證**時明確顯示未知，不提供虛假的「已同步」結論；使用者必須自行按「了解風險，繼續登入」，才會出現登入表單。
-- 使用者可在此視窗「選擇遊戲目錄」、「重新檢查」或「結束程式」；返回登入頁後仍可從「版本檢測」按鈕回到獨立視窗。
-- 仍需驗證官方實際 YooAsset 遠端查詢路徑與回應格式，目前的本機 Manifest 檢測**不等於**官方即時版本比對。
+## 驗收
 
-驗收重點：啟動時登入表單不可見、未檢查完不可進入登入、1262／1275 不同時阻擋並提示等待更新、無法驗證時明確揭示風險、重檢結果不會被舊背景工作覆蓋。涵蓋 `tests/test_prelogin_version_window.py`。
+```powershell
+python -m unittest discover -s tests -p "test_game_version_gate.py" -v
+python -m unittest discover -s tests -p "test_official_version.py" -v
+python -m unittest discover -s tests -p "test_prelogin_version_window.py" -v
+```
+
+測試要覆蓋以下保證：本機遊戲即使存在 1275 Manifest，也不能單獨造成封鎖；只有**可信官方遠端來源**確認 1275 與 1262 不符才阻擋登入。尚未取得真正官方 URL 前，模擬回應測試不能宣稱完成正式伺服器 E2E 驗收。
+
+此改動僅限 Windows/macOS 電腦版，**不修改 Android、不合併 main、不發布 Release**。現行開發版號仍為 v0.5.17。
