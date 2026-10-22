@@ -1,105 +1,97 @@
-"""No game account, network or Unity installation required."""
+"""Official server version is the ONLY gate; local game files do not matter."""
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
-from wlre.services.game_version_gate import (
-    find_yoo_root, run_prelogin_check, scan_local_manifests,
-)
-
-
-def paired(folder, package, version, stamp="2026_10_21_18_29_38_49"):
-    for suffix in ("bytes", "hash"):
-        (folder / f"{package}_{version}_{stamp}.{suffix}").write_bytes(b"x")
+from wlre.services.game_version_gate import configured_sources, run_prelogin_check
 
 
-class LocalGameVersionTests(unittest.TestCase):
-    def setUp(self):
-        self.temp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.temp.cleanup)
-        self.root = Path(self.temp.name) / "SampleGame_Data" / "yoo"
-        for name in ("MainPackage", "DataPackage"):
-            (self.root / name / "ManifestFiles").mkdir(parents=True)
+def response(main="1262", data="1262", *, state="same_resources"):
+    return {
+        "status": state,
+        "packages": {
+            "MainPackage": {"remote": main,
+                            "comparison": "same" if main == "1262" else "newer"},
+            "DataPackage": {"remote": data,
+                            "comparison": "same" if data == "1262" else "newer"},
+        },
+        "protocol_compatibility": "unverified",
+    }
 
-    def test_1262_is_local_match_not_official_verified(self):
-        for name in ("MainPackage", "DataPackage"):
-            paired(self.root / name / "ManifestFiles", name, "1262")
-        with patch("wlre.services.game_version_gate.check_official_versions") as check:
-            check.return_value = {"status": "unverified", "packages": {}}
-            result = run_prelogin_check(self.root)
+
+class RemoteGameVersionTests(unittest.TestCase):
+    def test_missing_official_urls_never_claims_a_match(self):
+        with patch.dict("os.environ", {}, clear=True):
+            result = run_prelogin_check()
         self.assertFalse(result["blocked"])
         self.assertEqual(result["status"], "unverified")
-        self.assertEqual(result["local"]["status"], "same_local")
+        self.assertEqual(result["source"], "official_remote_only")
+        self.assertIn("不代表已同步", result["message"])
 
-    def test_1275_blocks_even_if_offline(self):
-        paired(self.root / "MainPackage" / "ManifestFiles", "MainPackage", "1262")
-        paired(self.root / "DataPackage" / "ManifestFiles", "DataPackage", "1275")
-        with patch("wlre.services.game_version_gate.check_official_versions") as check:
-            check.return_value = {"status": "unverified", "packages": {}}
-            result = run_prelogin_check(self.root)
-        self.assertTrue(result["blocked"])
-        self.assertEqual(result["status"], "blocked")
-        self.assertIn("禁止登入", result["message"])
+    def test_config_sources_are_official_endpoint_urls_only(self):
+        with patch.dict("os.environ", {
+                "WLRE_OFFICIAL_MAIN_VERSION_URL": "https://example.invalid/a",
+                "WLRE_OFFICIAL_DATA_VERSION_URL": "https://example.invalid/b",
+                "WLRE_GAME_YOO_ROOT": "C:/local-game"}, clear=True):
+            self.assertEqual(configured_sources(), {
+                "MainPackage": "https://example.invalid/a",
+                "DataPackage": "https://example.invalid/b",
+            })
 
-    def test_newest_complete_pair_selected_and_older_cache_ignored(self):
-        folder = self.root / "MainPackage" / "ManifestFiles"
-        paired(folder, "MainPackage", "1076")
-        paired(folder, "MainPackage", "1262")
-        paired(self.root / "DataPackage" / "ManifestFiles", "DataPackage", "1262")
-        self.assertEqual(scan_local_manifests(self.root)["status"], "same_local")
-        paired(folder, "MainPackage", "1275")
-        self.assertEqual(scan_local_manifests(self.root)["status"], "changed")
-        self.assertEqual(scan_local_manifests(self.root)["packages"]["MainPackage"]["version"], "1275")
+    def test_remote_1262_equal_not_assume_protocol_match(self):
+        got = run_prelogin_check({}, checker=lambda _: response())
+        self.assertFalse(got["blocked"])
+        self.assertEqual(got["status"], "version_identifiers_match")
+        self.assertEqual(got["remote"]["protocol_compatibility"], "unverified")
 
-    def test_incomplete_manifest_not_claimed(self):
-        path = self.root / "MainPackage" / "ManifestFiles" / "MainPackage_1275_2026_10_21_18_29_38_49.bytes"
-        path.touch()
-        paired(self.root / "DataPackage" / "ManifestFiles", "DataPackage", "1262")
-        result = scan_local_manifests(self.root)
-        self.assertEqual(result["status"], "unverified")
-        self.assertEqual(result["packages"]["MainPackage"]["status"], "unverified")
+    def test_remote_1275_blocks_without_local_game_folder(self):
+        got = run_prelogin_check({}, checker=lambda _: response("1275", "1262",
+                                                            state="resources_changed"))
+        self.assertTrue(got["blocked"])
+        self.assertEqual(got["status"], "blocked")
+        self.assertIn("等待 LaLa 更新", got["message"])
 
-    def test_missing_root_not_claimed(self):
-        self.assertIsNone(find_yoo_root(Path(self.temp.name) / "missing", strict=True))
-        with patch("wlre.services.game_version_gate.find_yoo_root", return_value=None):
-            self.assertEqual(scan_local_manifests()["status"], "unverified")
+    def test_partial_official_change_blocks_if_other_endpoint_unavailable(self):
+        got = run_prelogin_check({}, checker=lambda _: {
+            "status": "unverified",
+            "packages": {
+                "MainPackage": {"remote": "1275", "comparison": "newer"},
+                "DataPackage": {"remote": None, "comparison": "unverified"},
+            },
+        })
+        self.assertTrue(got["blocked"])
 
-    def test_game_install_parent_autodiscovered(self):
-        paired(self.root / "MainPackage" / "ManifestFiles", "MainPackage", "1262")
-        paired(self.root / "DataPackage" / "ManifestFiles", "DataPackage", "1262")
-        self.assertEqual(find_yoo_root(self.root.parent.parent, strict=True), self.root)
+    def test_partial_result_with_no_confirmed_change_is_unknown(self):
+        got = run_prelogin_check({}, checker=lambda _: {
+            "status": "unverified",
+            "packages": {
+                "MainPackage": {"remote": "1262", "comparison": "same"},
+                "DataPackage": {"remote": None, "comparison": "unverified"},
+            },
+        })
+        self.assertEqual(got["status"], "unverified")
 
-    def test_confirmed_remote_delta_blocks_even_if_one_source_unavailable(self):
-        with patch("wlre.services.game_version_gate.check_official_versions") as check:
-            check.return_value = {
-                "status": "unverified",
-                "packages": {"MainPackage": {"comparison": "newer", "remote": "1275"},
-                             "DataPackage": {"comparison": "unverified"}}
-            }
-            result = run_prelogin_check(self.root)
-        self.assertTrue(result["blocked"])
+    def test_local_data_never_affects_version_decision(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder) / "Game_Data" / "yoo" / "MainPackage" / "ManifestFiles"
+            root.mkdir(parents=True)
+            (root / "MainPackage_1275_2026_10_21_18_29_38_49.bytes").touch()
+            with patch.dict("os.environ", {"WLRE_GAME_YOO_ROOT": folder}, clear=True):
+                got = run_prelogin_check()
+            self.assertEqual(got["status"], "unverified")
+            self.assertNotIn("local", got)
+            self.assertFalse(got["blocked"])
 
-    def test_app_connect_exits_before_account_or_network_on_block(self):
-        from types import SimpleNamespace
-        from unittest.mock import Mock
+    def test_app_connect_never_reads_account_or_network_before_gate(self):
         from wlre.ui.gui import App
-        mock_app = SimpleNamespace(assert_ui_thread=Mock(),
-                                   can_login_after_version_check=Mock(return_value=False))
-        with patch("wlre.ui.gui.run_client") as network:
-            self.assertIsNone(App.connect(mock_app))
-        mock_app.can_login_after_version_check.assert_called_once_with()
-        network.assert_not_called()
-
-    def test_remote_match_never_claims_protocol_compatibility(self):
-        for name in ("MainPackage", "DataPackage"):
-            paired(self.root / name / "ManifestFiles", name, "1262")
-        with patch("wlre.services.game_version_gate.check_official_versions") as check:
-            check.return_value = {"status": "same_resources", "packages": {},
-                                  "protocol_compatibility": "unverified"}
-            result = run_prelogin_check(self.root)
-        self.assertEqual(result["status"], "version_identifiers_match")
-        self.assertEqual(result["remote"]["protocol_compatibility"], "unverified")
+        fake = SimpleNamespace(assert_ui_thread=Mock(),
+                               can_login_after_version_check=Mock(return_value=False))
+        with patch("wlre.ui.gui.run_client") as client:
+            self.assertIsNone(App.connect(fake))
+        fake.can_login_after_version_check.assert_called_once_with()
+        client.assert_not_called()
 
 
 if __name__ == "__main__":
