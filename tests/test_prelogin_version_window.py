@@ -87,6 +87,27 @@ class PreloginVersionWindowTests(unittest.TestCase):
         self.app.continue_to_login()
         self.assertNotEqual(self.app.login_window.state(), "withdrawn")
 
+    def test_unknown_source_exposes_failure_stage(self):
+        response = official_result(status="unverified")
+        response["remote"]["failed_stage"] = "ResourcePath_PC.dat"
+        response["remote"]["reason"] = "DNS 無法解析官方網域"
+        self.deliver(response)
+        self.assertIn("ResourcePath_PC.dat", self.app._version_remote.get())
+        self.assertIn("DNS", self.app._version_remote.get())
+
+    def test_action_buttons_remain_visible_with_long_status(self):
+        # A high-DPI viewport must not swallow the last action row.
+        self.app.version_gate_text.set("官方版本回應尚待驗證。" * 35)
+        self.app._lala_release_text.set("正在核對 GitHub 正式發行版本。" * 35)
+        self.root.update()
+        window = self.app.version_window
+        button = self.app._version_continue_button
+        self.assertTrue(button.winfo_ismapped())
+        window_bottom = window.winfo_rooty() + window.winfo_height()
+        button_bottom = button.winfo_rooty() + button.winfo_height()
+        self.assertLessEqual(button_bottom, window_bottom)
+        self.assertTrue(hasattr(self.app, "_version_canvas"))
+
     def test_reopen_revokes_previous_approval(self):
         self.deliver(official_result(status="unverified"))
         self.app.continue_to_login()
