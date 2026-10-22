@@ -159,7 +159,16 @@ def parse_resource_path(body, exe_version=SUPPORTED_OFFICIAL_EXE_VERSION):
             newer_exe.append(item["ExeVer"])
     if len(matched) != 1:
         raise VersionSourceError("官方找不到唯一對應的遊戲程式版本")
-    return {"exe_version": exe_version, "data_version": matched[0],
+    # A newly published official PC executable may change DataVer. Check the
+    # newest public mapping and block the unsupported executable separately;
+    # never keep fetching the old 1.3.21 path as if it were the latest.
+    latest = max(rows, key=lambda item: tuple(map(int, item["ExeVer"].split("."))))
+    latest_version = tuple(map(int, latest["ExeVer"].split(".")))
+    supported_version = tuple(map(int, exe_version.split(".")))
+    actual_path_version = latest["DataVer"] if latest_version > supported_version else matched[0]
+    return {"exe_version": exe_version, "data_version": actual_path_version,
+            "supported_data_version": matched[0],
+            "selected_exe_version": latest["ExeVer"] if latest_version > supported_version else exe_version,
             "newer_exe_versions": sorted(set(newer_exe), key=lambda x: tuple(map(int, x.split("."))))}
 
 
