@@ -167,7 +167,7 @@ class VersionGateController:
             comparison = record.get("comparison", "unverified")
             if value is None:
                 reason = record.get("reason")
-                variable.set("查詢失敗：" + reason if reason else "尚無官方版本回應")
+                variable.set("無法驗證：" + reason if reason else "無法驗證：尚無官方版本回應")
             elif comparison == "same":
                 variable.set(f"{value} · 與 1262 相同")
             else:
