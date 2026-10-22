@@ -20,6 +20,7 @@ class VersionGateController:
         self._version_gate_entry_approved = False
         self.version_window = None
         self._version_heading = tk.StringVar(value="正在檢測版本…")
+        self._version_baseline = tk.StringVar(value="1262")
         self._version_main = tk.StringVar(value="等待官方查詢")
         self._version_data = tk.StringVar(value="等待官方查詢")
         self._version_remote = tk.StringVar(value="尚未驗證")
@@ -58,7 +59,7 @@ class VersionGateController:
 
         details = ttk.LabelFrame(body, text="線上版本比較", padding=(12, 9))
         details.pack(fill="x")
-        for label, var in (("LaLa 支援資源", tk.StringVar(value="1262")),
+        for label, var in (("LaLa 支援資源", self._version_baseline),
                            ("MainPackage", self._version_main),
                            ("DataPackage", self._version_data),
                            ("查詢狀態", self._version_remote)):
