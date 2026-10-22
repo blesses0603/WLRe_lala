@@ -15,6 +15,18 @@
 3. `https://wlreftp.chinesegamer.net/WLN/TW/1.3.21/ResourcesPC/AssetBundle/MainPackage.version`。2026-10-22 觀測回覆 `1275_2026_10_21_18_29_38_49`。
 4. `https://wlreftp.chinesegamer.net/WLN/TW/1.3.21/ResourcesPC/AssetBundle/DataPackage.version`。2026-10-22 觀測回覆 `1275_2026_10_21_18_27_33_84`。
 
+### 2026-10-23：DataVer 優先查詢與官方回應格式相容
+
+使用者在 Fiddler 擷取的第一階段請求帶有小數形式的動態查詢參數，例如：
+
+`https://wlreftp.chinesegamer.net/WLN/TW/ResourcePath_PC.dat?46317.9367265972`
+
+參數僅用來避免舊快取，不代表 DataVer、不能固定使用某次擷取值，程式產生自己的時間戳，並僅接受數字或小數的單一查詢參數。實際的 DataVer 必須透過伺服器回應的 `ExeVer`、`DataVer` 對照表取得。
+
+2026-10-23 使用者實機的 `ResourcePath_PC.dat` 回應長度為 **164 bytes**，嚴格 JSON 解析報錯。將先前 Fiddler 顯示的四筆對照資料加上 CRLF 換行及最後一筆後方的尾逗號，**可重建 164 bytes 的 JSON-like 格式**。這是符合證據的格式假說，尚未直接取得本次實機的原始 bytes；修正只移除最外層陣列結尾的**單一尾逗號**，不放寬其他 JSON 語法、路徑格式、版本欄位驗證。
+
+正式查詢順序：`ResourcePath_PC.dat` → 對照 `ExeVer=1.3.0` 取得 `DataVer` → `{DataVer}/ResourcesPC/AssetBundle/DataPackage.version` → 相同 DataVer 的 `MainPackage.version`。以雙包完整 1262 Manifest 識別值作為登入前比對基準。如果對照表仍不可讀，結果標為無法驗證，不得直接套用之前的 `1.3.21`。
+
 以上回覆只代表**當時**已觀測到的值，不得寫死為未來官方最新版本。每次啟動／重新查詢都使用 HTTPS GET 查公開檔案，不需遊戲帳密。下載請求附帶隨機時間參數、no-cache/no-store 標頭降低 CDN 快取誤用風險；但不能保證 CDN 任意延遲都不存在。
 
 只允許 `wlreftp.chinesegamer.net` 的已觀測 URL 型態、TLS、不帶帳密/非預期參數/任意路徑。最多讀取 4 KiB，遇到錯誤格式、轉址、過大檔案不當成版本一致；查不到映射時**不使用上次快取**當最新版本。這裡不使用 `wlreupload.chinesegamer.net` 的舊猜測路徑。
