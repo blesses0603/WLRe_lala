@@ -249,6 +249,63 @@ class OfficialResourceVersionTests(unittest.TestCase):
         self.assertIn("HTML", result["reason"])
         self.assertEqual(len(calls), 2)
 
+    def test_fiddler_164byte_trailing_comma_to_dynamic_datapackage_url(self):
+        # Reconstructed from the user's Fiddler ExeVer/DataVer values:
+        # CRLF lines and an extra comma before ']' produce exactly 164 bytes.
+        response = (
+            b'[\r\n'
+            b'{"ExeVer":"1.1.3","DataVer":"1.3.21"},\r\n'
+            b'{"ExeVer":"1.1.4","DataVer":"1.3.21"},\r\n'
+            b'{"ExeVer":"1.2.0","DataVer":"1.3.21"},\r\n'
+            b'{"ExeVer":"1.3.0","DataVer":"1.3.21"},\r\n'
+            b']'
+        )
+        self.assertEqual(len(response), 164)
+        parsed = parse_resource_path(response, exe_version="1.3.0")
+        self.assertEqual(parsed["data_version"], "1.3.21")
+        observed = {RESOURCE_MAP_URL: response, DATA: DATA_VALUE, MAIN: MAIN_VALUE}
+        order = []
+
+        def fetching(url):
+            order.append(url)
+            return observed[url]
+
+        checked = check_official_game_resources(fetcher=fetching)
+        self.assertEqual(order, [RESOURCE_MAP_URL, DATA, MAIN])
+        self.assertEqual(checked["resource_path"], "1.3.21")
+        self.assertEqual(checked["packages"]["DataPackage"]["remote"], DATA_VALUE.decode())
+        self.assertEqual(checked["status"], "resources_changed")
+
+    def test_only_terminal_array_comma_may_be_repaired(self):
+        malformed = (
+            b'[{"ExeVer":"1.3.0",,"DataVer":"1.3.21"}]',
+            b'[{"ExeVer":"1.3.0","DataVer":"1.3.21"},,]',
+            b'[{"ExeVer":"1.3.0","DataVer":"1.3.21" // unsafe comment\n}]',
+            b'[{"ExeVer":"1.3.0","DataVer":"../private"},]',
+        )
+        for text in malformed:
+            with self.subTest(text=text), self.assertRaises(VersionSourceError):
+                parse_resource_path(text)
+
+    def test_official_fractional_numeric_cache_buster(self):
+        url = RESOURCE_MAP_URL + "?46317.9367265972"
+        self.assertEqual(validate_source(url), url)
+        with self.assertRaises(VersionSourceError):
+            validate_source(RESOURCE_MAP_URL + "? 46317.9367265972")
+        with self.assertRaises(VersionSourceError):
+            validate_source(RESOURCE_MAP_URL + "?46317.9367265972&other=1")
+        called = []
+
+        def opener(request, timeout):
+            called.append(request.full_url)
+            return FakeResponse(RESOURCE_MAP, request.full_url)
+
+        with patch("wlre.services.official_version.time.time",
+                   return_value=46317.9367265972):
+            got = fetch_bytes(RESOURCE_MAP_URL, opener=opener)
+        self.assertEqual(got, RESOURCE_MAP)
+        self.assertEqual(called, [url])
+
     def test_no_sources_are_not_false_success(self):
         self.assertEqual(check_official_versions()["status"], "unverified")
         self.assertEqual(BASELINE, {"MainPackage": "1262", "DataPackage": "1262"})
