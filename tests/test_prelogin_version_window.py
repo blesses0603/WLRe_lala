@@ -135,6 +135,21 @@ class PreloginVersionWindowTests(unittest.TestCase):
         self.assertTrue(self.app._lala_open_button.winfo_ismapped())
         self.assertIn("1275", self.app._version_main.get())
         self.assertIn("1275", self.app._version_data.get())
+        # Check the darker window and single-pane cards within the existing
+        # app instance, rather than creating two extra Tk interpreters on
+        # Windows. Tk widgets must only be cleaned up by their owning thread.
+        self.assertAlmostEqual(window._glass_background_dim, 0.79)
+        self.assertTrue(self.app._version_resource_panel._section_outline)
+        self.assertTrue(self.app._version_release_panel._section_outline)
+        self.assertEqual(
+            self.app._version_resource_panel._surface_fill, (6, 20, 36, 226))
+        self.assertEqual(
+            self.app._version_release_panel._surface_fill, (6, 20, 36, 226))
+        self.assertFalse(any(isinstance(w, ttk.LabelFrame) for w in widgets))
+        self.assertEqual(
+            sum(bool(getattr(w, "_section_outline", False)) for w in widgets),
+            2)
+        self.assertFalse(hasattr(self.app.root, "_glass_background_dim"))
 
     def test_compact_window_data_above_pinned_footer(self):
         self.deliver(official_result("1275", "1275", "blocked"))
@@ -145,44 +160,10 @@ class PreloginVersionWindowTests(unittest.TestCase):
         self.assertLessEqual(
             body.winfo_rooty() + body.winfo_height(),
             button.winfo_rooty())
-
-    def test_dark_version_dialog_has_only_single_layer_resource_cards(self):
-        self.deliver(official_result("1275", "1275", "blocked"))
-        self.root.update()
-        window = self.app.version_window
-        self.assertAlmostEqual(window._glass_background_dim, 0.79)
-        self.assertTrue(self.app._version_resource_panel._section_outline)
-        self.assertTrue(self.app._version_release_panel._section_outline)
-        self.assertEqual(
-            self.app._version_resource_panel._surface_fill, (6, 20, 36, 226))
-        self.assertEqual(
-            self.app._version_release_panel._surface_fill, (6, 20, 36, 226))
-
-        def descendants(widget):
-            for child in widget.winfo_children():
-                yield child
-                yield from descendants(child)
-
-        children = tuple(descendants(window))
-        self.assertFalse(any(isinstance(w, ttk.LabelFrame) for w in children))
-        self.assertEqual(
-            sum(bool(getattr(w, "_section_outline", False)) for w in children),
-            2,
-        )
-        self.assertTrue(self.app._version_resource_panel.winfo_ismapped())
-        self.assertTrue(self.app._version_release_panel.winfo_ismapped())
-        self.assertTrue(self.app._version_continue_button.instate(["disabled"]))
-
-    def test_dark_cards_stay_above_footer_and_background_separate(self):
-        self.deliver(official_result("1275", "1275", "blocked"))
-        self.root.update()
-        updates_bottom = (
-            self.app._version_release_panel.winfo_rooty()
-            + self.app._version_release_panel.winfo_height()
-        )
         self.assertLessEqual(
-            updates_bottom, self.app._version_continue_button.winfo_rooty())
-        self.assertFalse(hasattr(self.app.root, "_glass_background_dim"))
+            self.app._version_release_panel.winfo_rooty()
+            + self.app._version_release_panel.winfo_height(),
+            button.winfo_rooty())
 
     def test_reopen_revokes_previous_approval(self):
         self.deliver(official_result(status="unverified"))
