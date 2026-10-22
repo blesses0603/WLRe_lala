@@ -33,6 +33,13 @@ class LoginAndTabAlignment(unittest.TestCase):
         self.assertNotIn('先驗證帳號，再登入',captions)
         self.assertNotIn('驗證並登入',captions)
         self.assertEqual(self.app.connect_button.cget('text'),'登入')
+        # This test validates the old connection-verification contract after
+        # the independent official-version dialog has been acknowledged.
+        self.app._version_gate_result={
+            'status':'version_identifiers_match','blocked':False,
+            'remote':{'status':'same_resources'}}
+        self.app.version_gate_state='ready'
+        self.app.continue_to_login()
         self.app.profile={'fixture':True};self.app.worker=None
         self.app.account.set('fixture-account');self.app.password.set('fixture-password')
         with patch.object(self.app,'activate_account_settings'),patch.object(self.app,'save_saved_login',return_value=True),patch.object(self.app,'background',side_effect=lambda task:task()),patch('wlre.ui.gui.run_client') as run:
