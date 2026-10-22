@@ -184,19 +184,25 @@ def download_verified_release(info, *, directory=None, opener=None):
         # ZIP CRC and intended package entry, without unsafe extraction.
         import zipfile
         with zipfile.ZipFile(temporary) as package:
-            expected_file = ("WLRe_LaLa/WLRe_LaLa.exe" if sys.platform == "win32"
+            expected_file = ("WLRe_LaLa/WLRe_LaLa.exe" if name.endswith("_windows_x64.zip")
                              else "WLRe_LaLa.app/")
             names = package.namelist()
+            # Forbid traversal, archive-based symlinks, and decompression bombs.
+            if len(names) > 100000 or sum(x.file_size for x in package.infolist()) > 4 * MAX_ARCHIVE:
+                raise UpdateError("安裝包解壓大小或項目數異常")
             if (not any(x == expected_file or
                         (expected_file.endswith("/") and x.startswith(expected_file))
                         for x in names) or
-                    any(x.startswith("/") or ".." in Path(x).parts for x in names)):
+                    any(x.startswith("/") or x.startswith("\\") or "\\" in x or
+                        ".." in x.split("/") for x in names) or
+                    any(((x.external_attr >> 16) & 0o170000) == 0o120000
+                        for x in package.infolist())):
                 raise UpdateError("安裝包內容不符合預期結構")
             bad = package.testzip()
             if bad:
                 raise UpdateError("安裝包 ZIP CRC 驗證失敗")
         os.replace(temporary, archive)
-    except (OSError, ValueError) as exc:
+    except (OSError, ValueError, RuntimeError) as exc:
         raise UpdateError("LaLa 安裝包下載或驗證失敗") from exc
     finally:
         temporary.unlink(missing_ok=True)
