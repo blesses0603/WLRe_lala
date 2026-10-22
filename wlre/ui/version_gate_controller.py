@@ -54,12 +54,57 @@ class VersionGateController:
         window = tk.Toplevel(self.root)
         self.version_window = window
         window.title("飄流Re:LaLa · 官方線上版本檢測")
-        configure_dialog(window, 740, 530)
+        configure_dialog(window, 760, 620)
         window.protocol("WM_DELETE_WINDOW", self.close)
         window.resizable(False, False)
 
-        body = ttk.Frame(window, padding=(25, 23))
-        body.pack(fill="both", expand=True)
+        # Keep the actions visible even on high-DPI/small screens. The main
+        # content scrolls; the fixed footer never gets clipped by text growth.
+        shell = ttk.Frame(window)
+        shell.pack(fill="both", expand=True)
+        footer = ttk.Frame(shell, padding=(19, 8))
+        footer.pack(side="bottom", fill="x")
+        ttk.Separator(footer, orient="horizontal").pack(fill="x", pady=(0, 8))
+        self._version_progress = ttk.Progressbar(footer, mode="indeterminate")
+        self._version_progress.pack(fill="x", pady=(0, 6))
+        ttk.Label(
+            footer, text="版本查詢不需要帳號或密碼。查詢失敗會標示原因。",
+            style="Muted.TLabel", wraplength=690,
+        ).pack(anchor="w")
+        actions = ttk.Frame(footer)
+        actions.pack(fill="x", pady=(9, 0))
+        for col in range(3):
+            actions.columnconfigure(col, weight=1, uniform="version_gate_action")
+        ttk.Button(actions, text="結束程式", command=self.close).grid(
+            row=0, column=0, sticky="ew", padx=(0, 7))
+        ttk.Button(actions, text="重新查詢官方版本",
+                   command=self.start_version_check).grid(
+            row=0, column=1, sticky="ew", padx=(0, 7))
+        self._version_continue_button = ttk.Button(
+            actions, text="進入登入畫面", command=self.continue_to_login)
+        self._version_continue_button.grid(row=0, column=2, sticky="ew")
+
+        content = ttk.Frame(shell)
+        content.pack(side="top", fill="both", expand=True)
+        style_bg = (ttk.Style(window).lookup("TFrame", "background") or
+                    window.cget("background"))
+        canvas = tk.Canvas(content, background=style_bg, borderwidth=0,
+                           highlightthickness=0, takefocus=True)
+        scrollbar = ttk.Scrollbar(content, orient="vertical", command=canvas.yview)
+        canvas.configure(yscrollcommand=scrollbar.set)
+        scrollbar.pack(side="right", fill="y")
+        canvas.pack(side="left", fill="both", expand=True)
+        self._version_canvas = canvas
+        body = ttk.Frame(canvas, padding=(20, 14))
+        inner = canvas.create_window((0, 0), window=body, anchor="nw")
+        body.bind("<Configure>", lambda _event: canvas.configure(
+            scrollregion=canvas.bbox("all")))
+        canvas.bind("<Configure>", lambda event: canvas.itemconfigure(
+            inner, width=event.width))
+        window.bind("<MouseWheel>", lambda event: canvas.yview_scroll(
+            -1 if event.delta > 0 else 1, "units"))
+        window.bind("<Button-4>", lambda _event: canvas.yview_scroll(-1, "units"))
+        window.bind("<Button-5>", lambda _event: canvas.yview_scroll(1, "units"))
         ttk.Label(body, text="官方伺服器遊戲資源版本檢測",
                   font=("TkDefaultFont", 16, "bold")).pack(anchor="w")
         ttk.Label(body, text="只查詢官方線上 YooAsset 版本，不讀取本機遊戲檔案",
@@ -99,18 +144,6 @@ class VersionGateController:
         self._lala_open_button.pack(side="left", padx=(8, 0))
         self._lala_open_button.configure(state="disabled")
 
-        self._version_progress = ttk.Progressbar(body, mode="indeterminate")
-        self._version_progress.pack(fill="x", pady=(14, 7))
-        ttk.Label(body, text="版本查詢不需要帳號或密碼。官方端點未驗證時將顯示未知。",
-                  style="Muted.TLabel").pack(anchor="w")
-        actions = ttk.Frame(body)
-        actions.pack(fill="x", pady=(13, 0))
-        ttk.Button(actions, text="結束程式", command=self.close).pack(side="left")
-        ttk.Button(actions, text="重新查詢官方版本",
-                   command=self.start_version_check).pack(side="left", padx=(9, 0))
-        self._version_continue_button = ttk.Button(
-            actions, text="進入登入畫面", command=self.continue_to_login)
-        self._version_continue_button.pack(side="right")
         self._render_version_window()
         window.lift()
         window.focus_set()
@@ -133,7 +166,8 @@ class VersionGateController:
             value = record.get("remote")
             comparison = record.get("comparison", "unverified")
             if value is None:
-                variable.set("無法驗證官方線上版本")
+                reason = record.get("reason")
+                variable.set("查詢失敗：" + reason if reason else "尚無官方版本回應")
             elif comparison == "same":
                 variable.set(f"{value} · 與 1262 相同")
             else:
@@ -144,10 +178,21 @@ class VersionGateController:
             path.get("resource_path_version") if isinstance(path, dict) else None)
         self._version_path.set(value or "無法確認")
         source_status = remote.get("status")
-        self._version_remote.set({
+        status_text = {
             "same_resources": "兩個官方資源版本識別值均符合 1262",
             "resources_changed": "官方資源版本已異動",
-        }.get(source_status, "官方公開版本來源尚未確認或連線失敗"))
+        }.get(source_status)
+        if not status_text:
+            stage = remote.get("failed_stage")
+            reason = remote.get("reason")
+            if stage:
+                if not reason:
+                    record = packages.get(stage.removesuffix(".version"), {})
+                    reason = record.get("reason", "無法讀取官方回應")
+                status_text = f"{stage}：{reason}"
+            else:
+                status_text = "無法完整驗證；請檢查各資源包的錯誤原因"
+        self._version_remote.set(status_text)
         if self.version_gate_state == "checking":
             self._version_heading.set("正在向官方來源查詢版本…")
             self._version_main.set("查詢中…")
@@ -223,7 +268,9 @@ class VersionGateController:
                 result = run_prelogin_check()
             except Exception:
                 result = {"blocked": False, "status": "unverified",
-                          "message": "官方版本查詢失敗，無法確認最新版，不代表已同步。"}
+                          "message": "版本檢測程式發生例外，請回報開發者；不代表版本已同步。",
+                          "remote": {"status": "unverified", "failed_stage": "檢測程式",
+                                     "reason": "內部例外（非官方版本回應）"}}
             self._version_gate_messages.put((generation, result))
 
         threading.Thread(target=worker, name="official-version-check",
