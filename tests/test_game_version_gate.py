@@ -80,6 +80,17 @@ class LocalGameVersionTests(unittest.TestCase):
             result = run_prelogin_check(self.root)
         self.assertTrue(result["blocked"])
 
+    def test_app_connect_exits_before_account_or_network_on_block(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+        from wlre.ui.gui import App
+        mock_app = SimpleNamespace(assert_ui_thread=Mock(),
+                                   can_login_after_version_check=Mock(return_value=False))
+        with patch("wlre.ui.gui.run_client") as network:
+            self.assertIsNone(App.connect(mock_app))
+        mock_app.can_login_after_version_check.assert_called_once_with()
+        network.assert_not_called()
+
     def test_remote_match_never_claims_protocol_compatibility(self):
         for name in ("MainPackage", "DataPackage"):
             paired(self.root / name / "ManifestFiles", name, "1262")
