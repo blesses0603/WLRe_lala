@@ -158,6 +158,14 @@ class VersionGateController:
         self.hide_version_check()
         self.show_login()
 
+    def reopen_version_check(self):
+        if self.live_active:
+            messagebox.showinfo("已連線", "請先中斷連線，再重新檢查版本。",
+                                parent=self.dialog_parent())
+            return
+        self.show_version_check()
+        self.start_version_check()
+
     def choose_version_folder(self):
         folder = filedialog.askdirectory(
             parent=self.dialog_parent(), title="選擇官方遊戲安裝目錄或 YooAsset 資料夾")
