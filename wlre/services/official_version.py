@@ -60,7 +60,7 @@ def validate_source(url):
     if (parsed.scheme != "https" or parsed.hostname != OFFICIAL_HOST or
             port is not None or parsed.username is not None or
             parsed.password is not None or parsed.fragment or
-            (parsed.query and not re.fullmatch(r"[0-9]{1,20}", parsed.query))):
+            (parsed.query and not re.fullmatch(r"[0-9]{1,20}(?:\.[0-9]{1,16})?", parsed.query))):
         raise VersionSourceError("非官方 HTTPS 版本來源")
     if parsed.path != "/WLN/TW/ResourcePath_PC.dat" and not _RESOURCE_FILE.fullmatch(parsed.path):
         raise VersionSourceError("非已確認的官方資源版本路徑")
@@ -108,8 +108,10 @@ def _request_problem(exc):
 def fetch_bytes(url, *, timeout=12, opener=None, cache_bust=True):
     """GET with an optional numeric cache buster and a strict payload cap."""
     validate_source(url)
+    # The official Unity PC client appends an unkeyed numeric cache buster.
+    # 46317.9367265972 was one *example*, never a permanent version value.
     target = (url if "?" in url or not cache_bust else
-              url + "?" + str(int(time.time() * 1000)))
+              url + "?" + str(time.time()))
     validate_source(target)
     if opener is None:
         opener = build_opener(_ApprovedRedirect()).open
@@ -222,9 +224,20 @@ def parse_resource_path(body, exe_version=SUPPORTED_OFFICIAL_EXE_VERSION):
     data = _decode_resource_map(body)
     try:
         rows = json.loads(data)
-    except (ValueError, UnicodeError, AttributeError) as exc:
-        raise InvalidResourceBody(
-            f"ResourcePath_PC.dat JSON 語法錯誤（{len(body)} bytes）") from exc
+    except json.JSONDecodeError as original:
+        # The observed official 164-byte PC table uses a trailing comma on
+        # the *last array item*. Standard Python JSON rejects that Unity-like
+        # format. Remove ONLY that exact final comma; all other syntax stays
+        # strictly validated and no DataVer is guessed or hard-coded.
+        repaired = re.sub(r",(?=\s*\]\s*\Z)", "", data, count=1)
+        if repaired == data:
+            raise InvalidResourceBody(
+                f"ResourcePath_PC.dat JSON 語法錯誤（{len(body)} bytes）") from original
+        try:
+            rows = json.loads(repaired)
+        except (ValueError, UnicodeError) as exc:
+            raise InvalidResourceBody(
+                f"ResourcePath_PC.dat JSON 語法錯誤（{len(body)} bytes）") from exc
     if not isinstance(rows, list) or not 1 <= len(rows) <= 128:
         raise VersionSourceError("資源路徑對照表格式不符")
     matched = []
