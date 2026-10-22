@@ -87,7 +87,11 @@ class App(LoginController,AccountController,VersionGateController):
             self.status.set('連線設定無法讀取，請載入設定或匯入登入封包。')
         self.load_saved_login()
         root.protocol('WM_DELETE_WINDOW',self.close)
+        # Prepare legacy login widgets while keeping account inputs hidden.
+        # Only the separate version-verification window is visible at startup.
         self.show_login()
+        self.login_window.withdraw()
+        self.show_version_check()
         root.after(1,self.start_version_check)
         root.after(50,self.poll)
 
@@ -95,6 +99,9 @@ class App(LoginController,AccountController,VersionGateController):
         if threading.get_ident()!=self._ui_thread:raise RuntimeError("UI changes must run on the Tk thread")
 
     def dialog_parent(self):
+        if (self.version_window is not None and self.version_window.winfo_exists()
+                and self.version_window.state() != 'withdrawn'):
+            return self.version_window
         if self.login_window is not None and self.login_window.winfo_exists():
             return self.login_window
         return self.root
