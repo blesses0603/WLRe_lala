@@ -12,7 +12,8 @@ def artwork_canvas(art, size=REFERENCE_SIZE):
     return ImageOps.fit(art, size, method=Image.Resampling.LANCZOS)
 
 
-def window_background(canvas, width, height, *, main=False, outline=True):
+def window_background(canvas, width, height, *, main=False, outline=True,
+                      dim_amount=None):
     if width < 1 or height < 1:
         raise ValueError("Window background must have positive dimensions")
     cw, ch = canvas.size
@@ -21,9 +22,14 @@ def window_background(canvas, width, height, *, main=False, outline=True):
         image = canvas.crop((left, top, left + width, top + height))
     else:
         image = ImageOps.fit(canvas, (width, height), method=Image.Resampling.LANCZOS)
+    # Keep the global wallpaper appearance unchanged. A dialog may opt into
+    # a stronger tint without changing any other window's shared theme.
+    amount = (.46 if main else .60) if dim_amount is None else dim_amount
+    if not isinstance(amount, (int, float)) or not 0 <= amount <= 1:
+        raise ValueError("Background dim amount must be within 0..1")
     image = Image.blend(image.convert('RGB'),
                         Image.new('RGB', (width, height), '#071526'),
-                        .46 if main else .60)
+                        amount)
     result = image.convert('RGBA')
     if outline and width >= 5 and height >= 5:
         border = Image.new('RGBA', result.size)
