@@ -11,6 +11,7 @@ import re
 import socket
 import ssl
 import time
+import zlib
 from urllib.error import HTTPError, URLError
 from datetime import datetime, timezone
 from urllib.parse import urlsplit
@@ -41,6 +42,10 @@ _RESOURCE_FILE = re.compile(
 
 class VersionSourceError(ValueError):
     """Official game version data is missing, invalid or untrusted."""
+
+
+class InvalidResourceBody(VersionSourceError):
+    """Response was HTTP 200 but not usable as a resource-path JSON document."""
 
 
 def validate_source(url):
@@ -100,10 +105,10 @@ def _request_problem(exc):
     return "無法取得回應"
 
 
-def fetch_bytes(url, *, timeout=12, opener=None):
-    """GET with a cache-busting numeric query and a strict payload cap."""
+def fetch_bytes(url, *, timeout=12, opener=None, cache_bust=True):
+    """GET with an optional numeric cache buster and a strict payload cap."""
     validate_source(url)
-    target = (url if "?" in url else
+    target = (url if "?" in url or not cache_bust else
               url + "?" + str(int(time.time() * 1000)))
     validate_source(target)
     if opener is None:
@@ -178,12 +183,48 @@ def compare_versions(local, remote):
     return "different"
 
 
+def _decode_resource_map(body):
+    """Decode a *bounded* public version payload, not an arbitrary HTML response.
+
+    Fiddler displayed UTF-8 JSON; additionally support BOM UTF-16 and gzip
+    transport payloads safely. Never guess DataVer from untrusted text.
+    """
+    if not isinstance(body, bytes) or len(body) > MAX_RESPONSE_BYTES:
+        raise InvalidResourceBody("ResourcePath_PC.dat 回應型別或大小錯誤")
+    if body.startswith(b"\x1f\x8b"):
+        try:
+            decoder = zlib.decompressobj(16 + zlib.MAX_WBITS)
+            decoded = decoder.decompress(body, MAX_RESPONSE_BYTES + 1)
+            if (len(decoded) > MAX_RESPONSE_BYTES or not decoder.eof or
+                    decoder.unconsumed_tail or decoder.unused_data):
+                raise ValueError("過量或不完整的 gzip")
+            body = decoded
+        except (ValueError, zlib.error) as exc:
+            raise InvalidResourceBody("ResourcePath_PC.dat gzip 格式無效") from exc
+    try:
+        if body.startswith((b"\xff\xfe", b"\xfe\xff")):
+            data = body.decode("utf-16").strip()
+        else:
+            data = body.decode("utf-8-sig").strip()
+    except UnicodeError as exc:
+        raise InvalidResourceBody(
+            f"ResourcePath_PC.dat 不是可讀 JSON 文字（{len(body)} bytes）") from exc
+    if not data.startswith("["):
+        kind = ("HTML" if data[:32].lower().startswith(("<!doctype html", "<html", "<head", "<body"))
+                else "XML" if data.startswith("<?xml") else "非 JSON")
+        raise InvalidResourceBody(
+            f"ResourcePath_PC.dat 收到 {kind} 回應（{len(body)} bytes），並非官方版本對照表")
+    return data
+
+
 def parse_resource_path(body, exe_version=SUPPORTED_OFFICIAL_EXE_VERSION):
     """Parse official PC ExeVer->DataVer JSON; no best-guess version fallback."""
+    data = _decode_resource_map(body)
     try:
-        rows = json.loads(body.decode("utf-8-sig"))
+        rows = json.loads(data)
     except (ValueError, UnicodeError, AttributeError) as exc:
-        raise VersionSourceError("ResourcePath_PC.dat 不是有效 JSON") from exc
+        raise InvalidResourceBody(
+            f"ResourcePath_PC.dat JSON 語法錯誤（{len(body)} bytes）") from exc
     if not isinstance(rows, list) or not 1 <= len(rows) <= 128:
         raise VersionSourceError("資源路徑對照表格式不符")
     matched = []
@@ -264,7 +305,21 @@ def check_official_game_resources(*, fetcher=fetch_bytes, exe_version=SUPPORTED_
     """Sequential remote lookup. No local game/LaLa files are consulted."""
     checked_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
     try:
-        path = parse_resource_path(fetcher(RESOURCE_MAP_URL), exe_version=exe_version)
+        try:
+            path = parse_resource_path(fetcher(RESOURCE_MAP_URL), exe_version=exe_version)
+        except InvalidResourceBody as initial:
+            # A cache-busting query may return HTTP 200 with an HTML CDN page.
+            # Retry the exact Fiddler-observed path once, only for the normal
+            # network fetcher. Injected test fetchers never trigger live calls.
+            if fetcher is not fetch_bytes:
+                raise
+            try:
+                path = parse_resource_path(
+                    fetch_bytes(RESOURCE_MAP_URL, cache_bust=False),
+                    exe_version=exe_version)
+            except (OSError, ValueError) as retry_exc:
+                raise VersionSourceError(
+                    f"{initial}；原始網址重試：{_request_problem(retry_exc)}") from retry_exc
     except (VersionSourceError, OSError, ValueError) as exc:
         return {"status": "unverified", "packages": {
             p: {"baseline": b, "remote": None, "comparison": "unverified"}
