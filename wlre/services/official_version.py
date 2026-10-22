@@ -8,7 +8,10 @@ No local game installation or login credentials are needed.
 """
 import json
 import re
+import socket
+import ssl
 import time
+from urllib.error import HTTPError, URLError
 from datetime import datetime, timezone
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
@@ -71,35 +74,74 @@ class _ApprovedRedirect(HTTPRedirectHandler):
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
-def fetch_bytes(url, *, timeout=5, opener=None):
+def _request_problem(exc):
+    """Public-safe failure category; never put remote headers, URLs or tokens in UI."""
+    if isinstance(exc, HTTPError):
+        return f"HTTP {exc.code}（官方 CDN 拒絕或找不到檔案）"
+    if isinstance(exc, (TimeoutError, socket.timeout)):
+        return "連線逾時"
+    if isinstance(exc, (ssl.SSLError, ssl.CertificateError)):
+        return "TLS 憑證驗證失敗"
+    if isinstance(exc, URLError):
+        reason = exc.reason
+        if isinstance(reason, (ssl.SSLError, ssl.CertificateError)):
+            return "TLS 憑證驗證失敗"
+        if isinstance(reason, (TimeoutError, socket.timeout)):
+            return "連線逾時"
+        if isinstance(reason, socket.gaierror):
+            return "DNS 無法解析官方網域"
+        if isinstance(reason, ConnectionRefusedError):
+            return "官方伺服器拒絕連線"
+        return "HTTPS 連線失敗"
+    if isinstance(exc, socket.gaierror):
+        return "DNS 無法解析官方網域"
+    if isinstance(exc, VersionSourceError):
+        return str(exc)
+    return "無法取得回應"
+
+
+def fetch_bytes(url, *, timeout=12, opener=None):
     """GET with a cache-busting numeric query and a strict payload cap."""
     validate_source(url)
-    target = url + ("&" if "?" in url else "?") + str(int(time.time() * 1000))
-    # URL input may already have numeric query, so a second parameter is never
-    # allowed. Callers normally pass the canonical query-free official URL.
-    if "?" in url:
-        target = url
+    target = (url if "?" in url else
+              url + "?" + str(int(time.time() * 1000)))
     validate_source(target)
     if opener is None:
         opener = build_opener(_ApprovedRedirect()).open
-    try:
-        with opener(Request(target, headers={
-            "Accept": "text/plain, application/json",
-            "Cache-Control": "no-cache",
-            "Pragma": "no-cache",
-            "User-Agent": "WLRe-LaLa-VersionCheck/1",
-        }), timeout=timeout) as response:
-            validate_source(response.geturl())
-            if urlsplit(response.geturl()).path != urlsplit(url).path:
+    headers = {
+        "Accept": "text/plain, application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache",
+        "User-Agent": "WLRe-LaLa-VersionCheck/1",
+    }
+
+    def read_one(request_url):
+        validate_source(request_url)
+        with opener(Request(request_url, headers=headers), timeout=timeout) as response:
+            returned = response.geturl()
+            validate_source(returned)
+            if urlsplit(returned).path != urlsplit(url).path:
                 raise VersionSourceError("回應網址與預期不一致")
             if getattr(response, "status", 200) != 200:
-                raise VersionSourceError("版本來源 HTTP 狀態非 200")
+                raise VersionSourceError("官方回應不是 HTTP 200")
             body = response.read(MAX_RESPONSE_BYTES + 1)
+            if len(body) > MAX_RESPONSE_BYTES:
+                raise VersionSourceError("官方版本回應超過安全上限")
+            return body
+
+    try:
+        return read_one(target)
+    except HTTPError as exc:
+        # Some CDNs reject an unfamiliar cache-busting query. Retry exactly
+        # once with the observed canonical HTTPS path; never change host or TLS.
+        if exc.code not in (400, 403, 404) or "?" in url:
+            raise VersionSourceError(_request_problem(exc)) from exc
+        try:
+            return read_one(url)
+        except (OSError, ValueError) as retry_exc:
+            raise VersionSourceError(_request_problem(retry_exc)) from retry_exc
     except (OSError, ValueError) as exc:
-        raise VersionSourceError("官方版本查詢失敗") from exc
-    if len(body) > MAX_RESPONSE_BYTES:
-        raise VersionSourceError("官方版本回應超過安全上限")
-    return body
+        raise VersionSourceError(_request_problem(exc)) from exc
 
 
 def parse_version(body):
@@ -206,9 +248,10 @@ def check_official_versions(sources=None, *, fetcher=fetch_version,
             results[package] = {"baseline": baseline,
                                 "baseline_manifest": BASELINE_MANIFEST[package],
                                 "remote": remote, "comparison": comparison}
-        except (VersionSourceError, OSError, ValueError):
+        except (VersionSourceError, OSError, ValueError) as exc:
             results[package] = {"baseline": baseline, "remote": None,
-                                "comparison": "unverified", "reason": "官方版號無法驗證"}
+                                "comparison": "unverified",
+                                "reason": _request_problem(exc)}
     states = {v["comparison"] for v in results.values()}
     status = ("unverified" if "unverified" in states else
               "same_resources" if states == {"same"} else "resources_changed")
@@ -226,13 +269,17 @@ def check_official_game_resources(*, fetcher=fetch_bytes, exe_version=SUPPORTED_
         return {"status": "unverified", "packages": {
             p: {"baseline": b, "remote": None, "comparison": "unverified"}
             for p, b in BASELINE.items()}, "resource_path": None,
-            "newer_official_client": False, "reason": str(exc),
+            "newer_official_client": False, "failed_stage": "ResourcePath_PC.dat",
+            "reason": _request_problem(exc),
             "checked_at_utc": checked_at,
             "protocol_compatibility": "unverified", "read_only": True}
     urls = official_package_urls(path["data_version"])
     result = check_official_versions(urls, fetcher=lambda url: parse_version(fetcher(url)),
                                      strict_manifest=True)
     result["resource_path"] = path["data_version"]
+    result["failed_stage"] = next(
+        (pkg + ".version" for pkg in BASELINE
+         if result["packages"][pkg]["comparison"] == "unverified"), None)
     result["official_exe_version"] = exe_version
     result["newer_official_client"] = bool(path["newer_exe_versions"])
     result["newer_official_exe_versions"] = path["newer_exe_versions"]
