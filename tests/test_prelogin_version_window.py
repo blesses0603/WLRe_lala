@@ -56,7 +56,7 @@ class PreloginVersionWindowTests(unittest.TestCase):
         self.assertTrue(self.app.version_window.winfo_ismapped())
         self.assertEqual(self.app.login_window.state(), "withdrawn")
         self.assertEqual(str(self.app.connect_button.cget("state")), "disabled")
-        self.assertIn("1262", self.app.version_window.winfo_children()[0].winfo_children()[1].cget("text"))
+        self.assertEqual(self.app._version_baseline.get(), "1262")
         self.assertNotIn("選擇遊戲目錄",
                          [str(x.cget("text")) for x in self.app.version_window.winfo_children()
                           if "text" in x.keys()])
