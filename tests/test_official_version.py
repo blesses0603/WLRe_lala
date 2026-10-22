@@ -54,6 +54,9 @@ class VersionTests(unittest.TestCase):
         self.assertEqual(compare_versions("1262", "1262"), "same")
         self.assertEqual(compare_versions("1262", "1263"), "newer")
         self.assertEqual(compare_versions("1262", "1261"), "older")
+        self.assertEqual(compare_versions("1262", "1262_2026_10_21_18_29_38_49"), "same")
+        self.assertEqual(compare_versions("1262", "1275_2026_10_21_18_29_38_49"), "newer")
+        self.assertEqual(compare_versions("1262", "1261_2026_10_21_18_29_38_49"), "older")
         self.assertEqual(compare_versions("1262", "2026-10-22"), "different")
 
     def test_unverified_default_and_partial(self):
