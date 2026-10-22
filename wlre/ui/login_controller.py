@@ -35,20 +35,12 @@ class LoginController:
         window=tk.Toplevel(self.root)
         self.login_window=window
         window.title('飄流Re:LaLa  =By赤寧= · 登入／選角')
-        configure_dialog(window,900,630)
+        configure_dialog(window,900,580)
         window.resizable(False,False)
         window.protocol('WM_DELETE_WINDOW',self.close_login)
         self.login_tab=ttk.Frame(window,padding=12)
         self.login_tab.pack(fill='both',expand=True)
         heading(self.login_tab,'登入與選角','選擇帳號與分流，登入後再選取角色。')
-        version_row=ttk.Frame(self.login_tab)
-        version_row.pack(fill='x',pady=(0,6))
-        ttk.Label(version_row,textvariable=self.version_gate_text,wraplength=580,
-                  style='Muted.TLabel',justify='left').pack(side='left',fill='x',expand=True)
-        ttk.Button(version_row,text='重新檢查',command=self.start_version_check,
-                   padding=(3,2)).pack(side='right',padx=(4,0))
-        ttk.Button(version_row,text='遊戲目錄',command=self.choose_version_folder,
-                   padding=(3,2)).pack(side='right',padx=(4,0))
         connection_tools=ttk.Frame(self.login_tab)
         connection_tools.pack(fill='x',pady=(0,6))
         for text,callback in [('載入設定',self.load_profile),
@@ -59,6 +51,7 @@ class LoginController:
         self.saved_account_choice.pack(side='left',fill='x',expand=True,padx=(0,4))
         self.saved_account_choice.bind('<<ComboboxSelected>>',self.select_saved_login)
         ttk.Button(connection_tools,text='新增',command=self.new_saved_login).pack(side='right')
+        ttk.Button(connection_tools,text='版本檢測',command=self.reopen_version_check).pack(side='right',padx=(0,7))
         self.refresh_saved_accounts()
         login=LabelFrame(self.login_tab,text='帳號登入',padding=8)
         login.pack(fill='x')
@@ -311,6 +304,7 @@ class LoginController:
 
     def show_main(self):
         self.entered_world=True
+        self.hide_version_check()
         if self.login_window is not None:
             self.login_window.destroy()
             self.login_window=None
