@@ -33,7 +33,10 @@ def main(argv=None):
     parser.add_argument('--item', type=int, help='查看 1275 物品基本資料')
     parser.add_argument('--recipe', type=int, help='查看 1275 製作配方')
     parser.add_argument('--portal', type=int, help='查看 1275 場景與傳送安全狀態')
+    parser.add_argument('--door-index', type=int, help='搭配 --portal 查看 1275 官方門事件索引')
     args = parser.parse_args(argv)
+    if args.door_index is not None and args.portal is None:
+        parser.error('--door-index 必須搭配 --portal')
     source = load_preview(args.data, args.eve)
     result = {'revision': source.revision, 'mode': 'read_only',
               'packet_sending_enabled': source.can_send_packets,
@@ -53,7 +56,7 @@ def main(argv=None):
     if args.recipe is not None:
         result['recipe'] = source.recipe(args.recipe)
     if args.portal is not None:
-        result['portal'] = source.portal_status(args.portal)
+        result['portal'] = source.portal_status(args.portal, args.door_index)
     print(json.dumps(result, ensure_ascii=False, indent=2))
     print('唯讀預覽：1275 網路登入、NPC 交易、傳點觸發、製作排程均未開放。')
 
