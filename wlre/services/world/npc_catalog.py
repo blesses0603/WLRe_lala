@@ -85,7 +85,7 @@ class NPCIndex:
 
     def for_scene(self, scene):
         rows = self.scenes.get(str(scene), [])
-        if self.path is None:  # 1275 verified source: no caller-owned mutation
+        if getattr(self, 'path', False) is None:  # 1275 verified source
             from copy import deepcopy
             return deepcopy(rows)
         return list(rows)
