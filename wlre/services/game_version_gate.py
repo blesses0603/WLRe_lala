@@ -54,6 +54,26 @@ def run_prelogin_check(sources=None, *, checker=None):
         status = "unverified"
         message = (f"官方版本無法完整驗證（LaLa 支援基準 {support}），"
                    "可能是網路失敗或更新資料不足；不代表已同步官方最新版本。")
+    # Official 1275 version identifiers are necessary, but not sufficient:
+    # the matching, pinned 1275 data must be installed before live login.
+    if (checker is None and sources is None
+            and all(str(value) == '1275' for value in BASELINE.values())):
+        from wlre.services.world.runtime_1275 import ready
+        resources_ok, reason = ready()
+        if not resources_ok:
+            # A network outage/unknown revision must not bypass mandatory
+            # 1275 asset validation and accidentally use bundled 1262 IDs.
+            if blocked:
+                # Preserve confirmed remote update/rejection as the primary
+                # reason. Never rewrite a 1276 server change as local-only.
+                message += ' 另外本機 1275 資料驗證未通過：' + reason
+            else:
+                blocked = True
+                status = "blocked"
+                message = ('LaLa 1275 缺少已校驗的 NPC／商店／製作／場景資料；'
+                           '禁止使用 1262 舊索引登入。' + reason)
+        elif all_same and not blocked:
+            message += ' 已確認本機 1275 資源包完整；尚未等同正式伺服器協定驗收。'
     return {"status": status, "blocked": blocked, "message": message,
             "remote": remote, "baseline": dict(BASELINE),
             "baseline_label": support, "source": "official_remote_only"}

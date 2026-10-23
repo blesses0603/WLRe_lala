@@ -62,7 +62,10 @@ def load_items(path=None):
 
 @lru_cache(maxsize=1)
 def item_catalog():
-    """Memoize the immutable built-in, fully checksum-verified catalogue."""
+    """Serve 1275 verified ItemData by default, never 1262 on a 1275 login."""
+    from wlre.services.world.runtime_1275 import baseline_revision, active_runtime
+    if baseline_revision() == '1275':
+        return active_runtime().items
     return load_items()
 
 

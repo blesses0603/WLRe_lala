@@ -37,7 +37,7 @@ class BundledResourceCompatibilityTests(unittest.TestCase):
         self.assertEqual(full, official_version.BASELINE_MANIFEST)
         self.assertEqual(data["official_game_exe_version"],
                          official_version.SUPPORTED_OFFICIAL_EXE_VERSION)
-        self.assertEqual(baseline_label(numbers), "1262")
+        self.assertEqual(baseline_label(numbers), "1275")
         for package in PACKAGES:
             self.assertTrue(full[package].startswith(numbers[package] + "_"))
 
@@ -61,7 +61,9 @@ class BundledResourceCompatibilityTests(unittest.TestCase):
                     "MainPackage" if "MainPackage" in url else "DataPackage"])
             self.assertEqual(checked["status"], "same_resources")
             with patch("wlre.services.game_version_gate.check_official_game_resources",
-                       return_value=checked):
+                       return_value=checked), patch(
+                           "wlre.services.world.runtime_1275.ready",
+                           return_value=(True, "1275 fixture verified")):
                 matched = game_version_gate.run_prelogin_check()
             self.assertFalse(matched["blocked"])
             self.assertIn("1275", matched["message"])

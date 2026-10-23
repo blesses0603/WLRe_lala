@@ -7,6 +7,24 @@ from pathlib import Path
 
 class Portals:
     def __init__(self,path=None):
+        if path is None:
+            from wlre.services.world.runtime_1275 import baseline_revision, active_runtime
+            if baseline_revision() == '1275':
+                # 1275 doors are parsed, but door destinations and live trigger
+                # conditions have not been independently authenticated. Never
+                # send an unverified 1262 C20-8 door index.
+                try:
+                    verified = active_runtime()
+                    door_count = sum(len(v) for v in verified.doors.values())
+                except ValueError:
+                    # The version gate will block login until both ZIPs validate;
+                    # constructing the pre-login UI must not crash.
+                    door_count = 0
+                self.data = {'portals': {}, 'audit': [], 'entities': {},
+                             'source_revision': 1275,
+                             'door_count': door_count}
+                self.audit = {}
+                return
         self.data=json.loads((Path(path) if path else RESOURCE_ROOT.joinpath('portals.json')).read_text(encoding='utf8'))
         self.audit={r['scene']:r for r in self.data['audit']}
 

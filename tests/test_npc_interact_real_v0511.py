@@ -19,3 +19,25 @@ class RealEveInteractRegression(unittest.TestCase):
         eligible=sum(index.choices(scene,ind,talks) is not None
                      for scene,rows in index.scenes.items() for ind in rows)
         self.assertEqual(eligible,1554)
+
+
+# These historical tests verify bundled 1262 fixtures explicitly. Production
+# LaLa now defaults to 1275, with no implicit source fallback.
+from unittest.mock import patch as _legacy_patch
+_legacy_context = None
+
+
+def setUpModule():
+    global _legacy_context
+    _legacy_context = _legacy_patch(
+        'wlre.services.world.runtime_1275.baseline_revision', return_value='1262')
+    _legacy_context.start()
+    from wlre.services.world.npc_item_data import item_catalog
+    item_catalog.cache_clear()
+
+
+def tearDownModule():
+    from wlre.services.world.npc_item_data import item_catalog
+    item_catalog.cache_clear()
+    _legacy_context.stop()
+

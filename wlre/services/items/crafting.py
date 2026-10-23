@@ -8,6 +8,28 @@ from wlre.network.wire import Packet, Reader, Writer, ProtocolError
 from wlre.services.items.combat_resources import item_name, available
 
 RECIPES=json.loads(RESOURCE_ROOT.joinpath('crafting_catalog.json').read_text(encoding='utf-8'))['recipes']
+
+
+def activate_1275_recipes(runtime):
+    """Swap the shared recipe dict in place once the 1275 archive is verified.
+
+    UI/catalog modules import RECIPES by reference, so replacing the dict
+    object would leave stale 1262 data in existing components.
+    """
+    if runtime.revision != 1275:
+        raise ValueError('不能把非 1275 製作資料當成新版本')
+    checked = {}
+    for item_id, recipe in runtime.recipes.items():
+        item = runtime.items.get(item_id)
+        if not isinstance(item, dict) or type(item.get('open_used')) is not int:
+            raise ValueError('1275 配方缺少可核對的 ItemData 開放狀態：' + str(item_id))
+        checked[str(item_id)] = {**recipe, 'open_used': item['open_used']}
+    if len(checked) != 1032:
+        raise ValueError('1275 製作配方數量不符；拒絕切換資料')
+    RECIPES.clear()
+    RECIPES.update(checked)
+    return len(RECIPES)
+
 SPEED={39053:15,39007:2,39045:3,37202:3}
 
 def confirmed_unlocked(recipe):

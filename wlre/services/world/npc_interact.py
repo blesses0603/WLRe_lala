@@ -19,6 +19,12 @@ MAX_SIZE = 8 * 1024 * 1024
 
 class NPCInteractIndex:
     def __init__(self, path=None):
+        if path is None:
+            from wlre.services.world.runtime_1275 import baseline_revision, active_runtime
+            if baseline_revision() == '1275':
+                self.path = None
+                self.scenes = active_runtime().interact_index.scenes
+                return
         self.path = Path(path) if path is not None else RESOURCE_ROOT / NAME
         self.scenes = {}
         if not self.path.is_file():
@@ -81,7 +87,11 @@ class NPCInteractIndex:
     def get(self, scene, interact_index):
         if type(scene) is not int or type(interact_index) is not int:
             return None
-        return self.scenes.get(scene, {}).get(interact_index)
+        row = self.scenes.get(scene, {}).get(interact_index)
+        if getattr(self, 'path', False) is None and row is not None:  # Pinned 1275 data
+            from copy import deepcopy
+            return deepcopy(row)
+        return row
 
     def choices(self, scene, interact_index, talks):
         """Render ONLY normal verified 0-based choice rows; shops are blocked."""
