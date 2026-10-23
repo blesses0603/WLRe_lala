@@ -148,7 +148,30 @@ class PreloginVersionWindowTests(unittest.TestCase):
         self.assertFalse(any(isinstance(w, ttk.LabelFrame) for w in widgets))
         self.assertEqual(
             sum(bool(getattr(w, "_section_outline", False)) for w in widgets),
-            2)
+            3)
+        self.assertTrue(self.app._version_alert_panel._section_outline)
+        self.assertEqual(self.app._version_alert_panel._surface_fill,
+                         (9, 27, 46, 235))
+        self.assertTrue(self.app._version_alert_heading_label.winfo_ismapped())
+        self.assertTrue(self.app._version_alert_message_label.winfo_ismapped())
+        # The two duplicate labels highlighted in the user's screenshot
+        # must no longer appear in the version dialog.
+        visible_static_text = [
+            str(w.cget("text")) for w in widgets
+            if isinstance(w, ttk.Label) and not str(w.cget("textvariable"))
+        ]
+        self.assertNotIn("官方資源版本檢測", visible_static_text)
+        self.assertFalse(any("線上取得 DataVer，再比對" in label
+                             for label in visible_static_text))
+        self.assertTrue(
+            self.app._version_alert_heading_label.cget("style")
+            .endswith("VersionAlertHeading.TLabel"))
+        self.assertTrue(
+            self.app._version_alert_message_label.cget("style")
+            .endswith("VersionAlertMessage.TLabel"))
+        style = ttk.Style(self.root)
+        self.assertIn("-20", str(style.lookup("VersionAlertHeading.TLabel", "font")))
+        self.assertIn("-16", str(style.lookup("VersionAlertMessage.TLabel", "font")))
         self.assertFalse(hasattr(self.app.root, "_glass_background_dim"))
 
     def test_compact_window_data_above_pinned_footer(self):
@@ -164,6 +187,12 @@ class PreloginVersionWindowTests(unittest.TestCase):
             self.app._version_release_panel.winfo_rooty()
             + self.app._version_release_panel.winfo_height(),
             button.winfo_rooty())
+        self.assertLess(
+            self.app._version_alert_panel.winfo_rooty()
+            + self.app._version_alert_panel.winfo_height(),
+            self.app._version_resource_panel.winfo_rooty())
+        self.assertGreater(
+            self.app._version_alert_panel.winfo_height(), 55)
 
     def test_reopen_revokes_previous_approval(self):
         self.deliver(official_result(status="unverified"))
