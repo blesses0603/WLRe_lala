@@ -87,7 +87,11 @@ class NPCInteractIndex:
     def get(self, scene, interact_index):
         if type(scene) is not int or type(interact_index) is not int:
             return None
-        return self.scenes.get(scene, {}).get(interact_index)
+        row = self.scenes.get(scene, {}).get(interact_index)
+        if self.path is None and row is not None:  # Pinned 1275 data
+            from copy import deepcopy
+            return deepcopy(row)
+        return row
 
     def choices(self, scene, interact_index, talks):
         """Render ONLY normal verified 0-based choice rows; shops are blocked."""
