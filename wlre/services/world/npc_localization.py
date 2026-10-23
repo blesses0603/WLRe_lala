@@ -52,6 +52,12 @@ def load_text_data(path=None):
 
 
 def load_battle_talk(path=None):
+    if path is None:
+        from wlre.services.world.runtime_1275 import (
+            Runtime1275Unavailable, baseline_revision)
+        if baseline_revision() == '1275':
+            raise Runtime1275Unavailable(
+                '1275 NpcTalkData_C 尚未獨立建置與驗證，禁止混用 1262 戰鬥台詞')
     data=_catalog('npc_battle_talk_1262.json.gz','NpcTalkData_C',path)
     result={}
     for key,entries in data.items():
