@@ -78,11 +78,11 @@ class UpdaterTests(unittest.TestCase):
 
     def test_missing_assets_cannot_offer_download(self):
         with self.assertRaises(lu.UpdateError):
-            lu.check_lala_release(opener=self.fake_opener(missing=True))
+            lu.check_lala_release(current_version="0.5.17", opener=self.fake_opener(missing=True))
 
     def test_verified_zip_download_and_staging(self):
         opener = self.fake_opener()
-        info = lu.check_lala_release(opener=opener)
+        info = lu.check_lala_release(current_version="0.5.17", opener=opener)
         with tempfile.TemporaryDirectory() as tmp:
             target = lu.download_verified_release(info, directory=tmp, opener=opener)
             self.assertTrue(target.is_file())
@@ -93,7 +93,7 @@ class UpdaterTests(unittest.TestCase):
     def test_bad_sha_never_overwrites_prior_archive(self):
         good = self.fake_opener()
         bad = self.fake_opener(bad_sha=True)
-        info = lu.check_lala_release(opener=good)
+        info = lu.check_lala_release(current_version="0.5.17", opener=good)
         with tempfile.TemporaryDirectory() as tmp:
             old = lu.download_verified_release(info, directory=tmp, opener=good)
             original = old.read_bytes()
@@ -104,14 +104,14 @@ class UpdaterTests(unittest.TestCase):
 
     def test_malicious_zip_rejected(self):
         opener = self.fake_opener(malicious=True)
-        info = lu.check_lala_release(opener=opener)
+        info = lu.check_lala_release(current_version="0.5.17", opener=opener)
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaises(lu.UpdateError):
                 lu.download_verified_release(info, directory=tmp, opener=opener)
             self.assertEqual(list(Path(tmp).iterdir()), [])
 
     def test_untrusted_asset_url_rejected(self):
-        info = lu.check_lala_release(opener=self.fake_opener())
+        info = lu.check_lala_release(current_version="0.5.17", opener=self.fake_opener())
         info["archive_url"] = "https://evil.example/update.zip"
         with self.assertRaises(lu.UpdateError):
             lu.download_verified_release(info)
