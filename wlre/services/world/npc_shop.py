@@ -15,7 +15,7 @@ from wlre.services.world.npc_interact import NPCInteractIndex
 SHOP_TYPES = {2: '武器商店', 3: '道具商店'}
 
 
-def shop_catalog(scene, interact_index, *, index=None):
+def shop_catalog(scene, interact_index, *, index=None, item_rows=None):
     """Return a verified shop's product IDs, never claim a price without data.
 
     The caller must additionally check the live manually-opened S20 event,
@@ -28,10 +28,13 @@ def shop_catalog(scene, interact_index, *, index=None):
     if not data or data.get('form_kind') not in SHOP_TYPES:
         return None
     # Lossy/corrupt catalogues never permit a transaction or fabricated price.
-    try:
-        item_rows = item_catalog()
-    except (OSError, EOFError, ValueError, UnicodeError):
-        item_rows = {}
+    if item_rows is None:
+        try:
+            item_rows = item_catalog()
+        except (OSError, EOFError, ValueError, UnicodeError):
+            item_rows = {}
+    elif not isinstance(item_rows, dict):
+        return None
     products = []
     seen = set()
     for entry in data['items']:
