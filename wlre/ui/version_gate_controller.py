@@ -63,7 +63,10 @@ class VersionGateController:
         # The wallpaper remains visible but no longer competes with version
         # identifiers or warning text. Only this window gets the darker tint.
         window._glass_background_dim = 0.79
-        configure_dialog(window, 810, 480)
+        # The larger result typography needs enough physical height on
+        # Windows, where ttk buttons and CJK fonts have taller native metrics.
+        # Otherwise the GitHub-update action row may be clipped off-screen.
+        configure_dialog(window, 810, 530)
         window.protocol("WM_DELETE_WINDOW", self.close)
         window.resizable(False, False)
 
