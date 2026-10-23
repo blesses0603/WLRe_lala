@@ -22,6 +22,21 @@ class WindowSurfaceTests(unittest.TestCase):
         small = window_background(self.canvas, 600, 420, main=True, outline=False)
         self.assertEqual(small.getpixel((300, 210)), full.getpixel((640, 400)))
 
+    def test_version_dialog_can_be_darkened_without_changing_global_theme(self):
+        original = window_background(self.canvas, 600, 420, outline=False)
+        stronger = window_background(self.canvas, 600, 420, outline=False,
+                                     dim_amount=0.79)
+        self.assertEqual(
+            original.tobytes(),
+            window_background(self.canvas, 600, 420,
+                              outline=False).tobytes())
+        self.assertLess(stronger.getpixel((300, 210))[0],
+                        original.getpixel((300, 210))[0])
+        self.assertLess(stronger.getpixel((300, 210))[1],
+                        original.getpixel((300, 210))[1])
+        with self.assertRaises(ValueError):
+            window_background(self.canvas, 600, 420, dim_amount=1.1)
+
     def test_dialog_border_is_optional_without_changing_interior(self):
         bordered = window_background(self.canvas, 600, 420, outline=True)
         clean = window_background(self.canvas, 600, 420, outline=False)

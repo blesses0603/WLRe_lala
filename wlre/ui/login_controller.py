@@ -51,6 +51,7 @@ class LoginController:
         self.saved_account_choice.pack(side='left',fill='x',expand=True,padx=(0,4))
         self.saved_account_choice.bind('<<ComboboxSelected>>',self.select_saved_login)
         ttk.Button(connection_tools,text='新增',command=self.new_saved_login).pack(side='right')
+        ttk.Button(connection_tools,text='版本檢測',command=self.reopen_version_check).pack(side='right',padx=(0,7))
         self.refresh_saved_accounts()
         login=LabelFrame(self.login_tab,text='帳號登入',padding=8)
         login.pack(fill='x')
@@ -85,7 +86,7 @@ class LoginController:
         ttk.Label(self.login_tab,textvariable=self.connection_status,wraplength=620).pack(fill='x')
         ttk.Label(self.login_tab,text='選角後等待世界資料同步完成，將自動開啟主頁。',style='Muted.TLabel').pack(anchor='w')
         self.update_role_choices(self.snapshot.get('roles',[]))
-        self.connect_button.configure(state='disabled' if self.live_active else 'normal')
+        self._set_login_gate_button()
         window.lift()
         window.focus_set()
 
@@ -303,6 +304,7 @@ class LoginController:
 
     def show_main(self):
         self.entered_world=True
+        self.hide_version_check()
         if self.login_window is not None:
             self.login_window.destroy()
             self.login_window=None

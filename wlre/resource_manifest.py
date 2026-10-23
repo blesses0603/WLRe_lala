@@ -7,6 +7,7 @@ import zipfile
 DATA_SUFFIXES={'.json','.zip','.gz','.png','.ico'}
 REQUIRED_RESOURCES=(
     'alchemy_catalog.json','combat_catalog.json','crafting_catalog.json','default_profile.json',
+    'lala_supported_resources.json',
     'emoji_catalog.json','emoji_images.zip','enums.json','expedition_catalog.json','instance_catalog_1262.json','graph_origins.json',
     'item_icon_coverage.json','item_icon_map.json','item_icons.zip','item_stackable.json',
     'map_names.json','navigation_data.zip','normal_attack_data.json','npc_event_index_1262.json.gz','npc_battle_talk_1262.json.gz',
@@ -44,6 +45,11 @@ def validate_resources(root):
         if not path.is_file():continue
         if path.suffix=='.json':
             with path.open(encoding='utf8') as stream:json.load(stream)
+            if path.name == 'lala_supported_resources.json':
+                # A syntactically valid JSON is not sufficient: reject a
+                # mismatched revision/Manifest before packaging or startup.
+                from wlre.services.resource_compatibility import load_supported_resources
+                load_supported_resources(path)
         elif path.suffix=='.gz':
             if path.name in ('npc_talk_1262.json.gz','npc_text_1262.json.gz',
                              'npc_battle_talk_1262.json.gz'):

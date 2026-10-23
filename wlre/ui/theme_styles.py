@@ -21,6 +21,12 @@ def apply_styles(style, root, font, *, bg, panel, ink, muted, cyan):
     s.configure('Title.TLabel', font=(font, -22, 'bold'), foreground=TEXT)
     s.configure('Heading.TLabel', font=(font, -16, 'bold'), foreground='#c5f1ff')
     s.configure('Section.TLabel', font=(font, -14, 'bold'), foreground='#c5f1ff')
+    # Dedicated typography for the pre-login official-version result card.
+    # This affects neither the dashboard nor other dialog headings.
+    s.configure('VersionAlertHeading.TLabel', font=(font, -20, 'bold'),
+                foreground='#ffe2b0')
+    s.configure('VersionAlertMessage.TLabel', font=(font, -16),
+                foreground='#eff7ff')
     s.configure('Muted.TLabel', foreground=MUTED, font=(font, -14))
     s.configure('TButton', padding=(7, 4), borderwidth=0, focusthickness=0, foreground=TEXT,
                 background='#233d52', focuscolor=CYAN)

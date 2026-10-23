@@ -298,10 +298,14 @@ class GlassTheme:
         data['signature'] = signature
         # One image transform per window size. Every transparent control takes
         # the same absolute crop; nested panels never recolor/rescale the picture.
-        background_key = (width, height, outline)
+        # A dedicated version dialog uses a stronger wallpaper tint for
+        # legibility; all other LaLa windows retain their original darkness.
+        dim_amount = getattr(window, '_glass_background_dim', None)
+        background_key = (width, height, outline, dim_amount)
         if data.get('background_key') != background_key:
             data['background'] = window_background(
-                self.wallpaper, width, height, main=window is self.root, outline=outline)
+                self.wallpaper, width, height, main=window is self.root,
+                outline=outline, dim_amount=dim_amount)
             data['background_key'] = background_key
             data['background_size'] = (width, height)
         surface_key = (background_key, sections)
