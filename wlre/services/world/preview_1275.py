@@ -9,12 +9,13 @@ import gzip
 import io
 import json
 import struct
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from zipfile import ZipFile
 
 from wlre.services.world.game_data_1275 import read_manifest, verify_archive
 from wlre.services.world.npc_1275_eve import read_verified_zip
+from wlre.services.world.doors_1275 import parse_doors_1275
 
 MAX_UNCOMPRESSED = 16 * 1024 * 1024
 
@@ -127,6 +128,7 @@ class Preview1275:
     texts: dict
     recipes: dict
     scene_ids: frozenset
+    doors: dict = field(default_factory=dict)
     revision: int = 1275
     can_send_packets: bool = False
 
@@ -144,13 +146,24 @@ class Preview1275:
         row = self.recipes.get(item_id)
         return None if row is None else dict(row)
 
-    def portal_status(self, scene):
-        """1275 scene presence cannot authorize legacy 1262 door triggers."""
+    def portal_status(self, scene, door_index=None):
+        """1275 actual NewDoor positions; never authorize a transfer packet."""
         if type(scene) is not int or scene not in self.scene_ids:
             return {'scene': scene, 'exists': False, 'can_send_packets': False,
                     'reason': '新版場景資料沒有此 ID'}
-        return {'scene': scene, 'exists': True, 'can_send_packets': False,
-                'reason': '場景存在，但 1275 出口索引／目的地尚未驗證'}
+        entries = self.doors.get(scene, ())
+        result = {'scene': scene, 'exists': True, 'door_count': len(entries),
+                  'can_send_packets': False}
+        if door_index is None:
+            result['reason'] = '1275 場景與門事件已讀取；尚未核對傳送目的地／條件'
+            return result
+        if type(door_index) is not int:
+            raise ValueError('門事件索引必須是整數')
+        found = [row for row in entries if row['index'] == door_index]
+        result['door'] = dict(found[0]) if len(found) == 1 else None
+        result['reason'] = ('1275 門事件存在，但傳送目的地及正式服回覆尚未驗證'
+                            if found else '1275 找不到原有門事件 index，禁止觸發')
+        return result
 
 
 def load_preview(data_archive, eve_archive):
@@ -173,4 +186,5 @@ def load_preview(data_archive, eve_archive):
               'npc_text_1275.json.gz', 'TextData_C').items()},
         recipes=parse_smith_1275(_table(data_archive, manifest, 'SmithData_C')),
         scene_ids=frozenset(parse_stages(_table(data_archive, manifest, 'ScenesData_C'))),
+        doors=parse_doors_1275(_table(data_archive, manifest, 'Eve')),
     )
