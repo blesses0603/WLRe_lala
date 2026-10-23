@@ -63,10 +63,15 @@ def run_prelogin_check(sources=None, *, checker=None):
         if not resources_ok:
             # A network outage/unknown revision must not bypass mandatory
             # 1275 asset validation and accidentally use bundled 1262 IDs.
-            blocked = True
-            status = "blocked"
-            message = ('LaLa 1275 缺少已校驗的 NPC／商店／製作／場景資料；'
-                       '禁止使用 1262 舊索引登入。' + reason)
+            if blocked:
+                # Preserve confirmed remote update/rejection as the primary
+                # reason. Never rewrite a 1276 server change as local-only.
+                message += ' 另外本機 1275 資料驗證未通過：' + reason
+            else:
+                blocked = True
+                status = "blocked"
+                message = ('LaLa 1275 缺少已校驗的 NPC／商店／製作／場景資料；'
+                           '禁止使用 1262 舊索引登入。' + reason)
         elif all_same and not blocked:
             message += ' 已確認本機 1275 資源包完整；尚未等同正式伺服器協定驗收。'
     return {"status": status, "blocked": blocked, "message": message,
