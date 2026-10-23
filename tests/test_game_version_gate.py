@@ -9,7 +9,7 @@ from wlre.services.game_version_gate import configured_sources, run_prelogin_che
 from wlre.services.official_version import RESOURCE_MAP_URL
 
 
-def response(main="1262", data="1262", *, state="same_resources",
+def response(main="1275", data="1275", *, state="same_resources",
              newer_exe=False):
     return {
         "status": state,
@@ -17,9 +17,9 @@ def response(main="1262", data="1262", *, state="same_resources",
         "resource_path": "1.3.21",
         "packages": {
             "MainPackage": {"remote": main,
-                            "comparison": "same" if main.startswith("1262") else "newer"},
+                            "comparison": "same" if main.startswith("1275") else "newer"},
             "DataPackage": {"remote": data,
-                            "comparison": "same" if data.startswith("1262") else "newer"},
+                            "comparison": "same" if data.startswith("1275") else "newer"},
         },
         "protocol_compatibility": "unverified",
     }
@@ -29,20 +29,22 @@ class RemoteGameVersionTests(unittest.TestCase):
     def test_source_is_official_dynamic_resource_map(self):
         self.assertEqual(configured_sources(), {"ResourcePath_PC.dat": RESOURCE_MAP_URL})
 
-    def test_game_baseline_1262_remote_same(self):
+    def test_game_baseline_1275_remote_same(self):
         with patch("wlre.services.game_version_gate.check_official_game_resources",
-                   return_value=response()) as check:
+                   return_value=response()) as check, patch(
+                       "wlre.services.world.runtime_1275.ready",
+                       return_value=(True, "1275 test fixture verified")):
             got = run_prelogin_check()
         check.assert_called_once_with()
         self.assertEqual(got["status"], "version_identifiers_match")
         self.assertFalse(got["blocked"])
         self.assertEqual(got["source"], "official_remote_only")
-        self.assertEqual(got["baseline"], {"MainPackage": "1262", "DataPackage": "1262"})
+        self.assertEqual(got["baseline"], {"MainPackage": "1275", "DataPackage": "1275"})
 
-    def test_real_fiddler_1275_blocks(self):
+    def test_future_1276_blocks(self):
         with patch("wlre.services.game_version_gate.check_official_game_resources",
-                   return_value=response("1275_2026_10_21_18_29_38_49",
-                                         "1275_2026_10_21_18_27_33_84",
+                   return_value=response("1276_2026_10_22_18_29_38_49",
+                                         "1276_2026_10_22_18_27_33_84",
                                          state="resources_changed")):
             got = run_prelogin_check()
         self.assertTrue(got["blocked"])
@@ -83,7 +85,9 @@ class RemoteGameVersionTests(unittest.TestCase):
             (manifest / "MainPackage_1275_2026_10_21_18_29_38_49.bytes").touch()
             with patch.dict("os.environ", {"WLRE_GAME_YOO_ROOT": tmp}, clear=True):
                 with patch("wlre.services.game_version_gate.check_official_game_resources",
-                           return_value=response()):
+                           return_value=response()), patch(
+                               "wlre.services.world.runtime_1275.ready",
+                               return_value=(True, "1275 fixture")):
                     got = run_prelogin_check()
             self.assertFalse(got["blocked"])
             self.assertNotIn("local", got)
