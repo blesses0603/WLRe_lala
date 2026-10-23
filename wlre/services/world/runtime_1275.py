@@ -64,9 +64,13 @@ def active_runtime():
 
 def ready():
     try:
-        active_runtime()
+        source = active_runtime()
+        # All crafting views share this dictionary object; swap only after
+        # full 1275 ZIP validation, before allowing the login screen.
+        from wlre.services.items.crafting import activate_1275_recipes
+        activate_1275_recipes(source)
         return True, '1275 NPC／商店／製作／場景索引通過來源校驗'
-    except Runtime1275Unavailable as exc:
+    except (Runtime1275Unavailable, OSError, ValueError) as exc:
         return False, str(exc)
 
 
