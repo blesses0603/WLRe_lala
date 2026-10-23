@@ -81,11 +81,13 @@ class Preview1275Tests(unittest.TestCase):
 
     def test_scene_and_recipe_results_are_copies(self):
         c = Preview1275(
-            PreviewNPCIndex({'scenes': {'10000': [{'index': 1, 'npc_id': 10}]}}),
+            PreviewNPCIndex({'scenes': {'10000': [{'index': 1, 'npc_id': 10, 'event_ids': [2]}]}}),
             PreviewInteractIndex({'scenes': {}}),
             {}, {}, {}, {39852: {'item_id': 39852}}, frozenset())
         c.npc_for_scene(10000)[0]['index'] = 999
         c.recipe(39852)['item_id'] = 4
+        c.npc_for_scene(10000)[0]['event_ids'].append(200)
+        self.assertEqual(c.npc_for_scene(10000)[0]['event_ids'], [2])
         self.assertEqual(c.npc_for_scene(10000)[0]['index'], 1)
         self.assertEqual(c.recipe(39852)['item_id'], 39852)
 
