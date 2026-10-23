@@ -19,6 +19,12 @@ MAX_SIZE = 8 * 1024 * 1024
 
 class NPCInteractIndex:
     def __init__(self, path=None):
+        if path is None:
+            from wlre.services.world.runtime_1275 import baseline_revision, active_runtime
+            if baseline_revision() == '1275':
+                self.path = None
+                self.scenes = active_runtime().interact_index.scenes
+                return
         self.path = Path(path) if path is not None else RESOURCE_ROOT / NAME
         self.scenes = {}
         if not self.path.is_file():
