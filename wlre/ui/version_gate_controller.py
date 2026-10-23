@@ -212,7 +212,7 @@ class VersionGateController:
         self._version_path.set(value or "無法確認")
         source_status = remote.get("status")
         status_text = {
-            "same_resources": "兩個官方資源版本識別值均符合 1262",
+            "same_resources": f"兩個官方資源版本識別值均符合 {baseline_label(BASELINE)}",
             "resources_changed": "官方資源版本已異動",
         }.get(source_status)
         if not status_text:
