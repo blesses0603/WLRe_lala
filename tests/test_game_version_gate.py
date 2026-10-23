@@ -73,10 +73,24 @@ class RemoteGameVersionTests(unittest.TestCase):
     def test_offline_is_not_false_match_or_unjustified_change(self):
         with patch("wlre.services.game_version_gate.check_official_game_resources",
                    return_value={"status":"unverified", "packages":{},
-                                 "resource_path":None}):
+                                 "resource_path":None}), patch(
+                       "wlre.services.world.runtime_1275.ready",
+                       return_value=(True, "1275 fixture verified")):
             got = run_prelogin_check()
         self.assertEqual(got["status"], "unverified")
         self.assertFalse(got["blocked"])
+
+    def test_local_1275_assets_required_even_if_network_unknown(self):
+        with patch("wlre.services.game_version_gate.check_official_game_resources",
+                   return_value={"status":"unverified", "packages":{},
+                                 "resource_path":None}), patch(
+                       "wlre.services.world.runtime_1275.ready",
+                       return_value=(False, "missing 1275 archive")):
+            result = run_prelogin_check()
+        self.assertEqual(result["status"], "blocked")
+        self.assertTrue(result["blocked"])
+        self.assertIn("1275", result["message"])
+        self.assertIn("1262", result["message"])
 
     def test_local_install_versions_do_not_affect_remote_result(self):
         with tempfile.TemporaryDirectory() as tmp:
