@@ -17,16 +17,15 @@ from datetime import datetime, timezone
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
-BASELINE = {"MainPackage": "1262", "DataPackage": "1262"}
-# Exact versions from the two user-provided 1262 YooAsset manifest filename pairs.
-# No copyrighted Unity asset binaries are bundled into the application.
-BASELINE_MANIFEST = {
-    "MainPackage": "1262_2026_10_14_15_02_22_47",
-    "DataPackage": "1262_2026_10_14_15_00_34_84",
-}
-# This is the official GAME executable identity from the Fiddler DataVer map,
-# not the LaLa program version, and never read from the user's installed game.
-SUPPORTED_OFFICIAL_EXE_VERSION = "1.3.0"
+from wlre.services.resource_compatibility import (
+    baseline_maps, load_supported_resources,
+)
+
+# One bundled, release-reviewed JSON governs every baseline comparison.
+# No server response or local game installation can silently change it.
+LA_LA_SUPPORTED_RESOURCES = load_supported_resources()
+BASELINE, BASELINE_MANIFEST = baseline_maps(LA_LA_SUPPORTED_RESOURCES)
+SUPPORTED_OFFICIAL_EXE_VERSION = LA_LA_SUPPORTED_RESOURCES["official_game_exe_version"]
 OFFICIAL_HOST = "wlreftp.chinesegamer.net"
 ROOT = "https://wlreftp.chinesegamer.net/WLN/TW"
 RESOURCE_MAP_URL = ROOT + "/ResourcePath_PC.dat"
