@@ -101,16 +101,23 @@ class VersionGateController:
         body = ttk.Frame(shell)
         body.pack(side="top", fill="x", pady=(3, 0))
         self._version_body = body
-        ttk.Label(body, text="官方資源版本檢測",
-                  font=("TkDefaultFont", 16, "bold")).pack(anchor="w")
-        ttk.Label(body, text="線上取得 DataVer，再比對 DataPackage／MainPackage 與 LaLa 1262 基準",
-                  style="Muted.TLabel").pack(anchor="w", pady=(2, 8))
-
-        ttk.Label(body, textvariable=self._version_heading,
-                  font=("TkDefaultFont", 11, "bold")).pack(anchor="w")
-        ttk.Label(body, textvariable=self.version_gate_text,
-                  wraplength=730, justify="left").pack(
-                      anchor="w", fill="x", pady=(2, 8))
+        # The title bar already names this page. Do not repeat the
+        # heading or explanatory paragraph here: the status is the focus.
+        # One card holds both the prominent result and its detailed reason.
+        alert = ttk.Frame(body, padding=(18, 12, 18, 13))
+        alert._section_outline = True
+        alert._surface_fill = (9, 27, 46, 235)
+        alert.pack(fill="x", pady=(1, 11))
+        self._version_alert_panel = alert
+        self._version_alert_heading_label = ttk.Label(
+            alert, textvariable=self._version_heading,
+            style="VersionAlertHeading.TLabel", anchor="w", justify="left")
+        self._version_alert_heading_label.pack(anchor="w", fill="x", pady=(0, 5))
+        self._version_alert_message_label = ttk.Label(
+            alert, textvariable=self.version_gate_text,
+            style="VersionAlertMessage.TLabel", anchor="w",
+            justify="left", wraplength=705)
+        self._version_alert_message_label.pack(anchor="w", fill="x")
 
         # A title above a single painted section avoids the native
         # TLabelframe notch + glass outline which created the double border.
