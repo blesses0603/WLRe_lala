@@ -3,12 +3,12 @@
   "official_game_exe_version": "1.3.0",
   "packages": {
     "DataPackage": {
-      "revision": "1262",
-      "manifest": "1262_2026_10_14_15_00_34_84"
+      "revision": "1275",
+      "manifest": "1275_2026_10_21_18_27_33_84"
     },
     "MainPackage": {
-      "revision": "1262",
-      "manifest": "1262_2026_10_14_15_02_22_47"
+      "revision": "1275",
+      "manifest": "1275_2026_10_21_18_29_38_49"
     }
   }
 }
