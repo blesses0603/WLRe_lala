@@ -84,7 +84,11 @@ class NPCIndex:
             raise ValueError('NPC 索引資料總數不符')
 
     def for_scene(self, scene):
-        return list(self.scenes.get(str(scene), []))
+        rows = self.scenes.get(str(scene), [])
+        if self.path is None:  # 1275 verified source: no caller-owned mutation
+            from copy import deepcopy
+            return deepcopy(rows)
+        return list(rows)
 
 
 def display_name(npc_id, event_name=''):
