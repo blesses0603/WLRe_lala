@@ -11,13 +11,16 @@ from wlre.services.lala_updater import (
 )
 
 from wlre.services.game_version_gate import run_prelogin_check
+from wlre.services.official_version import BASELINE
+from wlre.services.resource_compatibility import baseline_label
 from wlre.ui.window_layout import configure_dialog
 
 
 class VersionGateController:
     def initialize_version_gate(self):
         self.version_gate_state = "checking"
-        self.version_gate_text = tk.StringVar(value="準備查詢官方遊戲資源版本（LaLa 基準 1262）…")
+        self.version_gate_text = tk.StringVar(
+            value=f"準備查詢官方遊戲資源版本（LaLa 基準 {baseline_label(BASELINE)}）…")
         self._version_gate_result = None
         self._version_gate_checked = 0.0
         self._version_gate_generation = 0
@@ -25,7 +28,7 @@ class VersionGateController:
         self._version_gate_entry_approved = False
         self.version_window = None
         self._version_heading = tk.StringVar(value="正在檢測版本…")
-        self._version_baseline = tk.StringVar(value="1262")
+        self._version_baseline = tk.StringVar(value=baseline_label(BASELINE))
         self._version_main = tk.StringVar(value="等待官方查詢")
         self._version_data = tk.StringVar(value="等待官方查詢")
         self._version_remote = tk.StringVar(value="尚未驗證")
@@ -194,13 +197,14 @@ class VersionGateController:
             record = packages.get(package, {})
             value = record.get("remote")
             comparison = record.get("comparison", "unverified")
+            supported = BASELINE[package]
             if value is None:
                 reason = record.get("reason")
                 variable.set("無法驗證：" + reason if reason else "無法驗證：尚無官方版本回應")
             elif comparison == "same":
-                variable.set(f"{value} · 與 1262 相同")
+                variable.set(f"{value} · 與 {supported} 相同")
             else:
-                variable.set(f"{value} · 與 1262 不同")
+                variable.set(f"{value} · 與 {supported} 不同")
 
         path = remote.get("resource_path")
         value = path if isinstance(path, str) else (
@@ -236,7 +240,8 @@ class VersionGateController:
             self._version_heading.set("官方版本異動 · 請等待 LaLa 更新")
             self._version_continue_button.configure(text="禁止登入", state="disabled")
         elif result.get("status") == "version_identifiers_match":
-            self._version_heading.set("官方版本識別值符合 1262")
+            self._version_heading.set(
+                f"官方版本識別值符合 LaLa 支援基準 {baseline_label(BASELINE)}")
             self._version_continue_button.configure(text="進入登入畫面", state="normal")
         else:
             self._version_heading.set("官方遊戲版本無法驗證")
@@ -285,7 +290,8 @@ class VersionGateController:
         self._version_gate_entry_approved = False
         self.version_gate_state = "checking"
         self._version_gate_result = None
-        self.version_gate_text.set("向官方更新來源查詢資源版本；LaLa 支援基準 1262…")
+        self.version_gate_text.set(
+            f"向官方更新來源查詢資源版本；LaLa 支援基準 {baseline_label(BASELINE)}…")
         self._set_login_gate_button()
         self._render_version_window()
         # Both channels are independent; a GitHub outage never changes the
