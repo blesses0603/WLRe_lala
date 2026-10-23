@@ -90,7 +90,7 @@ def parse_smith_1275(data):
             'tool_id': tool, 'output': output, 'materials': materials,
             'seconds': seconds, 'skill_level': skill_level, 'suggest': suggest,
             'time_id': time_id, 'limit_kind': limit_kind, 'mark_id': mark_id,
-            'limit_times': limit_times, 'order': order, 'open_used': 0,
+            'limit_times': limit_times, 'order': order,
         }
     return result
 
