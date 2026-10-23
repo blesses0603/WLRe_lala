@@ -53,3 +53,29 @@ py -m unittest discover -s tests -p test_game_data_1275.py -v
 另外還必須在 GitHub Actions 檢查 Linux、Windows、macOS 的完整自動測試和原生建置前檢查，並在正式服驗證所有更新功能。測試通過只證明此索引驗證器安全運作，不等於 1275 版本的 NPC 買賣和傳送功能已開放。
 
 **PR 性質：** 純新增工具、回歸測試與技術文件，保留 main v0.5.17，不合併 main、不修改 Release Tag。
+
+
+## 第二項完成：1275 Eve NPC / Interact 完整唯讀解碼（新增）
+
+依使用者上傳的 1262 Lua `Lua/Logic/Data.lua`、`Lua/Data/EventData.lua` 和 1275 原始 `Eve.bytes`，實際逐場景解析並核對段落界線與每場固定 44 bytes 頁尾，**1,262/1,262 場景全部成功**。
+
+- `Eve.bytes` 原始 SHA-256：`f5fc56b1d6cf7c00dd20b2f35c04b4cbc60c92ccdb6085fbe465c7e6526745ad`。
+- 1275：**1,262 個事件場景、10,975 個 NPC、1,634 組互動選單（一般 1,569、武器商店 19、道具商店 46）**。
+- 1262 已知索引：1,256 場景、10,879 個 NPC、1,622 組互動選單（一般 1,557、商店合計 65）。
+- 另提供 `WLRE_1275_Eve_NPC_索引包.zip`，內有唯讀 `npc_event_index_1275.json.gz` 與 `npc_interact_1275.json.gz`。
+- 程式 `wlre/services/world/npc_1275_eve.py` 僅允許來源 SHA-256、壓縮內容 SHA-256、場景數、紀錄數、索引唯一性與欄位格式均核對過的資料，拒絕任意替換。
+- 這只是資料來源級驗證，**沒有把 LaLa 的 1262 C20 NPC 互動決策轉成 1275，也沒有解除 NPC 交易封鎖**，必須先驗證伺服器狀態與關鍵事件索引的逐筆差異。
+
+離線 Python 範例（指向另外交付的 NPC Eve ZIP，不會安裝或送出封包）：
+
+~~~python
+from wlre.services.world.npc_1275_eve import read_verified_zip, scene_npcs
+verified = read_verified_zip("WLRE_1275_Eve_NPC_索引包.zip")
+print(len(scene_npcs(verified, 10001)))
+~~~
+
+測試：
+
+~~~powershell
+py -m unittest discover -s tests -p test_npc_1275_eve.py -v
+~~~
