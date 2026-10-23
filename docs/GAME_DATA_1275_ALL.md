@@ -79,3 +79,23 @@ print(len(scene_npcs(verified, 10001)))
 ~~~powershell
 py -m unittest discover -s tests -p test_npc_1275_eve.py -v
 ~~~
+
+
+## 1262→1275 實際重跑比對（2026-10-23）
+
+本次從使用者上傳的 **兩份 1262 RAR Manifest** 和 **兩份 1275 ZIP Manifest** 重新解出二進位，以相同的 YooAsset 2.2.5 格式獨立解析比對：
+
+| 類型 | 資源新增 | 資源移除 | Bundle 新增 | Bundle 移除 | 原 Bundle 變動 | Bundle 依賴變動 |
+|---|---:|---:|---:|---:|---:|---:|
+| DataPackage | 0 | 0 | 0 | 0 | 15 | 0 |
+| MainPackage | 63 | 0 | 24 | 0 | 20 | 0 |
+
+新版真實資料交叉校驗（非宣稱 1262 相同）：
+- Eve NPC 10,975 筆、互動選單 1,634 組，其中 65 組商店共 **309 個商品位置／215 種商品 ID**，1275 ItemData_C 缺漏 **0**。
+- 1275 `DailyTaskData_C` 依官方 `DailyTaskData.lua`、`AwardData.lua` 完整解析 **48 個群組、420 筆任務**；群組引用與 `TextData_C` 任務名稱引用缺漏均為 **0**。
+- 1275 `NpcTalkData_C` SHA-256 `9de2f789e7f194148959457e7a1fc4744bf3378d62fdaff54ce51efe28499bb8`，與 LaLa 已核對的 1262 原始表相同。
+- 1275 的物品 ID 32297、10044、10002 經確認符合 main 既有 1262 regression samples；**不能由此推定其餘 ID 不變**。
+- `resources.assets` 和 `resources.resource` 的 SHA-256 跨版本完全相同。
+- 使用者的 1262 DataPackage、MainPackage 壓縮包僅包含 Manifest，**沒有 1262 的 160 張原始 TextAsset**。因此這 160 張仍沒有逐筆比較結果（既不是通過也不是失敗）；不能把 1275 筆數差直接當成新增 ID。
+
+此階段新增 `wlre/services/world/daily_task_1275.py` 作為每日任務**唯讀**的嚴格解析器，並新增截斷、無效更新週期、重複群組測試；不會改動任務流程或送出封包。
