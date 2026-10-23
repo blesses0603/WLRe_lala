@@ -76,6 +76,22 @@ class Default1275Tests(unittest.TestCase):
             RECIPES.clear()
             RECIPES.update(original)
 
+    def test_general_item_names_use_1275_and_never_1262(self):
+        runtime = SimpleNamespace(items={39053: {'name': '新版來源藥水'}})
+        with patch.object(runtime_1275, 'active_runtime', return_value=runtime):
+            self.assertEqual(item_name(39053), '新版來源藥水')
+            self.assertEqual(item_name(12345), '物品12345')
+        with patch.object(runtime_1275, 'active_runtime',
+                          side_effect=runtime_1275.Runtime1275Unavailable('missing')):
+            self.assertEqual(item_name(39053), '物品39053')
+
+    def test_localized_text_is_1275_and_unverified_battle_talk_is_blocked(self):
+        runtime = SimpleNamespace(texts={1: '1275 確認'})
+        with patch.object(runtime_1275, 'active_runtime', return_value=runtime):
+            self.assertEqual(load_text_data(), {1: '1275 確認'})
+        with self.assertRaises(runtime_1275.Runtime1275Unavailable):
+            load_battle_talk()
+
     def test_bad_recipe_source_does_not_modify_previous_catalog(self):
         original = dict(RECIPES)
         with self.assertRaises(ValueError):
