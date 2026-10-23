@@ -88,11 +88,11 @@ class OfficialResourceVersionTests(unittest.TestCase):
     def test_complete_remote_lookup_fiddler_1275(self):
         observed = {RESOURCE_MAP_URL: RESOURCE_MAP, MAIN: MAIN_VALUE, DATA: DATA_VALUE}
         got = check_official_game_resources(fetcher=lambda url: observed[url])
-        self.assertEqual(got["status"], "resources_changed")
+        self.assertEqual(got["status"], "same_resources")
         self.assertEqual(got["resource_path"], "1.3.21")
         self.assertEqual(got["packages"]["MainPackage"]["remote"], MAIN_VALUE.decode())
         self.assertEqual(got["packages"]["DataPackage"]["remote"], DATA_VALUE.decode())
-        self.assertEqual(got["packages"]["MainPackage"]["comparison"], "newer")
+        self.assertEqual(got["packages"]["MainPackage"]["comparison"], "same")
 
     def test_live_path_rotates_when_mapping_updates(self):
         updated = RESOURCE_MAP.replace(b"1.3.21", b"1.3.22")
@@ -119,21 +119,21 @@ class OfficialResourceVersionTests(unittest.TestCase):
             raise VersionSourceError("offline")
         got = check_official_game_resources(fetcher=fetcher)
         self.assertEqual(got["status"], "unverified")
-        self.assertEqual(got["packages"]["MainPackage"]["comparison"], "newer")
+        self.assertEqual(got["packages"]["MainPackage"]["comparison"], "same")
 
-    def test_embedded_1262_manifest_identifiers_detect_republish(self):
-        self.assertEqual(BASELINE_MANIFEST["MainPackage"], "1262_2026_10_14_15_02_22_47")
-        self.assertEqual(BASELINE_MANIFEST["DataPackage"], "1262_2026_10_14_15_00_34_84")
+    def test_embedded_1275_manifest_identifiers_detect_republish(self):
+        self.assertEqual(BASELINE_MANIFEST["MainPackage"], "1275_2026_10_21_18_29_38_49")
+        self.assertEqual(BASELINE_MANIFEST["DataPackage"], "1275_2026_10_21_18_27_33_84")
         known = {RESOURCE_MAP_URL: RESOURCE_MAP,
                  MAIN: BASELINE_MANIFEST["MainPackage"].encode(),
                  DATA: BASELINE_MANIFEST["DataPackage"].encode()}
         same = check_official_game_resources(fetcher=lambda url: known[url])
         self.assertEqual(same["status"], "same_resources")
-        known[MAIN] = b"1262_2026_10_22_11_00_00_00"
+        known[MAIN] = b"1275_2026_10_22_11_00_00_00"
         changed = check_official_game_resources(fetcher=lambda url: known[url])
         self.assertEqual(changed["status"], "resources_changed")
         self.assertEqual(changed["packages"]["MainPackage"]["comparison"], "different")
-        known[MAIN] = b"1262"
+        known[MAIN] = b"1275"
         unknown = check_official_game_resources(fetcher=lambda url: known[url])
         self.assertEqual(unknown["status"], "unverified")
 
@@ -178,7 +178,7 @@ class OfficialResourceVersionTests(unittest.TestCase):
         result = check_official_game_resources(fetcher=failed_main)
         self.assertEqual(result["failed_stage"], "MainPackage.version")
         self.assertEqual(result["packages"]["MainPackage"]["reason"], "TLS 憑證驗證失敗")
-        self.assertEqual(result["packages"]["DataPackage"]["comparison"], "newer")
+        self.assertEqual(result["packages"]["DataPackage"]["comparison"], "same")
 
     def test_network_failure_categories(self):
         self.assertIn("DNS", _request_problem(URLError(socket.gaierror(-2, "name unknown"))))
@@ -231,7 +231,7 @@ class OfficialResourceVersionTests(unittest.TestCase):
             return MAIN_VALUE if url == MAIN else DATA_VALUE
         with patch("wlre.services.official_version.fetch_bytes", side_effect=observed) as fetch:
             got = check_official_game_resources(fetcher=fetch)
-        self.assertEqual(got["status"], "resources_changed")
+        self.assertEqual(got["status"], "same_resources")
         self.assertEqual(got["resource_path"], "1.3.21")
         self.assertEqual(requests[0][0], RESOURCE_MAP_URL)
         self.assertEqual(requests[1], (RESOURCE_MAP_URL, {"cache_bust": False}))
@@ -274,7 +274,7 @@ class OfficialResourceVersionTests(unittest.TestCase):
         self.assertEqual(order, [RESOURCE_MAP_URL, DATA, MAIN])
         self.assertEqual(checked["resource_path"], "1.3.21")
         self.assertEqual(checked["packages"]["DataPackage"]["remote"], DATA_VALUE.decode())
-        self.assertEqual(checked["status"], "resources_changed")
+        self.assertEqual(checked["status"], "same_resources")
 
     def test_only_terminal_array_comma_may_be_repaired(self):
         malformed = (
@@ -308,7 +308,7 @@ class OfficialResourceVersionTests(unittest.TestCase):
 
     def test_no_sources_are_not_false_success(self):
         self.assertEqual(check_official_versions()["status"], "unverified")
-        self.assertEqual(BASELINE, {"MainPackage": "1262", "DataPackage": "1262"})
+        self.assertEqual(BASELINE, {"MainPackage": "1275", "DataPackage": "1275"})
 
 
 if __name__ == "__main__":
