@@ -13,6 +13,8 @@ from wlre.services.world.npc_talk import load_catalog as load_talks
 from wlre.services.world.npc_item_data import item_catalog
 from wlre.services.world.portals import Portals
 from wlre.services.items.crafting import RECIPES, activate_1275_recipes
+from wlre.services.items.catalog import item_name
+from wlre.services.world.npc_localization import load_text_data, load_battle_talk
 
 
 class Default1275Tests(unittest.TestCase):
