@@ -36,6 +36,10 @@ def _catalog(filename, expected_source, path=None):
 
 
 def load_text_data(path=None):
+    if path is None:
+        from wlre.services.world.runtime_1275 import baseline_revision, active_runtime
+        if baseline_revision() == '1275':
+            return dict(active_runtime().texts)
     data=_catalog('npc_text_1262.json.gz','TextData_C',path)
     result={}
     for key,value in data.items():
