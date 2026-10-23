@@ -1,10 +1,11 @@
-"""Remote official game resource compatibility gate; baseline 1262.
+"""Remote official game resource compatibility gate; bundled baseline.
 
 Do not read the local Unity installation, LaLa binary or disk ManifestFiles.
 """
 from wlre.services.official_version import (
     BASELINE, RESOURCE_MAP_URL, check_official_game_resources, check_official_versions,
 )
+from wlre.services.resource_compatibility import baseline_label
 
 
 def configured_sources(environ=None):
@@ -36,18 +37,23 @@ def run_prelogin_check(sources=None, *, checker=None):
         remote.get("status") == "same_resources" and
         all(packages.get(package, {}).get("comparison") == "same" for package in BASELINE)
     )
+    support = baseline_label(BASELINE)
     if blocked:
         status = "blocked"
         if client_changed and not package_changed:
-            message = "官方遊戲客戶端版本已有變更，請等待 LaLa 更新與相容性確認；禁止登入。"
+            message = (f"官方遊戲客戶端版本已有變更，LaLa 支援資源基準為 {support}；"
+                       "禁止登入，請等待 LaLa 更新與相容性確認。")
         else:
-            message = "官方遊戲資源版本已與 LaLa 支援的 1262 不同，禁止登入；請等待 LaLa 更新與相容性驗證。"
+            message = (f"官方遊戲資源版本與 LaLa 支援基準 {support} 不同；"
+                       "禁止登入，請等待 LaLa 更新與相容性驗證。")
     elif all_same:
         status = "version_identifiers_match"
-        message = ("官方 MainPackage／DataPackage 版本識別值均符合 1262；"
+        message = (f"官方 MainPackage／DataPackage 版本識別值均符合 LaLa 支援基準 {support}；"
                    "遊戲協定相容性仍須另外驗證。")
     else:
         status = "unverified"
-        message = "官方版本無法完整驗證，可能是網路失敗或更新資料不足；不代表已同步官方最新版本。"
+        message = (f"官方版本無法完整驗證（LaLa 支援基準 {support}），"
+                   "可能是網路失敗或更新資料不足；不代表已同步官方最新版本。")
     return {"status": status, "blocked": blocked, "message": message,
-            "remote": remote, "baseline": dict(BASELINE), "source": "official_remote_only"}
+            "remote": remote, "baseline": dict(BASELINE),
+            "baseline_label": support, "source": "official_remote_only"}
