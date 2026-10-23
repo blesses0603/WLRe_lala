@@ -49,7 +49,7 @@ py -m wlre.services.world.npc_1275_assets "C:\下載路徑\WLRE_1275_索引包.z
 ## 測試
 
 ~~~powershell
-py -m unittest tests.test_npc_1275_assets -v
+py -m unittest discover -s tests -p test_npc_1275_assets.py -v
 ~~~
 
 先前已在隔離 Python 測試環境實際執行四項校驗測試；GitHub CI 與 Windows/macOS 真正遊戲環境仍須另外驗收。此 PR 只新增驗證與安裝工具、測試、文件，沿用 v0.5.17，沒有發布版本。
