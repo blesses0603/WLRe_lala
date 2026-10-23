@@ -6,6 +6,7 @@ supported 1262 baseline, register network commands, or emit any packets.
 from __future__ import annotations
 
 import gzip
+from copy import deepcopy
 import io
 import json
 import struct
@@ -100,7 +101,7 @@ class PreviewNPCIndex:
         self.scenes = doc['scenes']
 
     def for_scene(self, scene):
-        return [dict(row) for row in self.scenes.get(str(scene), ())]
+        return deepcopy(self.scenes.get(str(scene), ()))
 
 
 class PreviewInteractIndex:
@@ -112,7 +113,8 @@ class PreviewInteractIndex:
     def get(self, scene, interact_index):
         if type(scene) is not int or type(interact_index) is not int:
             return None
-        return self.scenes.get(scene, {}).get(interact_index)
+        row = self.scenes.get(scene, {}).get(interact_index)
+        return None if row is None else deepcopy(row)
 
     def choices(self, scene, interact_index, talks):
         from wlre.services.world.npc_interact import NPCInteractIndex
@@ -144,7 +146,7 @@ class Preview1275:
         if type(item_id) is not int:
             return None
         row = self.recipes.get(item_id)
-        return None if row is None else dict(row)
+        return None if row is None else deepcopy(row)
 
     def portal_status(self, scene, door_index=None):
         """1275 actual NewDoor positions; never authorize a transfer packet."""
