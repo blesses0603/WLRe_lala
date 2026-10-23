@@ -79,6 +79,25 @@ class PreloginVersionWindowTests(unittest.TestCase):
         self.assertNotEqual(self.app.login_window.state(), "withdrawn")
         self.assertTrue(self.app._version_gate_entry_approved)
 
+    def test_baseline_display_is_loaded_from_bundled_declaration(self):
+        from types import SimpleNamespace
+        from wlre.services.resource_compatibility import baseline_label
+        supported = {"DataPackage": "1275", "MainPackage": "1275"}
+        with patch.dict("wlre.ui.version_gate_controller.BASELINE",
+                        supported, clear=True):
+            fake = SimpleNamespace()
+            VersionGateController.initialize_version_gate(fake)
+            self.assertEqual(fake._version_baseline.get(), "1275")
+            self.assertIn("1275", fake.version_gate_text.get())
+            # An actual redraw uses the current package baselines instead of
+            # keeping a hard-coded 1262 in its comparison text.
+            self.deliver(official_result("1280", "1280", "blocked"))
+            self.assertIn("與 1275 不同", self.app._version_main.get())
+            self.assertIn("與 1275 不同", self.app._version_data.get())
+            self.assertNotIn("1262", self.app._version_main.get())
+            self.assertNotIn("1262", self.app._version_data.get())
+            self.root.update()
+
     def test_unknown_state_requires_explicit_acknowledgement(self):
         self.deliver(official_result(status="unverified"))
         self.assertEqual(self.app.login_window.state(), "withdrawn")
