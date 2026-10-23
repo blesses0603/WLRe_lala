@@ -45,6 +45,11 @@ def validate_resources(root):
         if not path.is_file():continue
         if path.suffix=='.json':
             with path.open(encoding='utf8') as stream:json.load(stream)
+            if path.name == 'lala_supported_resources.json':
+                # A syntactically valid JSON is not sufficient: reject a
+                # mismatched revision/Manifest before packaging or startup.
+                from wlre.services.resource_compatibility import load_supported_resources
+                load_supported_resources(path)
         elif path.suffix=='.gz':
             if path.name in ('npc_talk_1262.json.gz','npc_text_1262.json.gz',
                              'npc_battle_talk_1262.json.gz'):
