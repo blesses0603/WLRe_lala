@@ -34,6 +34,14 @@ def _valid_index(row):
 
 class NPCIndex:
     def __init__(self, path=None):
+        # Runtime never resolves NPC event indices from 1262 while baseline 1275.
+        if path is None:
+            from wlre.services.world.runtime_1275 import baseline_revision, active_runtime
+            if baseline_revision() == '1275':
+                active = active_runtime()
+                self.path = None
+                self.scenes = active.npc_index.scenes
+                return
         self.path = Path(path) if path is not None else RESOURCE_ROOT/'npc_event_index_1262.json.gz'
         self.scenes = {}
         if not self.path.is_file():
