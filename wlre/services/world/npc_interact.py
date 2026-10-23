@@ -88,7 +88,7 @@ class NPCInteractIndex:
         if type(scene) is not int or type(interact_index) is not int:
             return None
         row = self.scenes.get(scene, {}).get(interact_index)
-        if self.path is None and row is not None:  # Pinned 1275 data
+        if getattr(self, 'path', False) is None and row is not None:  # Pinned 1275 data
             from copy import deepcopy
             return deepcopy(row)
         return row
