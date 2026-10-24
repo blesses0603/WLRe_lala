@@ -180,6 +180,7 @@ def _derive_candidate_indexes(payloads, *, revision):
     from wlre.services.world.eve_v115 import derive_eve_index
     from wlre.services.world.itemdata_v1 import parse_itemdata
     from wlre.services.world.npc_talk import parse_talk_data
+    from wlre.services.expedition.data import parse_text_data
     def source(name):
         found = [b for key, b in payloads.items()
                  if key.startswith('tables/') and key.endswith('/' + name + '.bytes')]
@@ -220,6 +221,23 @@ def _derive_candidate_indexes(payloads, *, revision):
             if len(body) <= MAX_SOURCE_BYTES:
                 derived['candidate_indexes/talk_data.json'] = body
         except (ValueError, TypeError):
+            pass
+    text_data = source('TextData_C')
+    if text_data is not None:
+        try:
+            texts = parse_text_data(text_data)
+            body = json.dumps(
+                {'schema_version': 1, 'revision': 1275,
+                 'source': 'TextData_C',
+                 'source_sha256': hashlib.sha256(text_data).hexdigest(),
+                 'record_count': len(texts), 'approved': False,
+                 'assets_ready': False, 'can_send_packets': False,
+                 'records': {str(key): value for key, value in texts.items()}},
+                ensure_ascii=True, separators=(',', ':'), sort_keys=True
+            ).encode('utf-8')
+            if len(body) <= MAX_SOURCE_BYTES:
+                derived['candidate_indexes/text_data.json'] = body
+        except (ValueError, TypeError, KeyError, UnicodeError):
             pass
     # Extend already downloaded DataPackage assets into per-feature, read-only
     # previews. Every component is strictly decoded from the same-version,
