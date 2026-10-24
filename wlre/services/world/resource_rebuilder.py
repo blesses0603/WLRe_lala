@@ -490,6 +490,18 @@ def rebuild_raw_resources(identity, data_manifest, *,
         for p in identity.packages)
     trusted, pinned = (_checked_existing(formal_base)
                        if identical_release else ({}, None))
+    if identical_release and pinned is None:
+        # A trusted manifest can be bundled with a later LaLa release.
+        # Loading it must be release-SHA pinned before assigning any per-file
+        # hashes. This removes the player's need to supply a partial ZIP.
+        # If no audited pin has shipped, the source remains unapproved.
+        pinned_bytes = _exact_reviewed_manifest(formal_base)
+        if pinned_bytes is not None:
+            from wlre.services.world.game_data_1275 import _valid_manifest
+            try:
+                pinned = _valid_manifest(json.loads(pinned_bytes.decode('utf-8')))
+            except (ValueError, KeyError, TypeError, UnicodeError):
+                pinned = None
     previous = _load_previous(dest, catalog_key=identity.key)
     pinned_files = pinned.get('files', {}) if pinned is not None else {}
 
