@@ -251,3 +251,16 @@ py -m unittest -v tests.test_auto_catalog tests.test_resource_rebuilder tests.te
 ~~~
 
 保留 Windows／macOS／Ubuntu 原始碼與原生 GUI 測試。此階段不修改版本常數、不合併 main、不發布 Tag；端到端官方 Bundle 驗收及真正 NPC 商店交易仍待實機測試。
+
+
+## 第二十一階段：零手動資料包的正式索引缺口診斷與全量文字索引
+
+這一階段繼續以 **官方版本 → 驗證 Bundle → 原始 TextAsset → 統一分類/索引 → 獨立正式驗證 → 功能接入** 為順序，不採用使用者複製 ZIP 作為正常操作步驟。
+
+- 從已按 DataPackage 1275 官方版本與 Bundle MD5/CRC 驗證的 `TextData_C.bytes`，自動用與遠征同源的 `parse_text_data()` 解出 UTF-16LE `文字 ID → 內容`；保存到私人版號快取 `candidate_indexes/text_data.json`，帶有原始來源 SHA-256、筆數及三個 `false` 權限欄位。原始格式不符、長度錯誤、重複 ID、截斷或出現多餘尾段時拒絕建立候選。
+- 此完整文字索引可作後續 NPC 對話、任務及活動畫面的唯讀查詢基礎；目前 **不會** 替代完整正式 `indexes/npc_text_1275.json.gz`，因為正式壓縮索引仍需額外的獨立固定 Manifest SHA-256 與逐檔雜湊驗證。
+- 現有 `resource_rebuilder` 每次補建會輸出 `formal_blockers`，清楚區別官方資源版號不符、正式固定清單缺失、正式 160 原始表缺項、正式三項索引缺失、兩項 Eve 索引缺失、正式 ZIP 完整校驗失敗或待正式銜接等問題；不顯示使用者私有絕對路徑。
+- `read_inventory_summary()` 僅接受已列入白名單的缺口類別並限制數量，Launcher 進度顯示「候選資料已整理的數量」和「仍需獨立驗證的缺口類別數」。這不是啟用授權；`formal_approved`、`assets_ready`、`can_send_packets` 依然一律維持 `false`。
+- 只有當完整 1275 原始表與獨立固定 SHA 的正式索引、Eve 索引 **全部存在且逐項校驗成功** 時，既有正式補建和 bridge 才能安全交付 Runtime；缺少獨立驗證依據時，**不可** 從自身候選雜湊自動簽發正式版本。
+- 測試：`py -m unittest -v tests.test_automatic_candidate_indexes tests.test_resource_rebuilder tests.test_launcher_progress`。原生 EXE、官方 1275 全量真實 Bundle 及遊戲封包 E2E 仍需實機驗收，不以 CI 模擬測試替代。
+
