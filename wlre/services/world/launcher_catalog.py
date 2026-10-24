@@ -75,13 +75,15 @@ def _store_status(report, *, root=None):
             pending.unlink(missing_ok=True)
 
 
-def prepare_on_launch(*, runner=None, root=None, environ=None):
+def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
     """Synchronously prepare a candidate before Tk starts.
 
     Failure is reported without blocking LaLa's own official login check.
     Callers must not treat any return value or the private receipt as approval.
     All downloads occur inside run_auto_catalog's verified, bounded pipeline.
     """
+    if progress is not None and not callable(progress):
+        raise ValueError('Invalid launcher progress callback')
     env = os.environ if environ is None else environ
     if env.get('WLRE_DISABLE_AUTO_CATALOG') == '1':
         return {'status': 'skipped', 'assets_ready': False,
@@ -91,7 +93,10 @@ def prepare_on_launch(*, runner=None, root=None, environ=None):
         runner = run_auto_catalog
     key = None
     try:
-        result = runner(download=True, parse=True)
+        kwargs = {'download': True, 'parse': True}
+        if progress is not None:
+            kwargs['progress'] = progress
+        result = runner(**kwargs)
         if result['status'] != 'review_required':
             raise ValueError('Launcher auto catalog did not produce a reviewed-schema candidate')
         key = result['catalog_key']
