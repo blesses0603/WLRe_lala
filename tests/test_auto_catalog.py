@@ -110,6 +110,35 @@ class AutoCatalogTests(unittest.TestCase):
             self.assertEqual(meta['features']['npc']['sha256'],
                              hashlib.sha256(self.bytes['npc']).hexdigest())
 
+    def test_progress_stages_are_emitted_only_for_work_attempted(self):
+        events = []
+        result = run_auto_catalog(**self.kwargs(
+            progress=lambda phase, details: events.append((phase, details))))
+        self.assertEqual(result['status'], 'review_required')
+        phases = [stage for stage, _ in events]
+        self.assertEqual(phases[:5], [
+            'official_version', 'manifest', 'manifest',
+            'bundle_plan', 'bundle_sync'])
+        self.assertEqual(events[1][1]['package'], 'DataPackage')
+        self.assertEqual(events[2][1]['package'], 'MainPackage')
+        self.assertEqual(phases.count('extract'), 4)
+        self.assertEqual(phases[-2:], ['candidate_write', 'candidate_ready'])
+        cached = []
+        run_auto_catalog(**self.kwargs(
+            progress=lambda phase, details: cached.append(phase),
+            extractor=lambda *_: self.fail('must use verified cache')))
+        self.assertEqual(cached[-1], 'cached_candidate')
+        self.assertNotIn('extract', cached)
+
+    def test_failing_manifest_never_reports_bundle_completed(self):
+        self.manifests['DataPackage'].index['assets'].pop()
+        events = []
+        with self.assertRaisesRegex(Exception, 'AssetPath missing'):
+            run_auto_catalog(**self.kwargs(
+                progress=lambda phase, details: events.append(phase)))
+        self.assertNotIn('bundle_sync', events)
+        self.assertNotIn('candidate_ready', events)
+
     def test_cached_candidate_reuses_without_extraction(self):
         first = run_auto_catalog(**self.kwargs())
         cached = run_auto_catalog(**self.kwargs(
