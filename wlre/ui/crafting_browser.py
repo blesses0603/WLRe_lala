@@ -7,6 +7,7 @@ from wlre.ui.theme import group
 from wlre.services.items.crafting import RECIPES, recipe_plan, effective_time, confirmed_unlocked
 from wlre.services.items.combat_resources import item_name
 from wlre.services.items.crafting_browser_model import Favorites, owned_counts, material_rows, availability, tool_status, room_known
+from wlre.services.world.feature_resource_index import feature_note
 from wlre.core.efficiency import duration
 from wlre.ui.crafting.item_icons import ItemIcons, ICON_MAP
 from wlre.ui.crafting.queue_view import CraftingQueueMixin
