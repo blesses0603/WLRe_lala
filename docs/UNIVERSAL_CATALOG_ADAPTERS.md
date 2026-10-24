@@ -218,3 +218,17 @@ py -m tools.verify_official_local_bundles --data-zip "C:\Downloads\DataPackage_1
 遠端認證；本工具固定輸出 live_official_authentication=false、
 approved=false、assets_ready=false、can_send_packets=false，
 不會修改正式登入閘門、執行遊戲交易或上傳私有遊戲檔案。
+
+## 1275 真實 Eve Bundle：修復場景尾端 44 bytes 區段偏移表
+
+使用者提供的 datapackage_data_e_1275.bundle 已於本次作業完成唯讀驗證：
+
+- Bundle 實體大小 1,816,278 bytes、MD5 344ed77d603ea14ee8072d5a00eb548e、CRC32-LE e46611ae，全部與使用者提供的 1275 Manifest 預期值相同。
+- 已實際解開 UnityFS v8、Unity 2021.3.45f2、LZ4 資料塊並取得 Eve TextAsset 原始內容，共 7,497,943 bytes，包含 1,262 個場景，所有場景格式均為 Eve v115。
+- 11 類 EventData 區段結束後，每個場景還有 11 筆 UInt32-LE (=44 bytes) 的 section offset table。數值是相對該場景起點的區段 UInt16 筆數欄位偏移。
+- 逐一對照全部 1,262 個實際場景，共 13,882 筆偏移皆與解析器走訪位置相符，0 筆異常。場景 10000 的索引為 4、197、263、265、267、794、796、833、881、883、954。
+- 原先場景 10000「已讀 956、場景 1000、剩餘 44」是解析器漏讀此索引表，而非未知填充。
+- eve_v115.py 現強制要求 44 bytes 尾表，逐項讀取 UInt32 並與各區段實際起點比較；缺少、額外或遭篡改的偏移全部拒絕，不放寬安全檢查。
+- 實際唯讀稽核計得 10,975 個 NPC 事件及 1,634 個 Interact 事件，未見重複事件 index 或無效 NPC ID／互動類型。但尚不能宣稱 ItemData、商店交易及其他遊戲封包正式相容。
+- 已補上合成 Eve v115 尾表、篡改、缺漏與額外資料的回歸測試。使用者提供的 Bundle 實體不提交 GitHub。
+- 不變更登入安全基準、不啟用未審核 Catalog、不打包 EXE／APP。
