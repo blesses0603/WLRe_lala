@@ -14,7 +14,7 @@ from wlre.services.official_bundle_download import (
 
 BODY = b'LaLa synthetic bundle fixture, not a game asset.\n' * 16
 HASH = hashlib.md5(BODY, usedforsecurity=False).hexdigest()
-CRC = f'{zlib.crc32(BODY) & 0xffffffff:08x}'
+CRC = (zlib.crc32(BODY) & 0xffffffff).to_bytes(4, 'little').hex()
 
 
 def spec():
@@ -35,6 +35,10 @@ class FakeResponse(io.BytesIO):
 
 
 class BundleDownloadTests(unittest.TestCase):
+    def test_manifest_crc_is_little_endian_not_conventional_crc_hex(self):
+        self.assertEqual(CRC, zlib.crc32(BODY).to_bytes(4, 'little').hex())
+        self.assertNotEqual(CRC, f'{zlib.crc32(BODY) & 0xffffffff:08x}')
+
     def test_known_1275_url_is_strictly_derived(self):
         value = spec()
         self.assertEqual(value.url,

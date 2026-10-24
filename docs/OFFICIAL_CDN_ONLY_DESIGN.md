@@ -29,9 +29,9 @@ python -m tools.check_official_sync --save
 `wlre.services.official_bundle_download`：
 
 - 從 Manifest 的 BundleName（output_name_style=1）組合使用者觀測的 `wlreftp.chinesegamer.net/.../ResourcesPC/AssetBundle/{BundleName}` 路徑；不接受任意網址、路徑穿越或跨網域轉址。
-- 單一 HTTPS 下載受檔案長度上限限制；串流驗證 Manifest 提供的檔案大小、MD5 FileHash 與 CRC32。全部通過後原子存入使用者電腦；下載中斷不留下可被當成完成的檔案。
+- 單一 HTTPS 下載受檔案長度上限限制；串流驗證 Manifest 提供的檔案大小、MD5 FileHash 與 **little-endian 編碼的 CRC32 FileCRC**。全部通過後原子存入使用者電腦；下載中斷不留下可被當成完成的檔案。
 - 已校驗的本機 Bundle 不重複下載。這項元件預設**不主動呼叫網路**；目前未接到 UI 或登入路徑。
-- 2026-10-24 用使用者提供的 DataPackage 1275 Manifest，確認 `datapackage_data_v.bundle` 為 4,695 bytes、FileHash `5bf5ead224fd61bbd8fc72af64b46864`、FileCRC `a64f27a7`。尚未取得遠端實際內容並完成網路端到端校驗。
+- 2026-10-24 用使用者提供的 DataPackage 1275 Manifest，確認 `datapackage_data_v.bundle` 為 4,695 bytes、FileHash `5bf5ead224fd61bbd8fc72af64b46864`、FileCRC `a64f27a7`；已唯讀下載遠端實際內容，比對大小與 MD5 均一致，並確認 **CRC32 常規 hex `a7274fa6` 對應 Manifest little-endian `a64f27a7`**，修正初期下載器誤用常規大端 hex 的問題。
 - `wlreftpsrc.chinesegamer.net` 是使用者另行提供的候選資源主機；在確定回應及官方路由前，**不自動設為下載來源**。
 
 ## 已完成：官方 Manifest 網址驗證與驗證後本機快取元件

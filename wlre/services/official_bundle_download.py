@@ -95,7 +95,7 @@ def _verified_file(path, spec):
             md5.update(chunk)
             crc = zlib.crc32(chunk, crc)
     return (md5.hexdigest() == spec.file_hash.lower() and
-            f'{crc & 0xffffffff:08x}' == spec.file_crc.lower())
+            (crc & 0xffffffff).to_bytes(4, 'little').hex() == spec.file_crc.lower())
 
 
 class _NoRedirect(HTTPRedirectHandler):
@@ -148,8 +148,10 @@ def fetch_bundle(spec, *, cache_root=None, opener=None, timeout=20):
                     handle.write(chunk)
                 handle.flush()
                 os.fsync(handle.fileno())
+        # YooAsset FileCRC is CRC32 encoded in *little-endian byte order*.
+        # The usual f'{crc:08x}' reverses that order and rejects valid Bundles.
         if (length != spec.file_size or md5.hexdigest() != spec.file_hash.lower() or
-                f'{crc & 0xffffffff:08x}' != spec.file_crc.lower()):
+                (crc & 0xffffffff).to_bytes(4, 'little').hex() != spec.file_crc.lower()):
             raise BundleDownloadError('Official Bundle size/hash/CRC verification failed')
         os.replace(pending, destination)
         return destination
