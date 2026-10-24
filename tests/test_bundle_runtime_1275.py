@@ -49,7 +49,8 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
         self.items = {i: {'name': f'物品{i}', 'open_used': 0} for i in range(1, 1033)}
         self.recipes = {
             i: {'item_id': i, 'tool_id': 39053, 'output': 1,
-                'materials': [], 'seconds': 1, 'order': i}
+                'materials': [], 'seconds': 1, 'order': i,
+                'design_id': 0, 'time_id': 0, 'limit_kind': 0}
             for i in range(1, 1033)}
         self.scenes = {str(10000+i): [] for i in range(1262)}
         self.extract = Mock(side_effect=lambda binding, paths, loader=None:
@@ -127,6 +128,38 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
         self.assertTrue(runtime.portal_status(10000)['exists'])
         self.assertFalse(runtime.can_send_packets)
         self.assertEqual(self.extract.call_count, 6)
+
+    def test_verified_bundle_data_enters_real_crafting_plan(self):
+        # This is the actual crafting service, not a read-only UI preview.
+        # Packet construction is tested offline; no game session is contacted.
+        from wlre.services.items.crafting import RECIPES, recipe_plan
+        from wlre.services.world import runtime_1275
+        saved = dict(RECIPES)
+        self.addCleanup(lambda: (RECIPES.clear(), RECIPES.update(saved)))
+        with ExitStack() as stack:
+            self.patches(stack)
+            source = load_verified_bundle_runtime(sync_root=self.root)
+            stack.enter_context(patch.object(
+                runtime_1275, 'active_runtime', return_value=source))
+            stack.enter_context(patch(
+                'wlre.services.world.formal_candidate_bridge.inspect_launcher_candidate',
+                return_value={'status': 'not_requested'}))
+            enabled, details = runtime_1275.ready()
+        self.assertTrue(enabled)
+        self.assertIn('協定仍須獨立驗收', details)
+        self.assertEqual(len(RECIPES), 1032)
+        self.assertEqual(RECIPES['20']['open_used'], 0)
+        player = {'role_id': 42}
+        state = SimpleNamespace(
+            player=player,
+            furniture={'ready': True, 'owner': 42,
+                       'items': {'1': {'item_id': 39053, 'index': 1, 'status': 0}}},
+            crafting={'ready': True, 'queue': {}},
+            inventory={'ready': True, 'reliable': True, 'items': {}})
+        recipe, allocations, packet = recipe_plan(state, 20, 1)
+        self.assertEqual(recipe['item_id'], 20)
+        self.assertEqual(allocations, [])
+        self.assertEqual((packet.main, packet.sub), (64, 1))
 
     def test_missing_or_corrupt_official_bundle_never_activates(self):
         for action in ('download', 'reuse_previous', 'cached'):
