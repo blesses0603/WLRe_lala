@@ -188,3 +188,24 @@ py -m tools.classify_existing_resources --data "DataPackage_1275.zip" --main "Ma
 ~~~powershell
 py -m unittest -v tests.test_resource_classification
 ~~~
+
+## 既有 NPC、背包、製作與遠征模組的分類接入（PR #56）
+
+正式使用 **`feature_resource_index.describe_feature(feature)`** 提供唯讀、跨版本核對的共用資源來源資訊：
+
+| 功能 | 精確原始資料綁定 | 本階段接入 |
+| --- | --- | --- |
+| NPC／商店 | Eve、NpcData_C、TalkData_C | 商店預覽新增 `resource_index_note`；商品價格與交易限制仍依正式索引，不從分類候選解鎖 |
+| 背包 | ItemData_C | 格位畫面顯示分類來源狀態；名稱優先使用已固定 SHA 驗證的正式 1275 ItemData，缺少時沿用內建顯示，不更動數量／封包 |
+| 製作 | SmithData_C、ItemData_C | 製作目錄增加來源狀態，設備／材料名稱優先使用已驗證 1275 ItemData；配方仍由正式 `runtime_1275.ready()` 的既有注入控制 |
+| 遠征 | AdventureData_C、AdventureLvData_C、NpcData_C、NpcCareerData_C、TextData_C | 遠征畫面顯示任務、等級與文字來源分類狀態；派遣／領獎仍依伺服器狀態，不直接接收未驗證的 1275 二進位資料 |
+
+分類狀態區分 `index_unavailable`、`version_mismatch`、`manifest_only`、`partial_local` 與 `all_local_unapproved`。即使顯示「原始資料均已保存」，也 **永遠不表示** `assets_ready` 或 `can_send_packets`。無法取得當次 Launcher 收據或與程式正式資源版本不一致時，不使用私人分類結果。
+
+注意：這一階段完成的是 **現有功能的資料來源辨識、顯示名稱與唯讀索引接入**，不代表 NPC 交易、1275 遠征任務資料格式及正式服派遣協定都已驗證。日後要把遠征和其他操作全面切換為新版遊戲資料，仍需逐表解析、已固定校驗的正式來源和伺服器 E2E；不得用檔名分類替代資料 Schema。
+
+純離線回歸：
+
+~~~powershell
+py -m unittest -v tests.test_resource_classification tests.test_feature_resource_index
+~~~
