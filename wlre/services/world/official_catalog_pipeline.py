@@ -40,19 +40,25 @@ class AssetBinding:
 
     asset_path: str
     contract: SourceContract
+    related_asset_paths: tuple[str, ...] = ()
 
     def __post_init__(self):
-        if (not isinstance(self.asset_path, str) or not self.asset_path
-                or len(self.asset_path) > 1024 or '\x00' in self.asset_path
-                or '*' in self.asset_path or '?' in self.asset_path
-                or not isinstance(self.contract, SourceContract)):
-            raise OfficialCatalogPipelineError('Invalid exact AssetPath/source binding')
+        paths = (self.asset_path, *self.related_asset_paths) if isinstance(
+            self.related_asset_paths, tuple) else ()
+        if (not isinstance(self.contract, SourceContract)
+                or len(paths) < 1 or len(paths) > 16
+                or len(set(paths)) != len(paths)
+                or any(not isinstance(path, str) or not path or len(path) > 1024
+                       or '\x00' in path or '*' in path or '?' in path
+                       for path in paths)):
+            raise OfficialCatalogPipelineError('Invalid exact or related AssetPath binding')
 
 
 @dataclass(frozen=True)
 class ResolvedAsset:
     binding: AssetBinding
     bundle_name: str
+    related_bundle_names: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -121,11 +127,14 @@ def plan_catalog_pipeline(snapshot, manifests: Mapping[str, VerifiedManifest],
         contract = binding.contract
         if versions.get(contract.package) != contract.package_version:
             raise OfficialCatalogPipelineError('Source revision differs from official Manifest')
-        selected = lookup[contract.package].get(binding.asset_path)
-        if selected is None:
-            raise OfficialCatalogPipelineError('Reviewed AssetPath missing in current official Manifest')
-        selectors[contract.package].add(binding.asset_path)
-        resolved.append(ResolvedAsset(binding, selected))
+        roots = []
+        for path in (binding.asset_path, *binding.related_asset_paths):
+            selected = lookup[contract.package].get(path)
+            if selected is None:
+                raise OfficialCatalogPipelineError('Reviewed AssetPath missing in current official Manifest')
+            selectors[contract.package].add(path)
+            roots.append(selected)
+        resolved.append(ResolvedAsset(binding, roots[0], tuple(roots[1:])))
 
     updates = []
     for package in PACKAGES:
@@ -212,16 +221,18 @@ def run_catalog_pipeline(plan: OfficialCatalogPlan, *, download=False,
                        if p.package == binding.contract.package), None)
         if update is None:
             raise OfficialCatalogPipelineError('Missing planned Package')
-        names = {source.bundle_name}
+        names = set()
         dependency_map = {row.spec.name: row.dependencies for row in update.entries}
         def include(name):
             if name not in dependency_map:
                 raise OfficialCatalogPipelineError('Required dependency not planned')
+            if name in names:
+                return
+            names.add(name)
             for dependency in dependency_map[name]:
-                if dependency not in names:
-                    names.add(dependency)
-                    include(dependency)
-        include(source.bundle_name)
+                include(dependency)
+        for name in (source.bundle_name, *source.related_bundle_names):
+            include(name)
         paths = tuple(bundle_index[(binding.contract.package, name)]
                       for name in sorted(names))
         try:
