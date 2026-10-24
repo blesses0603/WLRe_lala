@@ -181,6 +181,32 @@ class CandidateBridgeTests(unittest.TestCase):
                         reviewed_root=staging, install_root=Path(tmp) / 'install')
             installed.assert_not_called()
 
+    def test_handoff_cli_refuses_when_launcher_has_no_compatible_receipt(self):
+        from tools import reviewed_1275_handoff
+        from contextlib import redirect_stderr
+        from io import StringIO
+        with patch.object(reviewed_1275_handoff, 'read_launcher_status',
+                          return_value=None), patch.object(
+                              reviewed_1275_handoff, 'promote_reviewed_archives') as promote:
+            with redirect_stderr(StringIO()):
+                self.assertEqual(reviewed_1275_handoff.main([]), 2)
+            promote.assert_not_called()
+
+    def test_handoff_cli_check_only_does_not_install(self):
+        from tools import reviewed_1275_handoff
+        from contextlib import redirect_stdout
+        from io import StringIO
+        receipt = {'status': 'review_required', 'data_compatibility': 'compatible',
+                   'catalog_key': self.identity.key}
+        with patch.object(reviewed_1275_handoff, 'read_launcher_status',
+                          return_value=receipt), patch.object(
+                              reviewed_1275_handoff, 'promote_reviewed_archives',
+                              return_value={'status': 'ready_for_install',
+                                            'installed': False}) as promote, \
+                redirect_stdout(StringIO()):
+            self.assertEqual(reviewed_1275_handoff.main([]), 0)
+        promote.assert_called_once_with(self.identity.key, check_only=True)
+
     def test_runtime_ready_blocks_mismatching_candidate_before_recipe_mutation(self):
         with patch.object(runtime_1275, 'active_runtime',
                           return_value=self.runtime), patch(
