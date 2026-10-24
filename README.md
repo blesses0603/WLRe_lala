@@ -9,6 +9,7 @@
 > **PR #56 自動相容性判定（v0.6.1 開發候選）**：Launcher 下載並校驗官方 Manifest／Bundle 後，會針對 NPC、商店、製作與場景執行第二層版本身分、Schema、來源 SHA-256、長度與筆數判定；快取命中也必須重新核對來源。新版私有 `compatibility_report.json` 與 `candidate.zip` SHA-256 綁定，主程式僅顯示唯讀狀態。**資料相容不代表遊戲協定相容，也不會自動解除登入或交易限制**。詳細設計見 [自動相容性判定](docs/AUTO_COMPATIBILITY.md)。正式 EXE 打包與未取得的官方 Bundle 實檔驗收暫緩。
 
 > **Launcher 資源缺口自動診斷**：每次啟動會以唯讀方式盤點完整 1275 正式資料是否缺少 `1275_DataCatalog.zip`、`1275_EveNpcIndex.zip`，若檔案存在則以固定 SHA-256／Schema 核對內部資料。登入前視窗顯示缺少或損壞的來源；詳細清單可執行 `py -m tools.diagnose_lala_resources`，或加上 `--json`。缺口檢測不是把未驗證候選資料直接提升為正式遊戲資源。## v0.6.0 更新重點（2026-10-23，1275 資源預設基準，開發候選）
+> **Launcher 既有檔案整合與自動續補（PR #56）**：同步 1275 四類必要資料後，自動依當次官方 DataPackage Manifest 盤點全部原始 `.bytes`，重用**現存且校驗通過**的正式表格／索引與私人 Bundle 快取，缺少時從官方驗證下載（每輪額外上限 4 Bundle／16 MiB）；結果保存在版本化私有 `verified_raw_inventory.zip`，下次啟動可續補。Eve、ItemData_C、TalkData_C 若符合已審核格式則另產生未核准的唯讀候選索引。**全量原始資料完成不代表登入核准**；正式雙 ZIP 僅在擁有原版固定 SHA Manifest 且所有檔案逐項通過後才可安全組裝並交由原有載入器驗證。詳見 [自動相容性與補建規則](docs/AUTO_COMPATIBILITY.md)。
 
 - 主程式內建官方 MainPackage／DataPackage 版本基準改為 1275，完整 Manifest 對照檢查；若未安裝通過 SHA-256 及 Schema 校驗的 1275 來源，登入前阻擋，不會退回 1262 舊索引。
 - NPC 事件、對話、選項、商店價格與 ItemData 來源改為 1275；製作目錄在正式來源驗證完成後更新為新版 1,032 筆配方。
