@@ -77,7 +77,15 @@ def _trusted_cached_candidate(path, key):
     try:
         with zipfile.ZipFile(path) as z:
             expected = {'candidate.json'} | {f'{f}.source' for f in FEATURES}
-            if set(z.namelist()) != expected:
+            infos = z.infolist()
+            if (len(infos) != len(expected)
+                    or {item.filename for item in infos} != expected
+                    or any(item.is_dir() for item in infos)):
+                return None
+            sizes = {item.filename: item.file_size for item in infos}
+            if (not 0 < sizes['candidate.json'] <= 1024 * 1024
+                    or any(not 0 < sizes[f + '.source'] <= MAX_SOURCE_BYTES
+                           for f in FEATURES)):
                 return None
             meta = json.loads(z.read('candidate.json'))
             if (type(meta) is not dict or meta.get('schema_version') != 1
@@ -92,8 +100,13 @@ def _trusted_cached_candidate(path, key):
                 desc = meta['features'][feature]
                 if (type(desc) is not dict or
                         type(desc.get('bytes')) is not int or
-                        not 0 < desc['bytes'] <= MAX_SOURCE_BYTES or
-                        type(desc.get('sha256')) is not str):
+                        desc['bytes'] != sizes[feature + '.source'] or
+                        type(desc.get('record_count')) is not int or
+                        not 0 <= desc['record_count'] <= 20000 or
+                        type(desc.get('sha256')) is not str or
+                        len(desc['sha256']) != 64 or
+                        any(char not in '0123456789abcdef'
+                            for char in desc['sha256'])):
                     return None
                 raw = z.read(feature + '.source')
                 if len(raw) != desc['bytes'] or hashlib.sha256(raw).hexdigest() != desc['sha256']:
