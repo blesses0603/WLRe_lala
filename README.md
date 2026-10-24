@@ -215,6 +215,8 @@ py -m tools.resources.install_npc_text_1262 "WLRE_1262_NPC_繁中資料索引包
 
 原始碼相關依賴請參閱 `requirements-ui.txt`，Windows Nuitka 細節請見 [建置說明](docs/NUITKA_BUILD.md)。
 
+> **UnityFS 解包器（PR #56，v0.6.1 開發候選）**：原生 Windows／macOS 建置流程已加入 `requirements-extractor.txt`（固定 UnityPy 版本），預計隨 EXE／APP 一併封裝，使用者不需另外安裝 Python/UnityPy。新建置自檢 `--self-test-unityfs` 會核對內建模組及 LZ4／Brotli。**正式打包產物與真實官方 Bundle 解包仍須分別驗收**；此功能尚未隨目前 main 或既有 Release 發布。
+
 **更新成品**：先關閉舊版；若 Releases 已提供新版，請下載對應平台的完整壓縮檔，**解壓至新資料夾**後再執行 Windows `WLRe_LaLa.exe` 或 macOS App。資料夾版不可只複製 EXE，也不建議覆蓋舊版執行目錄。
 
 ## 使用限制
