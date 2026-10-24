@@ -24,7 +24,13 @@ class ExpeditionPanel(_ExpeditionPanel):
     """Compatibility adapter preserving historic module-level test/extension hooks."""
 
     def _load_catalog(self):
-        return load_catalog()
+        try:
+            return load_catalog()
+        except (OSError, ValueError, KeyError, EOFError, UnicodeError):
+            from wlre.services.world.auto_candidate_reader import candidate_expedition_catalog
+            return candidate_expedition_catalog() or {
+                'tasks': {}, 'levels': {},
+                'source_kind': 'formal_sources_missing'}
 
     def _plan_quests(self, quests, roles, threshold, npcs):
         return plan_quests(quests, roles, threshold, npcs)
