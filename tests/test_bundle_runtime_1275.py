@@ -246,31 +246,103 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
             with self.assertRaises(BundleRuntimeUnavailable):
                 load_verified_bundle_runtime(sync_root=self.root)
 
-    def test_real_runtime_falls_back_only_if_both_manual_zips_absent(self):
+    def test_runtime_uses_verified_bundle_when_no_legacy_zips(self):
         from wlre.services.world.runtime_1275 import _default_runtime
         _default_runtime.cache_clear()
         self.addCleanup(_default_runtime.cache_clear)
-        zip_root = self.root / 'formal'
-        data = zip_root / '1275_DataCatalog.zip'
-        eve = zip_root / '1275_EveNpcIndex.zip'
-        actual = object()
+        formal = self.root / 'formal'
+        data, eve = formal / '1275_DataCatalog.zip', formal / '1275_EveNpcIndex.zip'
+        working = object()
         with patch('wlre.services.world.runtime_1275._paths',
                    return_value=(data, eve)), patch(
              'wlre.services.world.bundle_runtime_1275.load_verified_bundle_runtime',
-             return_value=actual) as build:
-            self.assertIs(_default_runtime(), actual)
-            build.assert_called_once_with()
+             return_value=working) as bundle, patch(
+             'wlre.services.world.preview_1275.load_preview') as legacy:
+            self.assertIs(_default_runtime(), working)
+            bundle.assert_called_once_with()
+            legacy.assert_not_called()
+
+    def test_partial_old_zip_does_not_block_independently_verified_bundle(self):
+        from wlre.services.world.runtime_1275 import _default_runtime
         _default_runtime.cache_clear()
-        zip_root.mkdir(parents=True)
-        data.write_bytes(b'partial')
+        self.addCleanup(_default_runtime.cache_clear)
+        formal = self.root / 'formal'
+        formal.mkdir()
+        data, eve = formal / '1275_DataCatalog.zip', formal / '1275_EveNpcIndex.zip'
+        data.write_bytes(b'old broken partial zip')
+        working = object()
         with patch('wlre.services.world.runtime_1275._paths',
                    return_value=(data, eve)), patch(
+             'wlre.services.world.bundle_runtime_1275.load_verified_bundle_runtime',
+             return_value=working) as bundle, patch(
+             'wlre.services.world.preview_1275.load_preview') as legacy:
+            self.assertIs(_default_runtime(), working)
+            bundle.assert_called_once_with()
+            legacy.assert_not_called()
+        self.assertEqual(data.read_bytes(), b'old broken partial zip')
+
+    def test_two_invalid_old_zips_do_not_block_verified_bundle(self):
+        from wlre.services.world.runtime_1275 import _default_runtime
+        _default_runtime.cache_clear()
+        self.addCleanup(_default_runtime.cache_clear)
+        formal = self.root / 'formal'
+        formal.mkdir()
+        data, eve = formal / '1275_DataCatalog.zip', formal / '1275_EveNpcIndex.zip'
+        data.write_bytes(b'old invalid data')
+        eve.write_bytes(b'old invalid eve')
+        working = object()
+        with patch('wlre.services.world.runtime_1275._paths',
+                   return_value=(data, eve)), patch(
+             'wlre.services.world.preview_1275.load_preview',
+             side_effect=ValueError('Bad legacy manifest')) as legacy, patch(
+             'wlre.services.world.bundle_runtime_1275.load_verified_bundle_runtime',
+             return_value=working) as bundle:
+            self.assertIs(_default_runtime(), working)
+            legacy.assert_called_once_with(data, eve)
+            bundle.assert_called_once_with()
+        self.assertEqual(eve.read_bytes(), b'old invalid eve')
+
+    def test_good_legacy_zips_still_take_priority_over_bundle(self):
+        from wlre.services.world.runtime_1275 import _default_runtime
+        _default_runtime.cache_clear()
+        self.addCleanup(_default_runtime.cache_clear)
+        formal = self.root / 'formal'
+        formal.mkdir()
+        data, eve = formal / '1275_DataCatalog.zip', formal / '1275_EveNpcIndex.zip'
+        data.write_bytes(b'data fixture')
+        eve.write_bytes(b'eve fixture')
+        working = object()
+        with patch('wlre.services.world.runtime_1275._paths',
+                   return_value=(data, eve)), patch(
+             'wlre.services.world.preview_1275.load_preview',
+             return_value=working) as legacy, patch(
              'wlre.services.world.bundle_runtime_1275.load_verified_bundle_runtime'
-        ) as build:
-            from wlre.services.world.runtime_1275 import Runtime1275Unavailable
-            with self.assertRaises(Runtime1275Unavailable):
+         ) as bundle:
+            self.assertIs(_default_runtime(), working)
+            legacy.assert_called_once_with(data, eve)
+            bundle.assert_not_called()
+
+    def test_invalid_legacy_and_unverified_bundle_both_refused_without_writes(self):
+        from wlre.services.world.runtime_1275 import (
+            Runtime1275Unavailable, _default_runtime)
+        _default_runtime.cache_clear()
+        self.addCleanup(_default_runtime.cache_clear)
+        from wlre.services.world.bundle_runtime_1275 import BundleRuntimeUnavailable
+        formal = self.root / 'formal'
+        formal.mkdir()
+        data, eve = formal / '1275_DataCatalog.zip', formal / '1275_EveNpcIndex.zip'
+        data.write_bytes(b'bad data')
+        eve.write_bytes(b'bad eve')
+        with patch('wlre.services.world.runtime_1275._paths',
+                   return_value=(data, eve)), patch(
+             'wlre.services.world.preview_1275.load_preview',
+             side_effect=ValueError('bad legacy zip')), patch(
+             'wlre.services.world.bundle_runtime_1275.load_verified_bundle_runtime',
+             side_effect=BundleRuntimeUnavailable('仍缺少官方 Bundle：Eve')):
+            with self.assertRaisesRegex(Runtime1275Unavailable, '缺少官方 Bundle：Eve'):
                 _default_runtime()
-            build.assert_not_called()
+        self.assertEqual(data.read_bytes(), b'bad data')
+        self.assertEqual(eve.read_bytes(), b'bad eve')
 
 
 if __name__ == '__main__':
