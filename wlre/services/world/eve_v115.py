@@ -121,33 +121,57 @@ def _scene(r, source):
     )
     selected = 'npc' if source == 'EventData.NewNpc' else 'interact'
     result = []
+    counts = []
+    scene_start = r.pos - 4
     for kind, decode in groups:
-        count = r.u16()
-        if count > MAX_ROWS_PER_TYPE:
-            raise EveDecodeError('Eve per-scene event count exceeds limit')
-        seen = set()
-        for _ in range(count):
-            if kind in ('npc', 'interact'):
-                row = decode(r)
-            elif kind in ('event', 'lead_event', 'group', 'lead_group', 'battle'):
-                decode(r)
-                row = None
-            elif kind in ('door', 'mine', 'goods'):
-                r.skip(2)
-                _common(r)
-                r.skip({'door': 29, 'mine': 10, 'goods': 11}[kind])
-                row = None
-            else:  # convey
-                r.skip(2 + NAME_BYTES + 2 + 4 + 4 + 1 + 2)
-                row = None
-            if row is not None:
-                if row['index'] in seen:
-                    raise EveDecodeError('Duplicate event index in scene')
-                seen.add(row['index'])
-                if kind == selected:
-                    result.append(row)
+        try:
+            count = r.u16()
+            if count > MAX_ROWS_PER_TYPE:
+                raise EveDecodeError('Eve per-scene event count exceeds limit')
+            counts.append((kind, count))
+            seen = set()
+            for record_index in range(count):
+                try:
+                    if kind in ('npc', 'interact'):
+                        row = decode(r)
+                    elif kind in ('event', 'lead_event', 'group', 'lead_group', 'battle'):
+                        decode(r)
+                        row = None
+                    elif kind in ('door', 'mine', 'goods'):
+                        r.skip(2)
+                        _common(r)
+                        r.skip({'door': 29, 'mine': 10, 'goods': 11}[kind])
+                        row = None
+                    else:  # convey
+                        r.skip(2 + NAME_BYTES + 2 + 4 + 4 + 1 + 2)
+                        row = None
+                    if row is not None:
+                        if row['index'] in seen:
+                            raise EveDecodeError('Duplicate event index in scene')
+                        seen.add(row['index'])
+                        if kind == selected:
+                            result.append(row)
+                except EveDecodeError as exc:
+                    raise EveDecodeError(
+                        f'{kind} 第 {record_index + 1}/{count} 筆'
+                        f'（場景內偏移 {r.pos - scene_start}）：{exc}') from exc
+        except EveDecodeError as exc:
+            if f'{kind} 第 ' in str(exc):
+                raise
+            raise EveDecodeError(
+                f'{kind} 區段（場景內偏移 {r.pos - scene_start}）：{exc}') from exc
     if r.pos != r.end:
-        raise EveDecodeError('Scene size does not match audited Eve v115 layout')
+        remaining = r.end - r.pos
+        # Expose only position, lengths and section counts, never raw bytes.
+        # Zero padding might explain the difference but is NOT silently trusted.
+        is_zero = (remaining > 0 and
+                   not any(r.raw[r.pos:r.end]))
+        sizes = ','.join(f'{kind}:{count}' for kind, count in counts)
+        raise EveDecodeError(
+            'Scene size does not match audited Eve v115 layout'
+            f'（已讀 {r.pos-scene_start}，'
+            f'剩餘 {remaining} bytes，尾段全零={is_zero}，'
+            f'事件數={sizes}）')
     return result
 
 
