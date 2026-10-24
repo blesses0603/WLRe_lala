@@ -110,3 +110,30 @@ py -m tools.reviewed_1275_handoff --install
 ~~~
 
 請勿把 DataPackage_1275.zip 或 MainPackage_1275.zip 的 Manifest-only 壓縮包放成上述正式 ZIP，它們不含完整遊戲表格且無法通過固定 SHA 驗證。既有正式 ZIP 不覆寫；只有部分已安裝時直接安全拒絕。官方未來版本若改動格式或封包協定仍需獨立開發與驗收。
+
+## Launcher 自動盤點 LaLa 缺少的正式資料
+
+使用者不需要自行猜測是哪個 ZIP 或哪張表缺失。每次真實 Launcher 執行官方資源準備後，會唯讀檢查本機 official_resources_1275，輸出正式資源缺口報告至 official_sync/resource_gap_report.json。登入前畫面以簡短文字顯示實際缺哪一份 ZIP；完整清單則可用診斷工具查看。
+
+**資料類型與檢查方式：**
+
+| 正式來源 | 必要內容 | 缺失或損毀判定 |
+| --- | --- | --- |
+| 1275_DataCatalog.zip | 160 張原始表、TalkData_C／TextData_C／ItemData_C 索引 | 必須通過專案既有固定 manifest SHA-256、163 個內部檔案與逐檔 SHA-256 |
+| 1275_EveNpcIndex.zip | NPC 事件、互動事件的兩份索引 | 固定 SHA-256、總筆數、場景與欄位 Schema 校驗 |
+
+若整包不存在，列出實際缺少的 ZIP 與必要資料類型；若內部 manifest 可通過固定雜湊驗證，進一步列出缺失的 `tables/.../*.bytes` 與 `indexes/...`；若來源存在但遭修改，明確標示校驗失敗，不誤認成整包缺失。報告完全不包含使用者磁碟絕對路徑、不會解壓或修改任何遊戲檔案，`assets_ready`、`can_send_packets` 永遠為 false。
+
+可在專案目錄執行一鍵唯讀檢測：
+
+~~~powershell
+py -m tools.diagnose_lala_resources
+~~~
+
+要取得逐檔缺口 JSON：
+
+~~~powershell
+py -m tools.diagnose_lala_resources --json
+~~~
+
+目前官方 Manifest／Bundle 的**增量下載**仍由 Launcher 原有流程負責；但是**無法只靠四類候選自動合成**固定 SHA 的正式雙 ZIP。若缺少對話文字、全量物品或表格，診斷會指出，取得後還必須依正式來源的固定指紋和相容性檢查通過，才可能使用。資源缺口報告本身絕對不是登入權限。
