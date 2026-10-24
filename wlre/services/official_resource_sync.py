@@ -34,7 +34,7 @@ def validate_snapshot(value):
     if (not isinstance(value, dict) or
             set(value) != {'schema_version', 'origin', 'data_ver', 'exe_version',
                            'packages', 'checked_at_utc', 'assets_ready'} or
-            value['schema_version'] != SCHEMA or
+            type(value['schema_version']) is not int or value['schema_version'] != SCHEMA or
             value['origin'] != 'official_pc_version_endpoint' or
             not isinstance(value['data_ver'], str) or
             not _DATA_VERSION.fullmatch(value['data_ver']) or
@@ -105,6 +105,7 @@ def compare_snapshot(current, previous=None):
         validate_snapshot(previous)
     return {
         'data_ver_changed': None if previous is None else current['data_ver'] != previous['data_ver'],
+        'exe_version_changed': None if previous is None else current['exe_version'] != previous['exe_version'],
         'package_changes': {
             name: ('first_observation' if previous is None else
                    'unchanged' if current['packages'][name] == previous['packages'][name]

@@ -54,6 +54,9 @@ class OfficialResourceSyncTests(unittest.TestCase):
         result = compare_snapshot(later, first)
         self.assertEqual(result['package_changes']['MainPackage'], 'changed')
         self.assertEqual(result['package_changes']['DataPackage'], 'unchanged')
+        self.assertFalse(result['exe_version_changed'])
+        newer_client = dict(later, exe_version='1.3.1')
+        self.assertTrue(compare_snapshot(newer_client, first)['exe_version_changed'])
 
     def test_atomic_cache_and_corruption_rejection(self):
         fetch, _, _ = fake_fetcher()
@@ -82,6 +85,8 @@ class OfficialResourceSyncTests(unittest.TestCase):
         altered = dict(value, assets_ready=True)
         with self.assertRaises(OfficialSyncError):
             validate_snapshot(altered)
+        with self.assertRaises(OfficialSyncError):
+            validate_snapshot(dict(value, schema_version=True))
 
     def test_cache_is_metadata_only(self):
         fetch, _, _ = fake_fetcher()
