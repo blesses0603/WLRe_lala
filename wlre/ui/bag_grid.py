@@ -8,7 +8,7 @@ import tkinter as tk
 from tkinter import ttk
 
 from wlre.services.items.combat_resources import CAT, heal_effects, available
-from wlre.services.items.catalog import item_display_name as item_name
+from wlre.services.items.catalog import item_display_name as item_name, verified_item_metadata
 from wlre.services.world.feature_resource_index import feature_note
 from wlre.ui.theme import PANEL, CYAN, group
 
@@ -73,6 +73,25 @@ def item_details(inventory, index, record):
     """Conservatively label fields present in the decoded catalog."""
     sid = record['item_id']
     info = CAT['items'].get(str(sid), {})
+    official = verified_item_metadata(sid)
+    if official:
+        # 1275 has checked base prices / restrictions but no approved item
+        # effects schema. Do not render 1262 healing values as 1275 truth,
+        # nor enable bag-grid healing buttons from historical metadata.
+        price = official['base_price']
+        level = official['need_level']
+        status = 'NPC 不可販售' if not official['npc_sale_allowed'] else 'NPC 可販售（基礎資料）'
+        lines = [f'正式 1275 基礎價：{price} 金幣',
+                 f'需求等級：{level}；{status}',
+                 '1275 道具使用效果尚未核對，不依舊版資料啟用快捷補給']
+        return {
+            'id': sid, 'name': official['name'], 'index': int(index),
+            'count': record.get('count', 0),
+            'reserved': inventory.get('reserved', {}).get(str(index), 0),
+            'available': available(inventory, str(index)),
+            'kind': None, 'effects': {}, 'lines': lines,
+            'metadata_source': 'verified_1275_itemdata',
+        }
     effects = heal_effects(sid)
     lines = [f"HP +{effects['hp']}" for _ in (0,) if effects.get('hp')]
     lines += [f"SP +{effects['sp']}" for _ in (0,) if effects.get('sp')]
