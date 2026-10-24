@@ -263,6 +263,14 @@ LaLa 啟動自動資源準備時，先觀察 `ResourcePath_PC.dat` 與 DataPacka
 
 重新觀察只會使用既有資源路徑與 `.version`，不新增 `.json`／`.report` 網路依賴；純唯讀預覽不會額外重新查詢。這道檢查不等於封包協定相容或完整正式 1275 索引已獲核准。對應測試包含版號切換、錯誤快照、單純時間戳變化與唯讀模式的 GET 次數。
 
+## v0.6.1 舊 ZIP 與官方 Bundle 雙來源修復（PR #56）
+
+使用者在 Windows 的 v0.6.1 開發候選畫面回報：官方 DataPackage／MainPackage 都是 1275、Launcher 四類候選格式相容，但舊 `1275_DataCatalog.zip` 與 `1275_EveNpcIndex.zip` 兩份仍顯示內容損壞、阻止登入。確認 `runtime_1275._default_runtime` 先前只要任一舊 ZIP 存在就拒絕採用新 Bundle 正式 Runtime；UI 又將舊 ZIP 報告直接拼接為此次 Bundle 狀態。
+
+修正為**兩來源各自完整校驗、永不混用**：兩份舊 ZIP 均存在且完整通過原有固定 SHA/Schema 驗證時優先使用；任一缺少或驗證失敗時，改嘗試完整的已固定官方 `.version/.bytes/.hash` 與必要 Bundle Runtime 驗證。只有全部通過獨立 Manifest 身分、MD5／CRC、Eve／配方／遠征／原始資料格式檢查後才能取得正式資料；否則兩來源都不得啟用。**不刪除、覆寫或部分使用舊 ZIP**，不開放未驗證封包與登入。舊 ZIP 異常仍可另行診斷，但不再冒充官方 Bundle 的檢查結果。
+
+新增無 ZIP、單 ZIP 殘留、雙 ZIP 損壞、雙 ZIP 已驗證優先、兩來源皆失敗嚴格拒絕，以及 Windows 版本檢查資訊區隔離舊 ZIP 與 Bundle 的離線回歸測試。此修改在 Draft PR，現有 EXE 不會在下一次「重新查詢官方版本」後自動套用；正式官方 1275 Bundle／伺服器操作 E2E 尚待實機驗收。
+
 ## 官方 Manifest 三檔原則（固定開發決策）
 
 - **DataPackage 與 MainPackage 各只使用官方 `.version`、`.bytes`、`.hash`** 作為資源版本識別與正式二進位 Manifest 校驗來源。從官方資源版號端點查詢最新版本，使用 `.hash` 驗證 `.bytes`，再從 `.bytes` 解出 AssetPath、Bundle 和相依關係。
