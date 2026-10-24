@@ -53,6 +53,14 @@ class VersionGateController:
             'error': 'Launcher 本次候選準備未完成，安全限制不變',
             'preview': 'Launcher 僅預覽下載計畫',
         }.get(code, '尚無 Launcher 自動資源準備紀錄')
+        # Display the actual missing full-runtime inputs instead of telling
+        # users to guess which two ZIPs or internal tables are absent.
+        # Local report is untrusted and must never affect login eligibility.
+        from wlre.services.world.resource_gap_diagnostics import read_report, summarize
+        gaps = read_report(expected_checked_at_utc=(
+            receipt.get('checked_at_utc') if receipt else None))
+        if gaps is not None:
+            self._launcher_catalog_status += '｜' + summarize(gaps)
 
     def show_version_check(self):
         """Compact, single-page version review before exposing credentials.
