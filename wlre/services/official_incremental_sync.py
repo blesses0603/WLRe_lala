@@ -23,6 +23,7 @@ from wlre.storage.paths import data_root
 
 DEFAULT_MAX_DOWNLOAD_BYTES = 64 * 1024 * 1024
 DEFAULT_MAX_DOWNLOADS = 32
+MAX_HISTORICAL_RECEIPTS = 4096
 
 
 class IncrementalSyncError(ValueError):
@@ -97,10 +98,14 @@ def find_previous_verified_manifest(current, *, cache_root=None, max_candidates=
     def version_key(value):
         return tuple(int(part) for part in value.split('_'))
 
+    if (type(max_candidates) is not int or not 1 <= max_candidates <= 256):
+        raise IncrementalSyncError('Invalid historical Manifest comparison limit')
     candidates = []
+    scanned = 0
     for receipt in base.glob(f'*/{current.spec.package}/*/{current.spec.package}.verified.json'):
-        if len(candidates) >= max_candidates:
-            raise IncrementalSyncError('Historical Manifest cache has too many candidates')
+        scanned += 1
+        if scanned > MAX_HISTORICAL_RECEIPTS:
+            raise IncrementalSyncError('Historical Manifest directory exceeds safe scan bound')
         try:
             spec = ManifestSpec(receipt.parents[2].name, current.spec.package,
                                 receipt.parent.name)
@@ -108,8 +113,11 @@ def find_previous_verified_manifest(current, *, cache_root=None, max_candidates=
             continue
         if version_key(spec.package_version) < version_key(current.spec.package_version):
             candidates.append(spec)
+    # A healthy long-lived installation accumulates many versions. Select
+    # the newest bounded set before opening any historical receipts; do not
+    # block official updates just because there are over 64 older versions.
     candidates.sort(key=lambda spec: version_key(spec.package_version), reverse=True)
-    for spec in candidates:
+    for spec in candidates[:max_candidates]:
         try:
             return read_verified_cached_manifest(spec, cache_root=base)
         except ManifestSyncError:
