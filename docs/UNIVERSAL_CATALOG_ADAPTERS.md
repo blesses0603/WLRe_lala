@@ -141,7 +141,7 @@ python -m unittest tests.test_unity_textasset tests.test_eve_v115 tests.test_cat
 3. 在每次背景執行的總下載上限（預設 64 MiB／32 檔，含兩個 Package）內下載／重用 Bundle，逐個核對官方大小、MD5 與 CRC；校驗失敗則拒絕解析。
 4. 使用 Nuitka 已隨附的 UnityPy 解包 TextAsset，依已審核的 Eve v115、ItemData、Smith、Scenes 格式產生四項來源索引，並通過資料形狀、長度與筆數檢查。SHA-256 在經過來源驗證後自動計算，**不需玩家自己提供 Hash**。
 5. 所有四項成功才以 ZIP 格式寫入使用者私有資料夾 `LOCALAPPDATA\WLRE_LaLa\official_sync\derived_catalogs\<catalog_key>\candidate.zip`。ZIP 包含四項衍生來源與 `candidate.json`，有版號、來源雜湊、筆數與明確 `approved=false`。覆寫採同資料夾暫存、讀回驗證與原子替換，不寫 GitHub 或遊戲資源目錄。
-6. 登入前版本視窗自動在背景啟動此流程，回報下載／驗證結果。重查或來源異常時不允許舊作業影響新狀態。**本流程不改變正式登入閘門**；候選資料仍屬「等待版本相容性審核」，不能因自己算出的 SHA 正確就啟用交易、移動或新版本登入。
+6. **Launcher** 於啟動主程式前執行資源準備：原始碼版由 `wlre.launcher`（`run_client.bat`／`.command`）呼叫；Nuitka Windows／macOS 版由 `WLRE_Client.main` 直接呼叫同一 `launcher_catalog.prepare_on_launch`。將唯讀結果寫入 `LOCALAPPDATA/WLRE_LaLa/official_sync/launcher_catalog_status.json`，不依賴 Tk 與登入畫面下載。`VersionGateController` 僅讀取該狀態供展示，每次按「重新查詢官方版本」**不會重新下載 Bundle**。
 
 開發者若要單獨檢查自動流程（無須 --bindings）：
 
@@ -150,6 +150,14 @@ py -m tools.plan_official_catalog
 py -m tools.plan_official_catalog --download --parse
 ```
 
-一般使用者只需開啟已完成原生打包與驗收的 LaLa，主程式會在版本檢查時背景準備候選資料，不用執行 PowerShell。舊版 `--bindings 私人檔案` 仍提供專家相容用途，但不再是預設方式。
+一般使用者只需開啟已完成原生打包與驗收的 LaLa，**Launcher 在主畫面出現之前**核對、下載與解析候選資料，不需手動執行 PowerShell。原始碼版 Launcher 必要時在 `.ui-env` 私人虛擬環境中安裝固定的 UnityPy，避免安裝到系統 Python。離線／超額／新格式時候選準備失敗，但登入限制仍由登入前官方版本驗證獨立決定。舊版 `--bindings 私人檔案` 只保留專家相容用途。
 
 **重要：** 此版本尚未在官方 1275 真實 Bundle 上完成端到端解包驗收。新版候選不等同於 LaLa 實際 NPC 互動、商店購買、製作封包與導航功能的相容確認；尚需官方格式及伺服器驗收，不能直接將 `assets_ready` 改為 True。
+
+### Launcher 與主程式的職責界線
+
+- `wlre/launcher.py`：原始碼版啟動環境／選擇 Python、啟動資源處理子程序，再啟動 LaLa Tk GUI。
+- `WLRE_Client.py`：編譯版自身即啟動器，不依賴其他 Python；進入 GUI 前呼叫同一個資源服務。`--self-test`／`--smoke-test-gui` 不接觸官方 CDN。
+- `wlre/services/world/launcher_catalog.py`：單一資源準備入口、私人只讀候選收據、錯誤隔離。收據不能授權遊戲登入或封包。
+- `wlre/ui/version_gate_controller.py`：官方版本相容性與登入安全閘門，以及 Launcher 收據顯示，**不執行 Bundle 下載與解包**。
+- 此階段資源準備是同步啟動前程序，若官方 CDN 網路緩慢可能延後主畫面顯示；未加入下載進度 UI，仍待實際使用者驗收與後續 UX 改良。
