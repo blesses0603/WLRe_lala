@@ -79,3 +79,4 @@ class StartupSerialization(unittest.TestCase):
             self.assertIn('install',run.call_args_list[1].args[0])
             self.assertTrue(run.call_args_list[2].kwargs['check'])
             self.assertIn('wlre.services.world.launcher_catalog', run.call_args_list[3].args[0])
+            self.assertIn('--progress', run.call_args_list[3].args[0])
