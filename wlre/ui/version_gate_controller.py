@@ -345,6 +345,10 @@ class VersionGateController:
         if self._closing or self._auto_catalog_busy:
             return
         generation = self._auto_catalog_generation
+        # Never capture the Tk controller in a daemon thread. Otherwise the
+        # final reference may be released on the worker thread after window
+        # destruction, triggering Tcl_AsyncDelete outside the Tk main thread.
+        messages = self._auto_catalog_messages
         self._auto_catalog_busy = True
         self._auto_catalog_status = "正在核對 Manifest 並準備 Bundle"
         self._render_version_window()
@@ -356,7 +360,7 @@ class VersionGateController:
                 kind, value = "done", result.get("cache", "")
             except Exception as exc:
                 kind, value = "error", str(exc)[:100]
-            self._auto_catalog_messages.put((generation, kind, value))
+            messages.put((generation, kind, value))
 
         threading.Thread(target=worker, name="lala-catalog-auto-prepare",
                          daemon=True).start()
