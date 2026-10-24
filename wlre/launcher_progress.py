@@ -32,6 +32,7 @@ STEP_LABELS = {
     'preview_ready': '資源預覽完成',
     'download_ready': 'Bundle 同步完成',
     'candidate_ready': '候選資料已建立',
+    'extract_failed': '候選資料解析失敗',
 }
 _BG = '#101927'
 _PANEL = '#172539'
@@ -59,6 +60,15 @@ def progress_message(phase, details=None):
         if (type(done) is int and type(total) is int
                 and 0 <= done <= total and total > 0):
             return f'已校驗 {done} / {total} 個必要 Bundle'
+    if phase == 'extract_failed':
+        feature = details.get('feature')
+        stage = details.get('stage')
+        reviewed = ('UnityFS／TextAsset', 'Eve 二進位事件',
+                    'ItemData 二進位表', '資料 Schema',
+                    '未分類解包例外', '未分類 Schema 例外')
+        if feature in FEATURE_LABELS and stage in reviewed:
+            return f'{FEATURE_LABELS[feature]}：{stage} 驗證失敗'
+        return '新版候選資料格式未通過驗證'
     if phase == 'extract':
         feature = details.get('feature')
         if feature in FEATURE_LABELS:
@@ -110,7 +120,7 @@ def run_with_progress(task):
         raise
 
     messages = queue.Queue()
-    state = {'result': None, 'done': False}
+    state = {'result': None, 'done': False, 'last_error': None}
     root.title('飄流幻境 RE · LaLa Launcher')
     root.configure(bg=_BG)
     root.geometry('520x286')
@@ -180,6 +190,8 @@ def run_with_progress(task):
             if kind == 'stage':
                 stage.set(_format_stage(arg))
                 detail.set(progress_message(arg, extra))
+                if arg == 'extract_failed':
+                    state['last_error'] = progress_message(arg, extra)
                 if arg == 'bundle_item' and isinstance(extra, dict):
                     done, total = extra.get('completed'), extra.get('total')
                     if (type(done) is int and type(total) is int
@@ -207,8 +219,9 @@ def run_with_progress(task):
                 root.after(700, root.quit)
             else:
                 stage.set('Launcher 將繼續開啟 LaLa')
-                detail.set('候選資源未完成；主程式仍會獨立檢查官方遊戲版本。')
-                footer.set('無法解析的新資料不會被啟用。')
+                detail.set(state['last_error'] or
+                           '候選資源未完成；主程式仍會獨立檢查官方遊戲版本。')
+                footer.set('候選資料未啟用；原有登入安全檢查仍有效。')
                 root.after(1100, root.quit)
         else:
             root.after(80, pump)
