@@ -8,7 +8,9 @@ from tkinter import ttk, messagebox
 from wlre.services.expedition import (
     preferences, validate, faith_gain, duration, recovery_stock, choose_members,
 )
-from wlre.services.expedition_data import load_catalog
+# Keep this old import/patch symbol for test and extension compatibility,
+# but bind it to the audited active-version loader by default.
+from wlre.services.expedition_data import load_active_catalog as load_catalog
 from wlre.services.items.combat_resources import CAT, item_name
 from wlre.storage import expedition_settings
 from wlre.ui.layout import heading, scroll_table
