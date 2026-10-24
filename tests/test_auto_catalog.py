@@ -145,6 +145,49 @@ class AutoCatalogTests(unittest.TestCase):
         self.assertIn('compatibility_check', cached)
         self.assertNotIn('extract', cached)
 
+    def test_version_switch_during_two_manifest_downloads_aborts_before_bundles(self):
+        # A newly published official .version must not combine old and new
+        # DataPackage/MainPackage in one candidate or start Bundle fetching.
+        updated = {**self.snapshot, 'packages': {
+            **self.snapshot['packages'],
+            'MainPackage': '1276_2026_10_24_21_00_00_01'}}
+        observed = iter((self.snapshot, updated))
+        events = []
+        with self.assertRaisesRegex(AutoCatalogError, 'version changed'):
+            run_auto_catalog(**self.kwargs(
+                observe=lambda: next(observed),
+                progress=lambda phase, details: events.append(phase)))
+        self.assertNotIn('bundle_plan', events)
+        self.assertNotIn('bundle_sync', events)
+        self.assertNotIn('candidate_ready', events)
+        self.assertFalse(self.candidates.exists())
+
+    def test_version_recheck_failure_never_starts_bundle_work(self):
+        observed = iter((self.snapshot, {
+            **self.snapshot, 'packages': {'DataPackage': 'invalid'}}))
+        events = []
+        with self.assertRaisesRegex(AutoCatalogError, 'version recheck failed'):
+            run_auto_catalog(**self.kwargs(
+                observe=lambda: next(observed),
+                progress=lambda phase, details: events.append(phase)))
+        self.assertNotIn('bundle_sync', events)
+        self.assertFalse(self.candidates.exists())
+
+    def test_version_recheck_ignores_observation_timestamp(self):
+        observed = iter((self.snapshot, {
+            **self.snapshot, 'checked_at_utc': '2026-10-24T12:00:00+00:00'}))
+        result = run_auto_catalog(**self.kwargs(observe=lambda: next(observed)))
+        self.assertEqual(result['status'], 'review_required')
+        self.assertFalse(result['can_send_packets'])
+
+    def test_readonly_preview_does_not_repeat_version_requests(self):
+        calls = []
+        result = run_auto_catalog(**self.kwargs(
+            download=False, parse=False,
+            observe=lambda: calls.append('observed') or self.snapshot))
+        self.assertEqual(result['status'], 'preview')
+        self.assertEqual(calls, ['observed'])
+
     def test_failing_manifest_never_reports_bundle_completed(self):
         self.manifests['DataPackage'].index['assets'].pop()
         events = []
