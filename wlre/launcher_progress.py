@@ -182,7 +182,17 @@ def run_with_progress(task):
                 progress.stop()
                 break
         if state['done']:
-            root.after_idle(root.quit)
+            receipt = state['result'] or {}
+            if receipt.get('status') == 'review_required':
+                stage.set('Launcher 資料準備已完成')
+                detail.set('候選快取已建立或校驗完成，等待遊戲相容性審核。')
+                footer.set('現在開啟 LaLa 主程式，由官方版本安全檢查決定登入。')
+                root.after(700, root.quit)
+            else:
+                stage.set('Launcher 將繼續開啟 LaLa')
+                detail.set('候選資源未完成；主程式仍會獨立檢查官方遊戲版本。')
+                footer.set('無法解析的新資料不會被啟用。')
+                root.after(1100, root.quit)
         else:
             root.after(80, pump)
 
