@@ -23,10 +23,21 @@ python -m tools.check_official_sync --save
 
 預設只查詢、輸出；加上 `--save` 只原子寫入版本快照。該快照不表示玩家已下載 Manifest／Bundle，`assets_ready` 永遠為 false，不會更動 LaLa 的發行版相容性基準、不繞過登入版本閘門、不複製遊戲檔案。
 
+## 已完成：第 1.5 階段「單一 Bundle 的安全下載元件」
+
+對已由獨立可信流程驗證的 YooAsset 2.2.5 Manifest，新增 
+`wlre.services.official_bundle_download`：
+
+- 從 Manifest 的 BundleName（output_name_style=1）組合使用者觀測的 `wlreftp.chinesegamer.net/.../ResourcesPC/AssetBundle/{BundleName}` 路徑；不接受任意網址、路徑穿越或跨網域轉址。
+- 單一 HTTPS 下載受檔案長度上限限制；串流驗證 Manifest 提供的檔案大小、MD5 FileHash 與 CRC32。全部通過後原子存入使用者電腦；下載中斷不留下可被當成完成的檔案。
+- 已校驗的本機 Bundle 不重複下載。這項元件預設**不主動呼叫網路**；目前未接到 UI 或登入路徑。
+- 2026-10-24 用使用者提供的 DataPackage 1275 Manifest，確認 `datapackage_data_v.bundle` 為 4,695 bytes、FileHash `5bf5ead224fd61bbd8fc72af64b46864`、FileCRC `a64f27a7`。尚未取得遠端實際內容並完成網路端到端校驗。
+- `wlreftpsrc.chinesegamer.net` 是使用者另行提供的候選資源主機；在確定回應及官方路由前，**不自動設為下載來源**。
+
 ## 尚未完成：不能宣稱 B-only 已經能完整登入／導航
 
 - **第 2 階段：Manifest 遠端路徑實證。** 必須從官方遊戲的實際 HTTPS 請求確認兩包 Manifest `.bytes`／`.hash` URL。僅憑版本號及本機壓縮檔名稱猜測的幾種 URL 均回傳 HTTP 404。不可對未驗證路徑進行大量猜測／掃描。
-- **第 3 階段：必要 Bundle 的正確 URL。** 對照 Manifest 的 Bundle hash、尺寸、依賴，僅下載必需部分。限定官方網域與明確路徑，限制並行數、總傳輸量、磁碟用量，串流校驗後原子切換；只在玩家本機快取，不上傳 GitHub。
+- **第 3 階段：必要 Bundle 的完整 URL 與實際遠端驗證。** 已有單 Bundle 的嚴格下載元件，但尚須確認官方回應與 Manifest 校驗一致。對照依賴關係後才能挑選必要檔案；增量下載佇列、全域流量／磁碟配額、重試及暫停尚未實作。僅於玩家本機快取，不上傳 GitHub。
 - **第 4 階段：Unity 內建資源與功能相容驗收。** 確認 `resources.assets`、`unity default resources` 等遊戲內建資源是否另有官方來源；缺少 `12910` Mesh 等關鍵內容時，不得宣稱導航完成。
 - **第 5 階段：端到端驗收及安全遷移。** 在沒有官方遊戲安裝與既有 LaLa 資料的乾淨 Windows 環境測試。確認資源服務成功後，遷移所有 UI/服務讀取路徑並停止發版打包素材，再由維護者審核刪除舊素材與清理 Git 歷史。
 
