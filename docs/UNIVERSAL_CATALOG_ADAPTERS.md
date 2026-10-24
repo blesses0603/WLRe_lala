@@ -136,7 +136,7 @@ python -m unittest tests.test_unity_textasset tests.test_eve_v115 tests.test_cat
 
 **一般玩家不用建立 `C:\path\outside\repo\bindings.json`。** 原路徑只是舊版手動／開發者來源契約的示範，不是真正的 Windows 檔案。PR #56 現新增零設定的 `wlre.services.world.auto_catalog.run_auto_catalog`：
 
-1. 由官方 `ResourcePath_PC.dat`、兩包 `.version` 及各自驗證過的 Manifest 判定獨立完整版本與 64 位元十六進位的 catalog key。
+1. 由官方 `ResourcePath_PC.dat`、兩包 `.version` 及各自驗證過的 Manifest 判定獨立完整版本與 64 字元十六進位的 catalog key。
 2. 按目前**已知、確切**的 `Assets/ResourcesBuild/Data/{Eve,ItemData_C,SmithData_C,ScenesData_C}.bytes` AssetPath 定位必要 Bundle 與全部相依。只支援可明確對上 Manifest 的既有路徑；未來改名或格式變更時，不模糊比對、不中途默認相容。
 3. 在每次背景執行的總下載上限（預設 64 MiB／32 檔，含兩個 Package）內下載／重用 Bundle，逐個核對官方大小、MD5 與 CRC；校驗失敗則拒絕解析。
 4. 使用 Nuitka 已隨附的 UnityPy 解包 TextAsset，依已審核的 Eve v115、ItemData、Smith、Scenes 格式產生四項來源索引，並通過資料形狀、長度與筆數檢查。SHA-256 在經過來源驗證後自動計算，**不需玩家自己提供 Hash**。
