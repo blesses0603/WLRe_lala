@@ -14,6 +14,8 @@ MAX_RECORDS = 20000
 MAX_ROWS_PER_TYPE = 4096
 NAME_BYTES = 20
 PARA_NODES = 11
+EVE_SECTION_OFFSET_COUNT = 11
+EVE_SECTION_OFFSET_BYTES = EVE_SECTION_OFFSET_COUNT * 4
 
 
 class EveDecodeError(ValueError):
@@ -123,7 +125,9 @@ def _scene(r, source):
     result = []
     counts = []
     scene_start = r.pos - 4
+    section_offsets = []
     for kind, decode in groups:
+        section_offsets.append(r.pos - scene_start)
         try:
             count = r.u16()
             if count > MAX_ROWS_PER_TYPE:
@@ -160,18 +164,30 @@ def _scene(r, source):
                 raise
             raise EveDecodeError(
                 f'{kind} 區段（場景內偏移 {r.pos - scene_start}）：{exc}') from exc
-    if r.pos != r.end:
-        remaining = r.end - r.pos
-        # Expose only position, lengths and section counts, never raw bytes.
-        # Zero padding might explain the difference but is NOT silently trusted.
-        is_zero = (remaining > 0 and
-                   not any(r.raw[r.pos:r.end]))
+    # Verified on the complete user-provided official 1275 Eve TextAsset:
+    # every one of 1,262 v115 scenes ends in exactly eleven LE UInt32s.
+    # These are absolute positions of the *section count headers* relative
+    # to the start of this scene, in the same order as the eleven groups.
+    # Validate the table, rather than accepting or discarding a 44-byte tail.
+    remaining = r.end - r.pos
+    if remaining != EVE_SECTION_OFFSET_BYTES:
+        is_zero = remaining > 0 and not any(r.raw[r.pos:r.end])
         sizes = ','.join(f'{kind}:{count}' for kind, count in counts)
         raise EveDecodeError(
-            'Scene size does not match audited Eve v115 layout'
+            'Eve v115 section offset table length mismatch'
             f'（已讀 {r.pos-scene_start}，'
-            f'剩餘 {remaining} bytes，尾段全零={is_zero}，'
-            f'事件數={sizes}）')
+            f'剩餘 {remaining} bytes，'
+            f'預期 {EVE_SECTION_OFFSET_BYTES} bytes，'
+            f'尾段全零={is_zero}，事件數={sizes}）')
+    for index, (kind, _) in enumerate(groups):
+        recorded = r.u32()
+        expected = section_offsets[index]
+        if recorded != expected:
+            raise EveDecodeError(
+                f'Eve v115 offset table differs at {kind}: '
+                f'expected {expected}, got {recorded}')
+    if r.pos != r.end:
+        raise EveDecodeError('Eve v115 offset table did not consume entire scene')
     return result
 
 
