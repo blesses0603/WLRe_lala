@@ -6,6 +6,8 @@
 
 [更新重點](#v0517-更新重點) · [啟動與建置](#啟動與建置) · [使用限制](#使用限制) · [測試](#測試與驗證) · [文件](#參考文件) · [版本歷史](版本歷史.md)
 
+> **官方 Manifest 來源決策（PR #56）**：DataPackage／MainPackage 各僅以 `.version`、`.bytes`、`.hash` 作為版本與資源清單的必要來源；**不下載、不依賴**官方 `.json`、`.report`。`ResourcePath_PC.dat` 仍供偵測資料路徑與 DataVer，對應的 `.bundle` 依實際功能需求增量下載與校驗。程式內自行建立的 `.json` 索引／收據屬於本機衍生資料，不是額外要求下載的官方 `.json`。
+
 > **PR #56 自動相容性判定（v0.6.1 開發候選）**：Launcher 下載並校驗官方 Manifest／Bundle 後，會針對 NPC、商店、製作與場景執行第二層版本身分、Schema、來源 SHA-256、長度與筆數判定；快取命中也必須重新核對來源。新版私有 `compatibility_report.json` 與 `candidate.zip` SHA-256 綁定，主程式僅顯示唯讀狀態。**資料相容不代表遊戲協定相容，也不會自動解除登入或交易限制**。詳細設計見 [自動相容性判定](docs/AUTO_COMPATIBILITY.md)。正式 EXE 打包與未取得的官方 Bundle 實檔驗收暫緩。
 
 > **Launcher 資源缺口自動診斷**：每次啟動會以唯讀方式盤點完整 1275 正式資料是否缺少 `1275_DataCatalog.zip`、`1275_EveNpcIndex.zip`，若檔案存在則以固定 SHA-256／Schema 核對內部資料。登入前視窗顯示缺少或損壞的來源；詳細清單可執行 `py -m tools.diagnose_lala_resources`，或加上 `--json`。缺口檢測不是把未驗證候選資料直接提升為正式遊戲資源。## v0.6.0 更新重點（2026-10-23，1275 資源預設基準，開發候選）
