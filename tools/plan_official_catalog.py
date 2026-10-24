@@ -46,14 +46,18 @@ def load_bindings(path):
             raise OfficialCatalogPipelineError('Expected four release-reviewed source bindings')
         result = []
         for item in config['sources']:
-            if (type(item) is not dict or set(item) != {
-                    'feature', 'asset_path', 'source_name', 'schema_id',
-                    'expected_sha256', 'package', 'package_version'}):
+            required = {'feature', 'asset_path', 'source_name', 'schema_id',
+                        'expected_sha256', 'package', 'package_version'}
+            if (type(item) is not dict or not required.issubset(item)
+                    or not set(item).issubset(required | {'related_asset_paths'})):
                 raise OfficialCatalogPipelineError('Unexpected source binding fields')
             contract = SourceContract(
                 item['feature'], item['source_name'], item['schema_id'],
                 item['expected_sha256'], item['package'], item['package_version'])
-            result.append(AssetBinding(item['asset_path'], contract))
+            related = item.get('related_asset_paths', [])
+            if type(related) is not list or len(related) > 15:
+                raise OfficialCatalogPipelineError('Invalid related AssetPath list')
+            result.append(AssetBinding(item['asset_path'], contract, tuple(related)))
         if {r.contract.feature for r in result} != set(FEATURES):
             raise OfficialCatalogPipelineError('Missing or duplicate feature binding')
         return tuple(result)
