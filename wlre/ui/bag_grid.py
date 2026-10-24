@@ -8,6 +8,7 @@ import tkinter as tk
 from tkinter import ttk
 
 from wlre.services.items.combat_resources import CAT, item_name, heal_effects, available
+from wlre.services.world.feature_resource_index import feature_note
 from wlre.ui.theme import PANEL, CYAN, group
 
 COLUMNS = 6
