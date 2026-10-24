@@ -116,7 +116,7 @@ def _trusted_cached_candidate(path, key):
         return None
 
 
-def _store_candidate(identity, bytes_by_feature, parsed, *, candidate_root=None):
+def _store_candidate(identity, bytes_by_feature, parsed, *, sources, candidate_root=None):
     path = _candidate_path(identity, candidate_root)
     features = {}
     for feature in FEATURES:
@@ -141,6 +141,11 @@ def _store_candidate(identity, bytes_by_feature, parsed, *, candidate_root=None)
         'status': 'review_required', 'approved': False,
         'assets_ready': False, 'can_send_packets': False,
     }
+    from wlre.services.world.catalog_compatibility import assess_candidate
+    # Independently re-parse all four formats and compare the complete
+    # Manifest-bound source identity BEFORE publishing a candidate ZIP.
+    assessment = assess_candidate(
+        identity, sources, raw_by_feature=bytes_by_feature, metadata=metadata)
     path.parent.mkdir(parents=True, exist_ok=True)
     pending = None
     try:
@@ -161,7 +166,7 @@ def _store_candidate(identity, bytes_by_feature, parsed, *, candidate_root=None)
     finally:
         if pending is not None:
             pending.unlink(missing_ok=True)
-    return metadata
+    return metadata, assessment
 
 
 def run_auto_catalog(*, download=True, parse=True, observe=None, retrieve=None,
@@ -217,10 +222,34 @@ def run_auto_catalog(*, download=True, parse=True, observe=None, retrieve=None,
     cached = _trusted_cached_candidate(_candidate_path(plan.identity, candidate_root),
                                        plan.catalog_key)
     if cached is not None and download and parse:
-        emit('cached_candidate')
-        return {**result, 'status': 'review_required',
-                'cache': 'verified_private_candidate',
-                'record_counts': {f: cached['features'][f]['record_count'] for f in FEATURES}}
+        # Re-verify the official Bundle cache even when a previously derived
+        # ZIP exists, then re-parse all four sources before reporting a hit.
+        # If the cache vanished or fails schema/provenance checks, treat it as
+        # an untrusted miss and use the normal verified sync path below.
+        from wlre.services.world.catalog_compatibility import (
+            assess_candidate, CompatibilityError, write_compatibility_report)
+        try:
+            verified_source_paths(plan, bundle_root=bundle_root)
+            with zipfile.ZipFile(_candidate_path(plan.identity, candidate_root)) as archive:
+                cached_bytes = {f: archive.read(f + '.source') for f in FEATURES}
+            emit('compatibility_check')
+            assessment = assess_candidate(
+                plan.identity, plan.sources, raw_by_feature=cached_bytes,
+                metadata=cached)
+        except (OfficialCatalogPipelineError, CompatibilityError,
+                OSError, zipfile.BadZipFile, KeyError, ValueError):
+            cached = None
+        else:
+            write_compatibility_report(plan.identity, assessment,
+                                       candidate_root=candidate_root)
+            emit('cached_candidate')
+            emit('compatibility_ready')
+            return {**result, 'status': 'review_required',
+                    'cache': 'verified_private_candidate',
+                    'data_compatibility': assessment['data_compatibility'],
+                    'protocol_compatibility': assessment['protocol_compatibility'],
+                    'record_counts': {f: assessment['features'][f]['record_count']
+                                      for f in FEATURES}}
     if not download:
         emit('preview_ready')
         return result
@@ -302,10 +331,16 @@ def run_auto_catalog(*, download=True, parse=True, observe=None, retrieve=None,
         raw_by_feature[feature] = raw
     if set(parsed) != set(FEATURES):
         raise AutoCatalogError('Official source candidate is incomplete')
-    emit('candidate_write')
-    metadata = _store_candidate(plan.identity, raw_by_feature, parsed,
-                                candidate_root=candidate_root)
+    emit('compatibility_check')
+    metadata, assessment = _store_candidate(
+        plan.identity, raw_by_feature, parsed,
+        sources=plan.sources, candidate_root=candidate_root)
+    from wlre.services.world.catalog_compatibility import write_compatibility_report
+    write_compatibility_report(plan.identity, assessment, candidate_root=candidate_root)
     emit('candidate_ready')
+    emit('compatibility_ready')
     return {**result, 'status': 'review_required', 'cache': 'new_private_candidate',
-            'record_counts': {f: metadata['features'][f]['record_count']
+            'data_compatibility': assessment['data_compatibility'],
+            'protocol_compatibility': assessment['protocol_compatibility'],
+            'record_counts': {f: assessment['features'][f]['record_count']
                               for f in FEATURES}}
