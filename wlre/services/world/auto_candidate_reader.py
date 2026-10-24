@@ -50,7 +50,9 @@ def _load(path, key, kind, mtime_ns, length):
     member = 'candidate_indexes/' + kind + '.json'
     try:
         with ZipFile(path) as archive:
-            if len(archive.infolist()) > 270:
+            members = archive.namelist()
+            if (len(members) > 270 or len(members) != len(set(members))
+                    or 'inventory.json' not in members):
                 return None
             meta = archive.getinfo('inventory.json')
             if not 0 < meta.file_size <= MAX_INVENTORY:
