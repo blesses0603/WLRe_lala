@@ -49,6 +49,9 @@ class ResourceClassificationTests(unittest.TestCase):
             'DataPackage', 'Assets/ResourcesBuild/Data/DailyTaskData_C.bytes')[0],
             'quests')
         self.assertEqual(classify_asset_path(
+            'DataPackage', 'Assets/ResourcesBuild/Data/AdventureData_C.bytes')[0],
+            'expedition')
+        self.assertEqual(classify_asset_path(
             'MainPackage', 'Assets/ResourcesBuild/Model/House/Tent/a.prefab')[0],
             'housing')
         self.assertEqual(classify_asset_path(
