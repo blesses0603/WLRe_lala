@@ -37,8 +37,8 @@ jobs:
       - name: Prepare Linux display
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends xvfb xauth python3-tk
-      - name: Install UI dependencies
-        run: python -m pip install -r requirements-ui.txt
+      - name: Install UI and bundled extractor dependencies
+        run: python -m pip install -r requirements-ui.txt -r requirements-extractor.txt
       - name: Validate Python syntax and repository integrity
         run: |
           python -m compileall -q wlre tools tests WLRE_Client.py
@@ -62,6 +62,8 @@ jobs:
       - name: Validate packaged resources and build plan
         run: |
           python WLRE_Client.py --self-test
+          # Source-runtime check: native Nuitka build tests additionally run this in compiled EXE/APP.
+          python WLRE_Client.py --self-test-unityfs
           python -m tools.build.build_nuitka --dry-run
           python -m tools.build.build_macos --arch arm64 --dry-run > /dev/null
           python -m tools.build.build_macos --arch x64 --dry-run > /dev/null
