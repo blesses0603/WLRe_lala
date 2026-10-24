@@ -253,6 +253,10 @@ py -m unittest -v tests.test_auto_catalog tests.test_resource_rebuilder tests.te
 保留 Windows／macOS／Ubuntu 原始碼與原生 GUI 測試。此階段不修改版本常數、不合併 main、不發布 Tag；端到端官方 Bundle 驗收及真正 NPC 商店交易仍待實機測試。
 
 
+## 多版本歷史快取的自動增量維護
+
+每次新的官方 `.version` 與完整 `.bytes`、`.hash` 驗證完成後，增量更新器會在私人歷史快取中比較過往 Bundle 指紋以盡量重用未變的檔案。為避免長期使用後累積超過 64 版就無法更新，歷史候選先依版本由新到舊排序，只檢驗最近的有限份數；即使部分歷史快取已損壞，也逐一跳過，不把損壞收據當成可信來源。掃描本身另有最多 4096 筆的安全邊界，防止異常目錄無限制拖慢啟動。這只讀取 LaLa 本機產生的 Manifest 驗證收據，不額外取得官方 `.json`、`.report`。
+
 ## 兩 Package 版本切換保護（PR #56）
 
 LaLa 啟動自動資源準備時，先觀察 `ResourcePath_PC.dat` 與 DataPackage／MainPackage 的 `.version`；取得兩套 `.hash`、`.bytes` 並通過官方 Manifest 解析後，**在下載 Bundle 前重新觀察一次官方版號**。比較 `data_ver`、`exe_version` 和兩個 Package 完整版本識別碼（不比較查詢時間）；只要版本在兩份 Manifest 同步期間切換，或重新觀察失敗，就不啟動本輪 Bundle 計畫，也不產生此輪候選資料。下一輪從新版本重新規劃，不混用不同官方快照。
