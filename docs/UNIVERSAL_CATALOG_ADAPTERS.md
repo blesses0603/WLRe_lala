@@ -40,3 +40,54 @@ python -m unittest tests.test_catalog_adapters -v
 ```
 
 測試全為合成資料，沒有使用者帳密或官方遊戲資源。
+
+
+## 第一階段新增：官方 Manifest → Bundle 定位 → Adapter（PR #56）
+
+入口：\`wlre.services.world.official_catalog_pipeline\`
+
+1. \`plan_current_catalog\` 即時讀取 \`ResourcePath_PC.dat\` 與兩包 \`.version\`，從官方 CDN 驗證 \`.hash\`／完整 \`.bytes\`，並呼叫 \`identity_from_verified_manifests\` 產生兩包獨立來源身分。
+2. \`AssetBinding\` 明確指定每個功能的 \`AssetPath\`、格式 ID、資料衍生來源名稱、所屬 Package／完整版本與預先審核的 SHA-256。**不使用名稱子字串、索引順序或模糊搜尋**。最新版 Manifest 查無精確路徑就停止。
+3. \`build_update_plan\` 解析所需 Bundle 與全部相依，確認本機快取／跨版重用；預設僅回報下載數量。顯式 \`--download\` 先檢查合計檔數與位元組配額，再透過官方同步服務下載並校驗 MD5／CRC。
+4. \`run_catalog_pipeline(..., download=True, extractor=reviewed_extractor)\` 在所有必要 Bundle 的快取內容再次驗證後，將根 Bundle／相依路徑交給**由維護者審核、實際能驗證 UnityFS 結構與資產身分**的 extractor。解析出的 bytes 再交給 \`parse_feature\` 做來源 SHA-256 與 Schema 校驗。四種功能都正確才返回結果。
+5. 無 extractor 時（目前的 CLI 模式），**僅完成定位與 Bundle 校驗，不產生解析結果**。這並不代表失敗，而是不能跳過第二階段的 UnityFS/TextAsset 解包及衍生索引產製。
+
+無論有無 extractor，都不會寫入遊戲目錄、不自動套用新版 NPC／商店／製作／場景資料，也不會把 \`assets_ready\`／\`can_send_packets\` 設為 True。
+
+### 命令列（需先準備已審核的私人來源對應）
+
+在 Git 工作樹**外**放置 \`bindings.json\`。Schema 格式如下；\`<...>\` 均是示意佔位符，**不是實際官方資源路徑或雜湊**：
+
+\`\`\`json
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "feature": "npc",
+      "asset_path": "<官方完整精確 AssetPath>",
+      "source_name": "EventData.NewNpc",
+      "schema_id": "eve-npc-json-v1",
+      "expected_sha256": "<已審核之衍生索引 SHA-256>",
+      "package": "DataPackage",
+      "package_version": "<從官方 DataPackage.version 取得的完整修訂>"
+    }
+  ]
+}
+\`\`\`
+
+此處僅顯示單筆格式；正式檔案**必須提供 npc／shops／crafting／scenes 四筆來源**，且每筆均須以當次官方 Manifest 與可信解包來源核對。完整來源欄位請參閱 \`tools/plan_official_catalog.py\`。
+
+\`\`\`powershell
+py -m tools.plan_official_catalog --bindings "C:\path\outside\repo\bindings.json"
+py -m tools.plan_official_catalog --bindings "C:\path\outside\repo\bindings.json" --download --max-mib 64 --max-files 32
+\`\`\`
+
+沒有已審核綁定檔時**不要猜造路徑或 SHA**，這兩個指令會安全拒絕。下載僅保存官方校驗過的 Bundle 於玩家私人快取，**不包含 UnityFS 內容抽取**。
+
+### 驗證
+
+\`\`\`bash
+python -m unittest tests.test_catalog_adapters tests.test_official_catalog_pipeline -v
+\`\`\`
+
+CI 在 Windows、Ubuntu、macOS 執行完整回歸；合成資料測試不構成正式官方 Bundle 解包與遊戲登入／傳送驗收。
