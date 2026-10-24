@@ -253,6 +253,13 @@ py -m unittest -v tests.test_auto_catalog tests.test_resource_rebuilder tests.te
 保留 Windows／macOS／Ubuntu 原始碼與原生 GUI 測試。此階段不修改版本常數、不合併 main、不發布 Tag；端到端官方 Bundle 驗收及真正 NPC 商店交易仍待實機測試。
 
 
+## 官方 Manifest 三檔原則（固定開發決策）
+
+- **DataPackage 與 MainPackage 各只使用官方 `.version`、`.bytes`、`.hash`** 作為資源版本識別與正式二進位 Manifest 校驗來源。從官方資源版號端點查詢最新版本，使用 `.hash` 驗證 `.bytes`，再從 `.bytes` 解出 AssetPath、Bundle 和相依關係。
+- **不加入官方 `.json`、`.report` 的下載、解析或啟用依賴**，避免重複資訊與額外網路請求；若這兩份檔案缺失，LaLa 的官方資源流程不受影響。
+- 原本取得 `DataVer` 所需的 `ResourcePath_PC.dat`、正式功能所需的 `.bundle`、以及本機自動產生的 JSON 清單、快取與報告照常保留。這項決策並非限制整個程式只能存取三個檔案。
+- 官方 Manifest 的 CRC／版本檢查與 LaLa 自行定義的正式索引 SHA-256 驗證，屬於不同層級；前三檔不可自動替代獨立審核的正式索引 pin。
+
 ## 第二十一階段：零手動資料包的正式索引缺口診斷與全量文字索引
 
 這一階段繼續以 **官方版本 → 驗證 Bundle → 原始 TextAsset → 統一分類/索引 → 獨立正式驗證 → 功能接入** 為順序，不採用使用者複製 ZIP 作為正常操作步驟。
