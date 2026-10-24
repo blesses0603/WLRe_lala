@@ -163,3 +163,28 @@ py -m tools.plan_official_catalog --download --parse
 結果中 `resource_rebuild` 會顯示 `asset_total`、`asset_collected`、`existing_or_cached_reused`、`newly_extracted`、`new_bundle_downloads`、`derived_index_candidates`、`missing_asset_paths`、`missing_formal_members`、`formal_construction` 與 `status`。其中 `partial_raw` 代表有待補資料；`complete_raw_only` **只表示原始 `.bytes` 全部到齊，不表示完整正式 Runtime 通過**。
 
 目前本機來源上只有已實測的 1275 Eve Bundle 與官方 1275 Manifest。完整原始表、全部正式索引以及 Windows 實機資料安裝流程，還需要取得或在你的遊戲安裝快取找到來源後進行實際驗收；不要把離線模擬或單一 Bundle 通過視為正式版可登入。
+
+## 現有官方資源自動索引分類（PR #56）
+
+LaLa Launcher 在取得並驗證 **DataPackage 與 MainPackage 兩份 Manifest** 後，會先產生本版完整路徑分類目錄；即使四類候選解析或後續 Bundle 下載失敗，已核對的官方 Manifest 路徑仍能被分類。若原始資源補建成功，會再次整理本版已收集的原始檔，更新索引狀態。
+
+- 依 Package、完整版本、AssetPath 與 Bundle 名稱建立一筆對一筆目錄，不只收錄 LaLa 目前已解包的資料，MainPackage 的音效、圖片、場景、模型及特效等 **尚未解包路徑也會列出**。
+- DataPackage 分類包含 NPC、物品、商店、製作、地圖、任務、對話、戰鬥、角色與待辨識資料。MainPackage 包含音樂、圖示、角色/NPC 模型、房屋/帳篷、場景、材質、粒子特效、動畫與影片等。
+- 分類只使用檔名或資料夾路徑，`basis` 欄位會明確記錄 `filename_rule`、`directory_rule` 或 `unclassified_*`，**不能宣稱已了解檔案內部 Schema**。
+- `manifest_only` 表示僅由官方 Manifest 得知位置，**不代表檔案已下載**；`local_checksum_checked_not_approved` 則只表示版本相符的私人 ZIP 內部 SHA-256 校驗通過，不代表已獲正式 Runtime 授權。
+- 舊版與新版採不同的 `catalog_key` 分離保存；不會拿 1262 的檔案冒充 1275。自動分類本身不修改、刪除或覆寫正式遊戲資料，`approved/assets_ready/can_send_packets` 均為 `false`。
+
+本版私有分類索引：
+`%LOCALAPPDATA%\\WLRE_LaLa\\official_sync\\derived_catalogs\\<catalog_key>\\asset_classification.json`
+
+另提供直接對 **已有的**兩份官方 Manifest ZIP／RAR 產出私人 JSON 索引的離線工具，不連官方 CDN：
+
+~~~powershell
+py -m tools.classify_existing_resources --data "DataPackage_1275.zip" --main "MainPackage_1275.zip" --output-dir "$env:LOCALAPPDATA\\WLRE-LaLa-Index"
+~~~
+
+這份離線工具不會建立 LaLa 正式資源，也不可將私人全量 AssetPath 索引提交至公開 GitHub。測試指令：
+
+~~~powershell
+py -m unittest -v tests.test_resource_classification
+~~~
