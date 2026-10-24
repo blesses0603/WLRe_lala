@@ -32,6 +32,10 @@ STEP_LABELS = {
     'compatibility_ready': '資料格式檢查通過，協定仍待驗證',
     'formal_check': '核對完整正式 1275 資料來源',
     'formal_checked': '正式資源載入條件檢查完成',
+    'raw_rebuild': '補建官方全部原始資料，重用已驗證檔案',
+    'raw_resource_item': '整理已存在及新取得的資源',
+    'raw_rebuild_ready': '本次資源補建與續補已完成',
+    'raw_rebuild_unavailable': '部分原始資源仍待補建',
     'cached_candidate': '已使用驗證過的私人候選快取',
     'preview_ready': '資源預覽完成',
     'download_ready': 'Bundle 同步完成',
@@ -48,6 +52,11 @@ _ACCENT = '#56c8e9'
 def progress_message(phase, details=None):
     """Convert whitelisted stage data into a short human-readable message."""
     details = details if isinstance(details, dict) else {}
+    if phase in ('raw_resource_item', 'raw_rebuild_ready'):
+        done, total = details.get('completed'), details.get('total')
+        if (type(done) is int and type(total) is int
+                and 0 <= done <= total and total > 0):
+            return f'已驗證整理 {done} / {total} 份官方資源（原始資料候選）'
     if phase == 'manifest':
         package = details.get('package')
         if package in ('DataPackage', 'MainPackage'):
@@ -89,6 +98,9 @@ def progress_message(phase, details=None):
 
 
 def _format_stage(phase):
+    if phase in ('raw_rebuild', 'raw_resource_item', 'raw_rebuild_ready',
+                 'raw_rebuild_unavailable'):
+        return '補建資源清單（候選不直接啟用）'
     if phase == 'bundle_item':
         return f'第 {STEPS.index("bundle_sync") + 1} / {len(STEPS)} 階段'
     if phase == 'cached_candidate':
@@ -204,7 +216,7 @@ def run_with_progress(task):
                 detail.set(progress_message(arg, extra))
                 if arg == 'extract_failed':
                     state['last_error'] = progress_message(arg, extra)
-                if arg == 'bundle_item' and isinstance(extra, dict):
+                if arg in ('bundle_item', 'raw_resource_item') and isinstance(extra, dict):
                     done, total = extra.get('completed'), extra.get('total')
                     if (type(done) is int and type(total) is int
                             and 0 <= done <= total and total > 0):
