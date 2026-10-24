@@ -31,8 +31,50 @@ class LauncherCatalogTests(unittest.TestCase):
         runner.assert_called_once_with(download=True, parse=True)
         self.assertEqual(result['status'], 'review_required')
         self.assertFalse(result['assets_ready'])
+        self.assertEqual(result['data_compatibility'], 'unverified')
+        self.assertEqual(result['protocol_compatibility'], 'unverified')
         self.assertEqual(read_launcher_status(root=self.root), result)
         self.assertTrue(status_path(self.root).is_file())
+
+    def test_explicit_schema_compatible_still_never_approves_login(self):
+        runner = Mock(return_value={
+            'status': 'review_required',
+            'catalog_key': 'a' * 64,
+            'data_compatibility': 'compatible',
+            'protocol_compatibility': 'unverified',
+            'assets_ready': False,
+            'can_send_packets': False,
+            'approved': False,
+        })
+        result = prepare_on_launch(root=self.root, runner=runner, environ={})
+        self.assertEqual(result['schema_version'], 2)
+        self.assertEqual(result['data_compatibility'], 'compatible')
+        self.assertEqual(result['protocol_compatibility'], 'unverified')
+        self.assertFalse(result['assets_ready'])
+        self.assertFalse(result['can_send_packets'])
+        self.assertEqual(read_launcher_status(root=self.root), result)
+
+    def test_unverified_protocol_or_omitted_authorization_cannot_claim_compatibility(self):
+        runner = Mock(return_value={
+            'status': 'review_required', 'catalog_key': 'b'*64,
+            'data_compatibility': 'compatible',
+            'protocol_compatibility': 'compatible',
+            'assets_ready': False, 'can_send_packets': False, 'approved': False})
+        result = prepare_on_launch(root=self.root, runner=runner, environ={})
+        self.assertEqual(result['data_compatibility'], 'unverified')
+
+    def test_invalid_receipt_cannot_claim_protocol_approval(self):
+        runner = Mock(return_value={
+            'status': 'review_required', 'catalog_key': 'c'*64,
+            'data_compatibility': 'compatible',
+            'protocol_compatibility': 'unverified',
+            'assets_ready': False, 'can_send_packets': False, 'approved': False})
+        prepare_on_launch(root=self.root, runner=runner, environ={})
+        path = status_path(self.root)
+        receipt = json.loads(path.read_text(encoding='utf-8'))
+        receipt['protocol_compatibility'] = 'compatible'
+        path.write_text(json.dumps(receipt), encoding='utf-8')
+        self.assertIsNone(read_launcher_status(root=self.root))
 
     def test_network_failure_never_creates_approved_receipt(self):
         runner = Mock(side_effect=OSError('private game path'))
