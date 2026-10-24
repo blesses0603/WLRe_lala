@@ -73,6 +73,7 @@ class ExpeditionPanel(
 
     def render(self, state):
         e = state.get('expedition', {})
+        self.resource_status.set(feature_note('expedition'))
         live = self.app.live_active
         if live and self.app._settings_key and self.app._settings_key != self.key:
             self.load_settings(self.app._settings_key)
