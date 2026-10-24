@@ -80,3 +80,33 @@ py -m unittest discover -s tests -p "test_launcher_catalog.py" -v
 - 官方 1275 Eve Bundle 已做實檔測試；另外的 ItemData、Smith、
   Scenes Bundle 及實際伺服器 E2E 仍需驗收。
 - 本階段不打包 EXE／APP、不合併 main、不建立 Release。
+
+## 正式 1275 Runtime 的候選資料安全銜接
+
+**四類候選 ≠ 完整正式 Runtime。** 現有 runtime_1275 仍需要兩份來源獨立固定 SHA-256 的 ZIP：
+- 1275_DataCatalog.zip：160 張原始表與 3 份經審核的對話、文字、完整物品資料索引。
+- 1275_EveNpcIndex.zip：已核對的 NPC 與互動事件索引。
+
+由於自動候選只有 NPC、商店、製作、場景四份衍生來源，不能直接改名成正式 ZIP，更不能自造固定 SHA 來解鎖。
+
+Launcher 完成四類解析與相容報告後，會查看私人 reviewed_full_1275 資料夾是否備有上述完整雙 ZIP。若無，保留候選相容報告，但正式登入閘門仍阻擋缺少的全量資源。
+
+若完整雙 ZIP 到齊：先用原有 load_preview 驗證全部正式來源，再以 formal_candidate_bridge 重新檢查候選的版本身分、相容報告、來源 SHA 與 NPC/互動事件、製作配方、場景的實際內容是否和正式來源相同。不同則拒絕。確認兩份正式檔案尚未安裝後，先把檔案複製到同磁碟暫存區並重新完整驗證，才透過原有無覆寫的雙檔安裝器發布。
+
+Runtime 啟動前依舊只載入經既有固定 SHA 認證的正式資料。若 Launcher 已有同版相容收據，runtime_1275.ready 還會再次交叉驗證，只有全部符合才能更新共用製作資料；格式相容不代表 NPC 交易或任何伺服器封包已通過 E2E。
+
+私人路徑：%LOCALAPPDATA%\WLRE_LaLa\official_sync\reviewed_full_1275\
+
+手動確認狀態（預設唯讀）：
+
+~~~powershell
+py -m tools.reviewed_1275_handoff
+~~~
+
+兩份完整正式 ZIP 均已備妥時，可顯式執行安全安裝：
+
+~~~powershell
+py -m tools.reviewed_1275_handoff --install
+~~~
+
+請勿把 DataPackage_1275.zip 或 MainPackage_1275.zip 的 Manifest-only 壓縮包放成上述正式 ZIP，它們不含完整遊戲表格且無法通過固定 SHA 驗證。既有正式 ZIP 不覆寫；只有部分已安裝時直接安全拒絕。官方未來版本若改動格式或封包協定仍需獨立開發與驗收。
