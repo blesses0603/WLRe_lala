@@ -18,6 +18,10 @@ concurrency:
   group: desktop-release-${{ inputs.tag || github.ref_name }}
   cancel-in-progress: false
 
+env:
+  # Build/test runner must not auto-download game Bundles into temp GUI fixtures.
+  WLRE_DISABLE_AUTO_CATALOG: '1'
+
 jobs:
   preflight:
     name: Validate release tag
