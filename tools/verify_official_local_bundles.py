@@ -119,19 +119,58 @@ def required_bundle_set(index, data_ver):
     return specs, selected
 
 
+def scan_game_yoo_bundle_cache(yoo_root, specs, *, max_candidates=40000):
+    """Find known official Bundle *contents* in YooAsset hashed __data files.
+
+    The game stores Bundle bytes at hashed paths, not necessarily under their
+    original .bundle names. Search only DataPackage/BundleFiles and inspect
+    candidates with exact Manifest sizes before MD5/CRC checks.
+    Read-only; never rename/delete the game's files or follow symlinks.
+    """
+    root = Path(yoo_root) / 'DataPackage' / 'BundleFiles'
+    if not root.is_dir() or root.is_symlink():
+        raise OfflineVerificationError('Game YooAsset DataPackage/BundleFiles unavailable')
+    needed = {}
+    for name, spec in specs.items():
+        needed.setdefault(spec.file_size, []).append((name, spec))
+    located = {}
+    for count, path in enumerate(root.rglob('__data'), start=1):
+        if count > max_candidates:
+            raise OfflineVerificationError('Too many hashed Bundle candidates')
+        if (path.is_symlink() or not path.is_file()
+                or any(part.is_symlink() for part in path.parents
+                       if part != root and root in part.parents)):
+            continue
+        try:
+            size = path.stat().st_size
+        except OSError:
+            continue
+        for name, spec in needed.get(size, ()):
+            if name not in located and _verified_file(path, spec):
+                located[name] = path
+        if len(located) == len(specs):
+            break
+    return located
+
+
 def verify_local(data_zip, main_zip, *, data_ver, bundle_dir=None,
-                 bundle_cache_root=None, decode=False, extractor=None):
+                 bundle_cache_root=None, game_yoo=None,
+                 decode=False, extractor=None):
     """Validate archives, then optionally verify and decode all real Bundles."""
-    if bundle_dir is not None and bundle_cache_root is not None:
-        raise OfflineVerificationError('Choose one Bundle storage root')
-    if decode and bundle_dir is None and bundle_cache_root is None:
+    if sum(x is not None for x in
+           (bundle_dir, bundle_cache_root, game_yoo)) > 1:
+        raise OfflineVerificationError('Choose exactly one Bundle storage root')
+    if decode and all(x is None for x in (bundle_dir, bundle_cache_root, game_yoo)):
         raise OfflineVerificationError('Decode needs verified local Bundle paths')
     data, index = inspect_manifest_zip(data_zip, 'DataPackage')
     main, _ = inspect_manifest_zip(main_zip, 'MainPackage')
     specs, selected = required_bundle_set(index, data_ver)
+    scanned = (scan_game_yoo_bundle_cache(game_yoo, specs)
+               if game_yoo is not None else {})
     bundles, paths = {}, {}
     for name, spec in sorted(specs.items()):
-        path = (spec.cache_path(bundle_cache_root) if bundle_cache_root is not None
+        path = (scanned.get(name) if game_yoo is not None else
+                spec.cache_path(bundle_cache_root) if bundle_cache_root is not None
                 else Path(bundle_dir) / name if bundle_dir is not None else None)
         exists = path is not None and path.is_file()
         ok = bool(exists and _verified_file(path, spec))
@@ -204,6 +243,8 @@ def main(argv=None):
     origin = ap.add_mutually_exclusive_group()
     origin.add_argument('--bundle-dir', type=Path)
     origin.add_argument('--bundle-cache-root', type=Path)
+    origin.add_argument('--game-yoo', type=Path,
+                        help='Game install ..._Data/yoo (hashed __data scan, read-only)')
     ap.add_argument('--decode', action='store_true')
     args = ap.parse_args(argv)
     try:
@@ -211,7 +252,7 @@ def main(argv=None):
                               data_ver=args.data_ver,
                               bundle_dir=args.bundle_dir,
                               bundle_cache_root=args.bundle_cache_root,
-                              decode=args.decode)
+                              game_yoo=args.game_yoo, decode=args.decode)
     except (ValueError, OSError) as exc:
         print('LaLa 離線驗證拒絕：' + str(exc), file=sys.stderr)
         return 2
