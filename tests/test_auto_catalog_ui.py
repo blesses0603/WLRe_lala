@@ -38,6 +38,14 @@ class AutoCatalogUiTests(unittest.TestCase):
         self.assertFalse(c._auto_catalog_busy)
         self.assertNotIn('_version_gate_entry_approved', c.__dict__)
 
+    def test_background_worker_never_captures_tk_controller(self):
+        import inspect
+        source = inspect.getsource(VersionGateController._start_auto_catalog)
+        worker = source.split('        def worker():', 1)[1].split(
+            '        threading.Thread(', 1)[0]
+        self.assertNotIn('self.', worker)
+        self.assertIn('messages.put(', worker)
+
     def test_failed_candidate_preserves_login_gate(self):
         c = self.stub()
         c._auto_catalog_messages.put((4, 'error', 'bad official bundle'))
