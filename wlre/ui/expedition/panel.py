@@ -39,6 +39,8 @@ class ExpeditionPanel(
         self.plans = {}
         self.catalog = self._load_catalog()
         heading(self, '遠征', '自動領獎、補好友度並接續派遣；不使用縮時或支援物品。')
+        self.resource_status = tk.StringVar(value=feature_note('expedition'))
+        ttk.Label(self, textvariable=self.resource_status, style='Muted.TLabel', wraplength=700).pack(fill='x', pady=(0, 3))
         self.status = tk.StringVar(value='等待遠征與駐紮所資料同步。')
         ttk.Label(self, textvariable=self.status, wraplength=700).pack(fill='x', pady=(0, 4))
         build_controls(self, app)
