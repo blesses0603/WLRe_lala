@@ -113,7 +113,10 @@ class LauncherCatalogTests(unittest.TestCase):
         self.assertEqual(result['data_compatibility'], 'unverified')
         self.assertFalse(result['assets_ready'])
         self.assertFalse(result['can_send_packets'])
-        self.assertEqual(read_launcher_status(root=self.root), result)
+        # A real Launcher writes at data_root()/official_sync, while an
+        # injected root=... means that directory itself.
+        self.assertEqual(
+            read_launcher_status(root=self.root / 'official_sync'), result)
 
     def test_injected_runner_never_triggers_hidden_fallback(self):
         runner = Mock(side_effect=ValueError('source damaged'))
