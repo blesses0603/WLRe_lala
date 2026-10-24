@@ -87,6 +87,10 @@ class RawRebuilderTests(unittest.TestCase):
         self.assertEqual(report['new_bundle_downloads'], 2)
         self.assertFalse(report['formal_approved'])
         self.assertFalse(report['assets_ready'])
+        self.assertIn('release_pinned_catalog_manifest_missing',
+                      report['formal_blockers'])
+        self.assertIn('release_pinned_eve_indexes_missing',
+                      report['formal_blockers'])
         archive = self.identity.private_catalog_dir(self.candidates) / 'verified_raw_inventory.zip'
         with ZipFile(archive) as z:
             names = z.namelist()
@@ -173,6 +177,8 @@ class RawRebuilderTests(unittest.TestCase):
         self.assertEqual(summary['asset_collected'], 2)
         self.assertEqual(summary['asset_total'], 2)
         self.assertEqual(summary['derived_index_candidates'], 0)
+        self.assertIn('release_pinned_catalog_manifest_missing',
+                      summary['formal_blockers'])
         self.assertIsNone(read_inventory_summary('0'*64, candidate_root=self.candidates))
         self.assertIsNone(read_inventory_summary('../wrong', candidate_root=self.candidates))
 
