@@ -101,8 +101,13 @@ class VersionGateController:
         # The larger result typography needs enough physical height on
         # Windows, where ttk buttons and CJK fonts have taller native metrics.
         # Otherwise the GitHub-update action row may be clipped off-screen.
-        width, height, _, _ = configure_dialog(window, 1000, 710)
+        configure_dialog(window, 1000, 710)
         window.protocol("WM_DELETE_WINDOW", self.close)
+        # The helper is replaced with a no-result stub in native GUI smoke
+        # tests. Never depend on its return value; derive usable dimensions
+        # from Tk's own screen metrics instead.
+        width = max(1, min(1000, window.winfo_screenwidth() - 24))
+        height = max(1, min(710, window.winfo_screenheight() - 24))
         # configure_dialog normally fixes both maxsize and minsize. This
         # information-heavy view must reflow and grow on high-DPI desktops.
         window.minsize(min(850, width), min(590, height))
