@@ -22,8 +22,8 @@ def _shop_index(binding, bundle_paths, raw):
         return document
     extras = binding.related_asset_paths
     if (len(extras) != 1 or
-            extras[0] != 'Assets/ResourcesBuild/Data/ItemData_C.bytes'):
-        raise UnityTextAssetError('Shop requires the exact reviewed ItemData_C AssetPath')
+            PurePosixPath(extras[0]).name != 'ItemData_C.bytes'):
+        raise UnityTextAssetError('Shop requires one exact reviewed ItemData_C AssetPath')
     related_binding = AssetBinding(extras[0], binding.contract)
     item_raw = extract_textasset(related_binding, bundle_paths)
     items = parse_itemdata(item_raw)
