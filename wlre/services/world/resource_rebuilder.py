@@ -168,6 +168,60 @@ def _load_previous(path, *, catalog_key):
 
 
 
+
+def _derive_candidate_indexes(payloads):
+    """Produce unapproved read-only indexes from authenticated raw TextAssets.
+
+    The formal .json.gz checksums remain independent. Do not guess an
+    unreviewed TextData_C layout, or promote these previews to login data.
+    """
+    from wlre.services.world.eve_v115 import derive_eve_index
+    from wlre.services.world.itemdata_v1 import parse_itemdata
+    from wlre.services.world.npc_talk import parse_talk_data
+    def source(name):
+        found = [b for key, b in payloads.items()
+                 if key.startswith('tables/') and key.endswith('/' + name + '.bytes')]
+        return found[0] if len(found) == 1 else None
+    derived = {}
+    eve = source('Eve')
+    if eve is not None:
+        for kind, tag in (('npc_events', 'EventData.NewNpc'),
+                          ('npc_interacts', 'EventData.NewInteract')):
+            try:
+                body = derive_eve_index(eve, tag)
+                if len(body) <= MAX_SOURCE_BYTES:
+                    derived['candidate_indexes/' + kind + '.json'] = body
+            except ValueError:
+                pass
+    item = source('ItemData_C')
+    if item is not None:
+        try:
+            rows = parse_itemdata(item)
+            body = json.dumps(
+                {'revision': 1275, 'source': 'ItemData_C',
+                 'record_count': len(rows),
+                 'records': {str(key): value for key, value in rows.items()}},
+                ensure_ascii=True, separators=(',', ':'), sort_keys=True).encode()
+            if len(body) <= MAX_SOURCE_BYTES:
+                derived['candidate_indexes/item_data.json'] = body
+        except (ValueError, TypeError):
+            pass
+    talk = source('TalkData_C')
+    if talk is not None:
+        try:
+            rows = parse_talk_data(talk)
+            body = json.dumps(
+                {'revision': 1275, 'source': 'TalkData_C',
+                 'record_count': len(rows),
+                 'records': {str(key): value for key, value in rows.items()}},
+                ensure_ascii=True, separators=(',', ':'), sort_keys=True).encode()
+            if len(body) <= MAX_SOURCE_BYTES:
+                derived['candidate_indexes/talk_data.json'] = body
+        except (ValueError, TypeError):
+            pass
+    return derived
+
+
 def _exact_reviewed_manifest(formal_base):
     """Recover only the release-pinned manifest bytes from existing archives."""
     from wlre.services.world.runtime_1275 import DATA_FILE, FOLDER
@@ -431,6 +485,16 @@ def rebuild_raw_resources(identity, data_manifest, *,
         }
         reused += 1
 
+    derived_candidates = _derive_candidate_indexes(payloads)
+    for member, body in sorted(derived_candidates.items()):
+        total_bytes += len(body)
+        if total_bytes > MAX_RESULT_BYTES:
+            raise ResourceRebuildError('Candidate index quota exceeded')
+        payloads[member] = body
+        entries[member] = {
+            'size': len(body), 'sha256': hashlib.sha256(body).hexdigest(),
+            'source': 'derived_unapproved', 'bundle_md5': None,
+        }
     missing_formal = (
         sorted(set(pinned_files) - set(entries)) if pinned_files else
         ['尚無固定 SHA 的完整 1275 DataCatalog manifest；不能正式封裝']
@@ -448,7 +512,9 @@ def rebuild_raw_resources(identity, data_manifest, *,
             p.manifest_sha256 for p in identity.packages if p.name == 'DataPackage'),
         'asset_total': len(selected), 'asset_collected': len(selected) - len(missing),
         'existing_or_cached_reused': reused, 'newly_extracted': extracted,
-        'new_bundle_downloads': downloaded, 'missing_asset_paths': missing,
+        'new_bundle_downloads': downloaded,
+        'derived_index_candidates': len(derived_candidates),
+        'missing_asset_paths': missing,
         'missing_formal_members': sorted(set(missing_formal)),
         'formal_construction': formal_construction,
         'entries': entries, 'complete_raw_assets': not missing,
@@ -486,7 +552,8 @@ def rebuild_raw_resources(identity, data_manifest, *,
         lock.unlink(missing_ok=True)
     return {key: report[key] for key in (
         'asset_total', 'asset_collected', 'existing_or_cached_reused',
-        'newly_extracted', 'new_bundle_downloads', 'missing_asset_paths',
+        'newly_extracted', 'new_bundle_downloads',
+        'derived_index_candidates', 'missing_asset_paths',
         'missing_formal_members', 'formal_construction',
         'complete_raw_assets', 'formal_approved',
         'assets_ready', 'can_send_packets', 'protocol_compatibility')}
