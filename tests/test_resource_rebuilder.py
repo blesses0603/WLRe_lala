@@ -165,6 +165,64 @@ class RawRebuilderTests(unittest.TestCase):
                       report['missing_asset_paths'])
         self.assertFalse(report['complete_raw_assets'])
 
+    def test_inventory_summary_is_display_only_and_version_bound(self):
+        from wlre.services.world.resource_rebuilder import read_inventory_summary
+        self.rebuild()
+        summary = read_inventory_summary(
+            self.identity.key, candidate_root=self.candidates)
+        self.assertEqual(summary['asset_collected'], 2)
+        self.assertEqual(summary['asset_total'], 2)
+        self.assertEqual(summary['derived_index_candidates'], 0)
+        self.assertIsNone(read_inventory_summary('0'*64, candidate_root=self.candidates))
+        self.assertIsNone(read_inventory_summary('../wrong', candidate_root=self.candidates))
+
+    def test_assembled_full_archives_revalidate_and_never_overwrite(self):
+        from wlre.services.world import resource_rebuilder as mod
+        from wlre.services.world.npc_1275_eve import FILES
+        from wlre.services.world.runtime_1275 import DATA_FILE, EVE_FILE
+        from unittest.mock import patch
+        raw = b'pinned raw table'
+        member = 'tables/datapackage_data_a.bundle/AlphaData_C.bytes'
+        payloads = {member: raw, **{name: b'index fixture' for name in FILES}}
+        pinned = {member: {'bytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest()}}
+        with patch.object(mod, '_exact_reviewed_manifest',
+                          return_value=b'fixed manifest'), patch(
+            'wlre.services.world.game_data_1275.verify_archive') as verify, patch(
+            'wlre.services.world.npc_1275_eve.read_verified_zip') as eve:
+            result = mod._build_full_reviewed_if_pinned(
+                self.identity,self.home,payloads,pinned)
+            self.assertEqual(result, 'reviewed_archives_constructed')
+            verify.assert_called_once()
+            eve.assert_called_once()
+        target = self.home / 'official_sync' / 'reviewed_full_1275'
+        with ZipFile(target / DATA_FILE) as z:
+            self.assertEqual(z.read(member), raw)
+        with ZipFile(target / EVE_FILE) as z:
+            self.assertEqual(set(z.namelist()), set(FILES) | {'README.txt'})
+        # Pre-existing reviewed archives are never overwritten.
+        again = mod._build_full_reviewed_if_pinned(
+            self.identity,self.home,payloads,pinned)
+        self.assertEqual(again, 'reviewed_archives_already_present')
+
+    def test_failed_independent_pin_does_not_publish_formal_zip(self):
+        from wlre.services.world import resource_rebuilder as mod
+        from wlre.services.world.npc_1275_eve import FILES
+        from wlre.services.world.runtime_1275 import DATA_FILE, EVE_FILE
+        from unittest.mock import patch
+        member = 'tables/datapackage_data_a.bundle/AlphaData_C.bytes'
+        body = b'fake content'
+        inputs = {member:body, **{name:b'fake' for name in FILES}}
+        with patch.object(mod, '_exact_reviewed_manifest',
+                          return_value=b'fixed manifest'), patch(
+            'wlre.services.world.game_data_1275.verify_archive',
+            side_effect=ValueError('Pinned SHA mismatch')):
+            result = mod._build_full_reviewed_if_pinned(
+                self.identity,self.home,inputs,{member:{}})
+        self.assertEqual(result, 'reviewed_archive_verification_failed')
+        target = self.home / 'official_sync' / 'reviewed_full_1275'
+        self.assertFalse((target / DATA_FILE).exists())
+        self.assertFalse((target / EVE_FILE).exists())
+
     def test_failed_bundle_download_attempts_once_per_bundle(self):
         self.index['assets'].append({
             'path':'Assets/ResourcesBuild/Data/ExtraData_C.bytes',
