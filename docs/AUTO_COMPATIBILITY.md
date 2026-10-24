@@ -290,3 +290,20 @@ LaLa 啟動自動資源準備時，先觀察 `ResourcePath_PC.dat` 與 DataPacka
 `game_data_1275.MANIFEST_SHA256` 與 `_valid_manifest()` 規格才接受。
 只有正式校驗清單**獨立取得並經審核，且實際納入發行**後，這個來源才會讓玩家免手動放入 DataCatalog ZIP。補建器在沒有既存可信 ZIP 時，會依獨立 pin 的全量 `files` 明細檢驗每一張官方原始表及三項正式索引；缺少任何一項仍不予核准。現階段**尚未提供該完整固定清單檔**，因此不得宣稱正式自動封裝已可用。
 已安裝、且通過固定 SHA 的舊正式 ZIP 仍可供既有補建沿用，但來源不存在時一律保留正式驗證缺口，不自行將候選簽成正式資料。此設計為後續正式清單由 LaLa 發行版本管理提供介面，不下載不可信的第三方簽章檔。
+
+
+## 第二十三階段：從已驗證官方 Bundle 直接建立可使用的 1275 Runtime
+
+不再以「原始 ZIP 候選只能預覽」作為最終功能。當本機沒有手動安裝的 `1275_DataCatalog.zip`／`1275_EveNpcIndex.zip` 時，`runtime_1275.active_runtime()` 現在優先走 `bundle_runtime_1275.load_verified_bundle_runtime()`，直接把官方 Bundle 中的正式 NPC、互動、物品、文字、對話、配方、場景與門事件解析為 LaLa 既有的 `Preview1275` **資料介面**，沿用現有 `activate_1275_recipes()`，不是另外一份 UI 候選清單。
+
+這條真實資料銜接的條件：
+
+1. 本次 Launcher 必須成功驗證 DataPackage、MainPackage 各自的 `.version`、`.bytes`、`.hash`，且四個必要來源 Schema 相容；Launcher 版本身分與原始快取版號必須一致。
+2. 兩份二進位 Manifest 再次與經獨立選定的 **1275 版本固定 SHA-256** 比對；不是拿本機候選 ZIP 裡自行計算的雜湊值當成授權。只支援已審核的 DataVer `1.3.21` 與目前固定的 Package 版本。
+3. 逐個檢查 `Eve`、`ItemData_C`、`TalkData_C`、`TextData_C`、`SmithData_C`、`ScenesData_C` 六個精確 AssetPath 的 Bundle 閉包及每個 Bundle 的 MD5／CRC／檔案長度；只讀取已下載的正確來源，缺一個 Bundle 就拒絕啟用，不會在 Runtime 內自行下載或修改遊戲。
+4. 重新由這些 Bundle 解出 TextAsset，核對 1275 Eve 固定 SHA-256、NPC 與互動事件數、道具與製作配方對應、1032 個正式配方、對話／文字／場景完整解析；任一失敗都不以既有 1262 靜態資料假裝新版本可用。
+5. 讀入結果只保存在記憶體供真正的 LaLa 模組使用，主程式現有 `recipe_plan` 的配方狀態／材料／工作設備／伺服器排程檢查仍保留。網路協定相容性 **沒有因資料解析成功就自動核准**，仍須正式服封包與互動 E2E 驗收；新的 Runtime 資料物件 `can_send_packets=False`。
+6. 若使用者原本已安裝兩份通過固定 SHA 的完整正式 ZIP，仍維持舊版正式來源讀取；若僅安裝一份或正式 ZIP 已損壞，嚴格拒絕用 Bundle 候選靜默掩蓋錯誤。
+
+版本僅支援 **已審核的 1275**；官方 1276 等新版本必須更新 pin、Adapter、必要統計與協定驗收後才可作為功能來源。沒有使用官方 `.json`、`.report`。對應回歸測試：`tests/test_bundle_runtime_1275.py`。
+
