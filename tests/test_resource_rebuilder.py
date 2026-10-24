@@ -182,6 +182,34 @@ class RawRebuilderTests(unittest.TestCase):
         self.assertIsNone(read_inventory_summary('0'*64, candidate_root=self.candidates))
         self.assertIsNone(read_inventory_summary('../wrong', candidate_root=self.candidates))
 
+    def test_bundled_pinned_manifest_feeds_raw_resource_verification(self):
+        member = 'tables/datapackage_data_a.bundle/AlphaData_C.bytes'
+        expected = {'files': {
+            member: {'kind': 'raw_table', 'table': 'AlphaData_C',
+                     'bytes': 100, 'sha256': 'a' * 64},
+            'indexes/npc_text_1275.json.gz': {
+                'kind': 'read_only_index', 'bytes': 80, 'sha256': 'b' * 64},
+        }}
+        with patch('wlre.services.world.resource_rebuilder._checked_existing',
+                   return_value=({}, None)), patch(
+             'wlre.services.world.resource_rebuilder._exact_reviewed_manifest',
+                   return_value=b'{"schema_version":1}'), patch(
+             'wlre.services.world.game_data_1275._valid_manifest',
+                   return_value=expected) as reviewed, patch(
+             'wlre.services.world.resource_rebuilder._build_full_reviewed_if_pinned',
+                   return_value='awaiting_pinned_catalog_members') as build:
+            report = self.rebuild(max_downloads=0)
+        reviewed.assert_called_once()
+        self.assertEqual(build.call_args.args[3], expected['files'])
+        self.assertNotIn('release_pinned_catalog_manifest_missing',
+                         report['formal_blockers'])
+        self.assertIn('release_pinned_raw_tables_missing',
+                      report['formal_blockers'])
+        self.assertIn('release_pinned_catalog_indexes_missing',
+                      report['formal_blockers'])
+        self.assertFalse(report['assets_ready'])
+        self.assertFalse(report['can_send_packets'])
+
     def test_bundled_formal_manifest_is_independently_pinned_not_self_signed(self):
         from wlre.services.world.resource_rebuilder import _exact_reviewed_manifest
         pins = self.home / 'resource_bundle' / 'pins'
