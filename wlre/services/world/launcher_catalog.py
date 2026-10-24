@@ -152,6 +152,16 @@ def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
     except OSError:
         # No readable status must never be confused with an approved Catalog.
         pass
+    # Every real Launcher iteration also records what the full formal runtime
+    # still lacks. Tests with an injected root diagnose only that temporary
+    # private directory. Neither report is an authorization token.
+    try:
+        from wlre.services.world.resource_gap_diagnostics import (
+            diagnose_resources, save_report)
+        gaps = diagnose_resources(base=root, checked_at_utc=receipt['checked_at_utc'])
+        save_report(gaps, base=root)
+    except (OSError, ValueError, RuntimeError):
+        pass
     return receipt
 
 
