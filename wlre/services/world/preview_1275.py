@@ -131,6 +131,7 @@ class Preview1275:
     recipes: dict
     scene_ids: frozenset
     doors: dict = field(default_factory=dict)
+    expedition: dict | None = None
     revision: int = 1275
     can_send_packets: bool = False
 
