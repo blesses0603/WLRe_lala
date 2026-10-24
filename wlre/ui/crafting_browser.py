@@ -32,6 +32,8 @@ class CraftingBrowser(CraftingQueueMixin):
         ttk.Button(header,text='自訂清單',command=panel.open_plan,padding=(5,3)).pack(side='left',padx=(12,3))
         ttk.Button(header,text='進入自家帳篷',command=lambda:panel.app.send({'type':'tent','action':'enter'}),padding=(5,3)).pack(side='left',padx=3)
         self.queue_label=tk.StringVar();ttk.Button(header,textvariable=self.queue_label,command=self.show_queue,padding=(5,3)).pack(side='left',padx=3)
+        self.source_label=tk.StringVar(value=feature_note('crafting'))
+        ttk.Label(searchbar if False else header,textvariable=self.source_label,style='Muted.TLabel').pack(side='right',padx=4)
         searchbar=ttk.Frame(box);searchbar.pack(fill='x',pady=(0,4))
         self.only_tools=tk.BooleanVar(value=True);ttk.Checkbutton(searchbar,text='只列小屋已有設備',variable=self.only_tools,command=lambda:self.refresh(force=True)).pack(side='left')
         ttk.Label(searchbar,text='搜尋').pack(side='left',padx=(8,4))
