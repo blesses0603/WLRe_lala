@@ -1,0 +1,186 @@
+"""Offline tests of incremental raw asset rebuilding, retaining existing files."""
+import hashlib
+import json
+from pathlib import Path
+import tempfile
+import unittest
+from unittest.mock import patch
+import zlib
+from zipfile import ZipFile
+
+from wlre.services.official_manifest_sync import ManifestSpec, VerifiedManifest
+from wlre.services.official_bundle_download import spec_from_manifest
+from wlre.services.resource_compatibility import load_supported_resources
+from wlre.services.world.catalog_identity import OfficialCatalogIdentity, PackageRevision
+from wlre.services.world.resource_rebuilder import (
+    rebuild_raw_resources, ResourceRebuildError, _load_previous,
+)
+
+
+class RawRebuilderTests(unittest.TestCase):
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        self.home = Path(temp.name)
+        self.candidates = self.home / 'derived'
+        self.bundles = self.home / 'bundles'
+        supported = load_supported_resources()
+        self.revision = supported['packages']['DataPackage']['manifest']
+        main = supported['packages']['MainPackage']['manifest']
+        self.identity = OfficialCatalogIdentity(
+            '1.3.21', '1.3.0', (
+                PackageRevision('DataPackage', self.revision, 'a'*64, '12345678'),
+                PackageRevision('MainPackage', main, 'b'*64, 'abcdef12')))
+        self.payloads = {
+            'datapackage_data_a.bundle': b'fake UnityFS alpha payload',
+            'datapackage_data_b.bundle': b'fake UnityFS beta payload',
+        }
+        self.paths = {
+            'Assets/ResourcesBuild/Data/AlphaData_C.bytes':
+                'datapackage_data_a.bundle',
+            'Assets/ResourcesBuild/Data/TalkData_C.bytes':
+                'datapackage_data_b.bundle',
+        }
+        self.index = {
+            'header': {'package_name':'DataPackage',
+                       'package_version':self.revision,
+                       'file_version':'2.2.5','output_name_style':1},
+            'assets': [{'path': k, 'bundle_name': v}
+                       for k, v in self.paths.items()],
+            'bundles': [
+                {'name': name, 'file_size':len(body),
+                 'file_hash': hashlib.md5(body).hexdigest(),
+                 'file_crc': (zlib.crc32(body)&0xffffffff).to_bytes(
+                     4,'little').hex(), 'dependencies':[]}
+                for name, body in self.payloads.items()],
+        }
+        self.manifest = VerifiedManifest(
+            ManifestSpec('1.3.21','DataPackage',self.revision),
+            self.index,'12345678',self.home/'DataPackage.bytes', False)
+        self.reads = []
+        self.requests = []
+
+    def fetch(self, spec, *, cache_root):
+        self.requests.append(spec.name)
+        target = spec.cache_path(cache_root)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(self.payloads[spec.name])
+        return target
+
+    def extract(self, binding, paths):
+        self.reads.append(binding.asset_path)
+        return b'raw:' + binding.asset_path.encode()
+
+    def run(self, **kwargs):
+        return rebuild_raw_resources(
+            self.identity, self.manifest,
+            bundle_root=self.bundles, candidate_root=self.candidates,
+            formal_base=self.home, fetcher=self.fetch, extractor=self.extract,
+            **kwargs)
+
+    def test_all_current_and_new_raw_assets_are_included(self):
+        report = self.run()
+        self.assertTrue(report['complete_raw_assets'])
+        self.assertEqual(report['asset_total'], 2)
+        self.assertEqual(report['asset_collected'], 2)
+        self.assertEqual(report['newly_extracted'], 2)
+        self.assertEqual(report['new_bundle_downloads'], 2)
+        self.assertFalse(report['formal_approved'])
+        self.assertFalse(report['assets_ready'])
+        archive = self.identity.private_catalog_dir(self.candidates) / 'verified_raw_inventory.zip'
+        with ZipFile(archive) as z:
+            names = z.namelist()
+            self.assertIn('tables/datapackage_data_a.bundle/AlphaData_C.bytes', names)
+            self.assertIn('tables/datapackage_data_b.bundle/TalkData_C.bytes', names)
+            doc = json.loads(z.read('inventory.json'))
+            self.assertEqual(set(doc['entries']) | {'inventory.json'}, set(names))
+            self.assertEqual(doc['catalog_key'], self.identity.key)
+        again = self.run()
+        self.assertEqual(again['new_bundle_downloads'], 0)
+        self.assertEqual(again['existing_or_cached_reused'], 2)
+        self.assertEqual(len(self.requests), 2)
+
+    def test_bounded_download_then_resume_on_next_launcher_run(self):
+        one = self.run(max_downloads=1)
+        self.assertEqual(one['asset_collected'], 1)
+        self.assertEqual(len(one['missing_asset_paths']), 1)
+        two = self.run(max_downloads=1)
+        self.assertEqual(two['asset_collected'], 2)
+        self.assertTrue(two['complete_raw_assets'])
+        self.assertEqual(len(self.requests), 2)
+        self.assertFalse(two['can_send_packets'])
+
+    def test_existing_pinned_table_is_reused_without_re_download(self):
+        member = 'tables/datapackage_data_a.bundle/AlphaData_C.bytes'
+        existing = b'existing SHA pinned and checked alpha'
+        spec = {'bytes': len(existing),
+                'sha256': hashlib.sha256(existing).hexdigest()}
+        with patch('wlre.services.world.resource_rebuilder._checked_existing',
+                   return_value=({member: existing},
+                                 {'files': {member: spec}})) as checked:
+            result = self.run(max_downloads=0)
+        checked.assert_called_once()
+        self.assertEqual(result['asset_collected'], 1)
+        self.assertEqual(result['existing_or_cached_reused'], 1)
+        archive = self.identity.private_catalog_dir(self.candidates) / 'verified_raw_inventory.zip'
+        with ZipFile(archive) as z:
+            self.assertEqual(z.read(member), existing)
+        self.assertEqual(self.requests, [])
+
+    def test_existing_pinned_files_never_mix_into_next_revision(self):
+        wrong = OfficialCatalogIdentity(
+            '1.3.21','1.3.0',(
+                PackageRevision('DataPackage',
+                                '1276_2026_10_24_18_27_33_84',
+                                'c'*64,'12345678'),
+                self.identity.packages[1]))
+        new = VerifiedManifest(
+            ManifestSpec('1.3.21','DataPackage',
+                         '1276_2026_10_24_18_27_33_84'),
+            {**self.index, 'header': {
+                **self.index['header'],
+                'package_version':'1276_2026_10_24_18_27_33_84'}},
+            '12345678', self.home/'new.bytes',False)
+        with patch('wlre.services.world.resource_rebuilder._checked_existing') as checked:
+            report = rebuild_raw_resources(
+                wrong, new, bundle_root=self.bundles,
+                candidate_root=self.candidates, formal_base=self.home,
+                fetcher=self.fetch, extractor=self.extract,
+                max_downloads=0)
+        checked.assert_not_called()
+        self.assertEqual(report['asset_collected'], 0)
+        self.assertFalse(report['formal_approved'])
+
+    def test_invalid_bundle_hash_does_not_get_reused(self):
+        spec = spec_from_manifest(data_ver='1.3.21',
+                                  package='DataPackage', index=self.index,
+                                  name='datapackage_data_a.bundle')
+        path = spec.cache_path(self.bundles)
+        path.parent.mkdir(parents=True,exist_ok=True)
+        path.write_bytes(b'X'*len(self.payloads[spec.name]))
+        report = self.run(max_downloads=0)
+        self.assertNotIn('Assets/ResourcesBuild/Data/AlphaData_C.bytes',
+                         self.reads)
+        self.assertIn('Assets/ResourcesBuild/Data/AlphaData_C.bytes',
+                      report['missing_asset_paths'])
+        self.assertFalse(report['complete_raw_assets'])
+
+    def test_failed_bundle_download_attempts_once_per_bundle(self):
+        self.index['assets'].append({
+            'path':'Assets/ResourcesBuild/Data/ExtraData_C.bytes',
+            'bundle_name':'datapackage_data_a.bundle'})
+        def fail(spec, *, cache_root):
+            self.requests.append(spec.name)
+            raise OSError('offline')
+        with patch('wlre.services.world.resource_rebuilder._checked_existing',
+                   return_value=({}, None)):
+            result = rebuild_raw_resources(
+                self.identity,self.manifest,bundle_root=self.bundles,
+                candidate_root=self.candidates,formal_base=self.home,
+                fetcher=fail,extractor=self.extract)
+        self.assertEqual(self.requests.count('datapackage_data_a.bundle'), 1)
+        self.assertGreater(len(result['missing_asset_paths']), 0)
+
+
+if __name__ == '__main__':
+    unittest.main()
