@@ -37,6 +37,7 @@ def make_command(python, root=ROOT, arch=None, jobs=None):
         '--macos-app-icon=' + str(root / 'wlre/resources/assets/app.ico'),
         '--macos-target-arch=' + ('x86_64' if arch == 'x64' else 'arm64'),
         '--enable-plugin=tk-inter', '--include-package=wlre',
+        '--include-package=UnityPy', '--include-package-data=UnityPy',
         '--output-folder-name=WLRe_LaLa', '--output-filename=WLRe_LaLa', '--output-dir=' + str(output),
         '--report=' + str(output / 'compilation-report.xml'),
         '--assume-yes-for-downloads',
@@ -96,12 +97,13 @@ def main(argv=None):
     try:
         # The workflow installs requirements into its isolated setup-python.
         run_logged([sys.executable, '-m', 'pip', 'check'], log)
-        run_logged([sys.executable, '-c', 'import tkinter; from PIL import Image,ImageTk; import nuitka; print(tkinter.TkVersion)'], log)
+        run_logged([sys.executable, '-c', 'import tkinter; from PIL import Image,ImageTk; import nuitka, UnityPy, lz4.block, brotli; assert callable(UnityPy.load); print(tkinter.TkVersion)'], log)
         run_logged(make_command(sys.executable, arch=arch, jobs=args.jobs), log)
         bundle = output / 'WLRe_LaLa.app'
         executable = bundle_executable(bundle)
         verify_binary_arch(executable, arch)
         run_logged([str(executable), '--self-test'], log)
+        run_logged([str(executable), '--self-test-unityfs'], log)
         # GitHub's macos-15-intel hosted runner can have no usable WindowServer:
         # its Tk event loop hangs despite the compiled executable launching.
         # Skip *only* the visual smoke test when CI explicitly sets this.
