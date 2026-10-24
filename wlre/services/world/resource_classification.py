@@ -18,6 +18,7 @@ LABELS = {
     'npc': 'NPC／夥伴', 'items': '物品／裝備', 'shops': '商店／交易',
     'crafting': '製作／配方', 'maps': '地圖／傳送', 'quests': '任務／活動',
     'battle': '戰鬥／技能', 'talk': '對話／文字', 'characters': '角色／能力',
+    'expedition': '遠征／駐紮所',
     'other_data': '其他資料', 'audio': '音效／音樂', 'sprites': '圖示／圖片',
     'scenes': '場景資源', 'npc_models': 'NPC 模型', 'role_models': '角色模型',
     'housing': '房屋／帳篷', 'weapon_models': '武器模型',
@@ -45,6 +46,7 @@ def classify_asset_path(package, path):
         name = PurePosixPath(path).stem.lower()
         groups = (
             ('talk', ('talk', 'text', 'language', 'word', 'dirtyword')),
+            ('expedition', ('adventure', 'expedition', 'outpost')),
             ('quests', ('task', 'quest', 'mission', 'adventure', 'journal', 'dungeon')),
             ('shops', ('shop', 'store', 'mall', 'sale', 'sell', 'currency', 'trade')),
             ('crafting', ('smith', 'recipe', 'alchemy', 'creation', 'compose', 'cook')),
