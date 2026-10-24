@@ -170,6 +170,32 @@ def _store_candidate(identity, bytes_by_feature, parsed, *, sources, candidate_r
 
 
 
+def _refresh_existing_classification(identity, manifests, candidate_root, progress):
+    """Best-effort, read-only classification of both official Asset lists.
+
+    Index files remain private metadata and do not authorize runtime access.
+    Run both before optional downloads and after raw inventory updates, so
+    previously present and newly collected entries share one lookup table.
+    """
+    try:
+        from wlre.services.world.resource_classification import (
+            write_verified_classification)
+        summary = write_verified_classification(
+            identity, manifests, candidate_root=candidate_root)
+    except Exception:
+        # Classification is optional and must not change the prior login gate
+        # or erase a successfully validated four-feature candidate.
+        if progress is not None:
+            progress('classification_unavailable', {})
+        return {'status': 'pending_error', 'approved': False,
+                'assets_ready': False, 'can_send_packets': False}
+    if progress is not None:
+        progress('classification_ready', {
+            'total': summary['asset_total'],
+            'existing': summary['locally_indexed']})
+    return {**summary, 'status': 'indexed_metadata_only'}
+
+
 def _rebuild_known_resources(result, *, identity, manifests, bundle_root,
                              candidate_root, max_download_bytes,
                              max_downloads, opener, progress):
@@ -259,6 +285,11 @@ def run_auto_catalog(*, download=True, parse=True, observe=None, retrieve=None,
         'downloads_required': sum(p.download_count for p in plan.updates),
         'download_bytes': sum(p.download_bytes for p in plan.updates),
     }
+    # Build the current two-Package path/category index from already verified
+    # Manifests even when optional Bundle downloads later fail.
+    if download and default_extractor:
+        result['classification'] = _refresh_existing_classification(
+            plan.identity, manifests, candidate_root, progress)
     # Previous candidate files are content-checked, but never change the
     # official version/login gate. Fresh official manifest is still mandatory.
     cached = _trusted_cached_candidate(_candidate_path(plan.identity, candidate_root),
@@ -298,6 +329,8 @@ def run_auto_catalog(*, download=True, parse=True, observe=None, retrieve=None,
                     bundle_root=bundle_root, candidate_root=candidate_root,
                     max_download_bytes=max_download_bytes,
                     max_downloads=max_downloads, opener=opener, progress=progress)
+                result['classification'] = _refresh_existing_classification(
+                    plan.identity, manifests, candidate_root, progress)
             return result
     if not download:
         emit('preview_ready')
@@ -399,4 +432,6 @@ def run_auto_catalog(*, download=True, parse=True, observe=None, retrieve=None,
             bundle_root=bundle_root, candidate_root=candidate_root,
             max_download_bytes=max_download_bytes,
             max_downloads=max_downloads, opener=opener, progress=progress)
+        result['classification'] = _refresh_existing_classification(
+            plan.identity, manifests, candidate_root, progress)
     return result
