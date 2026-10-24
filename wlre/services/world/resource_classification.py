@@ -45,8 +45,8 @@ def classify_asset_path(package, path):
             raise ResourceClassificationError('無效 DataPackage 資料表')
         name = PurePosixPath(path).stem.lower()
         groups = (
-            ('talk', ('talk', 'text', 'language', 'word', 'dirtyword')),
             ('expedition', ('adventure', 'expedition', 'outpost')),
+            ('talk', ('talk', 'text', 'language', 'word', 'dirtyword')),
             ('quests', ('task', 'quest', 'mission', 'adventure', 'journal', 'dungeon')),
             ('shops', ('shop', 'store', 'mall', 'sale', 'sell', 'currency', 'trade')),
             ('crafting', ('smith', 'recipe', 'alchemy', 'creation', 'compose', 'cook')),
