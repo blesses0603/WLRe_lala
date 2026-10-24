@@ -39,10 +39,16 @@ class VersionGateController:
         self._lala_update_info = None
         self._lala_update_busy = False
         self._lala_downloaded = None
-        self._auto_catalog_generation = 0
-        self._auto_catalog_messages = queue.SimpleQueue()
-        self._auto_catalog_status = "尚未啟動"
-        self._auto_catalog_busy = False
+        # Display-only launcher receipt. This never affects the online game gate.
+        from wlre.services.world.launcher_catalog import read_launcher_status
+        receipt = read_launcher_status()
+        code = None if receipt is None else receipt['status']
+        self._launcher_catalog_status = {
+            'review_required': 'Launcher 已完成來源準備，候選待相容性審核',
+            'downloaded_unparsed': 'Launcher 僅下載資料，尚未驗證解包',
+            'error': 'Launcher 本次候選準備未完成，安全限制不變',
+            'preview': 'Launcher 僅預覽下載計畫',
+        }.get(code, '尚無 Launcher 自動資源準備紀錄')
 
     def show_version_check(self):
         """Compact, single-page version review before exposing credentials.
@@ -229,7 +235,7 @@ class VersionGateController:
                 status_text = f"{stage}：{reason}"
             else:
                 status_text = "無法完整驗證；請檢查各資源包的錯誤原因"
-        self._version_remote.set(status_text + "｜資源候選：" + self._auto_catalog_status)
+        self._version_remote.set(status_text + "｜" + self._launcher_catalog_status)
         if self.version_gate_state == "checking":
             self._version_heading.set("正在向官方來源查詢版本…")
             self._version_main.set("查詢中…")
@@ -291,8 +297,6 @@ class VersionGateController:
             self.show_version_check()
         self._version_gate_generation += 1
         generation = self._version_gate_generation
-        self._auto_catalog_generation += 1
-        self._auto_catalog_status = "等待官方檢測結果"
         self._version_gate_entry_approved = False
         self.version_gate_state = "checking"
         self._version_gate_result = None
@@ -324,7 +328,6 @@ class VersionGateController:
                 generation, result = self._version_gate_messages.get_nowait()
             except queue.Empty:
                 self._drain_lala_update_messages()
-                self._drain_auto_catalog_messages()
                 return
             if generation != self._version_gate_generation or self._closing:
                 continue
@@ -336,62 +339,6 @@ class VersionGateController:
             self._render_version_window()
             if result.get("blocked") and not self.live_active:
                 self.show_version_check()
-            if (os.environ.get("WLRE_DISABLE_AUTO_CATALOG") != "1"
-                    and result.get("source") == "official_remote_only"
-                    and result.get("remote", {}).get("status")
-                    in ("same_resources", "resources_changed")):
-                self._start_auto_catalog()
-
-    def _start_auto_catalog(self):
-        """Prepare a private, unapproved candidate on a background thread."""
-        if self._closing or self._auto_catalog_busy:
-            return
-        generation = self._auto_catalog_generation
-        # Never capture the Tk controller in a daemon thread. Otherwise the
-        # final reference may be released on the worker thread after window
-        # destruction, triggering Tcl_AsyncDelete outside the Tk main thread.
-        messages = self._auto_catalog_messages
-        self._auto_catalog_busy = True
-        self._auto_catalog_status = "正在核對 Manifest 並準備 Bundle"
-        self._render_version_window()
-
-        def worker():
-            try:
-                from wlre.services.world.auto_catalog import run_auto_catalog
-                result = run_auto_catalog(download=True, parse=True)
-                kind, value = "done", result.get("cache", "")
-            except Exception as exc:
-                kind, value = "error", str(exc)[:100]
-            messages.put((generation, kind, value))
-
-        threading.Thread(target=worker, name="lala-catalog-auto-prepare",
-                         daemon=True).start()
-
-    def _drain_auto_catalog_messages(self):
-        while True:
-            try:
-                generation, kind, value = self._auto_catalog_messages.get_nowait()
-            except queue.Empty:
-                return
-            self._auto_catalog_busy = False
-            if self._closing:
-                continue
-            if generation != self._auto_catalog_generation:
-                # A manual refresh may finish while an older worker is busy.
-                # Only the latest trusted official observation may start work.
-                current = self._version_gate_result or {}
-                if (current.get("source") == "official_remote_only"
-                        and current.get("remote", {}).get("status")
-                        in ("same_resources", "resources_changed")):
-                    self._start_auto_catalog()
-                continue
-            if kind == "done":
-                self._auto_catalog_status = (
-                    "私人候選快取已驗證，待相容性審核" if value == "verified_private_candidate"
-                    else "新版候選資料已建立，待相容性審核")
-            else:
-                self._auto_catalog_status = "準備未完成，仍保留既有登入限制"
-            self._render_version_window()
 
     def start_lala_release_check(self):
         if self._closing:
