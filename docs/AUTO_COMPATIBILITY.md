@@ -264,3 +264,12 @@ py -m unittest -v tests.test_auto_catalog tests.test_resource_rebuilder tests.te
 - 只有當完整 1275 原始表與獨立固定 SHA 的正式索引、Eve 索引 **全部存在且逐項校驗成功** 時，既有正式補建和 bridge 才能安全交付 Runtime；缺少獨立驗證依據時，**不可** 從自身候選雜湊自動簽發正式版本。
 - 測試：`py -m unittest -v tests.test_automatic_candidate_indexes tests.test_resource_rebuilder tests.test_launcher_progress`。原生 EXE、官方 1275 全量真實 Bundle 及遊戲封包 E2E 仍需實機驗收，不以 CI 模擬測試替代。
 
+
+
+### 可隨 LaLa 發行的獨立固定正式清單
+
+`resource_rebuilder._exact_reviewed_manifest()` 現在會先嘗試讀取隨程式發行的
+`wlre/resources/pins/1275_DataCatalog.manifest.json`，且必須完全符合程式內現有
+`game_data_1275.MANIFEST_SHA256` 與 `_valid_manifest()` 規格才接受。
+只有正式校驗清單**獨立取得並經審核，且實際納入發行**後，這個來源才會讓玩家免手動放入 DataCatalog ZIP；現階段**尚未提供該完整固定清單檔**，因此不得宣稱正式自動封裝已可用。
+已安裝、且通過固定 SHA 的舊正式 ZIP 仍可供既有補建沿用，但來源不存在時一律保留正式驗證缺口，不自行將候選簽成正式資料。此設計為後續正式清單由 LaLa 發行版本管理提供介面，不下載不可信的第三方簽章檔。
