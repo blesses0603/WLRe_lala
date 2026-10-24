@@ -163,3 +163,44 @@ py -m tools.plan_official_catalog --download --parse
 - **Launcher 進度畫面（PR #56）**：原始碼版 `wlre.launcher` 會啟動 `launcher_catalog --progress`，Nuitka EXE／APP 則在同一程序呼叫 `wlre.launcher_progress.run_with_progress(prepare_on_launch)`。使用既有 Tkinter，資源作業放在獨立執行緒，進度透過 Queue 在 GUI 主執行緒顯示；完成／失敗後自動關閉，才開啟 LaLa 正式主畫面。
 - 進度事件由實際業務流程發出：官方版本、DataPackage／MainPackage Manifest、Bundle 定位、同步總量、**已完成 MD5／CRC 校驗的 Bundle 筆數／總數**、NPC／商店／製作／場景解包、候選 ZIP 寫入與快取命中。校驗單檔完成才增加計數，未估算下載速度或虛構百分比；下載時如果官方回應較慢，顯示不定進度條。
 - **限制**：原始碼版首次安裝 Pillow／UnityPy 的 Python 私人環境屬進度畫面出現前的準備，CLI 仍會顯示簡短提示；大量下載須等待完成，暫不提供中途略過與可恢復的使用者中斷。官方 CDN 斷線時以不具授權效果的失敗結果繼續原有版本檢查；沒有螢幕的 Linux 環境以純文字階段訊息降級。正式 EXE／APP 與實際 Bundle 仍需個別驗收。
+
+
+## 官方 1275 Manifest 真實核對與本機 Bundle 解碼驗收
+
+已實際以使用者提供的 DataPackage_1275.zip、MainPackage_1275.zip
+解析 YooAsset 2.2.5 的完整索引，並核對 ZIP 內 .bytes/.hash 的 CRC32-LE：
+
+- DataPackage 1275_2026_10_21_18_27_33_84：190 Assets、22 Bundles，CRC32-LE dcace626。
+- MainPackage 1275_2026_10_21_18_29_38_49：21,577 Assets、1,732 Bundles，CRC32-LE b4e21f83。
+- Eve.bytes → datapackage_data_e.bundle：1,816,278 bytes，MD5 344ed77d603ea14ee8072d5a00eb548e，CRC32-LE e46611ae。
+- ItemData_C.bytes → datapackage_data_i.bundle：943,708 bytes，MD5 b28baaaa9b05bbc2fd26a27435098531，CRC32-LE 26904c43。
+- SmithData_C.bytes／ScenesData_C.bytes → datapackage_data_s.bundle：430,359 bytes，MD5 c3581ba9fcea38a28bda4d55c367c796，CRC32-LE ec25a891。
+- 上述三個 Bundle 均無 Manifest 相依 Bundle，因此不必下載整個 MainPackage。
+
+以上 MD5/CRC 是 Manifest 所列的「預期值」，不代表已拿到 Bundle 實體。
+使用者提供的 ZIP 僅含 Manifest；此執行環境無法連上官方 CDN 取得
+三個 Bundle，所以目前未完成官方 1275 的 UnityFS／TextAsset 實檔解碼。
+
+為下次實檔驗收新增 tools.verify_official_local_bundles。這是**開發者**
+可選用的離線工具，不取代 Launcher 自動準備。它只讀本機來源，
+先驗完整 Manifest 格式、同一 ZIP 的 CRC32、精確 AssetPath／相依關係，
+有提供 Bundle 時再核對實體大小／MD5／CRC，全部通過才用 UnityPy
+解析 NPC、商店、製作、場景四類資料。
+
+先只核對來源索引：
+
+~~~powershell
+py -m tools.verify_official_local_bundles --data-zip "C:\Downloads\DataPackage_1275.zip" --main-zip "C:\Downloads\MainPackage_1275.zip" --data-ver 1.3.21
+~~~
+
+當三個具原始 Bundle 檔名的實體檔案到齊後，再解碼：
+
+~~~powershell
+py -m tools.verify_official_local_bundles --data-zip "C:\Downloads\DataPackage_1275.zip" --main-zip "C:\Downloads\MainPackage_1275.zip" --data-ver 1.3.21 --bundle-dir "C:\Downloads\WLRE_Bundles" --decode
+~~~
+
+也可使用 --bundle-cache-root 指向 LaLa 已校驗的私有快取根目錄。
+來源 ZIP 的 .hash 只能證明本地資料彼此一致，不能代替當下的官方
+遠端認證；本工具固定輸出 live_official_authentication=false、
+approved=false、assets_ready=false、can_send_packets=false，
+不會修改正式登入閘門、執行遊戲交易或上傳私有遊戲檔案。
