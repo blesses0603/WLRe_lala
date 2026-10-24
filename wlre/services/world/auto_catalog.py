@@ -168,12 +168,20 @@ def run_auto_catalog(*, download=True, parse=True, observe=None, retrieve=None,
                      previous_finder=None, extractor=None,
                      manifest_root=None, bundle_root=None, candidate_root=None,
                      max_download_bytes=DEFAULT_MAX_DOWNLOAD_BYTES,
-                     max_downloads=DEFAULT_MAX_DOWNLOADS, opener=None):
+                     max_downloads=DEFAULT_MAX_DOWNLOADS, opener=None,
+                     progress=None):
     """One bounded background iteration; no UI objects, network commands or login.
 
     parse=True is only allowed with download=True; both default on for LaLa's
     auto-prepare worker. Call download=False,parse=False for a safe preview.
     """
+    if progress is not None and not callable(progress):
+        raise AutoCatalogError('Invalid Launcher progress callback')
+
+    def emit(phase, **details):
+        if progress is not None:
+            progress(phase, details)
+
     if parse and not download:
         raise AutoCatalogError('Cannot parse before explicit verified Bundle sync')
     if (type(max_download_bytes) is not int or max_download_bytes < 0
@@ -183,13 +191,16 @@ def run_auto_catalog(*, download=True, parse=True, observe=None, retrieve=None,
     retrieve = fetch_official_manifest if retrieve is None else retrieve
     previous_finder = (find_previous_verified_manifest if previous_finder is None
                        else previous_finder)
+    emit('official_version')
     snapshot = observe()
     manifests, previous = {}, {}
     for package in PACKAGES:
+        emit('manifest', package=package)
         current = retrieve(spec_from_snapshot(snapshot, package),
                            cache_root=manifest_root)
         manifests[package] = current
         previous[package] = previous_finder(current, cache_root=manifest_root)
+    emit('bundle_plan')
     bindings = _bindings_for_snapshot(snapshot)
     plan = plan_catalog_pipeline(snapshot, manifests, bindings,
                                  previous_manifests=previous, bundle_root=bundle_root)
@@ -206,10 +217,12 @@ def run_auto_catalog(*, download=True, parse=True, observe=None, retrieve=None,
     cached = _trusted_cached_candidate(_candidate_path(plan.identity, candidate_root),
                                        plan.catalog_key)
     if cached is not None and download and parse:
+        emit('cached_candidate')
         return {**result, 'status': 'review_required',
                 'cache': 'verified_private_candidate',
                 'record_counts': {f: cached['features'][f]['record_count'] for f in FEATURES}}
     if not download:
+        emit('preview_ready')
         return result
     if parse and extractor is None:
         try:
@@ -223,13 +236,17 @@ def run_auto_catalog(*, download=True, parse=True, observe=None, retrieve=None,
     if extractor is not None and not callable(extractor):
         raise AutoCatalogError('Invalid extractor')
     # Quotas checked for BOTH packages in run_catalog_pipeline, prior to writes.
+    emit('bundle_sync', count=result['downloads_required'],
+         bytes=result['download_bytes'])
     sync, _ = run_catalog_pipeline(
         plan, download=True, extractor=None, bundle_root=bundle_root,
         max_download_bytes=max_download_bytes, max_downloads=max_downloads,
         opener=opener)
     result['verified_bundles'] = sum(len(p.entries) for p in plan.updates)
     if not parse:
+        emit('download_ready')
         return {**result, 'status': 'downloaded_unparsed'}
+    emit('bundle_verify')
     paths = verified_source_paths(plan, bundle_root=bundle_root)
     raw_by_feature, parsed = {}, {}
     revisions = {p.name: p.full_version for p in plan.identity.packages}
@@ -238,6 +255,7 @@ def run_auto_catalog(*, download=True, parse=True, observe=None, retrieve=None,
     for source in plan.sources:
         provisional = source.binding
         feature = provisional.contract.feature
+        emit('extract', feature=feature)
         try:
             raw = extractor(provisional, paths[feature])
             if type(raw) is not bytes or not 0 < len(raw) <= MAX_SOURCE_BYTES:
@@ -256,8 +274,10 @@ def run_auto_catalog(*, download=True, parse=True, observe=None, retrieve=None,
                 f'{feature} 新版資料解析失敗；未儲存或啟用任何候選目錄') from exc
     if set(parsed) != set(FEATURES):
         raise AutoCatalogError('Official source candidate is incomplete')
+    emit('candidate_write')
     metadata = _store_candidate(plan.identity, raw_by_feature, parsed,
                                 candidate_root=candidate_root)
+    emit('candidate_ready')
     return {**result, 'status': 'review_required', 'cache': 'new_private_candidate',
             'record_counts': {f: metadata['features'][f]['record_count']
                               for f in FEATURES}}
