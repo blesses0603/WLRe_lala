@@ -125,6 +125,39 @@ class OfflineVerifierTests(unittest.TestCase):
                                        decode=True, extractor=extract))
         extract.assert_not_called()
 
+    def test_official_game_yoo_hashed_data_is_read_only(self):
+        import os
+        import tempfile
+        yoo = self.root / 'WLRE_Data' / 'yoo'
+        base = yoo / 'DataPackage' / 'BundleFiles' / '00'
+        for idx, raw in enumerate(self.payloads):
+            storage = base / (f'{idx:032x}')
+            storage.mkdir(parents=True)
+            (storage / '__data').write_bytes(raw)
+        fake = base / '99999999999999999999999999999999'
+        fake.mkdir(parents=True)
+        (fake / '__data').write_bytes(b'other bundle')
+        report = verify_local(**self.kwargs(game_yoo=yoo))
+        self.assertEqual(report['required_bundle_count'], 3)
+        self.assertTrue(all(row['status'] == 'verified'
+                            for row in report['bundles'].values()))
+        self.assertFalse(report['decoded'])
+        self.assertEqual(sorted(p.name for p in base.rglob('__data')),
+                         ['__data'] * 4)
+        # The helper must not rename original hashed files or create a cache.
+        self.assertTrue((base / f'{0:032x}' / '__data').exists())
+
+    def test_hashed_game_file_with_wrong_md5_cannot_decode(self):
+        yoo = self.root / 'WLRE_Data' / 'yoo'
+        base = yoo / 'DataPackage' / 'BundleFiles' / '00' / ('f' * 32)
+        base.mkdir(parents=True)
+        (base / '__data').write_bytes(b'0' * len(self.payloads[0]))
+        extract = Mock()
+        with self.assertRaisesRegex(OfflineVerificationError, 'MD5/CRC'):
+            verify_local(**self.kwargs(game_yoo=yoo, decode=True,
+                                       extractor=extract))
+        extract.assert_not_called()
+
     def test_decode_all_features_without_ever_approving_gameplay(self):
         for name, raw in zip(self.names, self.payloads):
             (self.bundle_dir / name).write_bytes(raw)
