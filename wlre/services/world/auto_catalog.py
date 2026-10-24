@@ -237,13 +237,13 @@ def _rebuild_known_resources(result, *, identity, manifests, bundle_root,
                 raise AutoCatalogError('Invalid raw resource download accounting')
             total_downloaded += changed
             remaining_files -= changed
-            # The exact byte cost of each downloaded bundle is checked again
-            # below via the official Manifest, never an untrusted progress log.
-            # A conservative per-batch charge avoids exceeding the user-facing
-            # quota when files are larger than the per-pass limit.
-            # Use actual MD5/CRC-verified cached file sizes from the manifest.
-            if changed:
-                remaining_bytes -= batch_bytes
+            # Use the actual independently verified downloaded bytes.
+            charged = current.get('new_bundle_download_bytes',
+                                  batch_bytes if changed else 0)
+            if (type(charged) is not int or charged < 0
+                    or charged > batch_bytes or (changed and not charged)):
+                raise AutoCatalogError('Invalid raw resource byte accounting')
+            remaining_bytes -= charged
             if (current['complete_raw_assets'] or not changed
                     or remaining_files == 0 or remaining_bytes <= 0):
                 break
