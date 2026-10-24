@@ -228,3 +228,26 @@ py -m unittest -v tests.test_verified_expedition_1275 tests.test_feature_resourc
 ~~~
 
 不得修改桌面／Android 正式版本宣告、合併 main 或放寬登入安全閘門。無真實完整 1275 正式檔案時，只能以 Mock/模擬資料驗證程式流程，不能宣稱官方實檔或實機已驗收。
+
+
+## 全自動接收階段：無需人工放 ZIP 的資料同步與唯讀功能
+
+這一階段的目標是讓 LaLa 啟動時自行從官方版本端點取得 DataPackage／MainPackage Manifest，對已審核的 AssetPath 自動下載與校驗 Bundle、保留既有版本隔離快取，逐步重建原始 TextAsset 以及 NPC／背包／製作／遠征的候選索引。
+
+### 自動作業行為
+
+- 資料收集現在位於四類 Schema 解析**之前**。Eve 或某個 Adapter 失敗時，官方原始資料的已下載內容仍會保留；Launcher 可以回退到官方下載（不解析）模式。沒有任何手動放 ZIP 的正常操作步驟。
+- 每個 Launcher 啟動迭代在既有總額度內最多執行 8 批補建（每批最多 4 個 Bundle、16 MiB），跨批次以官方驗證後實際下載量扣除額度；超過額度留待後續迭代。已快取且通過該版本 MD5/CRC 檢查的 Bundle 會重用。
+- 官方版本 1275 的已審核 Schema 可以另外產生 smith_recipes、expedition_quests、expedition_npcs 候選 JSON。AdventureData_C 與 AdventureLvData_C 可先建立數字任務索引，TextData_C 到齊後才附加經解析的名稱；NpcData_C 與 NpcCareerData_C 到齊後補建 NPC 索引。任何一個解析失敗不會抹除其他成功項目。
+- 未經審核的未來版本只保留官方原始資源及分類，不把 1275 的二進位解析規則假裝能自動適用。
+- **候選內容可用於畫面顯示，不代表正式授權。** 背包及製作可顯示由自動收到的 1275 ItemData_C 重建的候選名稱；遠征畫面可顯示自動整理的任務，但無正式來源時依然禁止派遣／領獎。伺服器封包與帳號登入仍維持原本的相容性閘門。
+- 所有版本候選 ZIP 均只存使用者私人資源快取；讀取時再次比對 Launcher 當前 catalog_key、ZIP 成員、檔案大小和 SHA-256；不能用候選的自算 SHA 取代正式來源的獨立固定驗證。
+- LaLa 的正式 1275 Preview Runtime 仍要求獨立校驗的完整正式原始索引來源。在缺少原始正式索引的獨立固定雜湊／未完成實際相容性測試前，尚不能保證所有候選資料自動轉為可操作的正式資料。**無手動 ZIP ≠ 可繞過安全校驗。**
+
+### 回歸測試
+
+~~~powershell
+py -m unittest -v tests.test_auto_catalog tests.test_resource_rebuilder tests.test_launcher_catalog tests.test_automatic_raw_receiver tests.test_automatic_candidate_indexes tests.test_auto_candidate_reader tests.test_expedition_ui tests.test_feature_resource_index
+~~~
+
+保留 Windows／macOS／Ubuntu 原始碼與原生 GUI 測試。此階段不修改版本常數、不合併 main、不發布 Tag；端到端官方 Bundle 驗收及真正 NPC 商店交易仍待實機測試。
