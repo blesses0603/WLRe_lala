@@ -106,7 +106,8 @@ def main():
         # Native EXE / macOS APP is its own launcher. Prepare verified
         # private candidates BEFORE importing Tk, never in login callbacks.
         from wlre.services.world.launcher_catalog import prepare_on_launch
-        prepare_on_launch()
+        from wlre.launcher_progress import run_with_progress
+        run_with_progress(prepare_on_launch)
         from wlre.ui.gui import main as run_gui
         run_gui()
         return 0
