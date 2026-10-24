@@ -115,9 +115,15 @@ def install(data_archive, eve_archive, *, base=None, check_only=True):
         for src, dest in sources:
             with tempfile.NamedTemporaryFile(dir=root, prefix='.lala1275_', suffix='.tmp',
                                              delete=False) as handle:
+                pending.append((Path(handle.name), dest))
                 with src.open('rb') as stream:
                     shutil.copyfileobj(stream, handle, 1024 * 1024)
-                pending.append((Path(handle.name), dest))
+                handle.flush()
+                os.fsync(handle.fileno())
+        # Protect against source files changing after the first verification,
+        # or copy truncation. Validate the exact staged files before publishing
+        # either destination; no partial active runtime is ever accepted.
+        load_preview(pending[0][0], pending[1][0])
         for tmp, dest in pending:
             os.link(tmp, dest)
             created.append(dest)
