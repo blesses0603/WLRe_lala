@@ -102,7 +102,7 @@ class OfficialPipelineTests(unittest.TestCase):
         self.assertEqual(set(p.package for p in plan.updates),
                          {'DataPackage', 'MainPackage'})
         self.assertEqual({p.download_count for p in plan.updates}, {0})
-        self.assertEqual([p.spec.package_version for p in plan.identity.packages],
+        self.assertEqual([p.full_version for p in plan.identity.packages],
                          [DATA_REV, MAIN_REV])
         self.assertEqual(len(plan.catalog_key), 64)
         self.assertFalse(plan.summary()['assets_ready'])
