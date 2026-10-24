@@ -8,6 +8,7 @@ from wlre.services.expedition_data import load_active_catalog
 from wlre.ui.layout import heading
 from wlre.ui.expedition_display import task_name
 from wlre.services.world.feature_resource_index import feature_note
+from wlre.services.world.auto_candidate_reader import candidate_expedition_catalog
 from .controls import build_controls, bind_control_changes
 from .settings import ExpeditionSettingsMixin
 from .planner import ExpeditionPlannerMixin
@@ -25,9 +26,9 @@ class ExpeditionPanel(
         try:
             return load_active_catalog()
         except (OSError, ValueError, KeyError, EOFError, UnicodeError):
-            # Never display 1262 rewards, names or NPC properties as if
-            # they were an approved 1275 source.
-            return {'tasks': {}, 'levels': {}, 'source_kind': 'formal_sources_missing'}
+            return (candidate_expedition_catalog() or
+                    {'tasks': {}, 'levels': {},
+                     'source_kind': 'formal_sources_missing'})
 
     def __init__(self, parent, app):
         super().__init__(parent, padding=6)
@@ -84,7 +85,9 @@ class ExpeditionPanel(
             self.load_settings(self.app._settings_key)
         self.update_inventory(state.get('inventory', {}))
         self.start_button.configure(state='normal' if live and e.get('ready') and e.get('outpost_ready')
-                                    and self.catalog.get('tasks') and not e.get('enabled') and not e.get('uncertain') else 'disabled')
+                                    and self.catalog.get('tasks')
+                                    and self.catalog.get('source_kind') != 'automatic_1275_unapproved_preview'
+                                    and not e.get('enabled') and not e.get('uncertain') else 'disabled')
         for control in (self.hours_input, self.faith_input, self.claim_option, self.success_input):
             control.configure(state='disabled' if e.get('enabled') or e.get('pending') else 'normal')
         self.item_combo.configure(state='disabled' if e.get('enabled') or e.get('pending') else 'readonly')
@@ -110,6 +113,8 @@ class ExpeditionPanel(
                           e.get('level'), hours, self.faith.get(), minimum, recovery_stock(state.get('inventory', {}))))
         self.render_catalog_rows(e, hours, minimum, signature)
         self.note.set(
-            '內建遠征資料不完整：當前版本正式遠征資料尚未完整驗證，不使用舊版任務或夥伴資料。'
+            '官方遠征候選資料已自動接收（唯讀），正式驗證前禁止派遣和領獎。'
+            if self.catalog.get('source_kind') == 'automatic_1275_unapproved_preview'
+            else '內建遠征資料不完整：當前版本正式遠征資料尚未完整驗證，不使用舊版任務或夥伴資料。'
             if not self.catalog.get('tasks') else
             '遠征任務與 NPC 資料已依正式版本讀取；仍以伺服器確認實際派遣和領獎。')
