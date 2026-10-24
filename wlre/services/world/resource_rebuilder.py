@@ -557,3 +557,41 @@ def rebuild_raw_resources(identity, data_manifest, *,
         'missing_formal_members', 'formal_construction',
         'complete_raw_assets', 'formal_approved',
         'assets_ready', 'can_send_packets', 'protocol_compatibility')}
+
+
+def read_inventory_summary(catalog_key, *, candidate_root=None):
+    """Untrusted display-only progress for Launcher UI; never an approval."""
+    if (type(catalog_key) is not str or len(catalog_key) != 64
+            or any(ch not in '0123456789abcdef' for ch in catalog_key)):
+        return None
+    root = (Path(candidate_root) if candidate_root is not None
+            else data_root() / 'official_sync' / 'derived_catalogs')
+    path = root / catalog_key / _FILE
+    try:
+        if not path.is_file() or path.is_symlink() or path.stat().st_size > MAX_RESULT_BYTES:
+            return None
+        with ZipFile(path) as z:
+            info = z.getinfo('inventory.json')
+            if not 0 < info.file_size <= 128 * 1024:
+                return None
+            report = json.loads(z.read(info))
+        if (type(report) is not dict
+                or report.get('schema_version') != SCHEMA
+                or report.get('catalog_key') != catalog_key
+                or report.get('formal_approved') is not False
+                or report.get('assets_ready') is not False
+                or report.get('can_send_packets') is not False
+                or report.get('protocol_compatibility') != 'unverified'
+                or type(report.get('asset_total')) is not int
+                or type(report.get('asset_collected')) is not int
+                or not 0 <= report['asset_collected'] <= report['asset_total'] <= MAX_ASSETS
+                or type(report.get('existing_or_cached_reused')) is not int
+                or type(report.get('newly_extracted')) is not int
+                or type(report.get('derived_index_candidates')) is not int):
+            return None
+        return {key: report[key] for key in (
+            'asset_total', 'asset_collected', 'existing_or_cached_reused',
+            'newly_extracted', 'derived_index_candidates',
+            'complete_raw_assets', 'formal_construction')}
+    except (OSError, BadZipFile, KeyError, ValueError, TypeError, RuntimeError):
+        return None
