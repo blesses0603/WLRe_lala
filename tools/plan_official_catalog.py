@@ -70,26 +70,38 @@ def main(argv=None):
     parser.add_argument('--bindings', type=Path, required=True,
                         help='Private, release-reviewed exact AssetPath/Schema/SHA JSON')
     parser.add_argument('--download', action='store_true',
-                        help='Explicitly download verified required Bundles; never parse UnityFS')
+                        help='Explicitly sync verified Bundles before optional parsing')
+    parser.add_argument('--parse', action='store_true',
+                        help='After --download, decode exact UnityFS TextAssets using installed UnityPy')
     parser.add_argument('--max-mib', type=int, default=64)
     parser.add_argument('--max-files', type=int, default=32)
     args = parser.parse_args(argv)
     try:
         if not 0 <= args.max_mib <= 1024 or not 0 <= args.max_files <= 1024:
             raise OfficialCatalogPipelineError('Invalid download quota')
+        if args.parse and not args.download:
+            raise OfficialCatalogPipelineError('--parse requires explicit --download')
         bindings = load_bindings(args.bindings)
         plan = plan_current_catalog(bindings)
+        if args.parse:
+            from wlre.services.world.catalog_source_extractor import extract_catalog_source
+            extractor = extract_catalog_source
+        else:
+            extractor = None
         result, parsed = run_catalog_pipeline(
-            plan, download=args.download, max_download_bytes=args.max_mib*1024*1024,
+            plan, download=args.download, extractor=extractor,
+            max_download_bytes=args.max_mib*1024*1024,
             max_downloads=args.max_files)
         if parsed:
-            raise OfficialCatalogPipelineError('CLI unexpectedly produced game catalog')
+            result['record_counts'] = {name: catalog.record_count
+                                       for name, catalog in parsed.items()}
+            result['records_are_private'] = True
     except (CatalogAdapterError, IncrementalSyncError, ManifestSyncError,
             OfficialSyncError, OfficialCatalogPipelineError, OSError) as exc:
         print(f'通用資源流程停止（安全拒絕）：{exc}', file=sys.stderr)
         return 1
     print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
-    print('Bundle 定位／校驗階段；UnityFS 解包及正式功能啟用仍未實裝。')
+    print('所有結果唯讀；資料不寫入 GitHub／遊戲目錄，亦不授權登入、交易或導航。')
     return 0
 
 
