@@ -96,3 +96,36 @@ python -m unittest tests.test_catalog_adapters tests.test_official_catalog_pipel
 ```
 
 CI 在 Windows、Ubuntu、macOS 執行完整回歸；合成資料測試不構成正式官方 Bundle 解包與遊戲登入／傳送驗收。
+
+## 第二階段：UnityFS／TextAsset 與 Eve v115 唯讀解包
+
+- `wlre.services.world.unity_textasset.extract_textasset`：使用 UnityPy 解析 UnityFS／SerializedFile，強制精確 AssetPath、TextAsset 類型／名稱、原始二進位與輸入大小限制。任何格式或來源不符皆拒絕。
+- `wlre.services.world.eve_v115.derive_eve_index`：依 1262 官方 Lua 與 1275 Eve 場景 v115 已知佈局，將 `Eve.bytes` 二進位衍生為 NPC／互動選單唯讀 JSON；未知場景格式拒絕，且索引輸出必須通過來源 SHA-256。
+- `wlre.services.world.catalog_source_extractor.extract_catalog_source`：將上述結果接到四種現有 Adapter；製作 `SmithData_C` 與場景 `ScenesData_C` 保留原始 TextAsset 二進位。
+- `tools.plan_official_catalog --download --parse`：僅在顯式要求且經官方 Bundle 完整校驗時執行解析；輸出來源筆數摘要而非官方完整遊戲資料。未安裝 UnityPy 則安全停止。
+
+安裝選用依賴及執行（私人 bindings 必須含當前官方來源完整修訂與已審核 SHA-256）：
+
+```powershell
+py -m pip install "UnityPy>=1.23,<2"
+py -m tools.plan_official_catalog --bindings "C:\path\outside\repo\bindings.json" --download --parse --max-mib 64 --max-files 32
+```
+
+經使用者提供的 1275 Manifest 實際核對的精確 AssetPath：
+
+| 類別 | AssetPath | Bundle |
+| --- | --- | --- |
+| NPC／互動事件 | `Assets/ResourcesBuild/Data/Eve.bytes` | `datapackage_data_e.bundle` |
+| 商品物品基礎資料 | `Assets/ResourcesBuild/Data/ItemData_C.bytes` | `datapackage_data_i.bundle` |
+| 製作 | `Assets/ResourcesBuild/Data/SmithData_C.bytes` | `datapackage_data_s.bundle` |
+| 場景 | `Assets/ResourcesBuild/Data/ScenesData_C.bytes` | `datapackage_data_s.bundle` |
+
+**雜湊契約：** 製作與場景是解包後原始 TextAsset SHA-256；NPC／商店是 Eve v115 衍生 JSON 的 SHA-256。均須由可靠實際來源計算、私人留存與人工複核，不要猜填 Hash。
+
+**目前不能宣稱完成的事：** 本次持有 1275 Manifest，沒有實際官方 `datapackage_data_e/i/s.bundle`，所以 UnityPy 在真實 Bundle 上的成功解包仍未實測。`ItemData_C` 尚未完成商品價格／開放條件的業務解析與交叉驗證；場景資料也不包含導航 Mesh／傳點判定，不能自動交易或行走。所有解析仍唯讀且 `assets_ready=False`。
+
+UnityPy 讀取第三方資料時可能使用較大量記憶體；此實作已限制輸入／輸出大小，但尚未實作跨平台 CPU／記憶體沙箱，請只讀取官方驗證來源。
+
+```bash
+python -m unittest tests.test_unity_textasset tests.test_eve_v115 tests.test_catalog_source_extractor -v
+```
