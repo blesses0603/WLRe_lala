@@ -336,7 +336,8 @@ class VersionGateController:
             self._render_version_window()
             if result.get("blocked") and not self.live_active:
                 self.show_version_check()
-            if (result.get("source") == "official_remote_only"
+            if (os.environ.get("WLRE_DISABLE_AUTO_CATALOG") != "1"
+                    and result.get("source") == "official_remote_only"
                     and result.get("remote", {}).get("status")
                     in ("same_resources", "resources_changed")):
                 self._start_auto_catalog()
