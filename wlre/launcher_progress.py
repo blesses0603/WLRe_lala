@@ -24,6 +24,7 @@ STEP_LABELS = {
     'manifest': '讀取並驗證 Manifest',
     'bundle_plan': '分析資源位置與相依',
     'bundle_sync': '下載並校驗必要 Bundle',
+    'bundle_item': '逐個驗證 Bundle 完整性',
     'bundle_verify': '重新核對 Bundle 完整性',
     'extract': '解包並驗證遊戲資料',
     'candidate_write': '建立版本化私人快取',
@@ -53,6 +54,11 @@ def progress_message(phase, details=None):
             if count == 0:
                 return 'Bundle 已在本機快取，重新校驗中'
             return f'待同步 {count} 個 Bundle，約 {size / (1024 * 1024):.1f} MiB'
+    if phase == 'bundle_item':
+        done, total = details.get('completed'), details.get('total')
+        if (type(done) is int and type(total) is int
+                and 0 <= done <= total and total > 0):
+            return f'已校驗 {done} / {total} 個必要 Bundle'
     if phase == 'extract':
         feature = details.get('feature')
         if feature in FEATURE_LABELS:
@@ -61,6 +67,8 @@ def progress_message(phase, details=None):
 
 
 def _format_stage(phase):
+    if phase == 'bundle_item':
+        return f'第 {STEPS.index("bundle_sync") + 1} / {len(STEPS)} 階段'
     if phase == 'cached_candidate':
         return '已驗證快取，無須重新解包'
     if phase in ('preview_ready', 'download_ready', 'candidate_ready'):
@@ -172,6 +180,15 @@ def run_with_progress(task):
             if kind == 'stage':
                 stage.set(_format_stage(arg))
                 detail.set(progress_message(arg, extra))
+                if arg == 'bundle_item' and isinstance(extra, dict):
+                    done, total = extra.get('completed'), extra.get('total')
+                    if (type(done) is int and type(total) is int
+                            and 0 <= done <= total and total > 0):
+                        progress.stop()
+                        progress.configure(mode='determinate', maximum=total, value=done)
+                elif progress.cget('mode') == 'determinate':
+                    progress.configure(mode='indeterminate')
+                    progress.start(15)
             else:
                 state['done'] = True
                 state['result'] = arg if kind == 'done' else {
