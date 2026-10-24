@@ -10,6 +10,10 @@ on:
 permissions:
   contents: read
 
+env:
+  # Build/test runner must not auto-download game Bundles into temp GUI fixtures.
+  WLRE_DISABLE_AUTO_CATALOG: '1'
+
 jobs:
   desktop-package:
     name: Compile / launch / archive (${{ matrix.label }})
