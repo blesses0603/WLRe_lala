@@ -181,6 +181,16 @@ class CandidateBridgeTests(unittest.TestCase):
                         reviewed_root=staging, install_root=Path(tmp) / 'install')
             installed.assert_not_called()
 
+    def test_failed_formal_handoff_does_not_silently_fall_back_to_runtime(self):
+        from wlre.services.world.formal_candidate_bridge import inspect_launcher_candidate
+        fake_receipt = {
+            'status': 'error', 'data_compatibility': 'compatible',
+            'catalog_key': self.identity.key}
+        with patch('wlre.services.world.launcher_catalog.read_launcher_status',
+                   return_value=fake_receipt):
+            with self.assertRaisesRegex(FormalBridgeError, 'reconciliation failed'):
+                inspect_launcher_candidate(self.runtime)
+
     def test_handoff_cli_refuses_when_launcher_has_no_compatible_receipt(self):
         from tools import reviewed_1275_handoff
         from contextlib import redirect_stderr
