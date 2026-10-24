@@ -59,6 +59,9 @@ def self_test_unityfs():
 
 def smoke_test_gui():
     """Exercise bundled Tcl/Tk and the dashboard without any game connection."""
+    # GUI smoke tests must never initiate automatic official Bundle downloads.
+    # This opt-out is scoped to the current smoke-test process only.
+    os.environ["WLRE_DISABLE_AUTO_CATALOG"] = "1"
     self_test()
     import tkinter as tk
     from wlre.ui.gui import App
