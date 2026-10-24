@@ -33,6 +33,11 @@ class LauncherProgressTests(unittest.TestCase):
             'bundle_item', {'completed': 1, 'total': 3}))
         self.assertIn('21767', progress_message(
             'classification_ready', {'total': 21767, 'existing': 160}))
+        self.assertIn('2 類獨立驗證缺口', progress_message(
+            'raw_rebuild_ready',
+            {'completed': 160, 'total': 190, 'formal_blockers': [
+                'release_pinned_catalog_manifest_missing',
+                'release_pinned_eve_indexes_missing']}))
         self.assertIn('現有官方資源索引分類',
                       _format_stage('classification_ready'))
         self.assertNotIn('12345678', progress_message(
