@@ -71,7 +71,7 @@ class RawRebuilderTests(unittest.TestCase):
         self.reads.append(binding.asset_path)
         return b'raw:' + binding.asset_path.encode()
 
-    def run(self, **kwargs):
+    def rebuild(self, **kwargs):
         return rebuild_raw_resources(
             self.identity, self.manifest,
             bundle_root=self.bundles, candidate_root=self.candidates,
@@ -79,7 +79,7 @@ class RawRebuilderTests(unittest.TestCase):
             **kwargs)
 
     def test_all_current_and_new_raw_assets_are_included(self):
-        report = self.run()
+        report = self.rebuild()
         self.assertTrue(report['complete_raw_assets'])
         self.assertEqual(report['asset_total'], 2)
         self.assertEqual(report['asset_collected'], 2)
@@ -95,16 +95,16 @@ class RawRebuilderTests(unittest.TestCase):
             doc = json.loads(z.read('inventory.json'))
             self.assertEqual(set(doc['entries']) | {'inventory.json'}, set(names))
             self.assertEqual(doc['catalog_key'], self.identity.key)
-        again = self.run()
+        again = self.rebuild()
         self.assertEqual(again['new_bundle_downloads'], 0)
         self.assertEqual(again['existing_or_cached_reused'], 2)
         self.assertEqual(len(self.requests), 2)
 
     def test_bounded_download_then_resume_on_next_launcher_run(self):
-        one = self.run(max_downloads=1)
+        one = self.rebuild(max_downloads=1)
         self.assertEqual(one['asset_collected'], 1)
         self.assertEqual(len(one['missing_asset_paths']), 1)
-        two = self.run(max_downloads=1)
+        two = self.rebuild(max_downloads=1)
         self.assertEqual(two['asset_collected'], 2)
         self.assertTrue(two['complete_raw_assets'])
         self.assertEqual(len(self.requests), 2)
@@ -118,7 +118,7 @@ class RawRebuilderTests(unittest.TestCase):
         with patch('wlre.services.world.resource_rebuilder._checked_existing',
                    return_value=({member: existing},
                                  {'files': {member: spec}})) as checked:
-            result = self.run(max_downloads=0)
+            result = self.rebuild(max_downloads=0)
         checked.assert_called_once()
         self.assertEqual(result['asset_collected'], 1)
         self.assertEqual(result['existing_or_cached_reused'], 1)
@@ -158,7 +158,7 @@ class RawRebuilderTests(unittest.TestCase):
         path = spec.cache_path(self.bundles)
         path.parent.mkdir(parents=True,exist_ok=True)
         path.write_bytes(b'X'*len(self.payloads[spec.name]))
-        report = self.run(max_downloads=0)
+        report = self.rebuild(max_downloads=0)
         self.assertNotIn('Assets/ResourcesBuild/Data/AlphaData_C.bytes',
                          self.reads)
         self.assertIn('Assets/ResourcesBuild/Data/AlphaData_C.bytes',
