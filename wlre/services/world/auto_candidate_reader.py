@@ -18,7 +18,6 @@ from wlre.storage.paths import data_root
 _ALLOWED = {
     'item_data': ('ItemData_C', 20000),
     'expedition_quests': ('AdventureData_C', 500),
-    'smith_recipes': ('SmithData_C', 20000),
 }
 _KEY = re.compile(r'[0-9a-f]{64}\Z')
 MAX_ARCHIVE = 128 * 1024 * 1024
@@ -107,44 +106,6 @@ def _load(path, key, kind, mtime_ns, length):
                         or len(doc['records']['tasks']) > max_rows
                         or len(doc['records']['levels']) > 20):
                     return None
-            elif kind == 'smith_recipes':
-                if (doc.get('schema_version') != 1
-                        or doc.get('approved') is not False
-                        or doc.get('assets_ready') is not False
-                        or doc.get('can_send_packets') is not False
-                        or type(doc.get('sources')) is not dict
-                        or set(doc['sources']) != {'SmithData_C'}
-                        or type(doc['sources']['SmithData_C']) is not str
-                        or not _KEY.fullmatch(doc['sources']['SmithData_C'])
-                        or not 0 < len(doc['records']) <= max_rows):
-                    return None
-                # The derived JSON must still match the original verified
-                # official TextAsset inside the *same* versioned inventory.
-                # A self-consistent JSON checksum alone is insufficient.
-                raw_members = [
-                    name for name in members
-                    if name.startswith('tables/')
-                    and name.endswith('/SmithData_C.bytes')]
-                if len(raw_members) != 1:
-                    return None
-                raw_name = raw_members[0]
-                raw_entry = inventory['entries'].get(raw_name)
-                if (type(raw_entry) is not dict
-                        or raw_entry.get('source') not in (
-                            'verified_bundle', 'existing_pinned', 'cached_candidate')
-                        or type(raw_entry.get('size')) is not int
-                        or type(raw_entry.get('sha256')) is not str
-                        or not _KEY.fullmatch(raw_entry['sha256'])):
-                    return None
-                raw_info = archive.getinfo(raw_name)
-                if (not 0 < raw_info.file_size <= MAX_INDEX
-                        or raw_info.file_size != raw_entry['size']):
-                    return None
-                source_bytes = archive.read(raw_info)
-                raw_digest = hashlib.sha256(source_bytes).hexdigest()
-                if (raw_digest != raw_entry['sha256']
-                        or raw_digest != doc['sources']['SmithData_C']):
-                    return None
             return doc['records']
     except (OSError, ValueError, TypeError, KeyError, RuntimeError, BadZipFile):
         return None
@@ -217,71 +178,5 @@ def candidate_expedition_catalog(*, root=None):
         'tasks': tasks, 'levels': levels, 'npcs': {},
         'source_kind': 'automatic_1275_unapproved_preview',
         'display_only': True,
-        'can_send_packets': False,
-    }
-
-
-
-def candidate_smith_recipes(*, root=None):
-    """Strictly validated *display-only* official 1275 crafting preview.
-
-    Never updates RECIPES, checks material availability, or sends commands.
-    Live crafting requires the independently pinned full runtime and separate
-    protocol approval.
-    """
-    base = Path(root) if root is not None else data_root() / 'official_sync'
-    located = _candidate_path(base)
-    if located is None:
-        return None
-    path, key = located
-    try:
-        if not path.is_file():
-            return None
-        info = path.stat()
-        rows = _load(str(path), key, 'smith_recipes',
-                     info.st_mtime_ns, info.st_size)
-    except OSError:
-        return None
-    if rows is None:
-        return None
-    recipes = {}
-    for key, row in rows.items():
-        if (type(key) is not str or not key.isdecimal()
-                or type(row) is not dict
-                or type(row.get('item_id')) is not int
-                or row['item_id'] < 1 or row['item_id'] > 65535
-                or key != str(row['item_id'])
-                or any(type(row.get(k)) is not int
-                       for k in ('tool_id', 'output', 'seconds', 'order'))
-                or not 0 <= row['tool_id'] <= 65535
-                or not 1 <= row['output'] <= 255
-                or not 0 <= row['seconds'] <= 65535
-                or not 1 <= row['order'] <= 20000
-                or type(row.get('materials')) is not list
-                or len(row['materials']) > 5):
-            return None
-        seen = set()
-        for material in row['materials']:
-            if (type(material) is not dict
-                    or type(material.get('item_id')) is not int
-                    or type(material.get('count')) is not int
-                    or not 1 <= material['item_id'] <= 65535
-                    or not 1 <= material['count'] <= 255
-                    or material['item_id'] in seen):
-                return None
-            seen.add(material['item_id'])
-        recipes[row['item_id']] = {
-            'item_id': row['item_id'],
-            'tool_id': row['tool_id'],
-            'output': row['output'],
-            'seconds': row['seconds'],
-            'materials': [dict(m) for m in row['materials']],
-        }
-    return {
-        'recipes': recipes,
-        'revision': 1275,
-        'source_kind': 'automatic_1275_unapproved_preview',
-        'display_only': True,
-        'assets_ready': False,
         'can_send_packets': False,
     }
