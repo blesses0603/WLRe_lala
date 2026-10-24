@@ -54,9 +54,15 @@ def _default_runtime():
             BundleRuntimeUnavailable, load_verified_bundle_runtime)
         try:
             return load_verified_bundle_runtime()
-        except (BundleRuntimeUnavailable, OSError, ValueError, KeyError) as exc:
+        except BundleRuntimeUnavailable as exc:
+            # This error has been normalized to trusted, path-free messages
+            # by the official Bundle loader. Keep the actionable cause.
             raise Runtime1275Unavailable(
-                '1275 官方 Bundle 尚未完成完整核對，無法啟用正式資料') from exc
+                '1275 官方 Bundle 尚未完成完整核對：' + str(exc)) from exc
+        except (OSError, ValueError, KeyError) as exc:
+            # Do not expose filesystem paths or unexpected parser details.
+            raise Runtime1275Unavailable(
+                '1275 官方 Bundle 來源校驗失敗，尚不可啟用正式資料') from exc
     if not data.is_file() or not eve.is_file():
         raise Runtime1275Unavailable('1275 正式資源只安裝了部分檔案，拒絕混用')
     try:
@@ -96,15 +102,19 @@ def ready():
             from wlre.services.world.resource_gap_diagnostics import (
                 diagnose_resources, summarize)
             from wlre.services.world.launcher_catalog import read_launcher_status
-            # Exact, read-only missing-file diagnosis. A good diagnostic
-            # is NEVER enough to authorize any gameplay command.
+            # A missing ZIP is not proof that the current official Bundle
+            # runtime has failed because of ZIP installation. Keep the
+            # actionable Bundle error whenever neither ZIP was installed.
+            # All status messages remain informational, never authorization.
             try:
-                gaps = diagnose_resources()
-                if not gaps['formal_ready']:
-                    message = summarize(gaps)
-                    receipt = read_launcher_status()
-                    if receipt is not None and receipt.get('data_compatibility') == 'compatible':
-                        message = 'Launcher 四類候選資料格式相容；' + message
+                data_zip, eve_zip = _paths()
+                if data_zip.exists() or eve_zip.exists():
+                    gaps = diagnose_resources()
+                    if not gaps['formal_ready']:
+                        message = summarize(gaps)
+                receipt = read_launcher_status()
+                if receipt is not None and receipt.get('data_compatibility') == 'compatible':
+                    message = 'Launcher 四類候選資料格式相容；' + message
             except Exception:
                 # Diagnostics cannot undo the original runtime refusal.
                 pass
