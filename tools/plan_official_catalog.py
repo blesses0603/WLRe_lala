@@ -111,7 +111,7 @@ def main(argv=None):
                                        for name, catalog in parsed.items()}
             result['records_are_private'] = True
     except (CatalogAdapterError, IncrementalSyncError, ManifestSyncError,
-            OfficialSyncError, OfficialCatalogPipelineError, OSError) as exc:
+            OfficialSyncError, OfficialCatalogPipelineError, OSError, ValueError) as exc:
         print(f'通用資源流程停止（安全拒絕）：{exc}', file=sys.stderr)
         return 1
     print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
