@@ -20,6 +20,56 @@ class ResourceGapTests(unittest.TestCase):
         self.formal = self.root / runtime_1275.FOLDER
         self.formal.mkdir()
 
+    def test_missing_legacy_zips_do_not_hide_official_bundle_error(self):
+        from wlre.services.world.runtime_1275 import Runtime1275Unavailable
+        missing = (
+            self.formal / '1275_DataCatalog.zip',
+            self.formal / '1275_EveNpcIndex.zip')
+        with patch.object(runtime_1275, 'active_runtime',
+                          side_effect=Runtime1275Unavailable(
+                              '1275 官方 Bundle 尚未完成完整核對：仍缺少官方 Bundle：Eve')), \
+             patch.object(runtime_1275, '_paths', return_value=missing), \
+             patch.object(diag, 'diagnose_resources') as zip_diagnose, \
+             patch('wlre.services.world.launcher_catalog.read_launcher_status',
+                   return_value=None):
+            ready, detail = runtime_1275.ready()
+        self.assertFalse(ready)
+        self.assertIn('缺少官方 Bundle：Eve', detail)
+        self.assertNotIn('1275_DataCatalog', detail)
+        zip_diagnose.assert_not_called()
+
+    def test_installed_corrupt_zip_keeps_exact_legacy_diagnostic(self):
+        from wlre.services.world.runtime_1275 import Runtime1275Unavailable
+        broken_zip = self.formal / '1275_DataCatalog.zip'
+        broken_zip.write_bytes(b'corrupt zip')
+        sources = (
+            broken_zip, self.formal / '1275_EveNpcIndex.zip')
+        with patch.object(runtime_1275, 'active_runtime',
+                          side_effect=Runtime1275Unavailable(
+                              '1275 正式資源驗證失敗')), \
+             patch.object(runtime_1275, '_paths', return_value=sources), \
+             patch.object(diag, 'diagnose_resources',
+                          return_value=diag.diagnose_resources(base=self.root)):
+            ready, detail = runtime_1275.ready()
+        self.assertFalse(ready)
+        self.assertIn('損壞或內容不符', detail)
+        self.assertIn('1275_DataCatalog', detail)
+
+    def test_bundle_loader_retains_sanitized_reason(self):
+        from wlre.services.world.bundle_runtime_1275 import BundleRuntimeUnavailable
+        missing = (
+            self.formal / '1275_DataCatalog.zip',
+            self.formal / '1275_EveNpcIndex.zip')
+        runtime_1275._default_runtime.cache_clear()
+        self.addCleanup(runtime_1275._default_runtime.cache_clear)
+        with patch.object(runtime_1275, '_paths', return_value=missing), \
+             patch('wlre.services.world.bundle_runtime_1275.load_verified_bundle_runtime',
+                   side_effect=BundleRuntimeUnavailable(
+                       '仍缺少官方 Bundle：SmithData_C')):
+            with self.assertRaisesRegex(
+                    runtime_1275.Runtime1275Unavailable, 'SmithData_C'):
+                runtime_1275._default_runtime()
+
     def test_missing_both_archives_reports_exact_required_groups(self):
         r = diag.diagnose_resources(base=self.root)
         self.assertFalse(r['formal_ready'])
