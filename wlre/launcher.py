@@ -27,6 +27,20 @@ def main():
             if probe.returncode:
                 subprocess.run([str(python),'-m','pip','install','-r',str(root/'requirements-ui.txt')],check=True)
                 subprocess.run([str(python),'-c',"from PIL import Image,ImageTk,features; assert hasattr(Image,'Resampling') and features.check('webp')"],check=True)
+    # Launcher owns official Bundle preparation. The UI only reads the
+    # resulting private, unapproved status; no download in Tk callbacks.
+    # Dev launcher runs this in the same Python environment that launches Tk.
+    # The compiled WLRE_Client entry runs the same service in-process.
+    if '--navigation' not in sys.argv and '--self-test' not in sys.argv:
+        try:
+            subprocess.run([str(python), '-m',
+                            'wlre.services.world.launcher_catalog'], cwd=root,
+                           check=False)
+        except OSError:
+            # Startup remains possible for offline users; pre-login game
+            # compatibility is independently enforced inside the client.
+            print('Launcher 資源候選準備無法啟動，請檢查環境；登入限制維持。',
+                  file=sys.stderr)
     return subprocess.run([str(python),*arguments],cwd=root).returncode
 
 
