@@ -299,6 +299,23 @@ def run_auto_catalog(*, download=True, parse=True, observe=None, retrieve=None,
                            cache_root=manifest_root)
         manifests[package] = current
         previous[package] = previous_finder(current, cache_root=manifest_root)
+    if download:
+        # .version can change while the two .bytes/.hash pairs are fetched.
+        # Never begin Bundle work using a mixed-version observation. Check
+        # the complete official version tuple again; timestamp is irrelevant.
+        # This intentionally requires only ResourcePath_PC.dat + .version,
+        # not optional official .json / .report sources.
+        from wlre.services.official_resource_sync import validate_snapshot
+        try:
+            latest = validate_snapshot(observe())
+        except (ValueError, OSError, TypeError, KeyError) as exc:
+            raise AutoCatalogError(
+                'Official version recheck failed; no Bundle work started') from exc
+        if any(latest[key] != snapshot[key]
+               for key in ('data_ver', 'exe_version', 'packages')):
+            raise AutoCatalogError(
+                'Official package version changed during Manifest sync; '
+                'no Bundle work started')
     emit('bundle_plan')
     bindings = _bindings_for_snapshot(snapshot)
     plan = plan_catalog_pipeline(snapshot, manifests, bindings,
