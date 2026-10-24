@@ -335,7 +335,15 @@ def rebuild_raw_resources(identity, data_manifest, *,
     if extractor is not None and not callable(extractor):
         raise ResourceRebuildError('Invalid text asset extractor')
     fetcher = fetch_bundle if fetcher is None else fetcher
-    extractor = extract_textasset if extractor is None else extractor
+    if extractor is None:
+        # Many of the 190 DataPackage assets share the same UnityFS Bundle.
+        # Preserve the existing checked extractor, but cache only a few
+        # decompressed container environments during this one run.
+        from functools import lru_cache
+        from wlre.services.world.unity_textasset import _loader
+        cached_loader = lru_cache(maxsize=3)(_loader)
+        extractor = lambda binding, paths: extract_textasset(
+            binding, paths, loader=cached_loader)
 
     candidate_root, formal_base = _roots(candidate_root, formal_base)
     selected = _manifest_assets(data_manifest)
@@ -394,7 +402,8 @@ def rebuild_raw_resources(identity, data_manifest, *,
     spent = 0
     attempted = set()
     total_bytes = 0
-    for asset_path, name in sorted(selected.items()):
+    for asset_path, name in sorted(selected.items(),
+                                   key=lambda pair: (pair[1], pair[0])):
         filename = PurePosixPath(asset_path).name
         member = f'tables/{name}/{filename}'
         # The reviewed, independently pinned SHA is stronger than an
