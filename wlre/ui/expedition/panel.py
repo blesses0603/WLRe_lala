@@ -4,7 +4,7 @@ import tkinter as tk
 from tkinter import ttk
 
 from wlre.services.expedition import recovery_stock
-from wlre.services.expedition_data import load_catalog
+from wlre.services.expedition_data import load_active_catalog
 from wlre.ui.layout import heading
 from wlre.ui.expedition_display import task_name
 from wlre.services.world.feature_resource_index import feature_note
@@ -22,7 +22,12 @@ class ExpeditionPanel(
     ttk.Frame,
 ):
     def _load_catalog(self):
-        return load_catalog()
+        try:
+            return load_active_catalog()
+        except (OSError, ValueError, KeyError, EOFError, UnicodeError):
+            # Never display 1262 rewards, names or NPC properties as if
+            # they were an approved 1275 source.
+            return {'tasks': {}, 'levels': {}, 'source_kind': 'formal_sources_missing'}
 
     def __init__(self, parent, app):
         super().__init__(parent, padding=6)
@@ -104,5 +109,7 @@ class ExpeditionPanel(
         signature = repr((e.get('revision'), e.get('roles'), e.get('quests'), e.get('teams'),
                           e.get('level'), hours, self.faith.get(), minimum, recovery_stock(state.get('inventory', {}))))
         self.render_catalog_rows(e, hours, minimum, signature)
-        self.note.set('內建遠征資料不完整，請更新完整程式。' if not self.catalog.get('tasks') else
-                      '內建官方遠征資料；上線後自動檢查任務與背包。可與自動戰鬥、徘徊同時啟用。')
+        self.note.set(
+            '當前版本正式遠征資料尚未完整驗證，不能以舊版任務或夥伴資料代替。'
+            if not self.catalog.get('tasks') else
+            '遠征任務與 NPC 資料已依正式版本讀取；仍以伺服器確認實際派遣和領獎。')
