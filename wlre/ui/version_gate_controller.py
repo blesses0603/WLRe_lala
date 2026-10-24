@@ -44,7 +44,11 @@ class VersionGateController:
         receipt = read_launcher_status()
         code = None if receipt is None else receipt['status']
         self._launcher_catalog_status = {
-            'review_required': 'Launcher 已完成來源準備，候選待相容性審核',
+            'review_required': (
+                'Launcher 四類資料格式相容，遊戲協定仍待審核'
+                if receipt is not None and
+                   receipt.get('data_compatibility') == 'compatible'
+                else 'Launcher 已建立候選，資料及協定仍待審核'),
             'downloaded_unparsed': 'Launcher 僅下載資料，尚未驗證解包',
             'error': 'Launcher 本次候選準備未完成，安全限制不變',
             'preview': 'Launcher 僅預覽下載計畫',
