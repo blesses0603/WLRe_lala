@@ -46,6 +46,16 @@ class AutoCatalogUiTests(unittest.TestCase):
         self.assertNotIn('self.', worker)
         self.assertIn('messages.put(', worker)
 
+    def test_all_version_background_workers_release_tk_references(self):
+        import inspect
+        for method in ('start_version_check', 'start_lala_release_check',
+                       'download_lala_release'):
+            source = inspect.getsource(getattr(VersionGateController, method))
+            worker = source.split('        def worker():', 1)[1].split(
+                '        threading.Thread(', 1)[0]
+            with self.subTest(method=method):
+                self.assertNotIn('self.', worker)
+
     def test_failed_candidate_preserves_login_gate(self):
         c = self.stub()
         c._auto_catalog_messages.put((4, 'error', 'bad official bundle'))
