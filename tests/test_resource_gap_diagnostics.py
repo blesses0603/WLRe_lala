@@ -60,6 +60,32 @@ class ResourceGapTests(unittest.TestCase):
         self.assertEqual(set(member['missing']), set(expected))
         verify.assert_not_called()
 
+    def test_corrupted_pinned_table_reports_exact_member(self):
+        archive = self.formal / diag.ARCHIVES[0]
+        name = 'tables/datapackage_data_a.bundle/SmithData_C.bytes'
+        raw = b'official table corrupted in this synthetic test'
+        with ZipFile(archive, 'w') as z:
+            z.writestr('manifest.json', b'fake pinned JSON')
+            z.writestr('使用說明.txt', 'readme')
+            z.writestr(name, raw)
+        manifest = {'files': {name: {
+            'bytes': len(raw), 'sha256': '0' * 64}}}
+        with patch.object(diag, 'read_manifest', return_value=manifest), \
+             patch.object(diag, 'verify_archive',
+                          side_effect=ValueError('SHA mismatch')):
+            report = diag.diagnose_resources(base=self.root)
+        self.assertIn(name, report['formal_sources'][diag.ARCHIVES[0]]['invalid'])
+
+    def test_corrupted_eve_index_identifies_affected_file(self):
+        archive = self.formal / diag.ARCHIVES[1]
+        with ZipFile(archive, 'w') as z:
+            z.writestr('README.txt', 'readme')
+            for name in diag.EVE_FILES:
+                z.writestr(name, b'incorrect source size')
+        report = diag.diagnose_resources(base=self.root)
+        self.assertEqual(set(report['formal_sources'][diag.ARCHIVES[1]]['invalid']),
+                         set(diag.EVE_FILES))
+
     def test_eve_missing_inner_index_is_explicit(self):
         archive = self.formal / diag.ARCHIVES[1]
         with ZipFile(archive, 'w') as z:
