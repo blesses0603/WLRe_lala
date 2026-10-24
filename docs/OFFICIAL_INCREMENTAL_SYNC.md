@@ -49,6 +49,7 @@ python -m tools.plan_official_incremental --requirements "$env:LOCALAPPDATA\WLRE
 - 官方真實的同名 1275 Bundle 已通過大小、MD5 及 little-endian CRC32 網路端到端驗證；但尚未啟用整包自動下載。
 - 尚缺**經 LaLa 業務模組審核的確切必要資產需求表**、從 Unity Bundle 解析出 NPC/商店/製作/場景資料並建立 1275 資源包、`12910` 缺失 Mesh 的合法來源及遊戲功能回歸。下載一份 Bundle **不能**自動解除圖一的登入阻擋。
 - 首次使用、缺乏歷史驗證收據時只能形成 `first_baseline` 計畫；不能假稱已比較過舊版。即使 Manifest 比對成功，遊戲封包／導航相容性仍須另外驗收。
+- **未來版號不是固定 1275**。NPC／商店／製作／場景資料的後續更新必須透過官方完整 Package 修訂與 SHA-256 生成不同的 Catalog 身分；詳見 `docs/OFFICIAL_VERSIONED_CATALOGS.md`。現行固定版號 runtime 要待通用 Catalog 的 feature-level 驗證完成後才能安全替換。
 - 對同版號重新發布內容的歷史保存、斷點續傳、週四自動觸發排程、GUI 背景進度顯示、細緻頻寬限速與大於 256 MiB 的必要檔案支援仍待後續實作。目前單檔上限 256 MiB、預設總下載 64 MiB／32 個檔案，採循序下載和校驗後原子快取。
 
 ## 安全性

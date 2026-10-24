@@ -94,6 +94,28 @@ class IncrementalPlanTests(unittest.TestCase):
             self.assertFalse(result['assets_ready'])
             self.assertEqual(plan.entries[0].spec.cache_path(tmp).read_bytes(), BUNDLE_BODY)
 
+    def test_1276_next_week_and_new_dataver_reuse_unchanged_content(self):
+        previous = manifest()
+        current = manifest('1276_2026_10_29_08_00_00_01')
+        current_spec = ManifestSpec('1.3.22', 'DataPackage',
+                                    '1276_2026_10_29_08_00_00_01')
+        current = VerifiedManifest(current_spec, current.index, current.hash_text,
+                                   current.cache_path, current.downloaded)
+        with tempfile.TemporaryDirectory() as tmp:
+            from wlre.services.official_bundle_download import spec_from_manifest
+            old = spec_from_manifest(data_ver=previous.spec.data_ver,
+                                     package='DataPackage', index=previous.index,
+                                     name=BUNDLE_NAME)
+            old_path = old.cache_path(tmp)
+            old_path.parent.mkdir(parents=True)
+            old_path.write_bytes(BUNDLE_BODY)
+            plan = build_update_plan(current, previous=previous,
+                                     bundle_names=[BUNDLE_NAME], cache_root=tmp)
+            self.assertEqual(plan.data_ver, '1.3.22')
+            self.assertEqual(plan.package_version, current_spec.package_version)
+            self.assertEqual(plan.entries[0].action, 'reuse_previous')
+            self.assertEqual(plan.download_bytes, 0)
+
     def test_download_is_opt_in_and_quota_checked_before_network(self):
         with tempfile.TemporaryDirectory() as tmp:
             plan = build_update_plan(manifest(), bundle_names=[BUNDLE_NAME], cache_root=tmp)
