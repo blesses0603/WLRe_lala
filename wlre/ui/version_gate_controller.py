@@ -251,7 +251,14 @@ class VersionGateController:
 
         self._version_progress.stop()
         if self.version_gate_state == "blocked":
-            self._version_heading.set("官方版本異動 · 請等待 LaLa 更新")
+            # Official versions may MATCH while mandatory, release-pinned
+            # full data is still absent. Don't mislabel that as a CDN update.
+            if ('LaLa 1275 缺少已校驗' in result.get('message', '')
+                    or ('1275 資料驗證未通過' in result.get('message', '')
+                        and source_status == 'same_resources')):
+                self._version_heading.set("1275 正式資源尚未就緒 · 請先完成驗證")
+            else:
+                self._version_heading.set("官方版本異動 · 請等待 LaLa 更新")
             self._version_continue_button.configure(text="禁止登入", state="disabled")
         elif result.get("status") == "version_identifiers_match":
             self._version_heading.set(
