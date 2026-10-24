@@ -6,6 +6,8 @@ parser is mandatory before the bytes may be used to select Bundles.
 """
 
 from dataclasses import dataclass
+import hashlib
+import json
 import os
 from pathlib import Path
 import re
@@ -22,6 +24,7 @@ OFFICIAL_HOST = 'wlreftp.chinesegamer.net'
 BASE = 'https://' + OFFICIAL_HOST + '/WLN/TW'
 MAX_MANIFEST_BYTES = 8 * 1024 * 1024
 MAX_HASH_BYTES = 8
+MAX_RECEIPT_BYTES = 4096
 _DATA_VER = re.compile(r'[0-9]{1,4}(?:\.[0-9]{1,4}){2}\Z')
 _REVISION = re.compile(r'[1-9][0-9]{0,5}_20[0-9]{2}(?:_[0-9]{2}){6}\Z')
 _HASH = re.compile(r'[a-fA-F0-9]{8}\Z')
@@ -54,6 +57,9 @@ class ManifestSpec:
         base = (Path(root) if root is not None else
                 data_root() / 'official_sync' / 'manifests')
         return base / self.data_ver / self.package / self.package_version / (self.package + '.bytes')
+
+    def receipt_path(self, root=None):
+        return self.cache_path(root).with_suffix('.verified.json')
 
 
 class _NoRedirect(HTTPRedirectHandler):
@@ -124,6 +130,72 @@ class VerifiedManifest:
     downloaded: bool
 
 
+def _atomic_write(target, body, *, prefix):
+    target.parent.mkdir(parents=True, exist_ok=True)
+    pending = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=target.parent, prefix=prefix,
+                                         suffix='.partial', delete=False) as handle:
+            pending = Path(handle.name)
+            handle.write(body)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(pending, target)
+    finally:
+        if pending is not None:
+            pending.unlink(missing_ok=True)
+
+
+def _receipt(spec, data, hash_text):
+    return {
+        'schema_version': 1,
+        'data_ver': spec.data_ver,
+        'package': spec.package,
+        'package_version': spec.package_version,
+        'manifest_url': spec.url('bytes'),
+        'hash_crc32_le': hash_text,
+        'sha256': hashlib.sha256(data).hexdigest(),
+        'size': len(data),
+    }
+
+
+def read_verified_cached_manifest(spec, *, cache_root=None, parser=None):
+    """Private historical Manifest, previously verified against official CDN.
+
+    Does not make any network requests. Must NEVER replace a fresh official
+    observation when deciding current-game compatibility.
+    """
+    if not isinstance(spec, ManifestSpec):
+        raise ManifestSyncError('Manifest requires a validated spec')
+    receipt_path = spec.receipt_path(cache_root)
+    target = spec.cache_path(cache_root)
+    try:
+        with receipt_path.open('rb') as stream:
+            receipt_bytes = stream.read(MAX_RECEIPT_BYTES + 1)
+        if len(receipt_bytes) > MAX_RECEIPT_BYTES:
+            raise ManifestSyncError('Historical Manifest receipt too large')
+        receipt = json.loads(receipt_bytes.decode('utf-8'))
+        if (not isinstance(receipt, dict) or set(receipt) != set(_receipt(spec, b'', '00000000'))
+                or receipt['schema_version'] != 1 or type(receipt['size']) is not int
+                or not 0 < receipt['size'] <= MAX_MANIFEST_BYTES
+                or not isinstance(receipt['sha256'], str) or len(receipt['sha256']) != 64
+                or not isinstance(receipt['hash_crc32_le'], str)
+                or not _HASH.fullmatch(receipt['hash_crc32_le'])):
+            raise ManifestSyncError('Historical Manifest receipt invalid')
+        with target.open('rb') as stream:
+            data = stream.read(MAX_MANIFEST_BYTES + 1)
+        if len(data) != receipt['size']:
+            raise ManifestSyncError('Historical Manifest size mismatch')
+        if receipt != _receipt(spec, data, receipt['hash_crc32_le']):
+            raise ManifestSyncError('Historical Manifest digest or identity mismatch')
+        if _crc32_le(data) != receipt['hash_crc32_le']:
+            raise ManifestSyncError('Historical Manifest CRC32 mismatch')
+    except (OSError, UnicodeError, ValueError, TypeError, KeyError) as exc:
+        raise ManifestSyncError('Historical Manifest private cache is missing or invalid') from exc
+    return VerifiedManifest(spec, _parse_index(data, spec, parser),
+                            receipt['hash_crc32_le'], target, False)
+
+
 def fetch_official_manifest(spec, *, cache_root=None, opener=None, timeout=20, parser=None):
     """Fetch .hash + .bytes, authenticate and parse before caching.
 
@@ -163,19 +235,13 @@ def fetch_official_manifest(spec, *, cache_root=None, opener=None, timeout=20, p
 
     index = _parse_index(data, spec, parser)
     if downloaded:
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        pending = None
-        try:
-            with tempfile.NamedTemporaryFile(dir=destination.parent, prefix='.manifest_',
-                                             suffix='.partial', delete=False) as handle:
-                pending = Path(handle.name)
-                handle.write(data)
-                handle.flush()
-                os.fsync(handle.fileno())
-            os.replace(pending, destination)
-        finally:
-            if pending is not None:
-                pending.unlink(missing_ok=True)
+        _atomic_write(destination, data, prefix='.manifest_')
+
+    receipt_body = (json.dumps(_receipt(spec, data, hash_text),
+                               sort_keys=True, ensure_ascii=False) + '\n').encode('utf-8')
+    if len(receipt_body) > MAX_RECEIPT_BYTES:
+        raise ManifestSyncError('Historical Manifest receipt exceeds safe limit')
+    _atomic_write(spec.receipt_path(cache_root), receipt_body, prefix='.receipt_')
 
     return VerifiedManifest(spec, index, hash_text, destination, downloaded)
 

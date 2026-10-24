@@ -7,7 +7,8 @@ import unittest
 import zlib
 
 from wlre.services.official_manifest_sync import (
-    ManifestSpec, ManifestSyncError, fetch_official_manifest, spec_from_snapshot,
+    ManifestSpec, ManifestSyncError, fetch_official_manifest,
+    read_verified_cached_manifest, spec_from_snapshot,
 )
 
 
@@ -76,6 +77,20 @@ class OfficialManifestSyncTests(unittest.TestCase):
             self.assertFalse(second.downloaded)
             self.assertEqual(requests, [spec().url('hash'), spec().url('bytes'),
                                         spec().url('hash')])
+            historical = read_verified_cached_manifest(spec(), cache_root=root,
+                                                        parser=parse_synthetic)
+            self.assertEqual(historical.index, second.index)
+
+    def test_historical_manifest_receipt_rejects_tampering_without_network(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fetch_official_manifest(spec(), cache_root=tmp,
+                                    opener=responder(), parser=parse_synthetic)
+            receipt = spec().receipt_path(tmp)
+            self.assertTrue(receipt.is_file())
+            receipt.write_bytes(receipt.read_bytes().replace(b'1275_', b'1262_'))
+            with self.assertRaises(ManifestSyncError):
+                read_verified_cached_manifest(spec(), cache_root=tmp,
+                                              parser=parse_synthetic)
 
     def test_corrupt_local_cache_redownloads_after_official_hash_check(self):
         with tempfile.TemporaryDirectory() as tmp:

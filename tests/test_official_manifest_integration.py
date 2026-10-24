@@ -23,7 +23,7 @@ def u16text(value):
     return struct.pack('<H', len(encoded)) + encoded
 
 
-def synthetic_manifest():
+def synthetic_manifest(package_version=PACKAGE_VERSION):
     """One asset and one bundle, valid YooAsset 2.2.5 binary layout."""
     md5 = hashlib.md5(BUNDLE_BODY, usedforsecurity=False).hexdigest()
     crc_le = zlib.crc32(BUNDLE_BODY).to_bytes(4, 'little').hex()
@@ -31,7 +31,7 @@ def synthetic_manifest():
         struct.pack('<I', 0x00594F4F), u16text('2.2.5'),
         b'\x00\x00\x00', struct.pack('<ii', 1, 0),
         u16text('ScriptableBuildPipeline'), u16text('DataPackage'),
-        u16text(PACKAGE_VERSION), u16text(''),
+        u16text(package_version), u16text(''),
         struct.pack('<i', 1),
         u16text('synthetic'), u16text('Assets/Synthetic/example.txt'),
         u16text('non-game-guid'), struct.pack('<H', 0), struct.pack('<i', 0),

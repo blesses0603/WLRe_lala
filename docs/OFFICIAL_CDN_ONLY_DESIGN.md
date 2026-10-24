@@ -82,8 +82,7 @@ python -m tools.check_official_lua --save
 
 ## 尚未完成：不能宣稱 B-only 已經能完整登入／導航
 
-- **第 2 階段：索引驗證已串接，增量差異計畫仍待完成。** PR #53 補上完整索引解析、命令列摘要與合成端到端測試；仍須為跨版 Manifest 差異比較設計安全、持久的驗證憑證及依賴圖排程。
-- **第 3 階段：必要 Bundle 的遠端驗證。** 已有單 Bundle 的嚴格下載元件，仍須確認實際 Bundle 回應與 Manifest 校驗一致。對照依賴關係後才能挑選必要檔案；增量下載佇列、全域流量／磁碟配額、重試及暫停尚未實作。僅於玩家本機快取，不上傳 GitHub。
+- **第 2～3 階段：已加入有界的增量計畫與明確下載。** `official_incremental_sync` 及 `tools.plan_official_incremental` 可使用已驗證的舊／新 Manifest、精確的 AssetPath／BundleName、遞迴 Bundle 依賴，區分本機快取、跨版重用與必要下載；`--download` 需額度預檢且不會解鎖登入。詳見 `docs/OFFICIAL_INCREMENTAL_SYNC.md`。**尚缺業務模組定義的確切需求清單**，以及同版重發版歷史、斷點續傳與 UI。
 - **第 4 階段：Unity 內建資源與功能相容驗收。** 確認 `resources.assets`、`unity default resources` 等遊戲內建資源是否另有官方來源；缺少 `12910` Mesh 等關鍵內容時，不得宣稱導航完成。
 - **第 5 階段：端到端驗收及安全遷移。** 在沒有官方遊戲安裝與既有 LaLa 資料的乾淨 Windows 環境測試。確認資源服務成功後，遷移所有 UI/服務讀取路徑並停止發版打包素材，再由維護者審核刪除舊素材與清理 Git 歷史。
 
