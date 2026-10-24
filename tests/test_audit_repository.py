@@ -67,6 +67,20 @@ class AuditFixtures(unittest.TestCase):
         self.assertEqual(audit_repository.duplicate_tracked_blobs(self.root),
                          [["a.txt", "b.txt"]])
 
+    @unittest.skipUnless(shutil.which("git"), "Git unavailable")
+    def test_official_1275_binary_sources_cannot_remain_tracked(self):
+        subprocess.run(["git", "init", "-q", str(self.root)], check=True)
+        private = self.root / "1275_差異"
+        private.mkdir()
+        (private / "LaLa_1275_差異選取清單.json").write_text("{}", encoding="utf-8")
+        (private / "unity default resources").write_bytes(b"synthetic fixture, not game data")
+        subprocess.run(["git", "add", "-A"], cwd=self.root, check=True)
+        self.assertEqual(audit_repository.tracked_private_game_assets(self.root),
+                         ["1275_差異/unity default resources"])
+        subprocess.run(["git", "rm", "--cached", "--", "1275_差異/unity default resources"],
+                       cwd=self.root, capture_output=True, check=True)
+        self.assertEqual(audit_repository.tracked_private_game_assets(self.root), [])
+
     def test_no_git_index_does_not_masquerade_as_a_pass(self):
         self.assertIsNone(audit_repository.duplicate_tracked_blobs(self.root))
         result = audit_repository.audit(self.root)
@@ -75,9 +89,9 @@ class AuditFixtures(unittest.TestCase):
 
     def test_strict_git_and_broken_links_produce_failure_exit_codes(self):
         no_index = {"broken_local_links": [], "nonempty_duplicate_blobs": None,
-                    "git_index_available": False}
+                    "private_official_game_assets_tracked": None, "git_index_available": False}
         bad_link = {"broken_local_links": ["broken.md"], "nonempty_duplicate_blobs": [],
-                    "git_index_available": True}
+                    "private_official_game_assets_tracked": [], "git_index_available": True}
         with patch.object(audit_repository, "audit", return_value=no_index):
             with contextlib.redirect_stdout(io.StringIO()):
                 self.assertEqual(audit_repository.main([]), 0)
