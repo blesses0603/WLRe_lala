@@ -255,7 +255,8 @@ def _rebuild_known_resources(result, *, identity, manifests, bundle_root,
     if progress is not None:
         progress('raw_rebuild_ready', {
             'completed': summary['asset_collected'],
-            'total': summary['asset_total']})
+            'total': summary['asset_total'],
+            'formal_blockers': summary.get('formal_blockers')})
     return {**summary, 'new_bundle_downloads': total_downloaded,
             'status': ('complete_raw_only' if summary['complete_raw_assets']
                        else 'partial_raw')}
