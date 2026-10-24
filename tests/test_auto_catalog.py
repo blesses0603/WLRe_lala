@@ -96,6 +96,14 @@ class AutoCatalogTests(unittest.TestCase):
         self.assertEqual(result['status'], 'review_required')
         self.assertEqual(result['cache'], 'new_private_candidate')
         self.assertEqual(set(result['record_counts']), set(_SOURCE_MAP))
+        self.assertEqual(result['data_compatibility'], 'compatible')
+        self.assertEqual(result['protocol_compatibility'], 'unverified')
+        receipt = self.candidates / result['catalog_key'] / 'compatibility_report.json'
+        self.assertTrue(receipt.is_file())
+        compatibility = json.loads(receipt.read_text(encoding='utf-8'))
+        self.assertEqual(set(compatibility['features']), set(_SOURCE_MAP))
+        self.assertFalse(compatibility['assets_ready'])
+        self.assertFalse(compatibility['can_send_packets'])
         self.assertFalse(result['approved'])
         self.assertFalse(result['assets_ready'])
         location = self.candidates / result['catalog_key'] / 'candidate.zip'
@@ -127,12 +135,14 @@ class AutoCatalogTests(unittest.TestCase):
         self.assertEqual(completed[0]['completed'], 1)
         self.assertEqual(completed[0]['total'], 1)
         self.assertEqual(completed[0]['action'], 'cached')
-        self.assertEqual(phases[-2:], ['candidate_write', 'candidate_ready'])
+        self.assertEqual(phases[-3:], [
+            'compatibility_check', 'candidate_ready', 'compatibility_ready'])
         cached = []
         run_auto_catalog(**self.kwargs(
             progress=lambda phase, details: cached.append(phase),
             extractor=lambda *_: self.fail('must use verified cache')))
-        self.assertEqual(cached[-1], 'cached_candidate')
+        self.assertEqual(cached[-2:], ['cached_candidate', 'compatibility_ready'])
+        self.assertIn('compatibility_check', cached)
         self.assertNotIn('extract', cached)
 
     def test_failing_manifest_never_reports_bundle_completed(self):
@@ -161,6 +171,50 @@ class AutoCatalogTests(unittest.TestCase):
         path.write_bytes(b'not-a-ZIP')
         second = run_auto_catalog(**self.kwargs())
         self.assertEqual(second['cache'], 'new_private_candidate')
+
+    def test_self_consistent_but_invalid_cached_schema_is_rebuilt(self):
+        """Recomputed local SHA cannot promote a malformed source to compatible."""
+        result = run_auto_catalog(**self.kwargs())
+        target = self.candidates / result['catalog_key'] / 'candidate.zip'
+        with zipfile.ZipFile(target, 'r') as source:
+            contents = {name: source.read(name) for name in source.namelist()}
+        altered = b'not valid schema'
+        meta = json.loads(contents['candidate.json'])
+        meta['features']['npc']['sha256'] = hashlib.sha256(altered).hexdigest()
+        meta['features']['npc']['bytes'] = len(altered)
+        contents['candidate.json'] = json.dumps(meta, ensure_ascii=False).encode()
+        contents['npc.source'] = altered
+        with zipfile.ZipFile(target, 'w') as source:
+            for name, body in contents.items():
+                source.writestr(name, body)
+        refreshed = run_auto_catalog(**self.kwargs())
+        self.assertEqual(refreshed['cache'], 'new_private_candidate')
+        self.assertEqual(refreshed['data_compatibility'], 'compatible')
+
+    def test_removed_official_bundle_disallows_false_cache_hit(self):
+        result = run_auto_catalog(**self.kwargs())
+        bundle = spec_from_manifest(
+            data_ver='1.3.21', package='DataPackage',
+            index=self.manifests['DataPackage'].index,
+            name='DataPackage.bundle')
+        bundle.cache_path(self.bundles).unlink()
+        with self.assertRaises(OfficialCatalogPipelineError):
+            run_auto_catalog(**self.kwargs(
+                max_download_bytes=0, opener=lambda *_: self.fail('no CDN')))
+        self.assertTrue((self.candidates / result['catalog_key'] /
+                         'candidate.zip').exists())
+
+    def test_cached_receipt_tampering_does_not_enable_game(self):
+        result = run_auto_catalog(**self.kwargs())
+        report = self.candidates / result['catalog_key'] / 'compatibility_report.json'
+        content = json.loads(report.read_text(encoding='utf-8'))
+        content['approved'] = True
+        report.write_text(json.dumps(content), encoding='utf-8')
+        # Cached source is reverified; its display-only receipt gets refreshed.
+        reused = run_auto_catalog(**self.kwargs())
+        self.assertEqual(reused['cache'], 'verified_private_candidate')
+        self.assertFalse(json.loads(report.read_text())['approved'])
+        self.assertFalse(reused['can_send_packets'])
 
     def test_absent_asset_fails_closed_before_any_cache_output(self):
         self.manifests['DataPackage'].index['assets'].pop()
