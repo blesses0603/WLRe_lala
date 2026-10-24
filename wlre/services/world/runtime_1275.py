@@ -46,9 +46,19 @@ def _paths(base=None):
 def _default_runtime():
     from wlre.services.world.preview_1275 import load_preview
     data, eve = _paths()
+    if not data.exists() and not eve.exists():
+        # Official .version + audited .bytes/.hash + verified Bundles are a
+        # first-class 1275 runtime source. Never ask users to insert ZIPs.
+        # Only exact release-pinned Manifests and fully decoded schemas qualify.
+        from wlre.services.world.bundle_runtime_1275 import (
+            BundleRuntimeUnavailable, load_verified_bundle_runtime)
+        try:
+            return load_verified_bundle_runtime()
+        except (BundleRuntimeUnavailable, OSError, ValueError, KeyError) as exc:
+            raise Runtime1275Unavailable(
+                '1275 官方 Bundle 尚未完成完整核對，無法啟用正式資料') from exc
     if not data.is_file() or not eve.is_file():
-        raise Runtime1275Unavailable(
-            '缺少已驗證的 1275 LaLa 資源。請先安裝 1275_DataCatalog.zip 與 1275_EveNpcIndex.zip。')
+        raise Runtime1275Unavailable('1275 正式資源只安裝了部分檔案，拒絕混用')
     try:
         return load_preview(data, eve)
     except (OSError, ValueError, KeyError, EOFError, UnicodeError) as exc:
@@ -64,8 +74,9 @@ def active_runtime():
 
 def ready():
     try:
-        # Only the independently pinned full 1275 archives are allowed to
-        # supply runtime records. Candidate ZIPs NEVER replace these sources.
+        # Full independently pinned ZIPs OR exact release-pinned official
+        # Bundle bytes can supply runtime data. Candidate ZIP indexes alone
+        # NEVER replace these sources.
         source = active_runtime()
         from wlre.services.world.formal_candidate_bridge import (
             FormalBridgeError, inspect_launcher_candidate)
@@ -78,7 +89,7 @@ def ready():
         if bridge['status'] == 'matches_formal_sources':
             return True, ('1275 正式資料完整驗證，且 Launcher 四類候選與正式來源一致；'
                           '遊戲協定仍須獨立驗收')
-        return True, '1275 正式資料通過來源校驗；遊戲協定仍須獨立驗收'
+        return True, '1275 正式資料通過來源校驗，可供功能模組使用；遊戲協定仍須獨立驗收'
     except (Runtime1275Unavailable, OSError, ValueError) as exc:
         message = str(exc)
         if isinstance(exc, Runtime1275Unavailable):
