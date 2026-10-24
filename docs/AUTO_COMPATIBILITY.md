@@ -253,6 +253,12 @@ py -m unittest -v tests.test_auto_catalog tests.test_resource_rebuilder tests.te
 保留 Windows／macOS／Ubuntu 原始碼與原生 GUI 測試。此階段不修改版本常數、不合併 main、不發布 Tag；端到端官方 Bundle 驗收及真正 NPC 商店交易仍待實機測試。
 
 
+## 兩 Package 版本切換保護（PR #56）
+
+LaLa 啟動自動資源準備時，先觀察 `ResourcePath_PC.dat` 與 DataPackage／MainPackage 的 `.version`；取得兩套 `.hash`、`.bytes` 並通過官方 Manifest 解析後，**在下載 Bundle 前重新觀察一次官方版號**。比較 `data_ver`、`exe_version` 和兩個 Package 完整版本識別碼（不比較查詢時間）；只要版本在兩份 Manifest 同步期間切換，或重新觀察失敗，就不啟動本輪 Bundle 計畫，也不產生此輪候選資料。下一輪從新版本重新規劃，不混用不同官方快照。
+
+重新觀察只會使用既有資源路徑與 `.version`，不新增 `.json`／`.report` 網路依賴；純唯讀預覽不會額外重新查詢。這道檢查不等於封包協定相容或完整正式 1275 索引已獲核准。對應測試包含版號切換、錯誤快照、單純時間戳變化與唯讀模式的 GET 次數。
+
 ## 官方 Manifest 三檔原則（固定開發決策）
 
 - **DataPackage 與 MainPackage 各只使用官方 `.version`、`.bytes`、`.hash`** 作為資源版本識別與正式二進位 Manifest 校驗來源。從官方資源版號端點查詢最新版本，使用 `.hash` 驗證 `.bytes`，再從 `.bytes` 解出 AssetPath、Bundle 和相依關係。
