@@ -219,6 +219,65 @@ def _derive_candidate_indexes(payloads):
                 derived['candidate_indexes/talk_data.json'] = body
         except (ValueError, TypeError):
             pass
+    # Extend already downloaded DataPackage assets into per-feature, read-only
+    # previews. Every component is strictly decoded from the same-version,
+    # official Bundle inventory; partial availability is expected. These
+    # unapproved JSONs MUST NOT be passed into packet/dispatch decisions.
+    from wlre.services.world.preview_1275 import parse_smith_1275
+    from wlre.services.expedition.data import (
+        parse_catalog as parse_adventure, attach_names as attach_adventure_names,
+        parse_npcs as parse_adventure_npcs)
+
+    def save_candidate(name, sources, records):
+        data = {
+            'schema_version': 1, 'revision': 1275,
+            'sources': {
+                source_name: hashlib.sha256(source(source_name)).hexdigest()
+                for source_name in sources
+            },
+            'approved': False, 'assets_ready': False, 'can_send_packets': False,
+            'records': records,
+        }
+        body = json.dumps(data, ensure_ascii=True, sort_keys=True,
+                          separators=(',', ':')).encode('utf-8')
+        if len(body) <= MAX_SOURCE_BYTES:
+            derived['candidate_indexes/' + name + '.json'] = body
+
+    smith = source('SmithData_C')
+    if smith is not None:
+        try:
+            recipes = parse_smith_1275(smith)
+            save_candidate('smith_recipes', ('SmithData_C',),
+                           {str(key): value for key, value in recipes.items()})
+        except (ValueError, TypeError, KeyError):
+            pass
+
+    adventure = source('AdventureData_C')
+    levels = source('AdventureLvData_C')
+    if adventure is not None and levels is not None:
+        try:
+            quest = parse_adventure(adventure, levels)
+            names = source('TextData_C')
+            sources = ('AdventureData_C', 'AdventureLvData_C')
+            if names is not None:
+                try:
+                    quest = attach_adventure_names(quest, names)
+                    sources += ('TextData_C',)
+                except (ValueError, TypeError, KeyError, UnicodeError):
+                    pass
+            save_candidate('expedition_quests', sources,
+                           {'tasks': quest['tasks'], 'levels': quest['levels']})
+        except (ValueError, TypeError, KeyError, UnicodeError):
+            pass
+    npc = source('NpcData_C')
+    careers = source('NpcCareerData_C')
+    if npc is not None and careers is not None:
+        try:
+            parsed = parse_adventure_npcs(npc, careers)
+            save_candidate('expedition_npcs',
+                           ('NpcData_C', 'NpcCareerData_C'), parsed)
+        except (ValueError, TypeError, KeyError, UnicodeError):
+            pass
     return derived
 
 
