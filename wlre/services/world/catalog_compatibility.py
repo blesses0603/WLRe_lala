@@ -18,6 +18,7 @@ from wlre.services.world.catalog_adapters import (
 
 REPORT_SCHEMA = 1
 MAX_REPORT_BYTES = 8192
+MAX_CANDIDATE_ZIP_BYTES = 4 * MAX_SOURCE_BYTES + 1024 * 1024
 EXPECTED_SCHEMAS = {
     'npc': ('eve-npc-json-v1', 'EventData.NewNpc'),
     'shops': ('eve-interact-json-v1', 'EventData.NewInteract'),
@@ -136,6 +137,21 @@ def _report_path(identity, candidate_root=None):
     return identity.private_catalog_dir(candidate_root) / 'compatibility_report.json'
 
 
+def _candidate_zip_digest(identity, candidate_root=None):
+    path = identity.private_catalog_dir(candidate_root) / 'candidate.zip'
+    if (not path.is_file() or path.is_symlink()
+            or not 0 < path.stat().st_size <= MAX_CANDIDATE_ZIP_BYTES):
+        raise CompatibilityError('Verified candidate ZIP missing or oversized')
+    digest = hashlib.sha256()
+    with path.open('rb') as stream:
+        while True:
+            block = stream.read(1024 * 1024)
+            if not block:
+                break
+            digest.update(block)
+    return digest.hexdigest()
+
+
 def write_compatibility_report(identity, report, *, candidate_root=None):
     """Save display-only report atomically after verified candidate creation."""
     if (type(report) is not dict
@@ -147,7 +163,9 @@ def write_compatibility_report(identity, report, *, candidate_root=None):
             or report.get('can_send_packets') is not False):
         raise CompatibilityError('Cannot publish an unsafe compatibility result')
     target = _report_path(identity, candidate_root)
-    payload = (json.dumps(report, ensure_ascii=True, sort_keys=True,
+    checked = dict(report, candidate_zip_sha256=_candidate_zip_digest(
+        identity, candidate_root))
+    payload = (json.dumps(checked, ensure_ascii=True, sort_keys=True,
                           separators=(',', ':')) + '\n').encode('utf-8')
     if not 0 < len(payload) <= MAX_REPORT_BYTES:
         raise CompatibilityError('Compatibility report exceeds limit')
@@ -181,11 +199,15 @@ def read_compatibility_report(identity, *, candidate_root=None):
                 or set(report) != {
                     'schema_version', 'catalog_key', 'official_identity',
                     'data_compatibility', 'protocol_compatibility',
-                    'requires_protocol_review', 'features', 'approved',
+                    'requires_protocol_review', 'features', 'candidate_zip_sha256',
+                    'approved',
                     'assets_ready', 'can_send_packets'}
                 or report['schema_version'] != REPORT_SCHEMA
                 or report['catalog_key'] != identity.key
                 or report['official_identity'] != identity.as_dict()
+                or not _digest(report['candidate_zip_sha256'])
+                or report['candidate_zip_sha256'] != _candidate_zip_digest(
+                    identity, candidate_root)
                 or report['data_compatibility'] != 'compatible'
                 or report['protocol_compatibility'] != 'unverified'
                 or report['requires_protocol_review'] is not True
