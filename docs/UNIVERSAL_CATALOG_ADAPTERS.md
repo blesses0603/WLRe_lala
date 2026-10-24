@@ -49,8 +49,9 @@ python -m unittest tests.test_catalog_adapters -v
 1. `plan_current_catalog` 即時讀取 `ResourcePath_PC.dat` 與兩包 `.version`，從官方 CDN 驗證 `.hash`／完整 `.bytes`，並呼叫 `identity_from_verified_manifests` 產生兩包獨立來源身分。
 2. `AssetBinding` 明確指定每個功能的 `AssetPath`、格式 ID、資料衍生來源名稱、所屬 Package／完整版本與預先審核的 SHA-256。**不使用名稱子字串、索引順序或模糊搜尋**。最新版 Manifest 查無精確路徑就停止。
 3. `build_update_plan` 解析所需 Bundle 與全部相依，確認本機快取／跨版重用；預設僅回報下載數量。顯式 `--download` 先檢查合計檔數與位元組配額，再透過官方同步服務下載並校驗 MD5／CRC。
-4. `run_catalog_pipeline(..., download=True, extractor=reviewed_extractor)` 在所有必要 Bundle 的快取內容再次驗證後，將根 Bundle／相依路徑交給**由維護者審核、實際能驗證 UnityFS 結構與資產身分**的 extractor。解析出的 bytes 再交給 `parse_feature` 做來源 SHA-256 與 Schema 校驗。四種功能都正確才返回結果。
-5. 無 extractor 時（目前的 CLI 模式），**僅完成定位與 Bundle 校驗，不產生解析結果**。這並不代表失敗，而是不能跳過第二階段的 UnityFS/TextAsset 解包及衍生索引產製。
+4. 每個 `AssetBinding` 可以使用可選的 `related_asset_paths` 指定**同一功能必須同時取得的額外精確資源**。例如商店 `EventData.NewInteract` 的事件資料與 `ItemData_C` 商品基礎資料可能位於不同 Bundle；額外路徑亦需要在最新 Manifest 內逐項找到，否則停止。其所屬 Bundle 也會加入下載配額與 extractor 可見的已驗證路徑清單。
+5. `run_catalog_pipeline(..., download=True, extractor=reviewed_extractor)` 在所有必要 Bundle 的快取內容再次驗證後，將根 Bundle／相依路徑交給**由維護者審核、實際能驗證 UnityFS 結構與資產身分**的 extractor。解析出的 bytes 再交給 `parse_feature` 做來源 SHA-256 與 Schema 校驗。四種功能都正確才返回結果。
+6. 無 extractor 時（目前的 CLI 模式），**僅完成定位與 Bundle 校驗，不產生解析結果**。這並不代表失敗，而是不能跳過第二階段的 UnityFS/TextAsset 解包及衍生索引產製。
 
 無論有無 extractor，都不會寫入遊戲目錄、不自動套用新版 NPC／商店／製作／場景資料，也不會把 `assets_ready`／`can_send_packets` 設為 True。
 
@@ -65,6 +66,7 @@ python -m unittest tests.test_catalog_adapters -v
     {
       "feature": "npc",
       "asset_path": "<官方完整精確 AssetPath>",
+      "related_asset_paths": [],
       "source_name": "EventData.NewNpc",
       "schema_id": "eve-npc-json-v1",
       "expected_sha256": "<已審核之衍生索引 SHA-256>",
@@ -81,6 +83,9 @@ python -m unittest tests.test_catalog_adapters -v
 py -m tools.plan_official_catalog --bindings "C:\path\outside\repo\bindings.json"
 py -m tools.plan_official_catalog --bindings "C:\path\outside\repo\bindings.json" --download --max-mib 64 --max-files 32
 ```
+
+
+若 `shops` 需要另外使用 `ItemData_C`，請在該筆設定的 `related_asset_paths` 明確加入 **當次官方 Manifest 中已驗證的完整 ItemData_C AssetPath**。列表可為空，但代表無附加來源，不應據此宣稱已取得完整價格或交易能力。
 
 沒有已審核綁定檔時**不要猜造路徑或 SHA**，這兩個指令會安全拒絕。下載僅保存官方校驗過的 Bundle 於玩家私人快取，**不包含 UnityFS 內容抽取**。
 
