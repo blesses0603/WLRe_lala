@@ -170,7 +170,8 @@ def plan_current_catalog(bindings, *, observe=None, retrieve=None,
 def run_catalog_pipeline(plan: OfficialCatalogPlan, *, download=False,
                          extractor: Callable | None = None, bundle_root=None,
                          max_download_bytes=DEFAULT_MAX_DOWNLOAD_BYTES,
-                         max_downloads=DEFAULT_MAX_DOWNLOADS, opener=None):
+                         max_downloads=DEFAULT_MAX_DOWNLOADS, opener=None,
+                         progress=None):
     """Preview, optionally sync, then parse only with a trusted extractor.
 
     Extractor signature: (AssetBinding, tuple[Path, ...]) -> bytes.
@@ -181,6 +182,8 @@ def run_catalog_pipeline(plan: OfficialCatalogPlan, *, download=False,
     """
     if not isinstance(plan, OfficialCatalogPlan):
         raise OfficialCatalogPipelineError('Expected an official catalog plan')
+    if progress is not None and not callable(progress):
+        raise OfficialCatalogPipelineError('Invalid Bundle progress callback')
     if extractor is not None and (not callable(extractor) or not download):
         raise OfficialCatalogPipelineError('Extraction requires explicit sync and trusted extractor')
     if (type(max_download_bytes) is not int or max_download_bytes < 0
@@ -192,11 +195,22 @@ def run_catalog_pipeline(plan: OfficialCatalogPlan, *, download=False,
         raise OfficialCatalogPipelineError('Aggregate download quota exceeded')
 
     reports = []
+    completed = 0
+    total = sum(len(update.entries) for update in plan.updates)
+
+    def on_verified_bundle(package_done, package_total, action):
+        nonlocal completed
+        completed += 1
+        if progress is not None:
+            progress(completed, total, action)
+
     for update in plan.updates:
-        reports.append(execute_update_plan(
-            update, cache_root=bundle_root, download=download,
-            max_download_bytes=max_download_bytes, max_downloads=max_downloads,
-            opener=opener))
+        kwargs = dict(cache_root=bundle_root, download=download,
+                      max_download_bytes=max_download_bytes,
+                      max_downloads=max_downloads, opener=opener)
+        if progress is not None and download:
+            kwargs['progress'] = on_verified_bundle
+        reports.append(execute_update_plan(update, **kwargs))
     summary = {**plan.summary(), 'mode': 'download' if download else 'preview',
                'updates': reports, 'parsed_features': 0}
     if extractor is None:
