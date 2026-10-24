@@ -260,10 +260,28 @@ def run_auto_catalog(*, download=True, parse=True, observe=None, retrieve=None,
         provisional = source.binding
         feature = provisional.contract.feature
         emit('extract', feature=feature)
+        # Report reviewed, human-readable decoder errors without dumping file
+        # paths, full tracebacks, binary payloads, or UnityPy internals.
+        from wlre.services.world.unity_textasset import UnityTextAssetError
+        from wlre.services.world.eve_v115 import EveDecodeError
+        from wlre.services.world.itemdata_v1 import ItemDataDecodeError
         try:
             raw = extractor(provisional, paths[feature])
+        except (UnityTextAssetError, EveDecodeError, ItemDataDecodeError) as exc:
+            stage = ('UnityFS／TextAsset' if isinstance(exc, UnityTextAssetError)
+                     else 'Eve 二進位事件' if isinstance(exc, EveDecodeError)
+                     else 'ItemData 二進位表')
+            emit('extract_failed', feature=feature, stage=stage)
+            raise AutoCatalogError(
+                f'{feature} {stage} 解析失敗：{exc}；未啟用任何候選資料') from exc
+        except Exception as exc:
+            emit('extract_failed', feature=feature, stage='未分類解包例外')
+            raise AutoCatalogError(
+                f'{feature} 來源解包發生未分類例外（{type(exc).__name__}），'
+                '請提供診斷資訊；未啟用任何候選資料') from exc
+        try:
             if type(raw) is not bytes or not 0 < len(raw) <= MAX_SOURCE_BYTES:
-                raise AutoCatalogError('Extractor returned invalid source bytes')
+                raise CatalogAdapterError('Extractor returned invalid source bytes')
             digest = hashlib.sha256(raw).hexdigest()
             contract = SourceContract(
                 feature, provisional.contract.source_name,
@@ -272,10 +290,16 @@ def run_auto_catalog(*, download=True, parse=True, observe=None, retrieve=None,
             parsed[feature] = parse_feature(catalog_key=plan.catalog_key,
                                             package_versions=revisions,
                                             contract=contract, raw=raw)
-            raw_by_feature[feature] = raw
-        except Exception as exc:
+        except CatalogAdapterError as exc:
+            emit('extract_failed', feature=feature, stage='資料 Schema')
             raise AutoCatalogError(
-                f'{feature} 新版資料解析失敗；未儲存或啟用任何候選目錄') from exc
+                f'{feature} 資料 Schema 校驗失敗：{exc}；未啟用任何候選資料') from exc
+        except Exception as exc:
+            emit('extract_failed', feature=feature, stage='未分類 Schema 例外')
+            raise AutoCatalogError(
+                f'{feature} Schema 校驗發生未分類例外（{type(exc).__name__}），'
+                '請提供診斷資訊；未啟用任何候選資料') from exc
+        raw_by_feature[feature] = raw
     if set(parsed) != set(FEATURES):
         raise AutoCatalogError('Official source candidate is incomplete')
     emit('candidate_write')
