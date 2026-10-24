@@ -79,6 +79,26 @@ class OfficialPipelineTests(unittest.TestCase):
                 'file_hash': hashlib.md5(bundle_bytes).hexdigest(),
                 'file_crc': digest_crc(bundle_bytes),
             }], 'assets': rows}
+            if package == 'DataPackage':
+                # A shop needs ItemData_C as well as EventData.NewInteract.
+                extra_name = 'datapackage_data_i.bundle'
+                extra_bytes = b'dummy-UnityFS-ItemData'
+                index['bundles'].append({
+                    'name': extra_name, 'dependencies': [],
+                    'file_size': len(extra_bytes),
+                    'file_hash': hashlib.md5(extra_bytes).hexdigest(),
+                    'file_crc': digest_crc(extra_bytes),
+                })
+                index['assets'].append({
+                    'path': 'Assets/Test/ItemData_C.bytes',
+                    'bundle_name': extra_name,
+                })
+                self.bindings = [
+                    AssetBinding(x.asset_path, x.contract,
+                                 ('Assets/Test/ItemData_C.bytes',))
+                    if x.contract.feature == 'shops' else x
+                    for x in self.bindings
+                ]
             spec = ManifestSpec(DATA_VER, package, version)
             self.manifests[package] = VerifiedManifest(
                 spec, index, digest_crc(manifest_bytes), receipt, False)
@@ -89,6 +109,12 @@ class OfficialPipelineTests(unittest.TestCase):
             destination = bundle.cache_path(self.bundle_root)
             destination.parent.mkdir(parents=True)
             destination.write_bytes(bundle_bytes)
+            if package == 'DataPackage':
+                extra_spec = spec_from_manifest(
+                    data_ver=DATA_VER, package=package, index=index, name=extra_name)
+                extra_target = extra_spec.cache_path(self.bundle_root)
+                extra_target.parent.mkdir(parents=True)
+                extra_target.write_bytes(extra_bytes)
 
     def plan(self, bindings=None):
         return plan_catalog_pipeline(
@@ -127,6 +153,8 @@ class OfficialPipelineTests(unittest.TestCase):
         self.assertEqual(result['parsed_features'], 4)
         self.assertEqual(set(parsed), {'npc', 'shops', 'crafting', 'scenes'})
         self.assertEqual(len(observed), 4)
+        self.assertEqual(len(next(paths for feature, paths in observed
+                                  if feature == 'shops')), 2)
         self.assertTrue(all(not p.can_send_packets and not p.assets_ready
                             for p in parsed.values()))
         self.assertFalse(result['assets_ready'])
@@ -137,6 +165,19 @@ class OfficialPipelineTests(unittest.TestCase):
                                      mismatched[0].contract)
         with self.assertRaisesRegex(OfficialCatalogPipelineError, 'AssetPath missing'):
             self.plan(mismatched)
+
+    def test_missing_related_asset_is_not_ignored(self):
+        mismatched = list(self.bindings)
+        shop = next(x for x in mismatched if x.contract.feature == 'shops')
+        mismatched[mismatched.index(shop)] = AssetBinding(
+            shop.asset_path, shop.contract, ('Assets/Test/nonexistent_items',))
+        with self.assertRaisesRegex(OfficialCatalogPipelineError, 'AssetPath missing'):
+            self.plan(mismatched)
+
+    def test_duplicate_related_asset_is_rejected(self):
+        shop = next(x for x in self.bindings if x.contract.feature == 'shops')
+        with self.assertRaises(OfficialCatalogPipelineError):
+            AssetBinding(shop.asset_path, shop.contract, (shop.asset_path,))
 
     def test_outdated_contract_revision_rejected(self):
         mismatched = list(self.bindings)
