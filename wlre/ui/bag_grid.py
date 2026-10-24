@@ -251,7 +251,7 @@ class BagGrid(ttk.Frame):
         pages = page_count(len(rows), self.compact, columns=self.columns, rows=self.row_count)
         self.page = min(self.page, pages - 1)
         capacity = self.inventory.get('capacity')
-        self.summary.set(f"{len(rows)} / {capacity if capacity is not None else '?'} 格")
+        self.summary.set(f"{len(rows)} / {capacity if capacity is not None else '?'} 格｜{feature_note('bag')}")
         self.page_label.set(f'{self.page + 1} / {pages}')
         signature = (tuple((index, item['item_id'], item.get('count'),
                            item.get('locked'), item.get('limited_time'),
