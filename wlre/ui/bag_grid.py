@@ -7,7 +7,8 @@ import math
 import tkinter as tk
 from tkinter import ttk
 
-from wlre.services.items.combat_resources import CAT, item_name, heal_effects, available
+from wlre.services.items.combat_resources import CAT, heal_effects, available
+from wlre.services.items.catalog import item_display_name as item_name
 from wlre.services.world.feature_resource_index import feature_note
 from wlre.ui.theme import PANEL, CYAN, group
 
