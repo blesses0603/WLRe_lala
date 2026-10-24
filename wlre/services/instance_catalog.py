@@ -75,8 +75,8 @@ def parse_stages(data):
         stage_id = r.u16()
         r.take(2)  # landType / businessType
         name_id = r.u32()
-        r.take(4)  # modelId / musicName
-        r.take(3)  # limitType / isOpen / specialType
+        model_id, music_id = r.u16(), r.u16()  # StageData.New, official model/music IDs
+        limit_type, open_flag, special_type = r.u8(), r.u8(), r.u8()
         r.take(2)  # sceneLightId
         r.take(4)  # englishName
         max_members, tag, min_members, room_count, group = (r.u8() for _ in range(5))
@@ -84,18 +84,29 @@ def parse_stages(data):
         min_level = r.u16()
         time_limit = r.u16()
         r.take(20)  # five reserved UInt32
-        r.take(4)  # mapWidth / mapHeight
-        r.take(3)  # cameraAngle / xRatio / yRatio
-        r.take(4)  # small map offsets
-        r.take(8)  # camera start/end X/Y
+        map_width, map_height = r.u16(), r.u16()
+        camera_angle, x_ratio, y_ratio = r.u8(), r.u8(), r.u8()
+        small_offset_x, small_offset_y = r.u16(), r.u16()
+        camera_start = [r.u16(), r.u16()]
+        camera_end = [r.u16(), r.u16()]
+        if not map_width or not map_height or not x_ratio or not y_ratio:
+            raise ProtocolError('場景尺寸或事件座標倍率不合法')
         r.take(5)  # water / activity / hide-player / no-battle / second-job
         if stage_id in result:
             raise ProtocolError('重複 StageData ID')
         result[stage_id] = {
-            'id': stage_id, 'name_id': name_id, 'max_members': max_members,
+            'id': stage_id, 'name_id': name_id, 'model_id': model_id, 'music_id': music_id,
+            'is_open': open_flag == 0, 'limit_type': limit_type, 'special_type': special_type,
+            'max_members': max_members,
             'min_members': min_members, 'min_level': min_level,
             'time_minutes': time_limit, 'tag': tag,
             'room_capacity': room_count, 'group': group, 'flag': flag,
+            'map_width': map_width, 'map_height': map_height,
+            'offset_y': 6992 if map_height == 65535 else map_height,
+            'pos_x_ratio': x_ratio, 'pos_y_ratio': y_ratio,
+            'small_offset_x': small_offset_x, 'small_offset_y': small_offset_y,
+            'camera_angle': camera_angle, 'camera_start': camera_start,
+            'camera_end': camera_end,
         }
     r.end()
     return result

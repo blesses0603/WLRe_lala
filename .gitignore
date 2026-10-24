@@ -6,3 +6,7 @@ __pycache__/
 dist_nuitka/
 
 .macos-build-env/
+
+# 使用者本機提取的官方 1275 Unity Bundle／Mesh／導航來源，禁止提交。
+# 已追蹤的差異選取清單 JSON 保留；其餘本目錄檔案不得新增至 Git。
+/1275_差異/

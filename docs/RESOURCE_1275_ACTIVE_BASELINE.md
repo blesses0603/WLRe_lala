@@ -8,6 +8,7 @@
 - `NPCIndex()`、`NPCInteractIndex()`、`load_catalog()`、`item_catalog()` 等無參數入口，在 1275 基準下必須使用經固定 SHA-256 與結構驗證的 1275 來源，**不會因缺檔就回退 1262**。
 - 官方 1275 資源已校驗且版本識別相符後，`crafting.RECIPES` 由新版本 1,032 筆配方原地替換，使 UI 已持有的匯入引用一併更新；`open_used` 要依新版 ItemData_C 實際欄位核對。
 - `Portals()` 不再讀取 1262 傳送目的地清單；1275 Eve NewDoor 已解析，但目的地與傳送條件尚未取得正式服證據，因此不送 C20-8。
+- `navigation.Repository()` 改用固定 SHA 的 14 份官方啟動掃描快取作離線預覽；缺少時保持不可用。私人封裝安裝方式見 [官方導航快取](OFFICIAL_NAVIGATION_CACHE_1275.md)。封包座標與實際行走仍待驗收。
 - 無新版資料包、損毀或校驗不符時，登入版本閘門應保留阻擋；不會為了顯示支援新版就使用舊版 NPC 事件編號。
 
 ## 為什麼不直接將遊戲原始資源提交到公開 GitHub？

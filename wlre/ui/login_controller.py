@@ -44,7 +44,8 @@ class LoginController:
         connection_tools=ttk.Frame(self.login_tab)
         connection_tools.pack(fill='x',pady=(0,6))
         for text,callback in [('載入設定',self.load_profile),
-                              ('儲存設定',self.save_profile)]:
+                              ('儲存設定',self.save_profile),
+                              ('匯出導航驗證',self.export_navigation_evidence)]:
             ttk.Button(connection_tools,text=text,command=callback).pack(side='left',padx=3)
         ttk.Label(connection_tools,text='帳號清單').pack(side='left',padx=(8,4))
         self.saved_account_choice=ttk.Combobox(connection_tools,state='readonly',width=24)

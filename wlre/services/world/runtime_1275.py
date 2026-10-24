@@ -65,13 +65,44 @@ def active_runtime():
 def ready():
     try:
         source = active_runtime()
-        # All crafting views share this dictionary object; swap only after
-        # full 1275 ZIP validation, before allowing the login screen.
-        from wlre.services.items.crafting import activate_1275_recipes
-        activate_1275_recipes(source)
-        return True, '1275 NPC／商店／製作／場景索引通過來源校驗'
+        from wlre.services.items.catalog import CAT
+        from wlre.services.items.alchemy import META
+        from wlre.services.items.crafting import RECIPES, activate_1275_recipes
+        from wlre.services.items.skills_1275 import activate_1275_skills
+        from wlre.services.items.itemdata_1275 import activate_1275_items
+        from wlre.services.expedition.data import activate_1275_npcs
+        from wlre.services.items.stackable_1275 import activate_1275_stackables
+        from wlre.core.inventory_updates import STACKABLE
+
+        # GUI, combat and expedition modules have already imported references
+        # to these dictionaries. On any activation error, restore *all* maps
+        # in place. A half-activated 1262/1275 state must never be retained.
+        maps = (RECIPES, CAT['skills'], CAT['keys'], CAT['items'],
+                CAT['npcs'], META, STACKABLE)
+        previous = [dict(value) for value in maps]
+        try:
+            activate_1275_recipes(source)
+            activate_1275_skills(source)
+            activate_1275_items(source)
+            activate_1275_npcs(source)
+            activate_1275_stackables(source)
+        except Exception:
+            for shared, snapshot in zip(maps, previous):
+                shared.clear()
+                shared.update(snapshot)
+            raise
+        return True, '1275 NPC戰技／商店／製作／技能／物品裝備／煉金／堆疊／場景來源校驗通過'
     except (Runtime1275Unavailable, OSError, ValueError) as exc:
         return False, str(exc)
+
+
+def clear_runtime_caches():
+    """Drop pre-install empty catalogues along with the verified source cache."""
+    _default_runtime.cache_clear()
+    from wlre.services.world.map_names import data as map_data
+    from wlre.services.instance_browser import official_catalog
+    from wlre.services.world.npc_item_data import item_catalog
+    for cached in (map_data,official_catalog,item_catalog):cached.cache_clear()
 
 
 def install(data_archive, eve_archive, *, base=None, check_only=True):
@@ -96,9 +127,10 @@ def install(data_archive, eve_archive, *, base=None, check_only=True):
         for src, dest in sources:
             with tempfile.NamedTemporaryFile(dir=root, prefix='.lala1275_', suffix='.tmp',
                                              delete=False) as handle:
+                pending.append((Path(handle.name), dest))
                 with src.open('rb') as stream:
                     shutil.copyfileobj(stream, handle, 1024 * 1024)
-                pending.append((Path(handle.name), dest))
+        load_preview(pending[0][0],pending[1][0])
         for tmp, dest in pending:
             os.link(tmp, dest)
             created.append(dest)
@@ -109,7 +141,7 @@ def install(data_archive, eve_archive, *, base=None, check_only=True):
     finally:
         for tmp, _ in pending:
             tmp.unlink(missing_ok=True)
-    _default_runtime.cache_clear()
+    clear_runtime_caches()
     return output
 
 

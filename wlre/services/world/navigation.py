@@ -24,11 +24,31 @@ def finite(*values):
 
 class Repository:
     def __init__(self, path=None):
+        from wlre.services.world.runtime_1275 import baseline_revision
+        self._official = None
+        self.source_revision = int(baseline_revision())
+        self.status = ''
+        if self.source_revision == 1275:
+            from wlre.services.world.official_navigation import default_path, load_archive
+            self.path = Path(path) if path is not None else default_path()
+            self._official = {}
+            try:
+                self._official = load_archive(self.path)
+                self.status = f'1275 官方啟動快取：{len(self._official)} 個模型｜僅供離線預覽'
+            except (OSError, ValueError, KeyError, zipfile.BadZipFile) as exc:
+                self.status = '1275 官方導航快取尚未安裝或驗證失敗：' + str(exc)
+            self.catalog = [{'id': 'M' + model.zfill(5), 'entry': f'official/{model}.zip',
+                             'display_name': model_label(model), 'source_revision': 1275,
+                             'source_kind': 'official_astar_startup_cache', 'can_send_packets': False}
+                            for model in sorted(self._official, key=int)]
+            self.scenes = {r['id']: r for r in self.catalog}
+            return
         self.path = Path(path) if path else RESOURCE_ROOT.joinpath('navigation_data.zip')
         with zipfile.ZipFile(self.path) as z:
             self.catalog = json.loads(z.read('catalog.json'))
         for row in self.catalog:row['display_name']=model_label(row['id'])
         self.scenes = {r['id']: r for r in self.catalog}
+        self.status = f'{self.source_revision} 歷史導航快取：{len(self.catalog)} 個場景'
 
     @staticmethod
     def normalize(scene):
@@ -38,6 +58,15 @@ class Repository:
 
     def load(self, scene):
         sid = self.normalize(scene)
+        if self._official is not None:
+            model = str(int(sid[1:])) if sid[1:].isdigit() else sid
+            data = self._official.get(model)
+            if data is None:
+                raise NavigationError(self.status if not self._official else '1275 官方快取未涵蓋模型：' + sid)
+            mesh = Mesh(data['mesh'])
+            mesh.scene_id = sid
+            mesh.source = dict(data['source'])
+            return mesh
         row = self.scenes.get(sid)
         if not row:
             raise NavigationError('找不到場景資源：' + sid)
@@ -52,6 +81,7 @@ class Repository:
 class Mesh:
     def __init__(self, data):
         self.scene_id = None
+        self.source = None
         self.faces = []
         self.metadata = []
         self.centers = []
@@ -139,6 +169,7 @@ class Mesh:
             if point != points[-1]:points.append(point)
         if tp != points[-1]:points.append(tp)
         return {'scene_resource':self.scene_id,'coordinate_space':'navcache_vertices_b_int3',
+                'source':self.source,'can_send_packets':False,
                 'network_coordinates_verified':False,'connectivity':'reconstructed_shared_edges',
                 'runtime_obstacles_applied':False,'original_node_flags_applied':False,
                 'points':points,'faces':faces,'length':sum(math.dist(a,b) for a,b in zip(points,points[1:]))}

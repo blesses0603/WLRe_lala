@@ -12,6 +12,11 @@ from wlre.ui.gui import App
 class DashboardLayout(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        # Layout tests use legacy bundled catalogue fixtures, not live data.
+        cls._fixture_revision = patch('wlre.services.world.runtime_1275.baseline_revision', return_value='1262')
+        cls._fixture_revision.start()
+        from wlre.services.instance_browser import official_catalog
+        official_catalog.cache_clear()
         cls.root=tk.Tk();cls.app=App(cls.root);cls.errors=[]
         cls.root.report_callback_exception=lambda *args:cls.errors.append(args)
         cls.app.show_main();cls.root.update()
@@ -20,6 +25,9 @@ class DashboardLayout(unittest.TestCase):
     def tearDownClass(cls):
         for job in cls.root.tk.call('after','info'):cls.root.tk.call('after','cancel',job)
         cls.root.destroy()
+        from wlre.services.instance_browser import official_catalog
+        official_catalog.cache_clear()
+        cls._fixture_revision.stop()
 
     def setUp(self):
         # Layout assertions describe the foreground UI. Windows CI may not

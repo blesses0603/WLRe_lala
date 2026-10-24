@@ -2,6 +2,21 @@
 import unittest
 
 from wlre.services.instance_browser import official_catalog, entries_for
+from unittest.mock import patch
+
+# Historical bundled 1262 fixture stays testable; actual runtime defaults to 1275.
+_legacy_patch = None
+
+def setUpModule():
+    global _legacy_patch
+    _legacy_patch = patch('wlre.services.world.runtime_1275.baseline_revision',
+                          return_value='1262')
+    _legacy_patch.start()
+    official_catalog.cache_clear()
+
+def tearDownModule():
+    official_catalog.cache_clear()
+    _legacy_patch.stop()
 
 
 class OfficialInstanceCatalog(unittest.TestCase):

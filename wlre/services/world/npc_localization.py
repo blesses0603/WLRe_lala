@@ -1,4 +1,4 @@
-"""Separate official 1262 NPC battle quotes from event TalkData.
+"""Resolve NPC battle quotes from the selected verified official version.
 
 NpcTalkData_C references TextData_C, never TalkData_C. Optional text file
 must be independently verified before loading. This module does not issue packets.
@@ -36,6 +36,10 @@ def _catalog(filename, expected_source, path=None):
 
 
 def load_text_data(path=None):
+    if path is None:
+        from wlre.services.world.runtime_1275 import baseline_revision, active_runtime
+        if baseline_revision() == '1275':
+            return dict(active_runtime().texts)
     data=_catalog('npc_text_1262.json.gz','TextData_C',path)
     result={}
     for key,value in data.items():
@@ -48,6 +52,11 @@ def load_text_data(path=None):
 
 
 def load_battle_talk(path=None):
+    if path is None:
+        from wlre.services.world.runtime_1275 import baseline_revision, active_runtime
+        if baseline_revision() == '1275':
+            from copy import deepcopy
+            return deepcopy(active_runtime().battle_talk)
     data=_catalog('npc_battle_talk_1262.json.gz','NpcTalkData_C',path)
     result={}
     for key,entries in data.items():

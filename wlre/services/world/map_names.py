@@ -1,4 +1,4 @@
-"""Display names from 1262 ScenesData_C + TextData_C; IDs stay numeric."""
+"""Display names from verified current ScenesData_C + TextData_C; IDs stay numeric."""
 from wlre.paths import RESOURCE_ROOT
 import json
 import re
@@ -7,6 +7,25 @@ from functools import lru_cache
 
 @lru_cache(maxsize=1)
 def data():
+    from wlre.services.world.runtime_1275 import baseline_revision, active_runtime
+    if baseline_revision() == '1275':
+        try:
+            active = active_runtime()
+        except (OSError, ValueError):
+            # Before local resources are installed, show no unverified old maps.
+            return {'maps': {}, 'models': {}}
+        maps, models = {}, {}
+        for sid, stage in active.stages.items():
+            if not isinstance(stage, dict):
+                continue
+            name = active.texts.get(stage.get('name_id'))
+            if not isinstance(name, str) or not name.strip():
+                continue
+            maps[str(sid)] = name
+            model = stage.get('model_id')
+            if type(model) is int and model >= 0:
+                models.setdefault(str(model), name)
+        return {'maps': maps, 'models': models}
     return json.loads(RESOURCE_ROOT.joinpath('map_names.json').read_text(encoding='utf8'))
 
 

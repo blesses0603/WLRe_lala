@@ -130,7 +130,9 @@ class ExpeditionPanelTests(unittest.TestCase):
         detail = self.panel.task_detail.get()
         self.assertIn('遠征經驗 × 25', detail)
         self.assertIn('遠征幣 × 20', detail)
-        self.assertIn('桃太郎飯糰 × 2', detail)
+        # The test uses a 1262 sample item ID without installed 1275 ItemData.
+        # Production must not present its historical name as verified 1275.
+        self.assertIn('物品34014 × 2', detail)
         self.assertIn('機率獎勵：紫鑽 × 3', detail)
         self.panel.tasks.selection_set('1')
         self.panel.show_task()

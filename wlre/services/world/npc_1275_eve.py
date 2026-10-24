@@ -16,11 +16,24 @@ FILES = {
 }
 
 
+# Alternative deterministic gzip indexes reconstructed from the original
+# verified 1275 Eve TextAsset. The source hash and all semantic counts remain
+# pinned and are independently checked after decompressing either variant.
+REEXTRACTED_FILES = {
+    'npc_event_index_1275.json.gz': (
+        111933, '3bdd3a70a31dce4624b4f5704f9b0df9e1b82d24343eb7aae83e1763826896b1'),
+    'npc_interact_1275.json.gz': (
+        20061, 'ec76150325ce24b8d5247b040025b1a20678722245e98c720ec9a470c4b6122e'),
+}
+
+
 def verify_file(name, raw):
     if name not in FILES or type(raw) is not bytes:
         raise ValueError('未知的 1275 Eve 索引')
     source, size, digest, count = FILES[name]
-    if len(raw) != size or hashlib.sha256(raw).hexdigest() != digest:
+    actual_sha = hashlib.sha256(raw).hexdigest()
+    candidates = ((size, digest), REEXTRACTED_FILES[name])
+    if (len(raw), actual_sha) not in candidates:
         raise ValueError(name + ' SHA-256 / 長度不符')
     with gzip.GzipFile(fileobj=io.BytesIO(raw)) as f:
         content = f.read(8*1024*1024+1)
