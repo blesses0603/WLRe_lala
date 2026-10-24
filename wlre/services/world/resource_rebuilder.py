@@ -169,12 +169,14 @@ def _load_previous(path, *, catalog_key):
 
 
 
-def _derive_candidate_indexes(payloads):
-    """Produce unapproved read-only indexes from authenticated raw TextAssets.
+def _derive_candidate_indexes(payloads, *, revision):
+    """Produce read-only previews only for an audited official data schema.
 
-    The formal .json.gz checksums remain independent. Do not guess an
-    unreviewed TextData_C layout, or promote these previews to login data.
+    Future/unknown revisions keep their downloaded raw resources, but cannot
+    silently inherit 1275 field layouts or obtain login/packet approval.
     """
+    if revision != '1275':
+        return {}
     from wlre.services.world.eve_v115 import derive_eve_index
     from wlre.services.world.itemdata_v1 import parse_itemdata
     from wlre.services.world.npc_talk import parse_talk_data
@@ -554,7 +556,9 @@ def rebuild_raw_resources(identity, data_manifest, *,
         }
         reused += 1
 
-    derived_candidates = _derive_candidate_indexes(payloads)
+    official_revision = data_manifest.spec.package_version.split('_', 1)[0]
+    derived_candidates = _derive_candidate_indexes(
+        payloads, revision=official_revision)
     for member, body in sorted(derived_candidates.items()):
         total_bytes += len(body)
         if total_bytes > MAX_RESULT_BYTES:
