@@ -25,6 +25,10 @@ class LauncherProgressTests(unittest.TestCase):
                       progress_message('bundle_sync',
                                        {'count': 0, 'bytes': 0}))
         self.assertIn('商店', progress_message('extract', {'feature': 'shops'}))
+        self.assertIn('1 / 3', progress_message(
+            'bundle_item', {'completed': 1, 'total': 3}))
+        self.assertEqual(_format_stage('bundle_item'), _format_stage('bundle_sync'))
+
         self.assertEqual(_format_stage('official_version'), f'第 1 / {len(STEPS)} 階段')
         self.assertEqual(_format_stage('candidate_write'),
                          f'第 {len(STEPS)} / {len(STEPS)} 階段')
