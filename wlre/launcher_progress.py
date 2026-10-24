@@ -36,6 +36,8 @@ STEP_LABELS = {
     'raw_resource_item': '整理已存在及新取得的資源',
     'raw_rebuild_ready': '本次資源補建與續補已完成',
     'raw_rebuild_unavailable': '部分原始資源仍待補建',
+    'classification_ready': '現有資料分類索引已更新',
+    'classification_unavailable': '分類索引暫不可用，原有安全限制不變',
     'cached_candidate': '已使用驗證過的私人候選快取',
     'preview_ready': '資源預覽完成',
     'download_ready': 'Bundle 同步完成',
@@ -52,6 +54,11 @@ _ACCENT = '#56c8e9'
 def progress_message(phase, details=None):
     """Convert whitelisted stage data into a short human-readable message."""
     details = details if isinstance(details, dict) else {}
+    if phase == 'classification_ready':
+        total, existing = details.get('total'), details.get('existing')
+        if (type(total) is int and type(existing) is int
+                and 0 <= existing <= total <= 100000):
+            return f'已分類 {total} 筆官方資源；本機已有 {existing} 筆原始候選'
     if phase in ('raw_resource_item', 'raw_rebuild_ready'):
         done, total = details.get('completed'), details.get('total')
         if (type(done) is int and type(total) is int
@@ -101,6 +108,8 @@ def _format_stage(phase):
     if phase in ('raw_rebuild', 'raw_resource_item', 'raw_rebuild_ready',
                  'raw_rebuild_unavailable'):
         return '補建資源清單（候選不直接啟用）'
+    if phase in ('classification_ready', 'classification_unavailable'):
+        return '現有官方資源索引分類'
     if phase == 'bundle_item':
         return f'第 {STEPS.index("bundle_sync") + 1} / {len(STEPS)} 階段'
     if phase == 'cached_candidate':
@@ -147,30 +156,35 @@ def run_with_progress(task):
     state = {'result': None, 'done': False, 'last_error': None}
     root.title('飄流幻境 RE · LaLa Launcher')
     root.configure(bg=_BG)
-    root.geometry('520x286')
-    root.minsize(480, 270)
-    root.resizable(False, False)
+    screen_w, screen_h = root.winfo_screenwidth(), root.winfo_screenheight()
+    width = min(640, max(480, screen_w - 36))
+    height = min(352, max(278, screen_h - 64))
+    root.geometry(f'{width}x{height}')
+    root.minsize(min(540, width), min(300, height))
+    root.resizable(True, True)
     try:
         root.eval('tk::PlaceWindow . center')
     except tk.TclError:
         pass
 
-    shell = tk.Frame(root, bg=_BG, padx=25, pady=22)
+    shell = tk.Frame(root, bg=_BG, padx=28, pady=24)
     shell.pack(fill='both', expand=True)
     tk.Label(shell, text='✦  WLRe : LaLa', font=('Arial', 20, 'bold'),
              bg=_BG, fg=_FG, anchor='w').pack(fill='x')
     tk.Label(shell, text='正在準備官方資源與遊戲資料',
              font=('Arial', 11), bg=_BG, fg=_MUTED, anchor='w').pack(
-                 fill='x', pady=(5, 17))
-    panel = tk.Frame(shell, bg=_PANEL, padx=15, pady=15)
+                 fill='x', pady=(6, 19))
+    panel = tk.Frame(shell, bg=_PANEL, padx=18, pady=17)
     panel.pack(fill='x')
     stage = tk.StringVar(master=root, value='準備檢查')
     detail = tk.StringVar(master=root, value='正在初始化安全資源流程…')
     tk.Label(panel, textvariable=stage, font=('Arial', 10, 'bold'),
              bg=_PANEL, fg=_ACCENT, anchor='w').pack(fill='x')
-    tk.Label(panel, textvariable=detail, font=('Arial', 11),
-             bg=_PANEL, fg=_FG, anchor='w', wraplength=445).pack(
-                 fill='x', pady=(8, 11))
+    detail_label = tk.Label(
+        panel, textvariable=detail, font=('Arial', 11),
+        bg=_PANEL, fg=_FG, anchor='w', justify='left',
+        wraplength=max(300, width - 115))
+    detail_label.pack(fill='x', pady=(9, 14))
     style = ttk.Style(root)
     style.configure('LaLa.Launcher.Horizontal.TProgressbar',
                     troughcolor='#293c50', background=_ACCENT,
@@ -181,9 +195,16 @@ def run_with_progress(task):
     progress.pack(fill='x')
     progress.start(15)
     footer = tk.StringVar(master=root, value='版本與資源先行驗證，登入權限仍由主程式判定。')
-    tk.Label(shell, textvariable=footer, font=('Arial', 9),
-             bg=_BG, fg=_MUTED, anchor='w', wraplength=470).pack(
-                 fill='x', pady=(13, 0))
+    footer_label = tk.Label(shell, textvariable=footer, font=('Arial', 9),
+                            bg=_BG, fg=_MUTED, anchor='w', justify='left',
+                            wraplength=max(300, width - 95))
+    footer_label.pack(fill='x', pady=(16, 0))
+
+    def resize_text(event):
+        if event.widget is root:
+            detail_label.configure(wraplength=max(300, event.width - 115))
+            footer_label.configure(wraplength=max(300, event.width - 95))
+    root.bind('<Configure>', resize_text, add='+')
 
     # Closing the window does not abandon a write or leave an untracked
     # downloader modifying the user's private cache.
