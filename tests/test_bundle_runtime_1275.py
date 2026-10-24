@@ -302,6 +302,25 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
             bundle.assert_called_once_with()
         self.assertEqual(eve.read_bytes(), b'old invalid eve')
 
+    def test_legacy_decompression_error_uses_independently_pinned_bundle(self):
+        import zlib
+        from wlre.services.world.runtime_1275 import _default_runtime
+        _default_runtime.cache_clear()
+        self.addCleanup(_default_runtime.cache_clear)
+        formal = self.root / 'formal'
+        formal.mkdir()
+        data, eve = formal / '1275_DataCatalog.zip', formal / '1275_EveNpcIndex.zip'
+        data.write_bytes(b'old corrupt data')
+        eve.write_bytes(b'old corrupt eve')
+        working = object()
+        with patch('wlre.services.world.runtime_1275._paths',
+                   return_value=(data, eve)), patch(
+             'wlre.services.world.preview_1275.load_preview',
+             side_effect=zlib.error('corrupted gzip')), patch(
+             'wlre.services.world.bundle_runtime_1275.load_verified_bundle_runtime',
+             return_value=working):
+            self.assertIs(_default_runtime(), working)
+
     def test_good_legacy_zips_still_take_priority_over_bundle(self):
         from wlre.services.world.runtime_1275 import _default_runtime
         _default_runtime.cache_clear()
