@@ -18,7 +18,16 @@ def fixture():
     sections = [u16(1) + npc]
     sections += [u16(0)] * 6  # door mine goods event group convey
     sections += [u16(1) + interact, u16(0), u16(0), u16(0)]
-    scene = u16(123) + u16(115) + b''.join(sections)
+    # Real 1275 Eve v115 scenes end with 11 LE UInt32 offsets pointing at
+    # section count headers, measured from the beginning of the scene.
+    offsets = []
+    length = 4
+    for section in sections:
+        offsets.append(length)
+        length += len(section)
+    assert len(offsets) == 11
+    scene = (u16(123) + u16(115) + b''.join(sections) +
+             b''.join(u32(value) for value in offsets))
     header = bytes(8) + u32(1) + struct.pack('<HHII', 500, 123, 24, len(scene))
     return header + scene
 
@@ -63,10 +72,28 @@ class EveTests(unittest.TestCase):
                     derive_eve_index(bytes(raw), 'EventData.NewNpc')
                 message = str(raised.exception)
                 self.assertIn('場景 500', message)
-                self.assertIn('剩餘 2 bytes', message)
-                self.assertIn('尾段全零=' + expected, message)
+                self.assertIn('剩餘 46 bytes', message)
+                self.assertIn('預期 44 bytes', message)
                 self.assertIn('npc:1', message)
                 self.assertIn('interact:1', message)
+
+    def test_offset_table_rejects_corrupted_section_position(self):
+        original = fixture()
+        raw = bytearray(original)
+        # The first 4-byte slot is NPC section offset; valid value is 4.
+        first_slot = len(raw) - 44
+        self.assertEqual(raw[first_slot:first_slot+4], u32(4))
+        raw[first_slot:first_slot+4] = u32(5)
+        with self.assertRaisesRegex(EveDecodeError, 'offset table differs at npc') as raised:
+            derive_eve_index(bytes(raw), 'EventData.NewNpc')
+        self.assertIn('expected 4, got 5', str(raised.exception))
+
+    def test_table_is_required_not_silently_ignored(self):
+        original = fixture()
+        raw = bytearray(original[:-44])
+        struct.pack_into('<I', raw, 20, len(raw) - 24)
+        with self.assertRaisesRegex(EveDecodeError, 'offset table length mismatch'):
+            derive_eve_index(bytes(raw), 'EventData.NewNpc')
 
     def test_record_truncation_identifies_section_and_record(self):
         raw = bytearray(fixture())
