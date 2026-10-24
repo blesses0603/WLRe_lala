@@ -72,9 +72,10 @@ class StartupSerialization(unittest.TestCase):
         def importing(name,*args,**kwargs):
             if name=='PIL':raise ImportError('fixture')
             return original(name,*args,**kwargs)
-        with patch('builtins.__import__',side_effect=importing),patch.object(launcher,'file_lock',return_value=nullcontext()) as lock,patch.object(launcher.subprocess,'run',side_effect=[Mock(returncode=1),Mock(returncode=0),Mock(returncode=0),Mock(returncode=0)]) as run,patch.object(launcher.venv,'EnvBuilder'):
+        with patch('builtins.__import__',side_effect=importing),patch.object(launcher,'file_lock',return_value=nullcontext()) as lock,patch.object(launcher,'ensure_extractor_environment',side_effect=lambda python,root:python),patch.object(launcher.subprocess,'run',side_effect=[Mock(returncode=1),Mock(returncode=0),Mock(returncode=0),Mock(returncode=0),Mock(returncode=0)]) as run,patch.object(launcher.venv,'EnvBuilder'):
             self.assertEqual(launcher.main(),0)
             lock.assert_called_once()
             self.assertEqual(lock.call_args.kwargs['timeout'],300)
             self.assertIn('install',run.call_args_list[1].args[0])
             self.assertTrue(run.call_args_list[2].kwargs['check'])
+            self.assertIn('wlre.services.world.launcher_catalog', run.call_args_list[3].args[0])
