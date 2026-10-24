@@ -254,14 +254,15 @@ def _build_full_reviewed_if_pinned(identity, formal_base, payloads, pinned_files
         return 'awaiting_pinned_catalog_members'
     if not all(name in payloads for name in FILES):
         return 'awaiting_pinned_eve_indices'
-    manifest_bytes = _exact_reviewed_manifest(formal_base)
-    if manifest_bytes is None:
-        return 'awaiting_release_pinned_manifest'
     root = Path(formal_base) / 'official_sync' / 'reviewed_full_1275'
     target_data, target_eve = root / DATA_FILE, root / EVE_FILE
     if target_data.exists() or target_eve.exists():
         # Never overwrite an existing formal reviewed ZIP, even if damaged.
+        # The normal formal bridge independently re-verifies both files.
         return 'reviewed_archives_already_present'
+    manifest_bytes = _exact_reviewed_manifest(formal_base)
+    if manifest_bytes is None:
+        return 'awaiting_release_pinned_manifest'
     root.mkdir(parents=True, exist_ok=True)
     pending, created = [], []
     try:
