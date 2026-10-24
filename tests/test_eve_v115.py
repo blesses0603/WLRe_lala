@@ -50,6 +50,34 @@ class EveTests(unittest.TestCase):
         with self.assertRaises(EveDecodeError):
             derive_eve_index(bytes(fixture())[:-1],'EventData.NewNpc')
 
+    def test_trailing_bytes_report_exact_count_and_zero_state(self):
+        """Unknown scene suffixes must be diagnosed, never silently skipped."""
+        base = fixture()
+        scene_size = struct.unpack_from('<I', base, 20)[0]
+        for trailer, expected in ((b'\\x00\\x00', 'True'),
+                                  (b'\\x00\\x01', 'False')):
+            with self.subTest(trailer=trailer):
+                raw = bytearray(base + trailer)
+                struct.pack_into('<I', raw, 20, scene_size + len(trailer))
+                with self.assertRaises(EveDecodeError) as raised:
+                    derive_eve_index(bytes(raw), 'EventData.NewNpc')
+                message = str(raised.exception)
+                self.assertIn('場景 500', message)
+                self.assertIn('剩餘 2 bytes', message)
+                self.assertIn('尾段全零=' + expected, message)
+                self.assertIn('npc:1', message)
+                self.assertIn('interact:1', message)
+
+    def test_record_truncation_identifies_section_and_record(self):
+        raw = bytearray(fixture())
+        # First NPC event_count field, after scene header and common fields.
+        raw[24 + 4 + 2 + 2 + 20 + 1 + 4 + 4] = 255
+        with self.assertRaises(EveDecodeError) as raised:
+            derive_eve_index(bytes(raw), 'EventData.NewNpc')
+        self.assertIn('場景 500', str(raised.exception))
+        self.assertIn('npc 第 1/1 筆', str(raised.exception))
+        self.assertIn('場景內偏移', str(raised.exception))
+
     def test_reject_bad_source(self):
         with self.assertRaises(EveDecodeError):
             derive_eve_index(fixture(), 'Other')
