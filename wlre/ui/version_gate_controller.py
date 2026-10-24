@@ -60,7 +60,16 @@ class VersionGateController:
         gaps = (read_report(expected_checked_at_utc=receipt['checked_at_utc'])
                 if receipt is not None else None)
         if gaps is not None:
-            self._launcher_catalog_status += '｜' + summarize(gaps)
+            if gaps['formal_ready']:
+                self._launcher_catalog_status += '｜舊式雙 ZIP 亦已通過校驗'
+            elif (receipt is not None and code == 'review_required'
+                    and receipt.get('data_compatibility') == 'compatible'):
+                # The former ZIP-only diagnostic is not the authoritative
+                # verdict for independently validated official Bundles.
+                self._launcher_catalog_status += (
+                    '｜舊式 ZIP 未通過校驗；官方 Bundle 由正式 Runtime 另外核對')
+            else:
+                self._launcher_catalog_status += '｜舊式 ZIP 診斷：' + summarize(gaps)
         if receipt is not None and receipt.get('status') == 'review_required':
             from wlre.services.world.resource_rebuilder import read_inventory_summary
             raw_inventory = read_inventory_summary(receipt['catalog_key'])
