@@ -61,11 +61,34 @@ def _inspect_archive(path, name):
                 if duplicate:
                     state['invalid'].append('ZIP 包含重複檔名')
                 if not missing and not unexpected and not duplicate:
-                    # Pin all 163 SHA-256 checks; even matching ZIP entries
-                    # cannot prove schema compatibility without the loader.
-                    verify_archive(path)
-                    state['state'] = 'verified'
-                    state['verified_entries'] = 163
+                    # Trust only this release-pinned manifest. On failure,
+                    # identify exact damaged members from its known paths.
+                    try:
+                        verify_archive(path)
+                    except (OSError, BadZipFile, ValueError, KeyError,
+                            EOFError, UnicodeError, RuntimeError):
+                        for member, spec in manifest['files'].items():
+                            if len(state['invalid']) >= MAX_DETAIL:
+                                break
+                            try:
+                                info = z.getinfo(member)
+                                if info.file_size != spec['bytes']:
+                                    state['invalid'].append(member)
+                                    continue
+                                digest = hashlib.sha256()
+                                with z.open(info) as stream:
+                                    while chunk := stream.read(1024 * 1024):
+                                        digest.update(chunk)
+                                if digest.hexdigest() != spec['sha256']:
+                                    state['invalid'].append(member)
+                            except (OSError, BadZipFile, ValueError, RuntimeError,
+                                    EOFError):
+                                state['invalid'].append(member)
+                        if not state['invalid']:
+                            state['invalid'].append('資料表或正式索引 Schema 校驗不符')
+                    else:
+                        state['state'] = 'verified'
+                        state['verified_entries'] = 163
             else:
                 expected = set(EVE_FILES) | {'README.txt'}
                 missing, unexpected, duplicate = _zip_members(z, expected)
@@ -74,9 +97,26 @@ def _inspect_archive(path, name):
                 if duplicate:
                     state['invalid'].append('ZIP 包含重複檔名')
                 if not missing and not unexpected and not duplicate:
-                    read_verified_zip(path)
-                    state['state'] = 'verified'
-                    state['verified_entries'] = 2
+                    try:
+                        read_verified_zip(path)
+                    except (OSError, BadZipFile, ValueError, KeyError,
+                            EOFError, UnicodeError, RuntimeError):
+                        from wlre.services.world.npc_1275_eve import verify_file
+                        for member, (_, expected_size, _, _) in EVE_FILES.items():
+                            try:
+                                info = z.getinfo(member)
+                                if info.file_size != expected_size:
+                                    state['invalid'].append(member)
+                                else:
+                                    verify_file(member, z.read(member))
+                            except (OSError, BadZipFile, ValueError, KeyError,
+                                    EOFError, UnicodeError, RuntimeError):
+                                state['invalid'].append(member)
+                        if not state['invalid']:
+                            state['invalid'].append('Eve 索引結構不符合正式格式')
+                    else:
+                        state['state'] = 'verified'
+                        state['verified_entries'] = 2
     except (OSError, BadZipFile, ValueError, KeyError, EOFError,
             UnicodeError, RuntimeError, TypeError):
         # Errors may include private paths or archive contents, so report
