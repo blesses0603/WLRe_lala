@@ -14,7 +14,7 @@ import tempfile
 
 from wlre.storage.paths import data_root
 
-STATUS_SCHEMA = 1
+STATUS_SCHEMA = 2
 STATUS_FILENAME = 'launcher_catalog_status.json'
 MAX_STATUS_BYTES = 4096
 STATES = frozenset(('review_required', 'downloaded_unparsed',
@@ -35,10 +35,17 @@ def read_launcher_status(*, root=None):
         if not 0 < len(raw) <= MAX_STATUS_BYTES:
             return None
         report = json.loads(raw.decode('utf-8'))
+        legacy = {'schema_version', 'status', 'checked_at_utc',
+                  'catalog_key', 'assets_ready', 'can_send_packets'}
+        current = legacy | {'data_compatibility', 'protocol_compatibility'}
         if (type(report) is not dict
-                or set(report) != {'schema_version', 'status', 'checked_at_utc',
-                                   'catalog_key', 'assets_ready', 'can_send_packets'}
-                or report['schema_version'] != STATUS_SCHEMA
+                or ((report.get('schema_version') == 1 and set(report) != legacy)
+                    or (report.get('schema_version') == STATUS_SCHEMA
+                        and set(report) != current)
+                    or report.get('schema_version') not in (1, STATUS_SCHEMA))
+                or (report['schema_version'] == STATUS_SCHEMA and
+                    (report['data_compatibility'] not in ('compatible', 'unverified')
+                     or report['protocol_compatibility'] != 'unverified'))
                 or report['status'] not in STATES
                 or report['assets_ready'] is not False
                 or report['can_send_packets'] is not False
@@ -92,6 +99,7 @@ def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
         from wlre.services.world.auto_catalog import run_auto_catalog
         runner = run_auto_catalog
     key = None
+    data_compatibility = 'unverified'
     try:
         kwargs = {'download': True, 'parse': True}
         if progress is not None:
@@ -103,6 +111,15 @@ def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
         if type(key) is not str or len(key) != 64 or any(
                 c not in '0123456789abcdef' for c in key):
             raise ValueError('Invalid launcher catalog identity')
+        # A source can pass its schemas without its network protocol being
+        # approved. Only advertise the data verdict when the Catalog pipeline
+        # explicitly returned both independent statuses.
+        if (result.get('data_compatibility') == 'compatible' and
+                result.get('protocol_compatibility') == 'unverified' and
+                result.get('assets_ready') is False and
+                result.get('can_send_packets') is False and
+                result.get('approved') is False):
+            data_compatibility = 'compatible'
         status = 'review_required'
     except Exception:
         # Keep reason out of local receipts; failures can include file paths,
@@ -113,6 +130,8 @@ def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
         'status': status,
         'checked_at_utc': datetime.now(timezone.utc).isoformat(timespec='seconds'),
         'catalog_key': key,
+        'data_compatibility': data_compatibility,
+        'protocol_compatibility': 'unverified',
         'assets_ready': False,
         'can_send_packets': False,
     }
@@ -138,7 +157,10 @@ def main(argv=None):
         result = prepare_on_launch()
     status = result['status']
     print('LaLa Launcher 官方資源候選：' +
-          ('已建立，尚待相容性審核' if status == 'review_required'
+          ('資料格式檢查通過，協定仍待審核'
+           if status == 'review_required' and
+           result.get('data_compatibility') == 'compatible'
+           else '已建立，尚待相容性審核' if status == 'review_required'
            else '未完成；仍維持原有登入安全檢查' if status == 'error'
            else '已略過'), flush=True)
     # Failure to build a *candidate* must not suppress the real login gate.
