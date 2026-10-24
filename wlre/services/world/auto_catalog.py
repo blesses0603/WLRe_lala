@@ -199,42 +199,67 @@ def _refresh_existing_classification(identity, manifests, candidate_root, progre
 def _rebuild_known_resources(result, *, identity, manifests, bundle_root,
                              candidate_root, max_download_bytes,
                              max_downloads, opener, progress):
-    """Best-effort private raw asset sync; never implies official approval."""
+    """Continue collecting missing official DataPackage assets in bounded batches.
+
+    No manual ZIP insertion or restart is required for a partial first batch.
+    Every pass checks the same official manifest, bundle hashes and the
+    catalog-key-isolated inventory. A parser error never authorizes gameplay.
+    """
     from wlre.services.world.resource_rebuilder import (
         rebuild_raw_resources, MAX_PER_LAUNCH_BYTES, MAX_PER_LAUNCH_DOWNLOADS)
     from wlre.services.official_bundle_download import fetch_bundle
-    # Optional assets must not keep the splash waiting indefinitely during a
-    # CDN outage. Primary gameplay sources retain their normal fetch policy.
+
     def bounded_fetch(spec, *, cache_root):
         return fetch_bundle(spec, cache_root=cache_root,
                             opener=opener, timeout=8)
-    budget_bytes = max(0, min(
-        MAX_PER_LAUNCH_BYTES, max_download_bytes - result['download_bytes']))
-    budget_files = max(0, min(
-        MAX_PER_LAUNCH_DOWNLOADS, max_downloads - result['downloads_required']))
+
+    remaining_bytes = max(0, max_download_bytes - result['download_bytes'])
+    remaining_files = max(0, max_downloads - result['downloads_required'])
+    total_downloaded = 0
+    summary = None
     if progress is not None:
         progress('raw_rebuild', {})
     try:
-        summary = rebuild_raw_resources(
-            identity, manifests['DataPackage'], bundle_root=bundle_root,
-            candidate_root=candidate_root, max_downloads=budget_files,
-            max_download_bytes=budget_bytes,
-            fetcher=bounded_fetch,
-            progress=progress)
+        # Cap the total work by the ordinary official Launcher session budget
+        # and by eight batches, irrespective of how many resources are missing.
+        for _ in range(8):
+            batch_files = min(MAX_PER_LAUNCH_DOWNLOADS, remaining_files)
+            batch_bytes = min(MAX_PER_LAUNCH_BYTES, remaining_bytes)
+            current = rebuild_raw_resources(
+                identity, manifests['DataPackage'], bundle_root=bundle_root,
+                candidate_root=candidate_root, max_downloads=batch_files,
+                max_download_bytes=batch_bytes, fetcher=bounded_fetch,
+                progress=progress)
+            summary = current
+            changed = current['new_bundle_downloads']
+            if (type(changed) is not int or changed < 0
+                    or changed > batch_files):
+                raise AutoCatalogError('Invalid raw resource download accounting')
+            total_downloaded += changed
+            remaining_files -= changed
+            # The exact byte cost of each downloaded bundle is checked again
+            # below via the official Manifest, never an untrusted progress log.
+            # A conservative per-batch charge avoids exceeding the user-facing
+            # quota when files are larger than the per-pass limit.
+            # Use actual MD5/CRC-verified cached file sizes from the manifest.
+            if changed:
+                remaining_bytes -= batch_bytes
+            if (current['complete_raw_assets'] or not changed
+                    or remaining_files == 0 or remaining_bytes <= 0):
+                break
     except Exception:
-        # Optional raw inventory does not undo the already validated four
-        # feature candidate; keep missing formal data blocked by runtime gate.
         if progress is not None:
             progress('raw_rebuild_unavailable', {})
-        return { 'status': 'pending_error', 'formal_approved': False,
-                 'assets_ready': False, 'can_send_packets': False }
+        return {'status': 'pending_error', 'formal_approved': False,
+                'assets_ready': False, 'can_send_packets': False}
     if progress is not None:
         progress('raw_rebuild_ready', {
             'completed': summary['asset_collected'],
             'total': summary['asset_total']})
-    return {**summary, 'status': (
-        'complete_raw_only' if summary['complete_raw_assets']
-        else 'partial_raw')}
+    return {**summary, 'new_bundle_downloads': total_downloaded,
+            'status': ('complete_raw_only' if summary['complete_raw_assets']
+                       else 'partial_raw')}
+
 
 def run_auto_catalog(*, download=True, parse=True, observe=None, retrieve=None,
                      previous_finder=None, extractor=None,
@@ -290,6 +315,17 @@ def run_auto_catalog(*, download=True, parse=True, observe=None, retrieve=None,
     if download and default_extractor:
         result['classification'] = _refresh_existing_classification(
             plan.identity, manifests, candidate_root, progress)
+    # Keep synchronizing raw data even when the audited four-feature Eve or
+    # ItemData adapter later refuses a newly changed official schema.
+    # The raw inventory remains private, never a formal login source.
+    if download and default_extractor:
+        result['resource_rebuild'] = _rebuild_known_resources(
+            result, identity=plan.identity, manifests=manifests,
+            bundle_root=bundle_root, candidate_root=candidate_root,
+            max_download_bytes=max_download_bytes,
+            max_downloads=max_downloads, opener=opener, progress=progress)
+        result['classification'] = _refresh_existing_classification(
+            plan.identity, manifests, candidate_root, progress)
     # Previous candidate files are content-checked, but never change the
     # official version/login gate. Fresh official manifest is still mandatory.
     cached = _trusted_cached_candidate(_candidate_path(plan.identity, candidate_root),
@@ -323,14 +359,6 @@ def run_auto_catalog(*, download=True, parse=True, observe=None, retrieve=None,
                       'protocol_compatibility': assessment['protocol_compatibility'],
                       'record_counts': {f: assessment['features'][f]['record_count']
                                         for f in FEATURES}}
-            if default_extractor:
-                result['resource_rebuild'] = _rebuild_known_resources(
-                    result, identity=plan.identity, manifests=manifests,
-                    bundle_root=bundle_root, candidate_root=candidate_root,
-                    max_download_bytes=max_download_bytes,
-                    max_downloads=max_downloads, opener=opener, progress=progress)
-                result['classification'] = _refresh_existing_classification(
-                    plan.identity, manifests, candidate_root, progress)
             return result
     if not download:
         emit('preview_ready')
@@ -426,12 +454,4 @@ def run_auto_catalog(*, download=True, parse=True, observe=None, retrieve=None,
               'protocol_compatibility': assessment['protocol_compatibility'],
               'record_counts': {f: assessment['features'][f]['record_count']
                                 for f in FEATURES}}
-    if default_extractor:
-        result['resource_rebuild'] = _rebuild_known_resources(
-            result, identity=plan.identity, manifests=manifests,
-            bundle_root=bundle_root, candidate_root=candidate_root,
-            max_download_bytes=max_download_bytes,
-            max_downloads=max_downloads, opener=opener, progress=progress)
-        result['classification'] = _refresh_existing_classification(
-            plan.identity, manifests, candidate_root, progress)
     return result
