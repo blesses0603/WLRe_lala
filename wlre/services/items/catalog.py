@@ -19,10 +19,21 @@ def item_display_name(item_id):
             Runtime1275Unavailable, active_runtime, baseline_revision)
         try:
             if baseline_revision() == '1275':
-                item = active_runtime().items.get(item_id)
-                if (type(item) is dict and
-                        isinstance(item.get('name'), str) and item['name'].strip()):
-                    return item['name']
+                try:
+                    item = active_runtime().items.get(item_id)
+                    if (type(item) is dict and
+                            isinstance(item.get('name'), str) and
+                            item['name'].strip()):
+                        return item['name']
+                except (Runtime1275Unavailable, OSError, ValueError, KeyError):
+                    pass
+                # Data may already have been safely received and decoded into
+                # a version-isolated preview. Names are DISPLAY-ONLY, never
+                # used for item effects, trade, crafting or packet decisions.
+                from wlre.services.world.auto_candidate_reader import candidate_item_name
+                candidate = candidate_item_name(item_id)
+                if candidate is not None:
+                    return candidate
         except (Runtime1275Unavailable, OSError, ValueError, KeyError):
             pass
     return item_name(item_id)
