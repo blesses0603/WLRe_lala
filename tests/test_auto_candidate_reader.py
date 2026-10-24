@@ -71,6 +71,45 @@ class ReadOnlyAutomaticItemNameTests(unittest.TestCase):
         self.assertIsNone(candidate_item_name(True, root=self.root))
         self.assertIsNone(candidate_item_name(65536, root=self.root))
 
+    def test_expansion_to_automatically_received_expedition_preview(self):
+        from wlre.services.world.auto_candidate_reader import candidate_expedition_catalog
+        member = 'candidate_indexes/expedition_quests.json'
+        doc = {
+            'schema_version': 1, 'revision': 1275,
+            'sources': {'AdventureData_C': 'b'*64, 'AdventureLvData_C': 'c'*64},
+            'approved': False, 'assets_ready': False,
+            'can_send_packets': False,
+            'records': {
+                'tasks': {'1': {
+                    'id': 1, 'area': 1, 'name_id': 222,
+                    'minutes': 300, 'difficulty': 1, 'faith_cost': 20,
+                    'condition': [0, 0, 0]}},
+                'levels': {'1': {'teams': 1, 'difficulty': 1, 'reduction': 0}},
+            }
+        }
+        data = json.dumps(doc).encode()
+        meta = {
+            'schema_version': 1, 'catalog_key': self.KEY,
+            'formal_approved': False, 'assets_ready': False,
+            'can_send_packets': False, 'protocol_compatibility': 'unverified',
+            'entries': {member: {
+                'size': len(data), 'sha256': hashlib.sha256(data).hexdigest(),
+                'source': 'derived_unapproved',
+            }}
+        }
+        with ZipFile(self.path, 'w') as zip_file:
+            zip_file.writestr('inventory.json', json.dumps(meta))
+            zip_file.writestr(member, data)
+        result = candidate_expedition_catalog(root=self.root)
+        self.assertIsNotNone(result)
+        self.assertEqual(result['tasks']['1']['name_id'], 222)
+        self.assertTrue(result['display_only'])
+        self.assertFalse(result['can_send_packets'])
+        self.assertEqual(result['source_kind'],
+                         'automatic_1275_unapproved_preview')
+        self._receipt('b'*64)
+        self.assertIsNone(candidate_expedition_catalog(root=self.root))
+
     def test_wrong_identity_or_tampered_archive_rejected(self):
         self._inventory()
         self._receipt('b'*64)
