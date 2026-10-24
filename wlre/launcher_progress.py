@@ -28,6 +28,8 @@ STEP_LABELS = {
     'bundle_verify': '重新核對 Bundle 完整性',
     'extract': '解包並驗證遊戲資料',
     'candidate_write': '建立版本化私人快取',
+    'compatibility_check': '核對四類資料的相容性',
+    'compatibility_ready': '資料格式檢查通過，協定仍待驗證',
     'cached_candidate': '已使用驗證過的私人候選快取',
     'preview_ready': '資源預覽完成',
     'download_ready': 'Bundle 同步完成',
