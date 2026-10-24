@@ -94,7 +94,8 @@ def ready():
                     receipt = read_launcher_status()
                     if receipt is not None and receipt.get('data_compatibility') == 'compatible':
                         message = 'Launcher 四類候選資料格式相容；' + message
-            except (OSError, ValueError):
+            except Exception:
+                # Diagnostics cannot undo the original runtime refusal.
                 pass
         return False, message
 
