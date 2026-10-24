@@ -175,6 +175,57 @@ class AutoCatalogTests(unittest.TestCase):
         self.assertFalse(any(self.candidates.rglob('candidate.zip'))
                          if self.candidates.exists() else False)
 
+    def test_decoder_failure_reports_real_stage_without_activating_catalog(self):
+        from wlre.services.world.unity_textasset import UnityTextAssetError
+        from wlre.services.world.eve_v115 import EveDecodeError
+        from wlre.services.world.itemdata_v1 import ItemDataDecodeError
+        cases = (
+            (UnityTextAssetError('Exact AssetPath is missing from verified UnityFS Bundles'),
+             'UnityFS／TextAsset', 'Exact AssetPath'),
+            (EveDecodeError('Unsupported Eve scene format, expected 115'),
+             'Eve 二進位事件', 'expected 115'),
+            (ItemDataDecodeError('ItemData record layout changed or trailing bytes'),
+             'ItemData 二進位表', 'trailing bytes'),
+        )
+        for original, stage, detail in cases:
+            with self.subTest(stage=stage):
+                events = []
+                def fail(*args):
+                    raise original
+                with self.assertRaises(AutoCatalogError) as thrown:
+                    run_auto_catalog(**self.kwargs(
+                        extractor=fail,
+                        progress=lambda phase, info: events.append((phase, info))))
+                self.assertIn(stage, str(thrown.exception))
+                self.assertIn(detail, str(thrown.exception))
+                self.assertIs(thrown.exception.__cause__, original)
+                self.assertEqual(events[-1][0], 'extract_failed')
+                self.assertEqual(events[-1][1]['feature'], 'npc')
+                self.assertEqual(events[-1][1]['stage'], stage)
+                self.assertFalse(self.candidates.exists())
+
+    def test_schema_failure_is_not_misreported_as_unityfs(self):
+        events = []
+        def invalid(binding, paths):
+            return b'not valid JSON' if binding.contract.feature == 'npc' else (
+                self.bytes[binding.contract.feature])
+        with self.assertRaisesRegex(AutoCatalogError, 'npc 資料 Schema 校驗失敗'):
+            run_auto_catalog(**self.kwargs(
+                extractor=invalid,
+                progress=lambda phase, info: events.append((phase, info))))
+        self.assertEqual(events[-1], ('extract_failed',
+                                       {'feature': 'npc', 'stage': '資料 Schema'}))
+        self.assertFalse(self.candidates.exists())
+
+    def test_unexpected_exceptions_do_not_expose_private_paths(self):
+        def fail(*args):
+            raise RuntimeError('secret C:\\Users\\test\\private.bundle')
+        with self.assertRaises(AutoCatalogError) as thrown:
+            run_auto_catalog(**self.kwargs(extractor=fail))
+        self.assertIn('RuntimeError', str(thrown.exception))
+        self.assertNotIn('private.bundle', str(thrown.exception))
+        self.assertFalse(self.candidates.exists())
+
     def test_preview_avoids_extraction_and_writes(self):
         result = run_auto_catalog(**self.kwargs(download=False, parse=False))
         self.assertEqual(result['status'], 'preview')
