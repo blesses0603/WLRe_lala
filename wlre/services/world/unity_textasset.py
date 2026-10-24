@@ -17,6 +17,7 @@ MAX_INPUT_BUNDLES = 24
 MAX_BUNDLE_BYTES = 64 * 1024 * 1024
 MAX_TOTAL_INPUT_BYTES = 128 * 1024 * 1024
 MAX_BLOCK_INFO_BYTES = 4 * 1024 * 1024
+MAX_CONTAINER_ENTRIES = 100_000
 
 
 class UnityTextAssetError(ValueError):
@@ -94,9 +95,42 @@ def _payload(obj, asset_path):
     return body
 
 
+
+def _find_exact_container_object(container, asset_path):
+    """Resolve exact AssetPath via UnityPy 1.25's ContainerHelper.items().
+
+    Environment.container no longer guarantees a dict. ContainerHelper.items
+    can preserve duplicate keys whereas its compatibility dict cannot. Never
+    search by filename or relax full, verified Manifest AssetPath matching.
+    """
+    if not callable(getattr(container, 'items', None)):
+        raise UnityTextAssetError('Unity container AssetPath index unavailable')
+    try:
+        entries = container.items()
+        found = None
+        for index, pair in enumerate(entries):
+            if index >= MAX_CONTAINER_ENTRIES:
+                raise UnityTextAssetError('Unity container index exceeds safe entry limit')
+            try:
+                path, obj = pair
+            except (TypeError, ValueError) as exc:
+                raise UnityTextAssetError('Malformed Unity container AssetPath entry') from exc
+            if type(path) is not str:
+                raise UnityTextAssetError('Malformed Unity container AssetPath key')
+            if path == asset_path:
+                if found is not None:
+                    raise UnityTextAssetError('Duplicate TextAsset AssetPath in one Unity container')
+                found = obj
+        return found
+    except UnityTextAssetError:
+        raise
+    except Exception as exc:
+        raise UnityTextAssetError('Unity container AssetPath enumeration failed') from exc
+
+
 def extract_textasset(binding: AssetBinding, bundle_paths: tuple[Path, ...], *,
                       loader: Callable | None = None) -> bytes:
-    """Unpack exact .bytes TextAsset bytes, without scanning by filename or ID.
+    """Unpack exact .bytes TextAsset bytes through UnityPy's .container.items().
 
     Input paths MUST come from the verified official pipeline; the pipeline
     verifies bundle MD5, CRC and length immediately before this call. Loading
@@ -137,10 +171,7 @@ def extract_textasset(binding: AssetBinding, bundle_paths: tuple[Path, ...], *,
     for path in candidates:
         try:
             env = read_bundle(path)
-            container = env.container
-            if not isinstance(container, dict):
-                raise UnityTextAssetError('Unity container AssetPath index unavailable')
-            obj = container.get(binding.asset_path)
+            obj = _find_exact_container_object(env.container, binding.asset_path)
         except UnityTextAssetError:
             raise
         except Exception as exc:
