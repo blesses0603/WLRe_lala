@@ -64,14 +64,33 @@ def active_runtime():
 
 def ready():
     try:
+        # Only the independently pinned full 1275 archives are allowed to
+        # supply runtime records. Candidate ZIPs NEVER replace these sources.
         source = active_runtime()
-        # All crafting views share this dictionary object; swap only after
-        # full 1275 ZIP validation, before allowing the login screen.
+        from wlre.services.world.formal_candidate_bridge import (
+            FormalBridgeError, inspect_launcher_candidate)
+        # A matching candidate is checked AGAIN against the full, release-
+        # pinned source before any shared recipe dict is touched. A mismatch
+        # must never partially change game state.
+        bridge = inspect_launcher_candidate(source)
         from wlre.services.items.crafting import activate_1275_recipes
         activate_1275_recipes(source)
-        return True, '1275 NPC／商店／製作／場景索引通過來源校驗'
+        if bridge['status'] == 'matches_formal_sources':
+            return True, ('1275 正式資料完整驗證，且 Launcher 四類候選與正式來源一致；'
+                          '遊戲協定仍須獨立驗收')
+        return True, '1275 正式資料通過來源校驗；遊戲協定仍須獨立驗收'
     except (Runtime1275Unavailable, OSError, ValueError) as exc:
-        return False, str(exc)
+        message = str(exc)
+        if '缺少已驗證的 1275 LaLa 資源' in message:
+            from wlre.services.world.launcher_catalog import read_launcher_status
+            receipt = read_launcher_status()
+            if (receipt is not None
+                    and receipt.get('data_compatibility') == 'compatible'):
+                message = (
+                    'Launcher 四類資料已通過相容性檢查，但尚缺完整且獨立校驗的 '
+                    '1275 DataCatalog／EveNpcIndex 正式來源（含對話、完整物品、'
+                    '門事件等資料）；仍禁止登入。')
+        return False, message
 
 
 def install(data_archive, eve_archive, *, base=None, check_only=True):
