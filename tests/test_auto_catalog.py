@@ -16,6 +16,7 @@ from wlre.services.world.auto_catalog import (
     run_auto_catalog,
 )
 from wlre.services.official_incremental_sync import IncrementalSyncError
+from wlre.services.world.official_catalog_pipeline import OfficialCatalogPipelineError
 
 VERSIONS = {
     'DataPackage': '1275_2026_10_21_18_27_33_84',
@@ -153,7 +154,7 @@ class AutoCatalogTests(unittest.TestCase):
                                   index=self.manifests['DataPackage'].index,
                                   name=row['name'])
         spec.cache_path(self.bundles).unlink()
-        with self.assertRaises(IncrementalSyncError):
+        with self.assertRaises(OfficialCatalogPipelineError):
             run_auto_catalog(**self.kwargs(max_download_bytes=0, opener=lambda *args:
                                            self.fail('must not reach CDN')))
 
