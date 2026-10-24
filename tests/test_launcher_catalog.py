@@ -53,7 +53,7 @@ class LauncherCatalogTests(unittest.TestCase):
 
     def test_invalid_status_receipts_fail_closed(self):
         path = status_path(self.root)
-        path.parent.mkdir(parents=True)
+        path.parent.mkdir(parents=True, exist_ok=True)
         for content in (
             b'not json',
             b'X' * 5000,
