@@ -95,6 +95,7 @@ def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
     if env.get('WLRE_DISABLE_AUTO_CATALOG') == '1':
         return {'status': 'skipped', 'assets_ready': False,
                 'can_send_packets': False}
+    real_launcher_run = runner is None and root is None
     if runner is None:
         from wlre.services.world.auto_catalog import run_auto_catalog
         runner = run_auto_catalog
@@ -120,6 +121,17 @@ def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
                 result.get('can_send_packets') is False and
                 result.get('approved') is False):
             data_compatibility = 'compatible'
+        # Automatic promotion is only eligible in a real Launcher run after
+        # four independently validated sources and the full pinned archives
+        # are available. Injected test runners/roots never touch live files.
+        if (real_launcher_run and data_compatibility == 'compatible'):
+            from wlre.services.world.formal_candidate_bridge import (
+                promote_reviewed_archives)
+            if progress is not None:
+                progress('formal_check', {})
+            bridge = promote_reviewed_archives(key)
+            if progress is not None:
+                progress('formal_checked', {'status': bridge['status']})
         status = 'review_required'
     except Exception:
         # Keep reason out of local receipts; failures can include file paths,
