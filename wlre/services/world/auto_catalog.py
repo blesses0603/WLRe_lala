@@ -241,7 +241,11 @@ def run_auto_catalog(*, download=True, parse=True, observe=None, retrieve=None,
     sync, _ = run_catalog_pipeline(
         plan, download=True, extractor=None, bundle_root=bundle_root,
         max_download_bytes=max_download_bytes, max_downloads=max_downloads,
-        opener=opener)
+        opener=opener,
+        progress=(None if progress is None else
+                  lambda completed, total, action: emit(
+                      'bundle_item', completed=completed, total=total,
+                      action=action)))
     result['verified_bundles'] = sum(len(p.entries) for p in plan.updates)
     if not parse:
         emit('download_ready')
