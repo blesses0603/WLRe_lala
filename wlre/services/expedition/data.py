@@ -61,8 +61,15 @@ def load_catalog():
     return json.loads(path.read_text(encoding='utf8'))
 
 
-def attach_names(catalog, text_data):
-    """Data.OnLoadTextData: u32 key, u16 byte length, UTF-16LE text."""
+def parse_text_data(text_data):
+    """Strictly read official TextData_C v1; no guessed fields or fallback.
+
+    Used by the expedition name mapper and the read-only automatic asset
+    inventory. An unknown binary layout fails closed without overwriting
+    any previously reviewed runtime text.
+    """
+    if type(text_data) is not bytes or not 4 < len(text_data) <= 16 * 1024 * 1024:
+        raise ProtocolError('文字資料來源缺失或大小不合法')
     r = Reader(text_data)
     count = r.i32()
     if not 1 <= count <= 1000000:
@@ -77,6 +84,12 @@ def attach_names(catalog, text_data):
         except UnicodeDecodeError as exc:
             raise ProtocolError('文字資料編碼錯誤') from exc
     r.end()
+    return texts
+
+
+def attach_names(catalog, text_data):
+    """Bind mission names only from same official TextData_C bytes."""
+    texts = parse_text_data(text_data)
     tasks = {}
     for sid, quest in catalog['tasks'].items():
         name = texts.get(quest['name_id'])
