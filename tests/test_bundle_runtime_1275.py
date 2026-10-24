@@ -45,7 +45,9 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
         self.raw = {
             name: name.encode() for name in (
                 'Eve', 'ItemData_C', 'TalkData_C', 'TextData_C',
-                'SmithData_C', 'ScenesData_C')}
+                'SmithData_C', 'ScenesData_C',
+                'AdventureData_C', 'AdventureLvData_C',
+                'NpcData_C', 'NpcCareerData_C')}
         self.items = {i: {'name': f'物品{i}', 'open_used': 0} for i in range(1, 1033)}
         self.recipes = {
             i: {'item_id': i, 'tool_id': 39053, 'output': 1,
@@ -53,6 +55,12 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
                 'design_id': 0, 'time_id': 0, 'limit_kind': 0}
             for i in range(1, 1033)}
         self.scenes = {str(10000+i): [] for i in range(1262)}
+        self.expedition_tasks = {
+            str(i): {'id': i, 'name_id': 3, 'area_name': 3}
+            for i in range(1, 261)}
+        self.expedition_levels = {str(i): {'teams': 1} for i in range(1, 11)}
+        self.expedition_npcs = {
+            str(i): {'kind': 1} for i in range(1, 7562)}
         self.extract = Mock(side_effect=lambda binding, paths, loader=None:
                             self.raw[binding.contract.source_name])
         self.plan = SimpleNamespace(entries=[
@@ -109,6 +117,25 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
             'wlre.services.world.preview_1275.parse_smith_1275',
             return_value=self.recipes))
         stack.enter_context(patch(
+            'wlre.services.expedition.data.ADVENTURE_1275_SHA256',
+            hashlib.sha256(self.raw['AdventureData_C']).hexdigest()))
+        stack.enter_context(patch(
+            'wlre.services.expedition.data.ADVENTURE_LEVEL_1275_SHA256',
+            hashlib.sha256(self.raw['AdventureLvData_C']).hexdigest()))
+        stack.enter_context(patch(
+            'wlre.services.expedition.data.parse_catalog',
+            return_value={
+                'tasks': self.expedition_tasks,
+                'levels': self.expedition_levels,
+                'source_sha256': {
+                    'AdventureData_C': hashlib.sha256(
+                        self.raw['AdventureData_C']).hexdigest(),
+                    'AdventureLvData_C': hashlib.sha256(
+                        self.raw['AdventureLvData_C']).hexdigest()}}))
+        stack.enter_context(patch(
+            'wlre.services.expedition.data.parse_npcs',
+            return_value=self.expedition_npcs))
+        stack.enter_context(patch(
             'wlre.services.instance_catalog.parse_stages',
             return_value={10000: {}}))
         stack.enter_context(patch(
@@ -127,7 +154,11 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
         self.assertEqual(runtime.texts[3], '正式文字')
         self.assertTrue(runtime.portal_status(10000)['exists'])
         self.assertFalse(runtime.can_send_packets)
-        self.assertEqual(self.extract.call_count, 6)
+        self.assertEqual(self.extract.call_count, 10)
+        self.assertEqual(len(runtime.expedition['tasks']), 260)
+        self.assertEqual(runtime.expedition['tasks']['1']['name'], '正式文字')
+        self.assertEqual(runtime.expedition['source_kind'],
+                         'verified_1275_official_bundle')
 
     def test_verified_bundle_data_enters_real_crafting_plan(self):
         # This is the actual crafting service, not a read-only UI preview.
@@ -160,6 +191,25 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
         self.assertEqual(recipe['item_id'], 20)
         self.assertEqual(allocations, [])
         self.assertEqual((packet.main, packet.sub), (64, 1))
+
+    def test_official_expedition_service_uses_active_bundle_catalog(self):
+        from wlre.services.expedition.data import load_verified_1275_catalog
+        with ExitStack() as stack:
+            self.patches(stack)
+            runtime = load_verified_bundle_runtime(sync_root=self.root)
+            stack.enter_context(patch(
+                'wlre.services.world.runtime_1275.baseline_revision',
+                return_value='1275'))
+            stack.enter_context(patch(
+                'wlre.services.world.runtime_1275.active_runtime',
+                return_value=runtime))
+            catalog = load_verified_1275_catalog()
+        self.assertEqual(len(catalog['tasks']), 260)
+        self.assertEqual(len(catalog['levels']), 10)
+        self.assertEqual(len(catalog['npcs']), 7561)
+        self.assertEqual(catalog['tasks']['1']['name'], '正式文字')
+        catalog['tasks']['1']['name'] = '被 UI 修改'
+        self.assertEqual(runtime.expedition['tasks']['1']['name'], '正式文字')
 
     def test_missing_or_corrupt_official_bundle_never_activates(self):
         for action in ('download', 'reuse_previous', 'cached'):
