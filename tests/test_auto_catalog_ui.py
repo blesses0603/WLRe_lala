@@ -1,83 +1,39 @@
-"""LaLa version-screen auto candidate worker contracts without display/network."""
-import queue
-import threading
+"""Login gate displays Launcher receipt but cannot start resource downloads."""
+import inspect
 import unittest
 from unittest.mock import Mock, patch
 
 from wlre.ui.version_gate_controller import VersionGateController
 
 
-class AutoCatalogUiTests(unittest.TestCase):
-    def stub(self):
+class LauncherResourceUiTests(unittest.TestCase):
+    def test_version_ui_does_not_download_or_extract(self):
+        source = inspect.getsource(VersionGateController)
+        self.assertNotIn('run_auto_catalog(', source)
+        self.assertNotIn('lala-catalog-auto-prepare', source)
+        self.assertNotIn('_start_auto_catalog', source)
+        self.assertIn('read_launcher_status()', source)
+
+    def test_main_version_check_only_starts_remote_version_worker(self):
         c = Mock()
         c._closing = False
-        c._auto_catalog_generation = 4
-        c._auto_catalog_busy = False
-        c._auto_catalog_messages = queue.SimpleQueue()
-        c._auto_catalog_status = '尚未啟動'
-        c._version_gate_result = {
-            'source': 'official_remote_only',
-            'remote': {'status': 'resources_changed'}}
-        return c
+        c.login_window = None
+        c._version_gate_generation = 0
+        c.version_gate_text = Mock()
+        c._version_gate_messages = Mock()
+        c._version_gate_result = None
+        c._version_gate_entry_approved = False
+        with patch('wlre.ui.version_gate_controller.threading.Thread') as thread:
+            VersionGateController.start_version_check(c)
+        self.assertEqual(thread.call_count, 1)
+        self.assertEqual(thread.call_args.kwargs['name'], 'official-version-check')
 
-    def test_prelogin_starts_bounded_worker_only_once(self):
-        c = self.stub()
-        with patch.object(threading, 'Thread') as spawn:
-            VersionGateController._start_auto_catalog(c)
-            VersionGateController._start_auto_catalog(c)
-        self.assertEqual(spawn.call_count, 1)
-        self.assertTrue(c._auto_catalog_busy)
-        self.assertIn('Manifest', c._auto_catalog_status)
-        spawn.return_value.start.assert_called_once()
-
-    def test_completed_candidate_never_approves_login(self):
-        c = self.stub()
-        c._auto_catalog_messages.put((4, 'done', 'new_private_candidate'))
-        VersionGateController._drain_auto_catalog_messages(c)
-        self.assertIn('待相容性審核', c._auto_catalog_status)
-        self.assertFalse(c._auto_catalog_busy)
-        self.assertNotIn('_version_gate_entry_approved', c.__dict__)
-
-    def test_background_worker_never_captures_tk_controller(self):
-        import inspect
-        source = inspect.getsource(VersionGateController._start_auto_catalog)
-        worker = source.split('        def worker():', 1)[1].split(
-            '        threading.Thread(', 1)[0]
-        self.assertNotIn('self.', worker)
-        self.assertIn('messages.put(', worker)
-
-    def test_all_version_background_workers_release_tk_references(self):
-        import inspect
-        for method in ('start_version_check', 'start_lala_release_check',
-                       'download_lala_release'):
-            source = inspect.getsource(getattr(VersionGateController, method))
-            worker = source.split('        def worker():', 1)[1].split(
-                '        threading.Thread(', 1)[0]
-            with self.subTest(method=method):
-                self.assertNotIn('self.', worker)
-
-    def test_failed_candidate_preserves_login_gate(self):
-        c = self.stub()
-        c._auto_catalog_messages.put((4, 'error', 'bad official bundle'))
-        VersionGateController._drain_auto_catalog_messages(c)
-        self.assertIn('登入限制', c._auto_catalog_status)
-
-    def test_stale_worker_does_not_replace_new_status(self):
-        c = self.stub()
-        c._auto_catalog_messages.put((3, 'done', 'new_private_candidate'))
-        c._start_auto_catalog = Mock()
-        VersionGateController._drain_auto_catalog_messages(c)
-        self.assertEqual(c._auto_catalog_status, '尚未啟動')
-        c._start_auto_catalog.assert_called_once()
-
-    def test_stale_worker_not_restarted_for_unverified_source(self):
-        c = self.stub()
-        c._version_gate_result = {'source': 'official_remote_only',
-                                  'remote': {'status': 'unverified'}}
-        c._auto_catalog_messages.put((3, 'done', 'new_private_candidate'))
-        c._start_auto_catalog = Mock()
-        VersionGateController._drain_auto_catalog_messages(c)
-        c._start_auto_catalog.assert_not_called()
+    def test_launcher_receipt_is_display_only(self):
+        from wlre.services.world.launcher_catalog import read_launcher_status
+        self.assertNotIn('approved', inspect.getsource(read_launcher_status))
+        remote = inspect.getsource(VersionGateController.can_login_after_version_check)
+        self.assertNotIn('launcher_catalog', remote)
+        self.assertNotIn('assets_ready', remote)
 
 
 if __name__ == '__main__':
