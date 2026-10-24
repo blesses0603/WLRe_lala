@@ -111,3 +111,97 @@ def parse_npcs(npc_data, career_data):
         npcs[str(sid)] = {'element': fields[74], 'kind': fields[106], 'original': careers.get(sid, sid)}
     r.end()
     return npcs
+
+
+# These two official TextAssets are byte-identical in the audited 1262/1275
+# sources. NPC and localization tables changed and must not be borrowed from
+# bundled 1262 catalogs for a 1275 dispatch decision.
+ADVENTURE_1275_SHA256 = 'e240dbc011fe213f2a5d907b9d02281ab2417b764caecd2fd222f99faedb59e8'
+ADVENTURE_LEVEL_1275_SHA256 = '98b8359741f2e67fe7a15214c6a6b1c6495977a00d6c666beed9d129f4d520d4'
+
+
+def load_verified_1275_catalog():
+    """Load expedition rows exclusively from the independently pinned 1275 ZIP.
+
+    All 160 archive files must pass the repository's fixed manifest and
+    per-file hashes before extracting expedition data. The 1275 NPC and text
+    sources are independently bound to that manifest as well. This provides
+    verified static data, NOT protocol/dispatch compatibility approval.
+    """
+    from zipfile import ZipFile
+    from wlre.services.world.game_data_1275 import read_manifest, verify_archive
+    from wlre.services.world.runtime_1275 import (
+        Runtime1275Unavailable, baseline_revision, active_runtime,
+        resource_dir, DATA_FILE,
+    )
+
+    if baseline_revision() != '1275':
+        raise Runtime1275Unavailable('正式資源基準不是 1275')
+    runtime = active_runtime()
+    if runtime.revision != 1275:
+        raise Runtime1275Unavailable('遠征資料來源版本不符合 1275')
+    path = resource_dir() / DATA_FILE
+    # Do not trust path-only classification, self-computed candidate hashes
+    # or an unchecked ZIP as a gameplay-ready expedition catalog.
+    verify_archive(path)
+    with ZipFile(path) as archive:
+        manifest = read_manifest(archive)
+        tables = {}
+        for table in ('AdventureData_C', 'AdventureLvData_C',
+                      'NpcData_C', 'NpcCareerData_C'):
+            matches = [name for name, row in manifest['files'].items()
+                       if row.get('kind') == 'raw_table' and row.get('table') == table]
+            if len(matches) != 1:
+                raise ValueError('1275 遠征資料表缺失或名稱重複：' + table)
+            name = matches[0]
+            raw = archive.read(name)
+            row = manifest['files'][name]
+            # Recheck after verification to prevent a replaced ZIP from
+            # supplying different bytes between the two file opens.
+            if len(raw) != row['bytes'] or hashlib.sha256(raw).hexdigest() != row['sha256']:
+                raise ValueError('1275 遠征原始表二次校驗失敗：' + table)
+            tables[table] = raw
+
+    if (hashlib.sha256(tables['AdventureData_C']).hexdigest() != ADVENTURE_1275_SHA256
+            or hashlib.sha256(tables['AdventureLvData_C']).hexdigest()
+            != ADVENTURE_LEVEL_1275_SHA256):
+        raise ValueError('遠征任務與等級表的已審核來源指紋不符')
+
+    result = parse_catalog(tables['AdventureData_C'], tables['AdventureLvData_C'])
+    if len(result['tasks']) != 260 or len(result['levels']) != 10:
+        raise ValueError('1275 遠征任務／等級筆數不符')
+    npcs = parse_npcs(tables['NpcData_C'], tables['NpcCareerData_C'])
+    if len(npcs) != 7561:
+        raise ValueError('1275 夥伴職業／元素索引筆數不符')
+
+    texts = runtime.texts
+    if type(texts) is not dict:
+        raise ValueError('1275 文字索引格式不符')
+    named = {}
+    for key, quest in result['tasks'].items():
+        name = texts.get(quest['name_id'])
+        area = texts.get(quest['area_name'], '')
+        if (not isinstance(name, str) or not name.strip()
+                or not isinstance(area, str)
+                or len(name) > 8192 or len(area) > 8192):
+            raise ValueError('1275 遠征任務缺少已驗證的名稱／地區文字：' + key)
+        named[key] = {**quest, 'name': name, 'area_label': area}
+    return {**result, 'tasks': named, 'npcs': npcs, 'revision': 1275,
+            'source_kind': 'verified_1275_full_archive',
+            'source_sha256': {
+                **result['source_sha256'],
+                'NpcData_C': hashlib.sha256(tables['NpcData_C']).hexdigest(),
+                'NpcCareerData_C': hashlib.sha256(tables['NpcCareerData_C']).hexdigest(),
+            }}
+
+
+def load_active_catalog():
+    """Operation-safe source, distinct from the bundled legacy display data.
+
+    Missing or incompatible 1275 formal inputs are *not* allowed to silently
+    fall back to 1262, especially for success probabilities and team choice.
+    """
+    from wlre.services.world.runtime_1275 import baseline_revision
+    if baseline_revision() == '1275':
+        return load_verified_1275_catalog()
+    return load_catalog()
