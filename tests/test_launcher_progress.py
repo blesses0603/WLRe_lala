@@ -25,6 +25,10 @@ class LauncherProgressTests(unittest.TestCase):
                       progress_message('bundle_sync',
                                        {'count': 0, 'bytes': 0}))
         self.assertIn('商店', progress_message('extract', {'feature': 'shops'}))
+        self.assertIn('Eve 二進位事件', progress_message(
+            'extract_failed', {'feature': 'npc', 'stage': 'Eve 二進位事件'}))
+        self.assertNotIn('secret', progress_message(
+            'extract_failed', {'feature': 'npc', 'stage': 'C:/secret'}))
         self.assertIn('1 / 3', progress_message(
             'bundle_item', {'completed': 1, 'total': 3}))
         self.assertEqual(_format_stage('bundle_item'), _format_stage('bundle_sync'))
