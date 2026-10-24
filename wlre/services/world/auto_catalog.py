@@ -231,7 +231,7 @@ def _rebuild_known_resources(result, *, identity, manifests, bundle_root,
                 max_download_bytes=batch_bytes, fetcher=bounded_fetch,
                 progress=progress)
             summary = current
-            changed = current['new_bundle_downloads']
+            changed = current.get('new_bundle_downloads', 0)
             if (type(changed) is not int or changed < 0
                     or changed > batch_files):
                 raise AutoCatalogError('Invalid raw resource download accounting')
