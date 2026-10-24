@@ -63,7 +63,13 @@ def progress_message(phase, details=None):
         done, total = details.get('completed'), details.get('total')
         if (type(done) is int and type(total) is int
                 and 0 <= done <= total and total > 0):
-            return f'已驗證整理 {done} / {total} 份官方資源（原始資料候選）'
+            message = f'已驗證整理 {done} / {total} 份官方資源（原始資料候選）'
+            blockers = details.get('formal_blockers')
+            if (phase == 'raw_rebuild_ready' and type(blockers) is list
+                    and 0 < len(blockers) <= 8
+                    and all(type(item) is str for item in blockers)):
+                return message + f'｜正式啟用仍有 {len(blockers)} 類獨立驗證缺口'
+            return message
     if phase == 'manifest':
         package = details.get('package')
         if package in ('DataPackage', 'MainPackage'):
