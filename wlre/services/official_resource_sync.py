@@ -113,7 +113,7 @@ def compare_snapshot(current, previous=None):
         },
         'resource_installation': 'not_implemented',
         'can_start_asset_dependent_features': False,
-        'note': '只驗證官方版本，尚缺完整的遠端 Manifest／Bundle URL 證據',
+        'note': '目前僅比較版本；遠端 Manifest URL 已核實，仍需另外驗證、解析並下載所需資源',
     }
 
 

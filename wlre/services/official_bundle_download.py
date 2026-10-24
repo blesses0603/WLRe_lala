@@ -1,9 +1,8 @@
 """Verified on-demand YooAsset Bundle download primitive (not activated by UI).
 
 Never guesses manifests or downloads entire packages. Only call this with a
-bundle record from a separately verified official Manifest. The current B-only
-bootstrap does not yet have a verified remote Manifest URL, so this service
-is intentionally not wired into automatic startup or login.
+bundle record from a separately verified official Manifest. The remote Manifest
+URLs are now confirmed; this service still is not wired into startup or login.
 """
 
 from dataclasses import dataclass
