@@ -206,7 +206,15 @@ def rebuild_raw_resources(identity, data_manifest, *,
             index=data_manifest.index, name=name)
     staging = identity.private_catalog_dir(candidate_root)
     dest = staging / _FILE
-    trusted, pinned = _checked_existing(formal_base)
+    # Release-pinned 1275 files must NEVER be mixed into another official
+    # revision even if some filename happens to match.
+    from wlre.services.resource_compatibility import load_supported_resources
+    supported = load_supported_resources()
+    identical_release = all(
+        supported['packages'].get(p.name, {}).get('manifest') == p.full_version
+        for p in identity.packages)
+    trusted, pinned = (_checked_existing(formal_base)
+                       if identical_release else ({}, None))
     previous = _load_previous(dest, catalog_key=identity.key)
     pinned_files = pinned.get('files', {}) if pinned is not None else {}
 
@@ -215,6 +223,7 @@ def rebuild_raw_resources(identity, data_manifest, *,
     payloads, entries = {}, {}
     missing, reused, extracted, downloaded = [], 0, 0, 0
     spent = 0
+    attempted = set()
     total_bytes = 0
     for asset_path, name in sorted(selected.items()):
         filename = PurePosixPath(asset_path).name
@@ -229,9 +238,10 @@ def rebuild_raw_resources(identity, data_manifest, *,
             spec = specs[name]
             path = spec.cache_path(bundle_root)
             if not _verified_file(path, spec):
-                if (name not in missing and
+                if (name not in attempted and
                         downloaded < max_downloads and
                         spent + spec.file_size <= max_download_bytes):
+                    attempted.add(name)
                     try:
                         fetcher(spec, cache_root=bundle_root)
                         if _verified_file(path, spec):
@@ -303,9 +313,10 @@ def rebuild_raw_resources(identity, data_manifest, *,
         sorted(set(pinned_files) - set(entries)) if pinned_files else
         ['尚無固定 SHA 的完整 1275 DataCatalog manifest；不能正式封裝']
     )
-    for member in ('npc_event_index_1275.json.gz', 'npc_interact_1275.json.gz'):
-        if member not in entries:
-            missing_formal.append(member)
+    if identical_release:
+        for member in ('npc_event_index_1275.json.gz', 'npc_interact_1275.json.gz'):
+            if member not in entries:
+                missing_formal.append(member)
     report = {
         'schema_version': SCHEMA, 'catalog_key': identity.key,
         'official_manifest_sha256': next(
