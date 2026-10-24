@@ -82,12 +82,17 @@ def main(argv=None):
         if args.parse and not args.download:
             raise OfficialCatalogPipelineError('--parse requires explicit --download')
         bindings = load_bindings(args.bindings)
-        plan = plan_current_catalog(bindings)
         if args.parse:
+            try:
+                import UnityPy  # noqa: F401 - prerequisite before network or disk work
+            except ImportError as exc:
+                raise OfficialCatalogPipelineError(
+                    '缺少 UnityFS 解包相依，請先執行：py -m pip install "UnityPy>=1.23,<2"') from exc
             from wlre.services.world.catalog_source_extractor import extract_catalog_source
             extractor = extract_catalog_source
         else:
             extractor = None
+        plan = plan_current_catalog(bindings)
         result, parsed = run_catalog_pipeline(
             plan, download=args.download, extractor=extractor,
             max_download_bytes=args.max_mib*1024*1024,
