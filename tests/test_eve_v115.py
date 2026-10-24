@@ -54,8 +54,8 @@ class EveTests(unittest.TestCase):
         """Unknown scene suffixes must be diagnosed, never silently skipped."""
         base = fixture()
         scene_size = struct.unpack_from('<I', base, 20)[0]
-        for trailer, expected in ((b'\\x00\\x00', 'True'),
-                                  (b'\\x00\\x01', 'False')):
+        for trailer, expected in ((bytes((0, 0)), 'True'),
+                                  (bytes((0, 1)), 'False')):
             with self.subTest(trailer=trailer):
                 raw = bytearray(base + trailer)
                 struct.pack_into('<I', raw, 20, scene_size + len(trailer))
