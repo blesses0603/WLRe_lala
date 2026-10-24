@@ -1,6 +1,6 @@
-# WLRe:LaLa | v0.6.0 開發版
+# WLRe:LaLa | v0.6.1 開發候選（PR #56，未發布）
 
-> **版本狀態（2026-10-23）**：目前為 **v0.6.0 開發候選，尚未發行正式安裝包**；官方 MainPackage／DataPackage 資料預設基準已調整為 **1275**，正式資料可由已驗證的官方 Bundle 自動重建，若資源不齊或格式不符仍會拒絕登入。現有封包邏輯仍需正式服驗收，不能把官方資源版本相符等同於所有功能完成相容。最近正式 Release 為 [v0.5.0](https://github.com/blesses0603/WLRe_lala/releases/tag/v0.5.0)。
+> **版本狀態（2026-10-25）**：目前 main 仍為 **v0.6.0**；本 PR 為 **v0.6.1 開發候選，尚未合併或發行正式安裝包**。開發候選的編譯成品必須另外安裝／以原始碼執行，不會出現在「GitHub 正式 Release 更新」清單。官方 MainPackage／DataPackage 資料預設基準已調整為 **1275**，正式資料可由已驗證的官方 Bundle 自動重建，若資源不齊或格式不符仍會拒絕登入。現有封包邏輯仍需正式服驗收，不能把官方資源版本相符等同於所有功能完成相容。最近正式 Release 為 [v0.5.0](https://github.com/blesses0603/WLRe_lala/releases/tag/v0.5.0)。
 
 **WLRe:LaLa** 是《飄流幻境 RE：星之方舟》的 Python 桌面客戶端工具，使用 Tkinter／ttk、遊戲封包與內建資源。桌面版獨立維護，Android 不在本倉庫的建置範圍內。
 
