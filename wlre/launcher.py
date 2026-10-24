@@ -84,7 +84,7 @@ def main():
         python = ensure_extractor_environment(python, root)
         try:
             subprocess.run([str(python), '-m',
-                            'wlre.services.world.launcher_catalog'], cwd=root,
+                            'wlre.services.world.launcher_catalog', '--progress'], cwd=root,
                            check=False)
         except OSError:
             print('Launcher 資源候選準備無法啟動；登入限制維持。',
