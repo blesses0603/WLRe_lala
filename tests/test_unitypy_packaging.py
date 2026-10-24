@@ -37,8 +37,9 @@ class ExtractorBuildContractTests(unittest.TestCase):
             '.github/workflows/desktop-packaging.yml',
             '.github/workflows/release-windows.yml',
         ):
-            self.assertIn('requirements-extractor.txt',
-                          (ROOT / path).read_text(encoding='utf-8'))
+            content = (ROOT / path).read_text(encoding='utf-8')
+            self.assertIn('requirements-extractor.txt', content)
+            self.assertIn('WLRE_DISABLE_AUTO_CATALOG:', content)
         source = (ROOT / '.github/workflows/test.yml').read_text(encoding='utf-8')
         self.assertIn('python WLRE_Client.py --self-test-unityfs', source)
         win_source = (ROOT / 'tools/build/build_nuitka.py').read_text(encoding='utf-8')
