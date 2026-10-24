@@ -38,8 +38,10 @@ class EveTests(unittest.TestCase):
 
     def test_reject_unknown_revision(self):
         raw=bytearray(fixture());raw[26:28]=u16(116)
-        with self.assertRaisesRegex(EveDecodeError, 'Unsupported Eve'):
+        with self.assertRaisesRegex(EveDecodeError, 'Unsupported Eve') as raised:
             derive_eve_index(bytes(raw),'EventData.NewNpc')
+        self.assertIn('場景 500', str(raised.exception))
+        self.assertIn('偏移 24', str(raised.exception))
 
     def test_reject_size_and_overlap(self):
         raw=bytearray(fixture());raw[20:24]=u32(999999)
