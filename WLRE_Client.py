@@ -17,6 +17,36 @@ def self_test():
     return 0
 
 
+def self_test_unityfs():
+    """Verify the compiled executable ships UnityPy and its native codecs.
+
+    This runs offline with no game files, user credentials or official CDN.
+    A successful result proves bundled module/codec load, NOT actual game
+    Bundle decoding or compatibility with future Unity versions.
+    """
+    import UnityPy
+    import brotli
+    import lz4.block
+    from wlre.services.world.unity_textasset import extract_textasset
+    from wlre.services.world.catalog_source_extractor import extract_catalog_source
+    from wlre.services.world.eve_v115 import derive_eve_index
+    from wlre.services.world.itemdata_v1 import parse_itemdata
+    from wlre.services.world.catalog_adapters import parse_feature
+    if not all(callable(x) for x in (UnityPy.load, extract_textasset,
+                                     extract_catalog_source, derive_eve_index,
+                                     parse_itemdata, parse_feature)):
+        raise RuntimeError('UnityFS/TextAsset 解包器在打包後缺少必要入口')
+    expected = b'LaLa native UnityFS codec check: offline only'
+    lz4_packed = lz4.block.compress(expected)
+    if lz4.block.decompress(lz4_packed) != expected:
+        raise RuntimeError('Bundled LZ4 decoder failed')
+    brotli_packed = brotli.compress(expected)
+    if brotli.decompress(brotli_packed) != expected:
+        raise RuntimeError('Bundled Brotli decoder failed')
+    print('UnityFS runtime self-test passed: UnityPy, LZ4, Brotli, adapters')
+    return 0
+
+
 def smoke_test_gui():
     """Exercise bundled Tcl/Tk and the dashboard without any game connection."""
     self_test()
@@ -55,6 +85,7 @@ def main():
     if sys.stderr is None:sys.stderr=log.open('a',encoding='utf8',buffering=1)
     try:
         if '--smoke-test-gui' in sys.argv:return smoke_test_gui()
+        if '--self-test-unityfs' in sys.argv:return self_test_unityfs()
         if '--self-test' in sys.argv:return self_test()
         if os.name=='nt':
             import ctypes
@@ -65,7 +96,7 @@ def main():
     except Exception:
         details=traceback.format_exc()
         with log.open('a',encoding='utf8') as stream:stream.write(details+'\n')
-        if not any(flag in sys.argv for flag in ('--self-test','--smoke-test-gui')) and os.name=='nt':
+        if not any(flag in sys.argv for flag in ('--self-test','--smoke-test-gui','--self-test-unityfs')) and os.name=='nt':
             import ctypes
             ctypes.windll.user32.MessageBoxW(None,'程式啟動失敗，詳細記錄：\n'+str(log),'飄流Re:LaLa  =By赤寧=',0x10)
         elif sys.stderr:print(details,file=sys.stderr)
