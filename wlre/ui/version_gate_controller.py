@@ -61,6 +61,16 @@ class VersionGateController:
                 if receipt is not None else None)
         if gaps is not None:
             self._launcher_catalog_status += '｜' + summarize(gaps)
+        if receipt is not None and receipt.get('status') == 'review_required':
+            from wlre.services.world.resource_rebuilder import read_inventory_summary
+            raw_inventory = read_inventory_summary(receipt['catalog_key'])
+            if raw_inventory is not None:
+                self._launcher_catalog_status += (
+                    f"｜原始資源 {raw_inventory['asset_collected']}/"
+                    f"{raw_inventory['asset_total']}，"
+                    f"重用 {raw_inventory['existing_or_cached_reused']}")
+            # This number is a display-only derived candidate, NOT evidence
+            # that the missing pinned formal indexes are available.
 
     def show_version_check(self):
         """Compact, single-page version review before exposing credentials.
