@@ -127,7 +127,11 @@ class CoopLifecycle(unittest.TestCase):
             self.assertIn('coop_state source=instance_reward_status', logged)
             self.assertIn('reward_known=1 open_reward=1', logged)
             self.assertNotIn('PRIVATE-CHARACTER', logged)
-            self.assertNotIn('678', logged)
+            # 日誌時間戳的毫秒可能剛好是 678；只檢查被匿名化的事件內容。
+            trace_lines = [line.partition('coop_state ')[2] for line in logged.splitlines()
+                           if 'coop_state ' in line]
+            self.assertEqual(len(trace_lines), 1)
+            self.assertNotIn('678', trace_lines[0])
 
     def test_wire_reward_then_first_room_info_survives_and_trace_is_present(self):
         connection = Mock()
