@@ -160,4 +160,6 @@ py -m tools.plan_official_catalog --download --parse
 - `WLRE_Client.py`：編譯版自身即啟動器，不依賴其他 Python；進入 GUI 前呼叫同一個資源服務。`--self-test`／`--smoke-test-gui` 不接觸官方 CDN。
 - `wlre/services/world/launcher_catalog.py`：單一資源準備入口、私人只讀候選收據、錯誤隔離。收據不能授權遊戲登入或封包。
 - `wlre/ui/version_gate_controller.py`：官方版本相容性與登入安全閘門，以及 Launcher 收據顯示，**不執行 Bundle 下載與解包**。
-- 此階段資源準備是同步啟動前程序，若官方 CDN 網路緩慢可能延後主畫面顯示；未加入下載進度 UI，仍待實際使用者驗收與後續 UX 改良。
+- **Launcher 進度畫面（PR #56）**：原始碼版 `wlre.launcher` 會啟動 `launcher_catalog --progress`，Nuitka EXE／APP 則在同一程序呼叫 `wlre.launcher_progress.run_with_progress(prepare_on_launch)`。使用既有 Tkinter，資源作業放在獨立執行緒，進度透過 Queue 在 GUI 主執行緒顯示；完成／失敗後自動關閉，才開啟 LaLa 正式主畫面。
+- 進度事件由實際業務流程發出：官方版本、DataPackage／MainPackage Manifest、Bundle 定位、同步總量、**已完成 MD5／CRC 校驗的 Bundle 筆數／總數**、NPC／商店／製作／場景解包、候選 ZIP 寫入與快取命中。校驗單檔完成才增加計數，未估算下載速度或虛構百分比；下載時如果官方回應較慢，顯示不定進度條。
+- **限制**：原始碼版首次安裝 Pillow／UnityPy 的 Python 私人環境屬進度畫面出現前的準備，CLI 仍會顯示簡短提示；大量下載須等待完成，暫不提供中途略過與可恢復的使用者中斷。官方 CDN 斷線時以不具授權效果的失敗結果繼續原有版本檢查；沒有螢幕的 Linux 環境以純文字階段訊息降級。正式 EXE／APP 與實際 Bundle 仍需個別驗收。
