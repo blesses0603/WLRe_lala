@@ -1,6 +1,6 @@
 # WLRe:LaLa | v0.6.0 開發版
 
-> **版本狀態（2026-10-23）**：目前為 **v0.6.0 開發候選，尚未發行正式安裝包**；官方 MainPackage／DataPackage 資料預設基準已調整為 **1275**，需另外安裝通過驗證的 1275 資料 ZIP 才能登入。現有封包邏輯仍需正式服驗收，不能把官方資源版本相符等同於所有功能完成相容。最近正式 Release 為 [v0.5.0](https://github.com/blesses0603/WLRe_lala/releases/tag/v0.5.0)。
+> **版本狀態（2026-10-23）**：目前為 **v0.6.0 開發候選，尚未發行正式安裝包**；官方 MainPackage／DataPackage 資料預設基準已調整為 **1275**，正式資料可由已驗證的官方 Bundle 自動重建，若資源不齊或格式不符仍會拒絕登入。現有封包邏輯仍需正式服驗收，不能把官方資源版本相符等同於所有功能完成相容。最近正式 Release 為 [v0.5.0](https://github.com/blesses0603/WLRe_lala/releases/tag/v0.5.0)。
 
 **WLRe:LaLa** 是《飄流幻境 RE：星之方舟》的 Python 桌面客戶端工具，使用 Tkinter／ttk、遊戲封包與內建資源。桌面版獨立維護，Android 不在本倉庫的建置範圍內。
 
@@ -8,7 +8,7 @@
 
 > **官方 Manifest 來源決策（PR #56）**：DataPackage／MainPackage 各僅以 `.version`、`.bytes`、`.hash` 作為版本與資源清單的必要來源；**不下載、不依賴**官方 `.json`、`.report`。`ResourcePath_PC.dat` 仍供偵測資料路徑與 DataVer，對應的 `.bundle` 依實際功能需求增量下載與校驗。程式內自行建立的 `.json` 索引／收據屬於本機衍生資料，不是額外要求下載的官方 `.json`。
 
-> **PR #56 自動相容性判定（v0.6.1 開發候選）**：Launcher 下載並校驗官方 Manifest／Bundle 後，會針對 NPC、商店、製作與場景執行第二層版本身分、Schema、來源 SHA-256、長度與筆數判定；快取命中也必須重新核對來源。新版私有 `compatibility_report.json` 與 `candidate.zip` SHA-256 綁定，主程式僅顯示唯讀狀態。**資料相容不代表遊戲協定相容，也不會自動解除登入或交易限制**。詳細設計見 [自動相容性判定](docs/AUTO_COMPATIBILITY.md)。正式 EXE 打包與未取得的官方 Bundle 實檔驗收暫緩。
+> **PR #56 已審核 1275 Bundle 正式 Runtime 接入（開發測試中）**：LaLa 不再把手動安裝 `1275_DataCatalog.zip`／`1275_EveNpcIndex.zip` 當成唯一可用來源。若 Launcher 已從官方 `.version`、`.bytes`、`.hash` 驗證完整版本與所需 Bundle，主程式可用 `bundle_runtime_1275.py` 直接解析 NPC／互動、物品、對話、文字、製作、場景與門事件，交由既有 Runtime 與 `recipe_plan` 使用。仍須對兩份 Manifest 做固定 SHA-256、逐 Bundle MD5/CRC、Eve 固定 SHA、完整 Schema 與 1032 配方交叉校驗；缺少任一來源就拒絕啟用，不自動解鎖未驗收協定。真實伺服器 E2E 與打包安裝尚待驗收，詳見 `docs/AUTO_COMPATIBILITY.md`。\n\n> **PR #56 自動相容性判定（v0.6.1 開發候選）**：Launcher 下載並校驗官方 Manifest／Bundle 後，會針對 NPC、商店、製作與場景執行第二層版本身分、Schema、來源 SHA-256、長度與筆數判定；快取命中也必須重新核對來源。新版私有 `compatibility_report.json` 與 `candidate.zip` SHA-256 綁定，主程式僅顯示唯讀狀態。**資料相容不代表遊戲協定相容，也不會自動解除登入或交易限制**。詳細設計見 [自動相容性判定](docs/AUTO_COMPATIBILITY.md)。正式 EXE 打包與未取得的官方 Bundle 實檔驗收暫緩。
 
 > **Launcher 資源缺口自動診斷**：每次啟動會以唯讀方式盤點完整 1275 正式資料是否缺少 `1275_DataCatalog.zip`、`1275_EveNpcIndex.zip`，若檔案存在則以固定 SHA-256／Schema 核對內部資料。登入前視窗顯示缺少或損壞的來源；詳細清單可執行 `py -m tools.diagnose_lala_resources`，或加上 `--json`。缺口檢測不是把未驗證候選資料直接提升為正式遊戲資源。## v0.6.0 更新重點（2026-10-23，1275 資源預設基準，開發候選）
 > **Launcher 既有檔案整合與自動續補（PR #56）**：同步 1275 四類必要資料後，自動依當次官方 DataPackage Manifest 盤點全部原始 `.bytes`，重用**現存且校驗通過**的正式表格／索引與私人 Bundle 快取，缺少時從官方驗證下載（每輪額外上限 4 Bundle／16 MiB）；結果保存在版本化私有 `verified_raw_inventory.zip`，下次啟動可續補。Eve、ItemData_C、TalkData_C 若符合已審核格式則另產生未核准的唯讀候選索引。**全量原始資料完成不代表登入核准**；正式雙 ZIP 僅在擁有原版固定 SHA Manifest 且所有檔案逐項通過後才可安全組裝並交由原有載入器驗證。詳見 [自動相容性與補建規則](docs/AUTO_COMPATIBILITY.md)。
