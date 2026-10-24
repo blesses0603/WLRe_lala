@@ -36,7 +36,7 @@ class AutoCatalogUiTests(unittest.TestCase):
         VersionGateController._drain_auto_catalog_messages(c)
         self.assertIn('待相容性審核', c._auto_catalog_status)
         self.assertFalse(c._auto_catalog_busy)
-        self.assertFalse(hasattr(c, '_version_gate_entry_approved'))
+        self.assertNotIn('_version_gate_entry_approved', c.__dict__)
 
     def test_failed_candidate_preserves_login_gate(self):
         c = self.stub()
