@@ -104,6 +104,7 @@ class CraftingBrowser(CraftingQueueMixin):
         self.state=self.panel.state;c=self.state.get('crafting',{})
         capacity=5 if any(v['item_id']==39050 and v.get('status')==0 for v in self.state.get('furniture',{}).get('items',{}).values()) else 3
         self.queue_label.set(f"製作排程：{len(c.get('queue',{}))}/{capacity}")
+        self.source_label.set(feature_note('crafting'))
         self.favorite_count.set(f'我的最愛：{len(self.favorite_store.ids)}/100'+('' if self.embedded else '（儲存於本機）'))
         tool_ids=sorted({r['tool_id'] for r in RECIPES.values() if confirmed_unlocked(r)})
         signature=(self.only_tools.get(),room_known(self.state),tuple((sid,tool_status(self.state,sid)) for sid in tool_ids))
