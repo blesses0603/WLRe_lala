@@ -280,6 +280,43 @@ class AutoCatalogTests(unittest.TestCase):
         self.assertNotIn('private.bundle', str(thrown.exception))
         self.assertFalse(self.candidates.exists())
 
+    def test_optional_raw_rebuild_respects_remaining_launcher_quota(self):
+        from wlre.services.world.auto_catalog import _rebuild_known_resources
+        events = []
+        example = {'asset_total': 190, 'asset_collected': 10,
+                   'complete_raw_assets': False,
+                   'formal_approved': False, 'can_send_packets': False,
+                   'assets_ready': False}
+        with patch('wlre.services.world.resource_rebuilder.rebuild_raw_resources',
+                   return_value=example) as rebuild:
+            result = _rebuild_known_resources(
+                {'download_bytes': 8 * 1024 * 1024, 'downloads_required': 2},
+                identity=object(), manifests={'DataPackage': object()},
+                bundle_root=None, candidate_root=None,
+                max_download_bytes=12 * 1024 * 1024, max_downloads=3,
+                opener=None,
+                progress=lambda phase, info: events.append((phase, info)))
+        self.assertEqual(result['status'], 'partial_raw')
+        self.assertEqual(rebuild.call_args.kwargs['max_downloads'], 1)
+        self.assertEqual(rebuild.call_args.kwargs['max_download_bytes'],
+                         4 * 1024 * 1024)
+        self.assertEqual([phase for phase, _ in events],
+                         ['raw_rebuild', 'raw_rebuild_ready'])
+        self.assertFalse(result['assets_ready'])
+
+    def test_optional_rebuild_error_does_not_approve_candidate(self):
+        from wlre.services.world.auto_catalog import _rebuild_known_resources
+        with patch('wlre.services.world.resource_rebuilder.rebuild_raw_resources',
+                   side_effect=ValueError('format changed')):
+            result = _rebuild_known_resources(
+                {'download_bytes': 0, 'downloads_required': 0},
+                identity=object(), manifests={'DataPackage': object()},
+                bundle_root=None, candidate_root=None,
+                max_download_bytes=0, max_downloads=0,
+                opener=None, progress=None)
+        self.assertEqual(result['status'], 'pending_error')
+        self.assertFalse(result['can_send_packets'])
+
     def test_preview_avoids_extraction_and_writes(self):
         result = run_auto_catalog(**self.kwargs(download=False, parse=False))
         self.assertEqual(result['status'], 'preview')
