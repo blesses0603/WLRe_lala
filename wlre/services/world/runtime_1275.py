@@ -81,15 +81,21 @@ def ready():
         return True, '1275 正式資料通過來源校驗；遊戲協定仍須獨立驗收'
     except (Runtime1275Unavailable, OSError, ValueError) as exc:
         message = str(exc)
-        if '缺少已驗證的 1275 LaLa 資源' in message:
+        if isinstance(exc, Runtime1275Unavailable):
+            from wlre.services.world.resource_gap_diagnostics import (
+                diagnose_resources, summarize)
             from wlre.services.world.launcher_catalog import read_launcher_status
-            receipt = read_launcher_status()
-            if (receipt is not None
-                    and receipt.get('data_compatibility') == 'compatible'):
-                message = (
-                    'Launcher 四類資料已通過相容性檢查，但尚缺完整且獨立校驗的 '
-                    '1275 DataCatalog／EveNpcIndex 正式來源（含對話、完整物品、'
-                    '門事件等資料）；仍禁止登入。')
+            # Exact, read-only missing-file diagnosis. A good diagnostic
+            # is NEVER enough to authorize any gameplay command.
+            try:
+                gaps = diagnose_resources()
+                if not gaps['formal_ready']:
+                    message = summarize(gaps)
+                    receipt = read_launcher_status()
+                    if receipt is not None and receipt.get('data_compatibility') == 'compatible':
+                        message = 'Launcher 四類候選資料格式相容；' + message
+            except (OSError, ValueError):
+                pass
         return False, message
 
 
