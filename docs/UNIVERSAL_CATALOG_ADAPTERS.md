@@ -131,3 +131,25 @@ python -m unittest tests.test_unity_textasset tests.test_eve_v115 tests.test_cat
 ```
 
 補充：`tests/test_itemdata_v1.py` 驗證合成商品名稱、售價、交易限制、重複 ID、Unicode 與截斷資料拒絕；`tests/test_catalog_source_extractor.py` 驗證 Eve 商品 ID 與 ItemData 資料的離線關聯。解析結果仍只供查看，沒有任何交易指令。
+
+## 第四階段：LaLa 自動處理官方資源（免手動 bindings.json）
+
+**一般玩家不用建立 `C:\path\outside\repo\bindings.json`。** 原路徑只是舊版手動／開發者來源契約的示範，不是真正的 Windows 檔案。PR #56 現新增零設定的 `wlre.services.world.auto_catalog.run_auto_catalog`：
+
+1. 由官方 `ResourcePath_PC.dat`、兩包 `.version` 及各自驗證過的 Manifest 判定獨立完整版本與 64 位元十六進位的 catalog key。
+2. 按目前**已知、確切**的 `Assets/ResourcesBuild/Data/{Eve,ItemData_C,SmithData_C,ScenesData_C}.bytes` AssetPath 定位必要 Bundle 與全部相依。只支援可明確對上 Manifest 的既有路徑；未來改名或格式變更時，不模糊比對、不中途默認相容。
+3. 在每次背景執行的總下載上限（預設 64 MiB／32 檔，含兩個 Package）內下載／重用 Bundle，逐個核對官方大小、MD5 與 CRC；校驗失敗則拒絕解析。
+4. 使用 Nuitka 已隨附的 UnityPy 解包 TextAsset，依已審核的 Eve v115、ItemData、Smith、Scenes 格式產生四項來源索引，並通過資料形狀、長度與筆數檢查。SHA-256 在經過來源驗證後自動計算，**不需玩家自己提供 Hash**。
+5. 所有四項成功才以 ZIP 格式寫入使用者私有資料夾 `LOCALAPPDATA\WLRE_LaLa\official_sync\derived_catalogs\<catalog_key>\candidate.zip`。ZIP 包含四項衍生來源與 `candidate.json`，有版號、來源雜湊、筆數與明確 `approved=false`。覆寫採同資料夾暫存、讀回驗證與原子替換，不寫 GitHub 或遊戲資源目錄。
+6. 登入前版本視窗自動在背景啟動此流程，回報下載／驗證結果。重查或來源異常時不允許舊作業影響新狀態。**本流程不改變正式登入閘門**；候選資料仍屬「等待版本相容性審核」，不能因自己算出的 SHA 正確就啟用交易、移動或新版本登入。
+
+開發者若要單獨檢查自動流程（無須 --bindings）：
+
+```powershell
+py -m tools.plan_official_catalog
+py -m tools.plan_official_catalog --download --parse
+```
+
+一般使用者只需開啟已完成原生打包與驗收的 LaLa，主程式會在版本檢查時背景準備候選資料，不用執行 PowerShell。舊版 `--bindings 私人檔案` 仍提供專家相容用途，但不再是預設方式。
+
+**重要：** 此版本尚未在官方 1275 真實 Bundle 上完成端到端解包驗收。新版候選不等同於 LaLa 實際 NPC 互動、商店購買、製作封包與導航功能的相容確認；尚需官方格式及伺服器驗收，不能直接將 `assets_ready` 改為 True。
