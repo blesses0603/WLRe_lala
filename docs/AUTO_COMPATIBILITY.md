@@ -209,3 +209,22 @@ py -m unittest -v tests.test_resource_classification
 ~~~powershell
 py -m unittest -v tests.test_resource_classification tests.test_feature_resource_index
 ~~~
+
+
+## 下一階段：1275 正式資料實際接入（NPC／背包／製作／遠征）
+
+這階段不再只根據 Manifest 檔名分類推斷功能，補上正式來源的逐表解析與交叉校驗。
+
+- **遠征正式來源：**新增 wlre.services.expedition.data.load_verified_1275_catalog()。先核對 1275 正式 Runtime，再對 1275_DataCatalog.zip 完整驗證固定 Manifest、160 張原始表及逐檔 SHA。不能以路徑分類或自行計算的候選 Hash 解鎖。
+- **遠征內容：**讀取 AdventureData_C、AdventureLvData_C、NpcData_C、NpcCareerData_C，前兩張表需通過已審核的跨版相同 SHA-256；任務 260、等級 10、NPC 7,561 筆。名稱與地區一律使用正式 1275 TextData_C 索引，不使用 1262 的舊名稱作替代。
+- **遠征原功能：**遠征 UI 與一般自動派遣服務採相同正式版來源。正式資料缺漏或不相容時只顯示缺口，阻止自動派遣；原有伺服器狀態機、獎勵確認及封包格式不改動。明確注入的測試 catalog 不受此預設載入器影響。
+- **背包 ItemData：**新增 verified_item_metadata()，只從正式驗證 1275 ItemData_C 讀取價格、販售限制、需求等級與名稱；背包數量、格位、保留量仍由伺服器同步。新的詳情不能把內建 1262 HP/SP 效果冒充已驗證的新版屬性。
+- **NPC／製作：**NPC 商店原有正式商品索引與禁止未驗證交易的規則保留；製作依現有 runtime_1275.ready() 成功時的配方原子切換，並由前階段加入的正式物品名稱查詢顯示材料／設備。沒有完整來源不會用分類候選取代正式配方。
+- **限制：**現階段道具效果、遠征正式伺服器派遣、NPC 買賣與製作封包尚未完成 1275 E2E。正式物品資料缺少新版效果欄位時，背包詳情不以歷史效果啟用快捷補給。其他補給和戰鬥命令尚須獨立驗收，不表示四個模組全面完成切換。
+
+回歸測試：
+~~~powershell
+py -m unittest -v tests.test_verified_expedition_1275 tests.test_feature_resource_index tests.test_expedition_service_modules tests.test_bag_grid tests.test_preview_1275
+~~~
+
+不得修改桌面／Android 正式版本宣告、合併 main 或放寬登入安全閘門。無真實完整 1275 正式檔案時，只能以 Mock/模擬資料驗證程式流程，不能宣稱官方實檔或實機已驗收。
