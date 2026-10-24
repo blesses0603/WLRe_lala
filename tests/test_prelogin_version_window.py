@@ -70,6 +70,16 @@ class PreloginVersionWindowTests(unittest.TestCase):
         self.assertEqual(self.app.login_window.state(), "withdrawn")
         self.assertFalse(self.app._version_gate_entry_approved)
 
+    def test_same_official_version_with_missing_formal_assets_is_not_mislabeled_update(self):
+        response = official_result('1275', '1275', 'blocked')
+        response['remote']['status'] = 'same_resources'
+        response['message'] = ('LaLa 1275 缺少已校驗的 NPC／商店／製作／場景資料；'
+                               '仍禁止登入。')
+        self.deliver(response)
+        self.assertIn('正式資源尚未就緒', self.app._version_heading.get())
+        self.assertNotIn('官方版本異動', self.app._version_heading.get())
+        self.assertTrue(self.app._version_continue_button.instate(['disabled']))
+
     def test_confirmed_online_1262_requires_explicit_continue(self):
         self.deliver(official_result())
         self.assertEqual(self.app.login_window.state(), "withdrawn")
