@@ -302,9 +302,27 @@ def _derive_candidate_indexes(payloads, *, revision):
 
 
 def _exact_reviewed_manifest(formal_base):
-    """Recover only the release-pinned manifest bytes from existing archives."""
+    """Find the independent, *SHA-pinned* formal manifest, never self-sign one.
+
+    A future reviewed release can ship its pinned manifest as a normal LaLa
+    resource. Existing fully checked ZIPs remain supported for migration.
+    Neither the official YooAsset Manifest nor a candidate inventory hash
+    can substitute for the independent formal 1275 manifest digest.
+    """
     from wlre.services.world.runtime_1275 import DATA_FILE, FOLDER
-    from wlre.services.world.game_data_1275 import read_manifest
+    from wlre.services.world.game_data_1275 import (
+        read_manifest, MANIFEST_SHA256, MAX_MANIFEST, _valid_manifest)
+    from wlre.paths import RESOURCE_ROOT
+    bundled = RESOURCE_ROOT / 'pins' / '1275_DataCatalog.manifest.json'
+    try:
+        if (bundled.is_file() and not bundled.is_symlink()
+                and 0 < bundled.stat().st_size <= MAX_MANIFEST):
+            raw = bundled.read_bytes()
+            if hashlib.sha256(raw).hexdigest() == MANIFEST_SHA256:
+                _valid_manifest(json.loads(raw.decode('utf-8')))
+                return raw
+    except (OSError, ValueError, KeyError, TypeError, UnicodeError):
+        pass
     for root in (Path(formal_base) / FOLDER,
                  Path(formal_base) / 'official_sync' / 'reviewed_full_1275'):
         path = root / DATA_FILE
