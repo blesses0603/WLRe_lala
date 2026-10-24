@@ -169,6 +169,45 @@ def _store_candidate(identity, bytes_by_feature, parsed, *, sources, candidate_r
     return metadata, assessment
 
 
+
+def _rebuild_known_resources(result, *, identity, manifests, bundle_root,
+                             candidate_root, max_download_bytes,
+                             max_downloads, opener, progress):
+    """Best-effort private raw asset sync; never implies official approval."""
+    from wlre.services.world.resource_rebuilder import (
+        rebuild_raw_resources, MAX_PER_LAUNCH_BYTES, MAX_PER_LAUNCH_DOWNLOADS)
+    budget_bytes = max(0, min(
+        MAX_PER_LAUNCH_BYTES, max_download_bytes - result['download_bytes']))
+    budget_files = max(0, min(
+        MAX_PER_LAUNCH_DOWNLOADS, max_downloads - result['downloads_required']))
+    if progress is not None:
+        progress('raw_rebuild', {})
+    try:
+        summary = rebuild_raw_resources(
+            identity, manifests['DataPackage'], bundle_root=bundle_root,
+            candidate_root=candidate_root, max_downloads=budget_files,
+            max_download_bytes=budget_bytes,
+            fetcher=(None if opener is None else
+                     lambda spec, *, cache_root: __import__(
+                         'wlre.services.official_bundle_download',
+                         fromlist=['fetch_bundle']).fetch_bundle(
+                             spec, cache_root=cache_root, opener=opener)),
+            progress=progress)
+    except Exception:
+        # Optional raw inventory does not undo the already validated four
+        # feature candidate; keep missing formal data blocked by runtime gate.
+        if progress is not None:
+            progress('raw_rebuild_unavailable', {})
+        return { 'status': 'pending_error', 'formal_approved': False,
+                 'assets_ready': False, 'can_send_packets': False }
+    if progress is not None:
+        progress('raw_rebuild_ready', {
+            'completed': summary['asset_collected'],
+            'total': summary['asset_total']})
+    return {**summary, 'status': (
+        'complete_raw_only' if summary['complete_raw_assets']
+        else 'partial_raw')}
+
 def run_auto_catalog(*, download=True, parse=True, observe=None, retrieve=None,
                      previous_finder=None, extractor=None,
                      manifest_root=None, bundle_root=None, candidate_root=None,
@@ -187,6 +226,7 @@ def run_auto_catalog(*, download=True, parse=True, observe=None, retrieve=None,
         if progress is not None:
             progress(phase, details)
 
+    default_extractor = extractor is None
     if parse and not download:
         raise AutoCatalogError('Cannot parse before explicit verified Bundle sync')
     if (type(max_download_bytes) is not int or max_download_bytes < 0
@@ -244,12 +284,19 @@ def run_auto_catalog(*, download=True, parse=True, observe=None, retrieve=None,
                                        candidate_root=candidate_root)
             emit('cached_candidate')
             emit('compatibility_ready')
-            return {**result, 'status': 'review_required',
-                    'cache': 'verified_private_candidate',
-                    'data_compatibility': assessment['data_compatibility'],
-                    'protocol_compatibility': assessment['protocol_compatibility'],
-                    'record_counts': {f: assessment['features'][f]['record_count']
-                                      for f in FEATURES}}
+            result = {**result, 'status': 'review_required',
+                      'cache': 'verified_private_candidate',
+                      'data_compatibility': assessment['data_compatibility'],
+                      'protocol_compatibility': assessment['protocol_compatibility'],
+                      'record_counts': {f: assessment['features'][f]['record_count']
+                                        for f in FEATURES}}
+            if default_extractor:
+                result['resource_rebuild'] = _rebuild_known_resources(
+                    result, identity=plan.identity, manifests=manifests,
+                    bundle_root=bundle_root, candidate_root=candidate_root,
+                    max_download_bytes=max_download_bytes,
+                    max_downloads=max_downloads, opener=opener, progress=progress)
+            return result
     if not download:
         emit('preview_ready')
         return result
@@ -339,8 +386,15 @@ def run_auto_catalog(*, download=True, parse=True, observe=None, retrieve=None,
     write_compatibility_report(plan.identity, assessment, candidate_root=candidate_root)
     emit('candidate_ready')
     emit('compatibility_ready')
-    return {**result, 'status': 'review_required', 'cache': 'new_private_candidate',
-            'data_compatibility': assessment['data_compatibility'],
-            'protocol_compatibility': assessment['protocol_compatibility'],
-            'record_counts': {f: assessment['features'][f]['record_count']
-                              for f in FEATURES}}
+    result = {**result, 'status': 'review_required', 'cache': 'new_private_candidate',
+              'data_compatibility': assessment['data_compatibility'],
+              'protocol_compatibility': assessment['protocol_compatibility'],
+              'record_counts': {f: assessment['features'][f]['record_count']
+                                for f in FEATURES}}
+    if default_extractor:
+        result['resource_rebuild'] = _rebuild_known_resources(
+            result, identity=plan.identity, manifests=manifests,
+            bundle_root=bundle_root, candidate_root=candidate_root,
+            max_download_bytes=max_download_bytes,
+            max_downloads=max_downloads, opener=opener, progress=progress)
+    return result
