@@ -46,7 +46,7 @@ class DependencyCache(unittest.TestCase):
     def test_extractor_requirement_change_invalidates_cache(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);environment=root/'env';environment.mkdir()
-            (root/'requirements-build.txt').write_text('-r requirements-ui.txt\\n-r requirements-extractor.txt')
+            (root/'requirements-build.txt').write_text('-r requirements-ui.txt\n-r requirements-extractor.txt')
             (root/'requirements-ui.txt').write_text('Pillow>=10')
             (root/'requirements-extractor.txt').write_text('UnityPy==1.25.4')
             with patch.object(build_nuitka,'ROOT',root),patch.object(build_nuitka,'run_logged') as run:
