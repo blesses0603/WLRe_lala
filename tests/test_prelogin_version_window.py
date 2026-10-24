@@ -70,6 +70,16 @@ class PreloginVersionWindowTests(unittest.TestCase):
         self.assertEqual(self.app.login_window.state(), "withdrawn")
         self.assertFalse(self.app._version_gate_entry_approved)
 
+    def test_same_official_version_with_missing_formal_assets_is_not_mislabeled_update(self):
+        response = official_result('1275', '1275', 'blocked')
+        response['remote']['status'] = 'same_resources'
+        response['message'] = ('LaLa 1275 缺少已校驗的 NPC／商店／製作／場景資料；'
+                               '仍禁止登入。')
+        self.deliver(response)
+        self.assertIn('正式資源尚未就緒', self.app._version_heading.get())
+        self.assertNotIn('官方版本異動', self.app._version_heading.get())
+        self.assertTrue(self.app._version_continue_button.instate(['disabled']))
+
     def test_confirmed_online_1262_requires_explicit_continue(self):
         self.deliver(official_result())
         self.assertEqual(self.app.login_window.state(), "withdrawn")
@@ -133,7 +143,7 @@ class PreloginVersionWindowTests(unittest.TestCase):
             for child in self.app.version_window.winfo_children()
         ))
 
-    def test_compact_version_window_has_no_scrollbars_or_blank_canvas(self):
+    def test_responsive_version_window_has_no_scrollbars_or_blank_canvas(self):
         self.deliver(official_result("1275", "1275", "blocked"))
         self.root.update()
         window = self.app.version_window
@@ -148,7 +158,10 @@ class PreloginVersionWindowTests(unittest.TestCase):
         self.assertFalse(any(isinstance(w, tk.Canvas) for w in widgets))
         self.assertFalse(any(isinstance(w, __import__("tkinter").ttk.Scrollbar)
                              for w in widgets))
-        self.assertLessEqual(window.winfo_height(), 530)
+        self.assertGreaterEqual(window.winfo_height(), min(590, window.winfo_screenheight() - 24))
+        self.assertLessEqual(window.winfo_height(), min(710, window.winfo_screenheight() - 24))
+        self.assertTrue(window.resizable()[0])
+        self.assertTrue(window.resizable()[1])
         self.assertTrue(self.app._version_release_panel.winfo_ismapped())
         self.assertTrue(self.app._version_continue_button.winfo_ismapped())
         self.assertTrue(self.app._lala_download_button.winfo_ismapped())
@@ -213,6 +226,55 @@ class PreloginVersionWindowTests(unittest.TestCase):
             self.app._version_resource_panel.winfo_rooty())
         self.assertGreater(
             self.app._version_alert_panel.winfo_height(), 55)
+
+    def test_three_sections_and_buttons_keep_separate_vertical_space(self):
+        self.deliver(official_result("1275", "1275", "blocked"))
+        self.app.version_gate_text.set(
+            "1275 正式資源尚未就緒，候選資料未經安全驗證。" * 4)
+        self.app._version_remote.set(
+            "缺少 DataCatalog 與 NPC 正式索引，尚未允許登入。" * 5)
+        self.app._lala_release_text.set(
+            "LaLa v0.6.0 · GitHub Release 狀態已檢查；暫無更新。" * 2)
+        self.root.update()
+        alert = self.app._version_alert_panel
+        resource = self.app._version_resource_panel
+        release = self.app._version_release_panel
+        progress = self.app._version_progress
+        button = self.app._version_continue_button
+        self.assertLessEqual(
+            alert.winfo_rooty() + alert.winfo_height(),
+            resource.winfo_rooty())
+        self.assertLessEqual(
+            resource.winfo_rooty() + resource.winfo_height(),
+            release.winfo_rooty())
+        self.assertLessEqual(
+            release.winfo_rooty() + release.winfo_height(),
+            progress.winfo_rooty())
+        self.assertGreater(button.winfo_height(), 15)
+        self.assertLessEqual(
+            button.winfo_rooty() + button.winfo_height(),
+            self.app.version_window.winfo_rooty()
+            + self.app.version_window.winfo_height())
+
+    def test_resizing_reflows_every_long_text_label(self):
+        window = self.app.version_window
+        self.root.update()
+        before = self.app._version_release_label.cget("wraplength")
+        w = window.winfo_width()
+        h = window.winfo_height()
+        available = window.winfo_screenwidth() - 24
+        if available - w < 35:
+            self.skipTest("Viewport is already at its widest usable size")
+        window.geometry(f"{min(available, w + 80)}x{h}")
+        self.root.update()
+        self.assertGreater(
+            int(self.app._version_release_label.cget("wraplength")),
+            int(before))
+        self.assertEqual(
+            int(self.app._version_alert_message_label.cget("wraplength")),
+            int(self.app._version_alert_heading_label.cget("wraplength")))
+        self.assertEqual(len(self.app._version_resource_values), 5)
+        self.assertTrue(self.app._version_continue_button.winfo_ismapped())
 
     def test_reopen_revokes_previous_approval(self):
         self.deliver(official_result(status="unverified"))

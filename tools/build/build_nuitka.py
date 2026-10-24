@@ -33,7 +33,8 @@ def compiler_jobs(requested=None, cpu_count=None):
 def make_command(python,mode='standalone',root=ROOT,compiler='auto',diagnose_compiler=False,jobs=None):
     output=root/'dist_nuitka'/mode
     command=[str(python),'-m','nuitka','--mode='+mode,'--enable-plugin=tk-inter',
-             '--include-package=wlre','--windows-console-mode=disable',
+             '--include-package=wlre','--include-package=UnityPy',
+             '--include-package-data=UnityPy','--windows-console-mode=disable',
              '--windows-icon-from-ico='+str(root/'wlre/resources/assets/app.ico'),
              '--output-folder-name=WLRe_LaLa','--output-filename=WLRe_LaLa.exe','--output-dir='+str(output),
              '--report='+str(output/'compilation-report.xml'),'--assume-yes-for-downloads',
@@ -132,11 +133,12 @@ def prepare_environment(environment, log):
 def prepare_dependencies(python,environment,log,upgrade=False):
     """Reuse validated build dependencies; retry whenever validation fails."""
     requirements=ROOT/'requirements-build.txt'
-    signature=hashlib.sha256(requirements.read_bytes()+b'\0'+(ROOT/'requirements-ui.txt').read_bytes()).hexdigest()
+    signature=hashlib.sha256(b'\0'.join((ROOT/name).read_bytes() for name in
+        ('requirements-build.txt','requirements-ui.txt','requirements-extractor.txt'))).hexdigest()
     marker=environment/'dependencies.sha256'
     try:cached=marker.read_text(encoding='ascii')==signature
     except OSError:cached=False
-    probe=[str(python),'-c',"import tkinter; from PIL import Image,ImageTk,features; assert features.check('webp'); import nuitka"]
+    probe=[str(python),'-c',"import tkinter; from PIL import Image,ImageTk,features; assert features.check('webp'); import nuitka, UnityPy, lz4.block, brotli; assert callable(UnityPy.load)"]
     if cached and not upgrade:
         try:
             run_logged([str(python),'-m','pip','check'],log)
@@ -192,6 +194,8 @@ def main(argv=None):
         executable=(output/'WLRe_LaLa.exe') if args.mode=='onefile' else (output/'WLRe_LaLa.dist/WLRe_LaLa.exe')
         if not executable.is_file():raise RuntimeError('編譯未產生預期的 EXE：'+str(executable))
         run_logged([str(executable),'--self-test'],log)
+        # Verify bundled UnityPy and native decompression codecs without Python/pip.
+        run_logged([str(executable),'--self-test-unityfs'],log)
         # Exercise Tcl/Tk and dashboard construction in the compiled EXE too.
         run_logged([str(executable),'--smoke-test-gui'],log)
         print('\n打包及資源自檢完成：'+str(executable),flush=True)

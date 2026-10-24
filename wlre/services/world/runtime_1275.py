@@ -64,14 +64,40 @@ def active_runtime():
 
 def ready():
     try:
+        # Only the independently pinned full 1275 archives are allowed to
+        # supply runtime records. Candidate ZIPs NEVER replace these sources.
         source = active_runtime()
-        # All crafting views share this dictionary object; swap only after
-        # full 1275 ZIP validation, before allowing the login screen.
+        from wlre.services.world.formal_candidate_bridge import (
+            FormalBridgeError, inspect_launcher_candidate)
+        # A matching candidate is checked AGAIN against the full, release-
+        # pinned source before any shared recipe dict is touched. A mismatch
+        # must never partially change game state.
+        bridge = inspect_launcher_candidate(source)
         from wlre.services.items.crafting import activate_1275_recipes
         activate_1275_recipes(source)
-        return True, '1275 NPC／商店／製作／場景索引通過來源校驗'
+        if bridge['status'] == 'matches_formal_sources':
+            return True, ('1275 正式資料完整驗證，且 Launcher 四類候選與正式來源一致；'
+                          '遊戲協定仍須獨立驗收')
+        return True, '1275 正式資料通過來源校驗；遊戲協定仍須獨立驗收'
     except (Runtime1275Unavailable, OSError, ValueError) as exc:
-        return False, str(exc)
+        message = str(exc)
+        if isinstance(exc, Runtime1275Unavailable):
+            from wlre.services.world.resource_gap_diagnostics import (
+                diagnose_resources, summarize)
+            from wlre.services.world.launcher_catalog import read_launcher_status
+            # Exact, read-only missing-file diagnosis. A good diagnostic
+            # is NEVER enough to authorize any gameplay command.
+            try:
+                gaps = diagnose_resources()
+                if not gaps['formal_ready']:
+                    message = summarize(gaps)
+                    receipt = read_launcher_status()
+                    if receipt is not None and receipt.get('data_compatibility') == 'compatible':
+                        message = 'Launcher 四類候選資料格式相容；' + message
+            except Exception:
+                # Diagnostics cannot undo the original runtime refusal.
+                pass
+        return False, message
 
 
 def install(data_archive, eve_archive, *, base=None, check_only=True):
@@ -96,9 +122,15 @@ def install(data_archive, eve_archive, *, base=None, check_only=True):
         for src, dest in sources:
             with tempfile.NamedTemporaryFile(dir=root, prefix='.lala1275_', suffix='.tmp',
                                              delete=False) as handle:
+                pending.append((Path(handle.name), dest))
                 with src.open('rb') as stream:
                     shutil.copyfileobj(stream, handle, 1024 * 1024)
-                pending.append((Path(handle.name), dest))
+                handle.flush()
+                os.fsync(handle.fileno())
+        # Protect against source files changing after the first verification,
+        # or copy truncation. Validate the exact staged files before publishing
+        # either destination; no partial active runtime is ever accepted.
+        load_preview(pending[0][0], pending[1][0])
         for tmp, dest in pending:
             os.link(tmp, dest)
             created.append(dest)

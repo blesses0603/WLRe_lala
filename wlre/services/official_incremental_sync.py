@@ -270,7 +270,8 @@ def _reuse_verified_bundle(row, base):
 
 def execute_update_plan(plan, *, cache_root=None, download=False,
                         max_download_bytes=DEFAULT_MAX_DOWNLOAD_BYTES,
-                        max_downloads=DEFAULT_MAX_DOWNLOADS, opener=None, timeout=20):
+                        max_downloads=DEFAULT_MAX_DOWNLOADS, opener=None, timeout=20,
+                        progress=None):
     """Perform an explicit bounded run; preview is the default.
 
     Does not automatically mark runtime assets ready. If any required file is
@@ -278,6 +279,8 @@ def execute_update_plan(plan, *, cache_root=None, download=False,
     """
     if not isinstance(plan, BundleUpdatePlan):
         raise IncrementalSyncError('A verified Bundle update plan is required')
+    if progress is not None and not callable(progress):
+        raise IncrementalSyncError('Invalid Bundle completion callback')
     if not download:
         return {**plan.summary(), 'mode': 'preview', 'completed': 0}
     if (type(max_download_bytes) is not int or max_download_bytes < 0 or
@@ -300,6 +303,10 @@ def execute_update_plan(plan, *, cache_root=None, download=False,
             else:
                 raise IncrementalSyncError('Unknown Bundle action')
             completed += 1
+            # Call only after official size/MD5/CRC verification or validated
+            # reuse; this count must never mean 'bytes requested'.
+            if progress is not None:
+                progress(completed, len(plan.entries), row.action)
     except (OSError, BundleDownloadError) as exc:
         raise IncrementalSyncError('Incremental Bundle sync interrupted; not ready') from exc
     return {**plan.summary(), 'mode': 'download', 'completed': completed,

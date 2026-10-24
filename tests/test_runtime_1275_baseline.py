@@ -35,6 +35,46 @@ class Default1275Tests(unittest.TestCase):
                         fn()
         runtime_1275._default_runtime.cache_clear()
 
+    def test_formal_install_rechecks_staged_copies_before_any_commit(self):
+        with tempfile.TemporaryDirectory() as td:
+            source = Path(td) / 'source'
+            dest = Path(td) / 'formal'
+            source.mkdir()
+            raw_data = source / 'data.zip'
+            raw_eve = source / 'eve.zip'
+            raw_data.write_bytes(b'staged-data')
+            raw_eve.write_bytes(b'staged-eve')
+            fake = SimpleNamespace(revision=1275, items={}, recipes={}, scene_ids=set())
+            with patch('wlre.services.world.preview_1275.load_preview',
+                       side_effect=[fake, ValueError('staged copy corrupted')]) as check:
+                with self.assertRaisesRegex(ValueError, 'staged copy'):
+                    runtime_1275.install(
+                        raw_data, raw_eve, base=dest, check_only=False)
+            self.assertEqual(check.call_count, 2)
+            self.assertFalse((dest / runtime_1275.DATA_FILE).exists())
+            self.assertFalse((dest / runtime_1275.EVE_FILE).exists())
+            self.assertFalse(list(dest.glob('*.tmp')))
+
+    def test_formal_install_never_overwrites_existing_archive(self):
+        with tempfile.TemporaryDirectory() as td:
+            source = Path(td) / 'source'
+            dest = Path(td) / 'formal'
+            source.mkdir()
+            dest.mkdir()
+            raw_data = source / 'data.zip'
+            raw_eve = source / 'eve.zip'
+            raw_data.write_bytes(b'new data')
+            raw_eve.write_bytes(b'new eve')
+            (dest / runtime_1275.DATA_FILE).write_bytes(b'existing')
+            fake = SimpleNamespace(revision=1275, items={}, recipes={}, scene_ids=set())
+            with patch('wlre.services.world.preview_1275.load_preview',
+                       return_value=fake):
+                with self.assertRaises(FileExistsError):
+                    runtime_1275.install(
+                        raw_data, raw_eve, base=dest, check_only=False)
+            self.assertEqual((dest / runtime_1275.DATA_FILE).read_bytes(), b'existing')
+            self.assertFalse((dest / runtime_1275.EVE_FILE).exists())
+
     def test_npc_and_shop_take_pinned_1275_index(self):
         row = {'index': 12, 'npc_id': 888, 'x': 11, 'y': 12, 'event_count': 1}
         runtime = SimpleNamespace(

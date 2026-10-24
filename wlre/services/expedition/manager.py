@@ -7,7 +7,7 @@ import math
 import time
 
 from wlre.network.wire import Packet, Writer, ProtocolError
-from .data import load_catalog
+from .data import load_catalog, load_active_catalog
 from wlre.services.items.combat_resources import CAT, available
 from wlre.core.inventory_updates import STACKABLE
 from .teams import choose_members, condition_met, success_details
@@ -161,7 +161,16 @@ class Expedition:
         e = state.expedition
         if e['uncertain'] or self.pending: raise ProtocolError('前次遠征操作未確認，請重新登入同步')
         settings = validate(settings)
-        self.catalog = self.catalog_override if self.catalog_override is not None else load_catalog()
+        if self.catalog_override is not None:
+            self.catalog = self.catalog_override  # Explicitly injected test/legacy input
+        else:
+            try:
+                self.catalog = load_active_catalog()
+            except (OSError, ValueError, KeyError, EOFError, UnicodeError) as exc:
+                # The bundled 1262 catalog must not silently power 1275
+                # automatic dispatch, reward decisions or NPC team conditions.
+                raise ProtocolError(
+                    '遠征缺少完整且已驗證的目前版本資料；禁止自動派遣') from exc
         if not self.catalog.get('tasks') or not self.catalog.get('levels'):
             raise ProtocolError('內建遠征資料不完整，請更新完整程式')
         if not e['ready'] or not e['outpost_ready']: raise ProtocolError('等待遠征與駐紮所資料同步')

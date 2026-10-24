@@ -82,7 +82,20 @@ class InstanceJoinLeave(unittest.TestCase):
         state.apply(decode(main_list(public=False)))
         self.assertEqual(main_join(logic, state, password='0123'), [
             Packet(85, 5, Writer().u16(30012).u16(55).u16(123).build())])
-        self.assertNotIn('0123', repr(state.snapshot()))
+        # Inspect only persisted text fields. The monotonic timestamp in
+        # join_pending is a float and may coincidentally contain "0123".
+        def stored_strings(value):
+            if isinstance(value, dict):
+                for key, item in value.items():
+                    yield from stored_strings(key)
+                    yield from stored_strings(item)
+            elif isinstance(value, (tuple, list)):
+                for item in value:
+                    yield from stored_strings(item)
+            elif isinstance(value, str):
+                yield value
+        self.assertFalse(any('0123' in text for text in
+                             stored_strings(state.snapshot())))
         state.apply(decode(Packet(85, 3, b'\x08')))
         self.assertEqual(state.instances['main']['join_result'], 8)
         self.assertIsNone(state.instances['main']['join_pending'])
@@ -99,7 +112,20 @@ class InstanceJoinLeave(unittest.TestCase):
             coop_join(logic, state, password='0123', confirm_cost=False)
         self.assertEqual(coop_join(logic, state, password='0123'), [
             Packet(186, 4, Writer().u16(91).u32(123).build())])
-        self.assertNotIn('0123', repr(state.snapshot()))
+        # Inspect only persisted text fields. The monotonic timestamp in
+        # join_pending is a float and may coincidentally contain "0123".
+        def stored_strings(value):
+            if isinstance(value, dict):
+                for key, item in value.items():
+                    yield from stored_strings(key)
+                    yield from stored_strings(item)
+            elif isinstance(value, (tuple, list)):
+                for item in value:
+                    yield from stored_strings(item)
+            elif isinstance(value, str):
+                yield value
+        self.assertFalse(any('0123' in text for text in
+                             stored_strings(state.snapshot())))
         state.apply(decode(Packet(186, 2, b'\x0a')))
         self.assertTrue(state.instances['coop']['join_pending']['accepted'])
         state.apply(decode(coop_members(room_id=100)))

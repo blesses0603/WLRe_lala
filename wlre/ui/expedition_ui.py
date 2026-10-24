@@ -8,7 +8,9 @@ from tkinter import ttk, messagebox
 from wlre.services.expedition import (
     preferences, validate, faith_gain, duration, recovery_stock, choose_members,
 )
-from wlre.services.expedition_data import load_catalog
+# Keep this old import/patch symbol for test and extension compatibility,
+# but bind it to the audited active-version loader by default.
+from wlre.services.expedition_data import load_active_catalog as load_catalog
 from wlre.services.items.combat_resources import CAT, item_name
 from wlre.storage import expedition_settings
 from wlre.ui.layout import heading, scroll_table
@@ -22,7 +24,13 @@ class ExpeditionPanel(_ExpeditionPanel):
     """Compatibility adapter preserving historic module-level test/extension hooks."""
 
     def _load_catalog(self):
-        return load_catalog()
+        try:
+            return load_catalog()
+        except (OSError, ValueError, KeyError, EOFError, UnicodeError):
+            from wlre.services.world.auto_candidate_reader import candidate_expedition_catalog
+            return candidate_expedition_catalog() or {
+                'tasks': {}, 'levels': {},
+                'source_kind': 'formal_sources_missing'}
 
     def _plan_quests(self, quests, roles, threshold, npcs):
         return plan_quests(quests, roles, threshold, npcs)

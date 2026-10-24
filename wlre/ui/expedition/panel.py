@@ -4,9 +4,11 @@ import tkinter as tk
 from tkinter import ttk
 
 from wlre.services.expedition import recovery_stock
-from wlre.services.expedition_data import load_catalog
+from wlre.services.expedition_data import load_active_catalog
 from wlre.ui.layout import heading
 from wlre.ui.expedition_display import task_name
+from wlre.services.world.feature_resource_index import feature_note
+from wlre.services.world.auto_candidate_reader import candidate_expedition_catalog
 from .controls import build_controls, bind_control_changes
 from .settings import ExpeditionSettingsMixin
 from .planner import ExpeditionPlannerMixin
@@ -21,7 +23,12 @@ class ExpeditionPanel(
     ttk.Frame,
 ):
     def _load_catalog(self):
-        return load_catalog()
+        try:
+            return load_active_catalog()
+        except (OSError, ValueError, KeyError, EOFError, UnicodeError):
+            return (candidate_expedition_catalog() or
+                    {'tasks': {}, 'levels': {},
+                     'source_kind': 'formal_sources_missing'})
 
     def __init__(self, parent, app):
         super().__init__(parent, padding=6)
@@ -38,6 +45,8 @@ class ExpeditionPanel(
         self.plans = {}
         self.catalog = self._load_catalog()
         heading(self, '遠征', '自動領獎、補好友度並接續派遣；不使用縮時或支援物品。')
+        self.resource_status = tk.StringVar(value=feature_note('expedition'))
+        ttk.Label(self, textvariable=self.resource_status, style='Muted.TLabel', wraplength=700).pack(fill='x', pady=(0, 3))
         self.status = tk.StringVar(value='等待遠征與駐紮所資料同步。')
         ttk.Label(self, textvariable=self.status, wraplength=700).pack(fill='x', pady=(0, 4))
         build_controls(self, app)
@@ -70,12 +79,15 @@ class ExpeditionPanel(
 
     def render(self, state):
         e = state.get('expedition', {})
+        self.resource_status.set(feature_note('expedition'))
         live = self.app.live_active
         if live and self.app._settings_key and self.app._settings_key != self.key:
             self.load_settings(self.app._settings_key)
         self.update_inventory(state.get('inventory', {}))
         self.start_button.configure(state='normal' if live and e.get('ready') and e.get('outpost_ready')
-                                    and self.catalog.get('tasks') and not e.get('enabled') and not e.get('uncertain') else 'disabled')
+                                    and self.catalog.get('tasks')
+                                    and self.catalog.get('source_kind') != 'automatic_1275_unapproved_preview'
+                                    and not e.get('enabled') and not e.get('uncertain') else 'disabled')
         for control in (self.hours_input, self.faith_input, self.claim_option, self.success_input):
             control.configure(state='disabled' if e.get('enabled') or e.get('pending') else 'normal')
         self.item_combo.configure(state='disabled' if e.get('enabled') or e.get('pending') else 'readonly')
@@ -100,5 +112,9 @@ class ExpeditionPanel(
         signature = repr((e.get('revision'), e.get('roles'), e.get('quests'), e.get('teams'),
                           e.get('level'), hours, self.faith.get(), minimum, recovery_stock(state.get('inventory', {}))))
         self.render_catalog_rows(e, hours, minimum, signature)
-        self.note.set('內建遠征資料不完整，請更新完整程式。' if not self.catalog.get('tasks') else
-                      '內建官方遠征資料；上線後自動檢查任務與背包。可與自動戰鬥、徘徊同時啟用。')
+        self.note.set(
+            '官方遠征候選資料已自動接收（唯讀），正式驗證前禁止派遣和領獎。'
+            if self.catalog.get('source_kind') == 'automatic_1275_unapproved_preview'
+            else '內建遠征資料不完整：當前版本正式遠征資料尚未完整驗證，不使用舊版任務或夥伴資料。'
+            if not self.catalog.get('tasks') else
+            '遠征任務與 NPC 資料已依正式版本讀取；仍以伺服器確認實際派遣和領獎。')

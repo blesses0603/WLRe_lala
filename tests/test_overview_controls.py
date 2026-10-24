@@ -17,8 +17,17 @@ class OverviewControls(unittest.TestCase):
         self.app.render(self.state);self.root.update()
 
     def tearDown(self):
-        for job in self.root.tk.call('after','info'):self.root.tk.call('after','cancel',job)
-        self.root.destroy()
+        # Explicitly close and release all Tk widgets on the test main thread.
+        # Deferred GC by a networking/animation worker otherwise can invoke
+        # tkinter.Variable.__del__ from the wrong thread after Tk has ended.
+        import gc
+        for job in self.root.tk.call('after','info'):
+            self.root.tk.call('after','cancel',job)
+        self.app.close()
+        self.panel = None
+        self.app = None
+        self.root = None
+        gc.collect()
 
     def test_both_actions_start_stop_and_follow_confirmed_state(self):
         for key,section,start,stop in (('ai','auto_battle','start_auto_battle','stop_auto_battle'),('roaming','roaming','start_roaming','stop_roaming')):

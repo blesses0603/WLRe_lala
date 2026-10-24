@@ -83,3 +83,19 @@ macOS Intel 的 GitHub hosted runner 曾在原始碼 Tk GUI 冒煙測試逾時�
 - **需要提前取得原生安裝包**：開啟 GitHub Actions 的 `Native desktop packaging verification`，手動選擇分支再按 `Run workflow`。
 - **正式 Release**：以 `vX.Y.Z` 標籤觸發 `.github/workflows/release-windows.yml`，執行正式 Windows EXE 與 macOS APP 原生打包並建立發行版本。
 - 歷史上已啟動的舊打包工作不會因修改 YAML 自動取消；舊紀錄須另行刪除。本次改動不合併尚未驗收的副本／協力功能。
+
+## PR #56（預計 v0.6.1）：UnityFS 解包器隨原生程式打包
+
+- Windows `build_nuitka.bat` 與 macOS `tools.build.build_macos` 共用 `requirements-build.txt`；新增 `requirements-extractor.txt`，固定 `UnityPy==1.25.4`。正式打包會將 UnityPy、LZ4／Brotli 等解壓元件安裝進**建置環境**，不是要求玩家在電腦自行安裝 Python 或 UnityPy。
+- Nuitka 命令加入 `--include-package=UnityPy`、`--include-package-data=UnityPy`，確保 Lazy Import 模組及套件資料納入 EXE／APP。原本的 `wlre`、Tcl/Tk、圖示／地圖資源、編譯器與 Release 打包流程保留。
+- Windows 專用 `.nuitka-env` 快取簽章現在同時包含 `requirements-build.txt`、`requirements-ui.txt`、`requirements-extractor.txt`；若 UnityPy 版本改變會重新檢查並安裝，不沿用缺少解包器的舊虛擬環境。Windows／macOS workflow 的 pip／Nuitka 快取鍵也包含解包依賴設定。
+- 新增 `WLRE_Client.py --self-test-unityfs`：不連線、不讀取玩家帳號或官方 Bundle；實際載入 UnityPy、四類來源 Adapter，並對隨程式內的 LZ4 與 Brotli 編解碼做 roundtrip。Windows EXE、macOS APP 在**真正編譯完成後**都會執行此模式，失敗則編譯流程以非零碼終止，不封裝 Release。
+- PR 一般 CI 會從釘選依賴安裝 UnityPy 並直接測試 Python 原始碼的 `--self-test-unityfs`，同時執行既有三平台回歸。**但 PR CI 不會編譯 EXE／APP**；真正的內建依賴驗收需另執行 Actions → `Native desktop packaging verification`，選擇本 PR 分支並手動觸發，檢查 Windows x64、macOS arm64、macOS Intel x64 的打包產物及上述自檢。
+- **驗收範圍區分**：`--self-test-unityfs` 通過只表示內建解包器與原生壓縮解碼可用；要證明官方 1275 的 Eve、ItemData、SmithData、ScenesData 正確解包，仍需取得官方校驗過的真實 UnityFS Bundle 與私人來源雜湊契約來做內容驗證。此 PR 不變更正式資源基準、不啟用登入／交易／導航。
+
+開發環境若要使用解包命令，可自行安裝同一份依賴（**玩家使用驗證過的正式打包成品時不應需要這一步**）：
+
+```powershell
+py -m pip install -r requirements-extractor.txt
+py WLRE_Client.py --self-test-unityfs
+```
