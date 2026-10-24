@@ -200,6 +200,20 @@ py -m tools.verify_official_local_bundles --data-zip "C:\Downloads\DataPackage_1
 ~~~
 
 也可使用 --bundle-cache-root 指向 LaLa 已校驗的私有快取根目錄。
+
+如果 Windows 電腦已安裝官方遊戲，而檔案實際存放於
+星之方舟_Data/yoo/DataPackage/BundleFiles/<雜湊目錄>/__data，
+不需要手動辨識或重新命名：使用 --game-yoo 指向該 Data 目錄下的
+yoo 根目錄即可。工具唯讀遍歷 DataPackage/BundleFiles 中的 __data，
+先比對官方 Manifest 指定檔案大小，再驗 MD5、CRC；只有三個實檔
+全部相符才允許 --decode。
+
+~~~powershell
+py -m tools.verify_official_local_bundles --data-zip "C:\Downloads\DataPackage_1275.zip" --main-zip "C:\Downloads\MainPackage_1275.zip" --data-ver 1.3.21 --game-yoo "D:\Program Files\D\wlre\飄流幻境Re_星之方舟_Data\yoo" --decode
+~~~
+
+這是獨立研發驗收指令，正式 LaLa Launcher 仍使用原本自動下載、
+來源驗證及私有快取流程，玩家無須每次執行 PowerShell。
 來源 ZIP 的 .hash 只能證明本地資料彼此一致，不能代替當下的官方
 遠端認證；本工具固定輸出 live_official_authentication=false、
 approved=false、assets_ready=false、can_send_packets=false，
