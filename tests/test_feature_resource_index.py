@@ -103,6 +103,40 @@ class FeatureResourceIndexTests(unittest.TestCase):
                 result = describe_feature('bag', root=root, revisions=self.REV)
                 self.assertEqual(result['state'], 'index_unavailable')
 
+    def test_bag_metadata_uses_only_validated_1275_static_fields(self):
+        from types import SimpleNamespace
+        from wlre.services.items.catalog import verified_item_metadata
+        from wlre.ui.bag_grid import item_details
+
+        values = {34144: {
+            'name': '1275 測試聖水', 'price': 100, 'sell_price': 5,
+            'restrict': 16, 'open_used': 0, 'need_level': 25,
+        }}
+        inv = {'ready': True, 'reliable': True, 'reserved': {},
+               'items': {'2': {'item_id': 34144, 'count': 3}}}
+        with patch('wlre.services.world.runtime_1275.baseline_revision',
+                   return_value='1275'), \
+             patch('wlre.services.world.runtime_1275.active_runtime',
+                   return_value=SimpleNamespace(items=values)):
+            metadata = verified_item_metadata(34144)
+            self.assertEqual(metadata['source_revision'], 1275)
+            self.assertFalse(metadata['npc_sale_allowed'])
+            self.assertFalse(metadata['effects_verified'])
+            self.assertFalse(metadata['can_send_packets'])
+            detail = item_details(inv, '2', inv['items']['2'])
+            self.assertEqual(detail['name'], '1275 測試聖水')
+            self.assertEqual(detail['count'], 3)
+            self.assertEqual(detail['metadata_source'], 'verified_1275_itemdata')
+            self.assertEqual(detail['effects'], {})
+            self.assertTrue(any('尚未核對' in line for line in detail['lines']))
+        with patch('wlre.services.world.runtime_1275.baseline_revision',
+                   return_value='1275'), \
+             patch('wlre.services.world.runtime_1275.active_runtime',
+                   side_effect=ValueError('formal archive missing')):
+            self.assertIsNone(verified_item_metadata(34144))
+        self.assertIsNone(verified_item_metadata(True))
+        self.assertIsNone(verified_item_metadata(0))
+
     def test_item_name_prefers_only_full_pinned_runtime(self):
         from types import SimpleNamespace
         from wlre.services.items.catalog import item_display_name, item_name
