@@ -122,10 +122,12 @@ py -m tools.plan_official_catalog --bindings "C:\path\outside\repo\bindings.json
 
 **雜湊契約：** 製作與場景是解包後原始 TextAsset SHA-256；NPC／商店是 Eve v115 衍生 JSON 的 SHA-256。均須由可靠實際來源計算、私人留存與人工複核，不要猜填 Hash。
 
-**目前不能宣稱完成的事：** 本次持有 1275 Manifest，沒有實際官方 `datapackage_data_e/i/s.bundle`，所以 UnityPy 在真實 Bundle 上的成功解包仍未實測。`ItemData_C` 尚未完成商品價格／開放條件的業務解析與交叉驗證；場景資料也不包含導航 Mesh／傳點判定，不能自動交易或行走。所有解析仍唯讀且 `assets_ready=False`。
+**目前不能宣稱完成的事：** 本次持有 1275 Manifest，沒有實際官方 `datapackage_data_e/i/s.bundle`，所以 UnityPy 在真實 Bundle 上的成功解包仍未實測。`itemdata_v1.py` 已能依已知 Lua 格式解析 ItemData_C 物品名稱、基礎價格、售價、販售限制與開放狀態；商店指定 `related_asset_paths` 時會與 Eve 選單商品 ID 對照，缺少商品或未知格式即拒絕。**但尚未使用真實 1275 ItemData_C Bundle 驗證所有欄位與筆數，也不包含伺服器折扣／即時交易價格**。場景資料仍不含導航 Mesh／傳點判定，不能自動交易或行走。所有解析仍唯讀且 `assets_ready=False`。
 
 UnityPy 讀取第三方資料時可能使用較大量記憶體；此實作已限制輸入／輸出大小，但尚未實作跨平台 CPU／記憶體沙箱，請只讀取官方驗證來源。
 
 ```bash
 python -m unittest tests.test_unity_textasset tests.test_eve_v115 tests.test_catalog_source_extractor -v
 ```
+
+補充：`tests/test_itemdata_v1.py` 驗證合成商品名稱、售價、交易限制、重複 ID、Unicode 與截斷資料拒絕；`tests/test_catalog_source_extractor.py` 驗證 Eve 商品 ID 與 ItemData 資料的離線關聯。解析結果仍只供查看，沒有任何交易指令。
