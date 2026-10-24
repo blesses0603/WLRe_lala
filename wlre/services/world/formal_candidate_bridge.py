@@ -155,9 +155,14 @@ def inspect_launcher_candidate(runtime, *, root=None):
     """Use only the current Launcher receipt; no user-edited key is trusted."""
     from wlre.services.world.launcher_catalog import read_launcher_status
     receipt = read_launcher_status(root=root)
-    if (receipt is None or receipt.get('status') != 'review_required'
-            or receipt.get('data_compatibility') != 'compatible'):
+    if receipt is None or receipt.get('data_compatibility') != 'compatible':
         return {'status': 'not_requested', 'protocol_compatibility': 'unverified'}
+    # A compatible candidate that failed its FULL formal handoff may never
+    # fall back to the previous pinned resources without reporting the error.
+    if receipt.get('status') == 'error':
+        raise FormalBridgeError('Launcher candidate/formal source reconciliation failed')
+    if receipt.get('status') != 'review_required':
+        raise FormalBridgeError('Launcher compatibility receipt has an invalid state')
     return inspect_formal_bridge(runtime, candidate_key=receipt['catalog_key'])
 
 
