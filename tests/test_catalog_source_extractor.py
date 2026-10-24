@@ -59,5 +59,57 @@ class CatalogSourceExtractorTests(unittest.TestCase):
                     extract_catalog_source(item, ())
 
 
+    def test_shop_verified_related_itemdata_enriches_base_price(self):
+        import json
+        from wlre.services.world.itemdata_v1 import ItemDataDecodeError
+        primary = binding('shops', 'eve-interact-json-v1',
+                          'Eve.bytes', 'EventData.NewInteract')
+        item = AssetBinding(primary.asset_path, primary.contract,
+                            ('Assets/ResourcesBuild/Data/ItemData_C.bytes',))
+        scenes = {'schema_version': 1, 'source': 'EventData.NewInteract',
+                  'record_count': 1,
+                  'scenes': {'500': [{'index': 8, 'form_kind': 3,
+                                     'items': [{'id': 1, 'text_id': 3874,
+                                                'database_kind': 2, 'kind': 3}]}]}}
+        def read_asset(source, paths):
+            return b'raw-items' if source.asset_path.endswith('ItemData_C.bytes') else b'raw-eve'
+        with (patch('wlre.services.world.catalog_source_extractor.extract_textasset',
+                    side_effect=read_asset),
+              patch('wlre.services.world.catalog_source_extractor.derive_eve_index',
+                    return_value=json.dumps(scenes).encode()),
+              patch('wlre.services.world.catalog_source_extractor.parse_itemdata',
+                    return_value={3874: {'name': '物品', 'price': 100,
+                                         'sell_price': 40, 'restrict': 0,
+                                         'open_used': 0, 'need_level': 5}})):
+            result = json.loads(extract_catalog_source(item, ()))
+        self.assertTrue(result['itemdata_verified'])
+        self.assertEqual(result['itemdata_count'], 1)
+        offer = result['scenes']['500'][0]['items'][0]
+        self.assertEqual(offer['item_data']['price'], 100)
+        self.assertFalse(offer['buy_enabled'])
+
+        with (patch('wlre.services.world.catalog_source_extractor.extract_textasset',
+                    side_effect=read_asset),
+              patch('wlre.services.world.catalog_source_extractor.derive_eve_index',
+                    return_value=json.dumps(scenes).encode()),
+              patch('wlre.services.world.catalog_source_extractor.parse_itemdata',
+                    return_value={})):
+            with self.assertRaises(ItemDataDecodeError):
+                extract_catalog_source(item, ())
+
+    def test_shop_unreviewed_related_path_is_refused(self):
+        primary = binding('shops', 'eve-interact-json-v1',
+                          'Eve.bytes', 'EventData.NewInteract')
+        item = AssetBinding(primary.asset_path, primary.contract,
+                            ('Assets/Custom/Other.bytes',))
+        with patch('wlre.services.world.catalog_source_extractor.extract_textasset',
+                   return_value=b'raw'):
+            with patch('wlre.services.world.catalog_source_extractor.derive_eve_index',
+                       return_value=b'{"schema_version":1}'):
+                with self.assertRaisesRegex(UnityTextAssetError, 'exact reviewed'):
+                    extract_catalog_source(item, ())
+
+
+
 if __name__ == '__main__':
     unittest.main()
