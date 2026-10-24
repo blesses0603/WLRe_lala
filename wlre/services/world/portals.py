@@ -20,7 +20,38 @@ class Portals:
                     # The version gate will block login until both ZIPs validate;
                     # constructing the pre-login UI must not crash.
                     door_count = 0
-                self.data = {'portals': {}, 'audit': [], 'entities': {},
+                rows = {}
+                try:
+                    topology = verified.topology
+                    for kind in ('binary_links', 'eve_links'):
+                        for scene, links in topology[kind].items():
+                            for index, link in enumerate(links, 1):
+                                destination = link['destination']
+                                stage = verified.stages.get(destination)
+                                position = link['source_scaled_xy']
+                                if stage is None or not position:
+                                    continue
+                                label = verified.texts.get(stage['name_id']) or str(destination)
+                                rows.setdefault(str(scene), []).append({
+                                    'id': f'1275:{scene}:{kind}:{index}',
+                                    'scene': scene, 'index': index,
+                                    'name': f'{label}（1275 唯讀）',
+                                    'kind': 'link', 'destination': destination,
+                                    'x': position[0], 'y': position[1],
+                                    'coordinate_valid': all(
+                                        type(v) is int and 0 <= v <= 65535 for v in position),
+                                    'navigation_status': 'unverified_1275_navmesh',
+                                    'navigation_note': '1275 A* 網格尚未驗證',
+                                    'direct_eligible': False,
+                                    'direct_door_index': None,
+                                    'direct_note': '1275 來源只證明場景連結，未驗證門編號及伺服器條件',
+                                    'transition_note': '1275 不允許觸發傳送',
+                                    'source_revision': 1275,
+                                })
+                except (NameError, AttributeError, KeyError, TypeError):
+                    # Missing/offline 1275 archives must not turn into 1262 portals.
+                    rows = {}
+                self.data = {'portals': rows, 'audit': [], 'entities': {},
                              'source_revision': 1275,
                              'door_count': door_count}
                 self.audit = {}

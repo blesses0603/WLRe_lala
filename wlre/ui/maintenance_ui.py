@@ -136,4 +136,4 @@ class MaintenancePage(ttk.Frame):
     def destroyed(self,event):
         if event.widget is self:
             if self.job is not None:self.after_cancel(self.job);self.job=None
-            self.icons.archive.close()
+            self.icons.close()

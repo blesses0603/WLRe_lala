@@ -77,6 +77,18 @@ def duplicate_tracked_blobs(root=ROOT):
     return sorted(duplicates)
 
 
+
+def tracked_private_game_assets(root=ROOT):
+    """Reject raw game sources in Git, even when they are already ignored."""
+    if not shutil.which("git") or not (root / ".git").exists():
+        return None
+    result = subprocess.run(["git", "ls-files", "-z"], cwd=root,
+                            capture_output=True, check=True)
+    allowed = "1275_差異/LaLa_1275_差異選取清單.json"
+    tracked = [name.decode("utf-8") for name in result.stdout.split(b"\0") if name]
+    return sorted(name for name in tracked
+                  if name.startswith("1275_差異/") and name != allowed)
+
 def application_version(root=ROOT):
     text = (root / "wlre" / "__init__.py").read_text(encoding="utf-8")
     match = VERSION.search(text)
@@ -88,6 +100,7 @@ def application_version(root=ROOT):
 def audit(root=ROOT):
     checked, broken = invalid_links(root)
     duplicates = duplicate_tracked_blobs(root)
+    private_assets = tracked_private_game_assets(root)
     version = application_version(root)
     return {
         "application_version": version,
@@ -95,6 +108,7 @@ def audit(root=ROOT):
         "local_links_checked": checked,
         "broken_local_links": broken,
         "nonempty_duplicate_blobs": duplicates,
+        "private_official_game_assets_tracked": private_assets,
         "git_index_available": duplicates is not None,
     }
 
@@ -106,6 +120,7 @@ def main(argv=None):
     result = audit()
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return int(bool(result["broken_local_links"] or result["nonempty_duplicate_blobs"]
+                    or result["private_official_game_assets_tracked"]
                     or (args.strict_git and not result["git_index_available"])))
 
 

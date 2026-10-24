@@ -70,3 +70,22 @@ class DungeonRoomActionBytes(unittest.TestCase):
             logic.command({'type': 'instance_create', 'mode': 'main',
                            'map_id': 30012, 'public': True}, s)
         self.assertIsNone(s.instances['main']['room'])
+
+
+# 1262 historical packet/layout fixtures. Never enable these fixture indices in
+# production 1275; tests explicitly select their original source baseline.
+from unittest.mock import patch as _legacy_baseline_patch
+_legacy_baseline_context = None
+
+def setUpModule():
+    global _legacy_baseline_context
+    _legacy_baseline_context = _legacy_baseline_patch(
+        'wlre.services.world.runtime_1275.baseline_revision', return_value='1262')
+    _legacy_baseline_context.start()
+    from wlre.services.instance_browser import official_catalog
+    official_catalog.cache_clear()
+
+def tearDownModule():
+    from wlre.services.instance_browser import official_catalog
+    official_catalog.cache_clear()
+    _legacy_baseline_context.stop()

@@ -102,11 +102,13 @@ class Movement:
     @writes('movement')
     def tick(self,state,now):
         if not self.active:return []
+        team=own_team(state)
         if (state.player.get('role_id')!=self.role_id or state.player.get('scene')!=self.scene
                 or state.battle.get('active') or state.event_flow.get('blocked')
+                or state.activities or (team and team['leader_id']!=self.role_id)
                 or state.navigation.get('revision')!=self.revision
                 or state.navigation.get('stale')):
-            self.stop(state,'角色、場景、戰鬥或導航狀態改變');return []
+            self.stop(state,'角色、場景、戰鬥、活動、隊伍或導航狀態改變');return []
         if now+1e-9<self.next_due:return []
         # No catch-up burst after a blocked loop; each report advances at most one period.
         self.next_due=now+self.interval

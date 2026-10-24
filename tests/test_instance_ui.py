@@ -11,6 +11,14 @@ from wlre.ui.gui import App
 @unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt', 'Requires a desktop or Xvfb')
 class InstanceNavigation(unittest.TestCase):
     def setUp(self):
+        # This suite validates the historic 1262 instance UI fixture; do not
+        # switch production back to legacy tables when 1275 ZIPs are absent.
+        legacy = patch('wlre.services.world.runtime_1275.baseline_revision', return_value='1262')
+        legacy.start()
+        self.addCleanup(legacy.stop)
+        from wlre.services.instance_browser import official_catalog
+        official_catalog.cache_clear()
+        self.addCleanup(official_catalog.cache_clear)
         self.root = tk.Tk()
         self.app = App(self.root)
         self.errors = []

@@ -1,0 +1,2 @@
+# Offline Unity bundle inspection only; not required by the game client.
+UnityPy==1.25.4

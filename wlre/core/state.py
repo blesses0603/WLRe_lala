@@ -21,6 +21,8 @@ from wlre.services.instances import defaults as instance_defaults, apply_instanc
 from wlre.services.battle.attribute_points import defaults as points_defaults, apply_event as apply_points_event
 
 
+from wlre.services.world.navigation_evidence import defaults as nav_evidence_defaults, observe as observe_navigation
+
 POSITION_CACHE_LIMIT = 2048
 
 
@@ -47,6 +49,7 @@ class State:
     initial_data_complete: bool = False
     battle_units: dict = field(default_factory=dict)
     battle_count: int = 0
+    navigation_evidence: dict = field(default_factory=nav_evidence_defaults)
     navigation: dict = field(default_factory=lambda: {'scene':None,'revision':0,
                                'stale':False,'runtime_geometry_verified':False,'reasons':[]})
     location: dict = field(default_factory=lambda: {'confirmed':None,'confirmed_is_current':False,
@@ -159,6 +162,7 @@ class State:
         apply_tent(self,event)
         observe_shop_evidence(self,event)
         observe_efficiency(self,event)
+        observe_navigation(self,event)
 
     def snapshot(self):
         self.assert_writer()

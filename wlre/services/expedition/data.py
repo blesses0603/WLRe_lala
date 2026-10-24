@@ -55,6 +55,17 @@ def parse_catalog(tasks_data, levels_data):
 
 
 def load_catalog():
+    from wlre.services.world.runtime_1275 import baseline_revision, active_runtime
+    if baseline_revision() == '1275':
+        from copy import deepcopy
+        from wlre.services.world.runtime_1275 import Runtime1275Unavailable
+        try:
+            return deepcopy(active_runtime().expedition_catalog)
+        except Runtime1275Unavailable:
+            # The pre-login dashboard must render even without personal ZIPs.
+            # Do not show or dispatch old 1262 tasks as if they were 1275.
+            return {'tasks': {}, 'levels': {}, 'npcs': {},
+                    'source_revision': 1275, 'source_status': 'unavailable'}
     path = RESOURCE_ROOT / 'expedition_catalog.json'
     if not path.is_file():
         return {'tasks': {}, 'levels': {}}
@@ -102,12 +113,44 @@ def parse_npcs(npc_data, career_data):
     if not 1 <= count <= 65535: raise ProtocolError('夥伴資料筆數錯誤')
     npcs = {}
     for _ in range(count):
+        names = []
         for _ in range(2):
             size = r.u16()
             if size % 2: raise ProtocolError('夥伴名稱長度錯誤')
-            r.take(size).decode('utf-16-le')
+            names.append(r.take(size).decode('utf-16-le'))
         fields = r.take(203)
         sid = struct.unpack_from('<H', fields, 1)[0]
-        npcs[str(sid)] = {'element': fields[74], 'kind': fields[106], 'original': careers.get(sid, sid)}
+        if not sid or str(sid) in npcs:
+            raise ProtocolError('1275 NPC ID 重複或為零')
+        # NpcData.New: the five UInt16 battle skills follow element (byte 74).
+        skills = list(struct.unpack_from('<5H', fields, 75))
+        npcs[str(sid)] = {
+            'name': names[0], 'element': fields[74],
+            'kind': fields[106], 'original': careers.get(sid, sid),
+            'skills': skills,
+        }
     r.end()
     return npcs
+
+
+def activate_1275_npcs(runtime):
+    """Update shared partner names and skill slots from verified 1275 NpcData."""
+    if getattr(runtime, 'revision', None) != 1275:
+        raise ValueError('拒絕載入非1275 NPC資料')
+    source = getattr(runtime, 'expedition_catalog', None)
+    if not isinstance(source, dict) or source.get('source_revision') != 1275:
+        raise ValueError('缺少1275 NPC資料來源')
+    npcs = source.get('npcs')
+    if not isinstance(npcs, dict) or not npcs:
+        raise ValueError('1275 NPC資料空白')
+    for sid, row in npcs.items():
+        if (not isinstance(sid, str) or not sid.isdecimal()
+                or not isinstance(row, dict) or not isinstance(row.get('name'), str)
+                or not isinstance(row.get('skills'), list) or len(row['skills']) != 5
+                or any(type(x) is not int or not 0 <= x <= 65535
+                       for x in row['skills'])):
+            raise ValueError('1275 NPC戰鬥技能資料錯誤')
+    from wlre.services.items.catalog import CAT
+    CAT['npcs'].clear()
+    CAT['npcs'].update(npcs)
+    return len(npcs)

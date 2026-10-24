@@ -167,6 +167,7 @@
 | [movement.py](../wlre/services/world/movement.py) | 本機路徑、移動封包排程與伺服器位置確認。 |
 | [movement_display.py](../wlre/services/world/movement_display.py) | 移動要求與實際位置結果的顯示文字。 |
 | [navigation.py](../wlre/services/world/navigation.py) | 離線導航圖、幾何查詢與路徑計算。 |
+| [navigation_evidence.py](../wlre/services/world/navigation_evidence.py) | 有界自身定位／障礙被動紀錄與匿名欄位匯出；不是移動授權。 |
 | [obstacle_scope.py](../wlre/services/world/obstacle_scope.py) | 地圖／小屋動態障礙變更的作用範圍。 |
 | [portal_policy.py](../wlre/services/world/portal_policy.py) | 傳點目的地可用性；目前仍引用 ui.minimap.SmallMaps。 |
 | [portal_travel.py](../wlre/services/world/portal_travel.py) | 步行到出口與單次傳點觸發狀態機。 |
@@ -229,7 +230,7 @@
 | `server_list.json`／`default_profile.json` | 官方伺服器列表與非憑證連線設定。 |
 | `item_icons.zip`／`item_icon_map.json`／`item_icon_coverage.json` | 物品圖示及其索引／覆蓋資訊。 |
 | `emoji_images.zip`／`emoji_catalog.json` | 聊天表情及其目錄。 |
-| `smallmaps.zip`／`navigation_data.zip` | 小地圖與離線導航資料。 |
+| `smallmaps.zip`／`navigation_data.zip` | 歷史小地圖與導航資料；1275 預設導航改讀私人官方快取封裝。 |
 | `assets/app.ico`／`assets/exp_background.png` | 程式圖示與背景插畫。 |
 | `assets/buttons/`／`assets/function-icons/` | 原版按鈕、功能圖示及來源說明。 |
 
@@ -275,3 +276,16 @@
 4. 新資源要同步核對自檢與編譯收錄。使用 resource_manifest 的必要清單與驗證器，不可只因檔案在目錄中就視為已驗證。
 5. 根目錄保留啟動／打包腳本；一次性解包與開發環境檔案不要加入執行期套件。
 6. 修改功能時，同步更新功能文件與本索引；此文件不代替程式碼或正式服實測。
+
+## tools/navigation：1275 離線重建與實機證據檢查
+
+[操作與限制](NAVMESH_1275_REBUILD.md)。包含固定 Recast 建置／掃描、Unity Collider 與 Terrain 匯出、私有 Bundle 幾何重建、候選尋路、`verify_evidence` 被動觀測檢查及 `acceptance` 來源／參數／連通區驗收報告，以及 `official_cache` 官方啟動掃描快取提取與逐項幾何比較。執行期匯出入口由 [navigation_evidence_ui.py](../wlre/ui/navigation_evidence_ui.py) 提供。
+
+
+### 1275 官方導航快取
+
+`wlre.services.world.official_cache_format` 提供有界的官方 A* 原始快取解析；
+`official_navigation` 校驗固定來源指紋並安裝到使用者私人資料目錄。
+`navigation.Repository` 在 1275 僅使用這份官方資料，缺少時保持不可用。
+`tools.navigation.official_cache` 負責 Unity Bundle 提取，`package_official` 負責建立可匯入的私人封裝。
+[完整操作與驗收限制](OFFICIAL_NAVIGATION_CACHE_1275.md)。

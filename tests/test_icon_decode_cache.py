@@ -76,7 +76,9 @@ class DecodedItemSpriteCacheTests(unittest.TestCase):
             photos.append((master, result))
             return result
         DECODED_SPRITES.clear()
-        with patch('wlre.ui.crafting.item_icons.zipfile.ZipFile',
+        with patch('wlre.services.world.runtime_1275.baseline_revision',
+                   return_value='1262'), \
+             patch('wlre.ui.crafting.item_icons.zipfile.ZipFile',
                    side_effect=[first, second]), \
              patch('wlre.ui.crafting.item_icons.ICON_MAP',
                    {'42': {'icon': 'shared'}}), \

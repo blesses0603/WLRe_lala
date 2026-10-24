@@ -67,12 +67,14 @@ def main(argv=None):
             from wlre.services.world.navigation import Repository
             repository = Repository()
             if args.command == 'nav-list':
-                dump({'type':'navigation_catalog','scenes':repository.catalog})
+                dump({'type':'navigation_catalog','scenes':repository.catalog,
+                      'source_revision':repository.source_revision,'status':repository.status})
             else:
                 mesh = repository.load(args.scene)
                 if args.command == 'nav-query':
                     face,point = mesh.locate(args.x,args.z,args.height)
                     dump({'type':'navigation_surface','scene_resource':mesh.scene_id,
+                          'source':mesh.source,'can_send_packets':False,
                           'face':face,'point':point,'coordinate_space':'navcache_vertices_b_int3',
                           'network_coordinates_verified':False})
                 else:

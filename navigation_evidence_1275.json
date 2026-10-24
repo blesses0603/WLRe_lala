@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "resource_revision": 1275,
+  "capture_type": "lala_passive_navigation_events",
+  "events": [
+    {
+      "sequence": 51,
+      "scene": 12170,
+      "navigation_revision": 1,
+      "kind": "position_fix",
+      "source": "S3-1",
+      "x": 6000,
+      "y": 3303
+    },
+    {
+      "sequence": 549,
+      "scene": 12170,
+      "navigation_revision": 1,
+      "kind": "geometry_change",
+      "affects_current_map": false,
+      "reason": "furniture_snapshot",
+      "scope": "house",
+      "details_parsed": true,
+      "stale": false
+    }
+  ],
+  "dropped": 0,
+  "stages": {
+    "12170": {
+      "model_id": 12170,
+      "offset_y": 6433
+    }
+  },
+  "reference_points": [],
+  "can_send_packets": false,
+  "live_movement_verified": false,
+  "dynamic_geometry_verified": false,
+  "stage_source_status": "verified_runtime_1275"
+}

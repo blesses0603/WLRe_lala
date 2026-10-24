@@ -8,6 +8,8 @@ from wlre.ui.home_map import HomeMap
 @unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt','Requires a desktop')
 class AutomaticMap(unittest.TestCase):
     def setUp(self):
+        legacy=patch('wlre.services.world.runtime_1275.baseline_revision',return_value='1262')
+        legacy.start();self.addCleanup(legacy.stop)
         self.root=tk.Tk();self.root.geometry('600x500')
         self.pick=Mock();self.move=Mock();self.portal=Mock()
         self.map=HomeMap(self.root,self.pick,Mock(),on_move=self.move,on_portal=self.portal,compact=True)

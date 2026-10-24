@@ -46,18 +46,23 @@ class NavigationWindow:
         ttk.Button(toolbar,text='載入場景',command=self.load).pack(side='left',padx=5)
         ttk.Button(toolbar,text='縮放至全圖',command=self.fit).pack(side='left',padx=5)
         ttk.Button(toolbar,text='匯出預覽路徑',command=self.save).pack(side='left',padx=5)
+        ttk.Button(toolbar,text='匯入官方快取',command=self.import_official).pack(side='left',padx=5)
+        ttk.Button(toolbar,text='匯出導航驗證資料',command=self.save_evidence).pack(side='right')
         self.show_mesh=tk.BooleanVar(value=False)
         ttk.Checkbutton(toolbar,text='導航邊界',variable=self.show_mesh,command=self.draw).pack(side='left',padx=5)
         mapping = ttk.Frame(frame)
         mapping.pack(fill='x',pady=5)
         self.packet_mode = tk.BooleanVar(value=False)
         self.logical_map = tk.StringVar(value=map_label(suggested_scene if suggested_scene is not None else 10000))
-        ttk.Checkbutton(mapping,text='使用遊戲封包 X/Y',variable=self.packet_mode,
-                        command=lambda:self.load_mapped() if self.packet_mode.get() else self.load()).pack(side='left')
+        self.packet_toggle = ttk.Checkbutton(mapping,text='使用遊戲封包 X/Y',variable=self.packet_mode,
+                        command=lambda:self.load_mapped() if self.packet_mode.get() else self.load())
+        self.packet_toggle.pack(side='left')
+        if self.repository.source_revision==1275:self.packet_toggle.state(['disabled'])
         ttk.Label(mapping,text='地圖').pack(side='left',padx=5)
         ttk.Combobox(mapping,textvariable=self.logical_map,width=28,values=map_choices()).pack(side='left')
         ttk.Button(mapping,text='依地圖表載入模型',command=self.load_mapped).pack(side='left',padx=5)
-        ttk.Label(frame,text='724 份一般場景導航圖／39 個 StageScenes 尚無同類圖。ID 為資源 ID，與遊戲地圖 ID 的對應仍需核對。',wraplength=1030).pack(fill='x',pady=(8,2))
+        self.source_status = ttk.Label(frame,text=self.repository.status,wraplength=1030)
+        self.source_status.pack(fill='x',pady=(8,2))
         ttk.Label(frame,text='勾選封包模式後，第二軸是遊戲 Y；其餘模式是導航 Int3 Z。高度欄仍用導航 Int3。路徑不會送出移動。',wraplength=1030).pack(fill='x')
         form = ttk.Frame(frame)
         form.pack(fill='x',pady=8)
@@ -97,7 +102,7 @@ class NavigationWindow:
             except NavigationError:self.background_image=None
             self.scene.set(model_label(self.mesh.scene_id))
             self.fit()
-            self.status.set(f'{model_label(self.mesh.scene_id)}｜{len(self.mesh.faces)} 個三角形｜點選起點及終點；滾輪縮放。')
+            self.status.set(f'{model_label(self.mesh.scene_id)}｜{len(self.mesh.faces)} 個三角形｜官方快取原始 B 頂點，座標框架待核定。' if self.repository.source_revision==1275 else f'{model_label(self.mesh.scene_id)}｜{len(self.mesh.faces)} 個三角形｜點選起點及終點；滾輪縮放。')
         except (OSError,ValueError,KeyError) as exc:
             self.status.set(str(exc))
 
@@ -249,6 +254,24 @@ class NavigationWindow:
         except (ValueError,TypeError) as exc:
             self.status.set(str(exc))
         self.draw()
+
+    def save_evidence(self):
+        from wlre.ui.navigation_evidence_ui import save
+        return save(self.window,self.linked_state)
+
+    def import_official(self):
+        path = filedialog.askopenfilename(parent=self.window, title='選擇 1275 官方導航快取封裝',
+                                        filetypes=[('ZIP', '*.zip')])
+        if not path:return
+        try:
+            from wlre.services.world.official_navigation import install
+            install(path)
+            self.repository = Repository()
+            self.scene.configure(values=[r['display_name'] for r in self.repository.catalog])
+            self.source_status.configure(text=self.repository.status)
+            self.load()
+        except (OSError,ValueError,KeyError) as exc:
+            messagebox.showerror('官方快取匯入失敗',str(exc),parent=self.window)
 
     def save(self):
         if not self.result:

@@ -134,6 +134,11 @@ class App(LoginController,AccountController,VersionGateController):
         self.status.set(f'{map_label(scene)}｜已選目的地 ({x}, {y})；雙擊小地圖即可開始移動。')
         return True
 
+    def export_navigation_evidence(self):
+        self.assert_ui_thread()
+        from wlre.ui.navigation_evidence_ui import save
+        return save(self.dialog_parent(),self.snapshot)
+
     def open_navigation(self):
         try:
             from wlre.ui.navigation_gui import NavigationWindow

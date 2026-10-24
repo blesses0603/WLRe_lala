@@ -13,11 +13,20 @@ from wlre.services.world.map_names import parse_map_id, map_label
 
 class Coordinates:
     def __init__(self):
+        from wlre.services.world.runtime_1275 import baseline_revision
+        if baseline_revision() == '1275':
+            self.stages = {}
+            self.origins = {}
+            return
         base = RESOURCE_ROOT
         self.stages = json.loads((base/'stage_coordinates.json').read_text(encoding='utf8'))['stages']
         self.origins = json.loads((base/'graph_origins.json').read_text(encoding='utf8'))
 
     def mapping(self, logical_map):
+        from wlre.services.world.runtime_1275 import baseline_revision
+        if baseline_revision() == '1275':
+            raise NavigationError(
+                '1275 已改用官方啟動快取供離線預覽；封包座標、節點連線與動態障礙尚未驗收，自動導航仍停用')
         try:
             stage = self.stages[str(parse_map_id(logical_map))]
         except (KeyError,TypeError,ValueError):

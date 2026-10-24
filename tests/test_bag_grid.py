@@ -80,3 +80,17 @@ class BagGridModelTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+# Historical 1262 fixtures require an explicit test-only baseline.
+from unittest.mock import patch as _legacy_baseline_patch
+_legacy_baseline_context = None
+
+def setUpModule():
+    global _legacy_baseline_context
+    _legacy_baseline_context = _legacy_baseline_patch(
+        'wlre.services.world.runtime_1275.baseline_revision', return_value='1262')
+    _legacy_baseline_context.start()
+
+def tearDownModule():
+    _legacy_baseline_context.stop()

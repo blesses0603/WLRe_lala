@@ -6,6 +6,7 @@ supported 1262 baseline, register network commands, or emit any packets.
 from __future__ import annotations
 
 import gzip
+import hashlib
 from copy import deepcopy
 import io
 import json
@@ -95,6 +96,28 @@ def parse_smith_1275(data):
     return result
 
 
+def parse_npc_battle_talk_1275(raw):
+    """Decode validated 1275 NpcTalkData_C; source is TextData_C, not TalkData_C."""
+    expected = '9de2f789e7f194148959457e7a1fc4744bf3378d62fdaff54ce51efe28499bb8'
+    if type(raw) is not bytes or hashlib.sha256(raw).hexdigest() != expected:
+        raise PreviewError('1275 NpcTalkData_C 原始內容 SHA-256 不符')
+    if len(raw) < 4:
+        raise PreviewError('1275 戰鬥台詞檔案過短')
+    count = struct.unpack_from('<i', raw, 0)[0]
+    if count != 94 or len(raw) != 4 + count * 10:
+        raise PreviewError('1275 戰鬥台詞數量或長度錯誤')
+    result = {}
+    for i in range(count):
+        group, text_id, kind, parameter, duration = struct.unpack_from(
+            '<HIBHB', raw, 4 + i * 10)
+        result.setdefault(group, []).append({
+            'text_id': text_id, 'kind': kind,
+            'parameter': parameter, 'duration': duration})
+    if len(result) != 16:
+        raise PreviewError('1275 戰鬥台詞群組數不符')
+    return result
+
+
 class PreviewNPCIndex:
     """NPCIndex.for_scene-compatible source; results are snapshots."""
     def __init__(self, doc):
@@ -130,9 +153,30 @@ class Preview1275:
     texts: dict
     recipes: dict
     scene_ids: frozenset
+    stages: dict = field(default_factory=dict)
+    battle_talk: dict = field(default_factory=dict)
+    skill_catalog: dict = field(default_factory=dict)
+    item_catalog: dict = field(default_factory=dict)
+    expedition_catalog: dict = field(default_factory=dict)
+    dungeon_records: list = field(default_factory=list)
+    cooperative_records: list = field(default_factory=list)
     doors: dict = field(default_factory=dict)
+    topology: dict = field(default_factory=dict)
     revision: int = 1275
     can_send_packets: bool = False
+
+    def plan_stages(self, start, goal):
+        """1275 verified table-link stage sequence, never movement authorization."""
+        from wlre.services.world.topology_1275 import read_only_route
+        return read_only_route(self.topology, start, goal)
+
+    def world_position(self, scene, packet_x, packet_y):
+        """1275 official Stage coordinate transform only, no A* coordinates."""
+        from wlre.services.world.topology_1275 import packet_to_world_xz, Topology1275Error
+        stage = self.stages.get(scene)
+        if stage is None:
+            raise Topology1275Error('1275 場景不存在')
+        return packet_to_world_xz(stage, packet_x, packet_y)
 
     def npc_for_scene(self, scene):
         return self.npc_index.for_scene(scene)
@@ -176,17 +220,72 @@ def load_preview(data_archive, eve_archive):
         manifest = read_manifest(z)
     eve = read_verified_zip(eve_archive)
 
-    from wlre.services.instance_catalog import parse_stages
+    from wlre.services.instance_catalog import (
+        parse_stages, parse_dungeons, parse_cooperative_events)
+    from wlre.services.expedition.data import (
+        parse_catalog as parse_expeditions, parse_npcs)
+    stages = parse_stages(_table(data_archive, manifest, 'ScenesData_C'))
+    from wlre.services.world.topology_1275 import build_topology
+    topology = build_topology(
+        stages, _table(data_archive, manifest, 'StageMapData_C'),
+        _table(data_archive, manifest, 'DoorLinkData_C'),
+        _table(data_archive, manifest, 'EveDoorLinks'))
+    texts = {int(k): v for k, v in _catalog(
+        data_archive, manifest, 'npc_text_1275.json.gz', 'TextData_C').items()}
+    # The shop index only contains six fields per item, and cannot safely
+    # drive combat, equipment, material restrictions or automatic alchemy.
+    from wlre.services.items.itemdata_1275 import parse_items_1275
+    item_catalog = parse_items_1275(
+        _table(data_archive, manifest, 'ItemData_C'))
+    shop_items = {int(k): v for k, v in _catalog(data_archive, manifest,
+        'npc_item_data_1275.json.gz', 'ItemData_C').items()}
+    if len(shop_items) != len(item_catalog['items']):
+        raise PreviewError('1275 完整物品資料與NPC索引筆數不一致')
+    for sid, indexed in shop_items.items():
+        item = item_catalog['items'].get(str(sid))
+        if item is None or any(item.get(k) != indexed.get(k) for k in
+                ('name', 'price', 'sell_price', 'restrict', 'open_used',
+                 'need_level')):
+            raise PreviewError('1275 ItemData_C 與NPC商店索引欄位不一致：' + str(sid))
+    from wlre.services.items.skills_1275 import parse_skills_1275
+    skill_catalog = parse_skills_1275(
+        _table(data_archive, manifest, 'SkillData_C'), texts)
+    expeditions = parse_expeditions(
+        _table(data_archive, manifest, 'AdventureData_C'),
+        _table(data_archive, manifest, 'AdventureLvData_C'))
+    for sid, task in expeditions['tasks'].items():
+        name = texts.get(task['name_id'])
+        if not isinstance(name, str) or not name.strip():
+            raise PreviewError('1275 遠征任務缺少官方名稱：' + sid)
+        task['name'] = name
+        task['area_label'] = texts.get(task['area_name'], '')
+    expeditions['npcs'] = parse_npcs(
+        _table(data_archive, manifest, 'NpcData_C'),
+        _table(data_archive, manifest, 'NpcCareerData_C'))
+    expeditions['source_revision'] = 1275
+    if len(expeditions['tasks']) != 260 or len(expeditions['levels']) != 10:
+        raise PreviewError('1275 遠征任務與等級數量不符')
+    dungeons = parse_dungeons(_table(data_archive, manifest, 'DungeonData_C'))
+    cooperatives = parse_cooperative_events(
+        _table(data_archive, manifest, 'CooperateEventData_C'))
+    if len(dungeons) != 30 or len(cooperatives) != 2:
+        raise PreviewError('1275 副本／協力主要資料數量不符')
     return Preview1275(
         npc_index=PreviewNPCIndex(eve['npc_event_index_1275.json.gz']),
         interact_index=PreviewInteractIndex(eve['npc_interact_1275.json.gz']),
-        items={int(k): v for k, v in _catalog(data_archive, manifest,
-              'npc_item_data_1275.json.gz', 'ItemData_C').items()},
+        items=shop_items,
         talks={int(k): v['text'] for k, v in _catalog(data_archive, manifest,
               'npc_talk_1275.json.gz', 'TalkData_C').items()},
-        texts={int(k): v for k, v in _catalog(data_archive, manifest,
-              'npc_text_1275.json.gz', 'TextData_C').items()},
+        texts=texts,
         recipes=parse_smith_1275(_table(data_archive, manifest, 'SmithData_C')),
-        scene_ids=frozenset(parse_stages(_table(data_archive, manifest, 'ScenesData_C'))),
+        scene_ids=frozenset(stages),
+        stages=stages,
+        battle_talk=parse_npc_battle_talk_1275(_table(data_archive, manifest, 'NpcTalkData_C')),
+        skill_catalog=skill_catalog,
+        item_catalog=item_catalog,
+        expedition_catalog=expeditions,
+        dungeon_records=dungeons,
+        cooperative_records=cooperatives,
         doors=parse_doors_1275(_table(data_archive, manifest, 'Eve')),
+        topology=topology,
     )

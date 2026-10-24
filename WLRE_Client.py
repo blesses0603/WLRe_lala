@@ -43,6 +43,8 @@ def smoke_test_gui():
             # Their destroy methods perform the command cleanup themselves.
             root.tk.call('after', 'cancel', job)
         root.destroy()
+    if errors:
+        raise RuntimeError('GUI callback failed during cleanup: ' + str(errors))
     return 0
 
 

@@ -1,0 +1,1 @@
+{"coordinate_space":"unity_world_y_up","source":{"kind":"synthetic_test_only"},"vertices":[[0,0,0],[0,0,10],[10,0,0],[10,0,10]],"triangles":[[0,1,2],[2,1,3]]}

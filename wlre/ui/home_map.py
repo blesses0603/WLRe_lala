@@ -167,15 +167,25 @@ class HomeMap(ttk.Frame):
         try:
             self.selected_id=parse_map_id(map_id)
             self.map_title.set('小地圖｜'+map_label(self.selected_id))
-            self.projection,scene=self.maps.projection(self.selected_id)
-            self.image=self.maps.image(scene)
-            if self.image is not None:
-                try:self.mesh=self.repository.load(scene)
-                except NavigationError:pass
-                self.note.set(map_label(self.selected_id)+'｜原始小地圖')
-            else:
+            from wlre.services.world.runtime_1275 import baseline_revision
+            if baseline_revision()=='1275':
+                from wlre.services.world.runtime_1275 import active_runtime
+                stage=active_runtime().stages[self.selected_id]
+                self.image=self.maps.image(stage['model_id'])
                 self.projection=None
-                self.note.set(map_label(self.selected_id)+'｜沒有原始小地圖；請使用左側返回出口。')
+                self.note.set(map_label(self.selected_id)+
+                    ('｜1275 靜態小地圖；座標及傳點尚未校驗' if self.image is not None
+                     else '｜1275 尚無已驗證的小地圖；不可使用舊版圖像'))
+            else:
+                self.projection,scene=self.maps.projection(self.selected_id)
+                self.image=self.maps.image(scene)
+                if self.image is not None:
+                    try:self.mesh=self.repository.load(scene)
+                    except NavigationError:pass
+                    self.note.set(map_label(self.selected_id)+'｜原始小地圖')
+                else:
+                    self.projection=None
+                    self.note.set(map_label(self.selected_id)+'｜沒有原始小地圖；請使用左側返回出口。')
         except (OSError,ValueError,KeyError) as exc:
             self.image=None;self.mesh=None;self.projection=None
             self.note.set(str(exc))
@@ -193,7 +203,9 @@ class HomeMap(ttk.Frame):
                              else '選取 NPC 查看名稱、座標與事件索引核對狀態。')
         self.list_rows=[]
         for p in self.portal_rows:
-            prefix='↩ 返回：' if recovery else ('◎ ' if p.get('direct_eligible') else '○ ')
+            prefix=('◇ ' if self.portals.data.get('source_revision') == 1275
+                    else ('↩ 返回：' if recovery else
+                          ('◎ ' if p.get('direct_eligible') else '○ ')))
             self.portal_list.insert('end',prefix+p['name'])
             self.list_rows.append(p)
         self.monster_list.delete(0,'end')
@@ -211,7 +223,10 @@ class HomeMap(ttk.Frame):
         if not self.npc_rows:self.npc_list.insert('end','（本場景尚無 NPC 資料）')
         if not self.monster_rows:self.monster_list.insert('end','（來源未列怪物）')
         ready=sum(bool(p.get('direct_eligible')) for p in self.portal_rows)
-        if recovery:
+        if self.portals.data.get('source_revision') == 1275:
+            text=(f'1275 官方場景連結 {len(self.portal_rows)} 筆（唯讀）。'
+                  '門事件索引、A*網格與伺服器條件尚未驗證，傳送功能停用。')
+        elif recovery:
             text=(f'此圖沒有小地圖；左側保留 {ready} 個返回有圖地圖的出口。' if ready
                   else '此圖沒有小地圖，來源未列可確認的返回出口；請使用官方客戶端離開。')
         else:
@@ -663,8 +678,29 @@ class HomeMap(ttk.Frame):
         self._resize_job=None
         self.canvas.delete('all')
         if not self.projection:
-            self.canvas.create_text(self.canvas.winfo_width()/2,self.canvas.winfo_height()/2,
-                                    text=('等待角色地圖同步…' if self.selected_id is None else '此場景沒有原始小地圖\n請從左側清單選擇返回出口\n地圖圖示與座標操作已停用'),fill='#c8d3dc',font=('Microsoft JhengHei UI',-14),justify='center')
+            if self.image is not None:
+                # A 1275 client image is safe to display without inventing
+                # the 1262 pixel-to-world origin or enabling click navigation.
+                width=max(1,self.canvas.winfo_width())
+                height=max(1,self.canvas.winfo_height())
+                side=max(1,min(width,height))
+                if (getattr(self,'_photo_key',None)!=('static1275',self.selected_id,side)
+                        or getattr(self,'_photo_source',None) is not self.image):
+                    self.photo=ImageTk.PhotoImage(
+                        self.image.resize((side,side),Image.Resampling.LANCZOS),
+                        master=self.canvas)
+                    self._photo_key=('static1275',self.selected_id,side)
+                    self._photo_source=self.image
+                self.canvas.create_image((width-side)//2,(height-side)//2,
+                                         image=self.photo,anchor='nw')
+                self.canvas.create_text(width//2,14,
+                    text='1275 靜態小地圖｜座標／導航／傳送點尚未驗證',
+                    fill='#ffe5a2',anchor='n')
+            else:
+                self.canvas.create_text(self.canvas.winfo_width()/2,self.canvas.winfo_height()/2,
+                    text=('等待角色地圖同步…' if self.selected_id is None else
+                          '此場景沒有已驗證的小地圖\\n地圖圖示與座標操作已停用'),
+                    fill='#c8d3dc',font=('Microsoft JhengHei UI',-14),justify='center')
             return
         left,top,scale=self.view()
         size=max(1,round(1024*scale))

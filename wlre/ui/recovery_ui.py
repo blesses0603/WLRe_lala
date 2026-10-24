@@ -132,4 +132,4 @@ class RecoveryPage(ttk.Frame):
     def destroyed(self,event):
         if event.widget is self:
             if self.timer:self.after_cancel(self.timer);self.timer=None
-            self.icons.archive.close()
+            self.icons.close()

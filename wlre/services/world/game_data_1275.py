@@ -13,6 +13,9 @@ from zipfile import ZipFile
 
 VERSION = 1275
 MANIFEST_SHA256 = 'a069027a05aa332c57048164a61b839896c12926bfe93dfd2b52daf5c58d0dc4'
+# Independently extracted from 15 official 1275 UnityFS bundles supplied by the
+# user; content and all three indexes are individually checked below.
+REEXTRACTED_MANIFEST_SHA256 = '1522aa78e158b7daba5593d44c5dcc44373bae1be950b65e93da1ac22584da1f'
 MAX_MANIFEST = 160 * 1024
 MAX_ENTRY = 16 * 1024 * 1024
 MAX_FILES = 168
@@ -75,7 +78,7 @@ def read_manifest(archive: ZipFile):
     if info.file_size > MAX_MANIFEST:
         raise ValueError('1275 Manifest 超出限制')
     raw = archive.read(info)
-    if hashlib.sha256(raw).hexdigest() != MANIFEST_SHA256:
+    if hashlib.sha256(raw).hexdigest() not in (MANIFEST_SHA256, REEXTRACTED_MANIFEST_SHA256):
         raise ValueError('1275 Manifest SHA-256 不符')
     return _valid_manifest(json.loads(raw.decode('utf-8')))
 
@@ -102,7 +105,8 @@ def verify_archive(path):
                 raise ValueError(f'{name}：SHA-256 不符')
         return {'revision': VERSION, 'verified_files': len(manifest['files']),
                 'tables': 160, 'indexes': 3, 'changed_bundles': 59,
-                'new_main_assets': 63, 'manifest_sha256': MANIFEST_SHA256}
+                'new_main_assets': 63,
+                'manifest_sha256': hashlib.sha256(archive.read('manifest.json')).hexdigest()}
 
 
 def read_table(path, table):
