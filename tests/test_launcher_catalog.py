@@ -75,6 +75,7 @@ class LauncherCatalogTests(unittest.TestCase):
                 self.assertEqual(launcher.main(), 0)
         self.assertIn('wlre.services.world.launcher_catalog',
                       run.call_args_list[0].args[0])
+        self.assertIn('--progress', run.call_args_list[0].args[0])
         self.assertEqual(run.call_args_list[1].args[0][1:],
                          ['-m', 'wlre.ui.gui'])
 
@@ -82,8 +83,20 @@ class LauncherCatalogTests(unittest.TestCase):
         # A compiled EXE must not spawn a private Python launcher.
         import inspect
         source = inspect.getsource(WLRE_Client.main)
-        self.assertLess(source.index('prepare_on_launch()'),
+        self.assertLess(source.index('run_with_progress(prepare_on_launch)'),
                         source.index('from wlre.ui.gui import main as run_gui'))
+
+    def test_progress_relay_keeps_unapproved_status(self):
+        events = []
+        def fake_runner(**kwargs):
+            kwargs['progress']('official_version', {})
+            kwargs['progress']('bundle_sync', {'count': 2, 'bytes': 1024})
+            return {'status': 'review_required', 'catalog_key': 'a'*64}
+        result = prepare_on_launch(
+            root=self.root, runner=fake_runner, environ={},
+            progress=lambda phase, details: events.append((phase, details)))
+        self.assertEqual([x[0] for x in events], ['official_version', 'bundle_sync'])
+        self.assertFalse(result['assets_ready'])
 
     def test_unrecognized_runner_output_is_not_approval(self):
         result = prepare_on_launch(
