@@ -24,6 +24,8 @@ _PINNED_DATA_VER = '1.3.21'
 _REQUIRED_TABLES = (
     'Eve', 'ItemData_C', 'TalkData_C', 'TextData_C',
     'SmithData_C', 'ScenesData_C',
+    'AdventureData_C', 'AdventureLvData_C',
+    'NpcData_C', 'NpcCareerData_C',
 )
 _ASSET_ROOT = 'Assets/ResourcesBuild/Data/'
 
@@ -54,7 +56,10 @@ def load_verified_bundle_runtime(*, sync_root=None):
         Preview1275, PreviewNPCIndex, PreviewInteractIndex, parse_smith_1275)
     from wlre.services.world.itemdata_v1 import parse_itemdata
     from wlre.services.world.npc_talk import parse_talk_data
-    from wlre.services.expedition.data import parse_text_data
+    from wlre.services.expedition.data import (
+        parse_text_data, parse_catalog as parse_expedition,
+        parse_npcs as parse_expedition_npcs,
+        ADVENTURE_1275_SHA256, ADVENTURE_LEVEL_1275_SHA256)
     from wlre.services.world.eve_v115 import derive_eve_index
     from wlre.services.world.doors_1275 import (
         SOURCE_SHA256 as EVE_SHA256, parse_doors_1275)
@@ -138,6 +143,42 @@ def load_verified_bundle_runtime(*, sync_root=None):
         if not scene_rows or not talk_rows or not texts:
             raise BundleRuntimeUnavailable('1275 場景或對話原始資料缺失')
 
+        # Expedition is a real service catalog, not just a candidate label.
+        # This is the same independently audited 1275 source identity that
+        # the older full-ZIP loader validates before expedition dispatch.
+        if (hashlib.sha256(sources['AdventureData_C']).hexdigest()
+                != ADVENTURE_1275_SHA256 or
+                hashlib.sha256(sources['AdventureLvData_C']).hexdigest()
+                != ADVENTURE_LEVEL_1275_SHA256):
+            raise BundleRuntimeUnavailable('1275 遠征任務／等級來源 SHA-256 不符')
+        expedition = parse_expedition(
+            sources['AdventureData_C'], sources['AdventureLvData_C'])
+        expedition_npcs = parse_expedition_npcs(
+            sources['NpcData_C'], sources['NpcCareerData_C'])
+        if (len(expedition['tasks']) != 260
+                or len(expedition['levels']) != 10
+                or len(expedition_npcs) != 7561):
+            raise BundleRuntimeUnavailable('1275 遠征任務／夥伴資料筆數不符')
+        named = {}
+        for key, quest in expedition['tasks'].items():
+            name = texts.get(quest['name_id'])
+            area = texts.get(quest['area_name'], '')
+            if (type(name) is not str or not name.strip()
+                    or type(area) is not str
+                    or len(name) > 8192 or len(area) > 8192):
+                raise BundleRuntimeUnavailable('1275 遠征任務缺少已驗證文字')
+            named[key] = {**quest, 'name': name, 'area_label': area}
+        expedition = {
+            **expedition, 'tasks': named, 'npcs': expedition_npcs,
+            'revision': 1275,
+            'source_kind': 'verified_1275_official_bundle',
+            'source_sha256': {
+                **expedition['source_sha256'],
+                'NpcData_C': hashlib.sha256(sources['NpcData_C']).hexdigest(),
+                'NpcCareerData_C': hashlib.sha256(sources['NpcCareerData_C']).hexdigest(),
+            },
+        }
+
         return Preview1275(
             npc_index=PreviewNPCIndex(npc),
             interact_index=PreviewInteractIndex(interacts),
@@ -146,7 +187,7 @@ def load_verified_bundle_runtime(*, sync_root=None):
             texts=texts,
             recipes=recipes,
             scene_ids=frozenset(scene_rows),
-            doors=doors,
+            doors=doors, expedition=expedition,
         )
     except BundleRuntimeUnavailable:
         raise
