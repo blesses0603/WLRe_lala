@@ -91,6 +91,37 @@ class LauncherCatalogTests(unittest.TestCase):
         self.assertNotIn('private game path', status_path(self.root).read_text())
         self.assertFalse(read_launcher_status(root=self.root)['assets_ready'])
 
+    def test_real_launcher_falls_back_to_official_raw_sync_without_manual_zip(self):
+        # No user-installed source ZIP: the official-only parser failure is
+        # recovered by the same Launcher's bounded manifest/raw pipeline.
+        with patch('wlre.services.world.launcher_catalog.data_root',
+                   return_value=self.root), \
+             patch('wlre.services.world.auto_catalog.run_auto_catalog',
+                   side_effect=[
+                       ValueError('Eve 新格式尚待解析'),
+                       {'status': 'downloaded_unparsed', 'catalog_key': 'a'*64,
+                        'assets_ready': False, 'can_send_packets': False},
+                   ]) as automatic, \
+             patch('wlre.services.world.resource_gap_diagnostics.diagnose_resources',
+                   return_value={}), \
+             patch('wlre.services.world.resource_gap_diagnostics.save_report'):
+            result = prepare_on_launch(environ={})
+        self.assertEqual(automatic.call_count, 2)
+        automatic.assert_any_call(download=True, parse=False)
+        self.assertEqual(result['status'], 'downloaded_unparsed')
+        self.assertEqual(result['catalog_key'], 'a'*64)
+        self.assertEqual(result['data_compatibility'], 'unverified')
+        self.assertFalse(result['assets_ready'])
+        self.assertFalse(result['can_send_packets'])
+        self.assertEqual(read_launcher_status(root=self.root), result)
+
+    def test_injected_runner_never_triggers_hidden_fallback(self):
+        runner = Mock(side_effect=ValueError('source damaged'))
+        receipt = prepare_on_launch(root=self.root, runner=runner, environ={})
+        runner.assert_called_once_with(download=True, parse=True)
+        self.assertEqual(receipt['status'], 'error')
+        self.assertIsNone(receipt['catalog_key'])
+
     def test_skip_prevents_network_and_writes(self):
         runner = Mock()
         result = prepare_on_launch(
