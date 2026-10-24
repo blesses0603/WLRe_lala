@@ -31,6 +31,12 @@ class LauncherProgressTests(unittest.TestCase):
             'extract_failed', {'feature': 'npc', 'stage': 'C:/secret'}))
         self.assertIn('1 / 3', progress_message(
             'bundle_item', {'completed': 1, 'total': 3}))
+        self.assertIn('21767', progress_message(
+            'classification_ready', {'total': 21767, 'existing': 160}))
+        self.assertIn('現有官方資源索引分類',
+                      _format_stage('classification_ready'))
+        self.assertNotIn('12345678', progress_message(
+            'classification_ready', {'total': '12345678', 'existing': 160}))
         self.assertEqual(_format_stage('bundle_item'), _format_stage('bundle_sync'))
 
         self.assertEqual(_format_stage('official_version'), f'第 1 / {len(STEPS)} 階段')
