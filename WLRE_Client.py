@@ -43,7 +43,17 @@ def self_test_unityfs():
     brotli_packed = brotli.compress(expected)
     if brotli.decompress(brotli_packed) != expected:
         raise RuntimeError('Bundled Brotli decoder failed')
-    print('UnityFS runtime self-test passed: UnityPy, LZ4, Brotli, adapters')
+    # Parse a tiny synthetic, empty UnityFS container through the real
+    # UnityPy BundleFile reader. It has no game assets or user data.
+    import struct
+    header = b'UnityFS\x00' + struct.pack('>I', 6) + b'5.x.x\x00' + b'2019.4.0f1\x00'
+    blocks = bytes(16) + struct.pack('>II', 0, 0)
+    bundle = header + struct.pack('>QIII', len(header) + 20 + len(blocks),
+                                  len(blocks), len(blocks), 0x40) + blocks
+    environment = UnityPy.load(bundle)
+    if environment.objects or environment.container:
+        raise RuntimeError('Synthetic empty UnityFS decoded unexpected assets')
+    print('UnityFS runtime self-test passed: UnityPy, empty UnityFS, LZ4, Brotli, adapters')
     return 0
 
 
