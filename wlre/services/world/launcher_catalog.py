@@ -160,7 +160,9 @@ def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
             diagnose_resources, save_report)
         gaps = diagnose_resources(base=root, checked_at_utc=receipt['checked_at_utc'])
         save_report(gaps, base=root)
-    except (OSError, ValueError, RuntimeError):
+    except Exception:
+        # Optional gap diagnosis must not prevent LaLa from starting.
+        # This report is informational, not login authorization.
         pass
     return receipt
 
