@@ -49,7 +49,8 @@ def _default_runtime():
     A damaged legacy ZIP is not proof that the official Bundle source is
     damaged. Each source is verified in full and is never mixed with the other.
     """
-    from zipfile import BadZipFile
+    from zipfile import BadZipFile, LargeZipFile
+    import zlib
     from wlre.services.world.preview_1275 import load_preview
     from wlre.services.world.bundle_runtime_1275 import (
         BundleRuntimeUnavailable, load_verified_bundle_runtime)
@@ -59,8 +60,9 @@ def _default_runtime():
     if data.is_file() and eve.is_file():
         try:
             return load_preview(data, eve)
-        except (OSError, ValueError, KeyError, EOFError, UnicodeError,
-                BadZipFile):
+        except (OSError, ValueError, KeyError, TypeError, EOFError,
+                UnicodeError, BadZipFile, LargeZipFile, zlib.error,
+                RuntimeError):
             # Do not delete, overwrite, or silently trust broken ZIPs.
             # Independently verify the entire official Bundle source instead.
             pass
