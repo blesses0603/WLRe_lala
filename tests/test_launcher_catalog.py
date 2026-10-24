@@ -35,6 +35,13 @@ class LauncherCatalogTests(unittest.TestCase):
         self.assertEqual(result['protocol_compatibility'], 'unverified')
         self.assertEqual(read_launcher_status(root=self.root), result)
         self.assertTrue(status_path(self.root).is_file())
+        from wlre.services.world.resource_gap_diagnostics import read_report
+        gap = read_report(base=self.root,
+                          expected_checked_at_utc=result['checked_at_utc'])
+        self.assertIsNotNone(gap)
+        self.assertFalse(gap['formal_ready'])
+        self.assertEqual(gap['formal_sources']['1275_DataCatalog.zip']['state'],
+                         'missing')
 
     def test_explicit_schema_compatible_still_never_approves_login(self):
         runner = Mock(return_value={
