@@ -1,6 +1,7 @@
 """Independent offline checks for zero-manual-source candidate indexes."""
 import hashlib
 import json
+import struct
 import unittest
 from unittest.mock import patch
 
@@ -55,6 +56,53 @@ class AutomaticCandidateIndexTests(unittest.TestCase):
         self.assertEqual(quests['records']['tasks']['1']['name'],
                          '官方遠征名稱')
         self.assertIn('TextData_C', quests['sources'])
+
+    def test_textdata_is_independently_classified_with_source_hash(self):
+        from wlre.services.expedition.data import parse_text_data
+        value = '星之方舟・遠征'
+        payload = value.encode('utf-16-le')
+        raw = struct.pack('<iIH', 1, 4101, len(payload)) + payload
+        self.assertEqual(parse_text_data(raw), {4101: value})
+        candidates = _derive_candidate_indexes(
+            {'tables/datapackage_data_t.bundle/TextData_C.bytes': raw},
+            revision='1275')
+        self.assertEqual(set(candidates), {'candidate_indexes/text_data.json'})
+        doc = json.loads(candidates['candidate_indexes/text_data.json'])
+        self.assertEqual(doc['source'], 'TextData_C')
+        self.assertEqual(doc['record_count'], 1)
+        self.assertEqual(doc['records']['4101'], value)
+        self.assertEqual(doc['source_sha256'], hashlib.sha256(raw).hexdigest())
+        self.assertIs(doc['approved'], False)
+        self.assertIs(doc['can_send_packets'], False)
+        self.assertIs(doc['assets_ready'], False)
+        self.assertNotIn('indexes/npc_text_1275.json.gz', candidates)
+
+    def test_invalid_textdata_does_not_create_or_approve_index(self):
+        from wlre.services.expedition.data import parse_text_data
+        for raw in (
+            b'',
+            struct.pack('<i', -1),
+            struct.pack('<iIH', 1, 7, 3) + b'ABC',
+            struct.pack('<iIH', 1, 7, 4) + b'A',
+            struct.pack('<iIH', 1, 7, 2) + b'A\x00' + b'X',
+        ):
+            with self.subTest(length=len(raw)):
+                from wlre.network.wire import ProtocolError
+                with self.assertRaises(ProtocolError):
+                    parse_text_data(raw)
+                self.assertEqual(
+                    _derive_candidate_indexes(
+                        {'tables/datapackage_data_t.bundle/TextData_C.bytes': raw},
+                        revision='1275'), {})
+
+    def test_no_future_version_textdata_decode_attempt(self):
+        raw = struct.pack('<iIH', 1, 42, 2) + '好'.encode('utf-16-le')
+        with patch('wlre.services.expedition.data.parse_text_data') as parser:
+            self.assertEqual(
+                _derive_candidate_indexes(
+                    {'tables/datapackage_data_t.bundle/TextData_C.bytes': raw},
+                    revision='1276'), {})
+            parser.assert_not_called()
 
     def test_no_candidate_for_unknown_future_schema_even_if_name_matches(self):
         data = fixtures('AdventureData_C', 'AdventureLvData_C', 'SmithData_C')
