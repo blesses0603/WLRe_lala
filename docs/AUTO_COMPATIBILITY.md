@@ -137,3 +137,29 @@ py -m tools.diagnose_lala_resources --json
 ~~~
 
 目前官方 Manifest／Bundle 的**增量下載**仍由 Launcher 原有流程負責；但是**無法只靠四類候選自動合成**固定 SHA 的正式雙 ZIP。若缺少對話文字、全量物品或表格，診斷會指出，取得後還必須依正式來源的固定指紋和相容性檢查通過，才可能使用。資源缺口報告本身絕對不是登入權限。
+
+## 第四階段：依照缺口自動續補（包含已有資料）
+
+**PR #56 同一個 Launcher 自動執行**：完成當次 DataPackage/MainPackage 版本、Manifest 與 NPC／商店／製作／場景四類候選檢查後，啟動背景原始資源補建（不需手動選取檔案）。
+
+1. 從當次已驗證的 DataPackage Manifest 枚舉精確 `Assets/ResourcesBuild/Data/*.bytes`，確認對應 Bundle、完整相依關係與版本。1275 Manifest 約 190 個 Assets；不擅自宣稱每一個都是正式的 160 張表。
+2. 自動盤點目前使用者已安裝或放入 `reviewed_full_1275` 的兩份正式 ZIP：只接受固定 SHA 的 Manifest 及逐個 SHA-256/尺寸正確的表格、NPC／文字／物品索引。已正確的檔案直接重用；損毀或版本不符的只記為缺口，不覆寫原有檔案。
+3. 對缺少的原始資料，先查 LaLa 私有 Bundle 快取，逐個驗證官方 Manifest 指定長度／MD5／CRC；必要時只從固定官方 CDN 下載。**每輪額外最多 4 個 Bundle 或 16 MiB，且併入原有總下載額度**；網路中斷則保留已完成進度，下次啟動續補。
+4. 使用經校驗的完整相依閉包和 Manifest 精確 AssetPath 解出 TextAsset。若上一輪已有同版本且自我校驗的原始候選，必須再次核對其原始 Bundle 才能重用。來源升級不能使用舊版本私有候選。
+5. 對已經成功取得的 Eve、ItemData_C、TalkData_C 嘗試重建 NPC 事件、互動事件、唯讀物品與對話候選索引。尚無確定格式的 TextData_C 等索引，**不猜測資料**，保留已取得的原始表與待補缺口。
+6. 所有可用原始資源、既有的固定 SHA 索引和新衍生候選，一起收集到使用者私有的 `official_sync/derived_catalogs/<catalog_key>/verified_raw_inventory.zip`。其中 `inventory.json` 記錄各項來源、SHA-256、重用數、新增數、未完成 AssetPath、無法正式啟用的缺項。此 ZIP 不是正式遊戲資料包。
+7. **只有**已持有正式固定 SHA manifest 且 163 個 DataCatalog 檔案及 2 個 Eve 索引全部與原有獨立固定雜湊一致時，才會在私人 `official_sync/reviewed_full_1275/` 中無覆寫地重組兩份完整 ZIP，經原有 `verify_archive`／`read_verified_zip` 再次全量檢查。接著仍由 `formal_candidate_bridge` 與正式 Runtime 進行逐項交叉比對及安裝。不得從四份候選自算雜湊來替代正式來源。
+
+### 補建結果如何查看
+
+原始碼版 Launcher 啟動畫面會報告已完成的原始資源數量，登入前視窗會顯示「原始資源 X/Y，重用 Z」的簡要狀態；現有缺檔診斷 `py -m tools.diagnose_lala_resources` 仍以**正式**資料包為基準，不會把原始候選數量計入可登入來源。
+
+開發者可執行以下詳細流程：
+
+~~~powershell
+py -m tools.plan_official_catalog --download --parse
+~~~
+
+結果中 `resource_rebuild` 會顯示 `asset_total`、`asset_collected`、`existing_or_cached_reused`、`newly_extracted`、`new_bundle_downloads`、`derived_index_candidates`、`missing_asset_paths`、`missing_formal_members`、`formal_construction` 與 `status`。其中 `partial_raw` 代表有待補資料；`complete_raw_only` **只表示原始 `.bytes` 全部到齊，不表示完整正式 Runtime 通過**。
+
+目前本機來源上只有已實測的 1275 Eve Bundle 與官方 1275 Manifest。完整原始表、全部正式索引以及 Windows 實機資料安裝流程，還需要取得或在你的遊戲安裝快取找到來源後進行實際驗收；不要把離線模擬或單一 Bundle 通過視為正式版可登入。
