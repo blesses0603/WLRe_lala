@@ -124,8 +124,18 @@ def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
     return receipt
 
 
-def main():
-    result = prepare_on_launch()
+def main(argv=None):
+    import sys
+    args = sys.argv[1:] if argv is None else list(argv)
+    if args not in ([], ['--progress']):
+        print('用法：python -m wlre.services.world.launcher_catalog [--progress]',
+              file=sys.stderr)
+        return 2
+    if args == ['--progress']:
+        from wlre.launcher_progress import run_with_progress
+        result = run_with_progress(prepare_on_launch)
+    else:
+        result = prepare_on_launch()
     status = result['status']
     print('LaLa Launcher 官方資源候選：' +
           ('已建立，尚待相容性審核' if status == 'review_required'
