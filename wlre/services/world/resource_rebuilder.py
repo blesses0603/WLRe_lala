@@ -597,6 +597,33 @@ def rebuild_raw_resources(identity, data_manifest, *,
     formal_construction = (
         _build_full_reviewed_if_pinned(identity, formal_base, payloads, pinned_files)
         if identical_release else 'not_release_pinned')
+    # Expose independently actionable blockers without asking the player
+    # to provide a ZIP or pretending our self-hashed candidates are pinned.
+    # These are diagnostic labels, not authorizations or absolute file paths.
+    blockers = []
+    if not identical_release:
+        blockers.append('official_version_not_release_pinned')
+    else:
+        if not pinned_files:
+            blockers.append('release_pinned_catalog_manifest_missing')
+        else:
+            original_raw = {name for name, info in pinned_files.items()
+                            if info.get('kind') == 'raw_table'}
+            original_indexes = {name for name, info in pinned_files.items()
+                                if info.get('kind') == 'read_only_index'}
+            if original_raw - set(payloads):
+                blockers.append('release_pinned_raw_tables_missing')
+            if original_indexes - set(payloads):
+                blockers.append('release_pinned_catalog_indexes_missing')
+        from wlre.services.world.npc_1275_eve import FILES as _EVE_INDEX_FILES
+        if set(_EVE_INDEX_FILES) - set(payloads):
+            blockers.append('release_pinned_eve_indexes_missing')
+        if formal_construction == 'awaiting_release_pinned_manifest':
+            blockers.append('release_pinned_manifest_bytes_missing')
+        if formal_construction == 'reviewed_archive_verification_failed':
+            blockers.append('full_archive_verification_failed')
+        if formal_construction == 'reviewed_archives_already_present':
+            blockers.append('reviewed_archives_need_handoff_verification')
     report = {
         'schema_version': SCHEMA, 'catalog_key': identity.key,
         'official_manifest_sha256': next(
@@ -608,6 +635,7 @@ def rebuild_raw_resources(identity, data_manifest, *,
         'derived_index_candidates': len(derived_candidates),
         'missing_asset_paths': missing,
         'missing_formal_members': sorted(set(missing_formal)),
+        'formal_blockers': blockers,
         'formal_construction': formal_construction,
         'entries': entries, 'complete_raw_assets': not missing,
         'formal_approved': False, 'assets_ready': False,
@@ -646,7 +674,7 @@ def rebuild_raw_resources(identity, data_manifest, *,
         'asset_total', 'asset_collected', 'existing_or_cached_reused',
         'newly_extracted', 'new_bundle_downloads',
         'new_bundle_download_bytes', 'derived_index_candidates', 'missing_asset_paths',
-        'missing_formal_members', 'formal_construction',
+        'missing_formal_members', 'formal_blockers', 'formal_construction',
         'complete_raw_assets', 'formal_approved',
         'assets_ready', 'can_send_packets', 'protocol_compatibility')}
 
