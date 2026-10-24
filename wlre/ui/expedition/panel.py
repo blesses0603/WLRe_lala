@@ -110,6 +110,6 @@ class ExpeditionPanel(
                           e.get('level'), hours, self.faith.get(), minimum, recovery_stock(state.get('inventory', {}))))
         self.render_catalog_rows(e, hours, minimum, signature)
         self.note.set(
-            '當前版本正式遠征資料尚未完整驗證，不能以舊版任務或夥伴資料代替。'
+            '內建遠征資料不完整：當前版本正式遠征資料尚未完整驗證，不使用舊版任務或夥伴資料。'
             if not self.catalog.get('tasks') else
             '遠征任務與 NPC 資料已依正式版本讀取；仍以伺服器確認實際派遣和領獎。')
