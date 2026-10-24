@@ -174,7 +174,13 @@ def derive_eve_index(raw: bytes, source: str) -> bytes:
     for i, (start, end, scene) in enumerate(segments):
         if i and segments[i-1][1] > start:
             raise EveDecodeError('Eve scene segments overlap')
-        row = _scene(Reader(raw, start, end), source)
+        try:
+            row = _scene(Reader(raw, start, end), source)
+        except EveDecodeError as exc:
+            # Report only numeric scene ID and bounded binary offset.
+            # Never expose game payloads or arbitrary filesystem paths.
+            raise EveDecodeError(
+                f'場景 {scene}（偏移 {start}，長度 {end-start}）：{exc}') from exc
         records += len(row)
         if records > MAX_RECORDS:
             raise EveDecodeError('Eve selected index exceeds record limit')
