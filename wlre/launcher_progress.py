@@ -30,6 +30,8 @@ STEP_LABELS = {
     'candidate_write': '建立版本化私人快取',
     'compatibility_check': '核對四類資料的相容性',
     'compatibility_ready': '資料格式檢查通過，協定仍待驗證',
+    'formal_check': '核對完整正式 1275 資料來源',
+    'formal_checked': '正式資源載入條件檢查完成',
     'cached_candidate': '已使用驗證過的私人候選快取',
     'preview_ready': '資源預覽完成',
     'download_ready': 'Bundle 同步完成',
@@ -62,6 +64,14 @@ def progress_message(phase, details=None):
         if (type(done) is int and type(total) is int
                 and 0 <= done <= total and total > 0):
             return f'已校驗 {done} / {total} 個必要 Bundle'
+    if phase == 'formal_checked':
+        status = details.get('status')
+        choices = {
+            'already_verified': '完整正式資源已安裝並通過交叉驗證',
+            'installed_and_verified': '完整正式資源已安全安裝並重新校驗',
+            'awaiting_complete_reviewed_archives': '四類資料格式相容；仍缺完整正式 1275 資源',
+        }
+        return choices.get(status, '正式來源仍需獨立驗證')
     if phase == 'extract_failed':
         feature = details.get('feature')
         stage = details.get('stage')
