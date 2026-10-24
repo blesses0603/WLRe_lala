@@ -7,6 +7,7 @@ from wlre.services.expedition import recovery_stock
 from wlre.services.expedition_data import load_catalog
 from wlre.ui.layout import heading
 from wlre.ui.expedition_display import task_name
+from wlre.services.world.feature_resource_index import feature_note
 from .controls import build_controls, bind_control_changes
 from .settings import ExpeditionSettingsMixin
 from .planner import ExpeditionPlannerMixin
