@@ -71,6 +71,22 @@ class LauncherProgressTests(unittest.TestCase):
             self.assertEqual(launcher_catalog.main(['--progress']), 0)
         self.assertIs(view.call_args.args[0], launcher_catalog.prepare_on_launch)
 
+    @unittest.skipUnless(os.name == 'nt' or bool(os.environ.get('DISPLAY')),
+                         'Requires an active desktop / Xvfb')
+    def test_real_tk_splash_finishes_and_returns_candidate(self):
+        """Covers actual Tk event pumping and window lifecycle offline."""
+        def task(*, progress):
+            progress('official_version', {})
+            progress('manifest', {'package': 'DataPackage'})
+            progress('bundle_sync', {'count': 1, 'bytes': 4096})
+            progress('bundle_item', {'completed': 1, 'total': 1, 'action': 'cached'})
+            progress('candidate_ready', {})
+            return {'status': 'review_required', 'assets_ready': False}
+        with patch.dict(os.environ, {'WLRE_DISABLE_AUTO_CATALOG': ''}):
+            result = run_with_progress(task)
+        self.assertEqual(result['status'], 'review_required')
+        self.assertFalse(result['assets_ready'])
+
     def test_bad_cli_arguments_refused_without_download(self):
         with patch.object(launcher_catalog, 'prepare_on_launch') as prepare, \
              redirect_stdout(io.StringIO()), \
