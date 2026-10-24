@@ -23,7 +23,7 @@ from wlre.services.official_incremental_sync import (
 )
 from wlre.services.official_resource_sync import observe_official_versions
 from wlre.services.world.catalog_adapters import (
-    FEATURES, MAX_SOURCE_BYTES, SourceContract, parse_feature,
+    CatalogAdapterError, FEATURES, MAX_SOURCE_BYTES, SourceContract, parse_feature,
 )
 from wlre.services.world.official_catalog_pipeline import (
     AssetBinding, OfficialCatalogPipelineError,
