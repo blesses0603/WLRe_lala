@@ -622,7 +622,8 @@ def rebuild_raw_resources(identity, data_manifest, *,
             blockers.append('release_pinned_manifest_bytes_missing')
         if formal_construction == 'reviewed_archive_verification_failed':
             blockers.append('full_archive_verification_failed')
-        if formal_construction == 'reviewed_archives_already_present':
+        if formal_construction in ('reviewed_archives_already_present',
+                                   'reviewed_archives_constructed'):
             blockers.append('reviewed_archives_need_handoff_verification')
     report = {
         'schema_version': SCHEMA, 'catalog_key': identity.key,
@@ -709,9 +710,28 @@ def read_inventory_summary(catalog_key, *, candidate_root=None):
                 or type(report.get('newly_extracted')) is not int
                 or type(report.get('derived_index_candidates')) is not int):
             return None
-        return {key: report[key] for key in (
-            'asset_total', 'asset_collected', 'existing_or_cached_reused',
-            'newly_extracted', 'derived_index_candidates',
-            'complete_raw_assets', 'formal_construction')}
+        blocked = report.get('formal_blockers', [])
+        known = {
+            'official_version_not_release_pinned',
+            'release_pinned_catalog_manifest_missing',
+            'release_pinned_raw_tables_missing',
+            'release_pinned_catalog_indexes_missing',
+            'release_pinned_eve_indexes_missing',
+            'release_pinned_manifest_bytes_missing',
+            'full_archive_verification_failed',
+            'reviewed_archives_need_handoff_verification',
+        }
+        if (type(blocked) is not list or len(blocked) > len(known)
+                or any(type(name) is not str or name not in known
+                       for name in blocked)
+                or len(set(blocked)) != len(blocked)):
+            return None
+        return {
+            **{key: report[key] for key in (
+                'asset_total', 'asset_collected', 'existing_or_cached_reused',
+                'newly_extracted', 'derived_index_candidates',
+                'complete_raw_assets', 'formal_construction')},
+            'formal_blockers': blocked,
+        }
     except (OSError, BadZipFile, KeyError, ValueError, TypeError, RuntimeError):
         return None
