@@ -57,8 +57,8 @@ class VersionGateController:
         # users to guess which two ZIPs or internal tables are absent.
         # Local report is untrusted and must never affect login eligibility.
         from wlre.services.world.resource_gap_diagnostics import read_report, summarize
-        gaps = read_report(expected_checked_at_utc=(
-            receipt.get('checked_at_utc') if receipt else None))
+        gaps = (read_report(expected_checked_at_utc=receipt['checked_at_utc'])
+                if receipt is not None else None)
         if gaps is not None:
             self._launcher_catalog_status += '｜' + summarize(gaps)
 
