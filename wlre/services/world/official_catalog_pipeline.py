@@ -47,10 +47,10 @@ class AssetBinding:
             self.related_asset_paths, tuple) else ()
         if (not isinstance(self.contract, SourceContract)
                 or len(paths) < 1 or len(paths) > 16
-                or len(set(paths)) != len(paths)
-                or any(not isinstance(path, str) or not path or len(path) > 1024
+                or any(type(path) is not str or not path or len(path) > 1024
                        or '\x00' in path or '*' in path or '?' in path
-                       for path in paths)):
+                       for path in paths)
+                or len(set(paths)) != len(paths)):
             raise OfficialCatalogPipelineError('Invalid exact or related AssetPath binding')
 
 
