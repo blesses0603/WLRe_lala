@@ -182,6 +182,29 @@ class RawRebuilderTests(unittest.TestCase):
         self.assertIsNone(read_inventory_summary('0'*64, candidate_root=self.candidates))
         self.assertIsNone(read_inventory_summary('../wrong', candidate_root=self.candidates))
 
+    def test_bundled_formal_manifest_is_independently_pinned_not_self_signed(self):
+        from wlre.services.world.resource_rebuilder import _exact_reviewed_manifest
+        pins = self.home / 'resource_bundle' / 'pins'
+        pins.mkdir(parents=True)
+        file = pins / '1275_DataCatalog.manifest.json'
+        raw = b'{"schema_version":1,"official_resource_revision":1275}'
+        file.write_bytes(raw)
+        with patch('wlre.paths.RESOURCE_ROOT', pins.parent), patch(
+                'wlre.services.world.game_data_1275.MANIFEST_SHA256',
+                hashlib.sha256(raw).hexdigest()), patch(
+                'wlre.services.world.game_data_1275._valid_manifest',
+                return_value={}):
+            self.assertEqual(_exact_reviewed_manifest(self.home), raw)
+            file.write_bytes(raw + b' ')
+            self.assertIsNone(_exact_reviewed_manifest(self.home))
+            file.write_bytes(raw)
+        with patch('wlre.paths.RESOURCE_ROOT', pins.parent), patch(
+                'wlre.services.world.game_data_1275.MANIFEST_SHA256',
+                hashlib.sha256(raw).hexdigest()), patch(
+                'wlre.services.world.game_data_1275._valid_manifest',
+                side_effect=ValueError('rejected schema')):
+            self.assertIsNone(_exact_reviewed_manifest(self.home))
+
     def test_assembled_full_archives_revalidate_and_never_overwrite(self):
         from wlre.services.world import resource_rebuilder as mod
         from wlre.services.world.npc_1275_eve import FILES
