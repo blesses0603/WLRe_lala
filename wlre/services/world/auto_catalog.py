@@ -176,6 +176,12 @@ def _rebuild_known_resources(result, *, identity, manifests, bundle_root,
     """Best-effort private raw asset sync; never implies official approval."""
     from wlre.services.world.resource_rebuilder import (
         rebuild_raw_resources, MAX_PER_LAUNCH_BYTES, MAX_PER_LAUNCH_DOWNLOADS)
+    from wlre.services.official_bundle_download import fetch_bundle
+    # Optional assets must not keep the splash waiting indefinitely during a
+    # CDN outage. Primary gameplay sources retain their normal fetch policy.
+    def bounded_fetch(spec, *, cache_root):
+        return fetch_bundle(spec, cache_root=cache_root,
+                            opener=opener, timeout=8)
     budget_bytes = max(0, min(
         MAX_PER_LAUNCH_BYTES, max_download_bytes - result['download_bytes']))
     budget_files = max(0, min(
@@ -187,11 +193,7 @@ def _rebuild_known_resources(result, *, identity, manifests, bundle_root,
             identity, manifests['DataPackage'], bundle_root=bundle_root,
             candidate_root=candidate_root, max_downloads=budget_files,
             max_download_bytes=budget_bytes,
-            fetcher=(None if opener is None else
-                     lambda spec, *, cache_root: __import__(
-                         'wlre.services.official_bundle_download',
-                         fromlist=['fetch_bundle']).fetch_bundle(
-                             spec, cache_root=cache_root, opener=opener)),
+            fetcher=bounded_fetch,
             progress=progress)
     except Exception:
         # Optional raw inventory does not undo the already validated four
