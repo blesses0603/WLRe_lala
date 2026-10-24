@@ -117,10 +117,10 @@ def _inspect_archive(path, name):
                     else:
                         state['state'] = 'verified'
                         state['verified_entries'] = 2
-    except (OSError, BadZipFile, ValueError, KeyError, EOFError,
-            UnicodeError, RuntimeError, TypeError):
-        # Errors may include private paths or archive contents, so report
-        # only a stable diagnosis. Never trust damaged input as complete.
+    except Exception:
+        # Corrupt ZIP/gzip decoders can raise zlib.error or unexpected
+        # parser exceptions. A read-only diagnostic must never crash LaLa.
+        # Exception text may include private paths, so discard it.
         state['invalid'].append('固定 SHA-256／Schema／ZIP 結構校驗失敗')
     if state['state'] == 'invalid' and not state['invalid'] and not state['missing']:
         state['invalid'].append('正式封裝格式不完整')
