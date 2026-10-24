@@ -6,3 +6,24 @@ __pycache__/
 dist_nuitka/
 
 .macos-build-env/
+
+# Official game content is installed locally, never committed publicly.
+**/BundleFiles/
+**/ManifestFiles/
+**/TempFiles/
+**/__data
+**/*_Data/Resources/
+*.unity3d
+*.bundle
+*.assets
+*.resS
+*.rar
+*.7z
+/1275_差異/
+/wlre/resources/*.zip
+/wlre/resources/*.json.gz
+/wlre/resources/assets/*.png
+/wlre/resources/assets/buttons/*.png
+/wlre/resources/assets/function-icons/*.png
+/docs/button-assets/*.zip
+/docs/button-assets/*.png
