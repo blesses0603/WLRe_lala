@@ -105,9 +105,21 @@ def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
         kwargs = {'download': True, 'parse': True}
         if progress is not None:
             kwargs['progress'] = progress
-        result = runner(**kwargs)
-        if result['status'] != 'review_required':
-            raise ValueError('Launcher auto catalog did not produce a reviewed-schema candidate')
+        try:
+            result = runner(**kwargs)
+        except Exception:
+            if not real_launcher_run:
+                raise
+            # A new Eve/ItemData layout can block a four-feature decoder.
+            # Continue automatic official-only data collection and retain the
+            # current version's private catalog identity for gap reporting.
+            # This NEVER implies that an unparsed source is gameplay-ready.
+            fallback = {'download': True, 'parse': False}
+            if progress is not None:
+                fallback['progress'] = progress
+            result = runner(**fallback)
+        if result['status'] not in ('review_required', 'downloaded_unparsed'):
+            raise ValueError('Launcher official resources are not available')
         key = result['catalog_key']
         if type(key) is not str or len(key) != 64 or any(
                 c not in '0123456789abcdef' for c in key):
@@ -132,7 +144,7 @@ def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
             bridge = promote_reviewed_archives(key)
             if progress is not None:
                 progress('formal_checked', {'status': bridge['status']})
-        status = 'review_required'
+        status = result['status']
     except Exception:
         # Keep reason out of local receipts; failures can include file paths,
         # remote exceptions, or implementation details.
