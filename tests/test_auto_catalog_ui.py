@@ -7,6 +7,40 @@ from wlre.ui.version_gate_controller import VersionGateController
 
 
 class LauncherResourceUiTests(unittest.TestCase):
+    def test_old_zip_failure_is_not_reported_as_official_bundle_failure(self):
+        from types import SimpleNamespace
+        class FakeVar:
+            def __init__(self, value=None):
+                self.value = value
+            def get(self):
+                return self.value
+            def set(self, value):
+                self.value = value
+
+        receipt = {
+            'schema_version': 2, 'status': 'review_required',
+            'catalog_key': 'a' * 64, 'data_compatibility': 'compatible',
+            'checked_at_utc': '2026-10-25T00:00:00+00:00'}
+        old_zip_report = {
+            'formal_ready': False,
+            'formal_sources': {
+                '1275_DataCatalog.zip': {'state': 'invalid'},
+                '1275_EveNpcIndex.zip': {'state': 'invalid'}}}
+        c = SimpleNamespace()
+        with patch('wlre.ui.version_gate_controller.tk.StringVar',
+                   side_effect=lambda value=None: FakeVar(value)), \
+             patch('wlre.services.world.launcher_catalog.read_launcher_status',
+                   return_value=receipt), \
+             patch('wlre.services.world.resource_gap_diagnostics.read_report',
+                   return_value=old_zip_report), \
+             patch('wlre.services.world.resource_rebuilder.read_inventory_summary',
+                   return_value=None):
+            VersionGateController.initialize_version_gate(c)
+        self.assertIn('舊式 ZIP 未通過校驗', c._launcher_catalog_status)
+        self.assertIn('官方 Bundle 由正式 Runtime 另外核對',
+                      c._launcher_catalog_status)
+        self.assertNotIn('1275_DataCatalog', c._launcher_catalog_status)
+
     def test_version_ui_does_not_download_or_extract(self):
         source = inspect.getsource(VersionGateController)
         self.assertNotIn('run_auto_catalog(', source)
