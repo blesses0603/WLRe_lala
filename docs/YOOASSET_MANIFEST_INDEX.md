@@ -46,12 +46,34 @@ python -m unittest -v tests.test_yooasset_manifest_compare tests.test_yooasset_m
 
 測試使用合成的最小化 Manifest，不需要官方遊戲資源，也不會產生完整官方索引。
 
+## 與已合併的官方 CDN 同步服務串接
+
+PR #55 的 `wlre.services.official_manifest_sync` 已取得經驗證的官方
+`{Package}.hash`／`{Package}.bytes`，並在完整索引解析前阻止未驗證的
+Manifest 被用來挑選 Bundle。本 PR 將匯入路徑接到
+`tools.resources.lala_manifest_full_index.parse_manifest`。
+
+```bash
+python -m tools.check_official_manifests
+python -m tools.check_official_manifests --package DataPackage
+```
+
+上述指令先查官方 DataVer 及兩包 `.version`，再驗證完整 Manifest
+與個人使用者快取。畫面只輸出版本、雜湊、Asset 數與 Bundle 數，
+不輸出完整資產路徑。使用合成 YooAsset 2.2.5 二進位資料的整合測試
+涵蓋 Manifest → 索引 → 單筆 Bundle 驗證／快取，無官方素材也無網路請求。
+
 ## 安全界線及後續
 
 - **這次 GitHub PR 只加入 Python 程式、測試、文件**。不要提交官方 Bundle、RAR、ZIP、完整 JSON 索引或擷取素材。
-- 本工具不會向官方伺服器下載資料，也不會修改 LaLa 相容性鎖；不應據此宣稱 1275 遊戲登入／導航已驗證。
+- 舊的 ZIP／RAR 解析工具只處理私人本機檔；新的
+  `tools.check_official_manifests` 會依請求下載兩份官方 Manifest
+  至使用者私有快取，但**不下載全部 Bundle**，也不修改 LaLa 相容性鎖。
+  不應據此宣稱 1275 遊戲登入／導航已驗證。
 - 新版若不再使用 `2.2.5` Manifest 格式會安全失敗，須更新解析器並重新驗證。
-- 官方 `DataVer` 三階段版本偵測與正式更新排程，應另行整合現有 `tools/check_official_version.py`，避免兩套版本來源。
+- 官方 `DataVer` 三階段版本偵測沿用現有
+  `wlre.services.official_resource_sync.observe_official_versions`，
+  不另外實作第二套版本來源。正式更新排程、下載配額與權限仍未完成。
 - 專案現有的資源 ZIP 可能已追蹤在公開 Git 歷史；`.gitignore` 或本工具的私人輸出保護**無法清除已公開的歷史資料**。如需清理，必須單獨規劃與核准，以免破壞應用程式對圖示、小地圖、導航資源的依賴。
 
 YooAsset 格式參考：[tuyoogame/YooAsset 2.2.10](https://github.com/tuyoogame/YooAsset/tree/2.2.10) `DeserializeManifestOperation` 與 `BufferReader`。
