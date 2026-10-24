@@ -74,18 +74,31 @@ class LauncherProgressTests(unittest.TestCase):
     @unittest.skipUnless(os.name == 'nt' or bool(os.environ.get('DISPLAY')),
                          'Requires an active desktop / Xvfb')
     def test_real_tk_splash_finishes_and_returns_candidate(self):
-        """Covers actual Tk event pumping and window lifecycle offline."""
-        def task(*, progress):
-            progress('official_version', {})
-            progress('manifest', {'package': 'DataPackage'})
-            progress('bundle_sync', {'count': 1, 'bytes': 4096})
-            progress('bundle_item', {'completed': 1, 'total': 1, 'action': 'cached'})
-            progress('candidate_ready', {})
-            return {'status': 'review_required', 'assets_ready': False}
-        with patch.dict(os.environ, {'WLRE_DISABLE_AUTO_CATALOG': ''}):
-            result = run_with_progress(task)
-        self.assertEqual(result['status'], 'review_required')
-        self.assertFalse(result['assets_ready'])
+        """Isolate actual Tk creation/destruction in a bounded child process.
+
+        Tk's native handlers can outlive a unittest fixture when many roots
+        are created in the parent process; a failed splash must not hang CI.
+        """
+        import subprocess
+        import sys
+        code = """
+from wlre.launcher_progress import run_with_progress
+def task(*, progress):
+    progress('official_version', {})
+    progress('manifest', {'package': 'DataPackage'})
+    progress('bundle_sync', {'count': 1, 'bytes': 4096})
+    progress('bundle_item', {'completed': 1, 'total': 1, 'action': 'cached'})
+    progress('candidate_ready', {})
+    return {'status': 'review_required', 'assets_ready': False}
+result = run_with_progress(task)
+assert result['status'] == 'review_required'
+assert result['assets_ready'] is False
+"""
+        env = dict(os.environ, WLRE_DISABLE_AUTO_CATALOG='')
+        result = subprocess.run(
+            [sys.executable, '-c', code], env=env, capture_output=True,
+            text=True, encoding='utf-8', timeout=15)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_bad_cli_arguments_refused_without_download(self):
         with patch.object(launcher_catalog, 'prepare_on_launch') as prepare, \
