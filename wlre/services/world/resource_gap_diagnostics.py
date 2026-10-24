@@ -148,7 +148,8 @@ def save_report(report, *, base=None):
 
 def read_report(*, base=None, expected_checked_at_utc=None):
     try:
-        raw = report_path(base).read_bytes()
+        with report_path(base).open('rb') as fd:
+            raw = fd.read(MAX_REPORT_BYTES + 1)
         if not 0 < len(raw) <= MAX_REPORT_BYTES:
             return None
         doc = json.loads(raw)
