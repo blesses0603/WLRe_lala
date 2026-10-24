@@ -62,7 +62,7 @@ class ResourceClassificationTests(unittest.TestCase):
         for path in (
             '../Assets/ResourcesBuild/Data/Eve.bytes',
             'Assets/ResourcesBuild/Data/../Eve.bytes',
-            'Assets/ResourcesBuild/Data\Eve.bytes',
+            'Assets/ResourcesBuild/Data\\Eve.bytes',
         ):
             with self.assertRaises(ResourceClassificationError):
                 classify_asset_path('DataPackage', path)
