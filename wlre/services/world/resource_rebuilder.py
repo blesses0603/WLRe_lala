@@ -166,6 +166,92 @@ def _load_previous(path, *, catalog_key):
         return {}
 
 
+
+
+def _exact_reviewed_manifest(formal_base):
+    """Recover only the release-pinned manifest bytes from existing archives."""
+    from wlre.services.world.runtime_1275 import DATA_FILE, FOLDER
+    from wlre.services.world.game_data_1275 import read_manifest
+    for root in (Path(formal_base) / FOLDER,
+                 Path(formal_base) / 'official_sync' / 'reviewed_full_1275'):
+        path = root / DATA_FILE
+        if not path.is_file() or path.is_symlink() or path.stat().st_size > MAX_EXISTING_ARCHIVE_BYTES:
+            continue
+        try:
+            with ZipFile(path) as z:
+                read_manifest(z)  # Includes the release-pinned manifest SHA-256
+                return z.read('manifest.json')
+        except (OSError, ValueError, KeyError, BadZipFile, RuntimeError):
+            pass
+    return None
+
+
+def _build_full_reviewed_if_pinned(identity, formal_base, payloads, pinned_files):
+    """Assemble only when 163+2 original members match independent pinned SHA.
+
+    This can complete a PARTIAL, formerly installed DataCatalog using verified
+    Bundle data plus existing pinned indexes. No self-signed or unknown
+    candidate is ever installed as official; activation remains a separate gate.
+    """
+    from wlre.services.world.runtime_1275 import DATA_FILE, EVE_FILE
+    from wlre.services.world.game_data_1275 import verify_archive
+    from wlre.services.world.npc_1275_eve import FILES, read_verified_zip
+    if not pinned_files or not all(name in payloads for name in pinned_files):
+        return 'awaiting_pinned_catalog_members'
+    if not all(name in payloads for name in FILES):
+        return 'awaiting_pinned_eve_indices'
+    manifest_bytes = _exact_reviewed_manifest(formal_base)
+    if manifest_bytes is None:
+        return 'awaiting_release_pinned_manifest'
+    root = Path(formal_base) / 'official_sync' / 'reviewed_full_1275'
+    target_data, target_eve = root / DATA_FILE, root / EVE_FILE
+    if target_data.exists() or target_eve.exists():
+        # Never overwrite an existing formal reviewed ZIP, even if damaged.
+        return 'reviewed_archives_already_present'
+    root.mkdir(parents=True, exist_ok=True)
+    pending, created = [], []
+    try:
+        with tempfile.NamedTemporaryFile(dir=root, prefix='.data_',
+                                         suffix='.partial', delete=False) as handle:
+            first = Path(handle.name)
+            pending.append(first)
+            with ZipFile(handle, 'w', ZIP_DEFLATED) as z:
+                z.writestr('manifest.json', manifest_bytes)
+                z.writestr('使用說明.txt', 'LaLa 本機逐檔校驗的 1275 資源。')
+                for member in sorted(pinned_files):
+                    z.writestr(member, payloads[member])
+            handle.flush()
+            os.fsync(handle.fileno())
+        with tempfile.NamedTemporaryFile(dir=root, prefix='.eve_',
+                                         suffix='.partial', delete=False) as handle:
+            second = Path(handle.name)
+            pending.append(second)
+            with ZipFile(handle, 'w', ZIP_DEFLATED) as z:
+                z.writestr('README.txt', 'LaLa 本機校驗的 1275 Eve 索引。')
+                for member in sorted(FILES):
+                    z.writestr(member, payloads[member])
+            handle.flush()
+            os.fsync(handle.fileno())
+        # Verify full release-pinned manifest + ALL inner file SHA-256s,
+        # and both static Eve compressed SHA-256s + contents, before linking.
+        verify_archive(first)
+        read_verified_zip(second)
+        for staged, target in ((first, target_data), (second, target_eve)):
+            os.link(staged, target)
+            created.append(target)
+    except FileExistsError:
+        for path in created:
+            path.unlink(missing_ok=True)
+        return 'reviewed_archives_already_present'
+    except (OSError, ValueError, KeyError, BadZipFile, RuntimeError):
+        for path in created:
+            path.unlink(missing_ok=True)
+        return 'reviewed_archive_verification_failed'
+    finally:
+        for path in pending:
+            path.unlink(missing_ok=True)
+    return 'reviewed_archives_constructed'
+
 def rebuild_raw_resources(identity, data_manifest, *,
                           bundle_root=None, candidate_root=None, formal_base=None,
                           fetcher=None, extractor=None, progress=None,
@@ -317,6 +403,9 @@ def rebuild_raw_resources(identity, data_manifest, *,
         for member in ('npc_event_index_1275.json.gz', 'npc_interact_1275.json.gz'):
             if member not in entries:
                 missing_formal.append(member)
+    formal_construction = (
+        _build_full_reviewed_if_pinned(identity, formal_base, payloads, pinned_files)
+        if identical_release else 'not_release_pinned')
     report = {
         'schema_version': SCHEMA, 'catalog_key': identity.key,
         'official_manifest_sha256': next(
@@ -325,6 +414,7 @@ def rebuild_raw_resources(identity, data_manifest, *,
         'existing_or_cached_reused': reused, 'newly_extracted': extracted,
         'new_bundle_downloads': downloaded, 'missing_asset_paths': missing,
         'missing_formal_members': sorted(set(missing_formal)),
+        'formal_construction': formal_construction,
         'entries': entries, 'complete_raw_assets': not missing,
         'formal_approved': False, 'assets_ready': False,
         'can_send_packets': False, 'protocol_compatibility': 'unverified',
@@ -361,5 +451,6 @@ def rebuild_raw_resources(identity, data_manifest, *,
     return {key: report[key] for key in (
         'asset_total', 'asset_collected', 'existing_or_cached_reused',
         'newly_extracted', 'new_bundle_downloads', 'missing_asset_paths',
-        'missing_formal_members', 'complete_raw_assets', 'formal_approved',
+        'missing_formal_members', 'formal_construction',
+        'complete_raw_assets', 'formal_approved',
         'assets_ready', 'can_send_packets', 'protocol_compatibility')}
