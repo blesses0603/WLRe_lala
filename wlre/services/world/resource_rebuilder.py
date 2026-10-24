@@ -285,11 +285,40 @@ def rebuild_raw_resources(identity, data_manifest, *,
 
     candidate_root, formal_base = _roots(candidate_root, formal_base)
     selected = _manifest_assets(data_manifest)
-    specs = {}
-    for name in sorted(set(selected.values())):
-        specs[name] = spec_from_manifest(
+    # Rebuild every exact Manifest AssetPath with its transitive dependency
+    # closure. Unknown dependencies, cycles or unbounded fan-out fail closed.
+    bundle_rows = {
+        b['name']: b for b in data_manifest.index['bundles']
+        if type(b) is dict and type(b.get('name')) is str}
+    closures = {}
+    def closure(root):
+        seen, visiting, output = set(), set(), []
+        def visit(name):
+            if name in visiting:
+                raise ResourceRebuildError('Cyclic official Bundle dependency')
+            if name in seen:
+                return
+            row = bundle_rows.get(name)
+            if row is None or type(row.get('dependencies')) is not list:
+                raise ResourceRebuildError('Unknown Bundle dependency')
+            visiting.add(name)
+            output.append(name)
+            seen.add(name)
+            for dep in row['dependencies']:
+                visit(dep)
+            visiting.remove(name)
+        visit(root)
+        if len(output) > 24:
+            raise ResourceRebuildError('Bundle dependency closure exceeds safe limit')
+        return tuple(output)
+    for name in set(selected.values()):
+        closures[name] = closure(name)
+    all_bundles = {bundle for names in closures.values() for bundle in names}
+    specs = {
+        name: spec_from_manifest(
             data_ver=identity.data_ver, package='DataPackage',
             index=data_manifest.index, name=name)
+        for name in sorted(all_bundles)}
     staging = identity.private_catalog_dir(candidate_root)
     dest = staging / _FILE
     # Release-pinned 1275 files must NEVER be mixed into another official
@@ -322,20 +351,27 @@ def rebuild_raw_resources(identity, data_manifest, *,
             reused += 1
         else:
             spec = specs[name]
-            path = spec.cache_path(bundle_root)
-            if not _verified_file(path, spec):
-                if (name not in attempted and
-                        downloaded < max_downloads and
-                        spent + spec.file_size <= max_download_bytes):
-                    attempted.add(name)
-                    try:
-                        fetcher(spec, cache_root=bundle_root)
-                        if _verified_file(path, spec):
-                            downloaded += 1
-                            spent += spec.file_size
-                    except (OSError, ValueError, RuntimeError):
-                        pass
-            if not _verified_file(path, spec):
+            paths = []
+            complete = True
+            for dependency_name in closures[name]:
+                required = specs[dependency_name]
+                path = required.cache_path(bundle_root)
+                if not _verified_file(path, required):
+                    if (dependency_name not in attempted and
+                            downloaded < max_downloads and
+                            spent + required.file_size <= max_download_bytes):
+                        attempted.add(dependency_name)
+                        try:
+                            fetcher(required, cache_root=bundle_root)
+                            if _verified_file(path, required):
+                                downloaded += 1
+                                spent += required.file_size
+                        except (OSError, ValueError, RuntimeError):
+                            pass
+                if not _verified_file(path, required):
+                    complete = False
+                paths.append(path)
+            if not complete:
                 missing.append(asset_path)
                 continue
             prior = previous.get(member)
@@ -351,7 +387,7 @@ def rebuild_raw_resources(identity, data_manifest, *,
                     'scenes', filename.removesuffix('.bytes'), 'stage-new-76-v1',
                     '0' * 64, 'DataPackage', data_manifest.spec.package_version))
                 try:
-                    body = extractor(binding, (path,))
+                    body = extractor(binding, tuple(paths))
                     if type(body) is not bytes or not 0 < len(body) <= MAX_SOURCE_BYTES:
                         raise ResourceRebuildError('Invalid TextAsset payload')
                 except (OSError, ValueError, RuntimeError):
