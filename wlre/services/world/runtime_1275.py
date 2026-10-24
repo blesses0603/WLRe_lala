@@ -44,32 +44,38 @@ def _paths(base=None):
 
 @lru_cache(maxsize=1)
 def _default_runtime():
-    from wlre.services.world.preview_1275 import load_preview
-    data, eve = _paths()
-    if not data.exists() and not eve.exists():
-        # Official .version + audited .bytes/.hash + verified Bundles are a
-        # first-class 1275 runtime source. Never ask users to insert ZIPs.
-        # Only exact release-pinned Manifests and fully decoded schemas qualify.
-        from wlre.services.world.bundle_runtime_1275 import (
-            BundleRuntimeUnavailable, load_verified_bundle_runtime)
-        try:
-            return load_verified_bundle_runtime()
-        except BundleRuntimeUnavailable as exc:
-            # This error has been normalized to trusted, path-free messages
-            # by the official Bundle loader. Keep the actionable cause.
-            raise Runtime1275Unavailable(
-                '1275 官方 Bundle 尚未完成完整核對：' + str(exc)) from exc
-        except (OSError, ValueError, KeyError) as exc:
-            # Do not expose filesystem paths or unexpected parser details.
-            raise Runtime1275Unavailable(
-                '1275 官方 Bundle 來源校驗失敗，尚不可啟用正式資料') from exc
-    if not data.is_file() or not eve.is_file():
-        raise Runtime1275Unavailable('1275 正式資源只安裝了部分檔案，拒絕混用')
-    try:
-        return load_preview(data, eve)
-    except (OSError, ValueError, KeyError, EOFError, UnicodeError) as exc:
-        raise Runtime1275Unavailable('1275 資源驗證失敗，已停止使用新版資料') from exc
+    """Prefer verified formal archives; use independently pinned Bundles otherwise.
 
+    A damaged legacy ZIP is not proof that the official Bundle source is
+    damaged. Each source is verified in full and is never mixed with the other.
+    """
+    from zipfile import BadZipFile
+    from wlre.services.world.preview_1275 import load_preview
+    from wlre.services.world.bundle_runtime_1275 import (
+        BundleRuntimeUnavailable, load_verified_bundle_runtime)
+
+    data, eve = _paths()
+    legacy_present = data.exists() or eve.exists()
+    if data.is_file() and eve.is_file():
+        try:
+            return load_preview(data, eve)
+        except (OSError, ValueError, KeyError, EOFError, UnicodeError,
+                BadZipFile):
+            # Do not delete, overwrite, or silently trust broken ZIPs.
+            # Independently verify the entire official Bundle source instead.
+            pass
+
+    try:
+        return load_verified_bundle_runtime()
+    except BundleRuntimeUnavailable as exc:
+        # Bundle errors are already sanitized by the source verifier.
+        prefix = ('舊 1275 ZIP 校驗失敗或只有部分安裝；'
+                  if legacy_present else '')
+        raise Runtime1275Unavailable(
+            prefix + '1275 官方 Bundle 尚未完成完整核對：' + str(exc)) from exc
+    except (OSError, ValueError, KeyError) as exc:
+        raise Runtime1275Unavailable(
+            '1275 官方 Bundle 來源校驗失敗，尚不可啟用正式資料') from exc
 
 def active_runtime():
     """Use 1275 only, never silently return a 1262 NPC/item/recipe catalogue."""
@@ -111,7 +117,12 @@ def ready():
                 if data_zip.exists() or eve_zip.exists():
                     gaps = diagnose_resources()
                     if not gaps['formal_ready']:
-                        message = summarize(gaps)
+                        # Retain the Bundle validation cause. The old ZIP
+                        # diagnosis is supplementary, not an authorization
+                        # decision or a replacement for the actual failure.
+                        legacy = summarize(gaps)
+                        if legacy not in message:
+                            message += '｜舊 ZIP 診斷：' + legacy
                 receipt = read_launcher_status()
                 if receipt is not None and receipt.get('data_compatibility') == 'compatible':
                     message = 'Launcher 四類候選資料格式相容；' + message
