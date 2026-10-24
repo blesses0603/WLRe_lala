@@ -122,6 +122,11 @@ class AutoCatalogTests(unittest.TestCase):
         self.assertEqual(events[1][1]['package'], 'DataPackage')
         self.assertEqual(events[2][1]['package'], 'MainPackage')
         self.assertEqual(phases.count('extract'), 4)
+        completed = [info for stage, info in events if stage == 'bundle_item']
+        self.assertEqual(len(completed), 1)
+        self.assertEqual(completed[0]['completed'], 1)
+        self.assertEqual(completed[0]['total'], 1)
+        self.assertEqual(completed[0]['action'], 'cached')
         self.assertEqual(phases[-2:], ['candidate_write', 'candidate_ready'])
         cached = []
         run_auto_catalog(**self.kwargs(
