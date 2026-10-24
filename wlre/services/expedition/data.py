@@ -153,6 +153,27 @@ def load_verified_1275_catalog():
     runtime = active_runtime()
     if runtime.revision != 1275:
         raise Runtime1275Unavailable('遠征資料來源版本不符合 1275')
+    # If the exact official .version/.bytes/.hash and verified Bundle source
+    # already yielded the active Runtime, use the fully decoded data directly.
+    # Do NOT route gameplay through an unapproved JSON candidate archive.
+    bundled = getattr(runtime, 'expedition', None)
+    if bundled is not None:
+        from copy import deepcopy
+        if (type(bundled) is not dict
+                or bundled.get('revision') != 1275
+                or bundled.get('source_kind') != 'verified_1275_official_bundle'
+                or type(bundled.get('tasks')) is not dict
+                or type(bundled.get('levels')) is not dict
+                or type(bundled.get('npcs')) is not dict
+                or len(bundled['tasks']) != 260
+                or len(bundled['levels']) != 10
+                or len(bundled['npcs']) != 7561
+                or bundled.get('source_sha256', {}).get('AdventureData_C')
+                   != ADVENTURE_1275_SHA256
+                or bundled.get('source_sha256', {}).get('AdventureLvData_C')
+                   != ADVENTURE_LEVEL_1275_SHA256):
+            raise Runtime1275Unavailable('官方 Bundle 遠征資料不符合已審核 1275 規格')
+        return deepcopy(bundled)
     path = resource_dir() / DATA_FILE
     # Do not trust path-only classification, self-computed candidate hashes
     # or an unchecked ZIP as a gameplay-ready expedition catalog.
