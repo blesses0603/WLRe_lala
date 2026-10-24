@@ -368,7 +368,16 @@ class VersionGateController:
             except queue.Empty:
                 return
             self._auto_catalog_busy = False
-            if generation != self._auto_catalog_generation or self._closing:
+            if self._closing:
+                continue
+            if generation != self._auto_catalog_generation:
+                # A manual refresh may finish while an older worker is busy.
+                # Only the latest trusted official observation may start work.
+                current = self._version_gate_result or {}
+                if (current.get("source") == "official_remote_only"
+                        and current.get("remote", {}).get("status")
+                        in ("same_resources", "resources_changed")):
+                    self._start_auto_catalog()
                 continue
             if kind == "done":
                 self._auto_catalog_status = (
