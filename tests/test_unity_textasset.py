@@ -44,6 +44,55 @@ class TextAssetTests(unittest.TestCase):
         self.assertEqual(extract_textasset(self.binding, (self.first,),
                                            loader=self.loader()), self.raw)
 
+    def test_unitypy_125_container_helper_items_not_dict(self):
+        # UnityPy 1.25.4 returns ContainerHelper rather than a dict.
+        # There is intentionally no .get() API in this stand-in.
+        obj = SimpleNamespace(type=SimpleNamespace(name='TextAsset'), read=lambda:
+                              SimpleNamespace(name='SmithData_C', script=self.raw))
+        class ContainerHelperLike:
+            def items(self):
+                return iter([(self_path, obj)])
+        self_path = self.asset_path
+        env = SimpleNamespace(container=ContainerHelperLike())
+        self.assertEqual(extract_textasset(
+            self.binding, (self.first,), loader=lambda path: env), self.raw)
+
+    def test_container_helper_exact_path_no_filename_fallback(self):
+        obj = SimpleNamespace(type=SimpleNamespace(name='TextAsset'), read=lambda:
+                              SimpleNamespace(name='SmithData_C', script=self.raw))
+        class ContainerHelperLike:
+            def items(self):
+                return iter([('Assets/Another/SmithData_C.bytes', obj)])
+        with self.assertRaisesRegex(UnityTextAssetError, 'Exact AssetPath'):
+            extract_textasset(self.binding, (self.first,),
+                              loader=lambda path: SimpleNamespace(
+                                  container=ContainerHelperLike()))
+
+    def test_container_helper_duplicate_exact_asset_path_rejected(self):
+        obj = SimpleNamespace(type=SimpleNamespace(name='TextAsset'), read=lambda:
+                              SimpleNamespace(name='SmithData_C', script=self.raw))
+        class ContainerHelperLike:
+            def items(self):
+                return iter([(self_path, obj), (self_path, obj)])
+        self_path = self.asset_path
+        with self.assertRaisesRegex(UnityTextAssetError, 'Duplicate TextAsset'):
+            extract_textasset(self.binding, (self.first,),
+                              loader=lambda path: SimpleNamespace(
+                                  container=ContainerHelperLike()))
+
+    def test_malformed_container_entry_and_missing_index_fail_closed(self):
+        class BrokenContainer:
+            def items(self):
+                return iter([('not-a-pair',)])
+        with self.assertRaisesRegex(UnityTextAssetError, 'Malformed'):
+            extract_textasset(self.binding, (self.first,),
+                              loader=lambda path: SimpleNamespace(
+                                  container=BrokenContainer()))
+        with self.assertRaisesRegex(UnityTextAssetError, 'index unavailable'):
+            extract_textasset(self.binding, (self.first,),
+                              loader=lambda path: SimpleNamespace(
+                                  container=object()))
+
     def test_surrogateescape_binary_roundtrip(self):
         surrogate = self.raw.decode('utf8', 'surrogateescape')
         self.assertEqual(extract_textasset(self.binding, (self.first,),
