@@ -303,6 +303,7 @@ class VersionGateController:
         # Both channels are independent; a GitHub outage never changes the
         # official game resource login decision.
         self.start_lala_release_check()
+        official_messages = self._version_gate_messages
 
         def worker():
             try:
@@ -312,7 +313,7 @@ class VersionGateController:
                           "message": "版本檢測程式發生例外，請回報開發者；不代表版本已同步。",
                           "remote": {"status": "unverified", "failed_stage": "檢測程式",
                                      "reason": "內部例外（非官方版本回應）"}}
-            self._version_gate_messages.put((generation, result))
+            official_messages.put((generation, result))
 
         threading.Thread(target=worker, name="official-version-check",
                          daemon=True).start()
@@ -402,13 +403,14 @@ class VersionGateController:
         self._lala_release_text.set(f"LaLa v{__version__} · 正在確認 GitHub 正式發布版本…")
         self._lala_download_button.configure(state="disabled")
         self._lala_open_button.configure(state="disabled")
+        update_messages = self._lala_update_messages
 
         def worker():
             try:
                 result = check_lala_release()
-                self._lala_update_messages.put((generation, "check", result))
+                update_messages.put((generation, "check", result))
             except (UpdateError, OSError, ValueError):
-                self._lala_update_messages.put((generation, "error", "無法查詢 GitHub Release，請稍後重試。"))
+                update_messages.put((generation, "error", "無法查詢 GitHub Release，請稍後重試。"))
         threading.Thread(target=worker, name="lala-release-check", daemon=True).start()
 
     def download_lala_release(self):
@@ -426,13 +428,14 @@ class VersionGateController:
         generation = self._lala_update_generation
         self._lala_release_text.set("下載中，完成後會驗證官方 SHA-256 與 ZIP 完整性…")
         self._lala_download_button.configure(state="disabled")
+        download_messages = self._lala_update_messages
 
         def worker():
             try:
                 archive = download_verified_release(info)
-                self._lala_update_messages.put((generation, "download", str(archive)))
+                download_messages.put((generation, "download", str(archive)))
             except (UpdateError, OSError, ValueError):
-                self._lala_update_messages.put((generation, "error", "更新包下載或完整性驗證失敗；不會替換任何程式。"))
+                download_messages.put((generation, "error", "更新包下載或完整性驗證失敗；不會替換任何程式。"))
         threading.Thread(target=worker, name="lala-release-download", daemon=True).start()
 
     def _drain_lala_update_messages(self):
