@@ -202,39 +202,12 @@ def run_catalog_pipeline(plan: OfficialCatalogPlan, *, download=False,
     if extractor is None:
         return summary, {}
 
-    root = (Path(bundle_root) if bundle_root is not None else
-            data_root() / 'official_sync' / 'bundles')
-    bundle_index = {}
-    for update in plan.updates:
-        by_name = {row.spec.name: row for row in update.entries}
-        for row in update.entries:
-            path = row.spec.cache_path(root)
-            if not _verified_file(path, row.spec):
-                raise OfficialCatalogPipelineError('Verified Bundle vanished or changed')
-            bundle_index[(update.package, row.spec.name)] = path
-
+    paths_by_feature = verified_source_paths(plan, bundle_root=bundle_root)
     parsed = {}
     versions = {entry.name: entry.full_version for entry in plan.identity.packages}
     for source in plan.sources:
         binding = source.binding
-        update = next((p for p in plan.updates
-                       if p.package == binding.contract.package), None)
-        if update is None:
-            raise OfficialCatalogPipelineError('Missing planned Package')
-        names = set()
-        dependency_map = {row.spec.name: row.dependencies for row in update.entries}
-        def include(name):
-            if name not in dependency_map:
-                raise OfficialCatalogPipelineError('Required dependency not planned')
-            if name in names:
-                return
-            names.add(name)
-            for dependency in dependency_map[name]:
-                include(dependency)
-        for name in (source.bundle_name, *source.related_bundle_names):
-            include(name)
-        paths = tuple(bundle_index[(binding.contract.package, name)]
-                      for name in sorted(names))
+        paths = paths_by_feature[binding.contract.feature]
         try:
             raw = extractor(binding, paths)
             parsed[binding.contract.feature] = parse_feature(
@@ -250,3 +223,45 @@ def run_catalog_pipeline(plan: OfficialCatalogPlan, *, download=False,
     summary['needs_extractor'] = False
     # Parsing success never proves live protocol, navigation or login compatibility.
     return summary, parsed
+
+
+def verified_source_paths(plan: OfficialCatalogPlan, *, bundle_root=None):
+    """Resolve all roots/dependencies and recheck every official Bundle checksum.
+
+    Caller must explicitly execute its download plan first; this function
+    never downloads or extracts. Shared by reviewed and candidate pipelines.
+    """
+    if not isinstance(plan, OfficialCatalogPlan):
+        raise OfficialCatalogPipelineError('Expected official catalog plan')
+    root = (Path(bundle_root) if bundle_root is not None else
+            data_root() / 'official_sync' / 'bundles')
+    bundle_index = {}
+    by_package = {}
+    for update in plan.updates:
+        by_package[update.package] = update
+        for row in update.entries:
+            path = row.spec.cache_path(root)
+            if not _verified_file(path, row.spec):
+                raise OfficialCatalogPipelineError('Verified Bundle vanished or changed')
+            bundle_index[(update.package, row.spec.name)] = path
+    result = {}
+    for source in plan.sources:
+        binding = source.binding
+        update = by_package.get(binding.contract.package)
+        if update is None:
+            raise OfficialCatalogPipelineError('Missing planned Package')
+        names = set()
+        deps = {row.spec.name: row.dependencies for row in update.entries}
+        def include(name):
+            if name not in deps:
+                raise OfficialCatalogPipelineError('Required dependency not planned')
+            if name in names:
+                return
+            names.add(name)
+            for dep in deps[name]:
+                include(dep)
+        for name in (source.bundle_name, *source.related_bundle_names):
+            include(name)
+        result[binding.contract.feature] = tuple(
+            bundle_index[(binding.contract.package, name)] for name in sorted(names))
+    return result
