@@ -159,3 +159,48 @@ def inspect_launcher_candidate(runtime, *, root=None):
             or receipt.get('data_compatibility') != 'compatible'):
         return {'status': 'not_requested', 'protocol_compatibility': 'unverified'}
     return inspect_formal_bridge(runtime, candidate_key=receipt['catalog_key'])
+
+
+def promote_reviewed_archives(candidate_key, *, candidate_root=None,
+                              reviewed_root=None, install_root=None,
+                              check_only=False):
+    """Safe Launcher handoff when COMPLETE pinned ZIPs were supplied locally.
+
+    Four derived candidate sources alone never satisfy this requirement.
+    A pair of independently pinned original ZIPs must exist in the private
+    reviewed_full_1275 input directory (never download generated candidates
+    to that directory). No existing formal source may be overwritten.
+    """
+    from wlre.services.world import runtime_1275
+    from wlre.services.world.preview_1275 import load_preview
+    root = (Path(reviewed_root) if reviewed_root is not None else
+            data_root() / 'official_sync' / 'reviewed_full_1275')
+    data_path, eve_path = root / runtime_1275.DATA_FILE, root / runtime_1275.EVE_FILE
+    target_data, target_eve = runtime_1275._paths(install_root)
+    installed = (target_data.exists(), target_eve.exists())
+    if all(installed):
+        formal = load_preview(target_data, target_eve)
+        inspect_formal_bridge(
+            formal, candidate_key=candidate_key, root=candidate_root)
+        return {'status': 'already_verified', 'installed': True,
+                'protocol_compatibility': 'unverified'}
+    if any(installed):
+        raise FormalBridgeError('Partial formal 1275 installation requires manual review')
+    if not data_path.is_file() or not eve_path.is_file():
+        return {'status': 'awaiting_complete_reviewed_archives',
+                'installed': False, 'protocol_compatibility': 'unverified'}
+    # The formal reader validates ALL 163 pinned tables/indexes and BOTH
+    # independently reviewed Eve index sources before any filesystem writes.
+    formal = load_preview(data_path, eve_path)
+    inspect_formal_bridge(formal, candidate_key=candidate_key, root=candidate_root)
+    if check_only:
+        return {'status': 'ready_for_install', 'installed': False,
+                'protocol_compatibility': 'unverified'}
+    # Pre-existing source files cannot be replaced. runtime_1275.install
+    # commits the two pinned ZIPs with rollback on partial copy/link failure.
+    runtime_1275.install(data_path, eve_path, base=install_root, check_only=False)
+    installed_formal = load_preview(target_data, target_eve)
+    inspect_formal_bridge(
+        installed_formal, candidate_key=candidate_key, root=candidate_root)
+    return {'status': 'installed_and_verified', 'installed': True,
+            'protocol_compatibility': 'unverified'}
