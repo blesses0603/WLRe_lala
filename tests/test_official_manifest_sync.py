@@ -54,13 +54,16 @@ def responder(*, manifest=CONTENT, hash_bytes=CRC_LE, returned_url=None, request
 
 class OfficialManifestSyncTests(unittest.TestCase):
     def test_exact_official_paths_not_version_suffixed(self):
-        value = spec()
-        self.assertEqual(value.url('bytes'),
-                         'https://wlreftp.chinesegamer.net/WLN/TW/1.3.21/'
-                         'ResourcesPC/AssetBundle/DataPackage.bytes')
-        self.assertEqual(value.url('hash'),
-                         'https://wlreftp.chinesegamer.net/WLN/TW/1.3.21/'
-                         'ResourcesPC/AssetBundle/DataPackage.hash')
+        for package in ('DataPackage', 'MainPackage'):
+            with self.subTest(package=package):
+                value = ManifestSpec('1.3.21', package, spec().package_version)
+                prefix = ('https://wlreftp.chinesegamer.net/WLN/TW/1.3.21/'
+                          'ResourcesPC/AssetBundle/' + package)
+                self.assertEqual(value.url('bytes'), prefix + '.bytes')
+                self.assertEqual(value.url('hash'), prefix + '.hash')
+                for unsupported in ('json', 'report', 'version', '../report'):
+                    with self.assertRaises(ManifestSyncError):
+                        value.url(unsupported)
 
     def test_download_and_reuse_verified_local_manifest(self):
         requests = []
