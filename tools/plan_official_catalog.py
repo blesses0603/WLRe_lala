@@ -67,8 +67,8 @@ def load_bindings(path):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--bindings', type=Path, required=True,
-                        help='Private, release-reviewed exact AssetPath/Schema/SHA JSON')
+    parser.add_argument('--bindings', type=Path,
+                        help='Optional legacy manual source bindings. Omit for LaLa automatic mode.')
     parser.add_argument('--download', action='store_true',
                         help='Explicitly sync verified Bundles before optional parsing')
     parser.add_argument('--parse', action='store_true',
@@ -81,6 +81,15 @@ def main(argv=None):
             raise OfficialCatalogPipelineError('Invalid download quota')
         if args.parse and not args.download:
             raise OfficialCatalogPipelineError('--parse requires explicit --download')
+        if args.bindings is None:
+            from wlre.services.world.auto_catalog import run_auto_catalog
+            result = run_auto_catalog(
+                download=args.download, parse=args.parse,
+                max_download_bytes=args.max_mib * 1024 * 1024,
+                max_downloads=args.max_files)
+            print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
+            print('LaLa 自動模式：新版本只儲存私人候選資料，不解除登入限制。')
+            return 0
         bindings = load_bindings(args.bindings)
         if args.parse:
             try:
