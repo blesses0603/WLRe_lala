@@ -271,5 +271,5 @@ py -m unittest -v tests.test_auto_catalog tests.test_resource_rebuilder tests.te
 `resource_rebuilder._exact_reviewed_manifest()` 現在會先嘗試讀取隨程式發行的
 `wlre/resources/pins/1275_DataCatalog.manifest.json`，且必須完全符合程式內現有
 `game_data_1275.MANIFEST_SHA256` 與 `_valid_manifest()` 規格才接受。
-只有正式校驗清單**獨立取得並經審核，且實際納入發行**後，這個來源才會讓玩家免手動放入 DataCatalog ZIP；現階段**尚未提供該完整固定清單檔**，因此不得宣稱正式自動封裝已可用。
+只有正式校驗清單**獨立取得並經審核，且實際納入發行**後，這個來源才會讓玩家免手動放入 DataCatalog ZIP。補建器在沒有既存可信 ZIP 時，會依獨立 pin 的全量 `files` 明細檢驗每一張官方原始表及三項正式索引；缺少任何一項仍不予核准。現階段**尚未提供該完整固定清單檔**，因此不得宣稱正式自動封裝已可用。
 已安裝、且通過固定 SHA 的舊正式 ZIP 仍可供既有補建沿用，但來源不存在時一律保留正式驗證缺口，不自行將候選簽成正式資料。此設計為後續正式清單由 LaLa 發行版本管理提供介面，不下載不可信的第三方簽章檔。
