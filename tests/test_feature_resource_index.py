@@ -71,11 +71,11 @@ class FeatureResourceIndexTests(unittest.TestCase):
 
     def test_rejects_rogue_or_duplicate_resource_rows(self):
         doc = self.report()
-        doc['assets'].append(dict(doc['assets'][0]))
-        # This table may or may not be relevant to bag; NPC includes Eve.
+        npc = next(row for row in doc['assets']
+                   if row['asset_path'].endswith('/Eve.bytes'))
+        doc['assets'].append(dict(npc))
         result = describe_feature('npc', report=doc, revisions=self.REV)
-        self.assertEqual(result['state'], 'index_unavailable') if (
-            doc['assets'][0]['asset_path'] in result['required_assets']) else None
+        self.assertEqual(result['state'], 'index_unavailable')
         doc = self.report()
         doc['approved'] = True
         result = describe_feature('bag', report=doc, revisions=self.REV)
