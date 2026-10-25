@@ -178,7 +178,8 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
         # A scene title is never derived from portal selection or door IDs.
         # Update it even before 1275 names become available, so old labels
         # cannot survive a scene change or an asynchronous source reload.
-        MinimapNavigationMixin.update_scene_title(self)
+        if hasattr(self, 'map_title'):
+            MinimapNavigationMixin.update_scene_title(self)
         self.selected_portal=None
         self.selected_npc=None
         self.portal_list.delete(0,'end')
