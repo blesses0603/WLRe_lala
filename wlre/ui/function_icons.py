@@ -2,7 +2,7 @@
 from functools import lru_cache
 from PIL import Image, ImageDraw, ImageOps, ImageTk
 from wlre.paths import RESOURCE_ROOT
-from wlre.ui.instance_menu_icons import menu_icon_photo
+from wlre.features.instances.ui.instance_menu_icons import menu_icon_photo
 
 ICONS={'主頁':'MainIcon_041', '組隊':'MainIcon_005', '夥伴出戰':'MainIcon_010',
        '遠征':'MainIcon_038', '煉金':'MainIcon_007', '製作':'MainIcon_011',

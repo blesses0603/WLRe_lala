@@ -25,6 +25,8 @@
 | --- | --- | --- | --- | --- |
 | P0 | 盤點與 CI 基礎 | architecture/features.json、tools/architecture、FEATURE_INVENTORY、功能 CI 工作流程 | 盤點工具與邊界測試；完整基準排版問題已修復並加入回歸：1021 項，1019 通過、2 跳過 | 所有舊資源保留；依官方等價與全消費者遷移證據決定移除 |
 
+| P1 | 協力／一般副本 | features/instances 共用房間 UI；cooperative／dungeon 各自 Actions 與 Page；舊入口同物件 alias | 模組回歸 784 項通過；新增相容／斷線拒絕 7 項通過 | 保留共享封包／房間安全與 1262 副本目錄；官方來源等價缺口見資源稽核 |
+
 ## 最終驗收清單
 
 - [ ] 22 個功能依責任完成分類與舊入口相容。

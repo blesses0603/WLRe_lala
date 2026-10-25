@@ -19,7 +19,8 @@
         "wlre.services.instance",
         "wlre.services.instances",
         "wlre.network.instance"
-      ]
+      ],
+      "status": "implemented"
     },
     "cooperative": {
       "title": "協力",
@@ -28,7 +29,8 @@
       "shared": [
         "wlre.services.instance",
         "wlre.network.instance"
-      ]
+      ],
+      "status": "implemented"
     },
     "dungeon": {
       "title": "一般副本",
@@ -37,7 +39,8 @@
       "shared": [
         "wlre.services.instance",
         "wlre.network.instance"
-      ]
+      ],
+      "status": "implemented"
     },
     "minimap": {
       "title": "小地圖與導航預覽",

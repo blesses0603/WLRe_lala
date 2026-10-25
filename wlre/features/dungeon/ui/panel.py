@@ -1,0 +1,7 @@
+"""DungeonPage feature page; shared room snapshots and guards remain authoritative."""
+from wlre.features.instances.ui.instance_ui import InstanceModePage
+
+
+class DungeonPage(InstanceModePage):
+    def __init__(self, parent, app=None):
+        super().__init__(parent, cooperative=False, app=app)

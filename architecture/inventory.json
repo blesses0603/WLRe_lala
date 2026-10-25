@@ -370,6 +370,224 @@
       "compatibility_entry": false
     },
     {
+      "path": "wlre/features/__init__.py",
+      "module": "wlre.features",
+      "owner": "shared",
+      "sha256": "6dd111472d7dd89b597d2493f59d991630a01886de05be024043468dfb71cd91",
+      "lines": 1,
+      "imports": [
+        "wlre.features"
+      ],
+      "resources": [],
+      "definitions": [],
+      "compatibility_entry": false
+    },
+    {
+      "path": "wlre/features/cooperative/__init__.py",
+      "module": "wlre.features.cooperative",
+      "owner": "cooperative",
+      "sha256": "f2709915fd4e9433c3e61d3711affea810f349f151113e03235b6aa90db73a64",
+      "lines": 1,
+      "imports": [
+        "wlre.features.cooperative"
+      ],
+      "resources": [],
+      "definitions": [],
+      "compatibility_entry": false
+    },
+    {
+      "path": "wlre/features/cooperative/ui/__init__.py",
+      "module": "wlre.features.cooperative.ui",
+      "owner": "cooperative",
+      "sha256": "fbe989055444fc67834ee292b18ea7f4e808d6d87aeb1ef1431a1f01bb246780",
+      "lines": 1,
+      "imports": [],
+      "resources": [],
+      "definitions": [],
+      "compatibility_entry": false
+    },
+    {
+      "path": "wlre/features/cooperative/ui/actions.py",
+      "module": "wlre.features.cooperative.ui.actions",
+      "owner": "cooperative",
+      "sha256": "d039093700c3c5f3b6b96bf6cea9b1aeb9ecc1685f289e1c69eb43ea1c687a8d",
+      "lines": 76,
+      "imports": [
+        "tkinter",
+        "tkinter.messagebox",
+        "tkinter.ttk"
+      ],
+      "resources": [],
+      "definitions": [
+        "CooperativeActions"
+      ],
+      "compatibility_entry": false
+    },
+    {
+      "path": "wlre/features/cooperative/ui/panel.py",
+      "module": "wlre.features.cooperative.ui.panel",
+      "owner": "cooperative",
+      "sha256": "02b9cf1917affa0d9797322dd50d5ffd8cfcafb8dce98f570c431f98c495fdfe",
+      "lines": 7,
+      "imports": [
+        "wlre.features.instances.ui.instance_ui",
+        "wlre.features.instances.ui.instance_ui.InstanceModePage"
+      ],
+      "resources": [],
+      "definitions": [
+        "CooperativePage"
+      ],
+      "compatibility_entry": false
+    },
+    {
+      "path": "wlre/features/dungeon/__init__.py",
+      "module": "wlre.features.dungeon",
+      "owner": "dungeon",
+      "sha256": "40ee6af0756280842297823a411aa2c1d172b55a77f9887006bb147b1f2e9441",
+      "lines": 1,
+      "imports": [
+        "wlre.features.dungeon"
+      ],
+      "resources": [],
+      "definitions": [],
+      "compatibility_entry": false
+    },
+    {
+      "path": "wlre/features/dungeon/ui/__init__.py",
+      "module": "wlre.features.dungeon.ui",
+      "owner": "dungeon",
+      "sha256": "8986615b27c888496dfac169dd31506987c5a69db647e6070162c121c6805068",
+      "lines": 1,
+      "imports": [],
+      "resources": [],
+      "definitions": [],
+      "compatibility_entry": false
+    },
+    {
+      "path": "wlre/features/dungeon/ui/actions.py",
+      "module": "wlre.features.dungeon.ui.actions",
+      "owner": "dungeon",
+      "sha256": "d9212a09936c3633bc446d445b74f78a9e8d0c787171529484b375924942ca27",
+      "lines": 42,
+      "imports": [
+        "tkinter",
+        "tkinter.messagebox",
+        "tkinter.ttk"
+      ],
+      "resources": [],
+      "definitions": [
+        "DungeonActions"
+      ],
+      "compatibility_entry": false
+    },
+    {
+      "path": "wlre/features/dungeon/ui/panel.py",
+      "module": "wlre.features.dungeon.ui.panel",
+      "owner": "dungeon",
+      "sha256": "736f446a7360e5dde90fca8eb3f20cbdaad621895b41e6258aa7bcc1afbdd5cf",
+      "lines": 7,
+      "imports": [
+        "wlre.features.instances.ui.instance_ui",
+        "wlre.features.instances.ui.instance_ui.InstanceModePage"
+      ],
+      "resources": [],
+      "definitions": [
+        "DungeonPage"
+      ],
+      "compatibility_entry": false
+    },
+    {
+      "path": "wlre/features/instances/__init__.py",
+      "module": "wlre.features.instances",
+      "owner": "instances",
+      "sha256": "88c4df1dad50796a08a81d618a1ca162c00bae13eb7979fe02c2870feca051b3",
+      "lines": 1,
+      "imports": [
+        "wlre.features.instances"
+      ],
+      "resources": [],
+      "definitions": [],
+      "compatibility_entry": false
+    },
+    {
+      "path": "wlre/features/instances/ui/__init__.py",
+      "module": "wlre.features.instances.ui",
+      "owner": "instances",
+      "sha256": "29ee2ca3ea79fc4c331fd96a4dec17fa7d9dfde5a9595faeed69e289a79315f6",
+      "lines": 1,
+      "imports": [
+        "wlre.features.instances.ui"
+      ],
+      "resources": [],
+      "definitions": [],
+      "compatibility_entry": false
+    },
+    {
+      "path": "wlre/features/instances/ui/instance_menu_icons.py",
+      "module": "wlre.features.instances.ui.instance_menu_icons",
+      "owner": "instances",
+      "sha256": "6c281c06d5cd166a4a73328ba91c296eda95b30319b0c970be70b06d245ed635",
+      "lines": 40,
+      "imports": [
+        "PIL",
+        "PIL.Image",
+        "PIL.ImageOps",
+        "PIL.ImageTk",
+        "functools",
+        "functools.lru_cache",
+        "wlre.paths",
+        "wlre.paths.RESOURCE_ROOT"
+      ],
+      "resources": [],
+      "definitions": [
+        "menu_icon_image",
+        "menu_icon_photo"
+      ],
+      "compatibility_entry": false
+    },
+    {
+      "path": "wlre/features/instances/ui/instance_ui.py",
+      "module": "wlre.features.instances.ui.instance_ui",
+      "owner": "instances",
+      "sha256": "45e9a1584c3dfd1ae8c34f5ca4e905cc904d8a1dfbbab9ec856be10828b372b0",
+      "lines": 919,
+      "imports": [
+        "time",
+        "tkinter",
+        "tkinter.messagebox",
+        "tkinter.ttk",
+        "wlre.features.cooperative.ui.actions",
+        "wlre.features.cooperative.ui.actions.CooperativeActions",
+        "wlre.features.cooperative.ui.panel",
+        "wlre.features.cooperative.ui.panel.CooperativePage",
+        "wlre.features.dungeon.ui.actions",
+        "wlre.features.dungeon.ui.actions.DungeonActions",
+        "wlre.features.dungeon.ui.panel",
+        "wlre.features.dungeon.ui.panel.DungeonPage",
+        "wlre.features.instances.ui.instance_menu_icons",
+        "wlre.features.instances.ui.instance_menu_icons.menu_icon_photo",
+        "wlre.services.battle.party",
+        "wlre.services.battle.party.own_team",
+        "wlre.services.instance_browser",
+        "wlre.services.instance_browser.entries_for",
+        "wlre.services.instance_room_flow",
+        "wlre.services.instance_room_flow.coop_completed_no_chest",
+        "wlre.ui.rounded_notebook",
+        "wlre.ui.rounded_notebook.RoundedNotebook",
+        "wlre.ui.window_layout",
+        "wlre.ui.window_layout.configure_dialog"
+      ],
+      "resources": [],
+      "definitions": [
+        "creation_block_reasons",
+        "room_headcount_status",
+        "InstanceModePage",
+        "instance_details",
+        "InstancePanel"
+      ],
+      "compatibility_entry": false
+    },
+    {
       "path": "wlre/launcher.py",
       "module": "wlre.launcher",
       "owner": "shared",
@@ -4957,11 +5175,13 @@
       "path": "wlre/ui/dashboard_builder.py",
       "module": "wlre.ui.dashboard_builder",
       "owner": "shared",
-      "sha256": "2bcff2fb1855ef5b55cfbff2865c301c0bbc22940fbf9da96bdbd406d5024d7f",
+      "sha256": "6a4267d1d6e34ae9172c26dda9290d4a33d8517a06734d331f610da1024bc4bd",
       "lines": 101,
       "imports": [
         "tkinter",
         "tkinter.ttk",
+        "wlre.features.instances.ui.instance_ui",
+        "wlre.features.instances.ui.instance_ui.InstancePanel",
         "wlre.services.battle",
         "wlre.services.battle.auto_battle",
         "wlre.services.battle.auto_battle.defaults",
@@ -4984,8 +5204,6 @@
         "wlre.ui.feature_windows.make_feature",
         "wlre.ui.home_map",
         "wlre.ui.home_map.HomeMap",
-        "wlre.ui.instance_ui",
-        "wlre.ui.instance_ui.InstancePanel",
         "wlre.ui.overview_ui",
         "wlre.ui.overview_ui.OverviewPanel",
         "wlre.ui.party_guard_ui",
@@ -5337,7 +5555,7 @@
       "path": "wlre/ui/function_icons.py",
       "module": "wlre.ui.function_icons",
       "owner": "shared",
-      "sha256": "a766a46c73520b7ef9d4e5cf02e83a5939197011fcd6dc1c7a09b46ca6245cf6",
+      "sha256": "2eb7a4e290fd51f5cbc4c242969f9bc3f8dc9d17971a9e7cebfb295ad49e4163",
       "lines": 43,
       "imports": [
         "PIL",
@@ -5347,10 +5565,10 @@
         "PIL.ImageTk",
         "functools",
         "functools.lru_cache",
+        "wlre.features.instances.ui.instance_menu_icons",
+        "wlre.features.instances.ui.instance_menu_icons.menu_icon_photo",
         "wlre.paths",
-        "wlre.paths.RESOURCE_ROOT",
-        "wlre.ui.instance_menu_icons",
-        "wlre.ui.instance_menu_icons.menu_icon_photo"
+        "wlre.paths.RESOURCE_ROOT"
       ],
       "resources": [],
       "definitions": [
@@ -5528,58 +5746,33 @@
       "path": "wlre/ui/instance_menu_icons.py",
       "module": "wlre.ui.instance_menu_icons",
       "owner": "instances",
-      "sha256": "6c281c06d5cd166a4a73328ba91c296eda95b30319b0c970be70b06d245ed635",
-      "lines": 40,
+      "sha256": "004c617e1cc3dbb5b9c2ccb29b3977efc9d03dd6b12230fe59ae2e9710929031",
+      "lines": 4,
       "imports": [
-        "PIL",
-        "PIL.Image",
-        "PIL.ImageOps",
-        "PIL.ImageTk",
-        "functools",
-        "functools.lru_cache",
-        "wlre.paths",
-        "wlre.paths.RESOURCE_ROOT"
+        "wlre.compat",
+        "wlre.compat.alias_module",
+        "wlre.features.instances.ui.instance_menu_icons",
+        "wlre.ui.instance_menu_icons"
       ],
       "resources": [],
-      "definitions": [
-        "menu_icon_image",
-        "menu_icon_photo"
-      ],
-      "compatibility_entry": false
+      "definitions": [],
+      "compatibility_entry": true
     },
     {
       "path": "wlre/ui/instance_ui.py",
       "module": "wlre.ui.instance_ui",
       "owner": "instances",
-      "sha256": "e0f9aa64a4e69a06c50d77a088c0580f52aaf8e06185b21ff6e96e258e1e01ee",
-      "lines": 1011,
+      "sha256": "7ad2b30aafa80f39bd5d70c330f0ff27a7391edb276fc1439a7eae3c5f8c6a4c",
+      "lines": 4,
       "imports": [
-        "time",
-        "tkinter",
-        "tkinter.messagebox",
-        "tkinter.ttk",
-        "wlre.services.battle.party",
-        "wlre.services.battle.party.own_team",
-        "wlre.services.instance_browser",
-        "wlre.services.instance_browser.entries_for",
-        "wlre.services.instance_room_flow",
-        "wlre.services.instance_room_flow.coop_completed_no_chest",
-        "wlre.ui.instance_menu_icons",
-        "wlre.ui.instance_menu_icons.menu_icon_photo",
-        "wlre.ui.rounded_notebook",
-        "wlre.ui.rounded_notebook.RoundedNotebook",
-        "wlre.ui.window_layout",
-        "wlre.ui.window_layout.configure_dialog"
+        "wlre.compat",
+        "wlre.compat.alias_module",
+        "wlre.features.instances.ui.instance_ui",
+        "wlre.ui.instance_ui"
       ],
       "resources": [],
-      "definitions": [
-        "creation_block_reasons",
-        "room_headcount_status",
-        "InstanceModePage",
-        "instance_details",
-        "InstancePanel"
-      ],
-      "compatibility_entry": false
+      "definitions": [],
+      "compatibility_entry": true
     },
     {
       "path": "wlre/ui/layout.py",
@@ -7321,11 +7514,12 @@
       "path": "tests/test_feature_architecture.py",
       "module": "tests.test_feature_architecture",
       "owner": "shared",
-      "sha256": "797983128c8fce534a8a8b5a02b162236cb446c1606109f7c942ebd86d3445e0",
-      "lines": 49,
+      "sha256": "cc224cad82ce8b493a537e2e0c39b3cd586f6aafd645518e17918d4bc0c00e55",
+      "lines": 106,
       "imports": [
         "ast",
         "importlib",
+        "json",
         "pathlib",
         "pathlib.Path",
         "tools.architecture.inventory",
@@ -7334,12 +7528,27 @@
         "tools.architecture.inventory.owner",
         "tools.architecture.test_features",
         "tools.architecture.test_features.selected_tests",
+        "types",
+        "types.SimpleNamespace",
         "unittest",
+        "unittest.mock",
+        "unittest.mock.Mock",
+        "unittest.mock.patch",
         "wlre",
         "wlre.__version__",
         "wlre.features",
+        "wlre.features.cooperative.ui.actions",
+        "wlre.features.cooperative.ui.actions.CooperativeActions",
+        "wlre.features.cooperative.ui.panel",
+        "wlre.features.cooperative.ui.panel.CooperativePage",
+        "wlre.features.dungeon.ui.actions",
+        "wlre.features.dungeon.ui.actions.DungeonActions",
+        "wlre.features.dungeon.ui.panel",
+        "wlre.features.dungeon.ui.panel.DungeonPage",
         "wlre.services.instance_room_flow",
-        "wlre.services.social.guild"
+        "wlre.services.social.guild",
+        "wlre.ui.instance_ui",
+        "wlre.ui.instance_ui.InstanceModePage"
       ],
       "resources": [],
       "definitions": [

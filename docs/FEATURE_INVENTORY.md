@@ -6,9 +6,9 @@
 
 | 階段 | 功能 | 原始碼歸屬數 | 來源遷移規則 |
 | --- | --- | ---: | --- |
-| 1 | 副本共用房間流程 (`instances`) | 2 | 優先官方 Runtime；未證等價保留舊檔 |
-| 1 | 協力 (`cooperative`) | 0 | 優先官方 Runtime；未證等價保留舊檔 |
-| 1 | 一般副本 (`dungeon`) | 0 | 優先官方 Runtime；未證等價保留舊檔 |
+| 1 | 副本共用房間流程 (`instances`) | 6 | 優先官方 Runtime；未證等價保留舊檔 |
+| 1 | 協力 (`cooperative`) | 4 | 優先官方 Runtime；未證等價保留舊檔 |
+| 1 | 一般副本 (`dungeon`) | 4 | 優先官方 Runtime；未證等價保留舊檔 |
 | 2 | 小地圖與導航預覽 (`minimap`) | 3 | 優先官方 Runtime；未證等價保留舊檔 |
 | 2 | NPC／對話／商店 (`npc`) | 7 | 優先官方 Runtime；未證等價保留舊檔 |
 | 2 | 傳送點 (`portals`) | 2 | 優先官方 Runtime；未證等價保留舊檔 |
@@ -52,6 +52,19 @@ UI 主執行緒／主視窗組裝、共用圖片快取及多功能安全規則�
 | `wlre/core/state_ownership.py` | shared | 4 | 0 |
 | `wlre/core/state_session_events.py` | shared | 0 | 0 |
 | `wlre/core/state_world_events.py` | shared | 0 | 0 |
+| `wlre/features/__init__.py` | shared | 1 | 0 |
+| `wlre/features/cooperative/__init__.py` | cooperative | 1 | 0 |
+| `wlre/features/cooperative/ui/__init__.py` | cooperative | 0 | 0 |
+| `wlre/features/cooperative/ui/actions.py` | cooperative | 3 | 0 |
+| `wlre/features/cooperative/ui/panel.py` | cooperative | 2 | 0 |
+| `wlre/features/dungeon/__init__.py` | dungeon | 1 | 0 |
+| `wlre/features/dungeon/ui/__init__.py` | dungeon | 0 | 0 |
+| `wlre/features/dungeon/ui/actions.py` | dungeon | 3 | 0 |
+| `wlre/features/dungeon/ui/panel.py` | dungeon | 2 | 0 |
+| `wlre/features/instances/__init__.py` | instances | 1 | 0 |
+| `wlre/features/instances/ui/__init__.py` | instances | 1 | 0 |
+| `wlre/features/instances/ui/instance_menu_icons.py` | instances | 8 | 0 |
+| `wlre/features/instances/ui/instance_ui.py` | instances | 24 | 0 |
 | `wlre/launcher.py` | shared | 14 | 0 |
 | `wlre/launcher_progress.py` | shared | 8 | 0 |
 | `wlre/network/__init__.py` | shared | 0 | 0 |
@@ -222,8 +235,8 @@ UI 主執行緒／主視窗組裝、共用圖片快取及多功能安全規則�
 | `wlre/ui/gui.py` | shared | 63 | 0 |
 | `wlre/ui/halo_button.py` | shared | 10 | 0 |
 | `wlre/ui/home_map.py` | minimap | 44 | 0 |
-| `wlre/ui/instance_menu_icons.py` | instances | 8 | 0 |
-| `wlre/ui/instance_ui.py` | instances | 16 | 0 |
+| `wlre/ui/instance_menu_icons.py` | instances | 4 | 0 |
+| `wlre/ui/instance_ui.py` | instances | 4 | 0 |
 | `wlre/ui/layout.py` | shared | 2 | 0 |
 | `wlre/ui/login_controller.py` | accounts | 12 | 0 |
 | `wlre/ui/maintenance_ui.py` | maintenance | 14 | 0 |
@@ -281,7 +294,7 @@ UI 主執行緒／主視窗組裝、共用圖片快取及多功能安全規則�
 | `tests/test_expedition_teams.py` | shared | 18 | 1 |
 | `tests/test_expedition_ui.py` | shared | 16 | 0 |
 | `tests/test_expedition_ui_modules.py` | shared | 15 | 0 |
-| `tests/test_feature_architecture.py` | shared | 16 | 0 |
+| `tests/test_feature_architecture.py` | shared | 32 | 0 |
 | `tests/test_feature_resource_index.py` | shared | 22 | 0 |
 | `tests/test_feature_windows_v052.py` | shared | 14 | 0 |
 | `tests/test_formal_candidate_bridge.py` | shared | 48 | 0 |

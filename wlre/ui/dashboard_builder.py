@@ -10,7 +10,7 @@ from wlre.services.battle import party_guard
 from wlre.ui.services_ui import PartyPanel, AlchemyPanel
 from wlre.ui.companion_ui import CompanionPanel
 from wlre.ui.expedition_ui import ExpeditionPanel
-from wlre.ui.instance_ui import InstancePanel
+from wlre.features.instances.ui.instance_ui import InstancePanel
 from wlre.ui.feature_windows import make_feature
 from wlre.ui.party_guard_ui import PartyGuardPanel
 from wlre.ui.crafting_ui import CraftingPanel

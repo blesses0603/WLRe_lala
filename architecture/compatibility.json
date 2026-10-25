@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "modules": {
+    "wlre.ui.instance_menu_icons": "wlre.features.instances.ui.instance_menu_icons",
+    "wlre.ui.instance_ui": "wlre.features.instances.ui.instance_ui"
+  }
+}
