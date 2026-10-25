@@ -102,10 +102,14 @@ class LauncherCatalogTests(unittest.TestCase):
                        {'status': 'downloaded_unparsed', 'catalog_key': 'a'*64,
                         'assets_ready': False, 'can_send_packets': False},
                    ]) as automatic, \
+             patch('wlre.services.world.bundle_runtime_1275.sync_pinned_runtime_bundles',
+                   return_value={'verified_bundles': 4, 'downloaded_bundles': 2}
+             ) as pinned_sync, \
              patch('wlre.services.world.resource_gap_diagnostics.diagnose_resources',
                    return_value={}), \
              patch('wlre.services.world.resource_gap_diagnostics.save_report'):
             result = prepare_on_launch(environ={})
+        pinned_sync.assert_called_once_with()
         self.assertEqual(automatic.call_count, 2)
         automatic.assert_any_call(download=True, parse=False)
         self.assertEqual(result['status'], 'downloaded_unparsed')
