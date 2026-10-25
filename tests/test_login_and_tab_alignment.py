@@ -68,6 +68,10 @@ class LoginAndTabAlignment(unittest.TestCase):
             self.assertEqual(run.call_args.kwargs['account'],'fixture-account')
 
     def test_missing_package_comparison_still_blocks_login(self):
+        # setUp enters the main dashboard and destroys its login window.
+        # Re-create the hidden login screen to assert that denial never reveals it.
+        self.app.show_login()
+        self.app.login_window.withdraw()
         self.app._version_gate_result={
             'status':'version_identifiers_match','blocked':False,
             'remote':{'status':'same_resources','packages':{}},
