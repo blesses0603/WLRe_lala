@@ -40,8 +40,8 @@ class SceneNames1275Tests(unittest.TestCase):
             catalog = Portals()
         source_a = catalog.for_scene(12170)[0]
         source_b = catalog.for_scene(12171)[0]
-        self.assertEqual(source_a['name'], '門事件 #7（目的地未確認）')
-        self.assertEqual(source_b['name'], '門事件 #7（目的地未確認）')
+        self.assertEqual(source_a['name'], '傳點 #7（目的地待確認）')
+        self.assertEqual(source_b['name'], '傳點 #7（目的地待確認）')
         self.assertNotEqual(source_a['id'], source_b['id'])
         self.assertEqual(source_a['source_scene_label'], '瑪雅野豬叢林二(12170)')
         self.assertTrue(source_a['source_scene_name_known'])
@@ -58,7 +58,7 @@ class SceneNames1275Tests(unittest.TestCase):
                 return_value=runtime):
             catalog = Portals()
         row = catalog.for_scene(12170)[0]
-        self.assertEqual(row['name'], '門事件 #7（目的地未確認）')
+        self.assertEqual(row['name'], '傳點 #7（目的地待確認）')
         self.assertFalse(row['source_scene_name_known'])
         self.assertNotIn('瑪雅野豬叢林二', row['name'])
 
@@ -81,7 +81,7 @@ class SceneNames1275Tests(unittest.TestCase):
         page.map_title.set.assert_called_once_with('小地圖｜瑪雅野豬叢林二(12170)')
         listed = page.portal_list.insert.call_args_list[0].args[1]
         self.assertNotIn('瑪雅野豬叢林二(12170)', listed)
-        self.assertIn('門事件 #7', listed)
+        self.assertIn('傳點 #7', listed)
         self.assertIn('所在場景 瑪雅野豬叢林二(12170)',
                       page.portal_status.set.call_args.args[0])
 
