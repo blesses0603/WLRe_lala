@@ -135,7 +135,7 @@ class Portal1275RecoveryTests(unittest.TestCase):
         reload.assert_called_once()
         self.assertEqual(len(page.portal_rows), 2)
         self.assertIn('◇ ', page.portal_list.insert.call_args_list[0].args[1])
-        self.assertIn('1275 官方資料', page.portal_status.set.call_args.args[0])
+        self.assertIn('1275 場景', page.portal_status.set.call_args.args[0])
 
 
 if __name__ == '__main__':
