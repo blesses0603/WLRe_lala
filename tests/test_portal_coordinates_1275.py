@@ -124,6 +124,30 @@ class PortalPosition1275Tests(unittest.TestCase):
         page.on_pick.assert_not_called()
         self.assertIn('超出', page.portal_status.set.call_args.args[0])
 
+    def test_verified_1275_scene_geometry_prevents_1262_image_misalignment(self):
+        stage = {'pos_x_ratio': 3, 'pos_y_ratio': 2,
+                 'map_width': 1000, 'map_height': 1000,
+                 'small_offset_x': 25, 'small_offset_y': 30}
+        calibrated = verified_portal_positions(
+            stage_marker(), door_links(),
+            {11016: [{'index': 1, 'x': 42, 'y': 64}]},
+            {11016: stage})[(11016, 1)]
+        expected = {'rate': 100.0, 'offset_x': 25,
+                    'offset_y': 30, 'height': 1000}
+        self.assertEqual(calibrated['projection_guard'], expected)
+        p = {'coordinate_valid': True, 'x': 600, 'y': 600,
+             'projection_guard': expected}
+        good = SimpleNamespace(
+            rate=100.0, offset_x=25, offset_y=30, height=1000,
+            packet_to_pixel=lambda x, y: (x, y))
+        bad = SimpleNamespace(
+            rate=100.0, offset_x=40, offset_y=30, height=1000,
+            packet_to_pixel=lambda x, y: (x, y))
+        self.assertEqual(portal_map_pixel(p, good), (600, 600))
+        self.assertIsNone(portal_map_pixel(p, bad))
+        self.assertIsNone(nearest_marker(
+            [p], bad, lambda x, y: (x, y), 600, 600))
+
 
 if __name__ == '__main__':
     unittest.main()
