@@ -99,7 +99,15 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
         self.portal_list=tk.Listbox(self.portal_tab,exportselection=False,background='#203f53',foreground='#f4e4b5',selectbackground='#e5d9ad',selectforeground='#243b4d',borderwidth=0,highlightthickness=0,activestyle='none',font=('Microsoft JhengHei UI',-14))
         bar=ttk.Scrollbar(self.portal_tab,orient='vertical',command=self.portal_list.yview)
         self.portal_list.configure(yscrollcommand=bar.set)
-        bar.pack(side='right',fill='y');self.portal_list.pack(fill='both',expand=True)
+        bar.pack(side='right',fill='y')
+        # Compact dashboard hides the generic status strip. Keep a short
+        # actionable resource diagnostic visible beside the portal list.
+        self.portal_info=tk.StringVar(value='')
+        ttk.Label(self.portal_tab, textvariable=self.portal_info,
+                  style='Muted.TLabel',
+                  wraplength=108 if compact else 160).pack(
+                      side='bottom',fill='x',padx=1,pady=(3,2))
+        self.portal_list.pack(fill='both',expand=True)
         self.portal_list.bind('<<ListboxSelect>>',self.choose_portal)
         self.portal_list.bind('<Double-Button-1>',lambda event:self.go_portal())
         self.npc_message=tk.StringVar(value='選取 NPC 查看資料；目前不會觸發遊戲事件。')
@@ -216,6 +224,18 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
         if not self.npc_rows:self.npc_list.insert('end','（本場景尚無 NPC 資料）')
         if not self.monster_rows:self.monster_list.insert('end','（來源未列怪物）')
         ready=sum(bool(p.get('direct_eligible')) for p in self.portal_rows)
+        if hasattr(self, 'portal_info'):
+            self.portal_info.set('')
+            if self.portals.data.get('source_revision') == 1275:
+                source = self.portals.data.get('portal_metadata_status')
+                named = sum(bool(p.get('official_name')) for p in self.portal_rows)
+                if source in ('missing_stage_map', 'core_runtime_unavailable'):
+                    self.portal_info.set('尚缺 1275 官方傳點名稱資料')
+                elif source == 'stage_map_invalid':
+                    self.portal_info.set('1275 傳點名稱表格式無法解析')
+                elif named < len(self.portal_rows):
+                    self.portal_info.set(
+                        f'{len(self.portal_rows)-named} 個傳點未取得官方名稱')
         if self.portals.data.get('source_revision') == 1275:
             count = len(self.portal_rows)
             if self.portals.data.get('source_ready'):
