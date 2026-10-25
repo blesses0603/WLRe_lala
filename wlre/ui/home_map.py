@@ -220,8 +220,9 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
         if self.portals.data.get('source_revision') == 1275:
             count = len(self.portal_rows)
             if self.portals.data.get('source_ready'):
-                scene = source_scene_label(
-                    self.selected_id, self.portals.data.get('scene_names', {}))
+                # Use the same validated scene label as the map header,
+                # including safe fallback for out-of-range scene IDs.
+                scene = MinimapNavigationMixin.scene_display_name(self)
                 text = (f'已載入 1275 官方資料：所在場景 {scene} 有 {count} 個傳點；'
                         f'{ready} 個完成三表目的地核對可手動確認試傳；'
                         '其餘入口維持停用，實際換圖以伺服器回覆為準。')
