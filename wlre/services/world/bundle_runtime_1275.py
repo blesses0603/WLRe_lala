@@ -104,7 +104,7 @@ def sync_pinned_runtime_bundles(*, sync_root=None,
 
     from wlre.services.official_incremental_sync import IncrementalSyncError
     asset_paths = tuple(_ASSET_ROOT + name + '.bytes'
-                        for name in _REQUIRED_TABLES + _PORTAL_TABLES)
+                        for name in _REQUIRED_TABLES)
     try:
         plan = build_update_plan(
             manifests['DataPackage'], asset_paths=asset_paths,
@@ -126,9 +126,38 @@ def sync_pinned_runtime_bundles(*, sync_root=None,
     except (OSError, ValueError, TypeError, KeyError,
             RuntimeError, IncrementalSyncError) as exc:
         raise BundleRuntimeUnavailable('必要官方 1275 Bundle 同步失敗') from exc
+
+    # Optional portal metadata must never stop the ten-table core runtime.
+    # Allocate only the remaining pinned download budget and verify each
+    # additional Bundle before allowing read-only destination previews.
+    portal_count, portal_bytes, portal_ready = 0, 0, False
+    try:
+        optional_paths = tuple(_ASSET_ROOT + table + '.bytes'
+                               for table in _PORTAL_TABLES)
+        portal_plan = build_update_plan(
+            manifests['DataPackage'], asset_paths=optional_paths,
+            cache_root=root / 'bundles')
+        portal_count = sum(row.action != 'cached' for row in portal_plan.entries)
+        portal_bytes = sum(row.spec.file_size for row in portal_plan.entries
+                           if row.action != 'cached')
+        remaining_count = max_downloads - count
+        remaining_bytes = max_download_bytes - needed
+        if (portal_count <= remaining_count and portal_bytes <= remaining_bytes):
+            execute(portal_plan, cache_root=root / 'bundles', download=True,
+                    max_download_bytes=remaining_bytes,
+                    max_downloads=remaining_count)
+            portal_ready = all(_verified_file(
+                row.spec.cache_path(root / 'bundles'), row.spec)
+                for row in portal_plan.entries)
+    except (OSError, ValueError, TypeError, KeyError,
+            RuntimeError, IncrementalSyncError):
+        portal_ready = False
     return {'verified_bundles': len(plan.entries),
             'downloaded_bundles': count,
             'bytes_downloaded': needed,
+            'portal_metadata_ready': portal_ready,
+            'portal_bundles_downloaded': portal_count if portal_ready else 0,
+            'portal_bytes_downloaded': portal_bytes if portal_ready else 0,
             'assets_ready': False, 'can_send_packets': False}
 
 
