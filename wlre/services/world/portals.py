@@ -3,6 +3,7 @@ from wlre.paths import RESOURCE_ROOT
 import json
 import math
 from pathlib import Path
+from wlre.services.world.scene_names_1275 import source_scene_label
 
 
 class Portals:
@@ -16,9 +17,15 @@ class Portals:
                 # positions as read-only map markers; NEVER reuse 1262 routes.
                 source_ready = False
                 doors = {}
+                scene_names = {}
                 door_count = 0
                 try:
                     verified = active_runtime()
+                    # Only names bound to this exact verified 1275 runtime are
+                    # permitted. Legacy map_names.json is NOT a name fallback.
+                    scene_names = getattr(verified, 'scene_names', {})
+                    if not isinstance(scene_names, dict):
+                        scene_names = {}
                     door_count = sum(len(rows) for rows in verified.doors.values())
                     for scene, entries in verified.doors.items():
                         if (type(scene) is int and 0 <= scene <= 65535):
@@ -28,6 +35,7 @@ class Portals:
                             scene_id = int(scene)
                         else:
                             continue
+                        scene_label = source_scene_label(scene_id, scene_names)
                         visible = []
                         for row in entries:
                             if not isinstance(row, dict):
@@ -43,7 +51,10 @@ class Portals:
                             visible.append({
                                 'id': f'1275:{scene_id}:{index}',
                                 'scene': scene_id, 'index': index,
-                                'name': f'1275 門事件 #{index}',
+                                'name': f'{scene_label}｜1275 門事件 #{index}',
+                                'source_scene_label': scene_label,
+                                'source_scene_name_known': scene_id in scene_names,
+                                'destination_label': '目的地未確認',
                                 'kind': 'door',
                                 'source_revision': 1275,
                                 'coordinate_valid': valid_xy,
@@ -70,6 +81,7 @@ class Portals:
                     'portals': doors, 'audit': [], 'entities': {},
                     'source_revision': 1275,
                     'door_count': door_count,
+                    'scene_names': scene_names,
                     'source_ready': source_ready,
                 }
                 self.audit = {}
