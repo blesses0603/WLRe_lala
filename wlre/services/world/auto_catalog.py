@@ -286,6 +286,9 @@ def run_auto_catalog(*, download=True, parse=True, observe=None, retrieve=None,
     if (type(max_download_bytes) is not int or max_download_bytes < 0
             or type(max_downloads) is not int or max_downloads < 0):
         raise AutoCatalogError('Invalid automatic download limits')
+    # Persist only verified public version identifiers in a real Launcher run.
+    # Injected test fixtures must never read or overwrite the user's cache.
+    real_observation = observe is None and retrieve is None
     observe = observe_official_versions if observe is None else observe
     retrieve = fetch_official_manifest if retrieve is None else retrieve
     previous_finder = (find_previous_verified_manifest if previous_finder is None
@@ -320,8 +323,37 @@ def run_auto_catalog(*, download=True, parse=True, observe=None, retrieve=None,
     bindings = _bindings_for_snapshot(snapshot)
     plan = plan_catalog_pipeline(snapshot, manifests, bindings,
                                  previous_manifests=previous, bundle_root=bundle_root)
+    # Compare the current fully checked Manifest identity with the last
+    # OBSERVED official revision, not with an installed or gameplay-approved
+    # revision. Saving this metadata never switches the active game runtime.
+    revision_status = 'unrecorded'
+    if real_observation and download:
+        from wlre.services.official_resource_sync import (
+            OfficialSyncError, compare_snapshot, read_snapshot, save_snapshot,
+        )
+        try:
+            previous_observation = read_snapshot()
+        except OfficialSyncError:
+            previous_observation = None
+        delta = compare_snapshot(snapshot, previous_observation)
+        revision_status = (
+            'first_observation' if previous_observation is None
+            else 'changed' if (
+                delta['data_ver_changed'] or delta['exe_version_changed'] or
+                any(change == 'changed' for change in delta['package_changes'].values()))
+            else 'unchanged')
+        try:
+            save_snapshot(snapshot)
+        except OSError:
+            # A read-only user profile must not turn valid official manifests
+            # into an unsafe runtime decision; this status is informational.
+            emit('official_revision_unavailable')
+        emit('official_revision', state=revision_status,
+             data= snapshot['packages']['DataPackage'].split('_', 1)[0],
+             main= snapshot['packages']['MainPackage'].split('_', 1)[0])
     result = {
         'catalog_key': plan.catalog_key, 'data_ver': plan.identity.data_ver,
+        'official_revision_status': revision_status,
         'features': list(FEATURES),
         'status': 'preview', 'approved': False,
         'assets_ready': False, 'can_send_packets': False,
