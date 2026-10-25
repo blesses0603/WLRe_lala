@@ -68,7 +68,9 @@ def run_prelogin_check(sources=None, *, checker=None):
             if blocked:
                 # Preserve confirmed remote update/rejection as the primary
                 # reason. Never rewrite a 1276 server change as local-only.
-                message += ' 另外本機 1275 資料驗證未通過；禁止使用 1262 舊索引登入：' + reason
+                message += ' 另外本機 1275 資料驗證未通過：' + reason
+                if not package_changed and not client_changed:
+                    message += ' 禁止使用 1262 舊索引登入。'
             else:
                 blocked = True
                 status = "blocked"
