@@ -44,7 +44,7 @@ class Portal1275UI(unittest.TestCase):
         self.assertEqual(str(self.map.portal_go.cget('state')), 'disabled')
         self.map.portal_list.selection_set(0)
         self.map.choose_portal()
-        self.picked.assert_called_once_with(12170, 5701, 3230)
+        self.picked.assert_not_called()
         self.assertIn('目的地待核對', str(self.map.portal_go.cget('text')))
         self.assertFalse(self.map.go_portal())
         self.sent.assert_not_called()
