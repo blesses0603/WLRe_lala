@@ -84,7 +84,7 @@ class SceneNames1275Tests(unittest.TestCase):
         listed = page.portal_list.insert.call_args_list[0].args[1]
         self.assertNotIn('瑪雅野豬叢林二(12170)', listed)
         self.assertIn('傳點 #7', listed)
-        self.assertIn('1275 場景 瑪雅野豬叢林二(12170)'
+        self.assertIn('1275 場景 瑪雅野豬叢林二(12170)',
                       page.portal_status.set.call_args.args[0])
 
     def test_map_header_cannot_be_replaced_by_selected_portal_event(self):
