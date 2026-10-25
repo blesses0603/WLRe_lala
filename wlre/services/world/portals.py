@@ -83,13 +83,13 @@ class Portals:
                                 'event_ids': tuple(row.get('event_ids') or ()),
                                 'destination': destination,
                                 'destination_verified': verified_target,
-                                'direct_eligible': False,
-                                'direct_door_index': None,
-                                'door_index': None,
+                                'direct_eligible': bool(verified_target and valid_xy and 1 <= index <= 65535),
+                                'direct_door_index': index if verified_target and valid_xy and 1 <= index <= 65535 else None,
+                                'door_index': index if verified_target and valid_xy and 1 <= index <= 65535 else None,
                                 'navigation_status': 'unverified',
                                 'direct_note': (
-                                    '1275 官方資料已交叉核對目的地，但傳送協定'
-                                    '仍待伺服器實測；不會送出換圖封包'
+                                    '1275 門編號／位置／目的地已交叉核對；可在手動確認後單次試傳，'
+                                    '成功與否完全以伺服器回覆為準'
                                     if verified_target else
                                     '1275 官方門事件位置可參考；目的地與觸碰條件'
                                     '尚未驗證，不會送出換圖封包'),
