@@ -281,20 +281,26 @@ def load_verified_bundle_runtime(*, sync_root=None):
         portal_destinations, portal_names, portal_positions = {}, {}, {}
         portal_metadata_status = 'missing_stage_map'
         optional = {}
-        # Each optional official Bundle is processed independently. A missing
-        # EveDoorLinks must not erase valid StageMapData/TextData names.
+        optional_failures = {}
+        # Each optional Bundle must be traceable to a verified official
+        # manifest. Do not erase failures with a silent 'continue': users need
+        # to distinguish not-downloaded, damaged and unsupported TextAssets.
         for table in _PORTAL_TABLES:
             try:
                 asset = _ASSET_ROOT + table + '.bytes'
                 portal_plan = build_update_plan(
                     verified_data, asset_paths=(asset,), cache_root=bundle_root)
-                if (not portal_plan.entries
-                        or any(row.action != 'cached' for row in portal_plan.entries)):
+                if not portal_plan.entries:
+                    optional_failures[table] = 'asset_missing_from_manifest'
+                    continue
+                if any(row.action != 'cached' for row in portal_plan.entries):
+                    optional_failures[table] = 'bundle_not_cached'
                     continue
                 paths = tuple(row.spec.cache_path(bundle_root)
                               for row in portal_plan.entries)
                 if any(not _verified_file(path, row.spec)
                        for path, row in zip(paths, portal_plan.entries)):
+                    optional_failures[table] = 'bundle_integrity_failed'
                     continue
                 binding = AssetBinding(
                     asset, SourceContract(
@@ -302,7 +308,12 @@ def load_verified_bundle_runtime(*, sync_root=None):
                         '0' * 64, 'DataPackage', verified_data.spec.package_version))
                 optional[table] = extract_textasset(binding, paths, loader=load_container)
             except (OSError, ValueError, TypeError, KeyError, RuntimeError):
+                # Never disclose filesystem paths or untrusted raw errors.
+                optional_failures[table] = 'textasset_extract_failed'
                 continue
+        if 'StageMapData_C' not in optional:
+            portal_metadata_status = optional_failures.get(
+                'StageMapData_C', 'missing_stage_map')
         if 'StageMapData_C' in optional:
             try:
                 portal_names = verified_portal_names(
@@ -320,7 +331,10 @@ def load_verified_bundle_runtime(*, sync_root=None):
                     except (ValueError, KeyError, TypeError):
                         portal_metadata_status = 'destination_links_missing_or_invalid'
                 else:
-                    portal_metadata_status = 'destination_links_missing_or_invalid'
+                    portal_metadata_status = (
+                        'destination_links_' + optional_failures['EveDoorLinks']
+                        if 'EveDoorLinks' in optional_failures
+                        else 'destination_links_missing_or_invalid')
             except (ValueError, KeyError, TypeError):
                 portal_metadata_status = 'stage_map_invalid'
         if len(recipes) != 1032 or any(
