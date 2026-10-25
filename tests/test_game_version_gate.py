@@ -63,7 +63,25 @@ class RemoteGameVersionTests(unittest.TestCase):
                 "MainPackage": {"remote": "1262", "comparison": "same"},
                 "DataPackage": {"remote": None, "comparison": "unverified"}}})
         self.assertEqual(got["status"], "unverified")
-        self.assertIn("不代表已同步", got["message"])
+        self.assertTrue(got["blocked"])
+        self.assertIn("禁止登入", got["message"])
+
+    def test_incomplete_online_result_cannot_authorize_login(self):
+        cases = (
+            {"status": "same_resources", "packages": {
+                "MainPackage": {"comparison": "same"}}},
+            {"status": "unverified", "packages": {
+                "MainPackage": {"comparison": "same"},
+                "DataPackage": {"comparison": "same"}}},
+            {"status": "same_resources", "packages": {
+                "MainPackage": {"comparison": "same"},
+                "DataPackage": {"comparison": "unverified"}}},
+        )
+        for candidate in cases:
+            with self.subTest(candidate=candidate):
+                got = run_prelogin_check({}, checker=lambda _, item=candidate: item)
+                self.assertTrue(got["blocked"])
+                self.assertEqual(got["status"], "unverified")
 
     def test_new_official_executable_is_distinct_compatibility_signal(self):
         got = run_prelogin_check({}, checker=lambda _: response(newer_exe=True))
