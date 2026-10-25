@@ -16,6 +16,21 @@ from wlre.services.resource_compatibility import baseline_label
 from wlre.ui.window_layout import configure_dialog
 
 
+def _is_verified_login_result(result):
+    """Only a complete, positively verified official response can grant entry."""
+    if (not isinstance(result, dict) or result.get("blocked") is not False
+            or result.get("status") != "version_identifiers_match"):
+        return False
+    remote = result.get("remote")
+    if not isinstance(remote, dict) or remote.get("status") != "same_resources":
+        return False
+    packages = remote.get("packages")
+    return (isinstance(packages, dict) and
+            all(isinstance(packages.get(package), dict) and
+                packages[package].get("comparison") == "same"
+                for package in BASELINE))
+
+
 class VersionGateController:
     def initialize_version_gate(self):
         self.version_gate_state = "checking"
@@ -272,8 +287,10 @@ class VersionGateController:
         if window is None or not window.winfo_exists():
             return
         result = self._version_gate_result or {}
-        remote = result.get("remote", {})
-        packages = remote.get("packages", {})
+        remote = result.get("remote")
+        remote = remote if isinstance(remote, dict) else {}
+        packages = remote.get("packages")
+        packages = packages if isinstance(packages, dict) else {}
         for package, variable in (("MainPackage", self._version_main),
                                   ("DataPackage", self._version_data)):
             record = packages.get(package, {})
@@ -325,27 +342,28 @@ class VersionGateController:
                     or ('1275 資料驗證未通過' in result.get('message', '')
                         and source_status == 'same_resources')):
                 self._version_heading.set("1275 正式資源尚未就緒 · 請先完成驗證")
+            elif result.get("status") == "unverified":
+                self._version_heading.set("官方遊戲版本無法驗證 · 禁止登入")
             else:
                 self._version_heading.set("官方版本異動 · 請等待 LaLa 更新")
             self._version_continue_button.configure(text="禁止登入", state="disabled")
-        elif result.get("status") == "version_identifiers_match":
+        elif _is_verified_login_result(result):
             self._version_heading.set(
                 f"官方版本識別值符合 LaLa 支援基準 {baseline_label(BASELINE)}")
             self._version_continue_button.configure(text="進入登入畫面", state="normal")
         else:
-            self._version_heading.set("官方遊戲版本無法驗證")
+            self._version_heading.set("官方遊戲版本無法驗證 · 禁止登入")
             self._version_continue_button.configure(
-                text="了解風險，繼續登入", state="normal")
+                text="禁止登入", state="disabled")
 
     def continue_to_login(self):
         """Explicit acknowledgement grants one login stage, not network access."""
         if self.version_gate_state == "checking":
             return
-        if self.version_gate_state == "blocked":
+        if (self.version_gate_state != "ready" or
+                not _is_verified_login_result(self._version_gate_result)):
             messagebox.showwarning("禁止登入", self.version_gate_text.get(),
                                    parent=self.dialog_parent())
-            return
-        if self._version_gate_result is None:
             return
         self._version_gate_entry_approved = True
         self.hide_version_check()
@@ -365,7 +383,9 @@ class VersionGateController:
     def _set_login_gate_button(self):
         if hasattr(self, "connect_button") and self.connect_button.winfo_exists():
             enabled = (self._version_gate_entry_approved and
-                       self.version_gate_state == "ready" and not self.live_active)
+                       self.version_gate_state == "ready" and
+                       _is_verified_login_result(self._version_gate_result) and
+                       not self.live_active)
             self.connect_button.configure(state="normal" if enabled else "disabled")
 
     def start_version_check(self):
@@ -392,8 +412,8 @@ class VersionGateController:
             try:
                 result = run_prelogin_check()
             except Exception:
-                result = {"blocked": False, "status": "unverified",
-                          "message": "版本檢測程式發生例外，請回報開發者；不代表版本已同步。",
+                result = {"blocked": True, "status": "unverified",
+                          "message": "版本檢測程式發生例外，已禁止登入；請重新查詢或回報開發者。",
                           "remote": {"status": "unverified", "failed_stage": "檢測程式",
                                      "reason": "內部例外（非官方版本回應）"}}
             official_messages.put((generation, result))
@@ -410,13 +430,25 @@ class VersionGateController:
                 return
             if generation != self._version_gate_generation or self._closing:
                 continue
+            if not isinstance(result, dict):
+                result = {}
+            result = dict(result)
+            if not _is_verified_login_result(result):
+                # Treat missing/contradictory status or an unexpected response
+                # as a failed verification, even if the worker said blocked=False.
+                result["blocked"] = True
+                if result.get("status") == "version_identifiers_match":
+                    result["status"] = "unverified"
+                    result["message"] = "官方版本驗證結果不完整或互相矛盾；禁止登入，請重新查詢。"
             self._version_gate_result = result
             self._version_gate_checked = time.monotonic()
-            self.version_gate_state = "blocked" if result.get("blocked") else "ready"
-            self.version_gate_text.set(result["message"])
+            self.version_gate_state = (
+                "ready" if _is_verified_login_result(result) else "blocked")
+            self.version_gate_text.set(
+                result.get("message") or "官方版本無法完整驗證；禁止登入，請重新查詢。")
             self._set_login_gate_button()
             self._render_version_window()
-            if result.get("blocked") and not self.live_active:
+            if self.version_gate_state == "blocked" and not self.live_active:
                 self.show_version_check()
 
     def start_lala_release_check(self):
@@ -517,7 +549,7 @@ class VersionGateController:
                                 parent=self.dialog_parent())
             self.show_version_check()
             return False
-        if self._version_gate_result.get("blocked"):
+        if not _is_verified_login_result(self._version_gate_result):
             messagebox.showwarning("禁止登入", self.version_gate_text.get(),
                                    parent=self.dialog_parent())
             self.show_version_check()
