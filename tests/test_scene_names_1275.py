@@ -18,7 +18,7 @@ class SceneNames1275Tests(unittest.TestCase):
             12174: {'name_id': 401},
         }
         texts = {301: '瑪雅野豬叢林二', 302: '瑪雅野豬叢林三',
-                 400: ' ', 401: '\\x00broken'}
+                 400: ' ', 401: chr(0) + 'broken'}
         expected = {12170: '瑪雅野豬叢林二', 12171: '瑪雅野豬叢林三'}
         self.assertEqual(bind_scene_names(stages, texts), expected)
         self.assertEqual(source_scene_label(12170, expected),
