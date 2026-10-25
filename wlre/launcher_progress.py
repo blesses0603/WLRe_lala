@@ -21,6 +21,8 @@ FEATURE_LABELS = {
 }
 STEP_LABELS = {
     'official_version': '檢查官方版本',
+    'official_revision': '已比對官方版本變化，準備增量資源',
+    'official_revision_unavailable': '本次版本紀錄無法保存，保留資源校驗結果',
     'manifest': '讀取並驗證 Manifest',
     'bundle_plan': '分析資源位置與相依',
     'bundle_sync': '下載並校驗必要 Bundle',
@@ -57,6 +59,19 @@ _ACCENT = '#56c8e9'
 def progress_message(phase, details=None):
     """Convert whitelisted stage data into a short human-readable message."""
     details = details if isinstance(details, dict) else {}
+    if phase == 'official_revision':
+        state, data, main = (details.get('state'), details.get('data'),
+                             details.get('main'))
+        if (state in ('first_observation', 'changed', 'unchanged')
+                and all(isinstance(value, str) and value.isdigit()
+                        and 1 <= len(value) <= 6 for value in (data, main))):
+            names = f'DataPackage {data}／MainPackage {main}'
+            if state == 'changed':
+                return f'偵測到官方資源版本異動（{names}）；自動準備新版候選'
+            if state == 'first_observation':
+                return f'首次記錄官方資源版本（{names}）；開始驗證候選'
+            return f'官方資源版本未變（{names}）；重新核對既有資料'
+        return '已比對官方資源版本，候選仍需獨立校驗'
     if phase == 'runtime_bundle_ready':
         done, downloaded = details.get('completed'), details.get('downloaded')
         if (type(done) is int and type(downloaded) is int
