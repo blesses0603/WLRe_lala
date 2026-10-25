@@ -1,7 +1,8 @@
-"""Verified 1262 ItemData_C NPC shop prices and sell restrictions.
+"""NPC item metadata: validated active runtime only.
 
-Source: official binary ItemData:New layout, not TextData_C or TalkData_C.
-All prices are baseline data, NOT server-authoritative transaction totals.
+The historical 1262 importer is available only for an explicitly supplied
+offline fixture. Production never reads a packaged 1262 item catalogue.
+Official base prices are not server-authoritative transaction totals.
 """
 import gzip
 import hashlib
@@ -19,11 +20,13 @@ MAX_UNCOMPRESSED = 4 * 1024 * 1024
 
 
 def load_items(path=None):
-    """Fail closed if the official 1262 source or record schema differs."""
-    target = Path(path) if path is not None else RESOURCE_ROOT / FILENAME
+    """Validate an explicitly provided historical 1262 file, never a default."""
+    if path is None:
+        raise ValueError('1262 物品索引僅可明確指定檔案用於離線驗證')
+    target = Path(path)
     data = target.read_bytes()
-    if path is None and (len(data) != CATALOG_BYTES
-                         or hashlib.sha256(data).hexdigest() != CATALOG_SHA256):
+    if (len(data) != CATALOG_BYTES
+            or hashlib.sha256(data).hexdigest() != CATALOG_SHA256):
         raise ValueError('官方 ItemData_C 索引檔大小／SHA-256 不符')
     if len(data) > 512 * 1024:
         raise ValueError('ItemData_C 索引檔過大')
@@ -62,11 +65,9 @@ def load_items(path=None):
 
 @lru_cache(maxsize=1)
 def item_catalog():
-    """Serve 1275 verified ItemData by default, never 1262 on a 1275 login."""
-    from wlre.services.world.runtime_1275 import baseline_revision, active_runtime
-    if baseline_revision() == '1275':
-        return active_runtime().items
-    return load_items()
+    """Only serve the independently verified current official 1275 runtime."""
+    from wlre.services.world.runtime_1275 import active_runtime
+    return active_runtime().items
 
 
 def sellable(item):
