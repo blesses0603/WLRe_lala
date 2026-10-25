@@ -1,6 +1,6 @@
 # LaLa 電腦版：依功能建資料夾與舊離線資源遷移規劃（v0.6.1）
 
-> 2026-10-25。以已合併 PR #56 的 main（v0.6.1 開發版）為基準。**PR #57 已從規劃延伸為分階段實作：P1a 首批抽離協力按鈕行為、房間人數顯示並新增回歸測試；其餘模組尚未完成。未刪除資源、未提升版本號。** 以下路徑是實作提案，不代表已存在。使用者已回報「剛測試的功能都正常」，但未列出逐功能、環境與 Log，未測流程仍需驗收。
+> 2026-10-25。以已合併 PR #56 的 main（v0.6.1 開發版）為基準。**PR #57 已從規劃延伸為分階段實作：P1a 第一批抽離協力準備／領獎與房間人數顯示，第二批新增協力專屬分頁、抽離共用房間創／入／退對話框並補上回歸測試；其餘模組尚未完成。未刪除資源、未提升版本號。** 以下路徑是實作提案，不代表已存在。使用者已回報「剛測試的功能都正常」，但未列出逐功能、環境與 Log，未測流程仍需驗收。
 
 ## 一、經確認的主要需求
 
@@ -17,9 +17,9 @@ wlre/
   features/                         # 同一功能：UI、按鈕、協調與唯讀模型
     cooperative/                    # 協力，非一般副本
       __init__.py
-      panel.py                      # 協力畫面
+      panel.py                      # ✅ 協力專屬頁面入口（仍繼承共用 InstanceModePage）
       buttons.py                    # ✅ 已抽出協力準備／領獎／取消／自動領獎操作
-      rooms.py                      # ✅ 首批已抽出協力房間人數顯示；創房／加入／離開尚待拆分
+      rooms.py                      # ✅ 協力人數顯示、創房人數輸入與驗證、付費確認欄位
       rewards.py                    # 寶箱／獎勵 UI 狀態（不自行認定領獎成功）
     dungeon/                        # 一般副本
       __init__.py
@@ -44,7 +44,8 @@ wlre/
       panel.py
       buttons.py
   ui/
-    instance_ui.py                  # 舊匯入相容層，委託 cooperative/dungeon
+    instance_ui.py                  # 舊匯入相容層，保留兩種模式的共用 UI
+    instance_room_dialogs.py        # ✅ 共用創房／加入／離開對話框及防重複點擊
     home_map.py                     # 舊 HomeMap 相容層，委託 minimap/npc/portals
     gui.py                          # App 組裝／Tk 主執行緒入口
   core/                             # 跨功能 State／事件／排程／所有權
@@ -98,8 +99,9 @@ wlre/
 - [x] 將原本較粗的「副本／協力」與「地圖／NPC」再拆為協力／一般副本／小地圖／NPC 傳送等不同功能所有權。
 - [ ] 建立每張實作 PR 的精確 import dependency graph 和逐功能測試矩陣（開工前完成）。
 - [x] P1a 首批將協力準備、免費領獎／取消、自動免費領獎 UI 操作移至 `wlre/features/cooperative/buttons.py`，協力房間人數顯示移至 `rooms.py`；原 `InstanceModePage` 以 Mixin 保留舊匯入及方法契約，新增 `tests/test_feature_cooperative.py`。
-- [ ] P1a 其餘協力畫面／房間功能拆分與完整驗收；舊資源 `instance_catalog_1262.json` 仍供協力與一般副本共用，尚無證據可移除。
+- [x] P1a 第二批以 `features/cooperative/panel.py` 提供協力分頁入口，`features/cooperative/rooms.py` 負責協力人數核驗與費用確認欄位；建立／加入／離開房間的兩模式共用對話框搬到 `ui/instance_room_dialogs.py`，不複製一般副本程式；新增單元與 Tk GUI 回歸測試（等待本批 CI 驗證）。
+- [ ] P1a 協力剩餘畫面繪製與房間狀態渲染拆分、正式服 E2E；`instance_catalog_1262.json` 仍供協力與一般副本共用，尚無等價已核准替代來源，不可移除。
 - [ ] P1b～P5 實際搬遷、逐功能替代／清理及全域 `REQUIRED_RESOURCES` 檢核（尚未完成）。
 - [ ] 全功能正式服 E2E、乾淨安裝、正式安裝包／Release 驗收（尚未宣稱完成）。
 
-**接下來：** 在 PR #57 完成 P1a 協力其餘畫面與房間邏輯的安全拆分，確認 #832 及後續各階段 CI；P1b 一般副本分開測試，避免一次重排共用網路程式。
+**接下來：** 核對第二批 CI，再於 PR #57 拆分 P1a 其餘協力狀態渲染與畫面元件，進行專屬回歸及舊資源來源盤點。P1b 一般副本仍獨立驗收。
