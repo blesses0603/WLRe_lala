@@ -209,7 +209,7 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
             if self.portals.data.get('source_revision') == 1275:
                 empty = ('（1275 門事件資料尚未就緒）'
                          if not self.portals.data.get('source_ready')
-                         else '（此場景的 1275 Eve 未列門事件）')
+                         else '（此場景尚無經核對的傳點）')
             else:
                 empty = ('（沒有已確認的返回出口）' if recovery
                          else '（來源未列傳點）')
@@ -222,7 +222,7 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
             if self.portals.data.get('source_ready'):
                 scene = source_scene_label(
                     self.selected_id, self.portals.data.get('scene_names', {}))
-                text = (f'已載入 1275 Eve：所在場景 {scene} 有 {count} 個門事件；'
+                text = (f'已載入 1275 官方資料：所在場景 {scene} 有 {count} 個傳點；'
                         f'{ready} 個完成三表目的地核對可手動確認試傳；'
                         '其餘入口維持停用，實際換圖以伺服器回覆為準。')
             else:
