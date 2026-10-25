@@ -14,6 +14,10 @@ from wlre.features.cooperative.rooms import cooperative_headcount_status, Cooper
 from wlre.features.cooperative.rewards import CooperativeRewardViewMixin
 from wlre.features.cooperative.widgets import build_cooperative_widgets
 from wlre.ui.instance_room_list import InstanceRoomListMixin
+from wlre.features.dungeon.buttons import DungeonActionsMixin, build_dungeon_start_button
+from wlre.features.dungeon.rooms import dungeon_headcount_status
+from wlre.features.dungeon.readiness import DungeonRoomReadinessMixin
+from wlre.features.dungeon.details import dungeon_details
 
 
 def creation_block_reasons(state, mode, live):
@@ -92,29 +96,13 @@ def room_headcount_status(mode, data, local_role_id=None, *, can_begin=False):
         return cooperative_headcount_status(room, members, count,
                                             can_begin=can_begin)
 
-    stage = next((row for row in entries_for('main')
-                  if row['kind'] == 1 and row['map_id'] == room.get('room_id')),
-                 None)
-    if stage is None:
-        return '一般副本：尚未確認此房間所屬的官方副本，無法判定最低人數'
-    minimum, maximum = stage['min_members'], stage['max_members']
-    prefix = '一般副本：目前 %d/%d 人' % (count, minimum)
-    expected = room.get('members')
-    if (type(expected) is not int or count != expected
-            or not isinstance(members, (list, tuple))
-            or not any(member.get('role_id') == local_role_id for member in members)):
-        return prefix + '；伺服器成員名單尚未完整同步'
-    if count < minimum:
-        return prefix + '，尚缺 %d 人（上限 %d 人）' % (minimum - count, maximum)
-    if count > maximum:
-        return prefix + '；超出官方人數上限，請等待成員重新同步'
-    if can_begin:
-        return prefix + '，已達最低人數（上限 %d 人）；房主可以開始挑戰' % maximum
-    return prefix + '，已達最低人數（上限 %d 人）；等待房主或其他開始條件確認' % maximum
+    return dungeon_headcount_status(room, members, count, local_role_id,
+                                    can_begin=can_begin)
 
 
 class InstanceModePage(CooperativeActionsMixin, CooperativeRewardViewMixin,
-                       CooperativeRoomStatusMixin, InstanceRoomListMixin,
+                       CooperativeRoomStatusMixin, DungeonActionsMixin,
+                       DungeonRoomReadinessMixin, InstanceRoomListMixin,
                        InstanceRoomDialogMixin, ttk.Frame):
     """Room browser; mutations remain locked pending official live validation."""
 
@@ -247,10 +235,7 @@ class InstanceModePage(CooperativeActionsMixin, CooperativeRewardViewMixin,
         if self.cooperative:
             build_cooperative_widgets(self, controls)
         if not self.cooperative:
-            self.start_button = ttk.Button(
-                controls, text='房主開始挑戰',
-                command=self.request_start, state='disabled')
-            self.start_button.pack(side='left', padx=(8, 0))
+            build_dungeon_start_button(self, controls)
         self.enter_button = ttk.Button(controls, text='進入副本',
                                        command=self.request_enter, state='disabled')
         self.enter_button.pack(side='right')
@@ -325,43 +310,6 @@ class InstanceModePage(CooperativeActionsMixin, CooperativeRewardViewMixin,
             self.cancel_reward_button.state(['!disabled'] if self._cancel_ready else ['disabled'])
             self.auto_reward_button.state(['!disabled'] if self._auto_toggle_ready else ['disabled'])
 
-    def request_start(self):
-        if (self.cooperative or not self._start_ready or
-                self.app is None or not self.app.live_active):
-            return
-        current = self._room_data.get('room') or {}
-        room_id = current.get('room_id')
-        if not room_id:
-            return
-        if not messagebox.askyesno(
-                '確認開始副本',
-                '房間 #%s：確定由房主開始挑戰嗎？\\n'
-                '將沿用角色目前正常出戰的夥伴。\\n'
-                '送出後只等待伺服器確認，不會自動重送。' % room_id,
-                parent=self.winfo_toplevel()):
-            return
-        self._start_ready = False
-        self._update_room_buttons()
-        self.app.send({'type': 'instance_start', 'mode': 'main'})
-
-    def request_enter(self):
-        if (self.cooperative or not self._enter_ready or
-                self.app is None or not self.app.live_active):
-            return
-        room_id = (self._room_data.get('room') or {}).get('room_id')
-        if not room_id:
-            return
-        if not messagebox.askyesno(
-                '確認進入一般副本',
-                '房間 #%s 已經由伺服器開始。\n'
-                '確定手動要求進入副本場景？\n'
-                '不切換正常出戰夥伴、不自動重送。請以伺服器場景確認為準。' % room_id,
-                parent=self.winfo_toplevel()):
-            return
-        self._enter_ready = False
-        self._update_room_buttons()
-        self.app.send({'type': 'instance_enter', 'mode': 'main'})
-
     def refresh_rooms(self):
         if self.app is not None and self.app.live_active:
             self.app.send({'type': 'instance_refresh', 'mode': self.mode})
@@ -428,46 +376,9 @@ class InstanceModePage(CooperativeActionsMixin, CooperativeRewardViewMixin,
             and not any(other.get(k) for k in
                         ('create_uncertain','join_uncertain','leave_uncertain','standby_uncertain','start_uncertain', 'enter_uncertain')))
         self.render_cooperative_rewards(data, other, live, activity_blocked, inventory)
-        # Normal-dungeon start is host only. S85-4 roster must agree with
-        # the room count, and the official StageData minimum must be met.
-        stage = next((record for record in self.catalog_records
-                      if record['kind'] == 1 and
-                      record['map_id'] == current_room.get('room_id')), None)
-        valid_roster = (type(current_room.get('members')) is int
-                        and current_room['members'] == len(member_data)
-                        and any(member.get('role_id') == local_role_id
-                                for member in member_data))
-        min_reached = (stage is not None and valid_roster
-                       and stage['min_members'] <= len(member_data)
-                       <= stage['max_members'])
-        self._start_ready = (
-            not self.cooperative and bool(live) and min_reached
-            and data.get('phase') == 'waiting'
-            and current_room.get('host_id') == local_role_id
-            and not any(part.get(k) is not None
-                        for part in (data, other)
-                        for k in ('create_pending', 'join_pending',
-                                  'leave_pending', 'standby_pending', 'start_pending', 'enter_pending'))
-            and not any(part.get(k)
-                        for part in (data, other)
-                        for k in ('create_uncertain', 'join_uncertain',
-                                  'leave_uncertain', 'standby_uncertain', 'start_uncertain', 'enter_uncertain')))
-        self._enter_ready = (
-            not self.cooperative and bool(live) and not activity_blocked
-            and data.get('phase') == 'started'
-            and type(local_scene) is int and local_scene > 0
-            and local_scene != current_room.get('room_id')
-            and stage is not None
-            and any(member.get('role_id') == local_role_id for member in member_data)
-            and not other.get('room')
-            and not any(part.get(k) is not None
-                        for part in (data, other)
-                        for k in ('create_pending', 'join_pending', 'leave_pending',
-                                  'standby_pending', 'start_pending', 'enter_pending'))
-            and not any(part.get(k)
-                        for part in (data, other)
-                        for k in ('create_uncertain', 'join_uncertain', 'leave_uncertain',
-                                  'standby_uncertain', 'start_uncertain', 'enter_uncertain')))
+        self.render_dungeon_readiness(
+            data, other, live, member_data, current_room,
+            local_role_id, local_scene, activity_blocked)
         # Apply the same cross-mode pending/uncertain reward locks as the
         # network services. Disabled buttons must not imply a safe operation.
         all_modes = (data, other)
@@ -520,26 +431,7 @@ def instance_details(data, cooperative=False, local_role_id=None):
         if data.get('mail_notice'):
             parts.append('伺服器通知獎品寄送信箱')
     else:
-        obj = data.get('objectives') or {}
-        targets = obj.get('targets') or {}
-        if targets:
-            parts.append('擊殺目標：' + '、'.join(
-                '#%s NPC%s %s/%s' % (idx, row.get('npc_id', '?'),
-                                     row.get('kills', 0), row.get('required', '?'))
-                for idx, row in sorted(targets.items())))
-        boss = obj.get('boss') or {}
-        if boss:
-            parts.append('Boss NPC%s：%s' % (
-                boss.get('npc_id', '?'), '已擊敗' if boss.get('defeated') else '未擊敗'))
-        score = (obj.get('scores') or {}).get(str(local_role_id))
-        if score:
-            parts.append('個人積分：小怪 %s／Boss %s' %
-                         (score.get('normal', 0), score.get('boss', 0)))
-        if obj.get('records'):
-            parts.append('新式副本結算紀錄：%s 人（依 S85-21-100）' %
-                         len(obj['records']))
-        if data.get('completed'):
-            parts.append('副本完成：伺服器已確認')
+        return dungeon_details(data, local_role_id)
     return '；'.join(parts)
 
 
@@ -551,7 +443,8 @@ class InstancePanel(ttk.Frame):
         self.tabs = RoundedNotebook(self, borderless=True,
                                     image_loader=menu_icon_photo)
         self.tabs.pack(fill='both', expand=True)
-        self.main_page = InstanceModePage(self.tabs, cooperative=False, app=app)
+        from wlre.features.dungeon.panel import DungeonModePage
+        self.main_page = DungeonModePage(self.tabs, app=app)
         from wlre.features.cooperative.panel import CooperativeModePage
         self.coop_page = CooperativeModePage(self.tabs, app=app)
         self.tabs.add(self.main_page, text='主要')
