@@ -45,6 +45,32 @@ def parse_stage_map_portals(raw):
     return {key: value for key, value in entries.items() if value is not None}
 
 
+def verified_portal_names(stage_raw, scene_ids, texts):
+    """1275 minimap labels are independent of destination/packet approval.
+
+    Lua/UIMain.GetMapName uses StageMapData.NameID first. Its (SceneID,
+    EvtID) key can name a portal even when EveDoorLinks is unavailable.
+    Only a nonempty TextData entry tied to an unambiguous StageMap record
+    is displayed. NameID=0 is an intentional absence, not a scene name.
+    """
+    rows = parse_stage_map_portals(stage_raw)
+    result = {}
+    scenes = set(scene_ids)
+    for key, row in rows.items():
+        scene, idx = key
+        name_id = row.get('name_id')
+        if scene not in scenes or type(idx) is not int or idx <= 0:
+            continue
+        if type(name_id) is not int or name_id <= 0:
+            continue
+        name = texts.get(name_id) if isinstance(texts, dict) else None
+        if (type(name) is not str or not name.strip()
+                or len(name) > 160 or any(ord(ch) < 32 for ch in name)):
+            continue
+        result[key] = name.strip()
+    return result
+
+
 _POINT = re.compile(r'^\s*[^:：\[\],]+[:：]\s*(\d+)\s*,\s*'
                     r'[^:：\[\],]+[:：]\s*(\d+)\s*$')
 _HEADER = re.compile(r'^\s*事件ID\s*=\s*(\d+)\s*$')
