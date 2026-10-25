@@ -20,6 +20,10 @@ class MinimapNavigationMixin:
         catalog = getattr(self, 'portals', None)
         data = getattr(catalog, 'data', {}) if catalog is not None else {}
         if data.get('source_revision') == 1275:
+            if type(scene_id) is not int or not 0 <= scene_id <= 65535:
+                # Untrusted/stale scene snapshots must not crash the UI.
+                # Do not guess a 1262 name or silently select a different map.
+                return f'場景 {scene_id}（ID 超出範圍）'
             return source_scene_label(scene_id, data.get('scene_names', {}))
         return map_label(scene_id)
 
