@@ -70,6 +70,10 @@ class Portals:
                         portal_positions = {}
                     portal_metadata_status = getattr(
                         verified, 'portal_metadata_status', 'missing_stage_map')
+                    portal_schema_report = getattr(
+                        verified, 'portal_schema_report', {})
+                    if not isinstance(portal_schema_report, dict):
+                        portal_schema_report = {}
                     door_count = sum(len(rows) for rows in verified.doors.values())
                     for scene, entries in verified.doors.items():
                         if (type(scene) is int and 0 <= scene <= 65535):
@@ -201,6 +205,8 @@ class Portals:
                     'portal_metadata_status': (
                         portal_metadata_status if source_ready
                         else 'core_runtime_unavailable'),
+                    'portal_schema_report': (
+                        portal_schema_report if source_ready else {}),
                     'portal_name_count': sum(
                         bool(item.get('official_name')) for row in doors.values()
                         for item in row),
