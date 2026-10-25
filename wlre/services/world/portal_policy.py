@@ -7,10 +7,10 @@ def smallmaps():
     return SmallMaps()
 
 def destination_problem(portal, maps=None):
-    maps = maps if maps is not None else smallmaps()
     if portal.get('source_revision') == 1275:
         return ('1275 門事件僅核對座標；尚未確認傳送目的地與觸碰條件，'
                 '不會送出傳點指令。')
+    maps = maps if maps is not None else smallmaps()
     destination = portal.get('destination')
     if destination is None:
         return '傳點目的地尚未確認，已停用以避免進入無法預覽的場景。'
