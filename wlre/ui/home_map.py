@@ -11,6 +11,7 @@ from wlre.services.world.display_position import current_position
 from wlre.services.world.navigation import Repository, NavigationError
 from wlre.services.world.map_names import map_label, parse_map_id
 from wlre.services.world.portals import Portals, nearest_marker
+from wlre.services.world.scene_names_1275 import source_scene_label
 from wlre.services.world.portal_policy import allowed_rows, destination_problem
 from wlre.services.world.npc_catalog import NPCIndex, scene_npcs, npc_detail
 from wlre.services.world.npc_talk import load_catalog as load_npc_talks, dialogue_text
@@ -174,6 +175,15 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
             self.portals = Portals()
         recovery=self.image is None
         self.portal_rows=allowed_rows(self.portals,self.selected_id,self.maps,recovery=recovery)
+        if (self.portals.data.get('source_revision') == 1275
+                and self.portals.data.get('source_ready')
+                and type(self.selected_id) is int
+                and 0 <= self.selected_id <= 65535
+                and hasattr(self, 'map_title')):
+            # Source-scene title and portal labels use the SAME verified
+            # ScenesData/TextData lookup, never the legacy 1262 name table.
+            self.map_title.set('小地圖｜'+source_scene_label(
+                self.selected_id, self.portals.data.get('scene_names', {})))
         self.selected_portal=None
         self.selected_npc=None
         self.portal_list.delete(0,'end')
@@ -214,8 +224,10 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
         if self.portals.data.get('source_revision') == 1275:
             count = len(self.portal_rows)
             if self.portals.data.get('source_ready'):
-                text = (f'已載入 1275 Eve：本場景 {count} 個門事件；'
-                        '僅顯示已核對座標，目的地／正式服觸發未驗證，無法直接換圖。')
+                scene = source_scene_label(
+                    self.selected_id, self.portals.data.get('scene_names', {}))
+                text = (f'已載入 1275 Eve：所在場景 {scene} 有 {count} 個門事件；'
+                        '目的地名稱／正式服觸發未驗證，無法直接換圖。')
             else:
                 text = ('1275 官方門事件索引尚未完成校驗／安裝；'
                         '下次切換地圖會重新讀取，不使用 1262 舊傳點。')
