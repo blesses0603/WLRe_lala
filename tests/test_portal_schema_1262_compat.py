@@ -46,6 +46,18 @@ class Portal1262LayoutRecognition(unittest.TestCase):
             {(11016, 1): '新手海灘出口',
              (11016, 2): '隱藏通道'})
 
+    def test_name_id_does_not_require_nonzero_map_marker_xy(self):
+        # PositionX=0 or PositionY=0 is structurally allowed by 1262 Lua.
+        # Do not make source display names dependent on positional safety.
+        raw = stage_map((11016, 2, 0, 1, 0, 150, 93000, 0),
+                        (11016, 3, 0, 2, 150, 0, 93001, 1))
+        names = verified_portal_names(raw, {11016}, {
+            93000: '新手海灘入口', 93001: '隱藏通道'})
+        self.assertEqual(names, {
+            (11016, 1): '新手海灘入口',
+            (11016, 2): '隱藏通道'})
+        self.assertEqual(inspect_stage_map(raw)['portal_records'], 2)
+
     def test_eve_door_links_is_utf16_text_not_binary_door_link_data(self):
         result = recognize_portal_source('EveDoorLinks', eve_links())
         self.assertEqual(result['schema'], EVE_LINKS_LAYOUT)
