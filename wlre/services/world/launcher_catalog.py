@@ -101,6 +101,24 @@ def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
         runner = run_auto_catalog
     key = None
     data_compatibility = 'unverified'
+    if real_launcher_run:
+        # The four-feature candidate may fail before the full 1275 runtime
+        # files are prepared (e.g. a separately audited Eve decoder). Give
+        # the fixed-version runtime its own bounded official Bundle sync.
+        # Failure is informational, never a login/pass-packet authorization.
+        try:
+            from wlre.services.world.bundle_runtime_1275 import (
+                BundleRuntimeUnavailable, sync_pinned_runtime_bundles)
+            if progress is not None:
+                progress('runtime_bundle_plan', {})
+            summary = sync_pinned_runtime_bundles()
+            if progress is not None:
+                progress('runtime_bundle_ready', {
+                    'completed': summary['verified_bundles'],
+                    'downloaded': summary['downloaded_bundles']})
+        except (BundleRuntimeUnavailable, OSError, ValueError, TypeError):
+            if progress is not None:
+                progress('runtime_bundle_unavailable', {})
     try:
         kwargs = {'download': True, 'parse': True}
         if progress is not None:
