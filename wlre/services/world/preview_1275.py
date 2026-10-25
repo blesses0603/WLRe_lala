@@ -142,6 +142,7 @@ class Preview1275:
     portal_positions: dict = field(default_factory=dict)
     portal_display_destinations: dict = field(default_factory=dict)
     portal_metadata_status: str = 'missing_stage_map'
+    portal_schema_report: dict = field(default_factory=dict)
     expedition: dict | None = None
     revision: int = 1275
     can_send_packets: bool = False
@@ -197,14 +198,24 @@ def load_preview(data_archive, eve_archive):
     portal_names, portal_destinations, portal_positions = {}, {}, {}
     portal_display_destinations = {}
     portal_metadata_status = 'missing_stage_map'
+    portal_schema_report = {}
+    from wlre.services.world.portal_schema import recognize_portal_source
     try:
         stage_map = _table(data_archive, manifest, 'StageMapData_C')
+        portal_schema_report['StageMapData_C'] = recognize_portal_source(
+            'StageMapData_C', stage_map)
+        if portal_schema_report['StageMapData_C']['status'] != 'recognized':
+            raise PortalLinkSourceError('StageMapData 不符合已知 1262 欄位結構')
         # StageMapData.NameID is independently useful, even when links are
         # absent. Do not drop its official labels with the destination map.
         portal_names = verified_portal_names(stage_map, stages, texts)
         portal_metadata_status = 'stage_map_ready'
         try:
             link_table = _table(data_archive, manifest, 'EveDoorLinks')
+            portal_schema_report['EveDoorLinks'] = recognize_portal_source(
+                'EveDoorLinks', link_table)
+            if portal_schema_report['EveDoorLinks']['status'] != 'recognized':
+                raise PortalLinkSourceError('EveDoorLinks 不符合已知 UTF-16 格式')
             portal_positions = verified_portal_positions(
                 stage_map, link_table, doors, stages)
             portal_display_destinations = read_only_portal_destinations(
@@ -233,5 +244,6 @@ def load_preview(data_archive, eve_archive):
         portal_positions=portal_positions,
         portal_display_destinations=portal_display_destinations,
         portal_metadata_status=portal_metadata_status,
+        portal_schema_report=portal_schema_report,
         doors=doors,
     )
