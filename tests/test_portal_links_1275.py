@@ -36,6 +36,15 @@ def verified_mapping(*, marker_scene=12170, marker_index=1,
         raw, links, doors, {12170, 12171})
 
 
+def position_map():
+    return {(12170, 1): {
+        'scene': 12170, 'index': 1,
+        'x': 5701, 'y': 3230,
+        'position_verified': True,
+        'source_kind': '1275_eve_door_links_grid_scaled',
+    }}
+
+
 class PortalLinks1275Test(unittest.TestCase):
     def test_official_binary_marker_and_utf16_map_link_layout(self):
         rows = parse_stage_map_portals(stage_rows(
@@ -72,6 +81,7 @@ class PortalLinks1275Test(unittest.TestCase):
         runtime = SimpleNamespace(
             doors={12170: [{'index': 1, 'x': 5701, 'y': 3230, 'event_ids': []}]},
             portal_destinations=mapping,
+            portal_positions=position_map(),
             scene_names={12170: '瑪雅野豬叢林二', 12171: '瑪雅野豬叢林三'})
         with patch('wlre.services.world.runtime_1275.baseline_revision',
                    return_value='1275'), patch(
@@ -97,6 +107,7 @@ class PortalLinks1275Test(unittest.TestCase):
         runtime = SimpleNamespace(
             doors={12170: [{'index': 1, 'x': 5701, 'y': 3230}]},
             portal_destinations=mapping,
+            portal_positions=position_map(),
             scene_names={12171: '瑪雅野豬叢林三'})
         with patch('wlre.services.world.runtime_1275.baseline_revision',
                    return_value='1275'), patch(
@@ -125,6 +136,7 @@ class PortalLinks1275Test(unittest.TestCase):
         runtime = SimpleNamespace(
             doors={12170: [{'index': 1, 'x': 5701, 'y': 3230}]},
             portal_destinations=verified_mapping(),
+            portal_positions=position_map(),
             scene_names={12171: '瑪雅野豬叢林三'})
         with patch('wlre.services.world.runtime_1275.baseline_revision',
                    return_value='1275'), patch(
