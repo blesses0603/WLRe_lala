@@ -2,6 +2,7 @@
 from contextlib import ExitStack
 import hashlib
 import json
+import struct
 from pathlib import Path
 import tempfile
 import unittest
@@ -54,6 +55,8 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
                 'SmithData_C', 'ScenesData_C',
                 'AdventureData_C', 'AdventureLvData_C',
                 'NpcData_C', 'NpcCareerData_C')}
+        self.raw['StageMapData_C'] = struct.pack('<i', 0)
+        self.raw['EveDoorLinks'] = '事件ID=10000\n'.encode('utf-16-le')
         self.items = {i: {'name': f'物品{i}', 'open_used': 0} for i in range(1, 1033)}
         self.recipes = {
             i: {'item_id': i, 'tool_id': 39053, 'output': 1,
@@ -189,7 +192,7 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
         self.assertEqual(result['downloaded_bundles'], 1)
         self.assertFalse(result['assets_ready'])
         self.assertFalse(result['can_send_packets'])
-        self.assertEqual(len(plan.call_args.kwargs['asset_paths']), 10)
+        self.assertEqual(len(plan.call_args.kwargs['asset_paths']), 12)
         sync.assert_called_once()
 
     def test_pinned_runtime_sync_rejects_version_switch_before_download(self):
@@ -243,7 +246,7 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
         self.assertEqual(runtime.texts[3], '正式文字')
         self.assertTrue(runtime.portal_status(10000)['exists'])
         self.assertFalse(runtime.can_send_packets)
-        self.assertEqual(self.extract.call_count, 10)
+        self.assertEqual(self.extract.call_count, 12)
         self.assertEqual(len(runtime.expedition['tasks']), 260)
         self.assertEqual(runtime.expedition['tasks']['1']['name'], '正式文字')
         self.assertEqual(runtime.expedition['source_kind'],
