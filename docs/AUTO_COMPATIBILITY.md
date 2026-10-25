@@ -263,6 +263,18 @@ LaLa 啟動自動資源準備時，先觀察 `ResourcePath_PC.dat` 與 DataPacka
 
 重新觀察只會使用既有資源路徑與 `.version`，不新增 `.json`／`.report` 網路依賴；純唯讀預覽不會額外重新查詢。這道檢查不等於封包協定相容或完整正式 1275 索引已獲核准。對應測試包含版號切換、錯誤快照、單純時間戳變化與唯讀模式的 GET 次數。
 
+## v0.6.1 正式 Bundle 不受候選驗證狀態阻擋（2026-10-25）
+
+Windows 實測截圖：官方 DataPackage／MainPackage 完整 1275 版號相符，舊 ZIP 被保留供診斷；新版畫面顯示「Launcher 本次候選準備未完成」，正式 Runtime 誤因 `launcher_catalog_status.status != review_required` 而拒絕。在此前處理中，即使 Manifest／Bundle 已存在，仍要求自行產生的四類候選 `candidate.zip` 與 Launcher 收據成功，造成不必要的安全依賴。
+
+修復：
+
+- **正式 Runtime 與候選完全解耦**：使用程式內建 1275 完整 DataPackage／MainPackage 版號直接定位私有 Manifest，校驗每包先前已通過官方 `.hash` 的收據、原始 `.bytes`，以及**各自獨立固定的 SHA-256**。只有全部必要十種 DataPackage TextAsset 的 Bundle 大小／MD5／CRC、內容與嚴格 Schema 通過才供正式服務載入。不讀取候選 ZIP 或 Launcher 狀態作啟用授權，也不使用官方 `.json`／`.report`。
+- **Launcher 增加獨立有界補下載**：只有真正啟動 LaLa 時，另外以官方最新 `.version`、`.bytes`、`.hash` 確認固定 1275 版號，再次查核官方版本不變後才規劃十種 TextAsset 的相依 Bundle。每輪此專用流程額度最多 24 個 Bundle／32 MiB，逐 Bundle 重新核對官方雜湊，不覆寫遊戲安裝目錄；既有四類候選流程即使失敗也不阻擋獨立來源。
+- **登入仍以官方最新版本為準**：本機有舊的釘選 Manifest 與 Bundle 並不能證明現在正式服還是 1275。當線上版號查詢不完整時，1275 登入閘門維持封鎖；即使本機資料完整，也絕不把未知版號當作可登入。
+- 版本檢查畫面區分「四類候選未完成」「舊 ZIP 診斷」與「正式 Bundle Runtime」；不把候選相容性或下載完成當成登入／封包可用。
+- 新增 Launcher 模擬下載與回退、Manifest 被篡改／官方更新中跨版拒絕、候選失敗但固定 Bundle 正常、正式版號查詢失敗不准登入等離線測試。**真實 1275 Eve／其餘 Bundle 的 UnityFS 解包與正式伺服器操作仍須由實機檢查**；本次不是協定 E2E 驗收，也沒有合併 main／發布 Release。
+
 ## v0.6.1 舊 ZIP 與官方 Bundle 雙來源修復（PR #56）
 
 使用者在 Windows 的 v0.6.1 開發候選畫面回報：官方 DataPackage／MainPackage 都是 1275、Launcher 四類候選格式相容，但舊 `1275_DataCatalog.zip` 與 `1275_EveNpcIndex.zip` 兩份仍顯示內容損壞、阻止登入。確認 `runtime_1275._default_runtime` 先前只要任一舊 ZIP 存在就拒絕採用新 Bundle 正式 Runtime；UI 又將舊 ZIP 報告直接拼接為此次 Bundle 狀態。
