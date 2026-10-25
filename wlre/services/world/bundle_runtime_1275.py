@@ -192,7 +192,8 @@ def load_verified_bundle_runtime(*, sync_root=None):
         SOURCE_SHA256 as EVE_SHA256, parse_doors_1275)
     from wlre.services.instance_catalog import parse_stages
     from wlre.services.world.scene_names_1275 import bind_scene_names
-    from wlre.services.world.portal_links_1275 import verified_portal_destinations
+    from wlre.services.world.portal_links_1275 import (verified_portal_destinations,
+                                                      verified_portal_names)
 
     root = Path(sync_root) if sync_root is not None else data_root() / 'official_sync'
     # An optional four-feature *candidate* may be incomplete when the Eve
@@ -276,34 +277,48 @@ def load_verified_bundle_runtime(*, sync_root=None):
         scene_rows = parse_stages(sources['ScenesData_C'])
         stage = 'Eve'
         doors = parse_doors_1275(eve)
-        portal_destinations = {}
-        try:
-            optional = {}
-            for table in _PORTAL_TABLES:
+        portal_destinations, portal_names = {}, {}
+        portal_metadata_status = 'missing_stage_map'
+        optional = {}
+        # Each optional official Bundle is processed independently. A missing
+        # EveDoorLinks must not erase valid StageMapData/TextData names.
+        for table in _PORTAL_TABLES:
+            try:
                 asset = _ASSET_ROOT + table + '.bytes'
                 portal_plan = build_update_plan(
                     verified_data, asset_paths=(asset,), cache_root=bundle_root)
                 if (not portal_plan.entries
                         or any(row.action != 'cached' for row in portal_plan.entries)):
-                    break
+                    continue
                 paths = tuple(row.spec.cache_path(bundle_root)
                               for row in portal_plan.entries)
                 if any(not _verified_file(path, row.spec)
                        for path, row in zip(paths, portal_plan.entries)):
-                    break
+                    continue
                 binding = AssetBinding(
                     asset, SourceContract(
                         'scenes', table, 'stage-new-76-v1',
                         '0' * 64, 'DataPackage', verified_data.spec.package_version))
                 optional[table] = extract_textasset(binding, paths, loader=load_container)
-            if len(optional) == len(_PORTAL_TABLES):
-                portal_destinations = verified_portal_destinations(
-                    optional['StageMapData_C'], optional['EveDoorLinks'],
-                    doors, scene_rows)
-        except (OSError, ValueError, TypeError, KeyError, RuntimeError):
-            # Optional portal links cannot invalidate otherwise audited
-            # 1275 NPC/recipe runtime or authorize an unverified transfer.
-            portal_destinations = {}
+            except (OSError, ValueError, TypeError, KeyError, RuntimeError):
+                continue
+        if 'StageMapData_C' in optional:
+            try:
+                portal_names = verified_portal_names(
+                    optional['StageMapData_C'], scene_rows, texts)
+                portal_metadata_status = 'stage_map_ready'
+                if 'EveDoorLinks' in optional:
+                    try:
+                        portal_destinations = verified_portal_destinations(
+                            optional['StageMapData_C'], optional['EveDoorLinks'],
+                            doors, scene_rows)
+                        portal_metadata_status = 'destination_links_loaded'
+                    except (ValueError, KeyError, TypeError):
+                        portal_metadata_status = 'destination_links_missing_or_invalid'
+                else:
+                    portal_metadata_status = 'destination_links_missing_or_invalid'
+            except (ValueError, KeyError, TypeError):
+                portal_metadata_status = 'stage_map_invalid'
         if len(recipes) != 1032 or any(
                 ident not in items or type(items[ident].get('open_used')) is not int
                 for ident in recipes):
@@ -361,6 +376,8 @@ def load_verified_bundle_runtime(*, sync_root=None):
             scene_ids=frozenset(scene_rows),
             scene_names=bind_scene_names(scene_rows, texts),
             portal_destinations=portal_destinations,
+            portal_names=portal_names,
+            portal_metadata_status=portal_metadata_status,
             doors=doors, expedition=expedition,
         )
     except BundleRuntimeUnavailable:
