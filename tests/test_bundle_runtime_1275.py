@@ -460,8 +460,7 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
         self.addCleanup(_default_runtime.cache_clear)
         formal = self.root / 'formal'
         data, eve = formal / '1275_DataCatalog.zip', formal / '1275_EveNpcIndex.zip'
-        working = SimpleNamespace(revision=1275,
-                                  portal_metadata_status='stage_map_ready')
+        working = object()
         with patch('wlre.services.world.runtime_1275._paths',
                    return_value=(data, eve)), patch(
              'wlre.services.world.bundle_runtime_1275.load_verified_bundle_runtime',
@@ -539,7 +538,8 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
         data, eve = formal / '1275_DataCatalog.zip', formal / '1275_EveNpcIndex.zip'
         data.write_bytes(b'data fixture')
         eve.write_bytes(b'eve fixture')
-        working = object()
+        working = SimpleNamespace(
+            revision=1275, portal_metadata_status='stage_map_ready')
         with patch('wlre.services.world.runtime_1275._paths',
                    return_value=(data, eve)), patch(
              'wlre.services.world.preview_1275.load_preview',
