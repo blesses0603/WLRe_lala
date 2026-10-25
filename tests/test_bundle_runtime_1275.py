@@ -192,8 +192,36 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
         self.assertEqual(result['downloaded_bundles'], 1)
         self.assertFalse(result['assets_ready'])
         self.assertFalse(result['can_send_packets'])
-        self.assertEqual(len(plan.call_args.kwargs['asset_paths']), 12)
-        sync.assert_called_once()
+        self.assertEqual(plan.call_count, 2)
+        self.assertEqual(len(plan.call_args_list[0].kwargs['asset_paths']), 10)
+        self.assertEqual(len(plan.call_args_list[1].kwargs['asset_paths']), 2)
+        self.assertEqual(sync.call_count, 2)
+        self.assertTrue(result['portal_metadata_ready'])
+
+    def test_optional_portal_bundle_failure_keeps_core_runtime_ready(self):
+        snapshot = self._official_snapshot()
+        supported = {'official_game_exe_version': '1.3.0', **self.supported}
+        rows = [SimpleNamespace(
+            action='download',
+            spec=SimpleNamespace(file_size=512,
+                                 cache_path=lambda root: self.root / 'verified.bundle'))]
+        execute = Mock(side_effect=[None, ValueError('optional portal asset failed')])
+        with patch('wlre.services.world.bundle_runtime_1275._PINNED_MANIFEST_SHA256',
+                   self.pinned), patch(
+             'wlre.services.resource_compatibility.load_supported_resources',
+             return_value=supported), patch(
+             'wlre.services.official_incremental_sync.build_update_plan',
+             return_value=SimpleNamespace(entries=rows)), patch(
+             'wlre.services.official_bundle_download._verified_file',
+             return_value=True):
+            result = sync_pinned_runtime_bundles(
+                sync_root=self.root, observe=lambda: snapshot,
+                retrieve=lambda spec, cache_root: self.verified[spec.package],
+                execute=execute)
+        self.assertEqual(execute.call_count, 2)
+        self.assertEqual(result['downloaded_bundles'], 1)
+        self.assertFalse(result['portal_metadata_ready'])
+        self.assertFalse(result['can_send_packets'])
 
     def test_pinned_runtime_sync_rejects_version_switch_before_download(self):
         snapshot = self._official_snapshot()
