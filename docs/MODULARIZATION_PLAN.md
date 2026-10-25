@@ -149,6 +149,14 @@ wlre/
 - **回歸測試**：`tests/test_portal_coordinates_1275.py` 使用合成官方 Schema 模擬「EventData grid=(42,64)、門連線=(200,300)、倍率=(3,2)、正確 packet=(600,600)」以及沒有來源、倍率無效、點位越界、地圖位移不相容時的安全拒絕。先前只以原始事件座標為正確位置的測試已更正。
 - **限制與下一步實測**：1275 最新 `EveDoorLinks` 真實資產與場景 11016／12170 實際官方傳點位置，尚未獲取可驗證的 TextAsset 內容；CI 驗證的是契約、資料換算及 GUI 安全行為，**不等於正式遊戲圖示位置完全驗收**。使用 PR 分支實測時優先核對入口是否出現在對應地形位置，並比對官方遊戲傳點圖示。
 
+### 2026-10-25 新手海灘（11016）官方傳點名稱仍缺失：實際資料載入問題
+
+- **使用者實測證據**：場景 11016 的兩筆門事件列出 #1/#2，但傳點名稱都提示官方名稱未取得，稽核表的 X/Y 均為無效。這證明 Eve.NewDoor 基礎事件存在；**不證明** StageMapData_C 或 EveDoorLinks 已正確解包，不能再將之歸因於 UI 沒更新。
+- **官方原始檔**：使用者提供的 1275 DataPackage Manifest 確有 `Assets/ResourcesBuild/Data/StageMapData_C.bytes` 與 `.../EveDoorLinks.bytes` 的 AssetPath 索引，但 ZIP 只有 Manifest .bytes/.hash，沒有 TextAsset 本體；需要另從官方 Bundle 下載、hash 驗證後解出內容。
+- **已修正的根因**：(1) 1275 Runtime 原本優先使用有核心 NPC／物品資料的正式 ZIP，即使其缺少傳點資料也會遮蔽後續已驗證 Bundle；現在可優先採用同版且 StageMapData 已就緒的完整 Bundle Runtime。(2) 附加 Bundle 原本下載額度共用，若任一份下載受阻就兩者都得不到；現在優先且獨立下載 StageMapData_C 名稱表，再嘗試 EveDoorLinks。(3) 附加資產未快取、hash 不符、Unity TextAsset 解包失敗原本被靜默略過；現在會在首頁小地圖及稽核視窗以安全、不包含路徑的訊息明確顯示原因。
+- **官方名稱與目的地**：StageMap Kind 2（普通傳點）、Kind 3（隱藏傳點）的有效 NameID 都能讀取；NameID 缺失時，可從同版 StageMap 的 SceneID/EvtID 對應 EveDoorLinks 目的地，以已核對 ScenesData＋TextData 的場景中文名做**唯讀參考**。不同座標系統的 XY 不作相等比對來決定名稱；*只有名稱*不會授權 C20-8 或直接換圖。
+- **完整性與驗收**：新增正式 ZIP／Bundle 來源優先順序、缺資源診斷、Kind 3 名稱及唯讀目的地回退回歸測試。仍缺真正的 1275 場景 11016 StageMapData_C/EveDoorLinks TextAsset，故無法聲稱已取得兩個實際官方傳送點的中文名稱；必須以 PR 分支重新啟動並完成官方 Bundle 同步後，核對小地圖提示與兩筆實際名稱。
+
 ### 尚未能由 CI 單獨證明的正式驗收
 
 - **Windows 正式遊戲／網路回覆：** 1275 版本閘門、官方 Bundle 校驗與登入；副本創／入／退、房主開始及進場；協力房間待命與免費領獎；NPC 手動互動／唯讀商店，傳點不合法目標拒絕，全部需記錄正式伺服器回覆與操作前後 State。
