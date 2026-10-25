@@ -112,7 +112,7 @@ class SceneNames1275Tests(unittest.TestCase):
         self.assertNotIn('門事件', row['name'])
         PortalInteractionMixin.select_portal(page, row)
         page.map_title.set.assert_called_once_with(expected)
-        page.on_pick.assert_called_once_with(12170, 5701, 3230)
+        page.on_pick.assert_not_called()
 
     def test_1275_missing_verified_scene_name_never_uses_1262_header(self):
         page = MinimapNavigationMixin()
