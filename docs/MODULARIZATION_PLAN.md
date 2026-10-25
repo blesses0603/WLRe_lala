@@ -141,6 +141,14 @@ wlre/
 - **可觀測性**：除了詳細狀態文字，**首頁精簡小地圖**原本使用 `show_status=False`，導致診斷實際被隱藏；已在傳點列表下方新增常駐簡短提示，顯示 StageMap 資料未載入、格式無效或有多少傳點缺 NameID。完整資料仍寫入 `portal_metadata_status`，不把 1262 名稱冒充 1275。
 - **證據限制**：使用者目前提供的 `DataPackage_1275.zip` 及 `MainPackage_1275.zip` 內容是官方 Manifest 索引與 hash，沒有 `StageMapData_C`／`EveDoorLinks` TextAsset 原始資料，因此**尚不能斷言場景 11016 兩個傳點的實際官方文字**。需在 PR 分支版本完成官方附加 Bundle 同步後，以實際狀態欄與正式伺服器操作驗收。
 
+### 2026-10-25 傳點座標點位偏移：來源座標系統與投影修復
+
+- **已確認程式根因**：PR #57 原本把 `Eve.NewDoor` 通用事件的 `x/y` 當成小地圖 packet XY，直接傳入 `Projection.packet_to_pixel()`。使用者回報圖示位置與實際入口不符，根據提供的 1262 Lua `UIMain._SetPortalPosition()`，一般傳點真正採用 `EveDoorLinksData.GetDoorDataByIndex()` 的 `mapPosition`，且 `PosXRatio/PosYRatio` 要先依場景套用。兩類座標不能混用。
+- **已修改流程**：`parse_stages` 保留 `ScenesData_C` 官方 XY 比例與地圖尺寸／位移；`verified_portal_positions()` 使用經驗證 `StageMapData_C` 的 (SceneID, EvtID) 身分、`EveDoorLinks` 的原始格座標，再依 SceneData 的 X/Y ratio 轉換成可交給小地圖的 packet XY。`Portals` 僅在有獨立位置驗證時設定 `coordinate_valid`；原始 NewDoor 格座標另存 `event_grid_x/event_grid_y` 供診斷，不提供 UI 畫點、導航或換圖。
+- **防止錯位與誤觸**：`portal_map_pixel` 統一檢查 [0, 1024] 地圖界線、來源座標與正式 1275 幾何是否匹配目前圖片投影；畫點、清單選點與滑鼠點擊使用同一安全判定，且手動試傳按鈕不可繞過不符的來源地圖校驗。缺可信座標時清單照樣顯示、地圖不顯示假標記，精簡版小地圖會提示「點位待官方座標換算」。
+- **回歸測試**：`tests/test_portal_coordinates_1275.py` 使用合成官方 Schema 模擬「EventData grid=(42,64)、門連線=(200,300)、倍率=(3,2)、正確 packet=(600,600)」以及沒有來源、倍率無效、點位越界、地圖位移不相容時的安全拒絕。先前只以原始事件座標為正確位置的測試已更正。
+- **限制與下一步實測**：1275 最新 `EveDoorLinks` 真實資產與場景 11016／12170 實際官方傳點位置，尚未獲取可驗證的 TextAsset 內容；CI 驗證的是契約、資料換算及 GUI 安全行為，**不等於正式遊戲圖示位置完全驗收**。使用 PR 分支實測時優先核對入口是否出現在對應地形位置，並比對官方遊戲傳點圖示。
+
 ### 尚未能由 CI 單獨證明的正式驗收
 
 - **Windows 正式遊戲／網路回覆：** 1275 版本閘門、官方 Bundle 校驗與登入；副本創／入／退、房主開始及進場；協力房間待命與免費領獎；NPC 手動互動／唯讀商店，傳點不合法目標拒絕，全部需記錄正式伺服器回覆與操作前後 State。
