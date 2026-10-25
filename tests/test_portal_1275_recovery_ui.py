@@ -39,7 +39,7 @@ class Portal1275UI(unittest.TestCase):
     def test_1275_verified_door_is_selectable_not_directly_sendable(self):
         self.map.set_state({'player': {'scene': 12170}})
         self.assertEqual(len(self.map.portal_rows), 1)
-        self.assertIn('1275 門事件', self.map.portal_list.get(0))
+        self.assertIn('門事件 #2（目的地未確認）', self.map.portal_list.get(0))
         self.assertEqual(str(self.map.portal_go.cget('state')), 'disabled')
         self.map.portal_list.selection_set(0)
         self.map.choose_portal()
