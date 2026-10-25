@@ -105,6 +105,21 @@ class PortalInteractionMixin:
                 self.portals.data.get('portal_metadata_status'))
             ttk.Label(win, text='傳點名稱／位置資料：' + status,
                       wraplength=680).pack(fill='x', padx=10)
+            # Data-format recognition is NOT equivalent to official server
+            # transfer validation. Display concise verified source evidence.
+            schema_report = self.portals.data.get('portal_schema_report', {})
+            if isinstance(schema_report, dict):
+                formats = []
+                for table in ('StageMapData_C', 'EveDoorLinks'):
+                    report = schema_report.get(table)
+                    if not isinstance(report, dict):
+                        formats.append(table + '：來源未取得')
+                    elif report.get('status') == 'recognized':
+                        formats.append(table + '：結構相容')
+                    else:
+                        formats.append(table + '：版型待重新核對')
+                ttk.Label(win, text='1262 欄位格式比對：' + '／'.join(formats),
+                          wraplength=680).pack(fill='x', padx=10)
             if not self.portals.data.get('source_ready'):
                 ttk.Label(win, text='1275 官方資源尚未完成安裝／校驗，請重新登入。',
                           wraplength=680).pack(fill='x', padx=10)
