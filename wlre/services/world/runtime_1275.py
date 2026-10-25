@@ -79,12 +79,14 @@ def _default_runtime():
                         KeyError, TypeError):
                     pass
                 else:
+                    bundle_status = getattr(
+                        enriched, 'portal_metadata_status', 'missing_stage_map')
                     if (getattr(enriched, 'revision', None) == 1275
-                            and getattr(enriched, 'portal_metadata_status',
-                                        'missing_stage_map')
-                            in ('stage_map_ready', 'destination_links_loaded')
-                            or (getattr(enriched, 'revision', None) == 1275
-                                and bool(getattr(enriched, 'portal_names', {})))):
+                            and (bundle_status in (
+                                'stage_map_ready', 'destination_links_loaded')
+                                or (isinstance(bundle_status, str)
+                                    and bundle_status.startswith('destination_links_'))
+                                or bool(getattr(enriched, 'portal_names', {})))):
                         return enriched
             return formal
 
