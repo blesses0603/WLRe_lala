@@ -114,18 +114,39 @@ class DashboardLayout(unittest.TestCase):
 
     def test_hidden_expedition_checks_online_tasks_without_opening_tab(self):
         panel = self.app.expedition_panel
-        quest = next(q for q in panel.catalog['tasks'].values() if q['difficulty'] == 1 and q['minutes'] > 300)
+        # This test only checks server notifications for a hidden tab. It
+        # cannot assume that a user's FULL, independently pinned 1275 ZIPs
+        # were already installed on an ephemeral CI runner.
+        fixture = {
+            'tasks': {'1': {
+                'id': 1, 'name': '測試遠征', 'difficulty': 1,
+                'minutes': 360, 'area': 1, 'faith_cost': 10,
+                'success_rate': 500, 'condition': [0, 0, 0],
+                'recommendations': [], 'rewards': [],
+            }},
+            'levels': {'1': {'difficulty': 2, 'teams': 1, 'reduction': 0}},
+        }
+        old_catalog = panel.catalog
+        panel.catalog = fixture
+        panel.signature = None
         state = State().snapshot()
         state['player'] = {'role_id': 1, 'name': '測試角色', 'scene': 60000}
-        state['expedition'].update(ready=True, outpost_ready=True, level=1, quests={'1': quest['id']})
-        with patch.object(self.app, 'live_active', True), patch.object(self.app, 'send') as send:
-            self.app.render(state)
-            self.root.update()
-            self.assertFalse(panel.winfo_ismapped())
-            self.assertEqual(len(panel.tasks.get_children()), 1)
-            self.assertIn('已自動檢查', panel.status.get())
-            send.assert_not_called()
-        self.app.left_tabs.select(self.app.overview_panel.master);self.root.update()
+        state['expedition'].update(
+            ready=True, outpost_ready=True, level=1, quests={'1': 1})
+        try:
+            with patch.object(self.app, 'live_active', True), patch.object(
+                    self.app, 'send') as send:
+                self.app.render(state)
+                self.root.update()
+                self.assertFalse(panel.winfo_ismapped())
+                self.assertEqual(len(panel.tasks.get_children()), 1)
+                self.assertIn('已自動檢查', panel.status.get())
+                send.assert_not_called()
+        finally:
+            panel.catalog = old_catalog
+            panel.signature = None
+        self.app.left_tabs.select(self.app.overview_panel.master)
+        self.root.update()
 
     def test_all_navigation_actions_still_work(self):
         panel=self.app.overview_panel

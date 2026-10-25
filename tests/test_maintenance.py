@@ -44,7 +44,8 @@ class MaintenanceUiTests(unittest.TestCase):
         from wlre.ui.gui import App
         from wlre.ui.auto_battle_ui import SettingsEditor
         self.folder=tempfile.TemporaryDirectory()
-        self.environment=patch.dict(os.environ,{'LOCALAPPDATA':self.folder.name});self.environment.start()
+        self.environment=patch.dict(os.environ,{'LOCALAPPDATA':self.folder.name,
+                                             'WLRE_DISABLE_AUTO_CATALOG':'1'});self.environment.start()
         self.root=tk.Tk();self.app=App(self.root);self.editor=SettingsEditor(self.app)
         self.page=self.editor.maintenance_page
         self.editor.tabs.select(self.page);self.root.update()

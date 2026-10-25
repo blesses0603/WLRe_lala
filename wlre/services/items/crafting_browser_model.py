@@ -3,7 +3,8 @@ from wlre.storage.paths import favorites_file,legacy_favorites_file
 import json
 from pathlib import Path
 from wlre.services.items.crafting import RECIPES
-from wlre.services.items.combat_resources import item_name, available
+from wlre.services.items.catalog import item_display_name as item_name
+from wlre.services.items.combat_resources import available
 
 
 def room_known(state):return bool(state.get('player',{}).get('role_id') and state.get('furniture',{}).get('ready') and state.get('furniture',{}).get('owner')==state.get('player',{}).get('role_id'))

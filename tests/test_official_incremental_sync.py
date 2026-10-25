@@ -5,6 +5,7 @@ import hashlib
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 import zlib
 
 from test_official_manifest_integration import (
@@ -13,6 +14,7 @@ from test_official_manifest_integration import (
 from tools.resources.lala_manifest_full_index import parse_manifest
 from wlre.services.official_incremental_sync import (
     IncrementalSyncError, build_update_plan, execute_update_plan,
+    find_previous_verified_manifest,
 )
 from wlre.services.official_manifest_sync import ManifestSpec, VerifiedManifest
 
@@ -38,6 +40,44 @@ def manifest(version=PACKAGE_VERSION, *, dependencies=False):
 
 
 class IncrementalPlanTests(unittest.TestCase):
+    def test_many_historical_versions_select_newest_with_bounded_verification(self):
+        from wlre.services.official_manifest_sync import ManifestSyncError
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            # More than 64 successful updates must not permanently prevent
+            # subsequent official incremental updates.
+            for version in range(1001, 1101):
+                target = (base / '1.3.21' / 'DataPackage' /
+                          f'{version}_2026_01_01_00_00_00_00' /
+                          'DataPackage.verified.json')
+                target.parent.mkdir(parents=True)
+                target.write_text('{}', encoding='utf-8')
+            calls = []
+            def load_previous(spec, *, cache_root):
+                self.assertEqual(cache_root, base)
+                calls.append(spec.package_version)
+                if len(calls) <= 3:
+                    raise ManifestSyncError('old local receipt damaged')
+                return manifest(spec.package_version)
+            with patch('wlre.services.official_incremental_sync.read_verified_cached_manifest',
+                       side_effect=load_previous):
+                found = find_previous_verified_manifest(
+                    manifest(), cache_root=base, max_candidates=7)
+            self.assertIsNotNone(found)
+            self.assertEqual(found.spec.package_version,
+                             '1097_2026_01_01_00_00_00_00')
+            self.assertEqual(calls[:4], [
+                f'{v}_2026_01_01_00_00_00_00' for v in (1100, 1099, 1098, 1097)])
+            self.assertEqual(len(calls), 4)
+
+    def test_previous_manifest_scan_limit_must_be_valid(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for limit in (0, -1, 257, True, 1.5):
+                with self.subTest(limit=limit):
+                    with self.assertRaises(IncrementalSyncError):
+                        find_previous_verified_manifest(
+                            manifest(), cache_root=tmp, max_candidates=limit)
+
     def test_no_implicit_bulk_selection_or_missing_asset(self):
         with self.assertRaisesRegex(IncrementalSyncError, 'Explicit required'):
             build_update_plan(manifest())

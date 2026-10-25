@@ -1,0 +1,3 @@
+# Bundled UnityFS / TextAsset decoder for native Windows and macOS distributions.
+# Keep one reviewed version across build environments and source CI.
+UnityPy==1.25.4

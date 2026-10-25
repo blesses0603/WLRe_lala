@@ -18,30 +18,46 @@ class NPCShopCatalogueTests(unittest.TestCase):
     def test_real_eve_65_shops_are_readonly_and_accurate(self):
         idx=NPCInteractIndex()
         shops=[]
+        # Historical Eve fixture remains; the 1262 item-price archive does not.
+        # A missing verified current item runtime must never fabricate prices.
+        with patch('wlre.services.world.npc_shop.item_catalog',
+                   side_effect=ValueError('尚無正式物品來源')):
+            shops=self._assert_historical_shop_preview_without_prices(idx)
+        self.assertEqual(len(shops),65)
+        self.assertEqual(sum(c['form_kind']==2 for c in shops),19)
+        self.assertEqual(sum(c['form_kind']==3 for c in shops),46)
+        self.assertIsNone(shop_catalog(10000,1,index=idx))
+
+    def _assert_historical_shop_preview_without_prices(self, idx):
+        shops=[]
         for scene,rows in idx.scenes.items():
             for index,row in rows.items():
                 if row['form_kind'] in (2,3):
                     cat=shop_catalog(scene,index,index=idx)
                     self.assertIsNotNone(cat,(scene,index))
                     self.assertFalse(cat['verified_prices'])
-                    self.assertTrue(cat['item_data_verified'])
+                    self.assertFalse(cat['item_data_verified'])
                     self.assertEqual(cat['form_kind'],row['form_kind'])
                     self.assertTrue(cat['products'])
-                    self.assertTrue(all(type(p['price_gold']) is int and
+                    self.assertTrue(all(p['price_gold'] is None and
                                         p['buy_enabled'] is False
                                         for p in cat['products']))
                     self.assertEqual(
                         [(p['offer_index'],p['item_id']) for p in cat['products']],
                         [(p['id'],p['text_id']) for p in row['items'] if p['kind']==3])
                     shops.append(cat)
-        self.assertEqual(len(shops),65)
-        self.assertEqual(sum(c['form_kind']==2 for c in shops),19)
-        self.assertEqual(sum(c['form_kind']==3 for c in shops),46)
-        self.assertEqual(shop_catalog(10080,6,index=idx)['products'][0]['item_id'],32297)
-        self.assertIsNone(shop_catalog(10000,1,index=idx))
+        self.assertEqual(next(c for c in shops
+                              if c['scene']==10080 and c['interact_index']==6
+                             )['products'][0]['item_id'],32297)
+        return shops
 
     def test_purchase_preview_is_not_a_payment(self):
-        shop=shop_catalog(10080,6)
+        # A synthetic, explicitly injected verified-data *shape* proves the
+        # price preview logic independently of any bundled 1262 price file.
+        example={32297: {'name':'測試物品','price':750,
+                         'sell_price':8,'restrict':0}}
+        with patch('wlre.services.world.npc_shop.item_catalog',return_value=example):
+            shop=shop_catalog(10080,6)
         draft=draft_purchase(shop,1,2)
         self.assertEqual(draft['item_id'],32297)
         self.assertEqual(draft['count'],2)

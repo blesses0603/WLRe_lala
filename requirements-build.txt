@@ -1,4 +1,5 @@
 -r requirements-ui.txt
+-r requirements-extractor.txt
 Nuitka>=4.3,<5
 ordered-set>=4,<5
 zstandard>=0.22,<1

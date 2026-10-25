@@ -10,6 +10,10 @@ on:
 permissions:
   contents: read
 
+env:
+  # Build/test runner must not auto-download game Bundles into temp GUI fixtures.
+  WLRE_DISABLE_AUTO_CATALOG: '1'
+
 jobs:
   desktop-package:
     name: Compile / launch / archive (${{ matrix.label }})
@@ -47,13 +51,14 @@ jobs:
             requirements-ui.txt
             requirements-build.txt
             requirements-build-macos.txt
+            requirements-extractor.txt
       - name: Restore native Nuitka compiler cache
         uses: actions/cache@v4
         with:
           path: ${{ env.NUITKA_CACHE_DIR }}
-          key: desktop-nuitka-v1-${{ matrix.label }}-py312-${{ hashFiles('requirements-build.txt', 'requirements-build-macos.txt', 'requirements-ui.txt') }}-${{ github.sha }}
+          key: desktop-nuitka-v1-${{ matrix.label }}-py312-${{ hashFiles('requirements-build.txt', 'requirements-build-macos.txt', 'requirements-ui.txt', 'requirements-extractor.txt') }}-${{ github.sha }}
           restore-keys: |
-            desktop-nuitka-v1-${{ matrix.label }}-py312-${{ hashFiles('requirements-build.txt', 'requirements-build-macos.txt', 'requirements-ui.txt') }}-
+            desktop-nuitka-v1-${{ matrix.label }}-py312-${{ hashFiles('requirements-build.txt', 'requirements-build-macos.txt', 'requirements-ui.txt', 'requirements-extractor.txt') }}-
             desktop-nuitka-v1-${{ matrix.label }}-py312-
       - name: Install test and build dependencies (Windows)
         if: runner.os == 'Windows'

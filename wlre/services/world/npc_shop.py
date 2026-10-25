@@ -62,7 +62,9 @@ def shop_catalog(scene, interact_index, *, index=None, item_rows=None):
     if not products:
         return None
     complete = bool(item_rows) and all(p['price_gold'] is not None for p in products)
-    return {'scene': scene, 'interact_index': interact_index,
+    from wlre.services.world.feature_resource_index import feature_note
+    return {'resource_index_note': feature_note('npc'),
+            'scene': scene, 'interact_index': interact_index,
             'form_kind': data['form_kind'], 'title': SHOP_TYPES[data['form_kind']],
             'products': products, 'verified_prices': False,
             'item_data_verified': complete,

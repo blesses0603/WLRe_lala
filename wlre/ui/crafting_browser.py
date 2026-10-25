@@ -5,8 +5,9 @@ from wlre.ui.window_layout import configure_dialog
 from tkinter import ttk
 from wlre.ui.theme import group
 from wlre.services.items.crafting import RECIPES, recipe_plan, effective_time, confirmed_unlocked
-from wlre.services.items.combat_resources import item_name
+from wlre.services.items.catalog import item_display_name as item_name
 from wlre.services.items.crafting_browser_model import Favorites, owned_counts, material_rows, availability, tool_status, room_known
+from wlre.services.world.feature_resource_index import feature_note
 from wlre.core.efficiency import duration
 from wlre.ui.crafting.item_icons import ItemIcons, ICON_MAP
 from wlre.ui.crafting.queue_view import CraftingQueueMixin
@@ -31,6 +32,8 @@ class CraftingBrowser(CraftingQueueMixin):
         ttk.Button(header,text='自訂清單',command=panel.open_plan,padding=(5,3)).pack(side='left',padx=(12,3))
         ttk.Button(header,text='進入自家帳篷',command=lambda:panel.app.send({'type':'tent','action':'enter'}),padding=(5,3)).pack(side='left',padx=3)
         self.queue_label=tk.StringVar();ttk.Button(header,textvariable=self.queue_label,command=self.show_queue,padding=(5,3)).pack(side='left',padx=3)
+        self.source_label=tk.StringVar(value=feature_note('crafting'))
+        ttk.Label(header,textvariable=self.source_label,style='Muted.TLabel').pack(side='right',padx=4)
         searchbar=ttk.Frame(box);searchbar.pack(fill='x',pady=(0,4))
         self.only_tools=tk.BooleanVar(value=True);ttk.Checkbutton(searchbar,text='只列小屋已有設備',variable=self.only_tools,command=lambda:self.refresh(force=True)).pack(side='left')
         ttk.Label(searchbar,text='搜尋').pack(side='left',padx=(8,4))
@@ -101,6 +104,7 @@ class CraftingBrowser(CraftingQueueMixin):
         self.state=self.panel.state;c=self.state.get('crafting',{})
         capacity=5 if any(v['item_id']==39050 and v.get('status')==0 for v in self.state.get('furniture',{}).get('items',{}).values()) else 3
         self.queue_label.set(f"製作排程：{len(c.get('queue',{}))}/{capacity}")
+        self.source_label.set(feature_note('crafting'))
         self.favorite_count.set(f'我的最愛：{len(self.favorite_store.ids)}/100'+('' if self.embedded else '（儲存於本機）'))
         tool_ids=sorted({r['tool_id'] for r in RECIPES.values() if confirmed_unlocked(r)})
         signature=(self.only_tools.get(),room_known(self.state),tuple((sid,tool_status(self.state,sid)) for sid in tool_ids))

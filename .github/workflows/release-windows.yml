@@ -18,6 +18,10 @@ concurrency:
   group: desktop-release-${{ inputs.tag || github.ref_name }}
   cancel-in-progress: false
 
+env:
+  # Build/test runner must not auto-download game Bundles into temp GUI fixtures.
+  WLRE_DISABLE_AUTO_CATALOG: '1'
+
 jobs:
   preflight:
     name: Validate release tag
@@ -68,6 +72,7 @@ jobs:
             requirements-ui.txt
             requirements-build.txt
             requirements-build-macos.txt
+            requirements-extractor.txt
       - name: Check version tag
         run: python -m tools.build.release_nuitka --tag "$env:RELEASE_TAG" --check-tag
       - name: Install test dependencies
@@ -79,9 +84,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.NUITKA_CACHE_DIR }}
-          key: desktop-nuitka-v1-windows-x64-py312-${{ hashFiles('requirements-build.txt', 'requirements-build-macos.txt', 'requirements-ui.txt') }}-${{ github.sha }}
+          key: desktop-nuitka-v1-windows-x64-py312-${{ hashFiles('requirements-build.txt', 'requirements-build-macos.txt', 'requirements-ui.txt', 'requirements-extractor.txt') }}-${{ github.sha }}
           restore-keys: |
-            desktop-nuitka-v1-windows-x64-py312-${{ hashFiles('requirements-build.txt', 'requirements-build-macos.txt', 'requirements-ui.txt') }}-
+            desktop-nuitka-v1-windows-x64-py312-${{ hashFiles('requirements-build.txt', 'requirements-build-macos.txt', 'requirements-ui.txt', 'requirements-extractor.txt') }}-
             desktop-nuitka-v1-windows-x64-py312-
       # Call the BAT's Python entry point directly to avoid its interactive pause.
       - name: Compile and self-test Windows EXE
@@ -143,13 +148,14 @@ jobs:
             requirements-ui.txt
             requirements-build.txt
             requirements-build-macos.txt
+            requirements-extractor.txt
       - name: Restore Nuitka compiler cache
         uses: actions/cache@v4
         with:
           path: ${{ env.NUITKA_CACHE_DIR }}
-          key: desktop-nuitka-v1-macos-${{ matrix.arch }}-py312-${{ hashFiles('requirements-build.txt', 'requirements-build-macos.txt', 'requirements-ui.txt') }}-${{ github.sha }}
+          key: desktop-nuitka-v1-macos-${{ matrix.arch }}-py312-${{ hashFiles('requirements-build.txt', 'requirements-build-macos.txt', 'requirements-ui.txt', 'requirements-extractor.txt') }}-${{ github.sha }}
           restore-keys: |
-            desktop-nuitka-v1-macos-${{ matrix.arch }}-py312-${{ hashFiles('requirements-build.txt', 'requirements-build-macos.txt', 'requirements-ui.txt') }}-
+            desktop-nuitka-v1-macos-${{ matrix.arch }}-py312-${{ hashFiles('requirements-build.txt', 'requirements-build-macos.txt', 'requirements-ui.txt', 'requirements-extractor.txt') }}-
             desktop-nuitka-v1-macos-${{ matrix.arch }}-py312-
       - name: Check version tag and native architecture
         run: |

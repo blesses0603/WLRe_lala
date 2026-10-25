@@ -32,13 +32,15 @@ def run_prelogin_check(sources=None, *, checker=None):
             for item in packages.values())
     )
     client_changed = bool(remote.get("newer_official_client"))
-    blocked = package_changed or client_changed
     all_same = (
         remote.get("status") == "same_resources" and
         all(packages.get(package, {}).get("comparison") == "same" for package in BASELINE)
     )
+    # Fail closed: network errors, partial responses and unknown revisions
+    # cannot become a login permit, even when the local 1275 cache is valid.
+    blocked = package_changed or client_changed or not all_same
     support = baseline_label(BASELINE)
-    if blocked:
+    if package_changed or client_changed:
         status = "blocked"
         if client_changed and not package_changed:
             message = (f"官方遊戲客戶端版本已有變更，LaLa 支援資源基準為 {support}；"
@@ -53,7 +55,7 @@ def run_prelogin_check(sources=None, *, checker=None):
     else:
         status = "unverified"
         message = (f"官方版本無法完整驗證（LaLa 支援基準 {support}），"
-                   "可能是網路失敗或更新資料不足；不代表已同步官方最新版本。")
+                   "可能是網路失敗或更新資料不足；禁止登入，請重新查詢官方版本。")
     # Official 1275 version identifiers are necessary, but not sufficient:
     # the matching, pinned 1275 data must be installed before live login.
     if (checker is None and sources is None
@@ -67,11 +69,16 @@ def run_prelogin_check(sources=None, *, checker=None):
                 # Preserve confirmed remote update/rejection as the primary
                 # reason. Never rewrite a 1276 server change as local-only.
                 message += ' 另外本機 1275 資料驗證未通過：' + reason
+                if not package_changed and not client_changed:
+                    message += ' 禁止使用 1262 舊索引登入。'
             else:
                 blocked = True
                 status = "blocked"
                 message = ('LaLa 1275 缺少已校驗的 NPC／商店／製作／場景資料；'
                            '禁止使用 1262 舊索引登入。' + reason)
+        elif not all_same and not package_changed and not client_changed:
+            # A valid offline Bundle is not proof of the current live version.
+            message += ' 已有本機資源也不能替代本次官方版本確認；請恢復版本查詢後重試。'
         elif all_same and not blocked:
             message += ' 已確認本機 1275 資源包完整；尚未等同正式伺服器協定驗收。'
     return {"status": status, "blocked": blocked, "message": message,

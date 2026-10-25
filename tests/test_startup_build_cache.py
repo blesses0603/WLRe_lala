@@ -33,12 +33,26 @@ class DependencyCache(unittest.TestCase):
     def test_ui_requirement_change_invalidates_cache(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);environment=root/'env';environment.mkdir()
-            (root/'requirements-build.txt').write_text('-r requirements-ui.txt')
+            (root/'requirements-build.txt').write_text('-r requirements-ui.txt\n-r requirements-extractor.txt')
             (root/'requirements-ui.txt').write_text('Pillow>=10')
+            (root/'requirements-extractor.txt').write_text('UnityPy==1.25.4')
             with patch.object(build_nuitka,'ROOT',root),patch.object(build_nuitka,'run_logged') as run:
                 build_nuitka.prepare_dependencies('python',environment,root/'build.log')
                 (root/'requirements-ui.txt').write_text('Pillow>=11')
                 run.reset_mock()
+                build_nuitka.prepare_dependencies('python',environment,root/'build.log')
+                self.assertTrue(any('install' in call.args[0] for call in run.call_args_list))
+
+    def test_extractor_requirement_change_invalidates_cache(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);environment=root/'env';environment.mkdir()
+            (root/'requirements-build.txt').write_text('-r requirements-ui.txt\n-r requirements-extractor.txt')
+            (root/'requirements-ui.txt').write_text('Pillow>=10')
+            (root/'requirements-extractor.txt').write_text('UnityPy==1.25.4')
+            with patch.object(build_nuitka,'ROOT',root),patch.object(build_nuitka,'run_logged') as run:
+                build_nuitka.prepare_dependencies('python',environment,root/'build.log')
+                run.reset_mock()
+                (root/'requirements-extractor.txt').write_text('UnityPy==1.25.3')
                 build_nuitka.prepare_dependencies('python',environment,root/'build.log')
                 self.assertTrue(any('install' in call.args[0] for call in run.call_args_list))
 
@@ -58,9 +72,11 @@ class StartupSerialization(unittest.TestCase):
         def importing(name,*args,**kwargs):
             if name=='PIL':raise ImportError('fixture')
             return original(name,*args,**kwargs)
-        with patch('builtins.__import__',side_effect=importing),patch.object(launcher,'file_lock',return_value=nullcontext()) as lock,patch.object(launcher.subprocess,'run',side_effect=[Mock(returncode=1),Mock(returncode=0),Mock(returncode=0),Mock(returncode=0)]) as run,patch.object(launcher.venv,'EnvBuilder'):
+        with patch('builtins.__import__',side_effect=importing),patch.object(launcher,'file_lock',return_value=nullcontext()) as lock,patch.object(launcher,'ensure_extractor_environment',side_effect=lambda python,root:python),patch.object(launcher.subprocess,'run',side_effect=[Mock(returncode=1),Mock(returncode=0),Mock(returncode=0),Mock(returncode=0),Mock(returncode=0)]) as run,patch.object(launcher.venv,'EnvBuilder'):
             self.assertEqual(launcher.main(),0)
             lock.assert_called_once()
             self.assertEqual(lock.call_args.kwargs['timeout'],300)
             self.assertIn('install',run.call_args_list[1].args[0])
             self.assertTrue(run.call_args_list[2].kwargs['check'])
+            self.assertIn('wlre.services.world.launcher_catalog', run.call_args_list[3].args[0])
+            self.assertIn('--progress', run.call_args_list[3].args[0])

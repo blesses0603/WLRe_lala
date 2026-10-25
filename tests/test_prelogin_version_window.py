@@ -9,6 +9,9 @@ from wlre.ui.gui import App
 from wlre.ui.version_gate_controller import VersionGateController
 
 
+_UNPATCHED_START_VERSION_CHECK = VersionGateController.start_version_check
+
+
 def official_result(main="1262", data="1262", status="version_identifiers_match"):
     versions = {"MainPackage": main, "DataPackage": data}
     return {
@@ -70,6 +73,16 @@ class PreloginVersionWindowTests(unittest.TestCase):
         self.assertEqual(self.app.login_window.state(), "withdrawn")
         self.assertFalse(self.app._version_gate_entry_approved)
 
+    def test_same_official_version_with_missing_formal_assets_is_not_mislabeled_update(self):
+        response = official_result('1275', '1275', 'blocked')
+        response['remote']['status'] = 'same_resources'
+        response['message'] = ('LaLa 1275 缺少已校驗的 NPC／商店／製作／場景資料；'
+                               '仍禁止登入。')
+        self.deliver(response)
+        self.assertIn('正式資源尚未就緒', self.app._version_heading.get())
+        self.assertNotIn('官方版本異動', self.app._version_heading.get())
+        self.assertTrue(self.app._version_continue_button.instate(['disabled']))
+
     def test_confirmed_online_1262_requires_explicit_continue(self):
         self.deliver(official_result())
         self.assertEqual(self.app.login_window.state(), "withdrawn")
@@ -98,14 +111,39 @@ class PreloginVersionWindowTests(unittest.TestCase):
             self.assertNotIn("1262", self.app._version_data.get())
             self.root.update()
 
-    def test_unknown_state_requires_explicit_acknowledgement(self):
+    def test_unknown_state_blocks_login_even_if_worker_sets_blocked_false(self):
         self.deliver(official_result(status="unverified"))
         self.assertEqual(self.app.login_window.state(), "withdrawn")
-        self.assertEqual(self.app._version_continue_button.cget("text"),
-                         "了解風險，繼續登入")
+        self.assertEqual(self.app._version_continue_button.cget("text"), "禁止登入")
+        self.assertTrue(self.app._version_continue_button.instate(["disabled"]))
+        self.assertEqual(self.app.version_gate_state, "blocked")
+        self.assertTrue(self.app._version_gate_result["blocked"])
         self.assertIn("無法驗證", self.app._version_main.get())
-        self.app.continue_to_login()
-        self.assertNotEqual(self.app.login_window.state(), "withdrawn")
+        with patch("wlre.ui.version_gate_controller.messagebox.showwarning"):
+            self.app.continue_to_login()
+        self.assertEqual(self.app.login_window.state(), "withdrawn")
+        self.assertFalse(self.app._version_gate_entry_approved)
+        self.assertEqual(str(self.app.connect_button.cget("state")), "disabled")
+
+    def test_conflicting_verified_flag_still_blocks_login(self):
+        result = official_result()
+        result["remote"]["status"] = "unverified"
+        self.deliver(result)
+        self.assertEqual(self.app.version_gate_state, "blocked")
+        self.assertEqual(self.app._version_gate_result["status"], "unverified")
+        self.assertTrue(self.app._version_continue_button.instate(["disabled"]))
+
+    def test_worker_exception_fails_closed_without_exposing_exception(self):
+        with (patch("wlre.ui.version_gate_controller.run_prelogin_check",
+                    side_effect=RuntimeError("private credential path")),
+              patch("wlre.ui.version_gate_controller.threading.Thread") as thread,
+              patch.object(self.app, "start_lala_release_check")):
+            _UNPATCHED_START_VERSION_CHECK(self.app)
+            thread.call_args.kwargs["target"]()
+        self.app.drain_version_checks()
+        self.assertEqual(self.app.version_gate_state, "blocked")
+        self.assertTrue(self.app._version_continue_button.instate(["disabled"]))
+        self.assertNotIn("private credential path", self.app.version_gate_text.get())
 
     def test_unknown_source_exposes_failure_stage(self):
         response = official_result(status="unverified")
@@ -133,7 +171,7 @@ class PreloginVersionWindowTests(unittest.TestCase):
             for child in self.app.version_window.winfo_children()
         ))
 
-    def test_compact_version_window_has_no_scrollbars_or_blank_canvas(self):
+    def test_responsive_version_window_has_no_scrollbars_or_blank_canvas(self):
         self.deliver(official_result("1275", "1275", "blocked"))
         self.root.update()
         window = self.app.version_window
@@ -148,7 +186,10 @@ class PreloginVersionWindowTests(unittest.TestCase):
         self.assertFalse(any(isinstance(w, tk.Canvas) for w in widgets))
         self.assertFalse(any(isinstance(w, __import__("tkinter").ttk.Scrollbar)
                              for w in widgets))
-        self.assertLessEqual(window.winfo_height(), 530)
+        self.assertGreaterEqual(window.winfo_height(), min(590, window.winfo_screenheight() - 24))
+        self.assertLessEqual(window.winfo_height(), min(710, window.winfo_screenheight() - 24))
+        self.assertTrue(window.resizable()[0])
+        self.assertTrue(window.resizable()[1])
         self.assertTrue(self.app._version_release_panel.winfo_ismapped())
         self.assertTrue(self.app._version_continue_button.winfo_ismapped())
         self.assertTrue(self.app._lala_download_button.winfo_ismapped())
@@ -214,8 +255,57 @@ class PreloginVersionWindowTests(unittest.TestCase):
         self.assertGreater(
             self.app._version_alert_panel.winfo_height(), 55)
 
+    def test_three_sections_and_buttons_keep_separate_vertical_space(self):
+        self.deliver(official_result("1275", "1275", "blocked"))
+        self.app.version_gate_text.set(
+            "1275 正式資源尚未就緒，候選資料未經安全驗證。" * 4)
+        self.app._version_remote.set(
+            "缺少 DataCatalog 與 NPC 正式索引，尚未允許登入。" * 5)
+        self.app._lala_release_text.set(
+            "LaLa v0.6.0 · GitHub Release 狀態已檢查；暫無更新。" * 2)
+        self.root.update()
+        alert = self.app._version_alert_panel
+        resource = self.app._version_resource_panel
+        release = self.app._version_release_panel
+        progress = self.app._version_progress
+        button = self.app._version_continue_button
+        self.assertLessEqual(
+            alert.winfo_rooty() + alert.winfo_height(),
+            resource.winfo_rooty())
+        self.assertLessEqual(
+            resource.winfo_rooty() + resource.winfo_height(),
+            release.winfo_rooty())
+        self.assertLessEqual(
+            release.winfo_rooty() + release.winfo_height(),
+            progress.winfo_rooty())
+        self.assertGreater(button.winfo_height(), 15)
+        self.assertLessEqual(
+            button.winfo_rooty() + button.winfo_height(),
+            self.app.version_window.winfo_rooty()
+            + self.app.version_window.winfo_height())
+
+    def test_resizing_reflows_every_long_text_label(self):
+        window = self.app.version_window
+        self.root.update()
+        before = self.app._version_release_label.cget("wraplength")
+        w = window.winfo_width()
+        h = window.winfo_height()
+        available = window.winfo_screenwidth() - 24
+        if available - w < 35:
+            self.skipTest("Viewport is already at its widest usable size")
+        window.geometry(f"{min(available, w + 80)}x{h}")
+        self.root.update()
+        self.assertGreater(
+            int(self.app._version_release_label.cget("wraplength")),
+            int(before))
+        self.assertEqual(
+            int(self.app._version_alert_message_label.cget("wraplength")),
+            int(self.app._version_alert_heading_label.cget("wraplength")))
+        self.assertEqual(len(self.app._version_resource_values), 5)
+        self.assertTrue(self.app._version_continue_button.winfo_ismapped())
+
     def test_reopen_revokes_previous_approval(self):
-        self.deliver(official_result(status="unverified"))
+        self.deliver(official_result())
         self.app.continue_to_login()
         self.app.reopen_version_check()
         self.assertFalse(self.app._version_gate_entry_approved)
@@ -227,7 +317,8 @@ class PreloginVersionWindowTests(unittest.TestCase):
         self.app._version_gate_messages.put((1, official_result("1275", "1262", "blocked")))
         self.app._version_gate_messages.put((2, official_result(status="unverified")))
         self.app.drain_version_checks()
-        self.assertEqual(self.app.version_gate_state, "ready")
+        self.assertEqual(self.app.version_gate_state, "blocked")
+        self.assertTrue(self.app._version_continue_button.instate(["disabled"]))
         self.assertEqual(self.app.version_gate_text.get(), "官方線上版本檢測結果")
 
 

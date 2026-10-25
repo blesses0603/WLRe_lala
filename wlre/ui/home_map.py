@@ -344,8 +344,10 @@ class HomeMap(ttk.Frame):
         win.transient(self.winfo_toplevel())
         body=ttk.Frame(win,padding=12)
         body.pack(fill='both',expand=True)
-        ttk.Label(body,text=catalog['title']+'｜商品 ID：Eve 1262；金額：ItemData_C 基礎價',
-                  wraplength=640).pack(fill='x',pady=(0,6))
+        ttk.Label(body,text=catalog['title']+'｜商品 ID：Eve；金額：ItemData_C 基礎價',
+                  wraplength=640).pack(fill='x',pady=(0,4))
+        ttk.Label(body,text=catalog.get('resource_index_note', '官方分類來源待確認'),
+                  style='Muted.TLabel',wraplength=640).pack(fill='x',pady=(0,6))
         tabs=ttk.Notebook(body)
         tabs.pack(fill='both',expand=True)
         offers=ttk.Frame(tabs)

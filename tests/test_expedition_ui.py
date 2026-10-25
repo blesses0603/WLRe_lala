@@ -53,6 +53,19 @@ class ExpeditionPanelTests(unittest.TestCase):
         self.assertTrue(self.panel.start_button.instate(['disabled']))
         self.assertIn('內建遠征資料不完整', self.panel.note.get())
 
+    def test_auto_downloaded_preview_never_enables_dispatch(self):
+        self.panel.catalog = {
+            'source_kind': 'automatic_1275_unapproved_preview',
+            'tasks': self.catalog['tasks'], 'levels': self.catalog['levels'],
+            'npcs': {}, 'display_only': True, 'can_send_packets': False,
+        }
+        self.panel.render(self.state)
+        self.assertTrue(self.panel.start_button.instate(['disabled']))
+        self.assertIn('唯讀', self.panel.note.get())
+        self.panel.start()  # Even direct API calls cannot bypass disabled UI.
+        self.app.send.assert_not_called()
+        self.assertIn('不可自動派遣', self.panel.status.get())
+
     def test_account_preferences_reload_without_automatic_start(self):
         with tempfile.TemporaryDirectory() as folder, patch.dict(os.environ, {'LOCALAPPDATA': folder}):
             self.panel.hours.set('7.5')

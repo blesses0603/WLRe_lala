@@ -23,6 +23,7 @@ from wlre.storage.paths import data_root
 
 DEFAULT_MAX_DOWNLOAD_BYTES = 64 * 1024 * 1024
 DEFAULT_MAX_DOWNLOADS = 32
+MAX_HISTORICAL_RECEIPTS = 4096
 
 
 class IncrementalSyncError(ValueError):
@@ -97,10 +98,14 @@ def find_previous_verified_manifest(current, *, cache_root=None, max_candidates=
     def version_key(value):
         return tuple(int(part) for part in value.split('_'))
 
+    if (type(max_candidates) is not int or not 1 <= max_candidates <= 256):
+        raise IncrementalSyncError('Invalid historical Manifest comparison limit')
     candidates = []
+    scanned = 0
     for receipt in base.glob(f'*/{current.spec.package}/*/{current.spec.package}.verified.json'):
-        if len(candidates) >= max_candidates:
-            raise IncrementalSyncError('Historical Manifest cache has too many candidates')
+        scanned += 1
+        if scanned > MAX_HISTORICAL_RECEIPTS:
+            raise IncrementalSyncError('Historical Manifest directory exceeds safe scan bound')
         try:
             spec = ManifestSpec(receipt.parents[2].name, current.spec.package,
                                 receipt.parent.name)
@@ -108,8 +113,11 @@ def find_previous_verified_manifest(current, *, cache_root=None, max_candidates=
             continue
         if version_key(spec.package_version) < version_key(current.spec.package_version):
             candidates.append(spec)
+    # A healthy long-lived installation accumulates many versions. Select
+    # the newest bounded set before opening any historical receipts; do not
+    # block official updates just because there are over 64 older versions.
     candidates.sort(key=lambda spec: version_key(spec.package_version), reverse=True)
-    for spec in candidates:
+    for spec in candidates[:max_candidates]:
         try:
             return read_verified_cached_manifest(spec, cache_root=base)
         except ManifestSyncError:
@@ -270,7 +278,8 @@ def _reuse_verified_bundle(row, base):
 
 def execute_update_plan(plan, *, cache_root=None, download=False,
                         max_download_bytes=DEFAULT_MAX_DOWNLOAD_BYTES,
-                        max_downloads=DEFAULT_MAX_DOWNLOADS, opener=None, timeout=20):
+                        max_downloads=DEFAULT_MAX_DOWNLOADS, opener=None, timeout=20,
+                        progress=None):
     """Perform an explicit bounded run; preview is the default.
 
     Does not automatically mark runtime assets ready. If any required file is
@@ -278,6 +287,8 @@ def execute_update_plan(plan, *, cache_root=None, download=False,
     """
     if not isinstance(plan, BundleUpdatePlan):
         raise IncrementalSyncError('A verified Bundle update plan is required')
+    if progress is not None and not callable(progress):
+        raise IncrementalSyncError('Invalid Bundle completion callback')
     if not download:
         return {**plan.summary(), 'mode': 'preview', 'completed': 0}
     if (type(max_download_bytes) is not int or max_download_bytes < 0 or
@@ -300,6 +311,10 @@ def execute_update_plan(plan, *, cache_root=None, download=False,
             else:
                 raise IncrementalSyncError('Unknown Bundle action')
             completed += 1
+            # Call only after official size/MD5/CRC verification or validated
+            # reuse; this count must never mean 'bytes requested'.
+            if progress is not None:
+                progress(completed, len(plan.entries), row.action)
     except (OSError, BundleDownloadError) as exc:
         raise IncrementalSyncError('Incremental Bundle sync interrupted; not ready') from exc
     return {**plan.summary(), 'mode': 'download', 'completed': completed,

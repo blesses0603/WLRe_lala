@@ -16,6 +16,21 @@ from wlre.services.resource_compatibility import baseline_label
 from wlre.ui.window_layout import configure_dialog
 
 
+def _is_verified_login_result(result):
+    """Only a complete, positively verified official response can grant entry."""
+    if (not isinstance(result, dict) or result.get("blocked") is not False
+            or result.get("status") != "version_identifiers_match"):
+        return False
+    remote = result.get("remote")
+    if not isinstance(remote, dict) or remote.get("status") != "same_resources":
+        return False
+    packages = remote.get("packages")
+    return (isinstance(packages, dict) and
+            all(isinstance(packages.get(package), dict) and
+                packages[package].get("comparison") == "same"
+                for package in BASELINE))
+
+
 class VersionGateController:
     def initialize_version_gate(self):
         self.version_gate_state = "checking"
@@ -39,6 +54,49 @@ class VersionGateController:
         self._lala_update_info = None
         self._lala_update_busy = False
         self._lala_downloaded = None
+        # Display-only launcher receipt. This never affects the online game gate.
+        from wlre.services.world.launcher_catalog import read_launcher_status
+        receipt = read_launcher_status()
+        code = None if receipt is None else receipt['status']
+        self._launcher_catalog_status = {
+            'review_required': (
+                'Launcher 四類資料格式相容，遊戲協定仍待審核'
+                if receipt is not None and
+                   receipt.get('data_compatibility') == 'compatible'
+                else 'Launcher 已建立候選，資料及協定仍待審核'),
+            'downloaded_unparsed': 'Launcher 僅下載資料，尚未驗證解包',
+            'error': 'Launcher 四類候選準備未完成；1275 正式 Bundle 仍由獨立校驗器檢查',
+            'preview': 'Launcher 僅預覽下載計畫',
+        }.get(code, '尚無 Launcher 自動資源準備紀錄')
+        # Display the actual missing full-runtime inputs instead of telling
+        # users to guess which two ZIPs or internal tables are absent.
+        # Local report is untrusted and must never affect login eligibility.
+        from wlre.services.world.resource_gap_diagnostics import read_report, summarize
+        gaps = (read_report(expected_checked_at_utc=receipt['checked_at_utc'])
+                if receipt is not None else None)
+        if gaps is not None:
+            if gaps['formal_ready']:
+                self._launcher_catalog_status += '｜舊式雙 ZIP 亦已通過校驗'
+            elif (receipt is not None and code == 'review_required'
+                    and receipt.get('data_compatibility') == 'compatible'):
+                # The former ZIP-only diagnostic is not the authoritative
+                # verdict for independently validated official Bundles.
+                self._launcher_catalog_status += (
+                    '｜舊式 ZIP 未通過校驗；官方 Bundle 由正式 Runtime 另外核對')
+            else:
+                # Old ZIPs are optional when a separately pinned full Bundle
+                # runtime is used. Keep this clearly supplemental.
+                self._launcher_catalog_status += '｜舊式 ZIP（非唯一來源）：' + summarize(gaps)
+        if receipt is not None and receipt.get('status') == 'review_required':
+            from wlre.services.world.resource_rebuilder import read_inventory_summary
+            raw_inventory = read_inventory_summary(receipt['catalog_key'])
+            if raw_inventory is not None:
+                self._launcher_catalog_status += (
+                    f"｜原始資源 {raw_inventory['asset_collected']}/"
+                    f"{raw_inventory['asset_total']}，"
+                    f"重用 {raw_inventory['existing_or_cached_reused']}")
+            # This number is a display-only derived candidate, NOT evidence
+            # that the missing pinned formal indexes are available.
 
     def show_version_check(self):
         """Compact, single-page version review before exposing credentials.
@@ -69,24 +127,36 @@ class VersionGateController:
         # The larger result typography needs enough physical height on
         # Windows, where ttk buttons and CJK fonts have taller native metrics.
         # Otherwise the GitHub-update action row may be clipped off-screen.
-        configure_dialog(window, 810, 530)
+        configure_dialog(window, 1000, 710)
         window.protocol("WM_DELETE_WINDOW", self.close)
-        window.resizable(False, False)
+        # The helper is replaced with a no-result stub in native GUI smoke
+        # tests. Never depend on its return value; derive usable dimensions
+        # from Tk's own screen metrics instead.
+        width = max(1, min(1000, window.winfo_screenwidth() - 24))
+        height = max(1, min(710, window.winfo_screenheight() - 24))
+        # configure_dialog normally fixes both maxsize and minsize. This
+        # information-heavy view must reflow and grow on high-DPI desktops.
+        window.minsize(min(850, width), min(590, height))
+        window.maxsize(max(width, window.winfo_screenwidth() - 24),
+                       max(height, window.winfo_screenheight() - 48))
+        window.resizable(True, True)
 
         # Native ttk panels participate in LaLa's existing glass-background
         # compositor; unlike a standalone Canvas they do not obscure artwork.
-        shell = ttk.Frame(window, padding=(20, 8, 20, 10))
+        shell = ttk.Frame(window, padding=(22, 16, 22, 14))
         shell.pack(fill="both", expand=True)
 
         # Anchor the buttons BEFORE the data sections, so changing error text,
         # translation length or display scale cannot push them offscreen.
         footer = ttk.Frame(shell)
         footer.pack(side="bottom", fill="x")
-        ttk.Separator(footer, orient="horizontal").pack(fill="x", pady=(0, 6))
+        ttk.Separator(footer, orient="horizontal").pack(fill="x", pady=(6, 9))
         self._version_progress = ttk.Progressbar(footer, mode="indeterminate")
-        self._version_progress.pack(fill="x", pady=(0, 5))
-        ttk.Label(footer, text="僅查官方公開版本，不需要遊戲帳號或密碼。",
-                  style="Muted.TLabel").pack(anchor="w", pady=(0, 7))
+        self._version_progress.pack(fill="x", pady=(0, 8))
+        self._version_footer_hint = ttk.Label(
+            footer, text="僅查官方公開版本，不需要遊戲帳號或密碼。",
+            style="Muted.TLabel", justify="left")
+        self._version_footer_hint.pack(anchor="w", fill="x", pady=(0, 9))
 
         actions = ttk.Frame(footer)
         actions.pack(fill="x")
@@ -105,61 +175,67 @@ class VersionGateController:
         # Single compact content column, sized naturally rather than
         # scrolling through a tall, partly empty embedded window.
         body = ttk.Frame(shell)
-        body.pack(side="top", fill="x", pady=(3, 0))
+        body.pack(side="top", fill="both", expand=True, pady=(3, 9))
         self._version_body = body
         # The title bar already names this page. Do not repeat the
         # heading or explanatory paragraph here: the status is the focus.
         # One card holds both the prominent result and its detailed reason.
-        alert = ttk.Frame(body, padding=(18, 12, 18, 13))
+        alert = ttk.Frame(body, padding=(18, 14, 18, 15))
         alert._section_outline = True
         alert._surface_fill = (9, 27, 46, 235)
-        alert.pack(fill="x", pady=(1, 11))
+        alert.pack(fill="x", pady=(0, 15))
         self._version_alert_panel = alert
         self._version_alert_heading_label = ttk.Label(
             alert, textvariable=self._version_heading,
-            style="VersionAlertHeading.TLabel", anchor="w", justify="left")
+            style="VersionAlertHeading.TLabel", anchor="w",
+            justify="left", wraplength=870)
         self._version_alert_heading_label.pack(anchor="w", fill="x", pady=(0, 5))
         self._version_alert_message_label = ttk.Label(
             alert, textvariable=self.version_gate_text,
             style="VersionAlertMessage.TLabel", anchor="w",
-            justify="left", wraplength=705)
+            justify="left", wraplength=870)
         self._version_alert_message_label.pack(anchor="w", fill="x")
 
         # A title above a single painted section avoids the native
         # TLabelframe notch + glass outline which created the double border.
         ttk.Label(body, text="官方遊戲資源（唯讀）",
-                  style="Section.TLabel").pack(anchor="w", pady=(0, 3))
-        details = ttk.Frame(body, padding=(14, 9))
+                  style="Section.TLabel").pack(anchor="w", pady=(0, 6))
+        details = ttk.Frame(body, padding=(17, 12, 17, 12))
         details._section_outline = True
         details._surface_fill = (6, 20, 36, 226)
         details.pack(fill="x")
         self._version_resource_panel = details
+        details.columnconfigure(0, minsize=160)
         details.columnconfigure(1, weight=1)
+        self._version_resource_values = []
         for index, (label, variable) in enumerate((
                 ("資源路徑 DataVer", self._version_path),
                 ("DataPackage", self._version_data),
                 ("MainPackage", self._version_main),
                 ("LaLa 支援基準", self._version_baseline),
                 ("檢查結果", self._version_remote))):
-            ttk.Label(details, text=label, width=19,
+            ttk.Label(details, text=label, width=17,
                       anchor="w").grid(row=index, column=0,
-                                       sticky="nw", pady=2)
-            ttk.Label(details, textvariable=variable,
-                      wraplength=555, justify="left").grid(
-                          row=index, column=1, sticky="ew", pady=2)
+                                       sticky="nw", pady=4, padx=(0, 12))
+            value_label = ttk.Label(details, textvariable=variable,
+                                    anchor="w", wraplength=710, justify="left")
+            value_label.grid(row=index, column=1, sticky="ew", pady=4)
+            self._version_resource_values.append(value_label)
 
         ttk.Label(body, text="LaLa 程式更新（GitHub 正式 Release）",
-                  style="Section.TLabel").pack(anchor="w", pady=(9, 3))
-        updates = ttk.Frame(body, padding=(14, 9))
+                  style="Section.TLabel").pack(anchor="w", pady=(15, 6))
+        updates = ttk.Frame(body, padding=(17, 12, 17, 13))
         updates._section_outline = True
         updates._surface_fill = (6, 20, 36, 226)
         updates.pack(fill="x")
         self._version_release_panel = updates
-        ttk.Label(updates, textvariable=self._lala_release_text,
-                  wraplength=730, justify="left").pack(anchor="w", fill="x")
+        self._version_release_label = ttk.Label(
+            updates, textvariable=self._lala_release_text,
+            wraplength=850, justify="left")
+        self._version_release_label.pack(anchor="w", fill="x")
 
         controls = ttk.Frame(updates)
-        controls.pack(fill="x", pady=(5, 0))
+        controls.pack(fill="x", pady=(10, 0))
         for column in range(3):
             controls.columnconfigure(column, weight=1, uniform="lala_update_actions")
         ttk.Button(controls, text="重新確認 LaLa 版本",
@@ -176,9 +252,30 @@ class VersionGateController:
             row=0, column=2, sticky="ew", padx=(5, 0))
         self._lala_open_button.configure(state="disabled")
 
+        # A <Configure> event of this window is the only event which can
+        # change label wraplength. Do not use a Canvas over the artwork.
+        window.bind("<Configure>", self._resize_version_text, add="+")
+        self._resize_version_text()
         self._render_version_window()
         window.lift()
         window.focus_set()
+
+    def _resize_version_text(self, event=None):
+        """Reflow warning, table details and GitHub text on window resize."""
+        window = self.version_window
+        if window is None or not window.winfo_exists():
+            return
+        if event is not None and event.widget is not window:
+            return
+        width = window.winfo_width()
+        if width <= 1:
+            width = int(window.geometry().split("x", 1)[0])
+        self._version_alert_heading_label.configure(wraplength=max(300, width - 112))
+        self._version_alert_message_label.configure(wraplength=max(300, width - 112))
+        for value_label in self._version_resource_values:
+            value_label.configure(wraplength=max(240, width - 290))
+        self._version_release_label.configure(wraplength=max(300, width - 108))
+        self._version_footer_hint.configure(wraplength=max(300, width - 65))
 
     def hide_version_check(self):
         window = self.version_window
@@ -190,8 +287,10 @@ class VersionGateController:
         if window is None or not window.winfo_exists():
             return
         result = self._version_gate_result or {}
-        remote = result.get("remote", {})
-        packages = remote.get("packages", {})
+        remote = result.get("remote")
+        remote = remote if isinstance(remote, dict) else {}
+        packages = remote.get("packages")
+        packages = packages if isinstance(packages, dict) else {}
         for package, variable in (("MainPackage", self._version_main),
                                   ("DataPackage", self._version_data)):
             record = packages.get(package, {})
@@ -225,7 +324,7 @@ class VersionGateController:
                 status_text = f"{stage}：{reason}"
             else:
                 status_text = "無法完整驗證；請檢查各資源包的錯誤原因"
-        self._version_remote.set(status_text)
+        self._version_remote.set(status_text + "｜" + self._launcher_catalog_status)
         if self.version_gate_state == "checking":
             self._version_heading.set("正在向官方來源查詢版本…")
             self._version_main.set("查詢中…")
@@ -237,26 +336,34 @@ class VersionGateController:
 
         self._version_progress.stop()
         if self.version_gate_state == "blocked":
-            self._version_heading.set("官方版本異動 · 請等待 LaLa 更新")
+            # Official versions may MATCH while mandatory, release-pinned
+            # full data is still absent. Don't mislabel that as a CDN update.
+            if ('LaLa 1275 缺少已校驗' in result.get('message', '')
+                    or ('1275 資料驗證未通過' in result.get('message', '')
+                        and source_status == 'same_resources')):
+                self._version_heading.set("1275 正式資源尚未就緒 · 請先完成驗證")
+            elif result.get("status") == "unverified":
+                self._version_heading.set("官方遊戲版本無法驗證 · 禁止登入")
+            else:
+                self._version_heading.set("官方版本異動 · 請等待 LaLa 更新")
             self._version_continue_button.configure(text="禁止登入", state="disabled")
-        elif result.get("status") == "version_identifiers_match":
+        elif _is_verified_login_result(result):
             self._version_heading.set(
                 f"官方版本識別值符合 LaLa 支援基準 {baseline_label(BASELINE)}")
             self._version_continue_button.configure(text="進入登入畫面", state="normal")
         else:
-            self._version_heading.set("官方遊戲版本無法驗證")
+            self._version_heading.set("官方遊戲版本無法驗證 · 禁止登入")
             self._version_continue_button.configure(
-                text="了解風險，繼續登入", state="normal")
+                text="禁止登入", state="disabled")
 
     def continue_to_login(self):
         """Explicit acknowledgement grants one login stage, not network access."""
         if self.version_gate_state == "checking":
             return
-        if self.version_gate_state == "blocked":
+        if (self.version_gate_state != "ready" or
+                not _is_verified_login_result(self._version_gate_result)):
             messagebox.showwarning("禁止登入", self.version_gate_text.get(),
                                    parent=self.dialog_parent())
-            return
-        if self._version_gate_result is None:
             return
         self._version_gate_entry_approved = True
         self.hide_version_check()
@@ -276,7 +383,9 @@ class VersionGateController:
     def _set_login_gate_button(self):
         if hasattr(self, "connect_button") and self.connect_button.winfo_exists():
             enabled = (self._version_gate_entry_approved and
-                       self.version_gate_state == "ready" and not self.live_active)
+                       self.version_gate_state == "ready" and
+                       _is_verified_login_result(self._version_gate_result) and
+                       not self.live_active)
             self.connect_button.configure(state="normal" if enabled else "disabled")
 
     def start_version_check(self):
@@ -297,16 +406,17 @@ class VersionGateController:
         # Both channels are independent; a GitHub outage never changes the
         # official game resource login decision.
         self.start_lala_release_check()
+        official_messages = self._version_gate_messages
 
         def worker():
             try:
                 result = run_prelogin_check()
             except Exception:
-                result = {"blocked": False, "status": "unverified",
-                          "message": "版本檢測程式發生例外，請回報開發者；不代表版本已同步。",
+                result = {"blocked": True, "status": "unverified",
+                          "message": "版本檢測程式發生例外，已禁止登入；請重新查詢或回報開發者。",
                           "remote": {"status": "unverified", "failed_stage": "檢測程式",
                                      "reason": "內部例外（非官方版本回應）"}}
-            self._version_gate_messages.put((generation, result))
+            official_messages.put((generation, result))
 
         threading.Thread(target=worker, name="official-version-check",
                          daemon=True).start()
@@ -320,13 +430,25 @@ class VersionGateController:
                 return
             if generation != self._version_gate_generation or self._closing:
                 continue
+            if not isinstance(result, dict):
+                result = {}
+            result = dict(result)
+            if not _is_verified_login_result(result):
+                # Treat missing/contradictory status or an unexpected response
+                # as a failed verification, even if the worker said blocked=False.
+                result["blocked"] = True
+                if result.get("status") == "version_identifiers_match":
+                    result["status"] = "unverified"
+                    result["message"] = "官方版本驗證結果不完整或互相矛盾；禁止登入，請重新查詢。"
             self._version_gate_result = result
             self._version_gate_checked = time.monotonic()
-            self.version_gate_state = "blocked" if result.get("blocked") else "ready"
-            self.version_gate_text.set(result["message"])
+            self.version_gate_state = (
+                "ready" if _is_verified_login_result(result) else "blocked")
+            self.version_gate_text.set(
+                result.get("message") or "官方版本無法完整驗證；禁止登入，請重新查詢。")
             self._set_login_gate_button()
             self._render_version_window()
-            if result.get("blocked") and not self.live_active:
+            if self.version_gate_state == "blocked" and not self.live_active:
                 self.show_version_check()
 
     def start_lala_release_check(self):
@@ -340,13 +462,14 @@ class VersionGateController:
         self._lala_release_text.set(f"LaLa v{__version__} · 正在確認 GitHub 正式發布版本…")
         self._lala_download_button.configure(state="disabled")
         self._lala_open_button.configure(state="disabled")
+        update_messages = self._lala_update_messages
 
         def worker():
             try:
                 result = check_lala_release()
-                self._lala_update_messages.put((generation, "check", result))
+                update_messages.put((generation, "check", result))
             except (UpdateError, OSError, ValueError):
-                self._lala_update_messages.put((generation, "error", "無法查詢 GitHub Release，請稍後重試。"))
+                update_messages.put((generation, "error", "無法查詢 GitHub Release，請稍後重試。"))
         threading.Thread(target=worker, name="lala-release-check", daemon=True).start()
 
     def download_lala_release(self):
@@ -364,13 +487,14 @@ class VersionGateController:
         generation = self._lala_update_generation
         self._lala_release_text.set("下載中，完成後會驗證官方 SHA-256 與 ZIP 完整性…")
         self._lala_download_button.configure(state="disabled")
+        download_messages = self._lala_update_messages
 
         def worker():
             try:
                 archive = download_verified_release(info)
-                self._lala_update_messages.put((generation, "download", str(archive)))
+                download_messages.put((generation, "download", str(archive)))
             except (UpdateError, OSError, ValueError):
-                self._lala_update_messages.put((generation, "error", "更新包下載或完整性驗證失敗；不會替換任何程式。"))
+                download_messages.put((generation, "error", "更新包下載或完整性驗證失敗；不會替換任何程式。"))
         threading.Thread(target=worker, name="lala-release-download", daemon=True).start()
 
     def _drain_lala_update_messages(self):
@@ -425,7 +549,7 @@ class VersionGateController:
                                 parent=self.dialog_parent())
             self.show_version_check()
             return False
-        if self._version_gate_result.get("blocked"):
+        if not _is_verified_login_result(self._version_gate_result):
             messagebox.showwarning("禁止登入", self.version_gate_text.get(),
                                    parent=self.dialog_parent())
             self.show_version_check()

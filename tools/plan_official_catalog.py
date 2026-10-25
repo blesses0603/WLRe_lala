@@ -1,0 +1,123 @@
+"""Preview or explicitly download ONLY reviewed LaLa catalog AssetPaths.
+
+Example:
+  python -m tools.plan_official_catalog --bindings private_bindings.json
+  python -m tools.plan_official_catalog --bindings private_bindings.json --download
+
+This command does not extract UnityFS/TextAssets or enable game features.
+The source bindings JSON must live OUTSIDE a Git worktree. The expected
+SHA-256 of a derived source must be independently reviewed for that revision.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+import sys
+
+from tools.plan_official_incremental import _require_private_path
+from wlre.services.official_incremental_sync import IncrementalSyncError
+from wlre.services.official_manifest_sync import ManifestSyncError
+from wlre.services.official_resource_sync import OfficialSyncError
+from wlre.services.world.catalog_adapters import (
+    FEATURES, CatalogAdapterError, SourceContract,
+)
+from wlre.services.world.official_catalog_pipeline import (
+    AssetBinding, OfficialCatalogPipelineError,
+    plan_current_catalog, run_catalog_pipeline,
+)
+
+MAX_BINDINGS_BYTES = 64 * 1024
+
+
+def load_bindings(path):
+    source = _require_private_path(path)
+    try:
+        with source.open('rb') as stream:
+            data = stream.read(MAX_BINDINGS_BYTES + 1)
+        if not 0 < len(data) <= MAX_BINDINGS_BYTES:
+            raise OfficialCatalogPipelineError('Bindings file is empty or too large')
+        config = json.loads(data.decode('utf-8'))
+        if (type(config) is not dict
+                or set(config) != {'schema_version', 'sources'}
+                or config['schema_version'] != 1
+                or type(config['sources']) is not list
+                or len(config['sources']) != len(FEATURES)):
+            raise OfficialCatalogPipelineError('Expected four release-reviewed source bindings')
+        result = []
+        for item in config['sources']:
+            required = {'feature', 'asset_path', 'source_name', 'schema_id',
+                        'expected_sha256', 'package', 'package_version'}
+            if (type(item) is not dict or not required.issubset(item)
+                    or not set(item).issubset(required | {'related_asset_paths'})):
+                raise OfficialCatalogPipelineError('Unexpected source binding fields')
+            contract = SourceContract(
+                item['feature'], item['source_name'], item['schema_id'],
+                item['expected_sha256'], item['package'], item['package_version'])
+            related = item.get('related_asset_paths', [])
+            if type(related) is not list or len(related) > 15:
+                raise OfficialCatalogPipelineError('Invalid related AssetPath list')
+            result.append(AssetBinding(item['asset_path'], contract, tuple(related)))
+        if {r.contract.feature for r in result} != set(FEATURES):
+            raise OfficialCatalogPipelineError('Missing or duplicate feature binding')
+        return tuple(result)
+    except (OSError, UnicodeError, ValueError, TypeError, KeyError) as exc:
+        raise OfficialCatalogPipelineError('Invalid private source bindings') from exc
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--bindings', type=Path,
+                        help='Optional legacy manual source bindings. Omit for LaLa automatic mode.')
+    parser.add_argument('--download', action='store_true',
+                        help='Explicitly sync verified Bundles before optional parsing')
+    parser.add_argument('--parse', action='store_true',
+                        help='After --download, decode exact UnityFS TextAssets using installed UnityPy')
+    parser.add_argument('--max-mib', type=int, default=64)
+    parser.add_argument('--max-files', type=int, default=32)
+    args = parser.parse_args(argv)
+    try:
+        if not 0 <= args.max_mib <= 1024 or not 0 <= args.max_files <= 1024:
+            raise OfficialCatalogPipelineError('Invalid download quota')
+        if args.parse and not args.download:
+            raise OfficialCatalogPipelineError('--parse requires explicit --download')
+        if args.bindings is None:
+            from wlre.services.world.auto_catalog import run_auto_catalog
+            result = run_auto_catalog(
+                download=args.download, parse=args.parse,
+                max_download_bytes=args.max_mib * 1024 * 1024,
+                max_downloads=args.max_files)
+            print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
+            print('LaLa 自動模式：新版本只儲存私人候選資料，不解除登入限制。')
+            return 0
+        bindings = load_bindings(args.bindings)
+        if args.parse:
+            try:
+                import UnityPy  # noqa: F401 - prerequisite before network or disk work
+            except ImportError as exc:
+                raise OfficialCatalogPipelineError(
+                    '缺少 UnityFS 解包相依，請先執行：py -m pip install "UnityPy>=1.23,<2"') from exc
+            from wlre.services.world.catalog_source_extractor import extract_catalog_source
+            extractor = extract_catalog_source
+        else:
+            extractor = None
+        plan = plan_current_catalog(bindings)
+        result, parsed = run_catalog_pipeline(
+            plan, download=args.download, extractor=extractor,
+            max_download_bytes=args.max_mib*1024*1024,
+            max_downloads=args.max_files)
+        if parsed:
+            result['record_counts'] = {name: catalog.record_count
+                                       for name, catalog in parsed.items()}
+            result['records_are_private'] = True
+    except (CatalogAdapterError, IncrementalSyncError, ManifestSyncError,
+            OfficialSyncError, OfficialCatalogPipelineError, OSError, ValueError) as exc:
+        print(f'通用資源流程停止（安全拒絕）：{exc}', file=sys.stderr)
+        return 1
+    print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
+    print('所有結果唯讀；資料不寫入 GitHub／遊戲目錄，亦不授權登入、交易或導航。')
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

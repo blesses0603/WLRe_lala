@@ -44,16 +44,40 @@ def _paths(base=None):
 
 @lru_cache(maxsize=1)
 def _default_runtime():
-    from wlre.services.world.preview_1275 import load_preview
-    data, eve = _paths()
-    if not data.is_file() or not eve.is_file():
-        raise Runtime1275Unavailable(
-            '缺少已驗證的 1275 LaLa 資源。請先安裝 1275_DataCatalog.zip 與 1275_EveNpcIndex.zip。')
-    try:
-        return load_preview(data, eve)
-    except (OSError, ValueError, KeyError, EOFError, UnicodeError) as exc:
-        raise Runtime1275Unavailable('1275 資源驗證失敗，已停止使用新版資料') from exc
+    """Prefer verified formal archives; use independently pinned Bundles otherwise.
 
+    A damaged legacy ZIP is not proof that the official Bundle source is
+    damaged. Each source is verified in full and is never mixed with the other.
+    """
+    from zipfile import BadZipFile, LargeZipFile
+    import zlib
+    from wlre.services.world.preview_1275 import load_preview
+    from wlre.services.world.bundle_runtime_1275 import (
+        BundleRuntimeUnavailable, load_verified_bundle_runtime)
+
+    data, eve = _paths()
+    legacy_present = data.exists() or eve.exists()
+    if data.is_file() and eve.is_file():
+        try:
+            return load_preview(data, eve)
+        except (OSError, ValueError, KeyError, TypeError, EOFError,
+                UnicodeError, BadZipFile, LargeZipFile, zlib.error,
+                RuntimeError):
+            # Do not delete, overwrite, or silently trust broken ZIPs.
+            # Independently verify the entire official Bundle source instead.
+            pass
+
+    try:
+        return load_verified_bundle_runtime()
+    except BundleRuntimeUnavailable as exc:
+        # Bundle errors are already sanitized by the source verifier.
+        prefix = ('舊 1275 ZIP 校驗失敗或只有部分安裝；'
+                  if legacy_present else '')
+        raise Runtime1275Unavailable(
+            prefix + '1275 官方 Bundle 尚未完成完整核對：' + str(exc)) from exc
+    except (OSError, ValueError, KeyError) as exc:
+        raise Runtime1275Unavailable(
+            '1275 官方 Bundle 來源校驗失敗，尚不可啟用正式資料') from exc
 
 def active_runtime():
     """Use 1275 only, never silently return a 1262 NPC/item/recipe catalogue."""
@@ -64,14 +88,50 @@ def active_runtime():
 
 def ready():
     try:
+        # Full independently pinned ZIPs OR exact release-pinned official
+        # Bundle bytes can supply runtime data. Candidate ZIP indexes alone
+        # NEVER replace these sources.
         source = active_runtime()
-        # All crafting views share this dictionary object; swap only after
-        # full 1275 ZIP validation, before allowing the login screen.
+        from wlre.services.world.formal_candidate_bridge import (
+            FormalBridgeError, inspect_launcher_candidate)
+        # A matching candidate is checked AGAIN against the full, release-
+        # pinned source before any shared recipe dict is touched. A mismatch
+        # must never partially change game state.
+        bridge = inspect_launcher_candidate(source)
         from wlre.services.items.crafting import activate_1275_recipes
         activate_1275_recipes(source)
-        return True, '1275 NPC／商店／製作／場景索引通過來源校驗'
+        if bridge['status'] == 'matches_formal_sources':
+            return True, ('1275 正式資料完整驗證，且 Launcher 四類候選與正式來源一致；'
+                          '遊戲協定仍須獨立驗收')
+        return True, '1275 正式資料通過來源校驗，可供功能模組使用；遊戲協定仍須獨立驗收'
     except (Runtime1275Unavailable, OSError, ValueError) as exc:
-        return False, str(exc)
+        message = str(exc)
+        if isinstance(exc, Runtime1275Unavailable):
+            from wlre.services.world.resource_gap_diagnostics import (
+                diagnose_resources, summarize)
+            from wlre.services.world.launcher_catalog import read_launcher_status
+            # A missing ZIP is not proof that the current official Bundle
+            # runtime has failed because of ZIP installation. Keep the
+            # actionable Bundle error whenever neither ZIP was installed.
+            # All status messages remain informational, never authorization.
+            try:
+                data_zip, eve_zip = _paths()
+                if data_zip.exists() or eve_zip.exists():
+                    gaps = diagnose_resources()
+                    if not gaps['formal_ready']:
+                        # Retain the Bundle validation cause. The old ZIP
+                        # diagnosis is supplementary, not an authorization
+                        # decision or a replacement for the actual failure.
+                        legacy = summarize(gaps)
+                        if legacy not in message:
+                            message += '｜舊 ZIP 診斷：' + legacy
+                receipt = read_launcher_status()
+                if receipt is not None and receipt.get('data_compatibility') == 'compatible':
+                    message = 'Launcher 四類候選資料格式相容；' + message
+            except Exception:
+                # Diagnostics cannot undo the original runtime refusal.
+                pass
+        return False, message
 
 
 def install(data_archive, eve_archive, *, base=None, check_only=True):
@@ -96,9 +156,15 @@ def install(data_archive, eve_archive, *, base=None, check_only=True):
         for src, dest in sources:
             with tempfile.NamedTemporaryFile(dir=root, prefix='.lala1275_', suffix='.tmp',
                                              delete=False) as handle:
+                pending.append((Path(handle.name), dest))
                 with src.open('rb') as stream:
                     shutil.copyfileobj(stream, handle, 1024 * 1024)
-                pending.append((Path(handle.name), dest))
+                handle.flush()
+                os.fsync(handle.fileno())
+        # Protect against source files changing after the first verification,
+        # or copy truncation. Validate the exact staged files before publishing
+        # either destination; no partial active runtime is ever accepted.
+        load_preview(pending[0][0], pending[1][0])
         for tmp, dest in pending:
             os.link(tmp, dest)
             created.append(dest)
