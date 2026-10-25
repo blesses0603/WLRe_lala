@@ -43,6 +43,9 @@ STEP_LABELS = {
     'download_ready': 'Bundle 同步完成',
     'candidate_ready': '候選資料已建立',
     'extract_failed': '候選資料解析失敗',
+    'runtime_bundle_plan': '核對正式 1275 所需的官方 Bundle',
+    'runtime_bundle_ready': '正式 1275 Bundle 已下載並完成完整性校驗',
+    'runtime_bundle_unavailable': '正式 1275 Bundle 尚未補齊或驗證，將繼續候選資料流程',
 }
 _BG = '#101927'
 _PANEL = '#172539'
@@ -54,6 +57,11 @@ _ACCENT = '#56c8e9'
 def progress_message(phase, details=None):
     """Convert whitelisted stage data into a short human-readable message."""
     details = details if isinstance(details, dict) else {}
+    if phase == 'runtime_bundle_ready':
+        done, downloaded = details.get('completed'), details.get('downloaded')
+        if (type(done) is int and type(downloaded) is int
+                and 0 <= downloaded <= done <= 24):
+            return f'已核對 {done} 份必要 Bundle（本輪補下載 {downloaded}）'
     if phase == 'classification_ready':
         total, existing = details.get('total'), details.get('existing')
         if (type(total) is int and type(existing) is int
