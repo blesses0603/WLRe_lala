@@ -314,6 +314,17 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
                     load_verified_bundle_runtime(sync_root=self.root)
                 self.plan.entries[0].action = 'cached'
 
+    def test_invalid_textasset_reports_fixed_stage_not_private_error(self):
+        with ExitStack() as stack:
+            self.patches(stack)
+            stack.enter_context(patch(
+                'wlre.services.world.npc_talk.parse_talk_data',
+                side_effect=ValueError('C:\\\\private\\\\account.txt')))
+            with self.assertRaises(BundleRuntimeUnavailable) as context:
+                load_verified_bundle_runtime(sync_root=self.root)
+        self.assertIn('TalkData_C', str(context.exception))
+        self.assertNotIn('private', str(context.exception))
+
     def test_wrong_pinned_manifest_and_wrong_baseline_fail_closed(self):
         with ExitStack() as stack:
             self.patches(stack)
