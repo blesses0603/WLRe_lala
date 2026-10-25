@@ -8,8 +8,22 @@ def smallmaps():
 
 def destination_problem(portal, maps=None):
     if portal.get('source_revision') == 1275:
-        return ('1275 門事件僅核對座標；尚未確認傳送目的地與觸碰條件，'
-                '不會送出傳點指令。')
+        # Same-revision Eve, StageMap and EveDoorLinks must agree on the door,
+        # position and destination. A name alone never unlocks C20-8.
+        verified = (
+            portal.get('destination_verified') is True
+            and portal.get('direct_eligible') is True
+            and type(portal.get('direct_door_index')) is int
+            and 1 <= portal['direct_door_index'] <= 65535
+            and type(portal.get('destination')) is int
+            and 0 < portal['destination'] <= 65535)
+        if not verified:
+            return ('1275 門事件的目的地或觸碰索引尚未完成交叉核對；'
+                    '不會送出傳點指令。')
+        maps = maps if maps is not None else smallmaps()
+        if not maps.has_image(portal['destination']):
+            return '1275 目的地缺少已確認小地圖，拒絕直接傳送。'
+        return None
     maps = maps if maps is not None else smallmaps()
     destination = portal.get('destination')
     if destination is None:
