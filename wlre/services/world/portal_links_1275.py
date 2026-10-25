@@ -18,7 +18,7 @@ class PortalLinkSourceError(ValueError):
 
 
 def parse_stage_map_portals(raw):
-    """StageMapData.New: int32 count, 18-byte records; Kind=2 is a portal."""
+    """StageMapData.New: Kind 2 normal portal, Kind 3 hidden portal."""
     if type(raw) is not bytes or len(raw) < 4:
         raise PortalLinkSourceError('1275 StageMapData_C 來源無效')
     count = struct.unpack_from('<i', raw)[0]
@@ -30,7 +30,7 @@ def parse_stage_map_portals(raw):
             struct.unpack_from('<HBHIHHIB', raw, pos))
         if kind > 5:
             raise PortalLinkSourceError('1275 StageMapData_C 未知標記種類')
-        if kind != 2:
+        if kind not in (2, 3):
             continue
         if not scene or not event_id or not x or not y:
             continue
@@ -39,7 +39,8 @@ def parse_stage_map_portals(raw):
             # Duplicate references to a portal cannot prove a unique route.
             entries[key] = None
             continue
-        entries[key] = {'scene': scene, 'index': event_id, 'x': x, 'y': y,
+        entries[key] = {'scene': scene, 'index': event_id, 'kind': kind,
+                        'x': x, 'y': y,
                         'name_id': name_id, 'sorting': sorting,
                         'cross_scene': cross_scene}
     return {key: value for key, value in entries.items() if value is not None}
@@ -152,7 +153,8 @@ def verified_portal_positions(stage_raw, link_raw, doors, stages):
                 continue
             index = door.get('index')
             if (type(index) is not int or not 1 <= index <= len(linked)
-                    or (scene, index) not in markers):
+                    or (scene, index) not in markers
+                    or markers[(scene, index)]['kind'] != 2):
                 continue
             link = linked[index - 1]
             if link.get('scene') != scene or link.get('index') != index:
@@ -215,6 +217,7 @@ def read_only_portal_destinations(stage_raw, link_raw, doors, scene_ids):
             index = row.get('index')
             if (type(index) is not int or not 1 <= index <= len(link_rows)
                     or (scene, index) not in markers
+                    or markers[(scene, index)]['kind'] != 2
                     or index in seen):
                 continue
             seen.add(index)
@@ -244,7 +247,7 @@ def verified_portal_destinations(stage_raw, link_raw, doors, scene_ids):
             if type(index) is not int or index <= 0 or index > len(scene_links):
                 continue
             marker = markers.get((scene, index))
-            if not marker:
+            if not marker or marker['kind'] != 2:
                 continue
             link = scene_links[index - 1]
             if (marker['x'] != row.get('x') or marker['y'] != row.get('y')
