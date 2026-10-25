@@ -59,13 +59,34 @@ def _default_runtime():
     legacy_present = data.exists() or eve.exists()
     if data.is_file() and eve.is_file():
         try:
-            return load_preview(data, eve)
+            formal = load_preview(data, eve)
         except (OSError, ValueError, KeyError, TypeError, EOFError,
                 UnicodeError, BadZipFile, LargeZipFile, zlib.error,
                 RuntimeError):
             # Do not delete, overwrite, or silently trust broken ZIPs.
             # Independently verify the entire official Bundle source instead.
             pass
+        else:
+            # A valid older full ZIP can omit optional portal assets. Do not
+            # permanently shadow separately verified official 1275 Bundles
+            # which do have StageMapData / EveDoorLinks evidence.
+            status = getattr(formal, 'portal_metadata_status',
+                             'missing_stage_map')
+            if status in ('missing_stage_map', 'stage_map_invalid'):
+                try:
+                    enriched = load_verified_bundle_runtime()
+                except (BundleRuntimeUnavailable, OSError, ValueError,
+                        KeyError, TypeError):
+                    pass
+                else:
+                    if (getattr(enriched, 'revision', None) == 1275
+                            and getattr(enriched, 'portal_metadata_status',
+                                        'missing_stage_map')
+                            not in ('missing_stage_map', 'stage_map_invalid',
+                                    'stage_map_bundle_missing',
+                                    'stage_map_extract_failed')):
+                        return enriched
+            return formal
 
     try:
         return load_verified_bundle_runtime()
