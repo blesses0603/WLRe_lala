@@ -194,7 +194,8 @@ def load_verified_bundle_runtime(*, sync_root=None):
     from wlre.services.world.scene_names_1275 import bind_scene_names
     from wlre.services.world.portal_links_1275 import (verified_portal_destinations,
                                                       verified_portal_names,
-                                                      verified_portal_positions)
+                                                      verified_portal_positions,
+                                                      read_only_portal_destinations)
 
     root = Path(sync_root) if sync_root is not None else data_root() / 'official_sync'
     # An optional four-feature *candidate* may be incomplete when the Eve
@@ -279,6 +280,7 @@ def load_verified_bundle_runtime(*, sync_root=None):
         stage = 'Eve'
         doors = parse_doors_1275(eve)
         portal_destinations, portal_names, portal_positions = {}, {}, {}
+        portal_display_destinations = {}
         portal_metadata_status = 'missing_stage_map'
         optional = {}
         optional_failures = {}
@@ -322,6 +324,9 @@ def load_verified_bundle_runtime(*, sync_root=None):
                 if 'EveDoorLinks' in optional:
                     try:
                         portal_positions = verified_portal_positions(
+                            optional['StageMapData_C'], optional['EveDoorLinks'],
+                            doors, scene_rows)
+                        portal_display_destinations = read_only_portal_destinations(
                             optional['StageMapData_C'], optional['EveDoorLinks'],
                             doors, scene_rows)
                         portal_destinations = verified_portal_destinations(
@@ -396,6 +401,7 @@ def load_verified_bundle_runtime(*, sync_root=None):
             portal_destinations=portal_destinations,
             portal_names=portal_names,
             portal_positions=portal_positions,
+            portal_display_destinations=portal_display_destinations,
             portal_metadata_status=portal_metadata_status,
             doors=doors, expedition=expedition,
         )
