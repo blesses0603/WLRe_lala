@@ -1,5 +1,12 @@
 # LaLa Launcher：官方資源自動相容性判定（PR #56）
 
+## 第一批舊版資源清理（PR #56，2026-10-25）
+
+- 已從開發分支移除 `wlre/resources/npc_1262_sources.json`。這是 1262 對話資料的歷史 SHA／筆數摘要，未列入 `REQUIRED_RESOURCES`，也沒有執行階段或新版 Catalog 管線對其路徑的引用。歷史來源指紋保留於既有開發文件與 Git 紀錄。
+- **尚未移除** `npc_event_index_1262.json.gz`、`npc_interact_1262.json.gz`、`npc_item_data_1262.json.gz`、`npc_talk_1262.json.gz`、`npc_text_1262.json.gz`、`npc_battle_talk_1262.json.gz` 及 `instance_catalog_1262.json`：目前仍有必要打包清單、舊版讀取器、使用者介面或測試引用它們。移除前須先完成當前版來源替代、乾淨安裝、缺檔補建與回歸驗收。
+- **必須保留** `navigation_data.zip`、`smallmaps.zip`、`portals.json` 與相關碰撞／座標／圖示來源，直到新版能完整重建導航、圖片及傳點索引並通過實機驗收。帳號、登入設定、製作偏好等個人資料不在清理範圍。
+- 禁止把刪除資源當成測試官方補下載的方法：正常資料升級應使用版本化私人暫存目錄、官方 Manifest 完整性驗證與原子切換，失敗時保留舊版可用資料。這次不清除使用者本機快取、不修改正式遊戲安裝目錄，也不合併 `main`。
+
 ## 功能與權限界線
 
 Launcher 在官方 DataPackage／MainPackage Manifest、Bundle 驗證後，
