@@ -34,7 +34,7 @@ class Portal1275RecoveryTests(unittest.TestCase):
         self.assertEqual((rows[0]['index'], rows[0]['x'], rows[0]['y']),
                          (7, 5701, 3230))
         self.assertTrue(rows[0]['coordinate_valid'])
-        self.assertIn('門事件', Portals.label(rows[0]))
+        self.assertIn('1275 傳點', Portals.label(rows[0]))
         self.assertEqual(rows[0]['id'], '1275:12170:7')
         self.assertIsNone(rows[0]['destination'])
         self.assertFalse(rows[0]['direct_eligible'])
