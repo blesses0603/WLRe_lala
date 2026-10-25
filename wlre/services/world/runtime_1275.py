@@ -82,9 +82,9 @@ def _default_runtime():
                     if (getattr(enriched, 'revision', None) == 1275
                             and getattr(enriched, 'portal_metadata_status',
                                         'missing_stage_map')
-                            not in ('missing_stage_map', 'stage_map_invalid',
-                                    'stage_map_bundle_missing',
-                                    'stage_map_extract_failed')):
+                            in ('stage_map_ready', 'destination_links_loaded')
+                            or (getattr(enriched, 'revision', None) == 1275
+                                and bool(getattr(enriched, 'portal_names', {})))):
                         return enriched
             return formal
 
