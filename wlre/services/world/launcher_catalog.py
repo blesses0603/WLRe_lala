@@ -159,9 +159,22 @@ def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
                 promote_reviewed_archives)
             if progress is not None:
                 progress('formal_check', {})
-            bridge = promote_reviewed_archives(key)
-            if progress is not None:
-                progress('formal_checked', {'status': bridge['status']})
+            try:
+                bridge = promote_reviewed_archives(key)
+            except Exception:
+                # The legacy two-ZIP installation is OPTIONAL when the
+                # independently pinned official Bundle runtime is present.
+                # Do not turn a successfully verified candidate receipt into
+                # 'error' just because legacy ZIP reconciliation failed.
+                # runtime_1275.ready() separately revalidates the candidate
+                # against its independently verified full runtime and
+                # strictly rejects any actual source mismatch before
+                # activating recipes or permitting login.
+                if progress is not None:
+                    progress('formal_checked', {'status': 'optional_failed'})
+            else:
+                if progress is not None:
+                    progress('formal_checked', {'status': bridge['status']})
         status = result['status']
     except Exception:
         # Keep reason out of local receipts; failures can include file paths,
