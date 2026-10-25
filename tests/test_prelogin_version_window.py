@@ -9,6 +9,9 @@ from wlre.ui.gui import App
 from wlre.ui.version_gate_controller import VersionGateController
 
 
+_UNPATCHED_START_VERSION_CHECK = VersionGateController.start_version_check
+
+
 def official_result(main="1262", data="1262", status="version_identifiers_match"):
     versions = {"MainPackage": main, "DataPackage": data}
     return {
@@ -108,14 +111,39 @@ class PreloginVersionWindowTests(unittest.TestCase):
             self.assertNotIn("1262", self.app._version_data.get())
             self.root.update()
 
-    def test_unknown_state_requires_explicit_acknowledgement(self):
+    def test_unknown_state_blocks_login_even_if_worker_sets_blocked_false(self):
         self.deliver(official_result(status="unverified"))
         self.assertEqual(self.app.login_window.state(), "withdrawn")
-        self.assertEqual(self.app._version_continue_button.cget("text"),
-                         "了解風險，繼續登入")
+        self.assertEqual(self.app._version_continue_button.cget("text"), "禁止登入")
+        self.assertTrue(self.app._version_continue_button.instate(["disabled"]))
+        self.assertEqual(self.app.version_gate_state, "blocked")
+        self.assertTrue(self.app._version_gate_result["blocked"])
         self.assertIn("無法驗證", self.app._version_main.get())
-        self.app.continue_to_login()
-        self.assertNotEqual(self.app.login_window.state(), "withdrawn")
+        with patch("wlre.ui.version_gate_controller.messagebox.showwarning"):
+            self.app.continue_to_login()
+        self.assertEqual(self.app.login_window.state(), "withdrawn")
+        self.assertFalse(self.app._version_gate_entry_approved)
+        self.assertEqual(str(self.app.connect_button.cget("state")), "disabled")
+
+    def test_conflicting_verified_flag_still_blocks_login(self):
+        result = official_result()
+        result["remote"]["status"] = "unverified"
+        self.deliver(result)
+        self.assertEqual(self.app.version_gate_state, "blocked")
+        self.assertEqual(self.app._version_gate_result["status"], "unverified")
+        self.assertTrue(self.app._version_continue_button.instate(["disabled"]))
+
+    def test_worker_exception_fails_closed_without_exposing_exception(self):
+        with (patch("wlre.ui.version_gate_controller.run_prelogin_check",
+                    side_effect=RuntimeError("private credential path")),
+              patch("wlre.ui.version_gate_controller.threading.Thread") as thread,
+              patch.object(self.app, "start_lala_release_check")):
+            _UNPATCHED_START_VERSION_CHECK(self.app)
+            thread.call_args.kwargs["target"]()
+        self.app.drain_version_checks()
+        self.assertEqual(self.app.version_gate_state, "blocked")
+        self.assertTrue(self.app._version_continue_button.instate(["disabled"]))
+        self.assertNotIn("private credential path", self.app.version_gate_text.get())
 
     def test_unknown_source_exposes_failure_stage(self):
         response = official_result(status="unverified")
@@ -277,7 +305,7 @@ class PreloginVersionWindowTests(unittest.TestCase):
         self.assertTrue(self.app._version_continue_button.winfo_ismapped())
 
     def test_reopen_revokes_previous_approval(self):
-        self.deliver(official_result(status="unverified"))
+        self.deliver(official_result())
         self.app.continue_to_login()
         self.app.reopen_version_check()
         self.assertFalse(self.app._version_gate_entry_approved)
@@ -289,7 +317,8 @@ class PreloginVersionWindowTests(unittest.TestCase):
         self.app._version_gate_messages.put((1, official_result("1275", "1262", "blocked")))
         self.app._version_gate_messages.put((2, official_result(status="unverified")))
         self.app.drain_version_checks()
-        self.assertEqual(self.app.version_gate_state, "ready")
+        self.assertEqual(self.app.version_gate_state, "blocked")
+        self.assertTrue(self.app._version_continue_button.instate(["disabled"]))
         self.assertEqual(self.app.version_gate_text.get(), "官方線上版本檢測結果")
 
 
