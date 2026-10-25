@@ -122,6 +122,40 @@ class LauncherCatalogTests(unittest.TestCase):
         self.assertEqual(
             read_launcher_status(root=self.root / 'official_sync'), result)
 
+    def test_optional_legacy_zip_reconciliation_cannot_poison_verified_candidate(self):
+        # The user's real 1275 screenshot showed 'candidate/formal source
+        # reconciliation failed' because a *legacy ZIP installer* raised
+        # after the candidate passed all four data schemas.
+        candidate = {
+            'status': 'review_required', 'catalog_key': 'c' * 64,
+            'data_compatibility': 'compatible',
+            'protocol_compatibility': 'unverified',
+            'assets_ready': False, 'can_send_packets': False, 'approved': False}
+        events = []
+        with patch('wlre.services.world.launcher_catalog.data_root',
+                   return_value=self.root), \
+             patch('wlre.services.world.bundle_runtime_1275.sync_pinned_runtime_bundles',
+                   return_value={'verified_bundles': 7, 'downloaded_bundles': 0}), \
+             patch('wlre.services.world.auto_catalog.run_auto_catalog',
+                   return_value=candidate), \
+             patch('wlre.services.world.formal_candidate_bridge.promote_reviewed_archives',
+                   side_effect=ValueError('old archive corrupt')) as promotion, \
+             patch('wlre.services.world.resource_gap_diagnostics.diagnose_resources',
+                   return_value={}), \
+             patch('wlre.services.world.resource_gap_diagnostics.save_report'):
+            report = prepare_on_launch(
+                environ={}, progress=lambda phase, info: events.append((phase, info)))
+        promotion.assert_called_once_with('c' * 64)
+        self.assertEqual(report['status'], 'review_required')
+        self.assertEqual(report['data_compatibility'], 'compatible')
+        self.assertFalse(report['assets_ready'])
+        self.assertFalse(report['can_send_packets'])
+        self.assertEqual(report,
+                         read_launcher_status(root=self.root / 'official_sync'))
+        self.assertIn(('formal_checked', {'status': 'optional_failed'}), events)
+        self.assertNotIn('old archive corrupt',
+                         status_path(self.root / 'official_sync').read_text())
+
     def test_injected_runner_never_triggers_hidden_fallback(self):
         runner = Mock(side_effect=ValueError('source damaged'))
         receipt = prepare_on_launch(root=self.root, runner=runner, environ={})
