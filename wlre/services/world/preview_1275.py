@@ -17,6 +17,8 @@ from zipfile import ZipFile
 from wlre.services.world.game_data_1275 import read_manifest, verify_archive
 from wlre.services.world.npc_1275_eve import read_verified_zip
 from wlre.services.world.doors_1275 import parse_doors_1275
+from wlre.services.world.portal_links_1275 import (verified_portal_destinations,
+                                                    PortalLinkSourceError)
 
 MAX_UNCOMPRESSED = 16 * 1024 * 1024
 
@@ -132,6 +134,7 @@ class Preview1275:
     scene_ids: frozenset
     doors: dict = field(default_factory=dict)
     scene_names: dict = field(default_factory=dict)
+    portal_destinations: dict = field(default_factory=dict)
     expedition: dict | None = None
     revision: int = 1275
     can_send_packets: bool = False
@@ -183,6 +186,16 @@ def load_preview(data_archive, eve_archive):
     stages = parse_stages(_table(data_archive, manifest, 'ScenesData_C'))
     texts = {int(k): v for k, v in _catalog(
         data_archive, manifest, 'npc_text_1275.json.gz', 'TextData_C').items()}
+    doors = parse_doors_1275(_table(data_archive, manifest, 'Eve'))
+    try:
+        portal_destinations = verified_portal_destinations(
+            _table(data_archive, manifest, 'StageMapData_C'),
+            _table(data_archive, manifest, 'EveDoorLinks'),
+            doors, stages)
+    except (ValueError, KeyError, TypeError, PortalLinkSourceError):
+        # Optional destination preview cannot disable the verified main
+        # NPC/recipe runtime, nor authorize packets from unrecognized tables.
+        portal_destinations = {}
     return Preview1275(
         npc_index=PreviewNPCIndex(eve['npc_event_index_1275.json.gz']),
         interact_index=PreviewInteractIndex(eve['npc_interact_1275.json.gz']),
@@ -194,5 +207,6 @@ def load_preview(data_archive, eve_archive):
         recipes=parse_smith_1275(_table(data_archive, manifest, 'SmithData_C')),
         scene_ids=frozenset(stages),
         scene_names=bind_scene_names(stages, texts),
-        doors=parse_doors_1275(_table(data_archive, manifest, 'Eve')),
+        portal_destinations=portal_destinations,
+        doors=doors,
     )
