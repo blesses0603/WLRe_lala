@@ -99,7 +99,8 @@ def progress_message(phase, details=None):
         choices = {
             'already_verified': '完整正式資源已安裝並通過交叉驗證',
             'installed_and_verified': '完整正式資源已安全安裝並重新校驗',
-            'awaiting_complete_reviewed_archives': '四類資料格式相容；仍缺完整正式 1275 資源',
+            'awaiting_complete_reviewed_archives': '四類資料格式相容；舊式 ZIP 未齊（可改走已驗證 Bundle）',
+            'optional_failed': '舊式 ZIP 交叉驗證未通過；候選結果仍保留，正式 Bundle 需獨立驗證',
         }
         return choices.get(status, '正式來源仍需獨立驗證')
     if phase == 'extract_failed':
