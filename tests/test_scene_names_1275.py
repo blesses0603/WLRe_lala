@@ -6,6 +6,8 @@ from unittest.mock import Mock, patch
 from wlre.services.world.scene_names_1275 import bind_scene_names, source_scene_label
 from wlre.services.world.portals import Portals
 from wlre.ui.home_map import HomeMap
+from wlre.features.minimap.navigation_ui import MinimapNavigationMixin
+from wlre.features.portals.panel import PortalInteractionMixin
 
 
 class SceneNames1275Tests(unittest.TestCase):
@@ -84,6 +86,52 @@ class SceneNames1275Tests(unittest.TestCase):
         self.assertIn('傳點 #7', listed)
         self.assertIn('所在場景 瑪雅野豬叢林二(12170)',
                       page.portal_status.set.call_args.args[0])
+
+    def test_map_header_cannot_be_replaced_by_selected_portal_event(self):
+        runtime = SimpleNamespace(
+            scene_names={12170: '瑪雅野豬叢林二'},
+            doors={12170: [{'index': 7, 'x': 5701, 'y': 3230}]})
+        with patch('wlre.services.world.runtime_1275.baseline_revision',
+                   return_value='1275'), patch(
+                'wlre.services.world.runtime_1275.active_runtime',
+                return_value=runtime):
+            catalog = Portals()
+        page = SimpleNamespace(
+            portals=catalog, selected_id=12170, image=object(),
+            maps=Mock(), npc_index_error=False, npc_index=None,
+            map_title=Mock(), portal_list=Mock(), npc_list=Mock(),
+            monster_list=Mock(), npc_message=Mock(), portal_status=Mock(),
+            update_portal_button=Mock(), draw=Mock(), on_pick=Mock(),
+            selected_npc=None)
+        with patch('wlre.ui.home_map.scene_npcs', return_value=[]):
+            HomeMap.refresh_portals(page)
+        expected = '小地圖｜瑪雅野豬叢林二(12170)'
+        page.map_title.set.assert_called_once_with(expected)
+        row = page.portal_rows[0]
+        self.assertEqual(row['name'], '傳點 #7（目的地待確認）')
+        self.assertNotIn('門事件', row['name'])
+        PortalInteractionMixin.select_portal(page, row)
+        page.map_title.set.assert_called_once_with(expected)
+        page.on_pick.assert_called_once_with(12170, 5701, 3230)
+
+    def test_1275_missing_verified_scene_name_never_uses_1262_header(self):
+        page = MinimapNavigationMixin()
+        page.portals = SimpleNamespace(
+            data={'source_revision': 1275, 'source_ready': True,
+                  'scene_names': {}})
+        page.map_title = Mock()
+        page.note = Mock()
+        page.repository = Mock()
+        page.maps = SimpleNamespace(
+            projection=Mock(return_value=(None, 12170)),
+            image=Mock(return_value=None))
+        page.refresh_portals = Mock()
+        page.draw = Mock()
+        with patch('wlre.features.minimap.navigation_ui.map_label',
+                   side_effect=AssertionError('1262 name fallback is forbidden')):
+            page.show_map(12170)
+        page.map_title.set.assert_called_once_with('小地圖｜場景 12170')
+        self.assertIn('場景 12170', page.note.set.call_args.args[0])
 
 
 if __name__ == '__main__':
