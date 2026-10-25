@@ -15,6 +15,9 @@ class PortalInteractionMixin:
     def update_portal_button(self):
         p=self.selected_portal
         enabled=bool(p and destination_problem(p,self.maps) is None and p.get('direct_eligible') and self.state.get('player',{}).get('scene')==self.selected_id and not self.state.get('battle',{}).get('active') and not self.state.get('event_flow',{}).get('blocked'))
+        if p and p.get('source_revision') == 1275:
+            enabled = enabled and portal_map_pixel(
+                p, getattr(self, 'projection', None)) is not None
         label = ('手動確認換圖' if enabled and p.get('source_revision') == 1275
                  else '目的地待核對' if p and p.get('source_revision') == 1275
                  else '返回有圖地圖' if self.image is None else '直接嘗試換圖')
@@ -59,6 +62,11 @@ class PortalInteractionMixin:
             problem=destination_problem(self.selected_portal,self.maps)
             if problem:raise ValueError(problem)
             self.portals.direct_target(self.selected_portal,self.state.get('player',{}).get('scene'))
+            if (self.selected_portal.get('source_revision') == 1275
+                    and hasattr(self, 'projection')
+                    and portal_map_pixel(
+                        self.selected_portal, self.projection) is None):
+                raise ValueError('傳點座標未通過目前地圖投影校驗，禁止換圖。')
             if self.on_portal is None:
                 raise ValueError('尚未接上本機角色的出口觸發功能。')
             if self.selected_portal.get('source_revision') == 1275:
