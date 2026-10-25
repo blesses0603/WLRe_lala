@@ -26,6 +26,9 @@ class Portals:
                     scene_names = getattr(verified, 'scene_names', {})
                     if not isinstance(scene_names, dict):
                         scene_names = {}
+                    linked = getattr(verified, 'portal_destinations', {})
+                    if not isinstance(linked, dict):
+                        linked = {}
                     door_count = sum(len(rows) for rows in verified.doors.values())
                     for scene, entries in verified.doors.items():
                         if (type(scene) is int and 0 <= scene <= 65535):
@@ -48,28 +51,48 @@ class Portals:
                                     or not 0 <= y <= 4294967295):
                                 continue
                             valid_xy = (0 <= x <= 65535 and 0 <= y <= 65535)
+                            link = linked.get((scene_id, index), {})
+                            if not isinstance(link, dict):
+                                link = {}
+                            destination = link.get('destination')
+                            verified_target = (
+                                link.get('matched_stage_map') is True
+                                and link.get('destination_verified') is True
+                                and link.get('trigger_verified') is False
+                                and type(destination) is int
+                                and 0 < destination <= 65535
+                                and link.get('x') == x and link.get('y') == y)
+                            destination = destination if verified_target else None
+                            target_label = (source_scene_label(destination, scene_names)
+                                            if verified_target else '目的地未確認')
+                            label = (f'前往 {target_label}（門 #{index}）'
+                                     if verified_target else
+                                     f'門事件 #{index}（目的地未確認）')
                             visible.append({
                                 'id': f'1275:{scene_id}:{index}',
                                 'scene': scene_id, 'index': index,
-                                'name': f'門事件 #{index}（目的地未確認）',
+                                'name': label,
                                 'source_scene_label': scene_label,
                                 'source_scene_name_known': scene_id in scene_names,
-                                'destination_label': '目的地未確認',
+                                'destination_label': target_label,
                                 'kind': 'door',
                                 'source_revision': 1275,
                                 'coordinate_valid': valid_xy,
                                 'x': x if valid_xy else None,
                                 'y': y if valid_xy else None,
                                 'event_ids': tuple(row.get('event_ids') or ()),
-                                'destination': None,
-                                'destination_verified': False,
+                                'destination': destination,
+                                'destination_verified': verified_target,
                                 'direct_eligible': False,
                                 'direct_door_index': None,
                                 'door_index': None,
                                 'navigation_status': 'unverified',
                                 'direct_note': (
-                                    '1275 官方門事件座標已讀取；目的地與觸碰條件'
-                                    '尚未驗證，僅供定位，不會送出換圖封包'),
+                                    '1275 官方資料已交叉核對目的地，但傳送協定'
+                                    '仍待伺服器實測；不會送出換圖封包'
+                                    if verified_target else
+                                    '1275 官方門事件位置可參考；目的地與觸碰條件'
+                                    '尚未驗證，不會送出換圖封包'),
                             })
                         doors[str(scene_id)] = visible
                     source_ready = True
