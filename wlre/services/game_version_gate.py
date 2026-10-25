@@ -72,6 +72,13 @@ def run_prelogin_check(sources=None, *, checker=None):
                 status = "blocked"
                 message = ('LaLa 1275 缺少已校驗的 NPC／商店／製作／場景資料；'
                            '禁止使用 1262 舊索引登入。' + reason)
+        elif not blocked and not all_same:
+            # Pinned offline Bundles establish the local data identity, not the
+            # live server's current revision. Never treat an unknown official
+            # version as permission to use the 1275 game protocol.
+            blocked = True
+            status = 'blocked'
+            message += ' 已有本機資源也不能替代本次官方版本確認；請恢復版本查詢後重試。'
         elif all_same and not blocked:
             message += ' 已確認本機 1275 資源包完整；尚未等同正式伺服器協定驗收。'
     return {"status": status, "blocked": blocked, "message": message,
