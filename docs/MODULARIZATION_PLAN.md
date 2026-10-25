@@ -1,6 +1,6 @@
 # LaLa 電腦版：依功能建資料夾與舊離線資源遷移規劃（v0.6.1）
 
-> 2026-10-25。以已合併 PR #56 的 main（v0.6.1 開發版）為基準。**PR #57 已從規劃延伸為分階段實作：P1a 第一批抽出協力操作、第二批拆分房間對話框與分頁，第三批抽出協力獎勵／準備狀態畫面及共用房間列表刷新；後續模組尚未完成。未刪除資源、未提升版本號。** 以下路徑是實作提案，不代表已存在。使用者已回報「剛測試的功能都正常」，但未列出逐功能、環境與 Log，未測流程仍需驗收。
+> 2026-10-25。以已合併 PR #56 的 main（v0.6.1 開發版）為基準。**PR #57 已從規劃延伸為分階段實作：P1a 三批拆出協力操作、房間對話框與協力狀態顯示，P1b 第一批拆出一般副本開始／進場、房間人數門檻、入場許可及結算內容；後續模組尚未完成。未刪除資源、未提升版本號。** 以下路徑是實作提案，不代表已存在。使用者已回報「剛測試的功能都正常」，但未列出逐功能、環境與 Log，未測流程仍需驗收。
 
 ## 一、經確認的主要需求
 
@@ -24,10 +24,11 @@ wlre/
       widgets.py                    # ✅ 協力準備與獎勵按鈕畫面（維持原視覺順序）
     dungeon/                        # 一般副本
       __init__.py
-      panel.py
-      buttons.py
-      rooms.py
-      details.py
+      panel.py                      # ✅ 一般副本獨立頁面入口（繼承相容 UI）
+      buttons.py                    # ✅ 房主開始／手動入場與正常副本專屬按鈕
+      rooms.py                      # ✅ 依 StageData 最低人數及 S85-4 人數驗證
+      readiness.py                  # ✅ 開始／進場 UI 條件與跨模式待確認鎖定
+      details.py                    # ✅ S85 副本目標、Boss／積分／結算顯示
     minimap/                        # 小地圖專屬
       __init__.py
       panel.py                      # 小地圖容器
@@ -104,7 +105,8 @@ wlre/
 - [x] P1a 第二批以 `features/cooperative/panel.py` 提供協力分頁入口，`features/cooperative/rooms.py` 負責協力人數核驗與費用確認欄位；建立／加入／離開房間的兩模式共用對話框搬到 `ui/instance_room_dialogs.py`，不複製一般副本程式；新增單元與 Tk GUI 回歸測試（等待本批 CI 驗證）。
 - [x] P1a 第三批抽出 `features/cooperative/widgets.py` 協力按鈕、`rewards.py` 領獎狀態、`rooms.py` 準備狀態顯示，以及 `ui/instance_room_list.py` 共用房間列表（避免兩種模式程式重複）；新增狀態與 Tk GUI 回歸測試（CI 待確認）。
 - [ ] P1a 正式服 E2E 及 1275 協力清單替代來源驗證。現行 `wlre/services/instance_browser.py` 仍讀取內建 `instance_catalog_1262.json`，且一般副本共用；目前未取得可靠的等價 1275 副本清單，故**必須保留、不可冒險移除**。
-- [ ] P1b～P5 實際搬遷、逐功能替代／清理及全域 `REQUIRED_RESOURCES` 檢核（尚未完成）。
+- [x] P1b 第一批：一般副本獨立畫面入口、開始／進場動作與按鈕、最低人數／房主與場景校驗、伺服器副本目標／結算資訊移至 `features/dungeon/`；保留 `InstanceModePage`、`room_headcount_status`、`instance_details` 舊 API，補上非 GUI 與 Tk GUI 回歸測試（CI 待確認）。
+- [ ] P1b 剩餘畫面 UI 深度拆分與正式服 E2E，以及 P2～P5 逐功能資源替代／清理及全域 `REQUIRED_RESOURCES` 檢核。
 - [ ] 全功能正式服 E2E、乾淨安裝、正式安裝包／Release 驗收（尚未宣稱完成）。
 
-**接下來：** 核對第二批 CI，再於 PR #57 拆分 P1a 其餘協力狀態渲染與畫面元件，進行專屬回歸及舊資源來源盤點。P1b 一般副本仍獨立驗收。
+**接下來：** 驗證 P1b 第一批三平台 CI 與 Tk GUI，評估一般副本剩餘畫面／靜態目錄的來源等價性；P2 小地圖另行分階段進行。
