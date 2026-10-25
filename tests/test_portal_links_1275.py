@@ -6,7 +6,8 @@ from unittest.mock import Mock, patch
 
 from wlre.services.world.portal_links_1275 import (
     PortalLinkSourceError, parse_stage_map_portals,
-    parse_eve_door_links, verified_portal_destinations)
+    parse_eve_door_links, verified_portal_destinations,
+    read_only_portal_destinations)
 from wlre.services.world.portals import Portals
 from wlre.services.world.portal_policy import destination_problem
 from wlre.features.portals.panel import PortalInteractionMixin
@@ -62,6 +63,35 @@ class PortalLinks1275Test(unittest.TestCase):
         self.assertEqual(verified_mapping(marker_index=2), {})
         self.assertEqual(verified_mapping(link_scene=12172), {})
         self.assertEqual(verified_mapping(link_destination=12000), {})
+
+    def test_destination_label_never_requires_eve_grid_and_link_grid_to_match(self):
+        # Official Lua uses (SceneID, EvtID) to resolve EveDoorLinks. Its
+        # grid-space XY is NOT expected to equal Eve.NewDoor event XY.
+        marker = stage_rows((12170, 2, 0, 1, 21, 31, 0, 0))
+        link = link_bytes(12170, 12171, x=200, y=300)
+        doors = {12170: [{'index': 1, 'x': 5701, 'y': 3230}]}
+        display = read_only_portal_destinations(
+            marker, link, doors, {12170, 12171})
+        self.assertEqual(display, {(12170, 1): 12171})
+        # Strict transport proof still fails; the name must NOT grant
+        # authorization to send a C20-8 trigger.
+        self.assertEqual(verified_portal_destinations(
+            marker, link, doors, {12170, 12171}), {})
+        runtime = SimpleNamespace(
+            doors=doors, portal_display_destinations=display,
+            portal_destinations={},
+            scene_names={12170: '瑪雅野豬叢林二',
+                         12171: '瑪雅野豬叢林三'})
+        with patch('wlre.services.world.runtime_1275.baseline_revision',
+                   return_value='1275'), patch(
+                   'wlre.services.world.runtime_1275.active_runtime',
+                   return_value=runtime):
+            row = Portals().for_scene(12170)[0]
+        self.assertIn('瑪雅野豬叢林三(12171)', row['name'])
+        self.assertIn('連線名稱參考', row['name'])
+        self.assertFalse(row['destination_verified'])
+        self.assertIsNone(row['destination'])
+        self.assertFalse(row['direct_eligible'])
 
     def test_malformed_or_ambiguous_tables_never_authorize(self):
         with self.assertRaises(PortalLinkSourceError):
