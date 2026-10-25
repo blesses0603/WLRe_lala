@@ -32,6 +32,9 @@ class Portals:
                     portal_names = getattr(verified, 'portal_names', {})
                     if not isinstance(portal_names, dict):
                         portal_names = {}
+                    portal_positions = getattr(verified, 'portal_positions', {})
+                    if not isinstance(portal_positions, dict):
+                        portal_positions = {}
                     portal_metadata_status = getattr(
                         verified, 'portal_metadata_status', 'missing_stage_map')
                     door_count = sum(len(rows) for rows in verified.doors.values())
@@ -55,7 +58,24 @@ class Portals:
                                     or not 0 <= x <= 4294967295
                                     or not 0 <= y <= 4294967295):
                                 continue
-                            valid_xy = (0 <= x <= 65535 and 0 <= y <= 65535)
+                            # Eve.NewDoor's common x/y are EVENT GRID data,
+                            # not the position used in official UIMain
+                            # _SetPortalPosition. Rendering them as packet XY
+                            # previously placed portals on the wrong part of
+                            # the minimap. Only EveDoorLinks + StageData ratios
+                            # may supply an actionable projection.
+                            position = portal_positions.get((scene_id, index))
+                            if not isinstance(position, dict):
+                                position = {}
+                            map_x, map_y = position.get('x'), position.get('y')
+                            valid_xy = (
+                                position.get('position_verified') is True
+                                and position.get('source_kind')
+                                == '1275_eve_door_links_grid_scaled'
+                                and position.get('scene') == scene_id
+                                and position.get('index') == index
+                                and type(map_x) is int and type(map_y) is int
+                                and 0 <= map_x <= 65535 and 0 <= map_y <= 65535)
                             link = linked.get((scene_id, index), {})
                             if not isinstance(link, dict):
                                 link = {}
@@ -96,8 +116,13 @@ class Portals:
                                 'kind': 'door',
                                 'source_revision': 1275,
                                 'coordinate_valid': valid_xy,
-                                'x': x if valid_xy else None,
-                                'y': y if valid_xy else None,
+                                'coordinate_source': (
+                                    'verified_eve_door_links_scaled' if valid_xy
+                                    else 'unverified_event_grid'),
+                                'x': map_x if valid_xy else None,
+                                'y': map_y if valid_xy else None,
+                                'event_grid_x': x,
+                                'event_grid_y': y,
                                 'event_ids': tuple(row.get('event_ids') or ()),
                                 'destination': destination,
                                 'destination_verified': verified_target,
@@ -109,8 +134,9 @@ class Portals:
                                     '1275 門編號／位置／目的地已交叉核對；可在手動確認後單次試傳，'
                                     '成功與否完全以伺服器回覆為準'
                                     if verified_target else
-                                    '1275 官方門事件位置可參考；目的地與觸碰條件'
-                                    '尚未驗證，不會送出換圖封包'),
+                                    '1275 傳點資料可列出，但來源格座標不可直接'
+                                    '當成小地圖點位；需官方門連線和場景倍率核對，'
+                                    '未驗證時不畫點也不送出換圖封包'),
                             })
                         doors[str(scene_id)] = visible
                     source_ready = True
