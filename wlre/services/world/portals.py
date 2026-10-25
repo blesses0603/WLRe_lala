@@ -29,6 +29,10 @@ class Portals:
                     linked = getattr(verified, 'portal_destinations', {})
                     if not isinstance(linked, dict):
                         linked = {}
+                    display_targets = getattr(
+                        verified, 'portal_display_destinations', {})
+                    if not isinstance(display_targets, dict):
+                        display_targets = {}
                     portal_names = getattr(verified, 'portal_names', {})
                     if not isinstance(portal_names, dict):
                         portal_names = {}
@@ -101,15 +105,27 @@ class Portals:
                             if (type(official_name) is not str
                                     or not official_name.strip()):
                                 official_name = None
+                            display_scene = display_targets.get((scene_id, index))
+                            if (type(display_scene) is not int
+                                    or not 0 < display_scene <= 65535):
+                                display_scene = None
+                            display_label = (source_scene_label(
+                                display_scene, scene_names)
+                                if display_scene is not None else None)
+                            # Display-only official linkage is NOT a verified
+                            # C20-8 trigger. Even a named target cannot grant
+                            # direct_eligible or supply packet event indices.
                             label = (official_name or
-                                     f'前往 {target_label}' if verified_target
-                                     else official_name or
-                                     f'傳點 #{index}（官方名稱未取得）')
+                                     ('前往 ' + display_label + '（連線名稱參考）'
+                                      if display_label else
+                                      '傳點 #' + str(index) +
+                                      '（官方名稱未取得）'))
                             visible.append({
                                 'id': f'1275:{scene_id}:{index}',
                                 'scene': scene_id, 'index': index,
                                 'name': label,
                                 'official_name': official_name,
+                                'display_destination_label': display_label,
                                 'source_scene_label': scene_label,
                                 'source_scene_name_known': scene_id in scene_names,
                                 'destination_label': target_label,
