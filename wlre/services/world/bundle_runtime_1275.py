@@ -37,16 +37,16 @@ class BundleRuntimeUnavailable(ValueError):
 def load_verified_bundle_runtime(*, sync_root=None):
     """Load working NPC/shop/item/crafting/scene data without manual ZIPs.
 
-    No network access or download occurs here. The official Launcher MUST have
-    just verified both .version and .bytes/.hash. This call independently checks
-    two release-pinned Manifest SHA-256s, private receipts, every required
-    Bundle's hash/CRC and every decoded TextAsset's exact audited layout.
+    No network access or download occurs here. This call independently checks
+    the two release-baseline Manifest versions and pinned SHA-256 digests,
+    verified local .bytes/.hash receipts, every required Bundle's hash/CRC,
+    and each decoded TextAsset's audited layout. Launcher four-feature
+    candidates do NOT authorize this runtime or prevent its verification.
     """
-    from wlre.services.world.launcher_catalog import read_launcher_status
-    from wlre.services.world.auto_catalog import _trusted_cached_candidate
-    from wlre.services.world.formal_candidate_bridge import _identity_from_metadata
+    from wlre.services.resource_compatibility import load_supported_resources
     from wlre.services.official_manifest_sync import (
-        ManifestSpec, read_verified_cached_manifest, MAX_MANIFEST_BYTES)
+        ManifestSpec, ManifestSyncError, read_verified_cached_manifest,
+        MAX_MANIFEST_BYTES)
     from wlre.services.official_bundle_download import _verified_file
     from wlre.services.official_incremental_sync import build_update_plan
     from wlre.services.world.official_catalog_pipeline import AssetBinding
@@ -66,38 +66,40 @@ def load_verified_bundle_runtime(*, sync_root=None):
     from wlre.services.instance_catalog import parse_stages
 
     root = Path(sync_root) if sync_root is not None else data_root() / 'official_sync'
-    receipt = read_launcher_status(root=root)
-    if (receipt is None or receipt.get('status') != 'review_required'
-            or receipt.get('data_compatibility') != 'compatible'
-            or receipt.get('can_send_packets') is not False):
-        raise BundleRuntimeUnavailable('官方四類資料尚未完整校驗，不能銜接正式 Runtime')
-    key = receipt['catalog_key']
-    if not isinstance(key, str):
-        raise BundleRuntimeUnavailable('Launcher 沒有目前官方資源身分')
-    private = root / 'derived_catalogs' / key / 'candidate.zip'
-    meta = _trusted_cached_candidate(private, key)
-    if meta is None:
-        raise BundleRuntimeUnavailable('Launcher 候選來源不完整或已損壞')
-    identity = _identity_from_metadata(meta)
-    if identity.key != key or identity.data_ver != _PINNED_DATA_VER:
-        raise BundleRuntimeUnavailable('本機來源不是已審核的官方 1275 DataVer')
-
+    # An optional four-feature *candidate* may be incomplete when the Eve
+    # adapter encounters an unsupported layout, even while the independently
+    # pinned ten-table Bundle runtime is valid. Do not use the Launcher status
+    # or self-generated candidate ZIP as an authorization token.
+    #
+    # This path performs NO network requests. The separate pre-login online
+    # version gate must confirm the server still uses this release baseline.
+    baseline = load_supported_resources()
+    versions = baseline['packages']
+    if (set(versions) != set(_PINNED_MANIFEST_SHA256) or
+            any(versions[p]['revision'] != '1275'
+                for p in _PINNED_MANIFEST_SHA256)):
+        raise BundleRuntimeUnavailable('LaLa 內建正式 1275 版本基準不符')
     private_manifests = root / 'manifests'
     manifests = {}
     for package in ('DataPackage', 'MainPackage'):
-        version = next(p for p in identity.packages if p.name == package)
-        spec = ManifestSpec(identity.data_ver, package, version.full_version)
-        verified = read_verified_cached_manifest(spec, cache_root=private_manifests)
+        spec = ManifestSpec(_PINNED_DATA_VER, package,
+                            versions[package]['manifest'])
+        try:
+            verified = read_verified_cached_manifest(
+                spec, cache_root=private_manifests)
+        except (ManifestSyncError, OSError) as exc:
+            raise BundleRuntimeUnavailable(
+                '缺少已驗證的官方 Manifest 快取：' + package) from exc
         try:
             with verified.cache_path.open('rb') as handle:
                 raw = handle.read(MAX_MANIFEST_BYTES + 1)
         except OSError as exc:
-            raise BundleRuntimeUnavailable('已驗證的 Manifest 檔案不存在') from exc
-        if (not 0 < len(raw) <= MAX_MANIFEST_BYTES
-                or hashlib.sha256(raw).hexdigest() != _PINNED_MANIFEST_SHA256[package]
-                or version.manifest_sha256 != _PINNED_MANIFEST_SHA256[package]
-                or version.manifest_crc32_le != verified.hash_text):
-            raise BundleRuntimeUnavailable('官方 Manifest 不是本版經獨立 SHA-256 審核的內容')
+            raise BundleRuntimeUnavailable(
+                '已驗證的 Manifest 檔案不存在：' + package) from exc
+        if (verified.spec != spec or not 0 < len(raw) <= MAX_MANIFEST_BYTES
+                or hashlib.sha256(raw).hexdigest() != _PINNED_MANIFEST_SHA256[package]):
+            raise BundleRuntimeUnavailable(
+                '官方 Manifest 不是本版經獨立 SHA-256 審核的內容：' + package)
         manifests[package] = verified
 
     verified_data = manifests['DataPackage']
