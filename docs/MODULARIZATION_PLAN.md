@@ -1,84 +1,103 @@
-# LaLa 電腦版模組化路線圖（v0.6.1 基準）
+# LaLa 電腦版：依功能建資料夾與舊離線資源遷移規劃（v0.6.1）
 
-> 規劃日期：2026-10-25。基準：已合併 PR #56 的 `main`（合併 Commit `14af2ff`），`wlre/__init__.py` 為 **v0.6.1 開發版**。本文件屬**規劃／文件變更**，不拆檔、不更改執行期邏輯、不另升版本。以下行數僅為規劃當下靜態盤點，非重構品質指標。
+> 2026-10-25。以已合併 PR #56 的 main（v0.6.1 開發版）為基準。**PR #57 只編修規劃及 README，不搬移執行期程式、不刪除資源、不提升版本號。** 以下路徑是實作提案，不代表已存在。使用者已回報「剛測試的功能都正常」，但未列出逐功能、環境與 Log，未測流程仍需驗收。
 
-## 1. 目的與目前邊界
+## 一、經確認的主要需求
 
-LaLa 已有按領域劃分的 `ui/`、`core/`、`network/`、`services/`、`storage/`；並已拆出 `dashboard_builder.py`、`login_controller.py`、`account_controller.py`、`network/commands.py`、`network/service_scheduler.py`、`core/state_*_events.py`、遠征子介面與製作子介面。**不重做已有模組、不以檔案行數為唯一目標。**
+1. **功能優先（feature-first）**：協力、一般副本、小地圖、NPC 等各有**獨立資料夾**，該功能的畫面、按鈕、資料呈現、流程協調放在同一個位置，而不是只把大型檔案任意切碎。
+2. **同一階段同步處理舊離線資料**：整理某功能時，同時盤點該功能所依賴的 1262 靜態檔、手動 ZIP／舊圖像與導航資料，改接**官方驗證來源**或其他經審核的可信來源；替代品未達等效，**保留既有檔案與功能**，記錄阻塞原因。不另開「最後全部刪除」的大清理階段。
+3. **使用者免手動準備正式遊戲資料包**：PR #56 已支援從官方 `.version`、`.bytes`、`.hash` 和所需 Bundle 取得、校驗並建立 1275 Runtime；不代表遊戲運作不需要任何**本機驗證快取**或 UI 靜態圖片。沒有來源／驗證失敗，絕不回退 1262 假裝相容。
+4. **不重複底層共用程式**：真正多功能共用的 TCP、封包、State、資源校驗、保留量、圖片快取等仍由 `network/`、`core/`、共用 `services/`、`storage/` 所有；功能資料夾透過清楚的介面使用它們。不要把一套 TCP 協定複製到每個功能。
+5. **先維持相容，再搬遷**：`wlre/ui/instance_ui.py`、`wlre/ui/home_map.py` 等公開匯入路徑保留輕量相容入口；逐一更新內部匯入與 tests，確認後才能考慮移除舊入口。
 
-這輪僅針對下列剩餘的「單一檔案同時協調多種責任」安排小批次重構：
+## 二、預定資料夾配置（尚未實作）
 
-| 優先 | 現有檔案（規劃時行數） | 尚混合的責任 | 建議先分離的單元 | 主要風險 |
-|---|---|---|---|---|
-| P1 | `wlre/ui/instance_ui.py`（約 1,012） | 副本／協力房間、創房／入房、待命、獎勵與畫面刷新 | 房間動作 UI、獎勵呈現、純顯示資料整理 | 房間鎖、結果不明與獎勵禁止重領 |
-| P2 | `wlre/ui/home_map.py`（約 804） | 地圖繪圖、NPC 對話與商店、傳點操作 | NPC 視窗協調、傳點視窗協調、地圖描繪 | 舊 NPC 資料、座標與傳送憑證 |
-| P3 | `wlre/ui/gui.py`（約 523） | App 初始化、工作者生命週期、畫面事件、命令佇列、連線 | 事件路由／畫面更新與會話生命週期協調 | Tk 主執行緒、背景回呼、舊帳號事件 |
-| P4 | `wlre/network/client.py`（約 483） | SessionLogic 事件流、登入／斷線、命令協調、TCP 迴圈 | 會話階段協調／匿名診斷事件；沿用現有 commands 與 scheduler | 伺服器回覆先後、單寫入者 State、pending／uncertain |
-| P5（後置） | `wlre/ui/version_gate_controller.py`（約 566）；`wlre/services/world/auto_catalog.py`（約 508） | 官方版本檢測、GitHub 更新視窗、下載狀態及 Bundle 候選建置協調 | 分離 UI 呈現、同步／候選服務調度、收據解讀 | PR #56 安全驗證、雜湊／相容性、失敗時禁止登入 |
+```text
+wlre/
+  features/                         # 同一功能：UI、按鈕、協調與唯讀模型
+    cooperative/                    # 協力，非一般副本
+      __init__.py
+      panel.py                      # 協力畫面
+      buttons.py                    # 準備／開始／入場／領獎等操作
+      rooms.py                      # 創房、加入、離開、房間清單
+      rewards.py                    # 寶箱／獎勵 UI 狀態（不自行認定領獎成功）
+    dungeon/                        # 一般副本
+      __init__.py
+      panel.py
+      buttons.py
+      rooms.py
+      details.py
+    minimap/                        # 小地圖專屬
+      __init__.py
+      panel.py                      # 小地圖容器
+      buttons.py                    # 地圖上的操作按鈕
+      map_view.py                   # 地圖繪製、投影、選取
+      navigation_ui.py              # 導航／自動導航的 UI 協調
+    npc/                            # NPC 對話、互動、商店視窗
+      __init__.py
+      panel.py
+      dialogue.py
+      shop.py
+      buttons.py
+    portals/                        # 傳送點與條件（與小地圖顯示分開）
+      __init__.py
+      panel.py
+      buttons.py
+  ui/
+    instance_ui.py                  # 舊匯入相容層，委託 cooperative/dungeon
+    home_map.py                     # 舊 HomeMap 相容層，委託 minimap/npc/portals
+    gui.py                          # App 組裝／Tk 主執行緒入口
+  core/                             # 跨功能 State／事件／排程／所有權
+  network/                          # 共用 socket、封包、命令／狀態同步
+  services/                         # 真正共用的服務、資源驗證、權威規則
+  storage/                          # 設定與私人快取路徑
+```
 
-**P5 門檻：** PR #56 已合併且 CI #822 的 Windows／Ubuntu／macOS 成功；使用者於 2026-10-25 回報**剛完成的功能實測均正常、未發現問題**。這是實機驗收的正向回報，但尚未提供逐功能清單、系統環境或 Log，故不能據此推定 NPC 交易、製作排程、傳送、戰鬥與官方 Bundle 自動補建等全部路徑均已逐項 E2E 驗證。P5 開工前仍須記錄受影響流程的可重現實機證據，並建立原行為回歸測試；不得把 CI 成功或概括回報等同於所有資源協定通過。
+**上述檔名不是拆檔配額。** 先查現有相同職責檔案再定案；`features/*` 僅放各自特有功能，跨功能的邏輯不複製。真正的自動導航演算法、座標驗證、移動回覆確認仍由 `services/world/` 共用，不誤當成 UI 邏輯。目錄搬遷不等於允許用未知來源放行網路操作。
 
-## 2. 建議開發順序與每張 PR 範圍
+## 三、逐功能工作階段：分類與舊資源遷移**同時進行**
 
-每階段各開**獨立分支、獨立 PR**；除非同一界面無法拆分，避免一次橫跨 UI、Network 與官方資源驗證。候選檔名僅供規劃，實作前確認倉庫沒有同名模組，並沿用現有目錄布局。
+每階段各自建立小範圍實作 PR；階段中的「資源替代／清理」是同一張工作的驗收項，不是最後另外一次全刪。若替代來源不足，完成安全搬遷並將舊檔列為**待替代／不可刪**，不得冒險硬刪。
 
-### P0：盤點、測試基準與相依界線（本 PR）
+| 階段 | 功能分類與主要原始碼 | 同階段檢查的舊離線／內建來源 | 完成條件 |
+|---|---|---|---|
+| P1a 協力 | `instance_ui.py` 協力部分 → `features/cooperative/`；沿用 `instance_room_flow.py` 等權威規則 | `instance_catalog_1262.json` 中協力資料及其所有讀取處 | 協力房間、準備、獎勵狀態等價；1262 資料只有在全部必要來源經驗證替代後才可取消引用 |
+| P1b 一般副本 | `instance_ui.py` 一般副本部分 → `features/dungeon/` | 同一 `instance_catalog_1262.json` 的副本用途；**與 P1a 共用，不可先刪** | 副本詳細資料、創／入／退房、開始與人數限制保留；共享資料所有使用者都完成遷移後才評估移除 |
+| P2 小地圖 | `home_map.py` 地圖繪製／按鈕／導航 UI → `features/minimap/` | `smallmaps.zip`、`navigation_data.zip`、`map_names.json`、`stage_coordinates.json` | 地圖圖像、座標與自動導航有經核對的替代來源；缺少則**保留舊檔**，不得用未驗證的官方資料填補 |
+| P3 NPC／傳點 | `home_map.py` NPC／傳點相關 UI → `features/npc/`、`features/portals/` | `npc_event_index_1262.json.gz`、`npc_interact_1262.json.gz`、`npc_talk_1262.json.gz`、`npc_text_1262.json.gz`、`npc_battle_talk_1262.json.gz`、`portals.json` | 舊 1262 來源不再參與正式 1275 功能；NPC 文字、商店、傳送在對應驗證完成前仍維持安全拒絕與既有 UI |
+| P4 主程式與會話 | `ui/gui.py`、`network/client.py` 只拆主控／跨功能協調，不為「搬到同資料夾」複製共用層 | 全程審核剩餘 `REQUIRED_RESOURCES`、打包清單與匯入；依實際所屬功能回歸 P1–P3 處理 | Tk／背景工作、State 單寫入者、網路事件與所有公開入口均不變 |
+| P5 資源驗證服務整理（後置） | 官方更新／版本閘門／Bundle 下載仍是共用基礎設施，依責任細分，**不是額外刪除資源階段** | 檢查各功能已處理的資源清單、來源收據與封裝契約，不刪未替代項 | 有完整受影響流程 E2E 與安全回歸後才重整服務，不放寬 fail-closed 規則 |
 
-- [x] 記錄模組現況、順序、風險與安全界線。
-- [x] 修正 README 對 PR #56 未合併的過期描述，連結本路線圖。
-- [ ] 實作前建立匯入／呼叫關係基準，列出既有測試與畫面手動驗收清單。
-- [x] 記錄使用者 2026-10-25 的實機測試回報：「已測功能正常，未發現問題」（尚無逐功能清單、環境與 Log）。
-- [ ] 完成 **CI**、**Windows 實機 GUI**、**正式遊戲伺服器 E2E** 的逐項驗收矩陣；對未測路徑保留「待驗收」，不宣稱整體通過。
+### 每個階段都使用同一套遷移步驟
 
-### P1：副本／協力 UI（第一張實作 PR）
+1. **盤點：** 找出該功能 UI、按鈕、業務規則、網路命令、靜態資料的全部匯入／讀取位置，建立「舊路徑 → 新責任歸屬」對照；確認共用消費者。
+2. **抽取：** 先補現行行為測試；保留原公開類別、方法與指令契約，在功能資料夾逐步實作，原路徑作相容委託。
+3. **替代：** 優先採用 PR #56 的已審核 1275 Bundle Runtime；地圖圖像、導航 mesh 等**未證實有等價正式來源**者不憑空宣稱可從官方下載。官方來源只依 `.version`＋`.bytes`＋`.hash` 與需要的 Bundle 審核。
+4. **驗證：** 比對資料項目、Schema／SHA／MD5／CRC、權威伺服器回覆與主要 UI；執行三平台 CI 及對應 Windows／正式服 E2E。區分「資料已下載」「資料可解析」「安全允許操作」。
+5. **移除（有條件）：** 只有**所有消費者歸零**、等價來源可從乾淨安裝重建、打包與跨平台測試、必要實機驗收通過，才從 `REQUIRED_RESOURCES`、打包清單與舊檔同步移除；任何一項缺乏證據，保留檔案且標註原因。**不刪使用者私人快取、帳密設定或官方遊戲安裝內容。**
 
-- 保留 `InstancePanel`、`InstanceModePage` 公開入口、建立參數、指令名稱與既有使用者流程；先抽離可單測的純呈現計算，再移動房間／獎勵區塊 UI 方法。
-- 抽取只讀視圖協調，不移動 `services/instance_room_flow.py`、網路封包、不改房間成功判定；必要時沿用匯入相容入口。
-- 驗收：創房／加入／離開／待命／開始／入場、主副本與協力切換、領獎／取消與重開視窗；未確認狀態不得重送、不得跨副本操作。
-- 測試起點：`tests/test_instance_ui.py`、`tests/test_instance_room_ui.py`、`tests/test_instance_room_flow.py`、`tests/test_instance_rewards.py`，並擴充拆分接口回歸。
+### 已知事實與不可誤解之處
 
-### P2：地圖與 NPC UI（第二張實作 PR）
+- `runtime_1275.active_runtime()` 已有經正式固定驗證的舊 ZIP 或**已驗證官方 Bundle Runtime** 兩條來源；因此兩份手動 ZIP **不是永遠都必須事先安裝**。
+- 但目前 `wlre/resource_manifest.py` 的 `REQUIRED_RESOURCES` **仍列有** 1262 NPC 索引、`instance_catalog_1262.json`、`smallmaps.zip`、`navigation_data.zip`、`portals.json` 等。沒有等價替代時直接刪除會讓 self-test／封裝或功能失敗。
+- 官方 1275 新版本不能因快取存在、候選 Schema 相容或離線測試通過，就跳過新的線上版本確認；未知版本必須拒絕登入。個人設定檔／本機官方驗證快取是必要的持久化資料，不屬於「應刪掉的舊離線資料」。
+- 不將完整遊戲原始 Bundle 放入公開 GitHub，不引入未驗證來源；資源收據保持版本隔離，更新採原子切換，故障不覆寫可用資料。
 
-- 維持 `HomeMap` 的地圖選取、雙擊移動與公開回呼介面；候選責任：NPC 對話與商店視窗、傳點與清單 UI、純圖像／投影更新。
-- 沿用 `services/world/npc_*.py`、`portal_policy.py`、`movement.py` 既有資料／政策，不在 UI 重寫協定或推定目標地圖。
-- 驗收：NPC 查詢、對話與歷史、商店唯讀／操作入口、缺少資料安全降級、傳點禁止條件、地圖縮放／換圖後點擊對應。
-- 測試起點：`tests/test_home_map_follow.py`、`tests/test_npc_catalog_v057.py`，另補 UI 快照輸入及選取／坐標案例；真服傳送另行驗證。
+## 四、原行為與安全驗收界線
 
-### P3：App UI 協調（第三張實作 PR）
+- **協力／副本：** `InstancePanel`、`InstanceModePage` 的舊匯入與 callback 保持可用；創房、入房、退房、待命、開始、入場、獎勵狀態只接受伺服器證據；`pending`、`uncertain` 不盲目重送、不得跨房間領獎。
+- **小地圖／NPC：** `HomeMap` 繼續提供原回呼；圖像顯示、地圖點擊、導航座標、NPC 商店與對話、傳送拒絕條件逐項比較；來源缺失時安全降級、不把 1262 事件編號冒充 1275。
+- **網路與狀態：** UI 不接觸 TCP，Tk 只在 UI 執行緒；一個網路工作者改寫 State，先 `State.apply` 後 `SessionLogic.receive`；共享資源保留／互斥不改；登出與重登不能套用過期回覆。
+- **CI 與實機：** 每張實作 PR 都要 Windows／Ubuntu／macOS 完整自動化、原始碼／打包資源完整性測試與 Windows GUI；實際遊戲協定與功能需另由使用者 E2E。macOS 沒有顯示器時 skipped 的 GUI 測試不等於通過。
+- **版本：** 本文件 PR 維持 **v0.6.1**；各後續實作 PR 依最新 main 個別評估版本及 `[vX.Y.Z] 繁體中文標題`，不重複升版。PR 不經授權不合併 main，也不建 Release／Tag。
 
-- 讓 `App` 仍是唯一 Tk 組裝入口；將顯示事件分派／純格式化與背景工作者生命週期協調切開，**不改** `SessionBridge`、`DisplayQueue` 的既有所有權。
-- 所有 Tk 操作留在 UI 主執行緒；工作者不直接更新控件；舊連線回呼不能污染新連線。
-- 驗收：登入／斷線／重登、選角、背景佇列清空、頁籤顯示、視窗關閉與錯誤恢復、記憶帳號不洩漏敏感資料。
-- 測試起點：`tests/test_login_and_tab_alignment.py`、`tests/test_optimized_ui.py` 與事件佇列既有測試。
+## 五、本規劃 PR 的完成界線
 
-### P4：網路會話協調（第四張實作 PR）
+- [x] 明確採納**功能資料夾分類與同階段離線資源遷移**。
+- [x] 已記錄 2026-10-25 使用者回報的已測功能正常。
+- [x] 將原本較粗的「副本／協力」與「地圖／NPC」再拆為協力／一般副本／小地圖／NPC 傳送等不同功能所有權。
+- [ ] 建立每張實作 PR 的精確 import dependency graph 和逐功能測試矩陣（開工前完成）。
+- [ ] 實際移動檔案、改寫依賴、移除舊離線檔與更新 `REQUIRED_RESOURCES`（**本 PR 不做**）。
+- [ ] 全功能正式服 E2E、乾淨安裝、正式安裝包／Release 驗收（尚未宣稱完成）。
 
-- 保留 `run_client`、`SessionLogic`、`verify_account` 對外契約；只移動可驗證的會話階段、匿名診斷及協調程式，不重新發明 `commands.py` 或 `service_scheduler.py`。
-- **不變條件：** 單一網路工作者寫入 State；伺服器事件先 `State.apply` 再 `SessionLogic.receive`；回覆確認前不得假定操作成功；斷線／逾時保留 `uncertain`、避免重送。
-- 驗收：登入拒絕與斷線、S23／S26／S27 交易觀測、封包解碼拒絕、隊伍／戰鬥事件、服務 tick 順序，以及資源保留／跨功能互斥。
-- 測試起點：`tests/test_architecture_boundaries.py` 及既有 network／state／commands 領域測試；具體測試檔開工前再盤點，不猜測缺失檔名。
-
-### P5：官方資源與版本閘門（**E2E 證據具備後**）
-
-- `VersionGateController` 的官方資源版本與 GitHub LaLa Release 檢查可以在**UI 呈現層**拆分，但兩者仍須維持互不影響的安全決策。
-- `auto_catalog.py` 的已知資料查找、下載、快取驗證與候選收據可分為純服務；候選資料不可跳過校驗升為正式 Runtime。
-- **不變條件：** 官方只依已採用的 `.version`＋`.bytes`＋`.hash` 與實需 Bundle 校驗；固定 SHA／MD5／CRC／Schema 不降低；失敗時 fail closed，資料相容不代表遊戲協定相容。
-- 驗收：官方更新、離線、缺檔、損壞、快取被竄改、資源路徑變動、登入拒絕和過期檢查；不得自動放行未驗證功能。
-- 參考：`docs/AUTO_COMPATIBILITY.md`、`tests/test_prelogin_version_window.py`、`tests/test_game_version_gate.py` 及資源工具對應測試。
-
-## 3. 所有實作 PR 的硬性門檻
-
-1. **單一目的：** 保留公開入口、命令名稱、事件結構、設定格式與既有 UI 互動；先補 Characterization Tests（現行行為基準），再抽取。
-2. **資料可信度：** UI 不直接寫 socket、服務不讀 Tk；只有網路工作執行緒改寫 State，且遵守 `@writes(owner)` 所有權限制。伺服器回覆才可結束 pending；uncertain 禁止自動重送。
-3. **資源安全：** 不繞過官方 Manifest／Bundle 校驗、登入閘門或「未驗證資源不可啟用」原則。不改動 1275 固定基準與保護規則，除非另有經證據審核的專案需求。
-4. **跨平台 CI：** 至少 Windows、Ubuntu、macOS 現有 GitHub Actions 完整通過；檢查 skipped 的 GUI 測試，不能把略過說成通過。
-5. **人工實測：** 用 GitHub Desktop 切換待測分支，跑對應功能的 Windows 實機 UI 與遊戲伺服器 E2E（如需帳號／遊戲環境，由使用者執行）；結果、Log 與不能驗證的部分須分別註明。
-6. **不提前發布：** 開發階段不因重構自動製作正式 EXE／APP、Release 或 Tag；不直接合併 `main`，合併前須使用者明確授權。
-7. **版本紀律：** 本文件 PR 維持 v0.6.1；後續 PR 各自於建立及合併前讀取最新 `main`，依變更性質決定版本與標題 `[vX.Y.Z] 具體修改重點`，避免多 PR 版本碰撞。
-8. **驗收報告：** 每張 PR 列出影響檔案、公開 API 相容性、測試數與跳過原因、已完成及未完成的實機驗收、風險、預計版本、CI 連結與合併狀態。
-
-## 4. 下一步與完成定義
-
-**下一張建議實作 PR 為 P1「副本／協力 UI 模組化」**。先讀最新 main、列出 `InstanceModePage`／`InstancePanel` 的方法依賴與既有測試，再分離低風險的顯示資料與子視圖，確保使用者入口與伺服器行為完全不變。每一階段通過三平台 CI 且相關人工驗收有明確紀錄後，才開始下一階段。
-
-本路線圖本身完成僅表示**規劃文件已提交、可供審查**；使用者已回報已測功能正常，但尚不代表 P1–P5 的程式重構、全功能逐項 E2E 或正式發布已完成。
+**接下來：** 從最新 main 開第一張 P1a 協力功能實作 PR，逐一處理房間、按鈕、領獎及該功能的舊資料依賴；一般副本 P1b 獨立驗收，避免一次大量重排共用網路程式。
