@@ -121,6 +121,7 @@ wlre/
 - [x] P4 第一批：`App.open_feature/hide_feature/hide_all_features/open_instances/hide_instances/open_resources/open_attributes` 移至 `ui/feature_navigation.py`，只移動 Tk 視窗生命週期，不動 Worker、TCP、State 或事件佇列；新增權限與視窗單例相容測試（CI 待驗證）。
 - [x] P5 安全回歸底線：新增 `tests/test_feature_resource_safety.py`，驗證 1275 已驗證 NPC 索引不回退舊 NPC 事件資料、沒有可信傳送目的地時不啟用傳點、原必要封裝資源尚未遭刪除（最新 CI 待確認）。
 - [x] P3 傳點顯示修復（針對場景 12170 畫面問題）：1275 `active_runtime().doors` 原本只統計總數並返回空清單，現將已驗證的門事件索引／本地座標呈現為 `1275 門事件` 唯讀標記，修復 `portal_policy.allowed_rows` 誤隱藏全部未知目的地、新增重新載入預登入空快取及 1275 專屬門事件核對視窗。仍不核發 C20-8 換圖權限；此批已補單元／Tk UI 測試，CI 待驗證，正式伺服器換圖仍需目的地與事件實測。
+- [x] P3 傳點所在場景名稱匹配：從已驗證官方 1275 `ScenesData_C.name_id` 與 `TextData_C` 建立場景 ID→中文名稱，正式 ZIP／官方 Bundle 兩路 Runtime 共同輸出 `scene_names`；1275 傳點清單、選取狀態及小地圖標題共用此來源。缺正式中文名稱時只顯示「場景 ID」，不借用舊版 1262 名稱或把所在場景誤認為傳送目的地。目的地仍未知、換圖停用；新增場景名稱對應及安全回歸測試（CI 待驗證）。
 - [ ] P4 其餘會話事件協調及 P5 服務責任核查，仍須正式服 E2E、官方 1275 副本／地圖等價性與完整跨平台打包驗收。
 - [ ] 全功能正式服 E2E、乾淨安裝、正式安裝包／Release 驗收（尚未宣稱完成）。
 
