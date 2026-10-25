@@ -51,7 +51,7 @@ class Portals:
                             visible.append({
                                 'id': f'1275:{scene_id}:{index}',
                                 'scene': scene_id, 'index': index,
-                                'name': f'{scene_label}｜1275 門事件 #{index}',
+                                'name': f'門事件 #{index}（目的地未確認）',
                                 'source_scene_label': scene_label,
                                 'source_scene_name_known': scene_id in scene_names,
                                 'destination_label': '目的地未確認',
