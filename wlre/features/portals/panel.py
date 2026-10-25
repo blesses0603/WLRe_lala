@@ -14,8 +14,11 @@ class PortalInteractionMixin:
     def update_portal_button(self):
         p=self.selected_portal
         enabled=bool(p and destination_problem(p,self.maps) is None and p.get('direct_eligible') and self.state.get('player',{}).get('scene')==self.selected_id and not self.state.get('battle',{}).get('active') and not self.state.get('event_flow',{}).get('blocked'))
+        label = ('目的地待核對'
+                 if p and p.get('source_revision') == 1275
+                 else '返回有圖地圖' if self.image is None else '直接嘗試換圖')
         self.portal_go.configure(state='normal' if enabled else 'disabled',
-                                 text='返回有圖地圖' if self.image is None else '直接嘗試換圖')
+                                 text=label)
 
     def choose_portal(self,event=None):
         selected=self.portal_list.curselection()
@@ -32,6 +35,10 @@ class PortalInteractionMixin:
         self.portal_list.see(self.list_rows.index(p))
         self.portal_status.set(p['name']+'｜'+p.get('direct_note','尚未核對觸碰事件'))
         self.update_portal_button()
+        if (p.get('source_revision') == 1275
+                and p.get('coordinate_valid') and self.on_pick is not None):
+            # Sets destination fields only. Never call on_move or on_portal.
+            self.on_pick(self.selected_id, p['x'], p['y'])
         self.draw()
 
     def go_portal(self):
@@ -50,6 +57,41 @@ class PortalInteractionMixin:
     def show_audit(self):
         if self.audit_window and self.audit_window.winfo_exists():
             self.audit_window.lift();return
+        if self.portals.data.get('source_revision') == 1275:
+            # A 1262 historical review must never be presented as current
+            # destination or trigger verification for 1275.
+            win = tk.Toplevel(self)
+            self.audit_window = win
+            win.title('1275 官方門事件（位置預覽）')
+            configure_dialog(win, 730, 460)
+            win.resizable(False, False)
+            ttk.Label(win, text='1275 Eve 門事件索引與位置已讀取。'
+                      '目的地、事件觸發及換圖回覆尚未核對，禁止傳送；不引用 1262 舊報告。',
+                      wraplength=680).pack(fill='x', padx=10, pady=8)
+            if not self.portals.data.get('source_ready'):
+                ttk.Label(win, text='1275 官方資源尚未完成安裝／校驗，請重新登入。',
+                          wraplength=680).pack(fill='x', padx=10)
+            frame = ttk.Frame(win)
+            frame.pack(fill='both', expand=True, padx=10, pady=8)
+            cols = ('index', 'x', 'y', 'status')
+            tree = ttk.Treeview(frame, columns=cols, show='headings')
+            for key, label, width in (
+                ('index', '門事件索引', 110), ('x', 'X', 100),
+                ('y', 'Y', 100), ('status', '驗證情況', 360),
+            ):
+                tree.heading(key, text=label)
+                tree.column(key, width=width, anchor='w')
+            scroll = ttk.Scrollbar(frame, orient='vertical', command=tree.yview)
+            tree.configure(yscrollcommand=scroll.set)
+            scroll.pack(side='right', fill='y')
+            tree.pack(side='left', fill='both', expand=True)
+            for row in self.portals.for_scene(self.selected_id):
+                tree.insert('', 'end', values=(
+                    row['index'], row['x'] if row['coordinate_valid'] else '無效',
+                    row['y'] if row['coordinate_valid'] else '無效',
+                    '位置可參考；目的地與觸發未驗證' if row['coordinate_valid']
+                    else '座標未確認；禁止傳送'))
+            return
         win=tk.Toplevel(self);self.audit_window=win
         win.title('地圖傳送點逐圖核對 · 1262');configure_dialog(win,1000,600);win.resizable(False,False)
         ttk.Label(win,text='已核對數量只代表門編號與觸碰事件有效，正式服是否允許遠距觸發仍待實測。').pack(fill='x',padx=10,pady=8)
