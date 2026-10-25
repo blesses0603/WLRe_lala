@@ -31,9 +31,11 @@ class Portal1275RecoveryTests(unittest.TestCase):
         self.assertEqual(catalog.data['door_count'], 2)
         rows = catalog.for_scene(SCENE)
         self.assertEqual(len(rows), 2)
-        self.assertEqual((rows[0]['index'], rows[0]['x'], rows[0]['y']),
-                         (7, 5701, 3230))
-        self.assertTrue(rows[0]['coordinate_valid'])
+        self.assertEqual((rows[0]['index'], rows[0]['event_grid_x'],
+                          rows[0]['event_grid_y']), (7, 5701, 3230))
+        self.assertFalse(rows[0]['coordinate_valid'])
+        self.assertIsNone(rows[0]['x'])
+        self.assertIsNone(rows[0]['y'])
         self.assertIn('1275 傳點', Portals.label(rows[0]))
         self.assertEqual(rows[0]['id'], '1275:12170:7')
         self.assertIsNone(rows[0]['destination'])
@@ -101,7 +103,7 @@ class Portal1275RecoveryTests(unittest.TestCase):
         page.on_move = Mock()
         page.list_rows = [p]
         page.select_portal(p)
-        page.on_pick.assert_called_once_with(SCENE, 5701, 3230)
+        page.on_pick.assert_not_called()
         page.on_portal.assert_not_called()
         page.on_move.assert_not_called()
         page.draw.assert_called_once_with()
