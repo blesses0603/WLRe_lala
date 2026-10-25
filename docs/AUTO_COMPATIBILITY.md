@@ -3,7 +3,8 @@
 ## 第一批舊版資源清理（PR #56，2026-10-25）
 
 - 已從開發分支移除 `wlre/resources/npc_1262_sources.json`。這是 1262 對話資料的歷史 SHA／筆數摘要，未列入 `REQUIRED_RESOURCES`，也沒有執行階段或新版 Catalog 管線對其路徑的引用。歷史來源指紋保留於既有開發文件與 Git 紀錄。
-- **尚未移除** `npc_event_index_1262.json.gz`、`npc_interact_1262.json.gz`、`npc_item_data_1262.json.gz`、`npc_talk_1262.json.gz`、`npc_text_1262.json.gz`、`npc_battle_talk_1262.json.gz` 及 `instance_catalog_1262.json`：目前仍有必要打包清單、舊版讀取器、使用者介面或測試引用它們。移除前須先完成當前版來源替代、乾淨安裝、缺檔補建與回歸驗收。
+- **第二批物品清理（2026-10-25）**：已移除 `wlre/resources/npc_item_data_1262.json.gz` 並從 `REQUIRED_RESOURCES` 和舊資源雜湊驗證清單取消其打包要求。正式 `item_catalog()` 僅讀取經正式 `active_runtime()` 完整來源校驗的 1275 `items`，未完成驗證時不得回退 1262。歷史 `load_items(path)` 僅允許明確指定離線來源且要求原始固定雜湊；商店維持唯讀，缺少正式物品表時價格為未知、購物／販售不啟用。對應測試改用注入資料驗證價格預覽、失敗保護與交易限制，不再把舊價格包當成正式安裝必要項。
+- **尚未移除** `npc_event_index_1262.json.gz`、`npc_interact_1262.json.gz`、`npc_talk_1262.json.gz`、`npc_text_1262.json.gz`、`npc_battle_talk_1262.json.gz` 及 `instance_catalog_1262.json`：仍有必要打包清單、舊版讀取器、使用者介面或測試引用它們。移除前須先完成當前版來源替代、乾淨安裝、缺檔補建與回歸驗收。
 - **必須保留** `navigation_data.zip`、`smallmaps.zip`、`portals.json` 與相關碰撞／座標／圖示來源，直到新版能完整重建導航、圖片及傳點索引並通過實機驗收。帳號、登入設定、製作偏好等個人資料不在清理範圍。
 - 禁止把刪除資源當成測試官方補下載的方法：正常資料升級應使用版本化私人暫存目錄、官方 Manifest 完整性驗證與原子切換，失敗時保留舊版可用資料。這次不清除使用者本機快取、不修改正式遊戲安裝目錄，也不合併 `main`。
 
