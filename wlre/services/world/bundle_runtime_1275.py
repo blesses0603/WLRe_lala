@@ -159,6 +159,7 @@ def load_verified_bundle_runtime(*, sync_root=None):
     from wlre.services.world.doors_1275 import (
         SOURCE_SHA256 as EVE_SHA256, parse_doors_1275)
     from wlre.services.instance_catalog import parse_stages
+    from wlre.services.world.scene_names_1275 import bind_scene_names
 
     root = Path(sync_root) if sync_root is not None else data_root() / 'official_sync'
     # An optional four-feature *candidate* may be incomplete when the Eve
@@ -297,6 +298,7 @@ def load_verified_bundle_runtime(*, sync_root=None):
             texts=texts,
             recipes=recipes,
             scene_ids=frozenset(scene_rows),
+            scene_names=bind_scene_names(scene_rows, texts),
             doors=doors, expedition=expedition,
         )
     except BundleRuntimeUnavailable:
