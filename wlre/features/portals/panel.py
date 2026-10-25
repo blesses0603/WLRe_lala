@@ -4,7 +4,7 @@ Original user confirmation/destination validation remain in the existing
 feature callbacks, while underlying world services remain authoritative.
 """
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 from wlre.paths import PROJECT_ROOT
 from wlre.ui.window_layout import configure_dialog
 from wlre.services.world.portal_policy import destination_problem
@@ -14,8 +14,8 @@ class PortalInteractionMixin:
     def update_portal_button(self):
         p=self.selected_portal
         enabled=bool(p and destination_problem(p,self.maps) is None and p.get('direct_eligible') and self.state.get('player',{}).get('scene')==self.selected_id and not self.state.get('battle',{}).get('active') and not self.state.get('event_flow',{}).get('blocked'))
-        label = ('目的地待核對'
-                 if p and p.get('source_revision') == 1275
+        label = ('手動確認換圖' if enabled and p.get('source_revision') == 1275
+                 else '目的地待核對' if p and p.get('source_revision') == 1275
                  else '返回有圖地圖' if self.image is None else '直接嘗試換圖')
         self.portal_go.configure(state='normal' if enabled else 'disabled',
                                  text=label)
@@ -49,6 +49,18 @@ class PortalInteractionMixin:
             self.portals.direct_target(self.selected_portal,self.state.get('player',{}).get('scene'))
             if self.on_portal is None:
                 raise ValueError('尚未接上本機角色的出口觸發功能。')
+            if self.selected_portal.get('source_revision') == 1275:
+                label = self.selected_portal.get('destination_label', '未知目的地')
+                # One explicit user confirmation. Server still decides whether
+                # the existing C20-8 door event can cause a scene transition.
+                if not messagebox.askyesno(
+                        '1275 傳點單次確認',
+                        '目的地：' + label + '\n'
+                        '官方門事件、座標與目的地已交叉核對，'
+                        '但正式伺服器是否接受此觸碰指令仍待驗證。\n'
+                        '只送出一次請求，不會強制改場景或自動重試。是否繼續？',
+                        parent=self):
+                    return False
             self.on_portal(self.selected_portal['id'])
             return True
         except ValueError as exc:
@@ -89,8 +101,10 @@ class PortalInteractionMixin:
                 tree.insert('', 'end', values=(
                     row['index'], row['x'] if row['coordinate_valid'] else '無效',
                     row['y'] if row['coordinate_valid'] else '無效',
-                    '位置可參考；目的地與觸發未驗證' if row['coordinate_valid']
-                    else '座標未確認；禁止傳送'))
+                    ('目的地：' + row['destination_label'] + '；可手動單次試傳，伺服器回覆為準'
+                     if row.get('direct_eligible') else
+                     '位置可參考；目的地與觸發未驗證')
+                    if row['coordinate_valid'] else '座標未確認；禁止傳送'))
             return
         win=tk.Toplevel(self);self.audit_window=win
         win.title('地圖傳送點逐圖核對 · 1262');configure_dialog(win,1000,600);win.resizable(False,False)
