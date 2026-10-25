@@ -118,6 +118,43 @@ class AutoCatalogTests(unittest.TestCase):
             self.assertEqual(meta['features']['npc']['sha256'],
                              hashlib.sha256(self.bytes['npc']).hexdigest())
 
+    def test_real_launcher_records_version_change_after_verified_manifests(self):
+        # All network, Manifest and disk state are injected, while the public
+        # Launcher entry path (observe=None/retrieve=None) is exercised.
+        previous = dict(self.snapshot, packages=dict(self.snapshot['packages']))
+        previous['packages']['DataPackage'] = '1274_2026_10_20_18_27_33_84'
+        params = self.kwargs(observe=None, retrieve=None)
+        with patch('wlre.services.world.auto_catalog.observe_official_versions',
+                   return_value=self.snapshot), patch(
+                       'wlre.services.world.auto_catalog.fetch_official_manifest',
+                       side_effect=lambda spec, cache_root=None:
+                       self.manifests[spec.package]), patch(
+                       'wlre.services.official_resource_sync.read_snapshot',
+                       return_value=previous), patch(
+                       'wlre.services.official_resource_sync.save_snapshot') as save:
+            stages = []
+            result = run_auto_catalog(**dict(
+                params, progress=lambda phase, details:
+                stages.append((phase, details))))
+        self.assertEqual(result['official_revision_status'], 'changed')
+        self.assertEqual(result['status'], 'review_required')
+        self.assertFalse(result['approved'])
+        self.assertFalse(result['assets_ready'])
+        self.assertFalse(result['can_send_packets'])
+        save.assert_called_once_with(self.snapshot)
+        changed = [value for phase, value in stages if phase == 'official_revision']
+        self.assertEqual(len(changed), 1)
+        self.assertEqual(changed[0]['state'], 'changed')
+        self.assertEqual(changed[0]['data'], '1275')
+
+    def test_injected_fixture_never_updates_real_observed_version(self):
+        with patch('wlre.services.official_resource_sync.read_snapshot') as read, patch(
+                'wlre.services.official_resource_sync.save_snapshot') as save:
+            result = run_auto_catalog(**self.kwargs())
+        self.assertEqual(result['official_revision_status'], 'unrecorded')
+        read.assert_not_called()
+        save.assert_not_called()
+
     def test_progress_stages_are_emitted_only_for_work_attempted(self):
         events = []
         result = run_auto_catalog(**self.kwargs(
