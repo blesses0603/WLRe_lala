@@ -23,3 +23,36 @@ def cooperative_headcount_status(room, members, count, *, can_begin=False):
         return prefix + '，已滿員；房主可以準備／開始配對'
     return prefix + '，已滿員；等待房主或其他開始條件確認'
 
+
+
+def cooperative_count_selector(form, record):
+    """Build the coop-only capacity selector without copying shared dialogs."""
+    import tkinter as tk
+    from tkinter import ttk
+    count_var = tk.StringVar(value=str(record['min_members']))
+    ttk.Label(form, text='協力房間人數').pack(anchor='w')
+    ttk.Spinbox(form, from_=record['min_members'], to=record['max_members'],
+                textvariable=count_var, width=8).pack(anchor='w', pady=(0, 8))
+    return count_var
+
+
+def cooperative_checked_count(raw, record):
+    """Accept only a count within the verified catalog range; UI cannot bypass it."""
+    try:
+        count = int(raw)
+    except (TypeError, ValueError):
+        return None
+    if count < record['min_members'] or count > record['max_members']:
+        return None
+    return count
+
+
+def cooperative_create_fields(record, count):
+    """Fields specific to coop creation; payment confirmation is never omitted."""
+    return {'dungeon_id': record['id'], 'player_count': count,
+            'confirm_cost': True}
+
+
+def cooperative_join_fields():
+    """Explicit acknowledgement of possible ticket/point consumption."""
+    return {'confirm_cost': True}
