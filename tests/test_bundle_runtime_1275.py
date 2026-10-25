@@ -10,7 +10,8 @@ from types import SimpleNamespace
 
 from wlre.services.official_manifest_sync import ManifestSpec
 from wlre.services.world.bundle_runtime_1275 import (
-    BundleRuntimeUnavailable, load_verified_bundle_runtime)
+    BundleRuntimeUnavailable, load_verified_bundle_runtime,
+    sync_pinned_runtime_bundles)
 
 
 class VerifiedBundleRuntimeTests(unittest.TestCase):
@@ -149,6 +150,86 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
         stack.enter_context(patch(
             'wlre.services.world.doors_1275.parse_doors_1275',
             return_value={}))
+
+    def _official_snapshot(self):
+        return {
+            'schema_version': 1,
+            'origin': 'official_pc_version_endpoint',
+            'data_ver': '1.3.21',
+            'exe_version': '1.3.0',
+            'packages': {
+                package: self.verified[package].spec.package_version
+                for package in ('DataPackage', 'MainPackage')},
+            'checked_at_utc': '2026-10-25T00:00:00+00:00',
+            'assets_ready': False,
+        }
+
+    def test_pinned_runtime_sync_does_not_require_four_feature_candidate(self):
+        snapshot = self._official_snapshot()
+        supported = {
+            'official_game_exe_version': '1.3.0', **self.supported}
+        entries = [SimpleNamespace(
+            action='download',
+            spec=SimpleNamespace(file_size=1234,
+                                 cache_path=lambda root: self.root / 'synthetic.bundle'))]
+        sync = Mock()
+        with patch('wlre.services.world.bundle_runtime_1275._PINNED_MANIFEST_SHA256',
+                   self.pinned), patch(
+             'wlre.services.resource_compatibility.load_supported_resources',
+             return_value=supported), patch(
+             'wlre.services.official_incremental_sync.build_update_plan',
+             return_value=SimpleNamespace(entries=entries)) as plan, patch(
+             'wlre.services.official_bundle_download._verified_file',
+             return_value=True):
+            result = sync_pinned_runtime_bundles(
+                sync_root=self.root, observe=lambda: snapshot,
+                retrieve=lambda spec, cache_root: self.verified[spec.package],
+                execute=sync)
+        self.assertEqual(result['verified_bundles'], 1)
+        self.assertEqual(result['downloaded_bundles'], 1)
+        self.assertFalse(result['assets_ready'])
+        self.assertFalse(result['can_send_packets'])
+        self.assertEqual(len(plan.call_args.kwargs['asset_paths']), 10)
+        sync.assert_called_once()
+
+    def test_pinned_runtime_sync_rejects_version_switch_before_download(self):
+        snapshot = self._official_snapshot()
+        switched = {**snapshot, 'packages': {
+            **snapshot['packages'],
+            'DataPackage': '1276_2026_10_25_00_00_00_00'}}
+        observed = iter((snapshot, switched))
+        supported = {
+            'official_game_exe_version': '1.3.0', **self.supported}
+        sync = Mock()
+        with patch('wlre.services.world.bundle_runtime_1275._PINNED_MANIFEST_SHA256',
+                   self.pinned), patch(
+             'wlre.services.resource_compatibility.load_supported_resources',
+             return_value=supported), patch(
+             'wlre.services.official_incremental_sync.build_update_plan',
+             return_value=SimpleNamespace(entries=[])):
+            with self.assertRaisesRegex(BundleRuntimeUnavailable, '版本變動'):
+                sync_pinned_runtime_bundles(
+                    sync_root=self.root, observe=lambda: next(observed),
+                    retrieve=lambda spec, cache_root: self.verified[spec.package],
+                    execute=sync)
+        sync.assert_not_called()
+
+    def test_pinned_runtime_sync_rejects_manifest_sha_change(self):
+        snapshot = self._official_snapshot()
+        supported = {
+            'official_game_exe_version': '1.3.0', **self.supported}
+        pins = {**self.pinned, 'MainPackage': '0' * 64}
+        sync = Mock()
+        with patch('wlre.services.world.bundle_runtime_1275._PINNED_MANIFEST_SHA256',
+                   pins), patch(
+             'wlre.services.resource_compatibility.load_supported_resources',
+             return_value=supported):
+            with self.assertRaisesRegex(BundleRuntimeUnavailable, 'SHA-256'):
+                sync_pinned_runtime_bundles(
+                    sync_root=self.root, observe=lambda: snapshot,
+                    retrieve=lambda spec, cache_root: self.verified[spec.package],
+                    execute=sync)
+        sync.assert_not_called()
 
     def test_bundle_sources_become_real_runtime_data_not_ui_candidate(self):
         with ExitStack() as stack:
