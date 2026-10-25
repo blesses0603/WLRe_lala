@@ -160,8 +160,28 @@ def verified_portal_positions(stage_raw, link_raw, doors, stages):
             x, y = link['x'] * rx, link['y'] * ry
             if not 0 <= x <= 65535 or not 0 <= y <= 65535:
                 continue
+            # Runtime minimap images are still sourced from the older
+            # resource pack. When 1275 provides geometry, require it to
+            # agree with the image projection before displaying a marker.
+            known_geometry = all(type(stage.get(key)) is int for key in (
+                'map_width', 'map_height', 'small_offset_x', 'small_offset_y'))
+            geometry = None
+            if known_geometry:
+                width = (6992 if stage['map_width'] == 65535
+                         else stage['map_width'])
+                height = (6992 if stage['map_height'] == 65535
+                          else stage['map_height'])
+                if max(width, height) <= 0:
+                    continue
+                geometry = {
+                    'rate': 100 * (1024 - 24) / max(width, height),
+                    'offset_x': stage['small_offset_x'],
+                    'offset_y': stage['small_offset_y'],
+                    'height': height,
+                }
             result[(scene, index)] = {
                 'x': x, 'y': y, 'scene': scene, 'index': index,
+                'projection_guard': geometry,
                 'source_kind': '1275_eve_door_links_grid_scaled',
                 'raw_link_x': link['x'], 'raw_link_y': link['y'],
                 'pos_x_ratio': rx, 'pos_y_ratio': ry,
