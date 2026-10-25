@@ -192,10 +192,14 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
         self.assertEqual(result['downloaded_bundles'], 1)
         self.assertFalse(result['assets_ready'])
         self.assertFalse(result['can_send_packets'])
-        self.assertEqual(plan.call_count, 2)
+        self.assertEqual(plan.call_count, 3)
         self.assertEqual(len(plan.call_args_list[0].kwargs['asset_paths']), 10)
-        self.assertEqual(len(plan.call_args_list[1].kwargs['asset_paths']), 2)
-        self.assertEqual(sync.call_count, 2)
+        self.assertEqual(len(plan.call_args_list[1].kwargs['asset_paths']), 1)
+        self.assertIn('StageMapData_C', plan.call_args_list[1].kwargs['asset_paths'][0])
+        self.assertEqual(len(plan.call_args_list[2].kwargs['asset_paths']), 1)
+        self.assertIn('EveDoorLinks', plan.call_args_list[2].kwargs['asset_paths'][0])
+        self.assertEqual(sync.call_count, 3)
+        self.assertTrue(result['portal_names_bundle_ready'])
         self.assertTrue(result['portal_metadata_ready'])
 
     def test_optional_portal_bundle_failure_keeps_core_runtime_ready(self):
@@ -205,7 +209,8 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
             action='download',
             spec=SimpleNamespace(file_size=512,
                                  cache_path=lambda root: self.root / 'verified.bundle'))]
-        execute = Mock(side_effect=[None, ValueError('optional portal asset failed')])
+        execute = Mock(side_effect=[None, ValueError('optional portal asset failed'),
+                                    ValueError('optional link failed')])
         with patch('wlre.services.world.bundle_runtime_1275._PINNED_MANIFEST_SHA256',
                    self.pinned), patch(
              'wlre.services.resource_compatibility.load_supported_resources',
@@ -218,8 +223,9 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
                 sync_root=self.root, observe=lambda: snapshot,
                 retrieve=lambda spec, cache_root: self.verified[spec.package],
                 execute=execute)
-        self.assertEqual(execute.call_count, 2)
+        self.assertEqual(execute.call_count, 3)
         self.assertEqual(result['downloaded_bundles'], 1)
+        self.assertFalse(result['portal_names_bundle_ready'])
         self.assertFalse(result['portal_metadata_ready'])
         self.assertFalse(result['can_send_packets'])
 
