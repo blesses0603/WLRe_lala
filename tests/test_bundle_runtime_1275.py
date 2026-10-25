@@ -304,7 +304,7 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
         self.assertEqual(runtime.portal_names, {(10000, 1): '正式文字'})
         self.assertEqual(runtime.portal_destinations, {})
         self.assertEqual(runtime.portal_metadata_status,
-                         'destination_links_missing_or_invalid')
+                         'destination_links_textasset_extract_failed')
         self.assertEqual(len(runtime.recipes), 1032)
 
     def test_optional_stage_map_not_cached_reports_precise_reason(self):
@@ -460,7 +460,8 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
         self.addCleanup(_default_runtime.cache_clear)
         formal = self.root / 'formal'
         data, eve = formal / '1275_DataCatalog.zip', formal / '1275_EveNpcIndex.zip'
-        working = object()
+        working = SimpleNamespace(revision=1275,
+                                  portal_metadata_status='stage_map_ready')
         with patch('wlre.services.world.runtime_1275._paths',
                    return_value=(data, eve)), patch(
              'wlre.services.world.bundle_runtime_1275.load_verified_bundle_runtime',
