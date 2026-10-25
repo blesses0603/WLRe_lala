@@ -301,6 +301,37 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
                          'destination_links_missing_or_invalid')
         self.assertEqual(len(runtime.recipes), 1032)
 
+    def test_optional_stage_map_not_cached_reports_precise_reason(self):
+        from wlre.services.official_incremental_sync import build_update_plan
+        plan = build_update_plan
+        def fake_plan(manifest, *, asset_paths, cache_root):
+            if 'StageMapData_C.bytes' in asset_paths[0]:
+                return SimpleNamespace(entries=[SimpleNamespace(action='download')])
+            return self.plan
+        with ExitStack() as stack:
+            self.patches(stack)
+            stack.enter_context(patch(
+                'wlre.services.official_incremental_sync.build_update_plan',
+                side_effect=fake_plan))
+            runtime = load_verified_bundle_runtime(sync_root=self.root)
+        self.assertEqual(runtime.portal_metadata_status, 'bundle_not_cached')
+        self.assertEqual(runtime.portal_names, {})
+        self.assertEqual(runtime.portal_display_destinations, {})
+        self.assertEqual(len(runtime.recipes), 1032)
+
+    def test_optional_stage_map_extraction_error_is_not_silenced(self):
+        def extract(binding, paths, loader=None):
+            if binding.contract.source_name == 'StageMapData_C':
+                raise ValueError('malformed UnityFS text asset')
+            return self.raw[binding.contract.source_name]
+        self.extract.side_effect = extract
+        with ExitStack() as stack:
+            self.patches(stack)
+            runtime = load_verified_bundle_runtime(sync_root=self.root)
+        self.assertEqual(runtime.portal_metadata_status, 'textasset_extract_failed')
+        self.assertEqual(runtime.portal_names, {})
+        self.assertEqual(len(runtime.recipes), 1032)
+
     def test_verified_bundle_data_enters_real_crafting_plan(self):
         # This is the actual crafting service, not a read-only UI preview.
         # Packet construction is tested offline; no game session is contacted.
