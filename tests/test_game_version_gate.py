@@ -95,7 +95,7 @@ class RemoteGameVersionTests(unittest.TestCase):
                        "wlre.services.world.runtime_1275.ready",
                        return_value=(True, "1275 fixture verified")):
             got = run_prelogin_check()
-        self.assertEqual(got["status"], "blocked")
+        self.assertEqual(got["status"], "unverified")
         self.assertTrue(got["blocked"])
         self.assertIn("不能替代本次官方版本確認", got["message"])
 
@@ -106,7 +106,7 @@ class RemoteGameVersionTests(unittest.TestCase):
                        "wlre.services.world.runtime_1275.ready",
                        return_value=(False, "missing 1275 archive")):
             result = run_prelogin_check()
-        self.assertEqual(result["status"], "blocked")
+        self.assertEqual(result["status"], "unverified")
         self.assertTrue(result["blocked"])
         self.assertIn("1275", result["message"])
         self.assertIn("1262", result["message"])
