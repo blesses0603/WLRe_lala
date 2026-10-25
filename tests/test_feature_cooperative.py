@@ -50,5 +50,39 @@ class CooperativeFeatureStructure(unittest.TestCase):
         self.assertFalse(page._standby_ready)
 
 
+class CooperativeRoomExtractionTests(unittest.TestCase):
+    """Second-batch room dialogs and explicit cooperative feature contracts."""
+
+    def test_public_room_actions_still_inherit_from_shared_dialogs(self):
+        from wlre.ui.instance_room_dialogs import InstanceRoomDialogMixin
+        for name in ('open_create_dialog', 'open_join_dialog', 'request_leave'):
+            with self.subTest(name=name):
+                self.assertIs(getattr(InstanceModePage, name),
+                              getattr(InstanceRoomDialogMixin, name))
+
+    def test_cooperative_page_inherits_original_public_api(self):
+        from wlre.features.cooperative.panel import CooperativeModePage
+        self.assertTrue(issubclass(CooperativeModePage, InstanceModePage))
+
+    def test_cooperative_count_must_match_catalog_bounds(self):
+        from wlre.features.cooperative.rooms import cooperative_checked_count
+        record = {'id': 28, 'min_members': 2, 'max_members': 4}
+        self.assertEqual(cooperative_checked_count('2', record), 2)
+        self.assertEqual(cooperative_checked_count('4', record), 4)
+        for invalid in ('', 'wrong', '1', '5', None):
+            with self.subTest(value=invalid):
+                self.assertIsNone(cooperative_checked_count(invalid, record))
+
+    def test_cooperative_room_commands_keep_explicit_cost_approval(self):
+        from wlre.features.cooperative.rooms import (
+            cooperative_create_fields, cooperative_join_fields,
+        )
+        record = {'id': 28, 'min_members': 2, 'max_members': 4}
+        self.assertEqual(cooperative_create_fields(record, 3), {
+            'dungeon_id': 28, 'player_count': 3, 'confirm_cost': True,
+        })
+        self.assertEqual(cooperative_join_fields(), {'confirm_cost': True})
+
+
 if __name__ == '__main__':
     unittest.main()
