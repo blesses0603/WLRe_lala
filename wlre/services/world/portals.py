@@ -6,6 +6,32 @@ from pathlib import Path
 from wlre.services.world.scene_names_1275 import source_scene_label
 
 
+
+def portal_source_diagnostic(status):
+    """Show an actionable, sanitized reason for missing 1275 names/positions."""
+    hints = {
+        'asset_missing_from_manifest': '官方 Manifest 未列出傳點名稱資產',
+        'bundle_not_cached': '官方傳點 Bundle 尚未下載；重啟 LaLa 執行官方同步',
+        'bundle_integrity_failed': '傳點 Bundle 校驗不符，已拒絕使用',
+        'textasset_extract_failed': '傳點 Bundle 已找到，但 TextAsset 解包失敗',
+        'stage_map_invalid': '傳點名稱表二進位格式尚未通過驗證',
+        'missing_stage_map': '尚未取得官方 StageMapData 傳點名稱表',
+        'core_runtime_unavailable': '1275 核心資料尚未完成驗證',
+    }
+    if type(status) is not str:
+        return '尚無 1275 傳點名稱載入狀態'
+    if status in hints:
+        return hints[status]
+    if status.startswith('destination_links_'):
+        reason = status.removeprefix('destination_links_')
+        return ('官方傳點名稱表已可用；門連線資料：'
+                + hints.get(reason, '目的地資料尚未通過驗證'))
+    if status in ('stage_map_ready', 'destination_links_loaded'):
+        return '官方傳點資料已載入，部分入口仍可能沒有名稱 ID'
+    return '1275 傳點資料狀態待核對'
+
+
+
 class Portals:
     def __init__(self,path=None):
         if path is None:
