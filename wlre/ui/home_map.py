@@ -227,7 +227,8 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
                 scene = source_scene_label(
                     self.selected_id, self.portals.data.get('scene_names', {}))
                 text = (f'已載入 1275 Eve：所在場景 {scene} 有 {count} 個門事件；'
-                        '目的地名稱／正式服觸發未驗證，無法直接換圖。')
+                        f'{ready} 個完成三表目的地核對可手動確認試傳；'
+                        '其餘入口維持停用，實際換圖以伺服器回覆為準。')
             else:
                 text = ('1275 官方門事件索引尚未完成校驗／安裝；'
                         '下次切換地圖會重新讀取，不使用 1262 舊傳點。')
