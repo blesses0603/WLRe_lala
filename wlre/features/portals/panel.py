@@ -8,7 +8,7 @@ from tkinter import ttk, messagebox
 from wlre.paths import PROJECT_ROOT
 from wlre.ui.window_layout import configure_dialog
 from wlre.services.world.portal_policy import destination_problem
-from wlre.services.world.portals import portal_map_pixel
+from wlre.services.world.portals import portal_map_pixel, portal_source_diagnostic
 
 
 class PortalInteractionMixin:
@@ -101,6 +101,10 @@ class PortalInteractionMixin:
                       '僅三份同版官方表成功交叉匹配者可單次手動試傳；'
                       '其餘停用，實際換圖須以伺服器回覆為準，不引用 1262 舊報告。',
                       wraplength=680).pack(fill='x', padx=10, pady=8)
+            status = portal_source_diagnostic(
+                self.portals.data.get('portal_metadata_status'))
+            ttk.Label(win, text='傳點名稱／位置資料：' + status,
+                      wraplength=680).pack(fill='x', padx=10)
             if not self.portals.data.get('source_ready'):
                 ttk.Label(win, text='1275 官方資源尚未完成安裝／校驗，請重新登入。',
                           wraplength=680).pack(fill='x', padx=10)
