@@ -17,9 +17,11 @@ from wlre.services.world.npc_talk import load_catalog as load_npc_talks, dialogu
 from wlre.services.world.npc_interact import NPCInteractIndex
 from wlre.services.world.npc_shop import shop_catalog
 from wlre.services.world.npc_item_data import item_catalog, sellable
+from wlre.features.minimap.map_view import MinimapCanvasMixin
+from wlre.features.minimap.buttons import MinimapPickMixin
 
 
-class HomeMap(ttk.Frame):
+class HomeMap(MinimapCanvasMixin, MinimapPickMixin, ttk.Frame):
     def __init__(self,parent,on_pick,on_navigation,on_move=None,on_portal=None,status_parent=None,show_status=True,compact=False,on_npc=None,on_npc_next=None):
         super().__init__(parent,padding=8 if compact else 12)
         self.on_pick,self.on_navigation=on_pick,on_navigation
@@ -647,127 +649,6 @@ class HomeMap(ttk.Frame):
         tree.configure(yscrollcommand=bar.set);tree.pack(fill='both',expand=True)
         for row in self.portals.audit.values():
             tree.insert('', 'end',iid=str(row['scene']),values=(row['scene'],row['name'],row['count'],row['normal'],row['event'],row.get('direct_ready',0),row['status']))
-
-    def resize(self,event):
-        if self._resize_job:self.after_cancel(self._resize_job)
-        self._resize_job=self.after(60,self.draw)
-
-    def view(self):
-        w,h=self.canvas.winfo_width(),self.canvas.winfo_height()
-        size=max(1,min(w,h)-16)
-        return (w-size)/2,(h-size)/2,size/1024
-
-    def screen_pixel(self,u,v):
-        left,top,scale=self.view()
-        return left+u*scale,top+v*scale
-
-    def draw(self):
-        self._resize_job=None
-        self.canvas.delete('all')
-        if not self.projection:
-            self.canvas.create_text(self.canvas.winfo_width()/2,self.canvas.winfo_height()/2,
-                                    text=('等待角色地圖同步…' if self.selected_id is None else '此場景沒有原始小地圖\n請從左側清單選擇返回出口\n地圖圖示與座標操作已停用'),fill='#c8d3dc',font=('Microsoft JhengHei UI',-14),justify='center')
-            return
-        left,top,scale=self.view()
-        size=max(1,round(1024*scale))
-        if self.image:
-            image_key=(self.selected_id,size)
-            if getattr(self,'_photo_key',None)!=image_key or getattr(self,'_photo_source',None) is not self.image:
-                self.photo=ImageTk.PhotoImage(self.image.resize((size,size),Image.Resampling.LANCZOS),master=self.canvas)
-                self._photo_key=image_key
-                self._photo_source=self.image
-            self.canvas.create_image(left,top,image=self.photo,anchor='nw')
-        if self.route:
-            xy=[c for p in self.route['points'] for c in self.screen_pixel(*self.projection.navigation_to_pixel(p[0],p[2]))]
-            if len(xy)>=4:self.canvas.create_line(*xy,fill='#ffce58',width=3)
-        for p in self.portal_rows:
-            if not p['coordinate_valid']:continue
-            px,py=self.screen_pixel(*self.projection.packet_to_pixel(p['x'],p['y']))
-            color='#b591ff' if p['kind']=='event' else '#57e9ef'
-            if not p.get('direct_eligible'):color='#9b9b9b'
-            selected=p is self.selected_portal
-            r=8 if selected else 5
-            self.canvas.create_oval(px-r-2,py-r-2,px+r+2,py+r+2,fill='#183e4d',outline='#fff6a0' if selected else '#dafcff',width=2)
-            spiral=[]
-            for step in range(37):
-                angle=step/36*math.pi*3.5;radius=step/36*r
-                spiral.extend((px+math.cos(angle)*radius,py+math.sin(angle)*radius))
-            self.canvas.create_line(*spiral,fill=color,width=2,smooth=True)
-            if selected:self.canvas.create_text(px,py-14,text=p['name'],fill='white',anchor='s')
-        for npc in self.npc_rows:
-            x,y=npc['x'],npc['y']
-            if x is None or y is None or not 0<=x<=65535 or not 0<=y<=65535:
-                continue
-            u,v=self.projection.packet_to_pixel(x,y)
-            if not 0<=u<=1024 or not 0<=v<=1024:
-                continue
-            px,py=self.screen_pixel(u,v)
-            selected=npc is self.selected_npc
-            radius=5 if selected else 3
-            self.canvas.create_oval(px-radius,py-radius,px+radius,py+radius,
-                                    fill='#be8bec',outline='#fff3c1' if selected else '')
-            if selected:
-                self.canvas.create_text(px,py-12,text=npc['name'],fill='white',anchor='s')
-        location=self.state.get('location',{})
-        fix=location.get('confirmed')
-        displayed=current_position(self.state)
-        if displayed and displayed['scene']==self.selected_id:
-            if displayed['kind']=='local_report' and fix:
-                x,y=self.screen_pixel(*self.projection.packet_to_pixel(fix['x'],fix['y']))
-                self.canvas.create_oval(x-5,y-5,x+5,y+5,fill='',outline='#b7bec7',width=2)
-                self.canvas.create_text(x+9,y-12,text=f"上次位置 ({fix['x']}, {fix['y']})",fill='#c5cbd3',anchor='w')
-            x,y=self.screen_pixel(*self.projection.packet_to_pixel(displayed['x'],displayed['y']))
-            self.canvas.create_oval(x-6,y-6,x+6,y+6,fill='#ed4747' if displayed['filled'] else '',outline='#ff5959',width=2)
-            self.canvas.create_text(x+9,y+13,text=f"({displayed['x']}, {displayed['y']})",fill='white',anchor='w')
-        targets=[t for t in (location.get('requested_destination'),location.get('server_destination')) if t and t.get('scene')==self.selected_id]
-        local=self.state.get('local_movement')
-        if local and local.get('scene')==self.selected_id:
-            targets=[local['target']]
-        if targets:
-            target=max(targets,key=lambda t:t.get('packet_number',0))
-            x,y=self.screen_pixel(*self.projection.packet_to_pixel(target['x'],target['y']))
-            self.canvas.create_oval(x-7,y-7,x+7,y+7,outline='#ffc654',width=2)
-        if not self.state.get('player'):
-            self.canvas.create_text(left+12,top+12,text='離線地圖預覽',fill='white',anchor='nw')
-
-    def pick(self,event):
-        if not self.projection:return False
-        marker=nearest_marker(self.portal_rows,self.projection,self.screen_pixel,event.x,event.y)
-        if marker is not None:
-            self.select_portal(marker)
-            return False
-        # NPC markers are position references, not walk or event commands.
-        npc_candidates=[]
-        for npc in self.npc_rows:
-            if npc['x'] is None or npc['y'] is None or not 0<=npc['x']<=65535 or not 0<=npc['y']<=65535:
-                continue
-            u,v=self.projection.packet_to_pixel(npc['x'],npc['y'])
-            if not 0<=u<=1024 or not 0<=v<=1024:
-                continue
-            px,py=self.screen_pixel(u,v)
-            if math.hypot(px-event.x,py-event.y)<=8:
-                npc_candidates.append((math.hypot(px-event.x,py-event.y),npc))
-        if npc_candidates:
-            self.select_npc(min(npc_candidates,key=lambda x:x[0])[1])
-            return False
-        self.selected_portal=None
-        self.selected_npc=None
-        self.update_portal_button()
-        left,top,scale=self.view()
-        u,v=(event.x-left)/scale,(event.y-top)/scale
-        if not (0<=u<=1024 and 0<=v<=1024):return False
-        x,y=self.projection.pixel_to_packet(u,v)
-        x,y=round(x),round(y)
-        if not (0<=x<=65535 and 0<=y<=65535):
-            self.note.set('此處超出遊戲座標範圍。');return False
-        return self.on_pick(self.selected_id,x,y) is not False
-
-    def double_pick(self,event):
-        marker=nearest_marker(self.portal_rows,self.projection,self.screen_pixel,event.x,event.y) if self.projection else None
-        if marker is not None:
-            self.select_portal(marker);self.go_portal()
-        elif self.pick(event) and self.on_move is not None:self.on_move()
-        return 'break'
 
     def set_state(self,state,force=False):
         previous_navigation=self.state.get('navigation',{})
