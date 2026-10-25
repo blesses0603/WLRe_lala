@@ -5,9 +5,29 @@ through inheritance. This layer keeps missing image / stale navigation closed.
 """
 from wlre.services.world.navigation import NavigationError
 from wlre.services.world.map_names import map_label, parse_map_id
+from wlre.services.world.scene_names_1275 import source_scene_label
 
 
 class MinimapNavigationMixin:
+    def scene_display_name(self):
+        """The map header is sourced only from the selected scene ID.
+
+        Portal event labels and selected destinations must never be used as
+        the map title. 1275 without verified names shows a numeric scene ID,
+        not an outdated 1262 name.
+        """
+        scene_id = self.selected_id
+        catalog = getattr(self, 'portals', None)
+        data = getattr(catalog, 'data', {}) if catalog is not None else {}
+        if data.get('source_revision') == 1275:
+            return source_scene_label(scene_id, data.get('scene_names', {}))
+        return map_label(scene_id)
+
+    def update_scene_title(self):
+        if type(getattr(self, 'selected_id', None)) is not int:
+            return
+        self.map_title.set('小地圖｜' + self.scene_display_name())
+
     def show_map(self,map_id):
         self.route=None
         self.image=None
@@ -15,16 +35,16 @@ class MinimapNavigationMixin:
         self.projection=None
         try:
             self.selected_id=parse_map_id(map_id)
-            self.map_title.set('小地圖｜'+map_label(self.selected_id))
+            self.update_scene_title()
             self.projection,scene=self.maps.projection(self.selected_id)
             self.image=self.maps.image(scene)
             if self.image is not None:
                 try:self.mesh=self.repository.load(scene)
                 except NavigationError:pass
-                self.note.set(map_label(self.selected_id)+'｜原始小地圖')
+                self.note.set(self.scene_display_name()+'｜原始小地圖')
             else:
                 self.projection=None
-                self.note.set(map_label(self.selected_id)+'｜沒有原始小地圖；請使用左側返回出口。')
+                self.note.set(self.scene_display_name()+'｜沒有原始小地圖；請使用左側返回出口。')
         except (OSError,ValueError,KeyError) as exc:
             self.image=None;self.mesh=None;self.projection=None
             self.note.set(str(exc))
