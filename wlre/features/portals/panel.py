@@ -77,8 +77,9 @@ class PortalInteractionMixin:
             win.title('1275 官方門事件（位置預覽）')
             configure_dialog(win, 730, 460)
             win.resizable(False, False)
-            ttk.Label(win, text='1275 Eve 門事件索引與位置已讀取。'
-                      '目的地、事件觸發及換圖回覆尚未核對，禁止傳送；不引用 1262 舊報告。',
+            ttk.Label(win, text='1275 Eve 門事件來源已核對。'
+                      '僅三份同版官方表成功交叉匹配者可單次手動試傳；'
+                      '其餘停用，實際換圖須以伺服器回覆為準，不引用 1262 舊報告。',
                       wraplength=680).pack(fill='x', padx=10, pady=8)
             if not self.portals.data.get('source_ready'):
                 ttk.Label(win, text='1275 官方資源尚未完成安裝／校驗，請重新登入。',
