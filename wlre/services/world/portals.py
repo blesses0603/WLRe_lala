@@ -195,11 +195,33 @@ class Portals:
         return portal['scene'],x,y
 
 
+
+def portal_map_pixel(portal, projection):
+    """Only return portal position inside the matching 1024px map image.
+
+    The verified flag represents a packet-space coordinate, not a raw
+    Eve grid event. A stale/off-map marker is neither drawn nor clickable.
+    """
+    if not portal.get('coordinate_valid') or projection is None:
+        return None
+    x, y = portal.get('x'), portal.get('y')
+    if (type(x) is not int or type(y) is not int
+            or not 0 <= x <= 65535 or not 0 <= y <= 65535):
+        return None
+    u, v = projection.packet_to_pixel(x, y)
+    if not (math.isfinite(u) and math.isfinite(v)
+            and 0 <= u <= 1024 and 0 <= v <= 1024):
+        return None
+    return (u, v)
+
+
 def nearest_marker(rows,projection,screen,event_x,event_y,radius=12):
     hits=[]
     for p in rows:
-        if not p['coordinate_valid']:continue
-        x,y=screen(*projection.packet_to_pixel(p['x'],p['y']))
+        point = portal_map_pixel(p, projection)
+        if point is None:
+            continue
+        x, y = screen(*point)
         distance=math.hypot(x-event_x,y-event_y)
         if distance<=radius:hits.append((distance,p))
     return min(hits,key=lambda h:h[0])[1] if hits else None
