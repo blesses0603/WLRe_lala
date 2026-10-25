@@ -26,7 +26,7 @@ class MinimapNavigationMixin:
     def update_scene_title(self):
         if type(getattr(self, 'selected_id', None)) is not int:
             return
-        self.map_title.set('小地圖｜' + self.scene_display_name())
+        self.map_title.set('小地圖｜' + MinimapNavigationMixin.scene_display_name(self))
 
     def show_map(self,map_id):
         self.route=None
