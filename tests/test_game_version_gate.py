@@ -77,8 +77,9 @@ class RemoteGameVersionTests(unittest.TestCase):
                        "wlre.services.world.runtime_1275.ready",
                        return_value=(True, "1275 fixture verified")):
             got = run_prelogin_check()
-        self.assertEqual(got["status"], "unverified")
-        self.assertFalse(got["blocked"])
+        self.assertEqual(got["status"], "blocked")
+        self.assertTrue(got["blocked"])
+        self.assertIn("不能替代本次官方版本確認", got["message"])
 
     def test_local_1275_assets_required_even_if_network_unknown(self):
         with patch("wlre.services.game_version_gate.check_official_game_resources",
