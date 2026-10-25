@@ -84,7 +84,7 @@ wlre/
 | 協力／一般副本 | `ui/instance_catalog_ui.py` → `services/instance_browser.py` | `instance_catalog_1262.json` | 共用資料，未證實有同 Schema／完整記錄的 1275 替代；**保留** |
 | 小地圖／位置標記 | `features/minimap/map_view.py`、`ui/home_map.py` → `services/world/smallmaps.py` | `smallmaps.zip`、`map_names.json`、`stage_coordinates.json` | 尚無可重建的等價來源／投影核對；**保留** |
 | 導航路線顯示 | `features/minimap/navigation_ui.py` → `services/world/navigation.py` | `navigation_data.zip` | 路由只作已審核資料參考；無法證明 1275 網格等價；**保留** |
-| 傳送點 | `features/portals/panel.py` → `services/world/portals.py`／`portal_policy.py` | `portals.json` | **1275 已驗證 Eve NewDoor 門事件索引／座標可唯讀顯示在清單及地圖，選取僅填入目的地座標**；目的地與觸發條件未獨立驗證，C20-8 指令仍拒絕，**保留舊資源作 1262 歷史稽核、不繞過版本限制** |
+| 傳送點 | `features/portals/panel.py` → `services/world/portals.py`／`portal_policy.py`／`portal_links_1275.py` | `portals.json`、1275 `Eve`／`StageMapData_C`／`EveDoorLinks` | 1275 官方門事件座標與所在場景可顯示；同版三表的場景／索引／座標／目的地全數一致才顯示真實目標名稱並解鎖**使用者二次確認的一次性 C20-8 試傳**，角色場景只由伺服器確認；來源不完整時仍停用、無 1262 門 ID 回退，尚須正式服驗收 |
 | NPC／唯讀商店 | `features/npc/panel.py` → `services/world/npc_catalog.py`、`npc_talk.py`、`npc_shop.py` | `npc_*_1262.json.gz` 各索引 | 1275 NPC 索引由已驗證 Runtime 提供的部分，不代表對話／選項／交易全面相容；**舊檔仍屬封裝要求，禁止未經證實移除** |
 
 上述每個資源目前仍在 `resource_manifest.REQUIRED_RESOURCES`。清單只做程式碼來源盤點，不代表已完成官方 1275 與 1262 等價性、使用者正式服流程或封裝乾淨安裝驗收。
@@ -124,6 +124,14 @@ wlre/
 - [x] P3 傳點所在場景名稱匹配：從已驗證官方 1275 `ScenesData_C.name_id` 與 `TextData_C` 建立場景 ID→中文名稱，正式 ZIP／官方 Bundle 兩路 Runtime 共同輸出 `scene_names`；1275 傳點清單、選取狀態及小地圖標題共用此來源。缺正式中文名稱時只顯示「場景 ID」，不借用舊版 1262 名稱或把所在場景誤認為傳送目的地。目的地仍未知、換圖停用；新增場景名稱對應及安全回歸測試（CI 待驗證）。
 - [ ] P4 其餘會話事件協調及 P5 服務責任核查，仍須正式服 E2E、官方 1275 副本／地圖等價性與完整跨平台打包驗收。
 - [ ] 全功能正式服 E2E、乾淨安裝、正式安裝包／Release 驗收（尚未宣稱完成）。
+
+### 小地圖傳送問題修復範圍（PR #57，待 CI／正式服驗收）
+
+- **重複名稱已消除**：小地圖標題只顯示已驗證的來源場景中文名稱；傳點清單僅顯示門事件索引或交叉核對後的**目的地**名稱。
+- **1275 同版來源交叉核對**：新增 `portal_links_1275.py`，嚴格解析 `StageMapData_C`（門事件標記）、`EveDoorLinks`（目的地）、`Eve.NewDoor`（來源門 index／XY），要求場景、索引、來源座標與目的地場景全部吻合；對應資料從原本 Release-pinned Manifest／已驗證 Bundle 或經驗證正式 ZIP 載入，不能用 1262 路線猜測。
+- **安全單次試傳**：只有完成上述匹配且目的地存在可預覽地圖時，讓使用者在明確確認視窗後送出既有 C20-8；仍由 `PortalTravel` 拒絕戰鬥／事件阻塞、同一請求重複送出，並等候真實位置同步，拒絕逾時重送與本機假造換圖成功。
+- **安全降級**：需要資源未下載、二進位布局不相容、門事件座標不一致、目的地不存在或無可用小地圖時，一律顯示可核對資訊但不允許送封包。
+- **驗收限制**：目前只有本地程式碼與模擬資料可檢查這個流程。尚無本次 1275 正式伺服器真實 C20-8 換圖成功截圖／Log，不得將「手動可嘗試」宣稱為「已完成實機傳送」。
 
 ### 尚未能由 CI 單獨證明的正式驗收
 
