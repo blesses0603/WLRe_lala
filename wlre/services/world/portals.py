@@ -29,6 +29,11 @@ class Portals:
                     linked = getattr(verified, 'portal_destinations', {})
                     if not isinstance(linked, dict):
                         linked = {}
+                    portal_names = getattr(verified, 'portal_names', {})
+                    if not isinstance(portal_names, dict):
+                        portal_names = {}
+                    portal_metadata_status = getattr(
+                        verified, 'portal_metadata_status', 'missing_stage_map')
                     door_count = sum(len(rows) for rows in verified.doors.values())
                     for scene, entries in verified.doors.items():
                         if (type(scene) is int and 0 <= scene <= 65535):
@@ -68,13 +73,23 @@ class Portals:
                             # Door indices are internal event IDs, not
                             # geographical or destination names. Never present
                             # an event label as the name of a scene.
-                            label = (f'前往 {target_label}（傳點 #{index}）'
-                                     if verified_target else
-                                     f'傳點 #{index}（目的地待確認）')
+                            # Lua/UIMain first uses StageMapData.NameID and
+                            # only falls back to the destination stage's name.
+                            # A verified marker label is useful even when the
+                            # separate EveDoorLinks route cannot be resolved.
+                            official_name = portal_names.get((scene_id, index))
+                            if (type(official_name) is not str
+                                    or not official_name.strip()):
+                                official_name = None
+                            label = (official_name or
+                                     f'前往 {target_label}' if verified_target
+                                     else official_name or
+                                     f'傳點 #{index}（官方名稱未取得）')
                             visible.append({
                                 'id': f'1275:{scene_id}:{index}',
                                 'scene': scene_id, 'index': index,
                                 'name': label,
+                                'official_name': official_name,
                                 'source_scene_label': scene_label,
                                 'source_scene_name_known': scene_id in scene_names,
                                 'destination_label': target_label,
@@ -108,6 +123,15 @@ class Portals:
                     'source_revision': 1275,
                     'door_count': door_count,
                     'scene_names': scene_names,
+                    'portal_metadata_status': (
+                        portal_metadata_status if source_ready
+                        else 'core_runtime_unavailable'),
+                    'portal_name_count': sum(
+                        bool(item.get('official_name')) for row in doors.values()
+                        for item in row),
+                    'destination_count': sum(
+                        bool(item.get('destination_verified')) for row in doors.values()
+                        for item in row),
                     'source_ready': source_ready,
                 }
                 self.audit = {}
