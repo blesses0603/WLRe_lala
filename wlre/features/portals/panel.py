@@ -8,6 +8,7 @@ from tkinter import ttk, messagebox
 from wlre.paths import PROJECT_ROOT
 from wlre.ui.window_layout import configure_dialog
 from wlre.services.world.portal_policy import destination_problem
+from wlre.services.world.portals import portal_map_pixel
 
 
 class PortalInteractionMixin:
@@ -35,10 +36,21 @@ class PortalInteractionMixin:
         self.portal_list.see(self.list_rows.index(p))
         self.portal_status.set(p['name']+'｜'+p.get('direct_note','尚未核對觸碰事件'))
         self.update_portal_button()
-        if (p.get('source_revision') == 1275
-                and p.get('coordinate_valid') and self.on_pick is not None):
-            # Sets destination fields only. Never call on_move or on_portal.
-            self.on_pick(self.selected_id, p['x'], p['y'])
+        if (p.get('source_revision') == 1275 and self.on_pick is not None):
+            # Selecting a list row is NOT proof that Eve.NewDoor grid XY
+            # can be used as a packet-space destination. Recheck projection
+            # before updating the navigation target (never auto-move).
+            point = portal_map_pixel(p, getattr(self, 'projection', None))
+            if point is not None:
+                self.on_pick(self.selected_id, p['x'], p['y'])
+            elif not p.get('coordinate_valid'):
+                self.portal_status.set(
+                    p['name'] + '｜傳點位置尚未通過官方座標換算，'
+                    '已停用選點與換圖')
+            else:
+                self.portal_status.set(
+                    p['name'] + '｜轉換後位置超出目前小地圖範圍，'
+                    '已停用選點')
         self.draw()
 
     def go_portal(self):
