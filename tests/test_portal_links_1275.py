@@ -10,6 +10,8 @@ from wlre.services.world.portal_links_1275 import (
 from wlre.services.world.portals import Portals
 from wlre.services.world.portal_policy import destination_problem
 from wlre.features.portals.panel import PortalInteractionMixin
+from wlre.services.world.portal_travel import PortalTravel
+from wlre.core.state import State
 
 
 def stage_rows(*rows):
@@ -118,6 +120,36 @@ class PortalLinks1275Test(unittest.TestCase):
                    return_value=True):
             self.assertTrue(page.go_portal())
         page.on_portal.assert_called_once_with(row['id'])
+
+    def test_confirmed_manual_try_sends_once_then_waits_for_server_scene(self):
+        runtime = SimpleNamespace(
+            doors={12170: [{'index': 1, 'x': 5701, 'y': 3230}]},
+            portal_destinations=verified_mapping(),
+            scene_names={12171: '瑪雅野豬叢林三'})
+        with patch('wlre.services.world.runtime_1275.baseline_revision',
+                   return_value='1275'), patch(
+                'wlre.services.world.runtime_1275.active_runtime',
+                return_value=runtime):
+            catalog = Portals()
+        row = catalog.for_scene(12170)[0]
+        state = State()
+        state.player.update({'role_id': 42, 'scene': 12170,
+                             'x': 5701, 'y': 3230})
+        move = Mock()
+        service = PortalTravel(catalog=catalog)
+        packets = service.start_direct(state, move, row['id'], now=10.0)
+        self.assertEqual(len(packets), 1)
+        self.assertEqual((packets[0].main, packets[0].sub), (20, 8))
+        self.assertEqual(state.portal_travel['status'], 'awaiting_map')
+        self.assertEqual(state.player['scene'], 12170)
+        self.assertEqual(service.start_direct(state, move, row['id'], now=11.0), [])
+        move.stop.assert_called_once()
+        service.observe({'type': 'position_snapshot', 'role_id': 42,
+                         'scene': 12171, 'x': 100, 'y': 200}, state, move)
+        self.assertEqual(state.portal_travel['status'], 'completed')
+        self.assertEqual(state.portal_travel['arrival']['scene'], 12171)
+        self.assertEqual(state.player['scene'], 12170)
+        self.assertIsNone(service.pending)
 
 
 if __name__ == '__main__':
