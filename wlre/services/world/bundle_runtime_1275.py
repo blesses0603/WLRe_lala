@@ -27,6 +27,9 @@ _REQUIRED_TABLES = (
     'AdventureData_C', 'AdventureLvData_C',
     'NpcData_C', 'NpcCareerData_C',
 )
+# Optional: source-verified portal metadata. An absent or changed layout never
+# breaks the core ten-table NPC/recipe runtime or enables game packets.
+_PORTAL_TABLES = ('StageMapData_C', 'EveDoorLinks')
 _ASSET_ROOT = 'Assets/ResourcesBuild/Data/'
 
 
@@ -101,7 +104,7 @@ def sync_pinned_runtime_bundles(*, sync_root=None,
 
     from wlre.services.official_incremental_sync import IncrementalSyncError
     asset_paths = tuple(_ASSET_ROOT + name + '.bytes'
-                        for name in _REQUIRED_TABLES)
+                        for name in _REQUIRED_TABLES + _PORTAL_TABLES)
     try:
         plan = build_update_plan(
             manifests['DataPackage'], asset_paths=asset_paths,
@@ -160,6 +163,7 @@ def load_verified_bundle_runtime(*, sync_root=None):
         SOURCE_SHA256 as EVE_SHA256, parse_doors_1275)
     from wlre.services.instance_catalog import parse_stages
     from wlre.services.world.scene_names_1275 import bind_scene_names
+    from wlre.services.world.portal_links_1275 import verified_portal_destinations
 
     root = Path(sync_root) if sync_root is not None else data_root() / 'official_sync'
     # An optional four-feature *candidate* may be incomplete when the Eve
@@ -243,6 +247,34 @@ def load_verified_bundle_runtime(*, sync_root=None):
         scene_rows = parse_stages(sources['ScenesData_C'])
         stage = 'Eve'
         doors = parse_doors_1275(eve)
+        portal_destinations = {}
+        try:
+            optional = {}
+            for table in _PORTAL_TABLES:
+                asset = _ASSET_ROOT + table + '.bytes'
+                portal_plan = build_update_plan(
+                    verified_data, asset_paths=(asset,), cache_root=bundle_root)
+                if (not portal_plan.entries
+                        or any(row.action != 'cached' for row in portal_plan.entries)):
+                    break
+                paths = tuple(row.spec.cache_path(bundle_root)
+                              for row in portal_plan.entries)
+                if any(not _verified_file(path, row.spec)
+                       for path, row in zip(paths, portal_plan.entries)):
+                    break
+                binding = AssetBinding(
+                    asset, SourceContract(
+                        'scenes', table, 'stage-new-76-v1',
+                        '0' * 64, 'DataPackage', verified_data.spec.package_version))
+                optional[table] = extract_textasset(binding, paths, loader=load_container)
+            if len(optional) == len(_PORTAL_TABLES):
+                portal_destinations = verified_portal_destinations(
+                    optional['StageMapData_C'], optional['EveDoorLinks'],
+                    doors, scene_rows)
+        except (OSError, ValueError, TypeError, KeyError, RuntimeError):
+            # Optional portal links cannot invalidate otherwise audited
+            # 1275 NPC/recipe runtime or authorize an unverified transfer.
+            portal_destinations = {}
         if len(recipes) != 1032 or any(
                 ident not in items or type(items[ident].get('open_used')) is not int
                 for ident in recipes):
@@ -299,6 +331,7 @@ def load_verified_bundle_runtime(*, sync_root=None):
             recipes=recipes,
             scene_ids=frozenset(scene_rows),
             scene_names=bind_scene_names(scene_rows, texts),
+            portal_destinations=portal_destinations,
             doors=doors, expedition=expedition,
         )
     except BundleRuntimeUnavailable:
