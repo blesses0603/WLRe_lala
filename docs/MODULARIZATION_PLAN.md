@@ -157,6 +157,15 @@ wlre/
 - **官方名稱與目的地**：StageMap Kind 2（普通傳點）、Kind 3（隱藏傳點）的有效 NameID 都能讀取；NameID 缺失時，可從同版 StageMap 的 SceneID/EvtID 對應 EveDoorLinks 目的地，以已核對 ScenesData＋TextData 的場景中文名做**唯讀參考**。不同座標系統的 XY 不作相等比對來決定名稱；*只有名稱*不會授權 C20-8 或直接換圖。
 - **完整性與驗收**：新增正式 ZIP／Bundle 來源優先順序、缺資源診斷、Kind 3 名稱及唯讀目的地回退回歸測試。仍缺真正的 1275 場景 11016 StageMapData_C/EveDoorLinks TextAsset，故無法聲稱已取得兩個實際官方傳送點的中文名稱；必須以 PR 分支重新啟動並完成官方 Bundle 同步後，核對小地圖提示與兩筆實際名稱。
 
+### 2026-10-25 跨版本傳點欄位辨識：1262 Lua 為契約參考，不沿用舊傳點實際值
+
+- **來源可稽核**：由使用者上傳的 `WLRE_Lua_1262_Decoded_Analysis(1).zip` 讀取 `Lua/Data/StageMapData.lua`、`Lua/Data/EveDoorLinksData.lua`、`Lua/Logic/Data.lua` 和 `Lua/UI/Logic/UIMain.lua`；前者明定 `SceneID(u16), Kind(u8), CrossSceneNumber(u16), EvtID(u32), PositionX(u16), PositionY(u16), NameID(u32), Sorting(u8)`，總計每筆 18 bytes，表頭 Int32 筆數。
+- **三份來源角色分離**：`StageMapData_C` Kind=2/3 分別為一般與隱藏傳點，可用 `NameID` 對當版 `TextData_C`；`EveDoorLinks` 是 UTF-16LE 場景標頭與方括號連線文字；`DoorLinkData_C` 是 Int32 筆數 + 每筆 6 個 u16 (12 bytes) 的場景連線資料，它沒有 EveDoorLinks 的傳點事件索引，不可拿順序強行當作 EvtID。
+- **跨版辨識器**：`wlre/services/world/portal_schema.py` 提供 `recognize_portal_source(table, verified_raw)`，在來源已完成官方 hash/Manifest 驗證後，以**完整記錄長度／欄位範圍／文字編碼**識別既有 Schema；回傳不包含猜測欄位、也不允許送封包的 JSON-friendly verdict。結構不符直接回傳 `layout_unrecognized`，不做任意位元組掃描、偏移猜測或套用 1262 的實際場景座標。
+- **實際接線**：已將結構辨識接入經驗證的 1275 Bundle Runtime 與正式 ZIP 讀取流程，保留 `portal_schema_report`，只在舊版欄位相容時進行當版資料表的名稱／目的地唯讀解析；未知結構保留 NPC／製作等核心功能且在小地圖提供不相容診斷。
+- **未來版本限制**：結構辨識**不等於**新版本來源已通過審核。`runtime_1275` 及 `sync_pinned_runtime_bundles` 仍對 1275 Manifest 使用已審核 SHA-256 固定版本；未來官方版本需要由官方更新流程先取得可信 Manifest、Bundle 與 TextAsset，再做格式辨識與完整相容性測試。任何新版資料不得因 Schema 長得相似就自動放行 C20-8／換圖。
+- **測試**：`tests/test_portal_schema_1262_compat.py` 覆蓋三種 1262 schema、Kind 2／3 名稱、未知尾段、截斷、錯誤 endian、無效目的地與格式交叉誤判；`tests/test_bundle_runtime_1275.py` 新增正式 Runtime 保留結構辨識報告與未知表安全降級。新手海灘 11016 兩筆**實際**傳點名稱仍須取得官方 1275 TextAsset 才能驗收。
+
 ### 尚未能由 CI 單獨證明的正式驗收
 
 - **Windows 正式遊戲／網路回覆：** 1275 版本閘門、官方 Bundle 校驗與登入；副本創／入／退、房主開始及進場；協力房間待命與免費領獎；NPC 手動互動／唯讀商店，傳點不合法目標拒絕，全部需記錄正式伺服器回覆與操作前後 State。
