@@ -137,7 +137,8 @@ class Portals:
                                 display_scene = None
                             display_label = (source_scene_label(
                                 display_scene, scene_names)
-                                if display_scene is not None else None)
+                                if display_scene is not None else
+                                target_label if verified_target else None)
                             # Display-only official linkage is NOT a verified
                             # C20-8 trigger. Even a named target cannot grant
                             # direct_eligible or supply packet event indices.
