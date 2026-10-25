@@ -205,6 +205,7 @@ def load_preview(data_archive, eve_archive):
         portal_schema_report['StageMapData_C'] = recognize_portal_source(
             'StageMapData_C', stage_map)
         if portal_schema_report['StageMapData_C']['status'] != 'recognized':
+            portal_metadata_status = 'layout_unrecognized'
             raise PortalLinkSourceError('StageMapData 不符合已知 1262 欄位結構')
         # StageMapData.NameID is independently useful, even when links are
         # absent. Do not drop its official labels with the destination map.
