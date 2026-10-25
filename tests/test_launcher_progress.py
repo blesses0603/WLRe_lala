@@ -49,6 +49,20 @@ class LauncherProgressTests(unittest.TestCase):
                          f'第 {len(STEPS)} / {len(STEPS)} 階段')
         self.assertNotIn('%', progress_message('bundle_sync', {'count': 1, 'bytes': 10}))
 
+    def test_future_official_revision_notice_is_staging_only(self):
+        text = progress_message('official_revision', {
+            'state': 'changed', 'data': '1257', 'main': '1257'})
+        self.assertIn('版本異動', text)
+        self.assertIn('1257', text)
+        self.assertIn('候選', text)
+        self.assertNotIn('登入成功', text)
+        self.assertIn('首次記錄', progress_message('official_revision', {
+            'state': 'first_observation', 'data': '1246', 'main': '1246'}))
+        self.assertIn('未變', progress_message('official_revision', {
+            'state': 'unchanged', 'data': '1257', 'main': '1257'}))
+        self.assertNotIn('secret', progress_message('official_revision', {
+            'state': 'changed', 'data': 'C:/secret', 'main': '1257'}))
+
     def test_untrusted_event_details_are_not_displayed(self):
         self.assertNotIn('C:\\secret', progress_message(
             'manifest', {'package': 'C:\\secret'}))
