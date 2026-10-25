@@ -147,6 +147,21 @@ class AutoCatalogTests(unittest.TestCase):
         self.assertEqual(changed[0]['state'], 'changed')
         self.assertEqual(changed[0]['data'], '1275')
 
+    def test_version_change_mid_manifest_sync_never_records_observation(self):
+        updated = dict(self.snapshot, packages=dict(self.snapshot['packages']))
+        updated['packages']['MainPackage'] = '1276_2026_10_25_01_00_00_01'
+        observations = iter((self.snapshot, updated))
+        params = self.kwargs(observe=None, retrieve=None)
+        with patch('wlre.services.world.auto_catalog.observe_official_versions',
+                   side_effect=lambda: next(observations)), patch(
+                       'wlre.services.world.auto_catalog.fetch_official_manifest',
+                       side_effect=lambda spec, cache_root=None:
+                       self.manifests[spec.package]), patch(
+                       'wlre.services.official_resource_sync.save_snapshot') as save:
+            with self.assertRaisesRegex(AutoCatalogError, 'version changed'):
+                run_auto_catalog(**params)
+        save.assert_not_called()
+
     def test_injected_fixture_never_updates_real_observed_version(self):
         with patch('wlre.services.official_resource_sync.read_snapshot') as read, patch(
                 'wlre.services.official_resource_sync.save_snapshot') as save:
