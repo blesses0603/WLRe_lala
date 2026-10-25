@@ -127,37 +127,57 @@ def sync_pinned_runtime_bundles(*, sync_root=None,
             RuntimeError, IncrementalSyncError) as exc:
         raise BundleRuntimeUnavailable('必要官方 1275 Bundle 同步失敗') from exc
 
-    # Optional portal metadata must never stop the ten-table core runtime.
-    # Allocate only the remaining pinned download budget and verify each
-    # additional Bundle before allowing read-only destination previews.
-    portal_count, portal_bytes, portal_ready = 0, 0, False
-    try:
-        optional_paths = tuple(_ASSET_ROOT + table + '.bytes'
-                               for table in _PORTAL_TABLES)
-        portal_plan = build_update_plan(
-            manifests['DataPackage'], asset_paths=optional_paths,
-            cache_root=root / 'bundles')
-        portal_count = sum(row.action != 'cached' for row in portal_plan.entries)
-        portal_bytes = sum(row.spec.file_size for row in portal_plan.entries
-                           if row.action != 'cached')
-        remaining_count = max_downloads - count
-        remaining_bytes = max_download_bytes - needed
-        if (portal_count <= remaining_count and portal_bytes <= remaining_bytes):
-            execute(portal_plan, cache_root=root / 'bundles', download=True,
+    # StageMapData_C is independently useful for human-facing portal names.
+    # Never let an unavailable EveDoorLinks consume the entire optional sync
+    # budget or prevent StageMapData from being cached.
+    remaining_count = max_downloads - count
+    remaining_bytes = max_download_bytes - needed
+    portal_count, portal_bytes = 0, 0
+    portal_available = {}
+    portal_failures = {}
+    for table in _PORTAL_TABLES:
+        try:
+            optional_plan = build_update_plan(
+                manifests['DataPackage'],
+                asset_paths=(_ASSET_ROOT + table + '.bytes',),
+                cache_root=root / 'bundles')
+            needed_count = sum(entry.action != 'cached'
+                               for entry in optional_plan.entries)
+            needed_bytes = sum(entry.spec.file_size
+                               for entry in optional_plan.entries
+                               if entry.action != 'cached')
+            if not optional_plan.entries:
+                portal_failures[table] = 'asset_missing_from_manifest'
+                continue
+            if needed_count > remaining_count or needed_bytes > remaining_bytes:
+                portal_failures[table] = 'download_budget_exhausted'
+                continue
+            execute(optional_plan, cache_root=root / 'bundles', download=True,
                     max_download_bytes=remaining_bytes,
                     max_downloads=remaining_count)
-            portal_ready = all(_verified_file(
-                row.spec.cache_path(root / 'bundles'), row.spec)
-                for row in portal_plan.entries)
-    except (OSError, ValueError, TypeError, KeyError,
-            RuntimeError, IncrementalSyncError):
-        portal_ready = False
+            if not all(_verified_file(
+                    row.spec.cache_path(root / 'bundles'), row.spec)
+                    for row in optional_plan.entries):
+                portal_failures[table] = 'bundle_integrity_failed'
+                continue
+            portal_available[table] = True
+            portal_count += needed_count
+            portal_bytes += needed_bytes
+            remaining_count -= needed_count
+            remaining_bytes -= needed_bytes
+        except (OSError, ValueError, TypeError, KeyError,
+                RuntimeError, IncrementalSyncError):
+            portal_failures[table] = 'bundle_sync_failed'
     return {'verified_bundles': len(plan.entries),
             'downloaded_bundles': count,
             'bytes_downloaded': needed,
-            'portal_metadata_ready': portal_ready,
-            'portal_bundles_downloaded': portal_count if portal_ready else 0,
-            'portal_bytes_downloaded': portal_bytes if portal_ready else 0,
+            'portal_metadata_ready': all(
+                portal_available.get(table) for table in _PORTAL_TABLES),
+            'portal_names_bundle_ready': bool(
+                portal_available.get('StageMapData_C')),
+            'portal_bundles_downloaded': portal_count,
+            'portal_bytes_downloaded': portal_bytes,
+            'portal_sync_failures': portal_failures,
             'assets_ready': False, 'can_send_packets': False}
 
 
