@@ -201,8 +201,10 @@ def load_verified_bundle_runtime(*, sync_root=None):
     bundle_root = root / 'bundles'
     load_container = lru_cache(maxsize=3)(_loader)
     sources = {}
+    stage = '原始資料'
     try:
         for table in _REQUIRED_TABLES:
+            stage = table
             asset = _ASSET_ROOT + table + '.bytes'
             plan = build_update_plan(
                 verified_data, asset_paths=(asset,), cache_root=bundle_root)
@@ -218,6 +220,7 @@ def load_verified_bundle_runtime(*, sync_root=None):
                     '0' * 64, 'DataPackage', verified_data.spec.package_version))
             sources[table] = extract_textasset(binding, paths, loader=load_container)
 
+        stage = 'Eve'
         eve = sources['Eve']
         if hashlib.sha256(eve).hexdigest() != EVE_SHA256:
             raise BundleRuntimeUnavailable('1275 Eve 來源 SHA-256 不符')
@@ -227,11 +230,17 @@ def load_verified_bundle_runtime(*, sync_root=None):
                 or interacts.get('record_count') != 1634
                 or len(npc.get('scenes', {})) != 1262):
             raise BundleRuntimeUnavailable('NPC／互動事件數不符合已審核 1275 資料')
+        stage = 'ItemData_C'
         items = parse_itemdata(sources['ItemData_C'])
+        stage = 'TalkData_C'
         talk_rows = parse_talk_data(sources['TalkData_C'])
+        stage = 'TextData_C'
         texts = parse_text_data(sources['TextData_C'])
+        stage = 'SmithData_C'
         recipes = parse_smith_1275(sources['SmithData_C'])
+        stage = 'ScenesData_C'
         scene_rows = parse_stages(sources['ScenesData_C'])
+        stage = 'Eve'
         doors = parse_doors_1275(eve)
         if len(recipes) != 1032 or any(
                 ident not in items or type(items[ident].get('open_used')) is not int
@@ -243,6 +252,7 @@ def load_verified_bundle_runtime(*, sync_root=None):
         # Expedition is a real service catalog, not just a candidate label.
         # This is the same independently audited 1275 source identity that
         # the older full-ZIP loader validates before expedition dispatch.
+        stage = 'AdventureData_C／AdventureLvData_C'
         if (hashlib.sha256(sources['AdventureData_C']).hexdigest()
                 != ADVENTURE_1275_SHA256 or
                 hashlib.sha256(sources['AdventureLvData_C']).hexdigest()
@@ -250,12 +260,14 @@ def load_verified_bundle_runtime(*, sync_root=None):
             raise BundleRuntimeUnavailable('1275 遠征任務／等級來源 SHA-256 不符')
         expedition = parse_expedition(
             sources['AdventureData_C'], sources['AdventureLvData_C'])
+        stage = 'NpcData_C／NpcCareerData_C'
         expedition_npcs = parse_expedition_npcs(
             sources['NpcData_C'], sources['NpcCareerData_C'])
         if (len(expedition['tasks']) != 260
                 or len(expedition['levels']) != 10
                 or len(expedition_npcs) != 7561):
             raise BundleRuntimeUnavailable('1275 遠征任務／夥伴資料筆數不符')
+        stage = 'TextData_C／遠征名稱'
         named = {}
         for key, quest in expedition['tasks'].items():
             name = texts.get(quest['name_id'])
@@ -276,6 +288,7 @@ def load_verified_bundle_runtime(*, sync_root=None):
             },
         }
 
+        stage = '正式 Runtime 建立'
         return Preview1275(
             npc_index=PreviewNPCIndex(npc),
             interact_index=PreviewInteractIndex(interacts),
@@ -290,4 +303,4 @@ def load_verified_bundle_runtime(*, sync_root=None):
         raise
     except (OSError, ValueError, KeyError, TypeError, RuntimeError) as exc:
         raise BundleRuntimeUnavailable(
-            '官方 Bundle 的資料格式無法建立完整 1275 Runtime') from exc
+            '官方 Bundle 的資料格式無法建立完整 1275 Runtime：' + stage) from exc
