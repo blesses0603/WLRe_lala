@@ -9,42 +9,42 @@ from tkinter import ttk
 
 def build_instance_catalog(page, cooperative):
     """Preserve original widget identity, heights, layout and selection binding."""
-        page.catalog_heading = ttk.Label(
-            page.catalog_column, text="1262 官方副本清單（選擇後建立房間）",
-            style='Muted.TLabel')
-        page.catalog_heading.pack(anchor='w', pady=(0, 3))
-        page.catalog_columns = ('id', 'name', 'level', 'players', 'time')
-        catalog_host = ttk.Frame(page.catalog_column)
-        catalog_host.pack(fill='both', expand=True, pady=(0, 4))
-        page.catalog_table = ttk.Treeview(
-            catalog_host, columns=page.catalog_columns,
-            show='headings', selectmode='browse',
-            height=6 if cooperative else 8)
-        for field, title, width in (
-            ('id', 'ID', 48), ('name', '官方中文名稱／版本', 210),
-            ('level', '等級', 66), ('players', '人數', 76),
-            ('time', '時間', 80)
-        ):
-            page.catalog_table.heading(field, text=title)
-            page.catalog_table.column(field, width=width, anchor='w', stretch=True)
-        scroll = ttk.Scrollbar(catalog_host, orient='vertical',
-                               command=page.catalog_table.yview)
-        page.catalog_table.configure(yscrollcommand=scroll.set)
-        page.catalog_table.pack(side='left', fill='both', expand=True)
-        scroll.pack(side='right', fill='y')
-        for index, record in enumerate(page.catalog_records):
-            variant = (' (版本 %s)' % record['variant']) if record['variant'] else ''
-            members = ('%s～%s' % (record['min_members'], record['max_members'])
-                       if record['max_members'] else '依活動')
-            duration = ('%s 分' % record['time_minutes']
-                        if record['time_minutes'] else '依活動')
-            page.catalog_table.insert('', 'end', iid='catalog_%s' % index,
-                values=(record['id'], record['name'] + variant,
-                        record['min_level'] or '依活動', members, duration))
-        page.catalog_detail = tk.StringVar(value='點選官方副本名稱可查看來源 ID 與獎勵資料筆數。')
-        ttk.Label(page.catalog_column, textvariable=page.catalog_detail,
-                  style='Muted.TLabel',wraplength=530).pack(fill='x', pady=(0, 5))
-        page.catalog_table.bind('<<TreeviewSelect>>', page.on_catalog_selected)
+    page.catalog_heading = ttk.Label(
+        page.catalog_column, text="1262 官方副本清單（選擇後建立房間）",
+        style='Muted.TLabel')
+    page.catalog_heading.pack(anchor='w', pady=(0, 3))
+    page.catalog_columns = ('id', 'name', 'level', 'players', 'time')
+    catalog_host = ttk.Frame(page.catalog_column)
+    catalog_host.pack(fill='both', expand=True, pady=(0, 4))
+    page.catalog_table = ttk.Treeview(
+        catalog_host, columns=page.catalog_columns,
+        show='headings', selectmode='browse',
+        height=6 if cooperative else 8)
+    for field, title, width in (
+        ('id', 'ID', 48), ('name', '官方中文名稱／版本', 210),
+        ('level', '等級', 66), ('players', '人數', 76),
+        ('time', '時間', 80)
+    ):
+        page.catalog_table.heading(field, text=title)
+        page.catalog_table.column(field, width=width, anchor='w', stretch=True)
+    scroll = ttk.Scrollbar(catalog_host, orient='vertical',
+                           command=page.catalog_table.yview)
+    page.catalog_table.configure(yscrollcommand=scroll.set)
+    page.catalog_table.pack(side='left', fill='both', expand=True)
+    scroll.pack(side='right', fill='y')
+    for index, record in enumerate(page.catalog_records):
+        variant = (' (版本 %s)' % record['variant']) if record['variant'] else ''
+        members = ('%s～%s' % (record['min_members'], record['max_members'])
+                   if record['max_members'] else '依活動')
+        duration = ('%s 分' % record['time_minutes']
+                    if record['time_minutes'] else '依活動')
+        page.catalog_table.insert('', 'end', iid='catalog_%s' % index,
+            values=(record['id'], record['name'] + variant,
+                    record['min_level'] or '依活動', members, duration))
+    page.catalog_detail = tk.StringVar(value='點選官方副本名稱可查看來源 ID 與獎勵資料筆數。')
+    ttk.Label(page.catalog_column, textvariable=page.catalog_detail,
+              style='Muted.TLabel',wraplength=530).pack(fill='x', pady=(0, 5))
+    page.catalog_table.bind('<<TreeviewSelect>>', page.on_catalog_selected)
 
 
 class InstanceCatalogMixin:
