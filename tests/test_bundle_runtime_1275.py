@@ -280,6 +280,27 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
         self.assertEqual(runtime.expedition['source_kind'],
                          'verified_1275_official_bundle')
 
+    def test_portal_names_survive_missing_optional_eve_door_links(self):
+        # The official minimap label is StageMapData.NameID, not a transfer
+        # destination. Failure to load EveDoorLinks must not erase the name.
+        self.raw['StageMapData_C'] = (
+            struct.pack('<i', 1) +
+            struct.pack('<HBHIHHIB', 10000, 2, 0, 1, 500, 600, 3, 0))
+        def extract(binding, paths, loader=None):
+            name = binding.contract.source_name
+            if name == 'EveDoorLinks':
+                raise ValueError('optional link not available')
+            return self.raw[name]
+        self.extract.side_effect = extract
+        with ExitStack() as stack:
+            self.patches(stack)
+            runtime = load_verified_bundle_runtime(sync_root=self.root)
+        self.assertEqual(runtime.portal_names, {(10000, 1): '正式文字'})
+        self.assertEqual(runtime.portal_destinations, {})
+        self.assertEqual(runtime.portal_metadata_status,
+                         'destination_links_missing_or_invalid')
+        self.assertEqual(len(runtime.recipes), 1032)
+
     def test_verified_bundle_data_enters_real_crafting_plan(self):
         # This is the actual crafting service, not a read-only UI preview.
         # Packet construction is tested offline; no game session is contacted.
