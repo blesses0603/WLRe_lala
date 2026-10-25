@@ -131,6 +131,7 @@ class Preview1275:
     recipes: dict
     scene_ids: frozenset
     doors: dict = field(default_factory=dict)
+    scene_names: dict = field(default_factory=dict)
     expedition: dict | None = None
     revision: int = 1275
     can_send_packets: bool = False
@@ -178,6 +179,10 @@ def load_preview(data_archive, eve_archive):
     eve = read_verified_zip(eve_archive)
 
     from wlre.services.instance_catalog import parse_stages
+    from wlre.services.world.scene_names_1275 import bind_scene_names
+    stages = parse_stages(_table(data_archive, manifest, 'ScenesData_C'))
+    texts = {int(k): v for k, v in _catalog(
+        data_archive, manifest, 'npc_text_1275.json.gz', 'TextData_C').items()}
     return Preview1275(
         npc_index=PreviewNPCIndex(eve['npc_event_index_1275.json.gz']),
         interact_index=PreviewInteractIndex(eve['npc_interact_1275.json.gz']),
@@ -185,9 +190,9 @@ def load_preview(data_archive, eve_archive):
               'npc_item_data_1275.json.gz', 'ItemData_C').items()},
         talks={int(k): v['text'] for k, v in _catalog(data_archive, manifest,
               'npc_talk_1275.json.gz', 'TalkData_C').items()},
-        texts={int(k): v for k, v in _catalog(data_archive, manifest,
-              'npc_text_1275.json.gz', 'TextData_C').items()},
+        texts=texts,
         recipes=parse_smith_1275(_table(data_archive, manifest, 'SmithData_C')),
-        scene_ids=frozenset(parse_stages(_table(data_archive, manifest, 'ScenesData_C'))),
+        scene_ids=frozenset(stages),
+        scene_names=bind_scene_names(stages, texts),
         doors=parse_doors_1275(_table(data_archive, manifest, 'Eve')),
     )
