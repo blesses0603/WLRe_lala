@@ -190,6 +190,41 @@ def verified_portal_positions(stage_raw, link_raw, doors, stages):
     return result
 
 
+
+
+def read_only_portal_destinations(stage_raw, link_raw, doors, scene_ids):
+    """Map an official StageMap EvtID to EveDoorLinks target for UI labels.
+
+    Original 1262 Lua indexes EveDoorLinks by (SceneID, EvtID); grid and
+    event-space positions are different and must NOT be compared as equality.
+    This supports a destination NAME only, not pathfinding, C20-8 or packet
+    authorization. The stricter transfer verification stays independent.
+    """
+    markers = parse_stage_map_portals(stage_raw)
+    links = parse_eve_door_links(link_raw)
+    allowed_scenes = set(scene_ids)
+    result = {}
+    for scene, entries in doors.items():
+        if type(scene) is not int or scene not in allowed_scenes:
+            continue
+        link_rows = links.get(scene, ())
+        seen = set()
+        for row in entries:
+            if not isinstance(row, dict):
+                continue
+            index = row.get('index')
+            if (type(index) is not int or not 1 <= index <= len(link_rows)
+                    or (scene, index) not in markers
+                    or index in seen):
+                continue
+            seen.add(index)
+            link = link_rows[index - 1]
+            if (link['scene'] == scene and link['index'] == index
+                    and link['destination'] in allowed_scenes):
+                result[(scene, index)] = link['destination']
+    return result
+
+
 def verified_portal_destinations(stage_raw, link_raw, doors, scene_ids):
     """Reconcile three independent official 1275 sources without packet approval.
 
