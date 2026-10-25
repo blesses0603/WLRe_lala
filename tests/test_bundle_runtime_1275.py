@@ -307,6 +307,31 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
                          'destination_links_textasset_extract_failed')
         self.assertEqual(len(runtime.recipes), 1032)
 
+    def test_known_1262_layout_recognized_from_verified_1275_bundles(self):
+        with ExitStack() as stack:
+            self.patches(stack)
+            runtime = load_verified_bundle_runtime(sync_root=self.root)
+        report = runtime.portal_schema_report
+        self.assertEqual(report['StageMapData_C']['schema'], 'stage-map-le-v1')
+        self.assertEqual(report['EveDoorLinks']['schema'],
+                         'eve-door-links-utf16le-v1')
+        self.assertFalse(report['StageMapData_C']['can_send_packets'])
+        self.assertFalse(report['EveDoorLinks']['can_send_packets'])
+
+    def test_unknown_stage_layout_preserves_core_runtime_and_diagnostic(self):
+        self.raw['StageMapData_C'] = b'\x01\x00\x00\x00unsupported_future'
+        with ExitStack() as stack:
+            self.patches(stack)
+            runtime = load_verified_bundle_runtime(sync_root=self.root)
+        self.assertEqual(runtime.portal_metadata_status, 'layout_unrecognized')
+        self.assertEqual(
+            runtime.portal_schema_report['StageMapData_C']['status'],
+            'layout_unrecognized')
+        self.assertEqual(runtime.portal_names, {})
+        self.assertEqual(runtime.portal_destinations, {})
+        self.assertEqual(len(runtime.recipes), 1032)
+        self.assertFalse(runtime.can_send_packets)
+
     def test_optional_stage_map_not_cached_reports_precise_reason(self):
         from wlre.services.official_incremental_sync import build_update_plan
         plan = build_update_plan
