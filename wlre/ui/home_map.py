@@ -11,7 +11,6 @@ from wlre.services.world.display_position import current_position
 from wlre.services.world.navigation import Repository, NavigationError
 from wlre.services.world.map_names import map_label, parse_map_id
 from wlre.services.world.portals import Portals, nearest_marker
-from wlre.services.world.scene_names_1275 import source_scene_label
 from wlre.services.world.portal_policy import allowed_rows, destination_problem
 from wlre.services.world.npc_catalog import NPCIndex, scene_npcs, npc_detail
 from wlre.services.world.npc_talk import load_catalog as load_npc_talks, dialogue_text
