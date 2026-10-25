@@ -8,6 +8,7 @@ import unittest
 from unittest.mock import Mock, patch
 from types import SimpleNamespace
 
+from wlre.services.official_manifest_sync import ManifestSpec
 from wlre.services.world.bundle_runtime_1275 import (
     BundleRuntimeUnavailable, load_verified_bundle_runtime)
 
@@ -29,8 +30,12 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
             digest = hashlib.sha256(raw).hexdigest()
             self.pinned[package] = digest
             self.verified[package] = SimpleNamespace(
-                spec=SimpleNamespace(package=package, package_version=version),
+                spec=ManifestSpec('1.3.21', package, version),
                 cache_path=path, hash_text='ab12cd34')
+        self.supported = {'packages': {
+            package: {'revision': '1275',
+                      'manifest': self.verified[package].spec.package_version}
+            for package in ('DataPackage', 'MainPackage')}}
         self.key = 'a' * 64
         self.identity = SimpleNamespace(
             key=self.key, data_ver='1.3.21', packages=tuple(
@@ -73,6 +78,9 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
         stack.enter_context(patch(
             'wlre.services.world.bundle_runtime_1275._PINNED_MANIFEST_SHA256',
             self.pinned))
+        stack.enter_context(patch(
+            'wlre.services.resource_compatibility.load_supported_resources',
+            return_value=self.supported))
         stack.enter_context(patch(
             'wlre.services.world.launcher_catalog.read_launcher_status',
             return_value=self.receipt))
@@ -225,7 +233,7 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
                     load_verified_bundle_runtime(sync_root=self.root)
                 self.plan.entries[0].action = 'cached'
 
-    def test_wrong_pinned_manifest_and_wrong_launcher_state_fail_closed(self):
+    def test_wrong_pinned_manifest_and_wrong_baseline_fail_closed(self):
         with ExitStack() as stack:
             self.patches(stack)
             self.verified['DataPackage'].cache_path.write_bytes(b'tampered')
@@ -233,11 +241,30 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
                 load_verified_bundle_runtime(sync_root=self.root)
         self.verified['DataPackage'].cache_path.write_bytes(
             b'audited manifest fixture for DataPackage')
+        self.supported['packages']['MainPackage']['manifest'] = (
+            '1275_2026_10_23_18_29_38_49')
+        with ExitStack() as stack:
+            self.patches(stack)
+            with self.assertRaisesRegex(BundleRuntimeUnavailable, 'Manifest'):
+                load_verified_bundle_runtime(sync_root=self.root)
+
+    def test_valid_pinned_bundles_work_even_if_candidate_failed(self):
+        # Regression for Windows: Launcher four-candidate status can be
+        # 'error' when its optional Eve decoder refuses another schema.
+        # It must not gate the independently audited full Bundle runtime.
         self.receipt['status'] = 'error'
         with ExitStack() as stack:
             self.patches(stack)
-            with self.assertRaises(BundleRuntimeUnavailable):
-                load_verified_bundle_runtime(sync_root=self.root)
+            status = stack.enter_context(patch(
+                'wlre.services.world.launcher_catalog.read_launcher_status',
+                side_effect=AssertionError('optional status must not be read')))
+            candidate = stack.enter_context(patch(
+                'wlre.services.world.auto_catalog._trusted_cached_candidate',
+                side_effect=AssertionError('optional candidate must not be read')))
+            source = load_verified_bundle_runtime(sync_root=self.root)
+        self.assertEqual(len(source.recipes), 1032)
+        status.assert_not_called()
+        candidate.assert_not_called()
 
     def test_schema_error_refuses_partial_data_activation(self):
         with ExitStack() as stack:
