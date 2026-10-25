@@ -56,3 +56,42 @@ def cooperative_create_fields(record, count):
 def cooperative_join_fields():
     """Explicit acknowledgement of possible ticket/point consumption."""
     return {'confirm_cost': True}
+
+
+class CooperativeRoomStatusMixin:
+    """Server-snapshot cooperative standby explanation (UI only)."""
+
+    def render_cooperative_standby(self, live, data, current_room, member_data,
+                                   host_id, local_role_id, room_capacity,
+                                   reward_locked, activity_blocked):
+            if self.cooperative:
+                if not live:
+                    explanation = '尚未登入'
+                elif not current_room:
+                    explanation = '尚未加入協力房間'
+                elif data.get('create_pending') is not None:
+                    explanation = '創房仍待伺服器確認；請勿重複創房'
+                elif data.get('create_uncertain'):
+                    explanation = '創房結果仍不明；請重新登入同步，不要重複扣點'
+                elif data.get('standby_pending') is not None:
+                    explanation = '已送出準備要求，等待伺服器房間狀態回覆'
+                elif data.get('standby_uncertain'):
+                    explanation = '準備結果不明；請重新登入確認'
+                elif not member_data or host_id != local_role_id:
+                    explanation = '目前不是伺服器確認的房主，只有房主可開始'
+                elif type(room_capacity) is not int or room_capacity <= 0:
+                    explanation = '房間容量尚未同步'
+                elif len(member_data) < room_capacity:
+                    explanation = '等待成員到齊：%d/%d 人' % (len(member_data), room_capacity)
+                elif data.get('phase') != 'waiting':
+                    explanation = ('戰後房間尚未恢復準備狀態；確認獎勵後才可離房'
+                                   if data.get('phase') == 'matched'
+                                   else '房間階段：%s，尚不能開始' % data.get('phase'))
+                elif reward_locked or activity_blocked:
+                    explanation = '其他活動或獎勵操作尚未結束'
+                elif self._standby_ready:
+                    explanation = '房主與成員 %d/%d 已確認，可以按準備／開始配對' % (
+                        len(member_data), room_capacity)
+                else:
+                    explanation = '有其他房間操作未確認；請查看上方狀態'
+                self.standby_note.set('協力準備：' + explanation)
