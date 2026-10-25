@@ -212,6 +212,7 @@ def load_verified_bundle_runtime(*, sync_root=None):
         SOURCE_SHA256 as EVE_SHA256, parse_doors_1275)
     from wlre.services.instance_catalog import parse_stages
     from wlre.services.world.scene_names_1275 import bind_scene_names
+    from wlre.services.world.portal_schema import recognize_portal_source
     from wlre.services.world.portal_links_1275 import (verified_portal_destinations,
                                                       verified_portal_names,
                                                       verified_portal_positions,
@@ -304,6 +305,7 @@ def load_verified_bundle_runtime(*, sync_root=None):
         portal_metadata_status = 'missing_stage_map'
         optional = {}
         optional_failures = {}
+        portal_schema_report = {}
         # Each optional Bundle must be traceable to a verified official
         # manifest. Do not erase failures with a silent 'continue': users need
         # to distinguish not-downloaded, damaged and unsupported TextAssets.
@@ -328,7 +330,13 @@ def load_verified_bundle_runtime(*, sync_root=None):
                     asset, SourceContract(
                         'scenes', table, 'stage-new-76-v1',
                         '0' * 64, 'DataPackage', verified_data.spec.package_version))
-                optional[table] = extract_textasset(binding, paths, loader=load_container)
+                payload = extract_textasset(binding, paths, loader=load_container)
+                verdict = recognize_portal_source(table, payload)
+                portal_schema_report[table] = verdict
+                if verdict['status'] != 'recognized':
+                    optional_failures[table] = 'layout_unrecognized'
+                    continue
+                optional[table] = payload
             except (OSError, ValueError, TypeError, KeyError, RuntimeError):
                 # Never disclose filesystem paths or untrusted raw errors.
                 optional_failures[table] = 'textasset_extract_failed'
@@ -423,6 +431,7 @@ def load_verified_bundle_runtime(*, sync_root=None):
             portal_positions=portal_positions,
             portal_display_destinations=portal_display_destinations,
             portal_metadata_status=portal_metadata_status,
+            portal_schema_report=portal_schema_report,
             doors=doors, expedition=expedition,
         )
     except BundleRuntimeUnavailable:
