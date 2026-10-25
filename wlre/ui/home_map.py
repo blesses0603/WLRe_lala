@@ -222,9 +222,20 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
                 # Use the same validated scene label as the map header,
                 # including safe fallback for out-of-range scene IDs.
                 scene = MinimapNavigationMixin.scene_display_name(self)
-                text = (f'已載入 1275 官方資料：所在場景 {scene} 有 {count} 個傳點；'
-                        f'{ready} 個完成三表目的地核對可手動確認試傳；'
-                        '其餘入口維持停用，實際換圖以伺服器回覆為準。')
+                named = sum(bool(p.get('official_name')) for p in self.portal_rows)
+                name_status = self.portals.data.get(
+                    'portal_metadata_status', 'missing_stage_map')
+                if name_status == 'missing_stage_map':
+                    hint = ('1275 StageMapData_C 傳點名稱表尚未載入；'
+                            '需完成官方附加 Bundle 下載或安裝含此表的正式資料。')
+                elif name_status == 'stage_map_invalid':
+                    hint = '1275 StageMapData_C 傳點名稱表解析失敗；未採用舊版猜測名稱。'
+                else:
+                    hint = (f'{named} 個傳點有正式文字名稱；'
+                            f'{count-named} 個尚缺有效 NameID／文字對應。')
+                text = (f'1275 場景 {scene}：{count} 個傳點，'
+                        f'{ready} 個可手動確認試傳。{hint}'
+                        '實際換圖以伺服器回覆為準。')
             else:
                 text = ('1275 官方門事件索引尚未完成校驗／安裝；'
                         '下次切換地圖會重新讀取，不使用 1262 舊傳點。')
