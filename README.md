@@ -1,6 +1,6 @@
 # WLRe:LaLa | v0.6.1 開發版（已合併 main，尚未正式發布）
 
-> **版本狀態（2026-10-25）**：`main` 已整合 **v0.6.1 開發版**（PR #56 已合併，三平台 CI #822 通過），**尚未完成正式遊戲伺服器 E2E 驗收，也尚未建立正式 Release／Tag／安裝包**。官方 MainPackage／DataPackage 支援 1275 基準與已驗證 Bundle 的安全補建；資源缺失、校驗失敗或格式不相容時仍拒絕登入。資料版本相符不代表所有遊戲功能已通過驗收。最近正式 Release 為 [v0.5.0](https://github.com/blesses0603/WLRe_lala/releases/tag/v0.5.0)。
+> **版本狀態（2026-10-25）**：`main` 已整合 **v0.6.1 開發版**（PR #56 已合併，三平台 CI #822 通過），**使用者已回報本次測試的功能正常、未發現問題；逐功能正式服 E2E 證據與正式 Release／Tag／安裝包仍待驗收／發布**。官方 MainPackage／DataPackage 支援 1275 基準與已驗證 Bundle 的安全補建；資源缺失、校驗失敗或格式不相容時仍拒絕登入。資料版本相符不代表所有遊戲功能已通過驗收。最近正式 Release 為 [v0.5.0](https://github.com/blesses0603/WLRe_lala/releases/tag/v0.5.0)。
 
 **WLRe:LaLa** 是《飄流幻境 RE：星之方舟》的 Python 桌面客戶端工具，使用 Tkinter／ttk、遊戲封包與內建資源。桌面版獨立維護，Android 不在本倉庫的建置範圍內。
 
@@ -8,7 +8,7 @@
 
 > **官方 Manifest 來源決策（PR #56）**：DataPackage／MainPackage 各僅以 `.version`、`.bytes`、`.hash` 作為版本與資源清單的必要來源；**不下載、不依賴**官方 `.json`、`.report`。`ResourcePath_PC.dat` 仍供偵測資料路徑與 DataVer，對應的 `.bundle` 依實際功能需求增量下載與校驗。程式內自行建立的 `.json` 索引／收據屬於本機衍生資料，不是額外要求下載的官方 `.json`。
 
-> **PR #56 已審核 1275 Bundle 正式 Runtime 接入（開發測試中）**：LaLa 不再把手動安裝 `1275_DataCatalog.zip`／`1275_EveNpcIndex.zip` 當成唯一可用來源。若 Launcher 已從官方 `.version`、`.bytes`、`.hash` 驗證完整版本與所需 Bundle，主程式可用 `bundle_runtime_1275.py` 直接解析 NPC／互動、物品、對話、文字、製作、遠征、場景與門事件，交由既有 Runtime 與 `recipe_plan` 使用。仍須對兩份 Manifest 做固定 SHA-256、逐 Bundle MD5/CRC、Eve 固定 SHA、完整 Schema 與 1032 配方交叉校驗；缺少任一來源就拒絕啟用，不自動解鎖未驗收協定。真實伺服器 E2E 與打包安裝尚待驗收，詳見 `docs/AUTO_COMPATIBILITY.md`。
+> **PR #56 已審核 1275 Bundle 正式 Runtime 接入（開發測試中）**：LaLa 不再把手動安裝 `1275_DataCatalog.zip`／`1275_EveNpcIndex.zip` 當成唯一可用來源。若 Launcher 已從官方 `.version`、`.bytes`、`.hash` 驗證完整版本與所需 Bundle，主程式可用 `bundle_runtime_1275.py` 直接解析 NPC／互動、物品、對話、文字、製作、遠征、場景與門事件，交由既有 Runtime 與 `recipe_plan` 使用。仍須對兩份 Manifest 做固定 SHA-256、逐 Bundle MD5/CRC、Eve 固定 SHA、完整 Schema 與 1032 配方交叉校驗；缺少任一來源就拒絕啟用，不自動解鎖未驗收協定。使用者已回報已測功能正常；真實伺服器全流程逐項 E2E 證據與打包安裝仍待補齊，詳見 `docs/AUTO_COMPATIBILITY.md`。
 
 > **PR #56 自動相容性判定（v0.6.1 開發候選）**：Launcher 下載並校驗官方 Manifest／Bundle 後，會針對 NPC、商店、製作與場景執行第二層版本身分、Schema、來源 SHA-256、長度與筆數判定；快取命中也必須重新核對來源。新版私有 `compatibility_report.json` 與 `candidate.zip` SHA-256 綁定，主程式僅顯示唯讀狀態。**資料相容不代表遊戲協定相容，也不會自動解除登入或交易限制**。詳細設計見 [自動相容性判定](docs/AUTO_COMPATIBILITY.md)。正式 EXE 打包與未取得的官方 Bundle 實檔驗收暫緩。
 
@@ -213,7 +213,7 @@ py -m tools.resources.install_npc_text_1262 "WLRE_1262_NPC_繁中資料索引包
 - **v0.5.2**：全功能獨立視窗及協力創房／房主準備的修復，已合併 main，未發布 Release。
 - **v0.5.3**：一般副本與協力房間人數、缺額、可否開始的說明，僅開發版，不建立 Tag 或 Release。
 - **v0.6.0**：已整合至 main 的開發版，未建立 Tag 或正式 Release。
-- **v0.6.1**：PR #56 已合併至 main；Windows／Ubuntu／macOS CI #822 通過，正式服 E2E、安裝與發版驗收仍待進行。未建立 v0.6.1 Tag 或正式 Release。一般 PR／main 更新只執行跨平台測試。
+- **v0.6.1**：PR #56 已合併至 main；Windows／Ubuntu／macOS CI #822 通過，使用者於 2026-10-25 回報已測功能正常，但未提供逐項測試清單；完整正式服 E2E 證據、安裝與發版驗收仍待補齊。未建立 v0.6.1 Tag 或正式 Release。一般 PR／main 更新只執行跨平台測試。
 
 ## 啟動與建置
 
