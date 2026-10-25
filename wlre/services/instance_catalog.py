@@ -87,7 +87,7 @@ def parse_stages(data):
         map_width, map_height = r.u16(), r.u16()
         r.u8()  # camera angle
         pos_x_ratio, pos_y_ratio = r.u8(), r.u8()
-        r.take(4)  # small map offsets
+        small_offset_x, small_offset_y = r.u16(), r.u16()
         r.take(8)  # camera start/end X/Y
         r.take(5)  # water / activity / hide-player / no-battle / second-job
         if stage_id in result:
@@ -101,6 +101,7 @@ def parse_stages(data):
             # Only use these for separately checked portal map markers.
             'pos_x_ratio': pos_x_ratio, 'pos_y_ratio': pos_y_ratio,
             'map_width': map_width, 'map_height': map_height,
+            'small_offset_x': small_offset_x, 'small_offset_y': small_offset_y,
         }
     r.end()
     return result
