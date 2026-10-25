@@ -50,7 +50,7 @@ class VersionGateController:
                    receipt.get('data_compatibility') == 'compatible'
                 else 'Launcher 已建立候選，資料及協定仍待審核'),
             'downloaded_unparsed': 'Launcher 僅下載資料，尚未驗證解包',
-            'error': 'Launcher 本次候選準備未完成，安全限制不變',
+            'error': 'Launcher 四類候選準備未完成；1275 正式 Bundle 仍由獨立校驗器檢查',
             'preview': 'Launcher 僅預覽下載計畫',
         }.get(code, '尚無 Launcher 自動資源準備紀錄')
         # Display the actual missing full-runtime inputs instead of telling
@@ -69,7 +69,9 @@ class VersionGateController:
                 self._launcher_catalog_status += (
                     '｜舊式 ZIP 未通過校驗；官方 Bundle 由正式 Runtime 另外核對')
             else:
-                self._launcher_catalog_status += '｜舊式 ZIP 診斷：' + summarize(gaps)
+                # Old ZIPs are optional when a separately pinned full Bundle
+                # runtime is used. Keep this clearly supplemental.
+                self._launcher_catalog_status += '｜舊式 ZIP（非唯一來源）：' + summarize(gaps)
         if receipt is not None and receipt.get('status') == 'review_required':
             from wlre.services.world.resource_rebuilder import read_inventory_summary
             raw_inventory = read_inventory_summary(receipt['catalog_key'])
