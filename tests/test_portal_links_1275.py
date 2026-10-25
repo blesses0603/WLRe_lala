@@ -9,6 +9,7 @@ from wlre.services.world.portal_links_1275 import (
     parse_eve_door_links, verified_portal_destinations)
 from wlre.services.world.portals import Portals
 from wlre.services.world.portal_policy import destination_problem
+from wlre.features.portals.panel import PortalInteractionMixin
 
 
 def stage_rows(*rows):
@@ -79,11 +80,44 @@ class PortalLinks1275Test(unittest.TestCase):
         self.assertNotIn('瑪雅野豬叢林二', row['name'])
         self.assertEqual(row['destination'], 12171)
         self.assertTrue(row['destination_verified'])
-        self.assertFalse(row['direct_eligible'])
-        self.assertIsNone(row['direct_door_index'])
-        self.assertIsNotNone(destination_problem(row))
+        self.assertTrue(row['direct_eligible'])
+        self.assertEqual(row['direct_door_index'], 1)
+        self.assertIsNone(destination_problem(row, SimpleNamespace(
+            has_image=lambda scene: scene == 12171)))
+        self.assertIsNotNone(destination_problem(row, SimpleNamespace(
+            has_image=lambda scene: False)))
+        self.assertEqual(Portals.direct_target(row, 12170), 1)
         with self.assertRaises(ValueError):
-            Portals.direct_target(row, 12170)
+            Portals.direct_target(row, 12171)
+
+    def test_confirmed_route_manual_send_requires_explicit_consent(self):
+        mapping = verified_mapping()
+        runtime = SimpleNamespace(
+            doors={12170: [{'index': 1, 'x': 5701, 'y': 3230}]},
+            portal_destinations=mapping,
+            scene_names={12171: '瑪雅野豬叢林三'})
+        with patch('wlre.services.world.runtime_1275.baseline_revision',
+                   return_value='1275'), patch(
+                'wlre.services.world.runtime_1275.active_runtime',
+                return_value=runtime):
+            catalog = Portals()
+        row = catalog.for_scene(12170)[0]
+        page = PortalInteractionMixin()
+        page.selected_portal = row
+        page.portals = catalog
+        page.maps = SimpleNamespace(has_image=lambda scene: scene == 12171)
+        page.state = {'player': {'scene': 12170}}
+        page.portal_status = Mock()
+        page.on_portal = Mock()
+        with patch('wlre.features.portals.panel.messagebox.askyesno',
+                   return_value=False) as confirm:
+            self.assertFalse(page.go_portal())
+            confirm.assert_called_once()
+        page.on_portal.assert_not_called()
+        with patch('wlre.features.portals.panel.messagebox.askyesno',
+                   return_value=True):
+            self.assertTrue(page.go_portal())
+        page.on_portal.assert_called_once_with(row['id'])
 
 
 if __name__ == '__main__':
