@@ -6,6 +6,7 @@ does not authorize movement, portal travel, or NPC network commands.
 import math
 from PIL import Image, ImageTk
 from wlre.services.world.display_position import current_position
+from wlre.services.world.portals import portal_map_pixel
 
 
 class MinimapCanvasMixin:
@@ -42,8 +43,10 @@ class MinimapCanvasMixin:
             xy=[c for p in self.route['points'] for c in self.screen_pixel(*self.projection.navigation_to_pixel(p[0],p[2]))]
             if len(xy)>=4:self.canvas.create_line(*xy,fill='#ffce58',width=3)
         for p in self.portal_rows:
-            if not p['coordinate_valid']:continue
-            px,py=self.screen_pixel(*self.projection.packet_to_pixel(p['x'],p['y']))
+            point = portal_map_pixel(p, self.projection)
+            if point is None:
+                continue
+            px,py=self.screen_pixel(*point)
             color='#b591ff' if p['kind']=='event' else '#57e9ef'
             if not p.get('direct_eligible'):color='#9b9b9b'
             selected=p is self.selected_portal
