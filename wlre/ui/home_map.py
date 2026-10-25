@@ -167,6 +167,11 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
         self.after_idle(self.draw)
 
     def refresh_portals(self):
+        # The UI may be constructed before the 1275 runtime finishes being
+        # installed. Do not pin an empty pre-login portal snapshot forever.
+        if (self.portals.data.get('source_revision') == 1275
+                and not self.portals.data.get('source_ready')):
+            self.portals = Portals()
         recovery=self.image is None
         self.portal_rows=allowed_rows(self.portals,self.selected_id,self.maps,recovery=recovery)
         self.selected_portal=None
@@ -177,7 +182,10 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
                              else '選取 NPC 查看名稱、座標與事件索引核對狀態。')
         self.list_rows=[]
         for p in self.portal_rows:
-            prefix='↩ 返回：' if recovery else ('◎ ' if p.get('direct_eligible') else '○ ')
+            if p.get('source_revision') == 1275:
+                prefix = '◇ '  # verified door location, unverified destination
+            else:
+                prefix='↩ 返回：' if recovery else ('◎ ' if p.get('direct_eligible') else '○ ')
             self.portal_list.insert('end',prefix+p['name'])
             self.list_rows.append(p)
         self.monster_list.delete(0,'end')
@@ -191,11 +199,27 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
             if e['kind']!=0:
                 self.monster_list.insert('end',f"Lv.{e['level'] if e['level'] is not None else '?'} {e['name']}")
                 self.monster_rows.append(e)
-        if not self.list_rows:self.portal_list.insert('end','（沒有已確認的返回出口）' if recovery else '（來源未列傳點）')
+        if not self.list_rows:
+            if self.portals.data.get('source_revision') == 1275:
+                empty = ('（1275 門事件資料尚未就緒）'
+                         if not self.portals.data.get('source_ready')
+                         else '（此場景的 1275 Eve 未列門事件）')
+            else:
+                empty = ('（沒有已確認的返回出口）' if recovery
+                         else '（來源未列傳點）')
+            self.portal_list.insert('end', empty)
         if not self.npc_rows:self.npc_list.insert('end','（本場景尚無 NPC 資料）')
         if not self.monster_rows:self.monster_list.insert('end','（來源未列怪物）')
         ready=sum(bool(p.get('direct_eligible')) for p in self.portal_rows)
-        if recovery:
+        if self.portals.data.get('source_revision') == 1275:
+            count = len(self.portal_rows)
+            if self.portals.data.get('source_ready'):
+                text = (f'已載入 1275 Eve：本場景 {count} 個門事件；'
+                        '僅顯示已核對座標，目的地／正式服觸發未驗證，無法直接換圖。')
+            else:
+                text = ('1275 官方門事件索引尚未完成校驗／安裝；'
+                        '下次切換地圖會重新讀取，不使用 1262 舊傳點。')
+        elif recovery:
             text=(f'此圖沒有小地圖；左側保留 {ready} 個返回有圖地圖的出口。' if ready
                   else '此圖沒有小地圖，來源未列可確認的返回出口；請使用官方客戶端離開。')
         else:
