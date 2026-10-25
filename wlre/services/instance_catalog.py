@@ -84,8 +84,9 @@ def parse_stages(data):
         min_level = r.u16()
         time_limit = r.u16()
         r.take(20)  # five reserved UInt32
-        r.take(4)  # mapWidth / mapHeight
-        r.take(3)  # cameraAngle / xRatio / yRatio
+        map_width, map_height = r.u16(), r.u16()
+        r.u8()  # camera angle
+        pos_x_ratio, pos_y_ratio = r.u8(), r.u8()
         r.take(4)  # small map offsets
         r.take(8)  # camera start/end X/Y
         r.take(5)  # water / activity / hide-player / no-battle / second-job
@@ -96,6 +97,10 @@ def parse_stages(data):
             'min_members': min_members, 'min_level': min_level,
             'time_minutes': time_limit, 'tag': tag,
             'room_capacity': room_count, 'group': group, 'flag': flag,
+            # Official 1275 StageData ratios for EveDoorLinks grid XY.
+            # Only use these for separately checked portal map markers.
+            'pos_x_ratio': pos_x_ratio, 'pos_y_ratio': pos_y_ratio,
+            'map_width': map_width, 'map_height': map_height,
         }
     r.end()
     return result
