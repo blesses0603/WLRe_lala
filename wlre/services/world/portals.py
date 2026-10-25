@@ -34,10 +34,12 @@ class Portals:
                                 continue
                             index, x, y = (row.get('index'), row.get('x'),
                                            row.get('y'))
-                            if type(index) is not int or not 0 <= index <= 65535:
+                            if (type(index) is not int or not 0 <= index <= 65535
+                                    or type(x) is not int or type(y) is not int
+                                    or not 0 <= x <= 4294967295
+                                    or not 0 <= y <= 4294967295):
                                 continue
-                            valid_xy = (type(x) is int and type(y) is int
-                                        and 0 <= x <= 65535 and 0 <= y <= 65535)
+                            valid_xy = (0 <= x <= 65535 and 0 <= y <= 65535)
                             visible.append({
                                 'id': f'1275:{scene_id}:{index}',
                                 'scene': scene_id, 'index': index,
@@ -80,7 +82,8 @@ class Portals:
 
     @staticmethod
     def label(portal):
-        kind={'normal':'出口','event':'事件入口','link':'地圖連結'}[portal['kind']]
+        kind={'normal':'出口','event':'事件入口','link':'地圖連結',
+              'door':'1275 門事件'}[portal['kind']]
         xy=f"({portal['x']}, {portal['y']})" if portal['coordinate_valid'] else '座標未確認'
         status='' if portal.get('navigation_status')=='endpoint_valid' else '｜無可用導航'
         return f"{portal['index']}. {portal['name']}｜{kind} {xy}{status}"
