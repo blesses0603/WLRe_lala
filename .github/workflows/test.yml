@@ -2,7 +2,7 @@ name: Main and PR tests
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'refactor/**']
   pull_request:
   workflow_dispatch:
 

@@ -3,6 +3,7 @@
 These tests require neither a game account nor a GitHub Actions paid runner.
 """
 from pathlib import Path
+import re
 import unittest
 
 from tools import audit_repository
@@ -62,7 +63,14 @@ class DocumentationAndReleaseAudit(unittest.TestCase):
         self.assertNotIn("push:", native_triggers)
         self.assertIn("workflow_dispatch:", native_triggers)
         self.assertIn("pull_request:", daily)
-        self.assertIn("branches: [main]", daily)
+        daily_triggers = daily.split("on:\n", 1)[1].split("\npermissions:", 1)[0]
+        push_branches = re.search(
+            r"(?m)^  push:\n    branches:\s*\[([^\]]+)\]", daily_triggers)
+        self.assertIsNotNone(push_branches, "Full CI must keep an explicit push branch list")
+        branches = {value.strip().strip("'\"")
+                    for value in push_branches.group(1).split(',')}
+        self.assertTrue({'main', 'refactor/**'} <= branches,
+                        "Main and modularization branches must both run the full CI matrix")
         self.assertIn("tags:", release)
         self.assertIn("workflow_dispatch:", release)
         self.assertIn("build_macos:", release)

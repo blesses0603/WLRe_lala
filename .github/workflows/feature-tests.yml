@@ -1,0 +1,175 @@
+name: Feature module tests
+
+on:
+  push:
+    branches: ['refactor/**']
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      feature:
+        description: '要驗證的功能；all 執行完整測試'
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - instances
+          - cooperative
+          - dungeon
+          - minimap
+          - npc
+          - portals
+          - accounts
+          - overview
+          - party
+          - companions
+          - attributes
+          - battle
+          - expedition
+          - alchemy
+          - crafting
+          - inventory
+          - supply
+          - maintenance
+          - chat
+          - social
+          - efficiency
+          - resources
+
+permissions:
+  contents: read
+
+concurrency:
+  group: feature-tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      features: ${{ steps.select.outputs.features }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.12'
+      - name: Select affected feature regressions conservatively
+        id: select
+        env:
+          REQUESTED_FEATURE: ${{ inputs.feature }}
+          BASE_COMMIT: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_COMMIT: ${{ github.sha }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          import re
+          import subprocess
+          from tools.architecture.inventory import config, module_name, owner
+          from tools.architecture.test_features import selected_tests
+
+          spec = config()
+          requested = os.environ.get('REQUESTED_FEATURE', '')
+          known = set(spec['features'])
+          if requested:
+              if requested not in known | {'all'}:
+                  raise SystemExit('Unknown feature requested')
+              selected = [requested]
+          else:
+              base = os.environ.get('BASE_COMMIT', '')
+              head = os.environ['HEAD_COMMIT']
+              selected = set()
+              # New branches, missing history and shared infrastructure changes
+              # require the full suite; never infer a reduced safe set.
+              if not re.fullmatch(r'[0-9a-f]{40}', base) or base == '0' * 40:
+                  selected.add('all')
+              else:
+                  changed = subprocess.run(
+                      ['git', 'diff', '--name-only', base, head],
+                      check=True, capture_output=True, text=True).stdout.splitlines()
+                  for name in changed:
+                      path = Path(name)
+                      if name.startswith('wlre/') and path.suffix == '.py':
+                          feature = owner(module_name(path), spec)
+                          selected.add(feature if feature in known else 'all')
+                      elif name.startswith(('tools/architecture/', '.github/workflows/')):
+                          selected.add('all')
+                      elif name in ('architecture/features.json', 'requirements-ui.txt',
+                                    'requirements-extractor.txt', 'WLRE_Client.py'):
+                          selected.add('all')
+                      elif name.startswith('tests/') and path.suffix == '.py':
+                          selected.add('all')
+              if not selected or 'all' in selected:
+                  selected = ['all']
+              else:
+                  selected = sorted(selected)
+          if 'all' not in selected:
+              # A feature with only the generic architecture guard does not
+              # have enough static coverage evidence for a reduced CI run.
+              uncovered = [feature for feature in selected if not (
+                  set(selected_tests([feature], spec=spec)) - {'test_feature_architecture'})]
+              if uncovered:
+                  print('No focused regression found; running all:', ', '.join(uncovered))
+                  selected = ['all']
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf8') as stream:
+              stream.write('features=' + json.dumps(selected) + '\n')
+          print(json.dumps({'features': selected}))
+          PY
+
+  module:
+    needs: plan
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-2022, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    env:
+      PYTHONUTF8: '1'
+      WLRE_DISABLE_AUTO_CATALOG: '1'
+      FEATURE_LIST: ${{ needs.plan.outputs.features }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.12'
+      - name: Prepare Linux display
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends xvfb xauth python3-tk
+      - name: Install reviewed UI and extractor dependencies
+        run: python -m pip install -r requirements-ui.txt -r requirements-extractor.txt
+      - name: Validate syntax, inventory and repository integrity
+        run: |
+          python -m compileall -q wlre tools tests WLRE_Client.py
+          python -m tools.architecture.inventory --check
+          python -m tools.audit_repository --strict-git
+      - name: Run selected feature regression suite
+        run: |
+          cat > "$RUNNER_TEMP/lala-feature-tests.py" <<'PY'
+          import json
+          import os
+          import subprocess
+          import sys
+
+          features = json.loads(os.environ['FEATURE_LIST'])
+          if not isinstance(features, list) or not features:
+              raise SystemExit('No feature regression selection')
+          command = [sys.executable, '-m', 'tools.architecture.test_features']
+          for feature in features:
+              command.extend(['--feature', feature])
+          subprocess.run(command, check=True)
+          PY
+          if [ "$RUNNER_OS" = Linux ]; then
+            xvfb-run -a python "$RUNNER_TEMP/lala-feature-tests.py"
+          else
+            python "$RUNNER_TEMP/lala-feature-tests.py"
+          fi

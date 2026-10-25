@@ -1,0 +1,275 @@
+{
+  "schema_version": 1,
+  "baseline": {
+    "main": "14af2ff",
+    "dependency_pr": 57,
+    "verified_commit": "cb9e9a77d61bae8cd7cd4dbfbdf0dfc946c79b2f",
+    "reported_ci": 828,
+    "version": "0.6.1"
+  },
+  "features": {
+    "instances": {
+      "title": "副本共用房間流程",
+      "phase": 1,
+      "moves": {
+        "wlre.ui.instance_ui": "wlre.features.instances.ui.instance_ui",
+        "wlre.ui.instance_menu_icons": "wlre.features.instances.ui.instance_menu_icons"
+      },
+      "shared": [
+        "wlre.services.instance",
+        "wlre.services.instances",
+        "wlre.network.instance"
+      ]
+    },
+    "cooperative": {
+      "title": "協力",
+      "phase": 1,
+      "moves": {},
+      "shared": [
+        "wlre.services.instance",
+        "wlre.network.instance"
+      ]
+    },
+    "dungeon": {
+      "title": "一般副本",
+      "phase": 1,
+      "moves": {},
+      "shared": [
+        "wlre.services.instance",
+        "wlre.network.instance"
+      ]
+    },
+    "minimap": {
+      "title": "小地圖與導航預覽",
+      "phase": 2,
+      "moves": {
+        "wlre.ui.home_map": "wlre.features.minimap.ui.home_map",
+        "wlre.ui.minimap": "wlre.features.minimap.ui.minimap",
+        "wlre.ui.navigation_gui": "wlre.features.minimap.ui.navigation_gui"
+      },
+      "shared": [
+        "wlre.services.world.navigation",
+        "wlre.services.world.coordinates",
+        "wlre.services.world.movement",
+        "wlre.services.world.smallmaps",
+        "wlre.services.world.map_names"
+      ]
+    },
+    "npc": {
+      "title": "NPC／對話／商店",
+      "phase": 2,
+      "moves": {
+        "wlre.services.world.npc_catalog": "wlre.features.npc.domain.npc_catalog",
+        "wlre.services.world.npc_interact": "wlre.features.npc.domain.npc_interact",
+        "wlre.services.world.npc_talk": "wlre.features.npc.domain.npc_talk",
+        "wlre.services.world.npc_localization": "wlre.features.npc.domain.npc_localization",
+        "wlre.services.world.npc_item_data": "wlre.features.npc.domain.npc_item_data",
+        "wlre.services.world.npc_shop": "wlre.features.npc.domain.npc_shop",
+        "wlre.services.world.npc_shop_evidence": "wlre.features.npc.domain.npc_shop_evidence"
+      },
+      "shared": [
+        "wlre.network.npc_dialogue",
+        "wlre.services.world.npc_1275_eve",
+        "wlre.services.world.npc_asset_install"
+      ]
+    },
+    "portals": {
+      "title": "傳送點",
+      "phase": 2,
+      "moves": {
+        "wlre.services.world.portals": "wlre.features.portals.domain.portals",
+        "wlre.services.world.portal_travel": "wlre.features.portals.domain.portal_travel"
+      },
+      "shared": [
+        "wlre.services.world.portal_policy",
+        "wlre.services.world.doors_1275"
+      ]
+    },
+    "accounts": {
+      "title": "帳號／登入／角色／版本閘門",
+      "phase": 3,
+      "moves": {
+        "wlre.ui.account_controller": "wlre.features.accounts.ui.account_controller",
+        "wlre.ui.login_controller": "wlre.features.accounts.ui.login_controller",
+        "wlre.ui.version_gate_controller": "wlre.features.accounts.ui.version_gate_controller",
+        "wlre.storage.account_settings": "wlre.features.accounts.storage.account_settings",
+        "wlre.storage.login_memory": "wlre.features.accounts.storage.login_memory",
+        "wlre.storage.server_lines": "wlre.features.accounts.storage.server_lines",
+        "wlre.storage.defaults": "wlre.features.accounts.storage.defaults"
+      },
+      "shared": [
+        "wlre.services.game_version_gate",
+        "wlre.network.client"
+      ]
+    },
+    "overview": {
+      "title": "主畫面與目前活動",
+      "phase": 3,
+      "moves": {
+        "wlre.ui.overview_ui": "wlre.features.overview.ui.overview_ui"
+      },
+      "shared": [
+        "wlre.ui.gui",
+        "wlre.ui.dashboard_builder",
+        "wlre.ui.dashboard_layout",
+        "wlre.core.activity"
+      ]
+    },
+    "party": {
+      "title": "隊伍與隊伍檢查",
+      "phase": 4,
+      "moves": {
+        "wlre.ui.party_guard_ui": "wlre.features.party.ui.party_guard_ui",
+        "wlre.services.battle.party": "wlre.features.party.domain.party",
+        "wlre.services.battle.party_guard": "wlre.features.party.domain.party_guard"
+      },
+      "shared": []
+    },
+    "companions": {
+      "title": "夥伴出戰",
+      "phase": 4,
+      "moves": {
+        "wlre.ui.companion_ui": "wlre.features.companions.ui.companion_ui",
+        "wlre.services.battle.companions": "wlre.features.companions.domain.companions"
+      },
+      "shared": []
+    },
+    "attributes": {
+      "title": "能力配點",
+      "phase": 4,
+      "moves": {
+        "wlre.ui.attribute_points_ui": "wlre.features.attributes.ui.attribute_points_ui",
+        "wlre.services.battle.attribute_points": "wlre.features.attributes.domain.attribute_points"
+      },
+      "shared": []
+    },
+    "battle": {
+      "title": "戰鬥／AI／戰鬥設定",
+      "phase": 5,
+      "moves": {
+        "wlre.ui.battle_view": "wlre.features.battle.ui.battle_view",
+        "wlre.ui.auto_battle_ui": "wlre.features.battle.ui.auto_battle_ui",
+        "wlre.ui.auto_battle": "wlre.features.battle.ui.auto_battle",
+        "wlre.services.battle.combat": "wlre.features.battle.domain.combat",
+        "wlre.services.battle.battle_commands": "wlre.features.battle.domain.battle_commands",
+        "wlre.services.battle.auto_battle": "wlre.features.battle.domain.auto_battle"
+      },
+      "shared": []
+    },
+    "expedition": {
+      "title": "遠征",
+      "phase": 6,
+      "moves": {
+        "wlre.ui.expedition_ui": "wlre.features.expedition.ui.expedition_ui",
+        "wlre.ui.expedition_display": "wlre.features.expedition.ui.expedition_display",
+        "wlre.ui.expedition": "wlre.features.expedition.ui.expedition",
+        "wlre.services.expedition": "wlre.features.expedition.domain.expedition",
+        "wlre.services.expedition_data": "wlre.features.expedition.domain.expedition_data",
+        "wlre.services.expedition_teams": "wlre.features.expedition.domain.expedition_teams",
+        "wlre.storage.expedition_settings": "wlre.features.expedition.storage.expedition_settings"
+      },
+      "shared": []
+    },
+    "alchemy": {
+      "title": "煉金",
+      "phase": 7,
+      "moves": {
+        "wlre.services.items.alchemy": "wlre.features.alchemy.domain.alchemy"
+      },
+      "shared": []
+    },
+    "crafting": {
+      "title": "製作與排程",
+      "phase": 7,
+      "moves": {
+        "wlre.ui.crafting_ui": "wlre.features.crafting.ui.crafting_ui",
+        "wlre.ui.crafting_browser": "wlre.features.crafting.ui.crafting_browser",
+        "wlre.ui.crafting_plan_ui": "wlre.features.crafting.ui.crafting_plan_ui",
+        "wlre.ui.crafting": "wlre.features.crafting.ui.crafting",
+        "wlre.services.items.crafting": "wlre.features.crafting.domain.crafting",
+        "wlre.services.items.crafting_plan": "wlre.features.crafting.domain.crafting_plan",
+        "wlre.services.items.crafting_browser_model": "wlre.features.crafting.domain.crafting_browser_model"
+      },
+      "shared": [
+        "wlre.services.world.tent"
+      ]
+    },
+    "inventory": {
+      "title": "背包與超空間袋",
+      "phase": 8,
+      "moves": {
+        "wlre.ui.bag_grid": "wlre.features.inventory.ui.bag_grid",
+        "wlre.ui.room_storage_status": "wlre.features.inventory.ui.room_storage_status",
+        "wlre.services.items.inventory": "wlre.features.inventory.domain.inventory",
+        "wlre.services.items.room_storage": "wlre.features.inventory.domain.room_storage"
+      },
+      "shared": []
+    },
+    "supply": {
+      "title": "補給",
+      "phase": 8,
+      "moves": {
+        "wlre.ui.recovery_ui": "wlre.features.supply.ui.recovery_ui",
+        "wlre.services.items.recovery": "wlre.features.supply.domain.recovery",
+        "wlre.services.items.field_supply": "wlre.features.supply.domain.field_supply"
+      },
+      "shared": []
+    },
+    "maintenance": {
+      "title": "修理與戰後整理",
+      "phase": 8,
+      "moves": {
+        "wlre.ui.maintenance_ui": "wlre.features.maintenance.ui.maintenance_ui",
+        "wlre.services.items.maintenance": "wlre.features.maintenance.domain.maintenance",
+        "wlre.services.items.post_battle_maintenance": "wlre.features.maintenance.domain.post_battle_maintenance"
+      },
+      "shared": []
+    },
+    "chat": {
+      "title": "聊天",
+      "phase": 9,
+      "moves": {
+        "wlre.ui.chat_ui": "wlre.features.chat.ui.chat_ui",
+        "wlre.ui.chat_emoji": "wlre.features.chat.ui.chat_emoji",
+        "wlre.services.social.chat": "wlre.features.chat.domain.chat",
+        "wlre.services.social.chat_names": "wlre.features.chat.domain.chat_names"
+      },
+      "shared": []
+    },
+    "social": {
+      "title": "社交與公會",
+      "phase": 9,
+      "moves": {
+        "wlre.services.social.guild": "wlre.features.social.domain.guild"
+      },
+      "shared": []
+    },
+    "efficiency": {
+      "title": "經驗效率",
+      "phase": 9,
+      "moves": {
+        "wlre.ui.efficiency_ui": "wlre.features.efficiency.ui.efficiency_ui",
+        "wlre.core.efficiency": "wlre.features.efficiency.domain.efficiency"
+      },
+      "shared": []
+    },
+    "resources": {
+      "title": "官方資源狀態與資料檢視",
+      "phase": 10,
+      "moves": {
+        "wlre.ui.resource_view": "wlre.features.resources.ui.resource_view"
+      },
+      "shared": [
+        "wlre.launcher",
+        "wlre.services.official",
+        "wlre.services.resource_compatibility",
+        "wlre.services.world.runtime_1275",
+        "wlre.services.world.bundle_runtime_1275",
+        "wlre.services.world.auto_",
+        "wlre.services.world.catalog_",
+        "wlre.services.world.unity_textasset",
+        "wlre.resource_manifest"
+      ]
+    }
+  }
+}

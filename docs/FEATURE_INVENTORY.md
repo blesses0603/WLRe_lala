@@ -1,0 +1,421 @@
+# 全功能模組盤點與執行順序
+
+基準：最新 main `14af2ff`、PR #57 `cb9e9a77`；版本維持 v0.6.1。
+本報告由 `python -m tools.architecture.inventory` 讀取所有 Python 原始碼與測試產生。
+完整 import、定義、資源引用與來源 SHA 見 [inventory.json](../architecture/inventory.json)。
+
+| 階段 | 功能 | 原始碼歸屬數 | 來源遷移規則 |
+| --- | --- | ---: | --- |
+| 1 | 副本共用房間流程 (`instances`) | 2 | 優先官方 Runtime；未證等價保留舊檔 |
+| 1 | 協力 (`cooperative`) | 0 | 優先官方 Runtime；未證等價保留舊檔 |
+| 1 | 一般副本 (`dungeon`) | 0 | 優先官方 Runtime；未證等價保留舊檔 |
+| 2 | 小地圖與導航預覽 (`minimap`) | 3 | 優先官方 Runtime；未證等價保留舊檔 |
+| 2 | NPC／對話／商店 (`npc`) | 7 | 優先官方 Runtime；未證等價保留舊檔 |
+| 2 | 傳送點 (`portals`) | 2 | 優先官方 Runtime；未證等價保留舊檔 |
+| 3 | 帳號／登入／角色／版本閘門 (`accounts`) | 7 | 優先官方 Runtime；未證等價保留舊檔 |
+| 3 | 主畫面與目前活動 (`overview`) | 1 | 優先官方 Runtime；未證等價保留舊檔 |
+| 4 | 隊伍與隊伍檢查 (`party`) | 3 | 優先官方 Runtime；未證等價保留舊檔 |
+| 4 | 夥伴出戰 (`companions`) | 2 | 優先官方 Runtime；未證等價保留舊檔 |
+| 4 | 能力配點 (`attributes`) | 2 | 優先官方 Runtime；未證等價保留舊檔 |
+| 5 | 戰鬥／AI／戰鬥設定 (`battle`) | 9 | 優先官方 Runtime；未證等價保留舊檔 |
+| 6 | 遠征 (`expedition`) | 17 | 優先官方 Runtime；未證等價保留舊檔 |
+| 7 | 煉金 (`alchemy`) | 1 | 優先官方 Runtime；未證等價保留舊檔 |
+| 7 | 製作與排程 (`crafting`) | 12 | 優先官方 Runtime；未證等價保留舊檔 |
+| 8 | 背包與超空間袋 (`inventory`) | 4 | 優先官方 Runtime；未證等價保留舊檔 |
+| 8 | 補給 (`supply`) | 3 | 優先官方 Runtime；未證等價保留舊檔 |
+| 8 | 修理與戰後整理 (`maintenance`) | 3 | 優先官方 Runtime；未證等價保留舊檔 |
+| 9 | 聊天 (`chat`) | 4 | 優先官方 Runtime；未證等價保留舊檔 |
+| 9 | 社交與公會 (`social`) | 1 | 優先官方 Runtime；未證等價保留舊檔 |
+| 9 | 經驗效率 (`efficiency`) | 2 | 優先官方 Runtime；未證等價保留舊檔 |
+| 10 | 官方資源狀態與資料檢視 (`resources`) | 1 | 優先官方 Runtime；未證等價保留舊檔 |
+
+共享層保留 network、State／事件、排程、資源驗證與下載、路徑與原子儲存、
+UI 主執行緒／主視窗組裝、共用圖片快取及多功能安全規則。
+
+## 完整 Python 模組歸屬
+
+| 路徑 | 歸屬 | 直接依賴數 | 資源引用數 |
+| --- | --- | ---: | ---: |
+| `wlre/__init__.py` | shared | 0 | 0 |
+| `wlre/__main__.py` | shared | 16 | 0 |
+| `wlre/compat.py` | shared | 3 | 0 |
+| `wlre/core/__init__.py` | shared | 0 | 0 |
+| `wlre/core/activity.py` | shared | 2 | 0 |
+| `wlre/core/diagnostics.py` | shared | 11 | 0 |
+| `wlre/core/efficiency.py` | efficiency | 8 | 0 |
+| `wlre/core/event_log.py` | shared | 15 | 0 |
+| `wlre/core/inventory_updates.py` | shared | 4 | 1 |
+| `wlre/core/maintenance.py` | shared | 1 | 0 |
+| `wlre/core/state.py` | shared | 53 | 0 |
+| `wlre/core/state_battle_events.py` | shared | 0 | 0 |
+| `wlre/core/state_events.py` | shared | 9 | 0 |
+| `wlre/core/state_ownership.py` | shared | 4 | 0 |
+| `wlre/core/state_session_events.py` | shared | 0 | 0 |
+| `wlre/core/state_world_events.py` | shared | 0 | 0 |
+| `wlre/launcher.py` | shared | 14 | 0 |
+| `wlre/launcher_progress.py` | shared | 8 | 0 |
+| `wlre/network/__init__.py` | shared | 0 | 0 |
+| `wlre/network/client.py` | shared | 75 | 0 |
+| `wlre/network/command_envelope.py` | shared | 4 | 0 |
+| `wlre/network/commands.py` | shared | 70 | 0 |
+| `wlre/network/connection_health.py` | shared | 4 | 0 |
+| `wlre/network/expedition.py` | shared | 3 | 0 |
+| `wlre/network/instance_actions.py` | shared | 6 | 0 |
+| `wlre/network/instances.py` | shared | 5 | 0 |
+| `wlre/network/layouts.py` | shared | 2 | 0 |
+| `wlre/network/live_data.py` | shared | 3 | 0 |
+| `wlre/network/npc_dialogue.py` | shared | 15 | 0 |
+| `wlre/network/outbound_observations.py` | shared | 4 | 0 |
+| `wlre/network/protocol.py` | shared | 36 | 1 |
+| `wlre/network/service_scheduler.py` | shared | 22 | 0 |
+| `wlre/network/social_protocol.py` | shared | 2 | 0 |
+| `wlre/network/state_updates.py` | shared | 1 | 0 |
+| `wlre/network/wire.py` | shared | 3 | 0 |
+| `wlre/paths.py` | shared | 2 | 0 |
+| `wlre/resource_manifest.py` | shared | 14 | 29 |
+| `wlre/services/__init__.py` | shared | 0 | 0 |
+| `wlre/services/battle/__init__.py` | shared | 0 | 0 |
+| `wlre/services/battle/attribute_points.py` | attributes | 5 | 0 |
+| `wlre/services/battle/auto_battle.py` | battle | 24 | 0 |
+| `wlre/services/battle/battle_commands.py` | battle | 8 | 0 |
+| `wlre/services/battle/combat.py` | battle | 5 | 1 |
+| `wlre/services/battle/companions.py` | companions | 4 | 0 |
+| `wlre/services/battle/party.py` | party | 5 | 0 |
+| `wlre/services/battle/party_guard.py` | party | 11 | 0 |
+| `wlre/services/coordination.py` | shared | 0 | 0 |
+| `wlre/services/expedition/__init__.py` | expedition | 21 | 0 |
+| `wlre/services/expedition/data.py` | expedition | 26 | 1 |
+| `wlre/services/expedition/manager.py` | expedition | 25 | 0 |
+| `wlre/services/expedition/teams.py` | expedition | 2 | 0 |
+| `wlre/services/expedition_data.py` | expedition | 7 | 0 |
+| `wlre/services/expedition_teams.py` | expedition | 9 | 0 |
+| `wlre/services/game_version_gate.py` | shared | 9 | 0 |
+| `wlre/services/instance_browser.py` | shared | 5 | 1 |
+| `wlre/services/instance_catalog.py` | shared | 6 | 0 |
+| `wlre/services/instance_combat.py` | shared | 0 | 0 |
+| `wlre/services/instance_creation.py` | shared | 10 | 0 |
+| `wlre/services/instance_entry.py` | shared | 8 | 0 |
+| `wlre/services/instance_rewards.py` | shared | 4 | 0 |
+| `wlre/services/instance_room_flow.py` | shared | 11 | 0 |
+| `wlre/services/instance_standby.py` | shared | 7 | 0 |
+| `wlre/services/instance_start.py` | shared | 8 | 0 |
+| `wlre/services/instances.py` | shared | 13 | 0 |
+| `wlre/services/items/__init__.py` | shared | 0 | 0 |
+| `wlre/services/items/alchemy.py` | alchemy | 19 | 1 |
+| `wlre/services/items/catalog.py` | shared | 9 | 1 |
+| `wlre/services/items/combat_resources.py` | shared | 16 | 0 |
+| `wlre/services/items/crafting.py` | crafting | 20 | 1 |
+| `wlre/services/items/crafting_browser_model.py` | crafting | 15 | 0 |
+| `wlre/services/items/crafting_plan.py` | crafting | 9 | 0 |
+| `wlre/services/items/field_supply.py` | supply | 9 | 0 |
+| `wlre/services/items/inventory.py` | inventory | 9 | 0 |
+| `wlre/services/items/maintenance.py` | maintenance | 8 | 0 |
+| `wlre/services/items/post_battle_maintenance.py` | maintenance | 17 | 0 |
+| `wlre/services/items/recovery.py` | supply | 10 | 0 |
+| `wlre/services/items/reservations.py` | shared | 3 | 0 |
+| `wlre/services/items/room_storage.py` | inventory | 5 | 0 |
+| `wlre/services/lala_updater.py` | shared | 19 | 0 |
+| `wlre/services/official_bundle_download.py` | shared | 20 | 0 |
+| `wlre/services/official_incremental_sync.py` | shared | 23 | 0 |
+| `wlre/services/official_lua_index.py` | shared | 19 | 0 |
+| `wlre/services/official_manifest_sync.py` | shared | 25 | 0 |
+| `wlre/services/official_resource_sync.py` | shared | 13 | 0 |
+| `wlre/services/official_version.py` | shared | 21 | 0 |
+| `wlre/services/resource_compatibility.py` | shared | 6 | 1 |
+| `wlre/services/social/__init__.py` | shared | 0 | 0 |
+| `wlre/services/social/chat.py` | chat | 10 | 0 |
+| `wlre/services/social/chat_names.py` | chat | 4 | 0 |
+| `wlre/services/social/guild.py` | social | 3 | 0 |
+| `wlre/services/world/__init__.py` | shared | 0 | 0 |
+| `wlre/services/world/auto_candidate_reader.py` | shared | 16 | 0 |
+| `wlre/services/world/auto_catalog.py` | shared | 59 | 0 |
+| `wlre/services/world/bundle_runtime_1275.py` | shared | 56 | 0 |
+| `wlre/services/world/catalog_adapters.py` | shared | 14 | 0 |
+| `wlre/services/world/catalog_compatibility.py` | shared | 15 | 0 |
+| `wlre/services/world/catalog_identity.py` | shared | 15 | 0 |
+| `wlre/services/world/catalog_source_extractor.py` | shared | 16 | 0 |
+| `wlre/services/world/coordinates.py` | shared | 9 | 2 |
+| `wlre/services/world/daily_task_1275.py` | shared | 1 | 0 |
+| `wlre/services/world/display_position.py` | shared | 1 | 0 |
+| `wlre/services/world/doors_1275.py` | shared | 2 | 0 |
+| `wlre/services/world/eve_v115.py` | shared | 4 | 0 |
+| `wlre/services/world/feature_resource_index.py` | shared | 13 | 0 |
+| `wlre/services/world/formal_candidate_bridge.py` | shared | 37 | 0 |
+| `wlre/services/world/game_data_1275.py` | shared | 10 | 0 |
+| `wlre/services/world/itemdata_v1.py` | shared | 2 | 0 |
+| `wlre/services/world/launcher_catalog.py` | shared | 26 | 0 |
+| `wlre/services/world/map_names.py` | shared | 6 | 1 |
+| `wlre/services/world/movement.py` | shared | 13 | 0 |
+| `wlre/services/world/movement_display.py` | shared | 2 | 0 |
+| `wlre/services/world/navigation.py` | shared | 11 | 1 |
+| `wlre/services/world/npc_1275_eve.py` | shared | 6 | 0 |
+| `wlre/services/world/npc_asset_install.py` | shared | 13 | 3 |
+| `wlre/services/world/npc_catalog.py` | npc | 13 | 1 |
+| `wlre/services/world/npc_interact.py` | npc | 12 | 1 |
+| `wlre/services/world/npc_item_data.py` | npc | 11 | 0 |
+| `wlre/services/world/npc_localization.py` | npc | 10 | 2 |
+| `wlre/services/world/npc_shop.py` | npc | 13 | 0 |
+| `wlre/services/world/npc_shop_evidence.py` | npc | 2 | 0 |
+| `wlre/services/world/npc_talk.py` | npc | 14 | 1 |
+| `wlre/services/world/obstacle_scope.py` | shared | 5 | 1 |
+| `wlre/services/world/official_catalog_pipeline.py` | shared | 35 | 0 |
+| `wlre/services/world/portal_policy.py` | shared | 4 | 0 |
+| `wlre/services/world/portal_travel.py` | portals | 13 | 0 |
+| `wlre/services/world/portals.py` | portals | 9 | 1 |
+| `wlre/services/world/preview_1275.py` | shared | 28 | 0 |
+| `wlre/services/world/resource_classification.py` | shared | 20 | 0 |
+| `wlre/services/world/resource_gap_diagnostics.py` | shared | 25 | 0 |
+| `wlre/services/world/resource_rebuilder.py` | shared | 65 | 0 |
+| `wlre/services/world/roaming.py` | shared | 10 | 0 |
+| `wlre/services/world/runtime_1275.py` | shared | 33 | 0 |
+| `wlre/services/world/smallmaps.py` | shared | 16 | 1 |
+| `wlre/services/world/tent.py` | shared | 8 | 0 |
+| `wlre/services/world/unity_textasset.py` | shared | 13 | 0 |
+| `wlre/storage/__init__.py` | shared | 0 | 0 |
+| `wlre/storage/account_settings.py` | accounts | 17 | 0 |
+| `wlre/storage/atomic.py` | shared | 11 | 0 |
+| `wlre/storage/defaults.py` | accounts | 5 | 1 |
+| `wlre/storage/expedition_settings.py` | expedition | 9 | 0 |
+| `wlre/storage/login_memory.py` | accounts | 16 | 0 |
+| `wlre/storage/paths.py` | shared | 3 | 0 |
+| `wlre/storage/server_lines.py` | accounts | 3 | 1 |
+| `wlre/ui/__init__.py` | shared | 0 | 0 |
+| `wlre/ui/account_controller.py` | accounts | 2 | 0 |
+| `wlre/ui/attribute_points_ui.py` | attributes | 11 | 0 |
+| `wlre/ui/auto_battle/__init__.py` | battle | 0 | 0 |
+| `wlre/ui/auto_battle/action_editor.py` | battle | 17 | 0 |
+| `wlre/ui/auto_battle/model.py` | battle | 13 | 0 |
+| `wlre/ui/auto_battle/rule_card.py` | battle | 11 | 0 |
+| `wlre/ui/auto_battle_ui.py` | battle | 41 | 0 |
+| `wlre/ui/bag_grid.py` | inventory | 18 | 0 |
+| `wlre/ui/battle_view.py` | battle | 3 | 0 |
+| `wlre/ui/button_art.py` | shared | 13 | 0 |
+| `wlre/ui/chat_emoji.py` | chat | 9 | 2 |
+| `wlre/ui/chat_ui.py` | chat | 26 | 0 |
+| `wlre/ui/companion_ui.py` | companions | 10 | 0 |
+| `wlre/ui/connection_status.py` | shared | 3 | 0 |
+| `wlre/ui/crafting/__init__.py` | crafting | 0 | 0 |
+| `wlre/ui/crafting/catalog_grid.py` | crafting | 7 | 0 |
+| `wlre/ui/crafting/icon_cache.py` | crafting | 5 | 0 |
+| `wlre/ui/crafting/item_icons.py` | crafting | 12 | 2 |
+| `wlre/ui/crafting/queue_view.py` | crafting | 12 | 0 |
+| `wlre/ui/crafting/recipe_detail.py` | crafting | 6 | 0 |
+| `wlre/ui/crafting_browser.py` | crafting | 36 | 0 |
+| `wlre/ui/crafting_plan_ui.py` | crafting | 18 | 0 |
+| `wlre/ui/crafting_ui.py` | crafting | 15 | 0 |
+| `wlre/ui/dashboard_builder.py` | shared | 35 | 0 |
+| `wlre/ui/dashboard_layout.py` | shared | 2 | 0 |
+| `wlre/ui/efficiency_ui.py` | efficiency | 8 | 0 |
+| `wlre/ui/event_queue.py` | shared | 8 | 0 |
+| `wlre/ui/expedition/__init__.py` | expedition | 0 | 0 |
+| `wlre/ui/expedition/controls.py` | expedition | 2 | 0 |
+| `wlre/ui/expedition/panel.py` | expedition | 31 | 0 |
+| `wlre/ui/expedition/planner.py` | expedition | 8 | 0 |
+| `wlre/ui/expedition/settings.py` | expedition | 11 | 0 |
+| `wlre/ui/expedition/task_detail.py` | expedition | 6 | 0 |
+| `wlre/ui/expedition/task_list.py` | expedition | 8 | 0 |
+| `wlre/ui/expedition/team_view.py` | expedition | 4 | 0 |
+| `wlre/ui/expedition_display.py` | expedition | 2 | 0 |
+| `wlre/ui/expedition_ui.py` | expedition | 36 | 0 |
+| `wlre/ui/feature_windows.py` | shared | 4 | 0 |
+| `wlre/ui/function_icons.py` | shared | 11 | 0 |
+| `wlre/ui/gui.py` | shared | 63 | 0 |
+| `wlre/ui/halo_button.py` | shared | 10 | 0 |
+| `wlre/ui/home_map.py` | minimap | 44 | 0 |
+| `wlre/ui/instance_menu_icons.py` | instances | 8 | 0 |
+| `wlre/ui/instance_ui.py` | instances | 16 | 0 |
+| `wlre/ui/layout.py` | shared | 2 | 0 |
+| `wlre/ui/login_controller.py` | accounts | 12 | 0 |
+| `wlre/ui/maintenance_ui.py` | maintenance | 14 | 0 |
+| `wlre/ui/minimap.py` | minimap | 3 | 0 |
+| `wlre/ui/navigation_gui.py` | minimap | 28 | 0 |
+| `wlre/ui/overview_ui.py` | overview | 29 | 0 |
+| `wlre/ui/party_guard_ui.py` | party | 7 | 0 |
+| `wlre/ui/recovery_ui.py` | supply | 15 | 0 |
+| `wlre/ui/resource_view.py` | resources | 29 | 0 |
+| `wlre/ui/room_storage_status.py` | inventory | 0 | 0 |
+| `wlre/ui/rounded_notebook.py` | shared | 4 | 0 |
+| `wlre/ui/services_ui.py` | shared | 21 | 0 |
+| `wlre/ui/session_bridge.py` | shared | 1 | 0 |
+| `wlre/ui/theme.py` | shared | 25 | 2 |
+| `wlre/ui/theme_styles.py` | shared | 2 | 0 |
+| `wlre/ui/theme_surfaces.py` | shared | 4 | 0 |
+| `wlre/ui/version_gate_controller.py` | accounts | 33 | 0 |
+| `wlre/ui/window_layout.py` | shared | 0 | 0 |
+| `tests/test_alchemy_continuation.py` | shared | 9 | 0 |
+| `tests/test_architecture_boundaries.py` | shared | 21 | 2 |
+| `tests/test_attribute_points.py` | shared | 15 | 0 |
+| `tests/test_audit_repository.py` | shared | 12 | 3 |
+| `tests/test_auto_battle_diagnostics.py` | shared | 8 | 0 |
+| `tests/test_auto_battle_ui_modules.py` | shared | 9 | 0 |
+| `tests/test_auto_candidate_reader.py` | shared | 19 | 0 |
+| `tests/test_auto_catalog.py` | shared | 40 | 0 |
+| `tests/test_auto_catalog_ui.py` | shared | 15 | 0 |
+| `tests/test_automatic_candidate_indexes.py` | shared | 16 | 0 |
+| `tests/test_automatic_raw_receiver.py` | shared | 7 | 0 |
+| `tests/test_automation_integration.py` | shared | 33 | 0 |
+| `tests/test_bag_grid.py` | shared | 14 | 0 |
+| `tests/test_build.py` | shared | 12 | 2 |
+| `tests/test_build_environment_repair.py` | shared | 8 | 0 |
+| `tests/test_bundle_runtime_1275.py` | shared | 55 | 0 |
+| `tests/test_catalog_adapters.py` | shared | 9 | 0 |
+| `tests/test_catalog_compatibility.py` | shared | 24 | 0 |
+| `tests/test_catalog_source_extractor.py` | shared | 17 | 0 |
+| `tests/test_character_sync_safety.py` | shared | 18 | 0 |
+| `tests/test_compact_crafting.py` | shared | 20 | 0 |
+| `tests/test_companion_commands.py` | shared | 14 | 0 |
+| `tests/test_companion_sync_safety.py` | shared | 9 | 0 |
+| `tests/test_companion_ui.py` | shared | 9 | 0 |
+| `tests/test_compiler_diagnostics.py` | shared | 8 | 0 |
+| `tests/test_connection_health.py` | shared | 39 | 0 |
+| `tests/test_coop_reward_lifecycle_v057.py` | shared | 27 | 0 |
+| `tests/test_crafting_ui_modules.py` | shared | 10 | 0 |
+| `tests/test_crafting_ui_parts.py` | shared | 12 | 0 |
+| `tests/test_daily_task_1275.py` | shared | 4 | 0 |
+| `tests/test_dashboard_layout.py` | shared | 18 | 0 |
+| `tests/test_doors_1275.py` | shared | 4 | 0 |
+| `tests/test_eve_v115.py` | shared | 6 | 0 |
+| `tests/test_exp_efficiency_regression.py` | shared | 9 | 0 |
+| `tests/test_expedition.py` | shared | 33 | 1 |
+| `tests/test_expedition_service_modules.py` | shared | 10 | 0 |
+| `tests/test_expedition_teams.py` | shared | 18 | 1 |
+| `tests/test_expedition_ui.py` | shared | 16 | 0 |
+| `tests/test_expedition_ui_modules.py` | shared | 15 | 0 |
+| `tests/test_feature_architecture.py` | shared | 16 | 0 |
+| `tests/test_feature_resource_index.py` | shared | 22 | 0 |
+| `tests/test_feature_windows_v052.py` | shared | 14 | 0 |
+| `tests/test_formal_candidate_bridge.py` | shared | 48 | 0 |
+| `tests/test_game_data_1275.py` | shared | 13 | 0 |
+| `tests/test_game_version_gate.py` | shared | 19 | 0 |
+| `tests/test_gold_sync_v0515.py` | shared | 12 | 0 |
+| `tests/test_guild_chat_safety.py` | shared | 15 | 0 |
+| `tests/test_health_25804_diagnostics.py` | shared | 13 | 0 |
+| `tests/test_home_action_icons.py` | shared | 15 | 0 |
+| `tests/test_home_map_follow.py` | shared | 8 | 0 |
+| `tests/test_icon_decode_cache.py` | shared | 14 | 0 |
+| `tests/test_instance_actions.py` | shared | 15 | 0 |
+| `tests/test_instance_ai_lock_ui.py` | shared | 8 | 0 |
+| `tests/test_instance_bundle_collector.py` | shared | 10 | 0 |
+| `tests/test_instance_catalog_1262.py` | shared | 4 | 0 |
+| `tests/test_instance_coop_host_start_v052.py` | shared | 13 | 0 |
+| `tests/test_instance_creation.py` | shared | 14 | 0 |
+| `tests/test_instance_entry.py` | shared | 22 | 0 |
+| `tests/test_instance_headcount_v053.py` | shared | 3 | 0 |
+| `tests/test_instance_improvements.py` | shared | 18 | 0 |
+| `tests/test_instance_protocol.py` | shared | 19 | 0 |
+| `tests/test_instance_rewards.py` | shared | 24 | 0 |
+| `tests/test_instance_room_flow.py` | shared | 15 | 0 |
+| `tests/test_instance_room_ui.py` | shared | 13 | 0 |
+| `tests/test_instance_standby.py` | shared | 21 | 0 |
+| `tests/test_instance_start.py` | shared | 21 | 0 |
+| `tests/test_instance_ui.py` | shared | 11 | 0 |
+| `tests/test_itemdata_v1.py` | shared | 5 | 0 |
+| `tests/test_lala_updater.py` | shared | 14 | 0 |
+| `tests/test_launcher_catalog.py` | shared | 28 | 0 |
+| `tests/test_launcher_progress.py` | shared | 18 | 0 |
+| `tests/test_login_and_tab_alignment.py` | shared | 13 | 0 |
+| `tests/test_login_memory.py` | shared | 14 | 0 |
+| `tests/test_macos_build.py` | shared | 21 | 0 |
+| `tests/test_maintenance.py` | shared | 21 | 0 |
+| `tests/test_network_command_envelope.py` | shared | 23 | 0 |
+| `tests/test_npc_1275_eve.py` | shared | 10 | 1 |
+| `tests/test_npc_asset_install_v059.py` | shared | 17 | 3 |
+| `tests/test_npc_catalog_v057.py` | shared | 22 | 1 |
+| `tests/test_npc_choice_v0511.py` | shared | 24 | 0 |
+| `tests/test_npc_dialogue_ui_v058.py` | shared | 10 | 0 |
+| `tests/test_npc_dialogue_v058.py` | shared | 22 | 0 |
+| `tests/test_npc_interact_real_v0511.py` | shared | 13 | 0 |
+| `tests/test_npc_item_data_v0514.py` | shared | 28 | 0 |
+| `tests/test_npc_resource_integrity_v0510.py` | shared | 26 | 2 |
+| `tests/test_npc_shop_v0513.py` | shared | 32 | 0 |
+| `tests/test_npc_talk_v058.py` | shared | 15 | 1 |
+| `tests/test_nuitka_build_performance.py` | shared | 11 | 0 |
+| `tests/test_official_bundle_download.py` | shared | 12 | 0 |
+| `tests/test_official_catalog_identity.py` | shared | 16 | 0 |
+| `tests/test_official_catalog_pipeline.py` | shared | 21 | 0 |
+| `tests/test_official_incremental_cli.py` | shared | 25 | 0 |
+| `tests/test_official_incremental_sync.py` | shared | 30 | 0 |
+| `tests/test_official_lua_index.py` | shared | 12 | 0 |
+| `tests/test_official_manifest_integration.py` | shared | 16 | 0 |
+| `tests/test_official_manifest_sync.py` | shared | 12 | 0 |
+| `tests/test_official_resource_sync.py` | shared | 14 | 0 |
+| `tests/test_official_version.py` | shared | 26 | 0 |
+| `tests/test_optimizations.py` | shared | 24 | 0 |
+| `tests/test_optimized_ui.py` | shared | 27 | 0 |
+| `tests/test_overview.py` | shared | 5 | 0 |
+| `tests/test_overview_controls.py` | shared | 19 | 0 |
+| `tests/test_party_guard.py` | shared | 18 | 0 |
+| `tests/test_periodic_cleanup.py` | shared | 8 | 0 |
+| `tests/test_phase09_native_packaging.py` | shared | 10 | 0 |
+| `tests/test_position_cache.py` | shared | 6 | 0 |
+| `tests/test_post_battle_maintenance.py` | shared | 20 | 0 |
+| `tests/test_postbattle_ai_lock_policy.py` | shared | 13 | 0 |
+| `tests/test_prelogin_version_window.py` | shared | 18 | 0 |
+| `tests/test_preview_1275.py` | shared | 17 | 0 |
+| `tests/test_redesigned_layout.py` | shared | 16 | 0 |
+| `tests/test_release.py` | shared | 30 | 3 |
+| `tests/test_release_nuitka.py` | shared | 13 | 0 |
+| `tests/test_release_preflight.py` | shared | 8 | 0 |
+| `tests/test_repository_hygiene.py` | shared | 6 | 0 |
+| `tests/test_resource_classification.py` | shared | 13 | 0 |
+| `tests/test_resource_compatibility.py` | shared | 23 | 1 |
+| `tests/test_resource_gap_diagnostics.py` | shared | 22 | 0 |
+| `tests/test_resource_rebuilder.py` | shared | 40 | 0 |
+| `tests/test_room_storage_1262.py` | shared | 10 | 0 |
+| `tests/test_room_storage_ui.py` | shared | 11 | 0 |
+| `tests/test_runtime_1275_baseline.py` | shared | 26 | 0 |
+| `tests/test_s51_packet_resilience.py` | shared | 18 | 0 |
+| `tests/test_server_account_settings.py` | shared | 11 | 0 |
+| `tests/test_shop_reconciliation_v0516.py` | shared | 11 | 0 |
+| `tests/test_startup_build_cache.py` | shared | 15 | 0 |
+| `tests/test_state_event_routing.py` | shared | 14 | 0 |
+| `tests/test_state_updates.py` | shared | 12 | 0 |
+| `tests/test_tent_1262.py` | shared | 17 | 0 |
+| `tests/test_theme_layer_invalidation.py` | shared | 5 | 0 |
+| `tests/test_theme_surfaces.py` | shared | 15 | 0 |
+| `tests/test_ui_event_budget.py` | shared | 12 | 0 |
+| `tests/test_unity_textasset.py` | shared | 18 | 0 |
+| `tests/test_unitypy_packaging.py` | shared | 12 | 0 |
+| `tests/test_verified_expedition_1275.py` | shared | 28 | 0 |
+| `tests/test_verify_official_local_bundles.py` | shared | 17 | 0 |
+| `tests/test_window_minimize.py` | shared | 8 | 0 |
+| `tests/test_yooasset_manifest_compare.py` | shared | 12 | 0 |
+| `tests/test_yooasset_manifest_full_index.py` | shared | 17 | 0 |
+| `tools/__init__.py` | shared | 0 | 0 |
+| `tools/architecture/__init__.py` | shared | 0 | 0 |
+| `tools/architecture/inventory.py` | shared | 8 | 0 |
+| `tools/architecture/migrate.py` | shared | 11 | 0 |
+| `tools/architecture/test_features.py` | shared | 11 | 0 |
+| `tools/audit_repository.py` | shared | 9 | 0 |
+| `tools/build/__init__.py` | shared | 0 | 0 |
+| `tools/build/build_macos.py` | shared | 16 | 0 |
+| `tools/build/build_nuitka.py` | shared | 19 | 0 |
+| `tools/build/python_build_support.py` | shared | 8 | 0 |
+| `tools/build/release_macos.py` | shared | 14 | 0 |
+| `tools/build/release_nuitka.py` | shared | 9 | 0 |
+| `tools/check_official_lua.py` | shared | 11 | 0 |
+| `tools/check_official_manifests.py` | shared | 11 | 0 |
+| `tools/check_official_sync.py` | shared | 9 | 0 |
+| `tools/check_official_version.py` | shared | 4 | 0 |
+| `tools/classify_existing_resources.py` | shared | 14 | 0 |
+| `tools/diagnose_lala_resources.py` | shared | 9 | 0 |
+| `tools/plan_official_catalog.py` | shared | 29 | 0 |
+| `tools/plan_official_incremental.py` | shared | 20 | 0 |
+| `tools/resources/__init__.py` | shared | 0 | 0 |
+| `tools/resources/collect_emoji_resources.py` | shared | 11 | 0 |
+| `tools/resources/collect_instance_bundles.py` | shared | 7 | 0 |
+| `tools/resources/import_npc_talks.py` | shared | 8 | 0 |
+| `tools/resources/install_npc_text_1262.py` | shared | 2 | 0 |
+| `tools/resources/lala_manifest_compare.py` | shared | 20 | 0 |
+| `tools/resources/lala_manifest_full_index.py` | shared | 27 | 0 |
+| `tools/resources/preview_1275.py` | shared | 8 | 0 |
+| `tools/reviewed_1275_handoff.py` | shared | 7 | 0 |
+| `tools/verify_official_local_bundles.py` | shared | 28 | 0 |
+
+## 驗收與資源移除界線
+
+- 每個功能經舊入口／新入口相容測試與對應模組回歸；共享邊界變更執行完整回歸。
+- 官方來源延續現有 `.version`／`.bytes`／`.hash`、Bundle MD5／CRC、固定 SHA 與 Runtime；不新增手動 ZIP 前置要求。
+- 所有現存資源本輪先保留。靜態零引用不能證明所有消費者已遷移，也不能代替地圖／導航等價與乾淨安裝驗收。
+- GitHub 三平台 CI、正式服 E2E、原生 EXE 打包分別記錄；未執行者不標示通過。
+- PR #57 尚未合併：開發分支以其 head 為依賴，PR 先以該分支為 base，合併後再調整 main；保留 cb9e9a77。
