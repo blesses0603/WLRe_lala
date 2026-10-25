@@ -32,7 +32,11 @@ def parse_stage_map_portals(raw):
             raise PortalLinkSourceError('1275 StageMapData_C 未知標記種類')
         if kind not in (2, 3):
             continue
-        if not scene or not event_id or not x or not y:
+        # 1262 Lua defines PositionX/Y as unsigned fields but does not
+        # require either to be nonzero for NameID lookup. A portal label
+        # must not disappear merely because its *display* position is 0.
+        # Rendering/transfer positions are independently validated later.
+        if not scene or not event_id:
             continue
         key = (scene, event_id)
         if key in entries:
