@@ -1,6 +1,6 @@
 # LaLa 電腦版：依功能建資料夾與舊離線資源遷移規劃（v0.6.1）
 
-> 2026-10-25。以已合併 PR #56 的 main（v0.6.1 開發版）為基準。**PR #57 已從規劃延伸為分階段實作：P1a 三批拆出協力操作、房間對話框與協力狀態顯示，P1b 第一批拆出一般副本開始／進場、房間人數門檻、入場許可及結算內容；後續模組尚未完成。未刪除資源、未提升版本號。** 以下路徑是實作提案，不代表已存在。使用者已回報「剛測試的功能都正常」，但未列出逐功能、環境與 Log，未測流程仍需驗收。
+> 2026-10-25。以已合併 PR #56 的 main（v0.6.1 開發版）為基準。**PR #57 已從規劃延伸為分階段實作：P1a 三批已拆出協力操作、房間與獎勵狀態，P1b 已拆出一般副本專屬操作／結算及共用官方目錄 UI；P2 已拆出小地圖畫布／點選／場景與路徑同步，P3 第一批已拆出 NPC／傳點 UI。以上均不代表正式服 E2E 完成。未刪除資源、未提升版本號。** 以下路徑是實作提案，不代表已存在。使用者已回報「剛測試的功能都正常」，但未列出逐功能、環境與 Log，未測流程仍需驗收。
 
 ## 一、經確認的主要需求
 
@@ -31,24 +31,20 @@ wlre/
       details.py                    # ✅ S85 副本目標、Boss／積分／結算顯示
     minimap/                        # 小地圖專屬
       __init__.py
-      panel.py                      # 小地圖容器
-      buttons.py                    # 地圖上的操作按鈕
-      map_view.py                   # 地圖繪製、投影、選取
-      navigation_ui.py              # 導航／自動導航的 UI 協調
+      buttons.py                    # ✅ 單擊選取／雙擊手動移動事件
+      map_view.py                   # ✅ 地圖畫布、投影與座標渲染
+      navigation_ui.py              # ✅ 地圖切換／路徑狀態及失效處理
     npc/                            # NPC 對話、互動、商店視窗
       __init__.py
-      panel.py
-      dialogue.py
-      shop.py
-      buttons.py
+      panel.py                      # ✅ NPC 選取、手動對話、唯讀商店及選項 UI（不支援自動交易）
     portals/                        # 傳送點與條件（與小地圖顯示分開）
       __init__.py
-      panel.py
-      buttons.py
+      panel.py                      # ✅ 傳點選取／手動觸發 UI 與安全拒絕顯示
   ui/
     instance_ui.py                  # 舊匯入相容層，保留兩種模式的共用 UI
     instance_room_dialogs.py        # ✅ 共用創房／加入／離開對話框及防重複點擊
     instance_room_list.py           # ✅ 共用房間列表、刷新與選取保持
+    instance_catalog_ui.py          # ✅ 共用官方副本目錄、創房按鈕與選取
     home_map.py                     # 舊 HomeMap 相容層，委託 minimap/npc/portals
     gui.py                          # App 組裝／Tk 主執行緒入口
   core/                             # 跨功能 State／事件／排程／所有權
@@ -80,6 +76,18 @@ wlre/
 4. **驗證：** 比對資料項目、Schema／SHA／MD5／CRC、權威伺服器回覆與主要 UI；執行三平台 CI 及對應 Windows／正式服 E2E。區分「資料已下載」「資料可解析」「安全允許操作」。
 5. **移除（有條件）：** 只有**所有消費者歸零**、等價來源可從乾淨安裝重建、打包與跨平台測試、必要實機驗收通過，才從 `REQUIRED_RESOURCES`、打包清單與舊檔同步移除；任何一項缺乏證據，保留檔案且標註原因。**不刪使用者私人快取、帳密設定或官方遊戲安裝內容。**
 
+### 功能、來源與安全保留矩陣（2026-10-25 程式碼查核）
+
+| 功能 | UI／服務消費者 | 現行舊資源 | 處理結論 |
+|---|---|---|---|
+| 協力／一般副本 | `ui/instance_catalog_ui.py` → `services/instance_browser.py` | `instance_catalog_1262.json` | 共用資料，未證實有同 Schema／完整記錄的 1275 替代；**保留** |
+| 小地圖／位置標記 | `features/minimap/map_view.py`、`ui/home_map.py` → `services/world/smallmaps.py` | `smallmaps.zip`、`map_names.json`、`stage_coordinates.json` | 尚無可重建的等價來源／投影核對；**保留** |
+| 導航路線顯示 | `features/minimap/navigation_ui.py` → `services/world/navigation.py` | `navigation_data.zip` | 路由只作已審核資料參考；無法證明 1275 網格等價；**保留** |
+| 傳送點 | `features/portals/panel.py` → `services/world/portals.py`／`portal_policy.py` | `portals.json` | 1275 傳點目的地與觸發條件未獨立驗證，正式指令仍拒絕；**保留舊資源作稽核但不繞過版本限制** |
+| NPC／唯讀商店 | `features/npc/panel.py` → `services/world/npc_catalog.py`、`npc_talk.py`、`npc_shop.py` | `npc_*_1262.json.gz` 各索引 | 1275 NPC 索引由已驗證 Runtime 提供的部分，不代表對話／選項／交易全面相容；**舊檔仍屬封裝要求，禁止未經證實移除** |
+
+上述每個資源目前仍在 `resource_manifest.REQUIRED_RESOURCES`。清單只做程式碼來源盤點，不代表已完成官方 1275 與 1262 等價性、使用者正式服流程或封裝乾淨安裝驗收。
+
 ### 已知事實與不可誤解之處
 
 - `runtime_1275.active_runtime()` 已有經正式固定驗證的舊 ZIP 或**已驗證官方 Bundle Runtime** 兩條來源；因此兩份手動 ZIP **不是永遠都必須事先安裝**。
@@ -106,7 +114,10 @@ wlre/
 - [x] P1a 第三批抽出 `features/cooperative/widgets.py` 協力按鈕、`rewards.py` 領獎狀態、`rooms.py` 準備狀態顯示，以及 `ui/instance_room_list.py` 共用房間列表（避免兩種模式程式重複）；新增狀態與 Tk GUI 回歸測試（CI 待確認）。
 - [ ] P1a 正式服 E2E 及 1275 協力清單替代來源驗證。現行 `wlre/services/instance_browser.py` 仍讀取內建 `instance_catalog_1262.json`，且一般副本共用；目前未取得可靠的等價 1275 副本清單，故**必須保留、不可冒險移除**。
 - [x] P1b 第一批：一般副本獨立畫面入口、開始／進場動作與按鈕、最低人數／房主與場景校驗、伺服器副本目標／結算資訊移至 `features/dungeon/`；保留 `InstanceModePage`、`room_headcount_status`、`instance_details` 舊 API，補上非 GUI 與 Tk GUI 回歸測試（CI 待確認）。
-- [ ] P1b 剩餘畫面 UI 深度拆分與正式服 E2E，以及 P2～P5 逐功能資源替代／清理及全域 `REQUIRED_RESOURCES` 檢核。
+- [x] P1b 第二批：共同副本官方清單的 Treeview／選取／建立條件搬至 `ui/instance_catalog_ui.py`；兩種模式仍共用，同步新增 API 和狀態回歸測試。CI #854 曾因新檔縮排錯誤失敗，已於後續提交修復；修正後 CI #855 三平台成功。
+- [x] P2 第一批：地圖畫布、單擊／雙擊、場景載入及導航狀態更新移至 `features/minimap/`，保留 `HomeMap` 公開介面與導航安全限制；相關回歸測試已納入 #855。
+- [x] P3 第一批：NPC 對話、唯讀商店、選項、傳點與手動觸發 UI 抽至 `features/npc/` 和 `features/portals/`；舊 `HomeMap` 仍組裝地圖／怪物／NPC／傳點清單，未改變伺服器操作。新增安全／介面回歸測試（CI 待驗證）。
+- [ ] P1a／P1b 正式服 E2E、官方 1275 副本與地圖資源等價性、P2／P3 實際使用者流程回歸與 P4／P5 共用協調／資源整體盤點。
 - [ ] 全功能正式服 E2E、乾淨安裝、正式安裝包／Release 驗收（尚未宣稱完成）。
 
-**接下來：** 驗證 P1b 第一批三平台 CI 與 Tk GUI，評估一般副本剩餘畫面／靜態目錄的來源等價性；P2 小地圖另行分階段進行。
+**接下來：** P3 新提交先通過 Windows／Ubuntu／macOS 三平台 CI，再做 P4／P5 共用資料與資源載入契約檢查；正式服 E2E／乾淨安裝需有環境與操作紀錄才能驗收，資源替代證據不足時保持現狀。
