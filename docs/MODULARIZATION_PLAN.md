@@ -84,7 +84,7 @@ wlre/
 | 協力／一般副本 | `ui/instance_catalog_ui.py` → `services/instance_browser.py` | `instance_catalog_1262.json` | 共用資料，未證實有同 Schema／完整記錄的 1275 替代；**保留** |
 | 小地圖／位置標記 | `features/minimap/map_view.py`、`ui/home_map.py` → `services/world/smallmaps.py` | `smallmaps.zip`、`map_names.json`、`stage_coordinates.json` | 尚無可重建的等價來源／投影核對；**保留** |
 | 導航路線顯示 | `features/minimap/navigation_ui.py` → `services/world/navigation.py` | `navigation_data.zip` | 路由只作已審核資料參考；無法證明 1275 網格等價；**保留** |
-| 傳送點 | `features/portals/panel.py` → `services/world/portals.py`／`portal_policy.py` | `portals.json` | 1275 傳點目的地與觸發條件未獨立驗證，正式指令仍拒絕；**保留舊資源作稽核但不繞過版本限制** |
+| 傳送點 | `features/portals/panel.py` → `services/world/portals.py`／`portal_policy.py` | `portals.json` | **1275 已驗證 Eve NewDoor 門事件索引／座標可唯讀顯示在清單及地圖，選取僅填入目的地座標**；目的地與觸發條件未獨立驗證，C20-8 指令仍拒絕，**保留舊資源作 1262 歷史稽核、不繞過版本限制** |
 | NPC／唯讀商店 | `features/npc/panel.py` → `services/world/npc_catalog.py`、`npc_talk.py`、`npc_shop.py` | `npc_*_1262.json.gz` 各索引 | 1275 NPC 索引由已驗證 Runtime 提供的部分，不代表對話／選項／交易全面相容；**舊檔仍屬封裝要求，禁止未經證實移除** |
 
 上述每個資源目前仍在 `resource_manifest.REQUIRED_RESOURCES`。清單只做程式碼來源盤點，不代表已完成官方 1275 與 1262 等價性、使用者正式服流程或封裝乾淨安裝驗收。
@@ -120,6 +120,7 @@ wlre/
 - [x] P3 第一批：NPC 對話、唯讀商店、選項、傳點與手動觸發 UI 抽至 `features/npc/` 和 `features/portals/`；舊 `HomeMap` 仍組裝地圖／怪物／NPC／傳點清單，未改變伺服器操作。新增安全／介面回歸測試（CI 待驗證）。
 - [x] P4 第一批：`App.open_feature/hide_feature/hide_all_features/open_instances/hide_instances/open_resources/open_attributes` 移至 `ui/feature_navigation.py`，只移動 Tk 視窗生命週期，不動 Worker、TCP、State 或事件佇列；新增權限與視窗單例相容測試（CI 待驗證）。
 - [x] P5 安全回歸底線：新增 `tests/test_feature_resource_safety.py`，驗證 1275 已驗證 NPC 索引不回退舊 NPC 事件資料、沒有可信傳送目的地時不啟用傳點、原必要封裝資源尚未遭刪除（最新 CI 待確認）。
+- [x] P3 傳點顯示修復（針對場景 12170 畫面問題）：1275 `active_runtime().doors` 原本只統計總數並返回空清單，現將已驗證的門事件索引／本地座標呈現為 `1275 門事件` 唯讀標記，修復 `portal_policy.allowed_rows` 誤隱藏全部未知目的地、新增重新載入預登入空快取及 1275 專屬門事件核對視窗。仍不核發 C20-8 換圖權限；此批已補單元／Tk UI 測試，CI 待驗證，正式伺服器換圖仍需目的地與事件實測。
 - [ ] P4 其餘會話事件協調及 P5 服務責任核查，仍須正式服 E2E、官方 1275 副本／地圖等價性與完整跨平台打包驗收。
 - [ ] 全功能正式服 E2E、乾淨安裝、正式安裝包／Release 驗收（尚未宣稱完成）。
 
