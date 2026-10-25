@@ -119,6 +119,57 @@ def parse_eve_door_links(raw):
     return results
 
 
+
+def verified_portal_positions(stage_raw, link_raw, doors, stages):
+    """Map the *actual* official minimap portal point into packet XY.
+
+    UIMain._SetPortalPosition displays EveDoorLinks.mapPosition, not Eve
+    NewDoor's common-event x/y. Lua multiplies EveDoorLinks' grid values
+    by the source scene's PosXRatio / PosYRatio before TransferPosition.
+    In packet XY, TEMP_OFFSET_X=0 and the mapHeight y-inversion cancels.
+    StageMapData proves the (scene, EvtID) portal identity only; its
+    PositionX/Y and Eve.NewDoor x/y are NOT screen coordinates.
+
+    A missing/ambiguous entry, unknown scene ratios or impossible result
+    is never silently projected or sent to the movement handler.
+    """
+    markers = parse_stage_map_portals(stage_raw)
+    links = parse_eve_door_links(link_raw)
+    result = {}
+    for scene, entries in doors.items():
+        if type(scene) is not int:
+            continue
+        stage = stages.get(scene)
+        if not isinstance(stage, dict):
+            continue
+        rx, ry = stage.get('pos_x_ratio'), stage.get('pos_y_ratio')
+        if (type(rx) is not int or type(ry) is not int
+                or not 1 <= rx <= 255 or not 1 <= ry <= 255):
+            continue
+        linked = links.get(scene, ())
+        for door in entries:
+            if not isinstance(door, dict):
+                continue
+            index = door.get('index')
+            if (type(index) is not int or not 1 <= index <= len(linked)
+                    or (scene, index) not in markers):
+                continue
+            link = linked[index - 1]
+            if link.get('scene') != scene or link.get('index') != index:
+                continue
+            x, y = link['x'] * rx, link['y'] * ry
+            if not 0 <= x <= 65535 or not 0 <= y <= 65535:
+                continue
+            result[(scene, index)] = {
+                'x': x, 'y': y, 'scene': scene, 'index': index,
+                'source_kind': '1275_eve_door_links_grid_scaled',
+                'raw_link_x': link['x'], 'raw_link_y': link['y'],
+                'pos_x_ratio': rx, 'pos_y_ratio': ry,
+                'position_verified': True,
+            }
+    return result
+
+
 def verified_portal_destinations(stage_raw, link_raw, doors, scene_ids):
     """Reconcile three independent official 1275 sources without packet approval.
 
