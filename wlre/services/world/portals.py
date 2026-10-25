@@ -119,6 +119,9 @@ class Portals:
                                 'coordinate_source': (
                                     'verified_eve_door_links_scaled' if valid_xy
                                     else 'unverified_event_grid'),
+                                'projection_guard': (
+                                    position.get('projection_guard') if valid_xy
+                                    else None),
                                 'x': map_x if valid_xy else None,
                                 'y': map_y if valid_xy else None,
                                 'event_grid_x': x,
@@ -208,6 +211,18 @@ def portal_map_pixel(portal, projection):
     if (type(x) is not int or type(y) is not int
             or not 0 <= x <= 65535 or not 0 <= y <= 65535):
         return None
+    expected = portal.get('projection_guard')
+    if isinstance(expected, dict):
+        # Do not project a 1275 position onto mismatched 1262 image geometry.
+        for attr in ('rate', 'offset_x', 'offset_y', 'height'):
+            value = expected.get(attr)
+            actual = getattr(projection, attr, None)
+            if (not isinstance(value, (int, float))
+                    or not isinstance(actual, (int, float))
+                    or not math.isfinite(value)
+                    or not math.isfinite(actual)
+                    or not math.isclose(value, actual, abs_tol=1e-6)):
+                return None
     u, v = projection.packet_to_pixel(x, y)
     if not (math.isfinite(u) and math.isfinite(v)
             and 0 <= u <= 1024 and 0 <= v <= 1024):
