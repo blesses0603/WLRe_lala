@@ -65,9 +65,12 @@ class Portals:
                             destination = destination if verified_target else None
                             target_label = (source_scene_label(destination, scene_names)
                                             if verified_target else '目的地未確認')
-                            label = (f'前往 {target_label}（門 #{index}）'
+                            # Door indices are internal event IDs, not
+                            # geographical or destination names. Never present
+                            # an event label as the name of a scene.
+                            label = (f'前往 {target_label}（傳點 #{index}）'
                                      if verified_target else
-                                     f'門事件 #{index}（目的地未確認）')
+                                     f'傳點 #{index}（目的地待確認）')
                             visible.append({
                                 'id': f'1275:{scene_id}:{index}',
                                 'scene': scene_id, 'index': index,
