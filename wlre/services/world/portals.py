@@ -121,7 +121,7 @@ class Portals:
     @staticmethod
     def label(portal):
         kind={'normal':'出口','event':'事件入口','link':'地圖連結',
-              'door':'1275 門事件'}[portal['kind']]
+              'door':'1275 傳點'}[portal['kind']]
         xy=f"({portal['x']}, {portal['y']})" if portal['coordinate_valid'] else '座標未確認'
         status='' if portal.get('navigation_status')=='endpoint_valid' else '｜無可用導航'
         return f"{portal['index']}. {portal['name']}｜{kind} {xy}{status}"
