@@ -138,7 +138,7 @@ wlre/
 - **實際畫面已證明 UI 名稱去重生效**：小地圖標題為「新手海灘(11016)」，傳點清單為「傳點 #1／#2（目的地待確認）」，因此不能再把問題單純歸因於使用者沒有執行 PR 測試版；未核對成功的是傳點實際名稱／目的地資料。
 - **程式根因**：原本 `StageMapData_C` 與 `EveDoorLinks` 一起進行交叉比對才建立 `portal_destinations`，丟掉 `StageMapData_C.NameID`，即使官方有明確的傳點文字名稱，也因目的地無法核對而全部回退「傳點 #N」。
 - **這次修正**：以與同版 `TextData_C` 相符的 `StageMapData_C.NameID` 獨立建立 `portal_names[(scene_id, EvtID)]`，並在正式 ZIP 和驗證過的官方 Bundle 兩種 Runtime 都分開載入；UI 優先呈現官方名稱，其次才顯示已三表核對的目的地名稱，最後才顯示「傳點 #N（官方名稱未取得）」。**名稱已確認不等於可傳送**，目的地與觸發仍沿用安全閘門。
-- **可觀測性**：狀態欄提供 `portal_metadata_status` 與有名稱／無有效 NameID 數量，區分 `StageMapData_C` 尚未下載、解析失敗、無正式文字及 `EveDoorLinks` 路線校驗未完成；不會把 1262 名稱冒充 1275。
+- **可觀測性**：除了詳細狀態文字，**首頁精簡小地圖**原本使用 `show_status=False`，導致診斷實際被隱藏；已在傳點列表下方新增常駐簡短提示，顯示 StageMap 資料未載入、格式無效或有多少傳點缺 NameID。完整資料仍寫入 `portal_metadata_status`，不把 1262 名稱冒充 1275。
 - **證據限制**：使用者目前提供的 `DataPackage_1275.zip` 及 `MainPackage_1275.zip` 內容是官方 Manifest 索引與 hash，沒有 `StageMapData_C`／`EveDoorLinks` TextAsset 原始資料，因此**尚不能斷言場景 11016 兩個傳點的實際官方文字**。需在 PR 分支版本完成官方附加 Bundle 同步後，以實際狀態欄與正式伺服器操作驗收。
 
 ### 尚未能由 CI 單獨證明的正式驗收
