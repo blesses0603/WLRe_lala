@@ -34,6 +34,101 @@ class BundleRuntimeUnavailable(ValueError):
     """A complete audited 1275 runtime could not be constructed safely."""
 
 
+def sync_pinned_runtime_bundles(*, sync_root=None,
+                                observe=None, retrieve=None,
+                                execute=None, max_download_bytes=32 * 1024 * 1024,
+                                max_downloads=24):
+    """Only sync audited 1275 runtime dependencies, independent of preview.
+
+    Retrieves no official .json/.report and never edits installed game files.
+    Two fresh .version observations, both .bytes/.hash verifications and
+    independent pinned SHA-256 comparisons precede Bundle downloads.
+    This prepares *bytes*, not an authorization to log in or send packets.
+    """
+    from wlre.services.official_resource_sync import (
+        observe_official_versions, validate_snapshot)
+    from wlre.services.official_manifest_sync import (
+        ManifestSpec, fetch_official_manifest, MAX_MANIFEST_BYTES)
+    from wlre.services.official_incremental_sync import (
+        build_update_plan, execute_update_plan)
+    from wlre.services.official_bundle_download import _verified_file
+    from wlre.services.resource_compatibility import load_supported_resources
+
+    if (type(max_downloads) is not int or not 0 <= max_downloads <= 24
+            or type(max_download_bytes) is not int
+            or not 0 <= max_download_bytes <= 32 * 1024 * 1024):
+        raise BundleRuntimeUnavailable('1275 Bundle 下載額度設定無效')
+    observe = observe_official_versions if observe is None else observe
+    retrieve = fetch_official_manifest if retrieve is None else retrieve
+    execute = execute_update_plan if execute is None else execute
+    root = Path(sync_root) if sync_root is not None else data_root() / 'official_sync'
+    baseline = load_supported_resources()
+    packages = baseline['packages']
+    try:
+        start = validate_snapshot(observe())
+    except (OSError, ValueError, TypeError, KeyError) as exc:
+        raise BundleRuntimeUnavailable('無法確認官方 1275 版本，停止 Bundle 下載') from exc
+    if (start['data_ver'] != _PINNED_DATA_VER or
+            start['exe_version'] != baseline['official_game_exe_version'] or
+            any(start['packages'][p] != packages[p]['manifest']
+                or packages[p]['revision'] != '1275'
+                for p in _PINNED_MANIFEST_SHA256)):
+        raise BundleRuntimeUnavailable('官方版本不符合此版固定的 1275 Runtime')
+    manifests = {}
+    for package in ('DataPackage', 'MainPackage'):
+        spec = ManifestSpec(start['data_ver'], package,
+                            packages[package]['manifest'])
+        try:
+            current = retrieve(spec, cache_root=root / 'manifests')
+            with current.cache_path.open('rb') as stream:
+                raw = stream.read(MAX_MANIFEST_BYTES + 1)
+        except (OSError, ValueError, KeyError) as exc:
+            raise BundleRuntimeUnavailable(
+                '官方 Manifest 下載或快取驗證失敗：' + package) from exc
+        if (current.spec != spec or not 0 < len(raw) <= MAX_MANIFEST_BYTES
+                or hashlib.sha256(raw).hexdigest() !=
+                _PINNED_MANIFEST_SHA256[package]):
+            raise BundleRuntimeUnavailable(
+                '固定 1275 Manifest SHA-256 核對失敗：' + package)
+        manifests[package] = current
+    try:
+        latest = validate_snapshot(observe())
+    except (OSError, ValueError, TypeError, KeyError) as exc:
+        raise BundleRuntimeUnavailable('官方版本再次確認失敗，拒絕下載 Bundle') from exc
+    if any(latest[k] != start[k]
+           for k in ('data_ver', 'exe_version', 'packages')):
+        raise BundleRuntimeUnavailable('官方更新期間版本變動，拒絕混用 Bundle')
+
+    from wlre.services.official_incremental_sync import IncrementalSyncError
+    asset_paths = tuple(_ASSET_ROOT + name + '.bytes'
+                        for name in _REQUIRED_TABLES)
+    try:
+        plan = build_update_plan(
+            manifests['DataPackage'], asset_paths=asset_paths,
+            cache_root=root / 'bundles')
+        count = sum(entry.action != 'cached' for entry in plan.entries)
+        needed = sum(entry.spec.file_size for entry in plan.entries
+                     if entry.action != 'cached')
+        if count > max_downloads or needed > max_download_bytes:
+            raise BundleRuntimeUnavailable(
+                '必要官方 1275 Bundle 超過本輪安全下載額度')
+        execute(plan, cache_root=root / 'bundles', download=True,
+                max_download_bytes=max_download_bytes,
+                max_downloads=max_downloads)
+        if any(not _verified_file(entry.spec.cache_path(root / 'bundles'),
+                                  entry.spec) for entry in plan.entries):
+            raise BundleRuntimeUnavailable('已下載 Bundle 再驗證失敗')
+    except BundleRuntimeUnavailable:
+        raise
+    except (OSError, ValueError, TypeError, KeyError,
+            RuntimeError, IncrementalSyncError) as exc:
+        raise BundleRuntimeUnavailable('必要官方 1275 Bundle 同步失敗') from exc
+    return {'verified_bundles': len(plan.entries),
+            'downloaded_bundles': count,
+            'bytes_downloaded': needed,
+            'assets_ready': False, 'can_send_packets': False}
+
+
 def load_verified_bundle_runtime(*, sync_root=None):
     """Load working NPC/shop/item/crafting/scene data without manual ZIPs.
 
