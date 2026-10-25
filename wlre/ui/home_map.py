@@ -10,7 +10,8 @@ from wlre.ui.minimap import SmallMaps
 from wlre.services.world.display_position import current_position
 from wlre.services.world.navigation import Repository, NavigationError
 from wlre.services.world.map_names import map_label, parse_map_id
-from wlre.services.world.portals import Portals, nearest_marker, portal_map_pixel
+from wlre.services.world.portals import (Portals, nearest_marker,
+                                         portal_map_pixel, portal_source_diagnostic)
 from wlre.services.world.portal_policy import allowed_rows, destination_problem
 from wlre.services.world.npc_catalog import NPCIndex, scene_npcs, npc_detail
 from wlre.services.world.npc_talk import load_catalog as load_npc_talks, dialogue_text
@@ -229,10 +230,10 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
             if self.portals.data.get('source_revision') == 1275:
                 source = self.portals.data.get('portal_metadata_status')
                 named = sum(bool(p.get('official_name')) for p in self.portal_rows)
-                if source in ('missing_stage_map', 'core_runtime_unavailable'):
-                    self.portal_info.set('尚缺 1275 官方傳點名稱資料')
-                elif source == 'stage_map_invalid':
-                    self.portal_info.set('1275 傳點名稱表格式無法解析')
+                if source not in ('stage_map_ready', 'destination_links_loaded') and (
+                        not isinstance(source, str)
+                        or not source.startswith('destination_links_')):
+                    self.portal_info.set(portal_source_diagnostic(source))
                 elif named < len(self.portal_rows):
                     self.portal_info.set(
                         f'{len(self.portal_rows)-named} 個傳點未取得官方名稱')
@@ -262,14 +263,17 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
                 named = sum(bool(p.get('official_name')) for p in self.portal_rows)
                 name_status = self.portals.data.get(
                     'portal_metadata_status', 'missing_stage_map')
-                if name_status == 'missing_stage_map':
-                    hint = ('1275 StageMapData_C 傳點名稱表尚未載入；'
-                            '需完成官方附加 Bundle 下載或安裝含此表的正式資料。')
-                elif name_status == 'stage_map_invalid':
-                    hint = '1275 StageMapData_C 傳點名稱表解析失敗；未採用舊版猜測名稱。'
+                if name_status not in ('stage_map_ready', 'destination_links_loaded') and (
+                        not isinstance(name_status, str)
+                        or not name_status.startswith('destination_links_')):
+                    hint = portal_source_diagnostic(name_status) + '。'
                 else:
                     hint = (f'{named} 個傳點有正式文字名稱；'
-                            f'{count-named} 個尚缺有效 NameID／文字對應。')
+                            f'{count-named} 個尚缺有效 NameID／文字對應。'
+                            + ('｜' + portal_source_diagnostic(name_status)
+                               if isinstance(name_status, str)
+                               and name_status.startswith('destination_links_')
+                               else ''))
                 text = (f'1275 場景 {scene}：{count} 個傳點，'
                         f'{ready} 個可手動確認試傳。{hint}'
                         '實際換圖以伺服器回覆為準。')
