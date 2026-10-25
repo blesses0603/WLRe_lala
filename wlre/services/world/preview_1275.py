@@ -20,6 +20,7 @@ from wlre.services.world.doors_1275 import parse_doors_1275
 from wlre.services.world.portal_links_1275 import (verified_portal_destinations,
                                                     verified_portal_names,
                                                     verified_portal_positions,
+                                                    read_only_portal_destinations,
                                                     PortalLinkSourceError)
 
 MAX_UNCOMPRESSED = 16 * 1024 * 1024
@@ -139,6 +140,7 @@ class Preview1275:
     portal_destinations: dict = field(default_factory=dict)
     portal_names: dict = field(default_factory=dict)
     portal_positions: dict = field(default_factory=dict)
+    portal_display_destinations: dict = field(default_factory=dict)
     portal_metadata_status: str = 'missing_stage_map'
     expedition: dict | None = None
     revision: int = 1275
@@ -193,6 +195,7 @@ def load_preview(data_archive, eve_archive):
         data_archive, manifest, 'npc_text_1275.json.gz', 'TextData_C').items()}
     doors = parse_doors_1275(_table(data_archive, manifest, 'Eve'))
     portal_names, portal_destinations, portal_positions = {}, {}, {}
+    portal_display_destinations = {}
     portal_metadata_status = 'missing_stage_map'
     try:
         stage_map = _table(data_archive, manifest, 'StageMapData_C')
@@ -203,6 +206,8 @@ def load_preview(data_archive, eve_archive):
         try:
             link_table = _table(data_archive, manifest, 'EveDoorLinks')
             portal_positions = verified_portal_positions(
+                stage_map, link_table, doors, stages)
+            portal_display_destinations = read_only_portal_destinations(
                 stage_map, link_table, doors, stages)
             portal_destinations = verified_portal_destinations(
                 stage_map, link_table, doors, stages)
@@ -226,6 +231,7 @@ def load_preview(data_archive, eve_archive):
         portal_destinations=portal_destinations,
         portal_names=portal_names,
         portal_positions=portal_positions,
+        portal_display_destinations=portal_display_destinations,
         portal_metadata_status=portal_metadata_status,
         doors=doors,
     )
