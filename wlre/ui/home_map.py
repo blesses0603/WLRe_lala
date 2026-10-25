@@ -10,7 +10,7 @@ from wlre.ui.minimap import SmallMaps
 from wlre.services.world.display_position import current_position
 from wlre.services.world.navigation import Repository, NavigationError
 from wlre.services.world.map_names import map_label, parse_map_id
-from wlre.services.world.portals import Portals, nearest_marker
+from wlre.services.world.portals import Portals, nearest_marker, portal_map_pixel
 from wlre.services.world.portal_policy import allowed_rows, destination_problem
 from wlre.services.world.npc_catalog import NPCIndex, scene_npcs, npc_detail
 from wlre.services.world.npc_talk import load_catalog as load_npc_talks, dialogue_text
@@ -238,11 +238,21 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
                         f'{len(self.portal_rows)-named} 個傳點未取得官方名稱')
                 position_missing = sum(
                     not item.get('coordinate_valid') for item in self.portal_rows)
+                incompatible = sum(
+                    bool(item.get('coordinate_valid'))
+                    and portal_map_pixel(item, getattr(self, 'projection', None))
+                    is None for item in self.portal_rows)
+                notices = []
                 if position_missing:
+                    notices.append(
+                        f'{position_missing} 個點位待官方座標換算，暫不標記')
+                if incompatible:
+                    notices.append(
+                        f'{incompatible} 個點位與小地圖投影不相容，暫不標記')
+                if notices:
                     prefix = self.portal_info.get()
                     self.portal_info.set(
-                        (prefix + '｜' if prefix else '')
-                        + f'{position_missing} 個點位待官方座標換算，暫不標記')
+                        (prefix + '｜' if prefix else '') + '；'.join(notices))
         if self.portals.data.get('source_revision') == 1275:
             count = len(self.portal_rows)
             if self.portals.data.get('source_ready'):
