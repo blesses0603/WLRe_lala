@@ -119,7 +119,14 @@ wlre/
 - [x] P2 第一批：地圖畫布、單擊／雙擊、場景載入及導航狀態更新移至 `features/minimap/`，保留 `HomeMap` 公開介面與導航安全限制；相關回歸測試已納入 #855。
 - [x] P3 第一批：NPC 對話、唯讀商店、選項、傳點與手動觸發 UI 抽至 `features/npc/` 和 `features/portals/`；舊 `HomeMap` 仍組裝地圖／怪物／NPC／傳點清單，未改變伺服器操作。新增安全／介面回歸測試（CI 待驗證）。
 - [x] P4 第一批：`App.open_feature/hide_feature/hide_all_features/open_instances/hide_instances/open_resources/open_attributes` 移至 `ui/feature_navigation.py`，只移動 Tk 視窗生命週期，不動 Worker、TCP、State 或事件佇列；新增權限與視窗單例相容測試（CI 待驗證）。
+- [x] P5 安全回歸底線：新增 `tests/test_feature_resource_safety.py`，驗證 1275 已驗證 NPC 索引不回退舊 NPC 事件資料、沒有可信傳送目的地時不啟用傳點、原必要封裝資源尚未遭刪除（最新 CI 待確認）。
 - [ ] P4 其餘會話事件協調及 P5 服務責任核查，仍須正式服 E2E、官方 1275 副本／地圖等價性與完整跨平台打包驗收。
 - [ ] 全功能正式服 E2E、乾淨安裝、正式安裝包／Release 驗收（尚未宣稱完成）。
+
+### 尚未能由 CI 單獨證明的正式驗收
+
+- **Windows 正式遊戲／網路回覆：** 1275 版本閘門、官方 Bundle 校驗與登入；副本創／入／退、房主開始及進場；協力房間待命與免費領獎；NPC 手動互動／唯讀商店，傳點不合法目標拒絕，全部需記錄正式伺服器回覆與操作前後 State。
+- **乾淨安裝／資源來源：** 在無私人快取的乾淨 Windows 環境確認安裝包、官方 Manifest／Bundle 的 hash 與相依清單；取得真正等價的 1275 小地圖、導航、NPC 對話及副本資料後，方可刪除 1262 資源／解除封裝依賴。
+- **整合驗收：** 確認視窗開合／登入登出／斷線重連與背景事件不混用舊狀態；正式打包、跨平台測試及原版功能回歸需要真實運行紀錄。本 PR 只有連續 CI 證明的部分才可標記自動化通過，不宣稱正式伺服器測試成功。
 
 **接下來：** P3／P4 新提交需通過 Windows／Ubuntu／macOS 三平台 CI；P5 必須先有官方驗證來源與乾淨安裝證據再調整資源契約。登入、NPC 商店、傳點、協力／副本及正式遊戲 E2E 尚未實測，不宣稱正式完成。
