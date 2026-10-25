@@ -236,6 +236,13 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
                 elif named < len(self.portal_rows):
                     self.portal_info.set(
                         f'{len(self.portal_rows)-named} 個傳點未取得官方名稱')
+                position_missing = sum(
+                    not item.get('coordinate_valid') for item in self.portal_rows)
+                if position_missing:
+                    prefix = self.portal_info.get()
+                    self.portal_info.set(
+                        (prefix + '｜' if prefix else '')
+                        + f'{position_missing} 個點位待官方座標換算，暫不標記')
         if self.portals.data.get('source_revision') == 1275:
             count = len(self.portal_rows)
             if self.portals.data.get('source_ready'):
