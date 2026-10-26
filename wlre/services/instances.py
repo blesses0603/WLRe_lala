@@ -38,7 +38,7 @@ def defaults():
                  'phase': 'idle', 'status': '尚未查詢房間', 'fight_count': None, 'fight_consumed_battle': None, 'last_fight_victory': None,
                  'reward': None, 'standby': None,
                   'create_attempt': None,
-                 'standby_pending': None, 'standby_uncertain': False, 'standby_result': None,
+                 'standby_pending': None, 'standby_attempt': None, 'standby_uncertain': False, 'standby_result': None,
                  'create_pending': None, 'create_uncertain': False, 'create_result': None,
                  'join_pending': None, 'join_uncertain': False, 'join_result': None,
                  'leave_pending': None, 'leave_uncertain': False, 'leave_result': None,
