@@ -184,8 +184,13 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
         previous_revision = self.portals.data.get('source_revision')
         if (previous_revision != 1275
                 or not self.portals.data.get('source_ready')):
-            # Early 1262 portals.json files have no source_revision field;
-            # missing revision must fail closed just like explicit 1262.
+            # Early 1262 portals.json files have no source_revision field.
+            # Retire only their *portal rows*. NPC/monster reference records
+            # were bundled in the same index and must stay separately
+            # available for the sidebar until replaced by verified sources.
+            old_entities = self.portals.data.get('entities', {})
+            if isinstance(old_entities, dict) and old_entities:
+                self._legacy_map_entities = old_entities
             self.portals = Portals()
         recovery=self.image is None
         candidates=allowed_rows(self.portals,self.selected_id,self.maps,recovery=recovery)
@@ -213,6 +218,9 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
         self.monster_list.delete(0,'end')
         self.monster_rows=[]
         entities=self.portals.data.get('entities',{}).get(str(self.selected_id),[])
+        if not entities:
+            entities = getattr(self, '_legacy_map_entities', {}).get(
+                str(self.selected_id), [])
         self.npc_rows=scene_npcs(self.selected_id,entities,self.npc_index)
         for npc in self.npc_rows:
             marker='◆' if npc['verified'] else '◇'
