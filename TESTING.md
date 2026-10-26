@@ -29,6 +29,14 @@ python WLRE_Client.py --smoke-test-gui
 
 `WLRE_DISABLE_AUTO_CATALOG=1` 保證常規 UI 測試不下載官方資源。跳過項目及平台限制照實記錄，不能當作功能成功。盤點可重現：`python -m tools.rebuild_inventory --ref 2dd6694 --output /tmp/main_inventory.json`。直接測試引用數不是 coverage 百分比。
 
+## P0 分支 CI 與 P1a 本地驗證
+
+- P0 提交 `ce159f5`：[40333188720](https://github.com/blesses0603/WLRe_lala/actions/runs/40333188720) 三平台全部成功；Ubuntu 2m34s、Windows 5m32s、macOS 39s。通過後才開始 P1a。
+- P1a 新核心：`python -m unittest discover -s tests -p 'test_rebuild_*.py' -v`，**26 項通過**。包括真實背景工作停止、停止逾時明確 FAILED、生命週期回復、業務 API 閘門、事件訂閱釋放、相依無循環及無 GUI／服務載入。
+- P1a 最終本地完整回歸：**1,227 項，91.445 秒，OK，跳過 2 項**。輸出 `/tmp/lala-rebuild-p1a-final.log`；之前一次 1,226 項通過後又新增停止期間 API 保護測試，因此重新執行完整測試，不以舊結果替代。
+- 新增程式／測試 Ruff、compileall、repository audit、diff check 均通過。例外隔離及生命週期邊界的廣泛捕捉有逐行理由，固定錯誤碼取代例外內容；未降低既有檢查。
+- P1a 本批 GitHub CI：推送後由 PR 完整三平台及新增純核心三平台流程驗證；尚未以先前 main CI 代替本批成功證據。
+
 ## 尚未驗收
 
 - 新核心／新功能移植：以各批測試與 CI 另行追加，不引用舊 main 成功取代。

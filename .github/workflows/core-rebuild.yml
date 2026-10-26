@@ -1,0 +1,43 @@
+name: Core rebuild module tests
+
+on:
+  push:
+    branches: [feature/lala-core-rebuild]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-rebuild-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-2022, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.12'
+      - name: Install static checker
+        run: python -m pip install ruff==0.17.2
+      - name: Validate new core syntax and imports
+        run: >-
+          python -m ruff check wlre/core/application wlre/core/events
+          wlre/core/primitives.py tools/rebuild_inventory.py
+          tests/test_core_rebuild_inventory.py tests/test_rebuild_application.py
+          tests/test_rebuild_events.py tests/test_rebuild_boundaries.py
+      - name: Run core unit and integration tests without GUI dependencies
+        run: python -m unittest discover -s tests -p "test_rebuild_*.py" -v
+      - name: Validate inventory tool
+        run: python -m unittest discover -s tests -p test_core_rebuild_inventory.py -v
+
+# 既有 test.yml 的完整三平台 pull_request 檢查維持不變，不以本工作取代。

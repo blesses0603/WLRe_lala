@@ -39,6 +39,8 @@ flowchart TD
 
 新核心優先置於 `wlre/core/application` 與 `wlre/core/events`，避開既有 `core/state.py` 的同名衝突。新功能按實際移植建立 `wlre/modules/<功能>`，官方管線放 `wlre/resources_runtime`，避免把 Python 套件與現有 `wlre/resources` 遊戲資產目錄混淆。不先建立空模組。
 
+P1a 已建立上述純核心、`core/primitives.py` 與回歸測試。尚未切換既有桌面入口；`StateManager` 是不可變投影，絕不將舊 `State` 直接分享給新模組。可執行 API 在 READY／RUNNING 才開放，停止先封鎖所有 API，之後依反向相依順序清理。詳細公開介面見 [模組契約](MODULES.md)。
+
 ## 執行緒與關閉契約
 
 核心生命週期及同步事件分派由組裝執行緒擁有。跨執行緒通知採有界 mailbox，擁有者定量 drain；不將既有 socket 迴圈改成 async，也不在事件 handler 內下載資源。UI adapter 決定 Tk `after` 排程。停止依反向相依順序執行，釋放訂閱、計時器與工作；停止失敗必須報告，不得標示正常關閉。

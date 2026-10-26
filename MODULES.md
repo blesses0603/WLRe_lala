@@ -45,3 +45,16 @@
 ## 公用基礎層
 
 TCP、Packet／FrameDecoder、指令驗證、State 單寫入、SessionBridge、事件佇列、原子儲存、物品預留、跨自動化協調、官方來源驗證與快取均共享。先建立契約再接既有實作，不在每個功能重寫網路或安全規則。
+
+## P1a 已實作核心契約
+
+| 元件 | 公開 API／責任 | 相依與事件 | 停止與錯誤處理 | 測試 |
+|---|---|---|---|---|
+| Application | `initialize/start/pump/stop`；只組裝與協調 | Configuration、ModuleManager、EventBus、StateManager、DiagnosticLog | 初始化／啟動失敗反向回復；停止失敗保留 FAILED | test_rebuild_application |
+| ManagedModule／ModuleManager | ModuleSpec、`initialize/start/stop/own/own_worker`、唯讀狀態 | 只注入已宣告且 READY 的相依公開 API；ModuleSpec 記錄事件與官方需求識別 | 相依循環／遺漏先拒絕；所有 API 先 quiesce；清理異常不阻止其他模組；工作逾時不能標成功 | test_rebuild_application |
+| EventBus | `subscribe/unsubscribe/publish/post/drain/close` | frozen dataclass 精確型別；同步 owner dispatch、背景有界 mailbox | 重複訂閱冪等，遞迴同步分派拒絕，handler 失敗隔離；滿載明確 queue.Full；關閉清空待處理與訂閱 | test_rebuild_events |
+| StateManager | `replace/snapshot/close`；不可變功能投影 | 只接受 owner 寫入與單調 revision，不載入官方資料或權威 State | 可變值／過期修訂拒絕，snapshot 不隨後續變更，關閉清空 | test_rebuild_application |
+| DiagnosticLog | `record/snapshot/close`；固定識別碼與數值計數 | 標準 logging 可注入，無事件／憑證／例外文字 | 有界紀錄；sink 故障不遞迴 logging；關閉不再新增 | test_rebuild_application |
+| ApplicationConfiguration | 事件容量／每輪上限 | 不載入帳密或歷史遊戲表 | 型別／界線錯誤拒絕，不偷偷使用預設取代無效參數 | test_rebuild_application |
+
+上述元件是核心基礎，不是遊戲功能模組；目前還沒有將 UI、網路或官方 Runtime 接入。核心相依／無循環／無 GUI 執行期載入由 `test_rebuild_boundaries.py` 自動檢查。現有完整三平台 PR CI 保留，新增 `core-rebuild.yml` 在開發分支推送執行三平台純核心測試，不安裝 GUI／UnityPy。
