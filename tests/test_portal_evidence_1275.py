@@ -121,5 +121,26 @@ class OfficialLinkEvidenceTests(unittest.TestCase):
                             for x in catalog.for_scene(11016)))
 
 
+    def test_independent_door_link_data_has_no_event_index(self):
+        from wlre.services.world.portal_evidence_1275 import (
+            read_only_door_link_routes)
+        raw = struct.pack('<iHHHHHH', 1, 11016, 200, 300,
+                          11017, 5, 6)
+        routes = read_only_door_link_routes(raw, stages())
+        self.assertEqual(len(routes), 1)
+        route = routes[0]
+        self.assertEqual((route['x'], route['y']), (600, 600))
+        self.assertEqual((route['arrival_x'], route['arrival_y']), (10, 18))
+        self.assertEqual(route['destination'], 11017)
+        self.assertIsNone(route['event_index'])
+        self.assertFalse(route['can_send_packets'])
+
+    def test_invalid_door_link_data_fails_closed(self):
+        from wlre.services.world.portal_evidence_1275 import (
+            read_only_door_link_routes)
+        with self.assertRaises(ValueError):
+            read_only_door_link_routes(b'\x01\x00\x00\x00', stages())
+
+
 if __name__ == '__main__':
     unittest.main()
