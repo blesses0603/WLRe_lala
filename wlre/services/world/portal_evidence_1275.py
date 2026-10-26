@@ -50,7 +50,10 @@ def read_only_portal_evidence(stage_raw, link_raw, doors, stages):
     of a server-accepted door index. Unknown scenes/ratios remain unknown;
     their unscaled official grid coordinates are retained for diagnostics.
     """
-    markers = parse_stage_map_portals(stage_raw)
+    # A missing optional StageMap must not discard independently verified
+    # EveDoorLinks; without it all rows remain display-only.
+    markers = (parse_stage_map_portals(stage_raw)
+               if stage_raw is not None else {})
     links = parse_eve_door_links(link_raw)
     if not isinstance(doors, dict) or not isinstance(stages, dict):
         raise TypeError('1275 傳點資料型別不符')
