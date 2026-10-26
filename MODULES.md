@@ -57,4 +57,12 @@ TCP、Packet／FrameDecoder、指令驗證、State 單寫入、SessionBridge、�
 | DiagnosticLog | `record/snapshot/close`；固定識別碼與數值計數 | 標準 logging 可注入，無事件／憑證／例外文字 | 有界紀錄；sink 故障不遞迴 logging；關閉不再新增 | test_rebuild_application |
 | ApplicationConfiguration | 事件容量／每輪上限 | 不載入帳密或歷史遊戲表 | 型別／界線錯誤拒絕，不偷偷使用預設取代無效參數 | test_rebuild_application |
 
-上述元件是核心基礎，不是遊戲功能模組；目前還沒有將 UI、網路或官方 Runtime 接入。核心相依／無循環／無 GUI 執行期載入由 `test_rebuild_boundaries.py` 自動檢查。現有完整三平台 PR CI 保留，新增 `core-rebuild.yml` 在開發分支推送執行三平台純核心測試，不安裝 GUI／UnityPy。
+上述元件是核心基礎，不代表遊戲功能已完成移植。核心相依／無循環／無 GUI 執行期載入由 `test_rebuild_boundaries.py` 自動檢查。現有完整三平台 PR CI 保留，新增 `core-rebuild.yml` 在開發分支推送執行三平台純核心測試，不安裝 GUI／UnityPy。
+
+## P1b 桌面過渡轉接契約
+
+`ui/application_host.py` 的 DesktopHost／DesktopModule 以 `legacy_desktop` 契約接入現有 `App`。公開 API 僅提供不可變 DesktopStatus；此轉接沒有將所有遊戲業務集中到新核心，也沒有聲稱各功能模組已移植。正常 `gui.main` 與來源 GUI smoke 均經新 Host 組裝；原 `App(root)`、`gui.main` 及功能視窗入口保持相容。
+
+WorkerGroup 記錄遊戲連線、版本查詢、Release 查詢／下載背景工作；重複工作拒絕、結束後釋放登記。關閉時先取消及隱藏視窗，以 Tk 計時器等待，最長 15 秒，再核對所有工作是否退出。不能立即中斷的單次 HTTP 等待仍受既有 12 秒逾時限制；不使用強制終止執行緒。未退出或取消 callback 失敗會保留 FAILED，交給桌面入口回報，不標示成功。
+
+版本閘門仍依原有來源驗證與 1275 Runtime 規則，不因加入取消而放行；更新下載仍驗證 SHA／ZIP CRC、原子更名且不安裝。取消會停止後續請求／串流／CRC 檢查，清除 partial 並保留既有成品。官方來源與固定版本的正式遷移仍屬 P2。測試：`test_rebuild_workers`、`test_desktop_application_host`、`test_shutdown_cancellation` 及既有登入／更新／連線回歸。

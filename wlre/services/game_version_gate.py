@@ -6,6 +6,7 @@ from wlre.services.official_version import (
     BASELINE, RESOURCE_MAP_URL, check_official_game_resources, check_official_versions,
 )
 from wlre.services.resource_compatibility import baseline_label
+from wlre.core.primitives import check_cancelled
 
 
 def configured_sources(environ=None):
@@ -13,18 +14,22 @@ def configured_sources(environ=None):
     return {"ResourcePath_PC.dat": RESOURCE_MAP_URL}
 
 
-def run_prelogin_check(sources=None, *, checker=None):
+def run_prelogin_check(sources=None, *, checker=None, cancel_event=None):
     """Check official source and block upon a confirmed incompatible revision.
 
     Explicit sources/checker are reserved for offline regression tests/CLI.
     Normal GUI startup always performs the ResourcePath_PC.dat lookup.
     """
+    check_cancelled(cancel_event)
     if checker is not None:
         remote = checker(sources or {})
     elif sources is not None:
         remote = check_official_versions(sources)
+    elif cancel_event is not None:
+        remote = check_official_game_resources(cancel_event=cancel_event)
     else:
         remote = check_official_game_resources()
+    check_cancelled(cancel_event)
     packages = remote.get("packages", {})
     package_changed = (
         remote.get("status") == "resources_changed" or

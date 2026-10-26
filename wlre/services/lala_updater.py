@@ -10,10 +10,12 @@ import os
 from pathlib import Path
 import platform
 import re
+import zipfile
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from wlre import __version__
+from wlre.core.primitives import check_cancelled
 from wlre.storage.paths import data_root
 
 REPO = "blesses0603/WLRe_lala"
@@ -93,8 +95,9 @@ def _read_small(url, limit, *, accept, opener=None):
 
 
 def check_lala_release(*, current_version=__version__, opener=None,
-                       system=None, machine=None):
+                       system=None, machine=None, cancel_event=None):
     """Use published releases, not main's development version or an unmerged PR."""
+    check_cancelled(cancel_event)
     current = parsed_version(current_version)
     try:
         payload = json.loads(_read_small(API, MAX_API,
@@ -102,6 +105,7 @@ def check_lala_release(*, current_version=__version__, opener=None,
                                         opener=opener))
     except (ValueError, UnicodeError) as exc:
         raise UpdateError("GitHub Release 回應不是合法 JSON") from exc
+    check_cancelled(cancel_event)
     if not isinstance(payload, dict):
         raise UpdateError("Release 格式錯誤")
     tag = payload.get("tag_name")
@@ -145,11 +149,12 @@ def expected_checksum(data, filename):
     return hashes[0]
 
 
-def download_verified_release(info, *, directory=None, opener=None):
+def download_verified_release(info, *, directory=None, opener=None, cancel_event=None):
     """Download to user data, verify SHA256, and atomically expose the ZIP.
 
     Does not extract, execute, or overwrite a running program. No account data.
     """
+    check_cancelled(cancel_event)
     if info.get("status") != "update_available":
         raise UpdateError("沒有經確認可下載的新版本")
     tag = info.get("published")
@@ -160,6 +165,7 @@ def download_verified_release(info, *, directory=None, opener=None):
     checksums = _asset_uri(info.get("checksum_url"), tag=tag, filename="SHA256SUMS.txt")
     digest = expected_checksum(_read_small(checksums, MAX_HASHES,
                                            accept="text/plain", opener=opener), name)
+    check_cancelled(cancel_event)
     destination = Path(directory) if directory is not None else data_root() / "updates" / tag
     destination.mkdir(parents=True, exist_ok=True)
     archive = destination / name
@@ -170,7 +176,9 @@ def download_verified_release(info, *, directory=None, opener=None):
         with _request(url, accept="application/octet-stream", opener=opener) as stream, \
                 temporary.open("wb") as output:
             while True:
+                check_cancelled(cancel_event)
                 chunk = stream.read(1024 * 1024)
+                check_cancelled(cancel_event)
                 if not chunk:
                     break
                 downloaded += len(chunk)
@@ -181,7 +189,6 @@ def download_verified_release(info, *, directory=None, opener=None):
         if not downloaded or sha.hexdigest() != digest:
             raise UpdateError("下載完成但 SHA-256 與官方清單不一致")
         # ZIP CRC and intended package entry, without unsafe extraction.
-        import zipfile
         with zipfile.ZipFile(temporary) as package:
             expected_file = ("WLRe_LaLa/WLRe_LaLa.exe" if name.endswith("_windows_x64.zip")
                              else "WLRe_LaLa.app/")
@@ -197,11 +204,17 @@ def download_verified_release(info, *, directory=None, opener=None):
                     any(((x.external_attr >> 16) & 0o170000) == 0o120000
                         for x in package.infolist())):
                 raise UpdateError("安裝包內容不符合預期結構")
-            bad = package.testzip()
-            if bad:
-                raise UpdateError("安裝包 ZIP CRC 驗證失敗")
+            # 每段都可取消；ZipExtFile 讀到 EOF 時仍執行原有 CRC 校驗。
+            for entry in package.infolist():
+                check_cancelled(cancel_event)
+                if entry.is_dir():
+                    continue
+                with package.open(entry) as member:
+                    while member.read(64 * 1024):
+                        check_cancelled(cancel_event)
+        check_cancelled(cancel_event)
         os.replace(temporary, archive)
-    except (OSError, ValueError, RuntimeError) as exc:
+    except (OSError, ValueError, RuntimeError, zipfile.BadZipFile) as exc:
         raise UpdateError("LaLa 安裝包下載或驗證失敗") from exc
     finally:
         temporary.unlink(missing_ok=True)

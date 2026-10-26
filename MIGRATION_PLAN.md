@@ -6,7 +6,7 @@
 |---|---|---|---|
 | P0 | main／PR #57／全 Python AST／功能與依賴／資源探測／基準測試 | 完整清單、對照、依賴圖、測試證據及風險有來源，先提交報告 | ce159f5 已提交；三平台 CI 40333188720 成功，允許進入 P1 |
 | P1a | 不依賴 GUI 的設定、診斷、EventBus、Module／Manager、Application、投影狀態 | 非 READY 拒絕、依賴排序／循環拒絕、啟動回滾、停止清理、事件例外隔離、跨執行緒 mailbox、敏感內容不入紀錄 | 已實作；本地核心測試通過，完整回歸及本批 CI 另見 TESTING |
-| P1b | 桌面 adapter 接入、關閉排程與舊 API 回歸 | 啟動／關閉無 UI 回歸，背景停止可驗證，Windows／Ubuntu／macOS CI | 待實作 |
+| P1b | 桌面 adapter 接入、關閉排程與舊 API 回歸 | 啟動／關閉無 UI 回歸，背景停止可驗證，Windows／Ubuntu／macOS CI | 已實作桌面 host、背景工作納管與合作式取消；本地回歸通過，本批 CI 待推送驗證 |
 | P2a | 新官方來源、版本、下載與 Manifest 正式解析器 | 有界下載、TLS／來源／完整性、重試取消、未知格式拒絕；不啟用候選 | 待實作 |
 | P2b | Bundle／UnityFS／TextAsset、版本化 adapter | 真實官方樣本來源收據、精確 AssetPath、EOF／offset／schema 驗證、未知欄位保存 | 待實作 |
 | P2c | 相容性、缺口、官方快照服務 | 跨包版本一致、必要引用完整、原子提升、失敗不混版／不冒充最新 | 待實作 |

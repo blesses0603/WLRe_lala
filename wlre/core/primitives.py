@@ -16,6 +16,11 @@ def identifier(value):
     return value
 
 
+def check_cancelled(cancel_event):
+    if cancel_event is not None and cancel_event.is_set():
+        raise InterruptedError('operation_cancelled')
+
+
 class Owned:
     """只有建立物件的執行緒可以使用擁有者 API。"""
 

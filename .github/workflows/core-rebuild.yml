@@ -35,9 +35,13 @@ jobs:
           wlre/core/primitives.py tools/rebuild_inventory.py
           tests/test_core_rebuild_inventory.py tests/test_rebuild_application.py
           tests/test_rebuild_events.py tests/test_rebuild_boundaries.py
+          tests/test_rebuild_workers.py wlre/ui/application_host.py
+          tests/test_desktop_application_host.py tests/test_shutdown_cancellation.py
       - name: Run core unit and integration tests without GUI dependencies
         run: python -m unittest discover -s tests -p "test_rebuild_*.py" -v
       - name: Validate inventory tool
         run: python -m unittest discover -s tests -p test_core_rebuild_inventory.py -v
+      - name: Validate cooperative cancellation without live downloads
+        run: python -m unittest discover -s tests -p test_shutdown_cancellation.py -v
 
 # 既有 test.yml 的完整三平台 pull_request 檢查維持不變，不以本工作取代。

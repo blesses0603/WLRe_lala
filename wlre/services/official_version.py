@@ -17,6 +17,8 @@ from datetime import datetime, timezone
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
+from wlre.core.primitives import check_cancelled
+
 from wlre.services.resource_compatibility import (
     baseline_maps, load_supported_resources,
 )
@@ -314,8 +316,17 @@ def check_official_versions(sources=None, *, fetcher=fetch_version,
             "protocol_compatibility": "unverified", "read_only": True}
 
 
-def check_official_game_resources(*, fetcher=fetch_bytes, exe_version=SUPPORTED_OFFICIAL_EXE_VERSION):
+def check_official_game_resources(*, fetcher=fetch_bytes, exe_version=SUPPORTED_OFFICIAL_EXE_VERSION,
+                                  cancel_event=None):
     """Sequential remote lookup. No local game/LaLa files are consulted."""
+    check_cancelled(cancel_event)
+    original_fetcher = fetcher
+    if cancel_event is not None:
+        def fetcher(url):
+            check_cancelled(cancel_event)
+            result = original_fetcher(url)
+            check_cancelled(cancel_event)
+            return result
     checked_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
     try:
         try:
@@ -324,9 +335,10 @@ def check_official_game_resources(*, fetcher=fetch_bytes, exe_version=SUPPORTED_
             # A cache-busting query may return HTTP 200 with an HTML CDN page.
             # Retry the exact Fiddler-observed path once, only for the normal
             # network fetcher. Injected test fetchers never trigger live calls.
-            if fetcher is not fetch_bytes:
+            if original_fetcher is not fetch_bytes:
                 raise
             try:
+                check_cancelled(cancel_event)
                 path = parse_resource_path(
                     fetch_bytes(RESOURCE_MAP_URL, cache_bust=False),
                     exe_version=exe_version)
@@ -334,6 +346,7 @@ def check_official_game_resources(*, fetcher=fetch_bytes, exe_version=SUPPORTED_
                 raise VersionSourceError(
                     f"{initial}；原始網址重試：{_request_problem(retry_exc)}") from retry_exc
     except (VersionSourceError, OSError, ValueError) as exc:
+        check_cancelled(cancel_event)
         return {"status": "unverified", "packages": {
             p: {"baseline": b, "remote": None, "comparison": "unverified"}
             for p, b in BASELINE.items()}, "resource_path": None,
@@ -341,12 +354,14 @@ def check_official_game_resources(*, fetcher=fetch_bytes, exe_version=SUPPORTED_
             "reason": _request_problem(exc),
             "checked_at_utc": checked_at,
             "protocol_compatibility": "unverified", "read_only": True}
+    check_cancelled(cancel_event)
     urls = official_package_urls(path["data_version"])
     # The game first determines DataVer, then queries DataPackage.version.
     # The existing MainPackage compatibility check follows the same DataVer.
     result = check_official_versions(urls, fetcher=lambda url: parse_version(fetcher(url)),
                                      strict_manifest=True,
                                      package_order=("DataPackage", "MainPackage"))
+    check_cancelled(cancel_event)
     result["resource_path"] = path["data_version"]
     result["failed_stage"] = next(
         (pkg + ".version" for pkg in ("DataPackage", "MainPackage")

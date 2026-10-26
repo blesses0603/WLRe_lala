@@ -37,6 +37,17 @@ python WLRE_Client.py --smoke-test-gui
 - 新增程式／測試 Ruff、compileall、repository audit、diff check 均通過。例外隔離及生命週期邊界的廣泛捕捉有逐行理由，固定錯誤碼取代例外內容；未降低既有檢查。
 - P1a 本批 GitHub CI：推送後由 PR 完整三平台及新增純核心三平台流程驗證；尚未以先前 main CI 代替本批成功證據。
 
+P1a 提交 `d808926` 的實際結果：純核心三平台 [40336014367](https://github.com/blesses0603/WLRe_lala/actions/runs/40336014367) 及完整 PR 三平台 [40336021156](https://github.com/blesses0603/WLRe_lala/actions/runs/40336021156) **全部成功**，之後才開始 P1b。
+
+## P1b 桌面接入與背景取消
+
+- 30 項純核心測試（包含新增 4 項 WorkerGroup）通過；4 項實際 Tk／舊主頁的 Host 整合測試通過；4 項關閉／下載取消測試通過。所有 HTTP 皆為替身，不下載正式安裝包。
+- 完整本地回歸：**1,239 項，87.725 秒，OK，跳過 2 項**，紀錄 `/tmp/lala-rebuild-p1b-full.log`。之後來源 GUI smoke 改走同一 Host，再獨立重驗入口及既有 macOS 建置／smoke 測試，結果另列。
+- 最終入口：`--smoke-test-gui` exit 0；`test_macos_build.py` 10 項通過、跳過 1 項（`/tmp/lala-rebuild-p1b-entry.log`）。此為雲端來源／建置計畫測試，沒有產生原生 APP。
+- 測試曾發現 Tcl／ttk 計時器若用 Python `after_cancel` 刪除所屬 command，會造成停止 FAILED；已採原有 smoke 的 Tcl cancel 方式，交由 widget destroy 釋放 command。4 項 Host 測試全部重驗成功，不保留失敗待下批處理。
+- 新檔完整 Ruff、舊檔未定義名稱／重複定義檢查、compileall、repository audit 與 diff check 通過。
+- 本批 CI 尚待提交／推送；保留既有完整三平台 PR 檢查，純核心 CI 另加入合作式取消測試。Windows／macOS 原生安裝包及正式服 E2E 仍未執行。
+
 ## 尚未驗收
 
 - 新核心／新功能移植：以各批測試與 CI 另行追加，不引用舊 main 成功取代。

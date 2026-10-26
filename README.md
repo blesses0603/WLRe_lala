@@ -4,6 +4,8 @@
 
 **WLRe:LaLa** 是《飄流幻境 RE：星之方舟》的 Python 桌面客戶端工具，使用 Tkinter／ttk、遊戲封包與內建資源。桌面版獨立維護，Android 不在本倉庫的建置範圍內。
 
+> **本開發分支的新核心重建**：`feature/lala-core-rebuild`／[Draft PR #58](https://github.com/blesses0603/WLRe_lala/pull/58) 已提交 P0 盤點，並實作 P1 核心／桌面過渡接入，持續依 [移植計畫](MIGRATION_PLAN.md) 驗證；遊戲功能仍由既有實作提供，尚非全功能移植結案，不合併或發布。版本保持 0.6.1。見 [新架構](ARCHITECTURE.md)、[模組契約](MODULES.md)、[官方資源](OFFICIAL_RESOURCES.md) 與 [測試紀錄](TESTING.md)。
+
 [功能模組化與舊資源遷移](docs/MODULARIZATION_PLAN.md) · [啟動與建置](#啟動與建置) · [使用限制](#使用限制) · [測試](#測試與驗證) · [文件](#參考文件) · [版本歷史](版本歷史.md)
 
 > **模組化開發方向（PR #57）**：協力、一般副本、小地圖、NPC／傳點分別建立功能資料夾；每階段**同時**處理該功能舊離線／1262 資源的可信來源替代。未取得等價驗證來源、尚有其他模組引用或未通過回歸測試時保留舊檔，不為整理目錄直接刪除；官方已驗證 Bundle 可供正式 1275 Runtime 使用，但本機版本化快取、個人設定與 UI／導航必要資料不等於可全部刪除。詳見 [規劃文件](docs/MODULARIZATION_PLAN.md)。

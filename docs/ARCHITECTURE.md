@@ -1,5 +1,7 @@
 # WLRe:LaLa 整體架構
 
+> 本文保留歷史架構分析。最新「全新核心、逐步移植」工程及實際驗收狀態請先閱讀根目錄 [ARCHITECTURE.md](../ARCHITECTURE.md)、[MODULES.md](../MODULES.md) 及 [MIGRATION_PLAN.md](../MIGRATION_PLAN.md)，勿將下方歷史版本視為本分支現況。
+
 本文件描述截至第 09 項已合併的 `main` 架構（第 10 項基準 Commit `a27826b`）。該歷史架構基準版本是 `0.5.0`，目前副本／協力開發版為 `0.5.1`，v0.6.0 預定下次正式 Release，遊戲資料與協定核對版本為 `1262`。第 12 節列出已落實的調整與後續界線。
 
 - [完整目錄與模組索引](STRUCTURE.md)

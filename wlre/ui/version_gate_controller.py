@@ -6,6 +6,7 @@ import time
 import tkinter as tk
 from tkinter import messagebox, ttk
 from wlre import __version__
+from wlre.core.application.workers import WorkerGroup
 from wlre.services.lala_updater import (
     UpdateError, check_lala_release, download_verified_release,
 )
@@ -421,6 +422,9 @@ class VersionGateController:
     def start_version_check(self):
         if self._closing:
             return
+        if (isinstance(getattr(self, '_tasks', None), WorkerGroup)
+                and self._tasks.running('official-version-check')):
+            return
         if (self.login_window is not None and self.login_window.winfo_exists()
                 and self.login_window.state() != "withdrawn" and not self.live_active):
             self.show_version_check()
@@ -437,19 +441,21 @@ class VersionGateController:
         # official game resource login decision.
         self.start_lala_release_check()
         official_messages = self._version_gate_messages
+        cancel = threading.Event()
 
         def worker():
             try:
-                result = run_prelogin_check()
+                result = run_prelogin_check(cancel_event=cancel)
             except Exception:
                 result = {"blocked": True, "status": "unverified",
                           "message": "版本檢測程式發生例外，已禁止登入；請重新查詢或回報開發者。",
                           "remote": {"status": "unverified", "failed_stage": "檢測程式",
                                      "reason": "內部例外（非官方版本回應）"}}
-            official_messages.put((generation, result))
+            if not cancel.is_set():
+                official_messages.put((generation, result))
 
-        threading.Thread(target=worker, name="official-version-check",
-                         daemon=True).start()
+        self.launch_worker(threading.Thread(target=worker, name="official-version-check",
+                                            daemon=True), cancel.set)
 
     def drain_version_checks(self):
         while True:
@@ -484,6 +490,9 @@ class VersionGateController:
     def start_lala_release_check(self):
         if self._closing:
             return
+        if (isinstance(getattr(self, '_tasks', None), WorkerGroup)
+                and self._tasks.running('lala-release-check')):
+            return
         self._lala_update_generation += 1
         generation = self._lala_update_generation
         self._lala_update_info = None
@@ -493,14 +502,17 @@ class VersionGateController:
         self._lala_download_button.configure(state="disabled")
         self._lala_open_button.configure(state="disabled")
         update_messages = self._lala_update_messages
+        cancel = threading.Event()
 
         def worker():
             try:
-                result = check_lala_release()
-                update_messages.put((generation, "check", result))
+                result = check_lala_release(cancel_event=cancel)
+                if not cancel.is_set():
+                    update_messages.put((generation, "check", result))
             except (UpdateError, OSError, ValueError):
-                update_messages.put((generation, "error", "無法查詢 GitHub Release，請稍後重試。"))
-        threading.Thread(target=worker, name="lala-release-check", daemon=True).start()
+                if not cancel.is_set():
+                    update_messages.put((generation, "error", "無法查詢 GitHub Release，請稍後重試。"))
+        self.launch_worker(threading.Thread(target=worker, name="lala-release-check", daemon=True), cancel.set)
 
     def download_lala_release(self):
         info = self._lala_update_info
@@ -518,14 +530,17 @@ class VersionGateController:
         self._lala_release_text.set("下載中，完成後會驗證官方 SHA-256 與 ZIP 完整性…")
         self._lala_download_button.configure(state="disabled")
         download_messages = self._lala_update_messages
+        cancel = threading.Event()
 
         def worker():
             try:
-                archive = download_verified_release(info)
-                download_messages.put((generation, "download", str(archive)))
+                archive = download_verified_release(info, cancel_event=cancel)
+                if not cancel.is_set():
+                    download_messages.put((generation, "download", str(archive)))
             except (UpdateError, OSError, ValueError):
-                download_messages.put((generation, "error", "更新包下載或完整性驗證失敗；不會替換任何程式。"))
-        threading.Thread(target=worker, name="lala-release-download", daemon=True).start()
+                if not cancel.is_set():
+                    download_messages.put((generation, "error", "更新包下載或完整性驗證失敗；不會替換任何程式。"))
+        self.launch_worker(threading.Thread(target=worker, name="lala-release-download", daemon=True), cancel.set)
 
     def _drain_lala_update_messages(self):
         while True:

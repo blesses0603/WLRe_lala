@@ -64,12 +64,14 @@ def smoke_test_gui():
     os.environ["WLRE_DISABLE_AUTO_CATALOG"] = "1"
     self_test()
     import tkinter as tk
-    from wlre.ui.gui import App
+    from wlre.ui.application_host import DesktopHost
     root = tk.Tk()
+    host = DesktopHost(root)
     errors = []
     root.report_callback_exception = lambda *args: errors.append(args)
     try:
-        app = App(root)
+        host.start()
+        app = host.module.app
         app.show_main()
         # In unattended macOS runners Cocoa's full event pump can block
         # on hidden Toplevel transitions. This entry-point smoke check needs
@@ -85,7 +87,7 @@ def smoke_test_gui():
             # Cancel timers without deleting commands owned by child widgets.
             # Their destroy methods perform the command cleanup themselves.
             root.tk.call('after', 'cancel', job)
-        root.destroy()
+        host.finish()
     return 0
 
 

@@ -38,8 +38,10 @@ from wlre.ui.session_event_coordinator import SessionEventCoordinator
 
 class App(LoginController, AccountController,
           VersionGateController, FeatureWindowController, SessionEventCoordinator):
-    def __init__(self, root):
+    def __init__(self, root, *, tasks=None):
         self.root=root
+        self._tasks=tasks
+        self._request_shutdown=None
         self._ui_thread=threading.get_ident()
         self._closing=False
         self.diagnostics=Diagnostics()
@@ -157,6 +159,8 @@ class App(LoginController, AccountController,
         self.log.configure(state='disabled')
 
     def background(self, function):
+        if getattr(self, '_closing', False):
+            return False
         if self.worker and self.worker.is_alive():
             messagebox.showinfo('處理中','請先中斷目前的工作。',parent=self.root)
             return False
@@ -169,8 +173,16 @@ class App(LoginController, AccountController,
                 events.put(('error',str(exc)))
             finally: events.put(('finished',None))
         self.worker=threading.Thread(target=work,daemon=True)
-        self.worker.start()
+        stop_event = getattr(self, 'stop_event', None)
+        App.launch_worker(self, self.worker, stop_event.set if stop_event is not None else lambda: None)
         return True
+
+    def launch_worker(self, worker, request_stop):
+        """保留舊 Thread 建立位置；新桌面 host 另登記工作生命週期。"""
+        if getattr(self, '_tasks', None) is None:
+            worker.start()
+        else:
+            self._tasks.start(worker, request_stop)
 
     def set_profile(self, profile):
         for key in ('rx_xor','tx_xor','platform','language','game_endpoint'):
@@ -256,6 +268,8 @@ class App(LoginController, AccountController,
         self.events.put(('health' if event.get('type')=='connection_health' else 'event',event))
 
     def send(self, command):
+        if self._closing:
+            return False
         if not self.live_active or not self.worker or not self.worker.is_alive():
             messagebox.showinfo('尚未連線','請先登入後再操作。',parent=self.root)
             return False
@@ -385,12 +399,19 @@ class App(LoginController, AccountController,
         self.status.set('正在中斷連線…')
 
     def close(self):
+        if self._request_shutdown is not None:
+            self._request_shutdown()
+            return
+        self._destroy_desktop()
+
+    def _destroy_desktop(self):
         self._closing=True
         self.stop_event.set();self.password.set('');self.diagnostics.close();self.root.destroy()
 
 
 def main():
-    root=tk.Tk();App(root);root.mainloop()
+    from wlre.ui.application_host import run_desktop
+    run_desktop()
 
 
 if __name__=='__main__':main()
