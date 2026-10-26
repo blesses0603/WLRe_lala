@@ -1,3 +1,5 @@
+from _tk_native_pump import create_root
+import sys
 import os
 import tempfile
 import tkinter as tk
@@ -9,13 +11,13 @@ from unittest.mock import Mock, patch
 from wlre.ui.expedition_ui import ExpeditionPanel
 
 
-@unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt', 'Requires a desktop')
+@unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt' or sys.platform == 'darwin', 'Requires a desktop')
 class ExpeditionPanelTests(unittest.TestCase):
     def setUp(self):
         self.folder = tempfile.TemporaryDirectory()
         self.local_data = patch.dict(os.environ, {'LOCALAPPDATA': self.folder.name})
         self.local_data.start()
-        self.root = tk.Tk()
+        self.root = create_root()
         self.app = SimpleNamespace(root=self.root, live_active=True, _settings_key=None,
             snapshot={}, send=Mock(return_value=True), settings_identity=lambda: 'a'*64)
         self.catalog = {'levels': {'1': {'reduction': 0, 'difficulty': 2}}, 'tasks': {

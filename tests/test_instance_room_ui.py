@@ -1,4 +1,6 @@
 """Room join/leave UI: selection, confirmation, password and cross-mode locks."""
+from _tk_native_pump import create_root
+import sys
 import os
 import time
 import tkinter as tk
@@ -10,11 +12,11 @@ from wlre.ui.gui import App
 from wlre.core.state import State
 
 
-@unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt',
+@unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt' or sys.platform == 'darwin',
                      'Requires desktop/Xvfb')
 class RoomUI(unittest.TestCase):
     def setUp(self):
-        self.root = tk.Tk()
+        self.root = create_root()
         self.app = App(self.root)
         self.app.show_main()
         self.app.live_active = True

@@ -27,6 +27,7 @@ jobs:
         shell: bash
     env:
       PYTHONUTF8: '1'
+      PYTHONFAULTHANDLER: '1'
       # GUI regression may create temporary LOCALAPPDATA roots; never fetch
       # official Bundles from test sessions. Auto-service has offline fixtures.
       WLRE_DISABLE_AUTO_CATALOG: '1'
@@ -60,7 +61,9 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           python -c 'import platform, tkinter; print("macOS:", platform.mac_ver()[0], "arch:", platform.machine(), "Tk:", tkinter.TkVersion)'
-          python -m unittest discover -s tests -v
+          # 真實模組入口支援 spawn；每個 case／類別交接有 90 秒診斷截止。
+          python -m tools.run_native_unittest --pattern test_compact_crafting.py
+          python -m tools.run_native_unittest
           python WLRE_Client.py --smoke-test-gui
       - name: Validate packaged resources and build plan
         run: |

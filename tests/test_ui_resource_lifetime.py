@@ -8,15 +8,16 @@ import unittest
 from pathlib import Path
 from threading import Thread
 
+from _tk_native_pump import create_root
 from PIL import Image, ImageTk
 
 from wlre.ui.resource_lifetime import install_root_lifetime
 
 
-@unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt', '需要桌面顯示環境')
+@unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt' or sys.platform == 'darwin', '需要桌面顯示環境')
 class UiResourceLifetimeTests(unittest.TestCase):
     def test_owned_resources_release_without_touching_another_interpreter(self):
-        first, second = tk.Tk(), tk.Tk()
+        first, second = create_root(), create_root()
         install_root_lifetime(first)
         install_root_lifetime(second)
         one = tk.StringVar(first, value='one')
@@ -32,7 +33,7 @@ class UiResourceLifetimeTests(unittest.TestCase):
         second.destroy()
 
     def test_wrong_thread_destroy_is_rejected_before_calling_tcl(self):
-        root, rejected = tk.Tk(), []
+        root, rejected = create_root(), []
         install_root_lifetime(root)
 
         def bad_close():

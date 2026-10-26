@@ -1,4 +1,6 @@
 """Dedicated version-check window must use official server results exclusively."""
+from _tk_native_pump import create_root
+import sys
 import os
 import tkinter as tk
 import unittest
@@ -33,11 +35,11 @@ def official_result(main="1262", data="1262", status="version_identifiers_match"
     }
 
 
-@unittest.skipUnless(os.environ.get("DISPLAY") or os.name == "nt",
+@unittest.skipUnless(os.environ.get("DISPLAY") or os.name == "nt" or sys.platform == 'darwin',
                      "需要桌面顯示環境")
 class PreloginVersionWindowTests(unittest.TestCase):
     def setUp(self):
-        self.root = tk.Tk()
+        self.root = create_root()
         self.patcher = patch.object(VersionGateController, "start_version_check")
         self.patcher.start()
         self.app = App(self.root)

@@ -1,4 +1,6 @@
 """Phase 07: authoritative instance completion and safe co-op free rewards."""
+from _tk_native_pump import create_root
+import sys
 import os
 import tkinter as tk
 import unittest
@@ -249,12 +251,12 @@ class CompletionAndRewards(unittest.TestCase):
         self.assertFalse(state.instances['coop']['completed'])
 
 
-@unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt',
+@unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt' or sys.platform == 'darwin',
                      'Requires desktop/Xvfb')
 class RewardUI(unittest.TestCase):
     def setUp(self):
         from wlre.ui.gui import App
-        self.root = tk.Tk()
+        self.root = create_root()
         self.app = App(self.root)
         self.app.show_main()
         self.app.live_active = True

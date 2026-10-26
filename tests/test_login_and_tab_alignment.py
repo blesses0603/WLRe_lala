@@ -1,13 +1,15 @@
+from _tk_native_pump import assert_normal_display, create_root
+import sys
 import os, time, tkinter as tk, unittest
 from unittest.mock import patch
 from wlre.services.official_version import BASELINE
 from wlre.ui.gui import App
 
 
-@unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt','Requires a desktop')
+@unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt' or sys.platform == 'darwin','Requires a desktop')
 class LoginAndTabAlignment(unittest.TestCase):
     def setUp(self):
-        self.root=tk.Tk();self.app=App(self.root);self.app.show_main();self.root.update()
+        self.root=create_root();self.app=App(self.root);self.app.show_main();self.root.update()
 
     def tearDown(self):
         for job in self.root.tk.call('after','info'):self.root.tk.call('after','cancel',job)
@@ -22,7 +24,7 @@ class LoginAndTabAlignment(unittest.TestCase):
             self.assertEqual(button.winfo_x()+button.winfo_width(),tabs.bar.winfo_width())
             self.assertGreater(button.winfo_x(),tabs.buttons[str(self.app.crafting_launcher)].winfo_x())
             button.invoke();self.root.update()
-            self.assertEqual(self.app.feature_windows['efficiency'].state(),'normal')
+            assert_normal_display(self, self.app.feature_windows['efficiency'])
             self.assertEqual(tabs.select(),str(self.app.overview_panel.master))
         tabs._step(page,-1);self.assertEqual(tabs.select(),str(self.app.crafting_launcher))
 

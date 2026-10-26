@@ -1,3 +1,5 @@
+from _tk_native_pump import create_root
+import sys
 import os
 import tkinter as tk
 import unittest
@@ -7,10 +9,10 @@ from unittest.mock import Mock
 from wlre.ui.companion_ui import CompanionPanel
 
 
-@unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt', 'Requires a desktop')
+@unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt' or sys.platform == 'darwin', 'Requires a desktop')
 class CompanionSelection(unittest.TestCase):
     def setUp(self):
-        self.root = tk.Tk()
+        self.root = create_root()
         self.app = SimpleNamespace(live_active=True, send=Mock())
         self.panel = CompanionPanel(self.root, self.app)
         self.panel.pack(fill='both', expand=True)

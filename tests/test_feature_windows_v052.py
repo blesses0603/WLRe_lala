@@ -1,4 +1,6 @@
 """v0.5.2: all secondary functions are fixed windows centered on main."""
+from _tk_native_pump import assert_normal_display, create_root
+import sys
 import os
 import tkinter as tk
 import unittest
@@ -39,13 +41,39 @@ class CenterGeometry(unittest.TestCase):
         self.assertGreaterEqual(x,0)
         self.assertGreaterEqual(y,0)
 
+    def test_edge_clamp_reserves_room_for_native_window_frame(self):
+        main = Mock()
+        main.winfo_x.return_value = 900
+        main.winfo_y.return_value = 600
+        main.winfo_width.return_value = 1280
+        main.winfo_height.return_value = 800
+        window = Mock()
+        window.winfo_screenwidth.return_value = 1280
+        window.winfo_screenheight.return_value = 720
+        width, height, x, y = center_on_main(window, main, 1080, 650)
+        self.assertLessEqual(x + width, 1280 - 24)
+        self.assertLessEqual(y + height, 720 - 24)
 
-@unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt',
+    def test_aqua_navigation_budget_includes_menu_bar_and_shadow(self):
+        main = Mock()
+        main.winfo_x.return_value = main.winfo_y.return_value = 0
+        main.winfo_width.return_value = 1280
+        main.winfo_height.return_value = 800
+        window = Mock()
+        window.tk.call.return_value = 'aqua'
+        window.winfo_screenwidth.return_value = 1024
+        window.winfo_screenheight.return_value = 768
+        width, height, _, _ = center_on_main(window, main, 1120, 760)
+        self.assertLessEqual(width + 25, 1024)
+        self.assertLessEqual(height + 25, 768)
+
+
+@unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt' or sys.platform == 'darwin',
                      'Requires Tk / Xvfb')
 class SecondaryFeatures(unittest.TestCase):
     def setUp(self):
         from wlre.ui.gui import App
-        self.root=tk.Tk()
+        self.root=create_root()
         self.app=App(self.root)
         self.errors=[]
         self.root.report_callback_exception=lambda *e:self.errors.append(e)
@@ -56,6 +84,44 @@ class SecondaryFeatures(unittest.TestCase):
         for job in self.root.tk.call('after','info'):
             self.root.tk.call('after','cancel',job)
         self.root.destroy()
+
+    def test_native_mapping_keeps_dialog_inside_actual_display(self):
+        from wlre.ui.window_layout import configure_dialog
+        popup = tk.Toplevel(self.root)
+        popup.withdraw()
+        try:
+            configure_dialog(popup, 300, 200)
+            sw, sh = popup.winfo_screenwidth(), popup.winfo_screenheight()
+            popup.geometry(f'+{sw-100}+{sh-100}')
+            popup.deiconify()
+            self.root.update()
+            self.assertLessEqual(popup.winfo_x() + popup.winfo_width(), sw)
+            self.assertLessEqual(popup.winfo_y() + popup.winfo_height(), sh)
+            self.assertEqual(tuple(map(int, popup.resizable())), (0, 0))
+        finally:
+            popup.destroy()
+
+    def test_closing_dialog_cancels_owned_initial_geometry_jobs(self):
+        from wlre.ui.window_layout import _fit_mapped_display, configure_dialog
+        popup = tk.Toplevel(self.root)
+        popup.withdraw()
+        # 延長測試自己的穩定期限，確保 CI 繪圖較慢也能觀察待清理工作。
+        _fit_mapped_display(popup, settle_ms=10_000)
+        configure_dialog(popup, 300, 200)
+        try:
+            popup.deiconify()
+            self.root.update()
+            # 已完成原生 Map；從 Configure 回呼返回後才由測試關窗。
+            popup.event_generate('<Configure>')
+            commands = set(popup._tclCommands)
+            owned = {job for job in self.root.tk.call('after', 'info')
+                     if str(self.root.tk.call('after', 'info', job)[0]) in commands}
+            self.assertEqual(len(owned), 2)
+            popup.destroy()
+            self.assertFalse(owned & set(self.root.tk.call('after', 'info')))
+        finally:
+            if popup.winfo_exists():
+                popup.destroy()
 
     def test_every_non_home_tab_is_a_launcher(self):
         self.assertEqual(tuple(self.app.feature_windows),tuple(WINDOWS))
@@ -80,7 +146,7 @@ class SecondaryFeatures(unittest.TestCase):
                 window=self.app.feature_windows[key]
                 self.app.left_tabs.buttons[str(self.app.feature_launchers[key])].invoke()
                 self.root.update()
-                self.assertEqual(window.state(),'normal')
+                assert_normal_display(self, window)
                 self.assertEqual(self.app.left_tabs.select(),home)
                 self.assertEqual(tuple(int(x) for x in window.resizable()),(0,0))
                 self.assertEqual(window.minsize(),window.maxsize())

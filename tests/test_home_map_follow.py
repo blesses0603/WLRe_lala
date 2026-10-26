@@ -1,3 +1,5 @@
+from _tk_native_pump import create_root
+import sys
 import os
 import tkinter as tk
 import unittest
@@ -7,7 +9,7 @@ from wlre.services.world.smallmaps import SmallMaps
 from wlre.services.world.navigation import NavigationError
 
 
-@unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt','Requires a desktop')
+@unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt' or sys.platform == 'darwin','Requires a desktop')
 class AutomaticMap(unittest.TestCase):
     def setUp(self):
         # GUI lifecycle test: supply independently verified 1275 scene rows.
@@ -30,7 +32,7 @@ class AutomaticMap(unittest.TestCase):
                                         autospec=True, side_effect=verified_scene)
         self.scene_patch.start()
         self.addCleanup(self.scene_patch.stop)
-        self.root=tk.Tk();self.root.geometry('600x500')
+        self.root=create_root();self.root.geometry('600x500')
         self.pick=Mock();self.move=Mock();self.portal=Mock()
         self.map=HomeMap(self.root,self.pick,Mock(),on_move=self.move,on_portal=self.portal,compact=True)
         self.map.pack(fill='both',expand=True);self.root.update()

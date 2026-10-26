@@ -1,3 +1,5 @@
+from _tk_native_pump import create_root
+import sys
 import os
 import tkinter as tk
 import unittest
@@ -7,11 +9,11 @@ from wlre.core.state import State
 from wlre.ui.gui import App
 
 
-@unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt','Requires a desktop')
+@unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt' or sys.platform == 'darwin','Requires a desktop')
 class RedesignedLayout(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.root=tk.Tk();cls.app=App(cls.root);cls.errors=[]
+        cls.root=create_root();cls.app=App(cls.root);cls.errors=[]
         cls.root.report_callback_exception=lambda *args:cls.errors.append(args)
         cls.app.show_main();cls.root.update()
 

@@ -1,4 +1,6 @@
 """Run with a display (or xvfb-run) to catch clipped dashboard content."""
+from _tk_native_pump import assert_normal_display, create_root
+import sys
 import os
 import tkinter as tk
 import unittest
@@ -8,11 +10,11 @@ from wlre.core.state import State
 from wlre.ui.gui import App
 
 
-@unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt','Requires a desktop or Xvfb')
+@unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt' or sys.platform == 'darwin','Requires a desktop or Xvfb')
 class DashboardLayout(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.root=tk.Tk();cls.app=App(cls.root);cls.errors=[]
+        cls.root=create_root();cls.app=App(cls.root);cls.errors=[]
         cls.root.report_callback_exception=lambda *args:cls.errors.append(args)
         cls.app.show_main();cls.root.update()
 
@@ -163,7 +165,7 @@ class DashboardLayout(unittest.TestCase):
                 button.invoke();self.root.update()
                 key=destination.removesuffix('_panel')
                 if key=='efficiency':key='efficiency'
-                self.assertEqual(self.app.feature_windows[key].state(),'normal')
+                assert_normal_display(self, self.app.feature_windows[key])
                 self.assertEqual(self.app.left_tabs.select(),
                                  str(self.app.overview_panel.master))
         self.app.left_tabs.select(panel.master);self.root.update()
@@ -175,10 +177,14 @@ class DashboardLayout(unittest.TestCase):
         from wlre.ui.recovery_ui import SupplyPicker
         def check(window):
             self.root.update()
+            top = window.winfo_toplevel()
             self.assertGreaterEqual(window.winfo_x(),0)
             self.assertGreaterEqual(window.winfo_y(),0)
             self.assertLessEqual(window.winfo_x()+window.winfo_width(),self.root.winfo_screenwidth())
-            self.assertLessEqual(window.winfo_y()+window.winfo_height(),self.root.winfo_screenheight())
+            self.assertLessEqual(window.winfo_y()+window.winfo_height(),self.root.winfo_screenheight(),
+                                 f'{window}: {top.title()}, geometry={top.geometry()}, '
+                                 f'y={window.winfo_y()}, height={window.winfo_height()}, '
+                                 f'min={top.minsize()}, max={top.maxsize()}, state={top.state()}')
             self.assertLessEqual(window.winfo_width(),1240)
             self.assertLessEqual(window.winfo_height(),760)
             def inspect(parent):

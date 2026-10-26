@@ -1,3 +1,5 @@
+from _tk_native_pump import create_root
+import sys
 import errno
 import queue
 import tempfile
@@ -263,14 +265,14 @@ class PollRecovery(unittest.TestCase):
 
 
 import os
-@unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt','Requires Tk display')
+@unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt' or sys.platform == 'darwin','Requires Tk display')
 class NativeFocusRegression(unittest.TestCase):
     def test_native_combobox_popdown_does_not_stop_background_detection(self):
         import tkinter as tk
         from tkinter import ttk
         from types import SimpleNamespace
         from wlre.ui.gui import App
-        root=tk.Tk();self.addCleanup(root.destroy)
+        root=create_root();self.addCleanup(root.destroy)
         combo=ttk.Combobox(root,values=['A','B']);combo.pack();root.update()
         root.tk.call('ttk::combobox::Post',str(combo));root.update()
         root.tk.call('focus','-force',str(combo)+'.popdown.f.l');root.update()

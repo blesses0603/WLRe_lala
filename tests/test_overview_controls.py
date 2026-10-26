@@ -1,3 +1,5 @@
+from _tk_native_pump import create_root
+import sys
 import os
 import tkinter as tk
 import unittest
@@ -8,13 +10,13 @@ from wlre.ui.auto_battle_ui import SettingsEditor
 from wlre.ui.halo_button import edge_points,edge_overlay
 
 
-@unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt','Requires a desktop')
+@unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt' or sys.platform == 'darwin','Requires a desktop')
 class OverviewControls(unittest.TestCase):
     def setUp(self):
         # These tests verify local Tk controls, not remote update/version checks.
         # Keep all Tk lifecycle work on the test/UI thread with no HTTP workers.
         with patch.object(App, 'start_version_check'):
-            self.root=tk.Tk();self.app=App(self.root);self.app.show_main();self.root.update()
+            self.root=create_root();self.app=App(self.root);self.app.show_main();self.root.update()
         self.panel=self.app.overview_panel;self.app.live_active=True
         self.state=State().snapshot();self.state['player']={'role_id':1,'name':'測試角色','scene':12000}
         self.app.render(self.state);self.root.update()

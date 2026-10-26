@@ -1,4 +1,6 @@
 """P1b real Tk regression for the normal dungeon feature split."""
+from _tk_native_pump import create_root
+import sys
 import os
 import tkinter as tk
 import unittest
@@ -10,12 +12,12 @@ from wlre.features.cooperative.panel import CooperativeModePage
 from wlre.ui.gui import App
 
 
-@unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt',
+@unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt' or sys.platform == 'darwin',
                      'Requires desktop/Xvfb')
 class DungeonFeatureUI(unittest.TestCase):
     def setUp(self):
         with patch.object(App, 'start_version_check'):
-            self.root = tk.Tk()
+            self.root = create_root()
             self.app = App(self.root)
             self.app.show_main()
         self.app.live_active = True

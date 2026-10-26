@@ -21,7 +21,8 @@ class WindowMinimizeTests(unittest.TestCase):
         self.theme.minimize(self.window)
         self.assertTrue(self.window._glass_restore)
         self.assertEqual(self.window.method_calls, [call.winfo_exists(),
-            call.state(), call.overrideredirect(False), call.iconify()])
+            call.state(), call.tk.call('tk', 'windowingsystem'),
+            call.overrideredirect(False), call.iconify()])
 
     def test_queued_map_while_iconic_does_not_restore_chrome(self):
         self.theme.minimize(self.window)
@@ -57,3 +58,12 @@ class WindowMinimizeTests(unittest.TestCase):
             self.theme.minimize(self.window)
         self.window.overrideredirect.assert_not_called()
         self.window.iconify.assert_not_called()
+
+    def test_aqua_keeps_native_resizing_policy_during_minimize_and_restore(self):
+        self.window.tk.call.return_value = 'aqua'
+        self.theme.minimize(self.window)
+        self.window.iconify.assert_called_once()
+        self.assertFalse(self.window._glass_restore)
+        self.theme.finish_restore(self.window)
+        self.window.overrideredirect.assert_not_called()
+        self.window.resizable.assert_not_called()
