@@ -189,6 +189,13 @@ class PortalInteractionMixin:
         text = (f"已核對 {report.get('scene_count', 0)} 個場景；"
                 f"{report.get('unresolved_portals', 0)} 個一般傳點仍有來源對應缺口。"
                 if ready else '官方門索引、名稱標記或連線來源不完整，尚不能宣稱全場景已核對。')
+        if ready:
+            text += (f"｜官方 EveDoorLinks 已解析 "
+                     f"{report.get('official_link_reference_count', 0)} 筆"
+                     f"（來源座標 {report.get('reference_source_xy_count', 0)}、"
+                     f"目的地落點 {report.get('reference_arrival_xy_count', 0)} 筆已換算）。"
+                     f"另有 {report.get('door_link_data_route_count', 0)} 筆"
+                     f" DoorLinkData_C 獨立路線參考；不授權傳送。")
         ttk.Label(win, text=text, wraplength=930).pack(fill='x', padx=10, pady=8)
         detail = tk.StringVar(value='選擇場景查看所有門索引與未完成項目；此視窗不送出換圖指令。')
         ttk.Label(win, textvariable=detail, wraplength=930).pack(fill='x', padx=10, pady=4)
@@ -226,8 +233,33 @@ class PortalInteractionMixin:
                     labels = [{'hidden_portal': '隱藏傳點，獨立規則',
                                'event_container_only': '事件容器，未列為地圖出口',
                                'source_incomplete': '來源未齊'}.get(door['category'], '來源對應通過')]
-                parts.append(f"#{door['index']}：" + '／'.join(labels))
-            detail.set('；'.join(parts) if parts else '此場景沒有門索引或傳點標記。')
+                route_text = ''
+                if door.get('reference_only'):
+                    target = door.get('official_link_destination')
+                    point = door.get('official_link_position')
+                    arrival = door.get('official_arrival_position')
+                    route_text = (f'｜官方連線：'
+                                  f'{point if point is not None else "來源XY未校準"}'
+                                  f' → {target} '
+                                  f'{arrival if arrival is not None else "落點XY未校準"}'
+                                  f'（僅供查閱）')
+                parts.append(f"#{door['index']}：" + '／'.join(labels) + route_text)
+            extra = [link for link in self.portals.data.get('official_route_references', [])
+                     if link.get('scene') == row['scene']]
+            if extra:
+                parts.append(f'DoorLinkData_C：另有 {len(extra)} 筆獨立場景路線，'
+                             '不含門事件索引，不能直接傳送')
+                for item in extra[:8]:
+                    parts.append(
+                        f"路線 {item['route_ordinal']}："
+                        f"{(item['x'], item['y']) if item['position_verified'] else '來源XY待校準'}"
+                        f" → {item['destination']} "
+                        f"{(item['arrival_x'], item['arrival_y']) if item['arrival_verified'] else '落點XY待校準'}"
+                        '（唯讀）')
+            detail.set(('；'.join(parts[:24]) +
+                        (f'；其餘 {len(parts)-24} 筆請由官方完整報表查閱'
+                         if len(parts) > 24 else ''))
+                       if parts else '此場景沒有門索引或傳點標記。')
         table.bind('<<TreeviewSelect>>', selected)
         return win
 
