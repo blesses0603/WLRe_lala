@@ -36,3 +36,13 @@ class NativeTestRoot(tk.Tk):
 
 def create_root():
     return NativeTestRoot()
+
+
+def assert_normal_display(testcase, window):
+    """Aqua 對 min=max 的固定窗可回報 zoomed；仍須證明固定且實際可見。"""
+    if window.tk.call('tk', 'windowingsystem') == 'aqua' and window.state() == 'zoomed':
+        testcase.assertEqual(tuple(map(int, window.resizable())), (0, 0))
+        testcase.assertEqual(window.minsize(), window.maxsize())
+    else:
+        testcase.assertEqual(window.state(), 'normal')
+    testcase.assertTrue(window.winfo_ismapped())

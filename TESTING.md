@@ -108,3 +108,9 @@ P1b 首輪提交 `2d68ef9`：純核心三平台 [40339132736](https://github.com
 - 以 stdin 執行 unittest 時，Mac spawn 子程序嘗試匯入不存在的 `<stdin>`。改用 `python -m tools.run_native_unittest` 的真實檔案入口，保留同一套測試與 90 秒 deadline。新增隔離子程序測試驗證 spawn、失敗碼與阻塞 class setup 的堆疊／非零退出。
 
 修復後本地完整 **1,257 項，88.749 秒，OK，跳過 2 項**（`/tmp/lala-core-aqua-final-window.log`）；runner 額外 3 項通過，既有跨程序寫入 7 項透過新入口通過。Ruff、舊檔名稱、compileall、audit、diff check 通過。Mac 修復需由下一批 CI 實際確認，不預先標為成功。
+
+提交 `1b5b7c4`：三平台核心／資源 CI 成功；完整 40398181927 的 Ubuntu／Windows 成功，Mac 已修復 spawn、resizable 與 Toplevel 布林錯誤，但完整 **1,257 項／169.624 秒**仍有 **10 failures／3 skipped**。其中 9 個 failure 是固定視窗於 Cocoa 回報 zoomed 而非 normal；另外導航視窗下緣為 769，螢幕高 768。
+
+修復原生座標四捨五入：映射後尺寸內縮一個座標單位。對五處導航可見性斷言，Windows／X11 仍嚴格要求 normal，另外確認實際映射；Aqua 只有在 resizable=False、minsize=maxsize 且實際映射時，才接受固定窗的 zoomed 回報。沒有改寫 Tk 的 state 值或把隱藏視窗當成正常；新增真實 Tk 測試證明隱藏窗會被拒絕，已映射固定窗才通過。既有選頁、選取、尺寸與禁止網路指令等斷言全保留。
+
+本批本地完整 **1,258 項，92.183 秒，OK，跳過 2 項**（`/tmp/lala-core-native-state-final.log`）；事件迴圈／可見性 4 項另驗成功，Ruff、名稱及 diff check 通過。本批 native CI 仍需重新驗證，不能以 local X11 結果代替 Aqua。

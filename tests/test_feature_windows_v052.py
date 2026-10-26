@@ -1,5 +1,5 @@
 """v0.5.2: all secondary functions are fixed windows centered on main."""
-from _tk_native_pump import create_root
+from _tk_native_pump import assert_normal_display, create_root
 import sys
 import os
 import tkinter as tk
@@ -111,7 +111,7 @@ class SecondaryFeatures(unittest.TestCase):
                 window=self.app.feature_windows[key]
                 self.app.left_tabs.buttons[str(self.app.feature_launchers[key])].invoke()
                 self.root.update()
-                self.assertEqual(window.state(),'normal')
+                assert_normal_display(self, window)
                 self.assertEqual(self.app.left_tabs.select(),home)
                 self.assertEqual(tuple(int(x) for x in window.resizable()),(0,0))
                 self.assertEqual(window.minsize(),window.maxsize())

@@ -1,5 +1,5 @@
 """Regression tests for the instance and co-op navigation skeleton."""
-from _tk_native_pump import create_root
+from _tk_native_pump import assert_normal_display, create_root
 import sys
 import os
 import tkinter as tk
@@ -35,7 +35,7 @@ class InstanceNavigation(unittest.TestCase):
         self.root.update()
         self.assertEqual(self.app.left_tabs.select(),
                          str(self.app.overview_panel.master))
-        self.assertEqual(self.app.instance_window.state(),'normal')
+        assert_normal_display(self, self.app.instance_window)
         self.assertEqual(str(panel.winfo_toplevel()),str(self.app.instance_window))
         self.assertEqual(
             [panel.tabs.tab(page, 'text') for page in panel.tabs.tabs()],
@@ -177,7 +177,7 @@ class InstanceNavigation(unittest.TestCase):
             self.assertFalse(page.winfo_ismapped())
             self.app.open_instance_button.invoke()
             self.root.update()
-            self.assertEqual(self.app.instance_window.state(),'normal')
+            assert_normal_display(self, self.app.instance_window)
             self.assertEqual(panel.tabs.select(),str(page))
             self.assertEqual(page.catalog_table.selection(),('catalog_2',))
             send.assert_not_called()

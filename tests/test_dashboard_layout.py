@@ -1,5 +1,5 @@
 """Run with a display (or xvfb-run) to catch clipped dashboard content."""
-from _tk_native_pump import create_root
+from _tk_native_pump import assert_normal_display, create_root
 import sys
 import os
 import tkinter as tk
@@ -165,7 +165,7 @@ class DashboardLayout(unittest.TestCase):
                 button.invoke();self.root.update()
                 key=destination.removesuffix('_panel')
                 if key=='efficiency':key='efficiency'
-                self.assertEqual(self.app.feature_windows[key].state(),'normal')
+                assert_normal_display(self, self.app.feature_windows[key])
                 self.assertEqual(self.app.left_tabs.select(),
                                  str(self.app.overview_panel.master))
         self.app.left_tabs.select(panel.master);self.root.update()

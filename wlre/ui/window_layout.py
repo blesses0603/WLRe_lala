@@ -19,8 +19,9 @@ def _fit_mapped_display(window):
             if not window.winfo_exists() or not window.winfo_ismapped():
                 return
             width, height = window.winfo_width(), window.winfo_height()
-            available_width = max(1, window.winfo_screenwidth() - max(0, window.winfo_x()))
-            available_height = max(1, window.winfo_screenheight() - max(0, window.winfo_y()))
+            # 原生座標／內容尺寸可能各自四捨五入，保留一個實體座標單位。
+            available_width = max(1, window.winfo_screenwidth() - max(0, window.winfo_x()) - 1)
+            available_height = max(1, window.winfo_screenheight() - max(0, window.winfo_y()) - 1)
             fitted = min(width, available_width), min(height, available_height)
             if fitted == (width, height):
                 return

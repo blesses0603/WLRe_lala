@@ -4,7 +4,7 @@ import sys
 import tkinter as tk
 import unittest
 
-from _tk_native_pump import create_root, pump_native_events
+from _tk_native_pump import assert_normal_display, create_root, pump_native_events
 
 
 @unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt' or sys.platform == 'darwin',
@@ -36,3 +36,16 @@ class NativeTestPumpTests(unittest.TestCase):
         root.after(0, lambda: fired.append(True))
         root.update()
         self.assertEqual(fired, [True])
+
+    def test_display_assertion_rejects_hidden_window_and_accepts_real_fixed_window(self):
+        root = create_root()
+        self.addCleanup(root.destroy)
+        root.withdraw()
+        with self.assertRaises(AssertionError):
+            assert_normal_display(self, root)
+        root.minsize(160, 120)
+        root.maxsize(160, 120)
+        root.resizable(False, False)
+        root.deiconify()
+        root.update()
+        assert_normal_display(self, root)
