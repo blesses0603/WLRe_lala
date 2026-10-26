@@ -8,6 +8,7 @@
 - P1b：正常桌面入口及 GUI smoke 經新核心 Host 組裝既有 App；統一背景工作登記、合作式取消、非阻塞關閉等待與停止失敗回報。保留舊 API 與所有功能，尚未標示逐功能移植完成。
 - 新增三平台純核心 CI；保留既有完整三平台 PR 檢查與安全限制。
 - P2 第一批：官方來源統一至指定 wlreftpsrc 主機，補上該來源 Content-Type／Accept 相容性；YooAsset 解析器移入正式共用層，保留工具 API；新增雙輪動態版本觀測及資源模組 CI。沒有啟用未驗收候選或移除舊資料。
+- 修正完整 Windows 回歸中背景 GC 回收已關閉 Tk 資源造成的 `Tcl_AsyncDelete`：Root 生命週期在擁有者執行緒解除原生參照，保留其他 interpreter。新增隔離子程序及完整桌面背景 GC 回歸，不停用正式程式 GC、不跳過 Windows 測試。
 - 受控確認新官方資源站可取得 ResourcePath 及兩套 Manifest；未直接啟用未完成驗收的新資料。
 - 程式版本保持 0.6.1；沒有合併 main、建立 Release／Tag 或改動 Android Repository。
 

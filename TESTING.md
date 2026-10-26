@@ -60,6 +60,17 @@ P1b 首輪提交 `2d68ef9`：純核心三平台 [40339132736](https://github.com
 - 真實官方測試先發現 Accept 窄化會 406；調整為已觀測支援的 `*/*` 後，VersionDetector 兩輪六次版本讀取及兩份 Manifest 下載／CRC／完整解析成功，來源及 fingerprint 證據見 `docs/rebuild/official_pipeline_probe.json`。另外一般啟動的 cache-buster 查詢回報 `same_resources`。沒有登入遊戲、下載完整 Bundle、提升新 Runtime 或提交原始資源。
 - 本批獨立 CI：推送後執行資源三平台、純核心三平台及完整 PR 三平台；此處尚未預先標為通過。
 
+## 共用 UI 原生資源生命週期修復
+
+資源子 PR #59 的完整 Windows CI [40354746790](https://github.com/blesses0603/WLRe_lala/actions/runs/40354746790) 曾在背景 GC 執行 `Variable.__del__` 時出現 `main thread is not in main loop`／`Tcl_AsyncDelete` 並以 exit 3 終止；核心及資源單獨 CI 成功。這是 GUI 原生參照生命週期缺口，不以重新執行掩蓋。
+
+修復移回核心分支供 PR #58 與 #59 共用：只在完整 Tk root 銷毀後、原擁有者執行緒解除該 interpreter 的 Variable、圖像、Font、Style／widget 原生參照；其他 root 不受影響。Python 3.12 Variable 缺公開 dispose，因此對已銷毀 scope 使用其已驗證的終止欄位；失效 widget 呼叫仍回報 TclError。未停用正式 GC、未吞掉跨執行緒錯誤、未改動遊戲資料。
+
+- 新增 3 項 UI 資源測試通過：另一個 interpreter 保持可用、錯誤執行緒 destroy 先拒絕、隔離子程序關閉後背景 GC 無 unraisable／原生崩潰。
+- 隔離子程序另實際建立並關閉完整 DesktopHost，再由背景執行緒強制 GC，exit 0、無 stderr。
+- 資源子分支完整本地 1,263 項通過（90.229 秒、跳過 2）。搬回核心分支後另跑基準完整測試與 CI，不混用不同分支的測試筆數。
+- 核心分支最終完整本地 **1,248 項，90.173 秒，OK，跳過 2 項**（`/tmp/lala-core-ui-lifetime-full.log`）；加強後的隔離測試同時包含完整 DesktopHost，3 項另驗成功。
+
 ## 尚未驗收
 
 - 新核心／新功能移植：以各批測試與 CI 另行追加，不引用舊 main 成功取代。

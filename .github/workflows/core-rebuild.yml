@@ -37,6 +37,7 @@ jobs:
           tests/test_rebuild_events.py tests/test_rebuild_boundaries.py
           tests/test_rebuild_workers.py wlre/ui/application_host.py
           tests/test_desktop_application_host.py tests/test_shutdown_cancellation.py
+          wlre/ui/resource_lifetime.py tests/test_ui_resource_lifetime.py
       - name: Run core unit and integration tests without GUI dependencies
         run: python -m unittest discover -s tests -p "test_rebuild_*.py" -v
       - name: Validate inventory tool
