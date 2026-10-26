@@ -42,3 +42,44 @@ py -m tools.audit_minimap_1275 "C:\路徑\output_1275.zip" --pixel-audit
 
 工具只產生報告、不變更程式或遊戲檔案。實機畫面、官方傳點事件、伺服器換圖與
 新版導航圖仍須分別驗收。1275 圖像／場景一致，不構成自動換圖封包的額外授權。
+
+
+## 1275 傳送點座標／目的地補齊（PR #57 後續）
+
+使用者提供的 `output_1275.zip` 另含官方 `EveDoorLinks.bytes`、
+`StageMapData_C.bytes`、`ScenesData_C.bytes`，重新逐筆解析：
+
+| 檢查 | 1275 對照數量 |
+| --- | ---: |
+| EveDoorLinks 原始連線 | 2,374 |
+| 原場景 XY 有場景倍率可換算 | 2,366 |
+| 目的地落點 XY 有場景倍率可換算 | 2,367 |
+| 缺少同索引 Kind 2 標記的連線 | 525 |
+| 重複同索引 Kind 2 標記 | 3 |
+| 目的地不在 ScenesData_C | 7 |
+| 來源場景不在 ScenesData_C | 8 |
+
+以前 LaLa 的 `verified_portal_destinations()` 只接受
+`Eve.NewDoor + StageMapData_C + EveDoorLinks` 三表同場景同索引，
+因此缺標記的連線即使官方有寫出原座標及目的地，也無法作為唯讀資訊。
+
+現在另外建立 **`portal_evidence_1275.read_only_portal_evidence()`**：
+
+1. 保留每筆 EveDoorLinks 的 **(scene, one-based link ordinal)**、來源網格 XY、
+   原場景換算後 XY、目的場景 ID、目的地落點網格 XY、目的場景換算後 XY。
+2. 缺 StageMap 記錄、缺 Eve.NewDoor 事件、倍率不足、未知場景等均保留
+   明確原因；**不猜測座標，不拿 1262 結果補 1275**。
+3. LaLa 可唯讀顯示有正式場景幾何的連線；沒有對應 Eve.NewDoor 的
+   連線會標記為 `1275-ref`，**不得呼叫 C20-8**。
+4. 正式可試傳條件仍完全依舊有嚴格的 `verified_portal_destinations()`
+   及 `verified_portal_positions()`，不因新增唯讀資料提升權限。
+
+官方 1275 Manifest 另外包含 `DoorLinkData_C`，但上述
+`output_1275.zip` **未提供該表實際 TextAsset**，不能聲稱已解析其真實筆數。
+已新增按官方同版 Manifest / Bundle hash 取得的可選解碼流程；
+其 12-byte 紀錄是場景路線，不包含可直接發送的門事件索引。
+核心 Runtime 不會因其缺失而失效。
+
+使用者來源 ZIP 的對照統計，不能取代正式 Bundle hash 重新驗證。
+本次修復沒有上傳正式遊戲圖片、官方二進位原始資產，也不修改原始遊戲。
+門事件傳送及伺服器回覆仍須實機端到端驗收。
