@@ -150,5 +150,39 @@ class OfficialLinkEvidenceTests(unittest.TestCase):
             read_only_door_link_routes(b'\x01\x00\x00\x00', stages())
 
 
+    def test_hidden_portal_uses_event_id_as_destination_not_door_index(self):
+        from wlre.services.world.portal_evidence_1275 import (
+            read_only_stage_portal_markers)
+        raw = stage((11016, 3, 0, 11017, 200, 300, 63840, 1),
+                    (11016, 4, 11017, 1, 30, 40, 0, 2))
+        markers = read_only_stage_portal_markers(raw, stages())
+        self.assertEqual(len(markers), 2)
+        hidden, cross = markers
+        self.assertEqual((hidden['x'], hidden['y']), (600, 600))
+        self.assertEqual(hidden['destination'], 11017)
+        self.assertEqual(cross['cross_scene_reference'], 11017)
+        self.assertIsNone(cross['destination'])
+        self.assertFalse(hidden['can_send_packets'])
+        runtime = portal_runtime({})
+        runtime.portal_stage_markers = markers
+        runtime.texts = {63840: '隱藏海灘入口'}
+        rows = get_catalog(runtime).for_scene(11016)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]['official_name'], '隱藏海灘入口')
+        self.assertEqual(rows[0]['hidden_destination_scene_id'], 11017)
+        self.assertFalse(rows[0]['direct_eligible'])
+        with self.assertRaises(ValueError):
+            Portals.direct_target(rows[0], 11016)
+
+    def test_unnamed_hidden_portal_keeps_unknown_destination(self):
+        from wlre.services.world.portal_evidence_1275 import (
+            read_only_stage_portal_markers)
+        raw = stage((11016, 3, 0, 0, 200, 300, 0, 1))
+        hidden, = read_only_stage_portal_markers(raw, stages())
+        self.assertIsNone(hidden['destination'])
+        self.assertEqual((hidden['x'], hidden['y']), (600, 600))
+        self.assertFalse(hidden['can_send_packets'])
+
+
 if __name__ == '__main__':
     unittest.main()
