@@ -84,5 +84,55 @@ class MinimapFeatureTests(unittest.TestCase):
         obj.on_move.assert_not_called()
 
 
+    def test_npc_roster_is_not_drawn_even_if_selected(self):
+        obj = FakeMap()
+        obj.canvas = Mock()
+        obj.canvas.winfo_width.return_value = 1040
+        obj.canvas.winfo_height.return_value = 1040
+        obj.state = {'player': {'scene': 10000}, 'location': {}}
+        obj.image, obj.route, obj.photo = None, None, None
+        obj._resize_job = None
+        npc = {'name': 'NPC測試', 'x': 100, 'y': 150}
+        obj.npc_rows = [npc]
+        obj.selected_npc = npc
+        with patch('wlre.features.minimap.map_view.current_position',
+                   return_value=None):
+            obj.draw()
+        obj.canvas.delete.assert_called_once_with('all')
+        # No purple NPC dot or selected-NPC text should be drawn.
+        obj.canvas.create_oval.assert_not_called()
+        obj.canvas.create_text.assert_not_called()
+
+    def test_invisible_npc_has_no_canvas_click_hotspot(self):
+        obj = FakeMap()
+        obj.npc_rows = [{'name': 'NPC測試', 'x': 100, 'y': 150}]
+        obj.select_npc = Mock()
+        self.assertTrue(obj.pick(SimpleNamespace(x=108, y=158)))
+        obj.select_npc.assert_not_called()
+        obj.on_pick.assert_called_once_with(10000, 100, 150)
+
+        # For 1275 the normal navigation guard still prohibits movement.
+        obj.maps = SimpleNamespace(supports_navigation=False)
+        obj.on_pick.reset_mock()
+        self.assertFalse(obj.pick(SimpleNamespace(x=108, y=158)))
+        obj.select_npc.assert_not_called()
+        obj.on_pick.assert_not_called()
+        self.assertIn('未通過驗證', obj.note.set.call_args.args[0])
+
+    def test_sidebar_npc_selection_remains_available(self):
+        from wlre.features.npc.panel import NPCInteractionMixin
+        page = NPCInteractionMixin()
+        npc = {'scene': 10000, 'name': 'NPC測試', 'x': 100, 'y': 150}
+        page.npc_rows = [npc]
+        page.npc_list = Mock()
+        page.npc_list.curselection.return_value = (0,)
+        page.select_npc = Mock()
+        page.on_pick = Mock()
+        page.selected_id = 10000
+        page.choose_npc()
+        page.select_npc.assert_called_once_with(npc)
+        page.on_pick.assert_called_once_with(10000, 100, 150)
+
+
 if __name__ == '__main__':
     unittest.main()
