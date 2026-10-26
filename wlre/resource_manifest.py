@@ -61,7 +61,7 @@ def validate_resources(root):
                     raise RuntimeError('1262 NPC 原始文字檔案雜湊不符：'+path.name)
             if path.name == 'npc_interact_1262.json.gz':
                 import hashlib
-                from wlre.services.world.npc_interact import EXPECTED_SHA256
+                from wlre.features.npc.domain.npc_interact import EXPECTED_SHA256
                 if (path.stat().st_size != 19914
                         or hashlib.sha256(path.read_bytes()).hexdigest() != EXPECTED_SHA256):
                     raise RuntimeError('官方 1262 NPC 選項索引 SHA-256 或大小不符')

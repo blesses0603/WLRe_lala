@@ -10,7 +10,7 @@ from wlre.services.items.recovery import apply_recovery
 from wlre.services.items.combat_resources import apply_live
 from wlre.services.battle.party import party_defaults, apply_party
 from wlre.services.items.alchemy import defaults as alchemy_defaults
-from wlre.services.world.npc_shop_evidence import defaults as shop_evidence_defaults, observe as observe_shop_evidence
+from wlre.features.npc.domain.npc_shop_evidence import defaults as shop_evidence_defaults, observe as observe_shop_evidence
 from wlre.core.efficiency import defaults as efficiency_defaults, observe as observe_efficiency
 from wlre.core.activity import apply_activity
 from wlre.services.items.crafting import defaults as craft_defaults, room_defaults, apply_crafting

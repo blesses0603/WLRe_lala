@@ -11,7 +11,7 @@ import socket
 import threading
 import time
 from wlre.network.wire import FrameDecoder, Packet, encode, ProtocolError
-from wlre.services.world.portal_travel import PortalTravel
+from wlre.features.portals.domain.portal_travel import PortalTravel
 from wlre.services.battle.party import own_team
 from wlre.services.battle.attribute_points import expire as expire_allocation
 from wlre.services.expedition import Expedition

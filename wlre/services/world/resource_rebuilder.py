@@ -179,7 +179,7 @@ def _derive_candidate_indexes(payloads, *, revision):
         return {}
     from wlre.services.world.eve_v115 import derive_eve_index
     from wlre.services.world.itemdata_v1 import parse_itemdata
-    from wlre.services.world.npc_talk import parse_talk_data
+    from wlre.features.npc.domain.npc_talk import parse_talk_data
     from wlre.services.expedition.data import parse_text_data
     def source(name):
         found = [b for key, b in payloads.items()

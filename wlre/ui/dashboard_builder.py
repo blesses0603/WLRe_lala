@@ -15,7 +15,7 @@ from wlre.ui.feature_windows import make_feature
 from wlre.ui.party_guard_ui import PartyGuardPanel
 from wlre.ui.crafting_ui import CraftingPanel
 from wlre.ui.efficiency_ui import EfficiencyPanel
-from wlre.ui.home_map import HomeMap
+from wlre.features.minimap.ui.home_map import HomeMap
 from wlre.ui.battle_view import BattleView
 
 def build_dashboard(app):

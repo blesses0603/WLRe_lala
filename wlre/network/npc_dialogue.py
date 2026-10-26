@@ -1,6 +1,6 @@
 """NPC 1262 protocol helpers. Manual, single-shot and fail closed."""
 from wlre.network.wire import Packet, Reader, Writer, ProtocolError
-from wlre.services.world.npc_catalog import NPCIndex
+from wlre.features.npc.domain.npc_catalog import NPCIndex
 
 
 def decode_effect(payload):
@@ -78,7 +78,7 @@ def close_npc_choice(state, command):
             or state.player.get('scene') != info.get('scene')
             or state.battle.get('active')):
         raise ProtocolError('目前沒有可安全關閉的 NPC 選項')
-    from wlre.services.world.npc_interact import NPCInteractIndex
+    from wlre.features.npc.domain.npc_interact import NPCInteractIndex
     try:
         row=NPCInteractIndex().get(info['scene'],info.get('option_index'))
     except (ValueError, OSError, EOFError, UnicodeError) as exc:
@@ -116,8 +116,8 @@ def choose_npc_option(state, command):
             or not 0 <= command['choice'] <= 9
             or type(command.get('text_id')) is not int):
         raise ProtocolError('NPC 選項 ID 或場景已失效')
-    from wlre.services.world.npc_interact import NPCInteractIndex
-    from wlre.services.world.npc_talk import load_catalog
+    from wlre.features.npc.domain.npc_interact import NPCInteractIndex
+    from wlre.features.npc.domain.npc_talk import load_catalog
     try:
         options = NPCInteractIndex().choices(info['scene'], info['option_index'],
                                              load_catalog())
@@ -155,7 +155,7 @@ def close_npc_shop(state, command):
             state.player.get('scene')!=info['scene'] or
             state.battle.get('active')):
         raise ProtocolError('目前沒有可安全關閉的商店事件')
-    from wlre.services.world.npc_shop import shop_catalog
+    from wlre.features.npc.domain.npc_shop import shop_catalog
     try:
         current=shop_catalog(info['scene'],info.get('option_index'))
     except (ValueError,OSError,EOFError,UnicodeError) as exc:

@@ -56,7 +56,8 @@
         "wlre.services.world.movement",
         "wlre.services.world.smallmaps",
         "wlre.services.world.map_names"
-      ]
+      ],
+      "status": "implemented"
     },
     "npc": {
       "title": "NPC／對話／商店",
@@ -74,7 +75,8 @@
         "wlre.network.npc_dialogue",
         "wlre.services.world.npc_1275_eve",
         "wlre.services.world.npc_asset_install"
-      ]
+      ],
+      "status": "implemented"
     },
     "portals": {
       "title": "傳送點",
@@ -86,7 +88,8 @@
       "shared": [
         "wlre.services.world.portal_policy",
         "wlre.services.world.doors_1275"
-      ]
+      ],
+      "status": "implemented"
     },
     "accounts": {
       "title": "帳號／登入／角色／版本閘門",

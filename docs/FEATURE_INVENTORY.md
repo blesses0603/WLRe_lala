@@ -9,9 +9,9 @@
 | 1 | 副本共用房間流程 (`instances`) | 6 | 優先官方 Runtime；未證等價保留舊檔 |
 | 1 | 協力 (`cooperative`) | 4 | 優先官方 Runtime；未證等價保留舊檔 |
 | 1 | 一般副本 (`dungeon`) | 4 | 優先官方 Runtime；未證等價保留舊檔 |
-| 2 | 小地圖與導航預覽 (`minimap`) | 3 | 優先官方 Runtime；未證等價保留舊檔 |
-| 2 | NPC／對話／商店 (`npc`) | 7 | 優先官方 Runtime；未證等價保留舊檔 |
-| 2 | 傳送點 (`portals`) | 2 | 優先官方 Runtime；未證等價保留舊檔 |
+| 2 | 小地圖與導航預覽 (`minimap`) | 8 | 優先官方 Runtime；未證等價保留舊檔 |
+| 2 | NPC／對話／商店 (`npc`) | 18 | 優先官方 Runtime；未證等價保留舊檔 |
+| 2 | 傳送點 (`portals`) | 8 | 優先官方 Runtime；未證等價保留舊檔 |
 | 3 | 帳號／登入／角色／版本閘門 (`accounts`) | 7 | 優先官方 Runtime；未證等價保留舊檔 |
 | 3 | 主畫面與目前活動 (`overview`) | 1 | 優先官方 Runtime；未證等價保留舊檔 |
 | 4 | 隊伍與隊伍檢查 (`party`) | 3 | 優先官方 Runtime；未證等價保留舊檔 |
@@ -65,6 +65,28 @@ UI 主執行緒／主視窗組裝、共用圖片快取及多功能安全規則�
 | `wlre/features/instances/ui/__init__.py` | instances | 1 | 0 |
 | `wlre/features/instances/ui/instance_menu_icons.py` | instances | 8 | 0 |
 | `wlre/features/instances/ui/instance_ui.py` | instances | 24 | 0 |
+| `wlre/features/minimap/__init__.py` | minimap | 1 | 0 |
+| `wlre/features/minimap/ui/__init__.py` | minimap | 1 | 0 |
+| `wlre/features/minimap/ui/home_map.py` | minimap | 48 | 0 |
+| `wlre/features/minimap/ui/minimap.py` | minimap | 3 | 0 |
+| `wlre/features/minimap/ui/navigation_gui.py` | minimap | 28 | 0 |
+| `wlre/features/npc/__init__.py` | npc | 1 | 0 |
+| `wlre/features/npc/domain/__init__.py` | npc | 1 | 0 |
+| `wlre/features/npc/domain/npc_catalog.py` | npc | 13 | 1 |
+| `wlre/features/npc/domain/npc_interact.py` | npc | 12 | 1 |
+| `wlre/features/npc/domain/npc_item_data.py` | npc | 11 | 0 |
+| `wlre/features/npc/domain/npc_localization.py` | npc | 10 | 2 |
+| `wlre/features/npc/domain/npc_shop.py` | npc | 13 | 0 |
+| `wlre/features/npc/domain/npc_shop_evidence.py` | npc | 2 | 0 |
+| `wlre/features/npc/domain/npc_talk.py` | npc | 14 | 1 |
+| `wlre/features/npc/ui/__init__.py` | npc | 0 | 0 |
+| `wlre/features/npc/ui/map_actions.py` | npc | 15 | 0 |
+| `wlre/features/portals/__init__.py` | portals | 1 | 0 |
+| `wlre/features/portals/domain/__init__.py` | portals | 1 | 0 |
+| `wlre/features/portals/domain/portal_travel.py` | portals | 13 | 0 |
+| `wlre/features/portals/domain/portals.py` | portals | 9 | 1 |
+| `wlre/features/portals/ui/__init__.py` | portals | 0 | 0 |
+| `wlre/features/portals/ui/map_actions.py` | portals | 3 | 0 |
 | `wlre/launcher.py` | shared | 14 | 0 |
 | `wlre/launcher_progress.py` | shared | 8 | 0 |
 | `wlre/network/__init__.py` | shared | 0 | 0 |
@@ -163,18 +185,18 @@ UI 主執行緒／主視窗組裝、共用圖片快取及多功能安全規則�
 | `wlre/services/world/navigation.py` | shared | 11 | 1 |
 | `wlre/services/world/npc_1275_eve.py` | shared | 6 | 0 |
 | `wlre/services/world/npc_asset_install.py` | shared | 13 | 3 |
-| `wlre/services/world/npc_catalog.py` | npc | 13 | 1 |
-| `wlre/services/world/npc_interact.py` | npc | 12 | 1 |
-| `wlre/services/world/npc_item_data.py` | npc | 11 | 0 |
-| `wlre/services/world/npc_localization.py` | npc | 10 | 2 |
-| `wlre/services/world/npc_shop.py` | npc | 13 | 0 |
-| `wlre/services/world/npc_shop_evidence.py` | npc | 2 | 0 |
-| `wlre/services/world/npc_talk.py` | npc | 14 | 1 |
+| `wlre/services/world/npc_catalog.py` | npc | 4 | 0 |
+| `wlre/services/world/npc_interact.py` | npc | 4 | 0 |
+| `wlre/services/world/npc_item_data.py` | npc | 4 | 0 |
+| `wlre/services/world/npc_localization.py` | npc | 4 | 0 |
+| `wlre/services/world/npc_shop.py` | npc | 4 | 0 |
+| `wlre/services/world/npc_shop_evidence.py` | npc | 4 | 0 |
+| `wlre/services/world/npc_talk.py` | npc | 4 | 0 |
 | `wlre/services/world/obstacle_scope.py` | shared | 5 | 1 |
 | `wlre/services/world/official_catalog_pipeline.py` | shared | 35 | 0 |
 | `wlre/services/world/portal_policy.py` | shared | 4 | 0 |
-| `wlre/services/world/portal_travel.py` | portals | 13 | 0 |
-| `wlre/services/world/portals.py` | portals | 9 | 1 |
+| `wlre/services/world/portal_travel.py` | portals | 4 | 0 |
+| `wlre/services/world/portals.py` | portals | 4 | 0 |
 | `wlre/services/world/preview_1275.py` | shared | 28 | 0 |
 | `wlre/services/world/resource_classification.py` | shared | 20 | 0 |
 | `wlre/services/world/resource_gap_diagnostics.py` | shared | 25 | 0 |
@@ -234,14 +256,14 @@ UI 主執行緒／主視窗組裝、共用圖片快取及多功能安全規則�
 | `wlre/ui/function_icons.py` | shared | 11 | 0 |
 | `wlre/ui/gui.py` | shared | 63 | 0 |
 | `wlre/ui/halo_button.py` | shared | 10 | 0 |
-| `wlre/ui/home_map.py` | minimap | 44 | 0 |
+| `wlre/ui/home_map.py` | minimap | 4 | 0 |
 | `wlre/ui/instance_menu_icons.py` | instances | 4 | 0 |
 | `wlre/ui/instance_ui.py` | instances | 4 | 0 |
 | `wlre/ui/layout.py` | shared | 2 | 0 |
 | `wlre/ui/login_controller.py` | accounts | 12 | 0 |
 | `wlre/ui/maintenance_ui.py` | maintenance | 14 | 0 |
-| `wlre/ui/minimap.py` | minimap | 3 | 0 |
-| `wlre/ui/navigation_gui.py` | minimap | 28 | 0 |
+| `wlre/ui/minimap.py` | minimap | 4 | 0 |
+| `wlre/ui/navigation_gui.py` | minimap | 5 | 0 |
 | `wlre/ui/overview_ui.py` | overview | 29 | 0 |
 | `wlre/ui/party_guard_ui.py` | party | 7 | 0 |
 | `wlre/ui/recovery_ui.py` | supply | 15 | 0 |

@@ -136,7 +136,7 @@ class App(LoginController,AccountController,VersionGateController):
 
     def open_navigation(self):
         try:
-            from wlre.ui.navigation_gui import NavigationWindow
+            from wlre.features.minimap.ui.navigation_gui import NavigationWindow
             viewer = NavigationWindow(self.root, self.home_map.selected_id, on_route=self.home_map.set_route)
             viewer.update_live_state(self.snapshot)
             self.navigation_windows.append(viewer)

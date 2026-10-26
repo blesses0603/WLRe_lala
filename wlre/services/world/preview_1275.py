@@ -117,7 +117,7 @@ class PreviewInteractIndex:
         return None if row is None else deepcopy(row)
 
     def choices(self, scene, interact_index, talks):
-        from wlre.services.world.npc_interact import NPCInteractIndex
+        from wlre.features.npc.domain.npc_interact import NPCInteractIndex
         return NPCInteractIndex.choices(self, scene, interact_index, talks)
 
 
@@ -139,7 +139,7 @@ class Preview1275:
         return self.npc_index.for_scene(scene)
 
     def shop_for_scene(self, scene, interact_index):
-        from wlre.services.world.npc_shop import shop_catalog
+        from wlre.features.npc.domain.npc_shop import shop_catalog
         return shop_catalog(scene, interact_index, index=self.interact_index,
                             item_rows=self.items)
 

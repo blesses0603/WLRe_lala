@@ -222,7 +222,7 @@
       "path": "wlre/core/state.py",
       "module": "wlre.core.state",
       "owner": "shared",
-      "sha256": "e7b1f72aaad07df3c583a53a5ac49839a6cceeab766eb0e529a250e6b3ed79a1",
+      "sha256": "026df63d2f5a4ea1787c72a0697eb47354bbba939a536dde60fb322440a50c1a",
       "lines": 165,
       "imports": [
         "contextlib",
@@ -243,6 +243,9 @@
         "wlre.core.state_ownership.FIELDS",
         "wlre.core.state_ownership.guarded",
         "wlre.core.state_ownership.plain",
+        "wlre.features.npc.domain.npc_shop_evidence",
+        "wlre.features.npc.domain.npc_shop_evidence.defaults",
+        "wlre.features.npc.domain.npc_shop_evidence.observe",
         "wlre.services.battle.attribute_points",
         "wlre.services.battle.attribute_points.apply_event",
         "wlre.services.battle.attribute_points.defaults",
@@ -270,9 +273,6 @@
         "wlre.services.items.room_storage.defaults",
         "wlre.services.social.guild",
         "wlre.services.social.guild.apply_guild",
-        "wlre.services.world.npc_shop_evidence",
-        "wlre.services.world.npc_shop_evidence.defaults",
-        "wlre.services.world.npc_shop_evidence.observe",
         "wlre.services.world.obstacle_scope",
         "wlre.services.world.obstacle_scope.affects_navigation",
         "wlre.services.world.tent",
@@ -588,6 +588,524 @@
       "compatibility_entry": false
     },
     {
+      "path": "wlre/features/minimap/__init__.py",
+      "module": "wlre.features.minimap",
+      "owner": "minimap",
+      "sha256": "71f58d0c0aaffc301fafa43b8895017bba3568bb56869bbce49b716a3bba8986",
+      "lines": 1,
+      "imports": [
+        "wlre.features.minimap"
+      ],
+      "resources": [],
+      "definitions": [],
+      "compatibility_entry": false
+    },
+    {
+      "path": "wlre/features/minimap/ui/__init__.py",
+      "module": "wlre.features.minimap.ui",
+      "owner": "minimap",
+      "sha256": "c5b2268d0671e080d768891cd8a616ded6bf8202922dda05d8a16dfe99d97715",
+      "lines": 1,
+      "imports": [
+        "wlre.features.minimap.ui"
+      ],
+      "resources": [],
+      "definitions": [],
+      "compatibility_entry": false
+    },
+    {
+      "path": "wlre/features/minimap/ui/home_map.py",
+      "module": "wlre.features.minimap.ui.home_map",
+      "owner": "minimap",
+      "sha256": "2534973a2b7e8f801af8038ad384b4282ffe68f75866b6646c1780ead3f3a742",
+      "lines": 426,
+      "imports": [
+        "PIL",
+        "PIL.Image",
+        "PIL.ImageTk",
+        "math",
+        "tkinter",
+        "tkinter.messagebox",
+        "tkinter.ttk",
+        "webbrowser",
+        "wlre.features.minimap.ui.minimap",
+        "wlre.features.minimap.ui.minimap.SmallMaps",
+        "wlre.features.npc.domain.npc_catalog",
+        "wlre.features.npc.domain.npc_catalog.NPCIndex",
+        "wlre.features.npc.domain.npc_catalog.npc_detail",
+        "wlre.features.npc.domain.npc_catalog.scene_npcs",
+        "wlre.features.npc.domain.npc_interact",
+        "wlre.features.npc.domain.npc_interact.NPCInteractIndex",
+        "wlre.features.npc.domain.npc_item_data",
+        "wlre.features.npc.domain.npc_item_data.item_catalog",
+        "wlre.features.npc.domain.npc_item_data.sellable",
+        "wlre.features.npc.domain.npc_shop",
+        "wlre.features.npc.domain.npc_shop.shop_catalog",
+        "wlre.features.npc.domain.npc_talk",
+        "wlre.features.npc.domain.npc_talk.dialogue_text",
+        "wlre.features.npc.domain.npc_talk.load_catalog",
+        "wlre.features.npc.ui.map_actions",
+        "wlre.features.npc.ui.map_actions.NpcMapActions",
+        "wlre.features.portals.domain.portals",
+        "wlre.features.portals.domain.portals.Portals",
+        "wlre.features.portals.domain.portals.nearest_marker",
+        "wlre.features.portals.ui.map_actions",
+        "wlre.features.portals.ui.map_actions.PortalMapActions",
+        "wlre.paths",
+        "wlre.paths.PROJECT_ROOT",
+        "wlre.services.world.display_position",
+        "wlre.services.world.display_position.current_position",
+        "wlre.services.world.map_names",
+        "wlre.services.world.map_names.map_label",
+        "wlre.services.world.map_names.parse_map_id",
+        "wlre.services.world.navigation",
+        "wlre.services.world.navigation.NavigationError",
+        "wlre.services.world.navigation.Repository",
+        "wlre.services.world.portal_policy",
+        "wlre.services.world.portal_policy.allowed_rows",
+        "wlre.services.world.portal_policy.destination_problem",
+        "wlre.ui.rounded_notebook",
+        "wlre.ui.rounded_notebook.RoundedNotebook",
+        "wlre.ui.window_layout",
+        "wlre.ui.window_layout.configure_dialog"
+      ],
+      "resources": [],
+      "definitions": [
+        "HomeMap"
+      ],
+      "compatibility_entry": false
+    },
+    {
+      "path": "wlre/features/minimap/ui/minimap.py",
+      "module": "wlre.features.minimap.ui.minimap",
+      "owner": "minimap",
+      "sha256": "0b590717f64ce4b9adeab3fa49f11fd96f72bfde5dbdd066c31d65aeacca5e84",
+      "lines": 2,
+      "imports": [
+        "wlre.services.world.smallmaps",
+        "wlre.services.world.smallmaps.Projection",
+        "wlre.services.world.smallmaps.SmallMaps"
+      ],
+      "resources": [],
+      "definitions": [],
+      "compatibility_entry": false
+    },
+    {
+      "path": "wlre/features/minimap/ui/navigation_gui.py",
+      "module": "wlre.features.minimap.ui.navigation_gui",
+      "owner": "minimap",
+      "sha256": "80e6f6a4cef5997021919f45c5ed1476c0f9148a82c91bc03aa689ab1b328f57",
+      "lines": 273,
+      "imports": [
+        "PIL",
+        "PIL.Image",
+        "PIL.ImageTk",
+        "json",
+        "tkinter",
+        "tkinter.filedialog",
+        "tkinter.messagebox",
+        "tkinter.ttk",
+        "wlre.features.minimap.ui.minimap",
+        "wlre.features.minimap.ui.minimap.SmallMaps",
+        "wlre.services.world.coordinates",
+        "wlre.services.world.coordinates.Coordinates",
+        "wlre.services.world.display_position",
+        "wlre.services.world.display_position.current_position",
+        "wlre.services.world.map_names",
+        "wlre.services.world.map_names.map_choices",
+        "wlre.services.world.map_names.map_label",
+        "wlre.services.world.map_names.model_label",
+        "wlre.services.world.map_names.parse_map_id",
+        "wlre.services.world.navigation",
+        "wlre.services.world.navigation.NavigationError",
+        "wlre.services.world.navigation.Repository",
+        "wlre.ui.layout",
+        "wlre.ui.layout.heading",
+        "wlre.ui.theme",
+        "wlre.ui.theme.install",
+        "wlre.ui.window_layout",
+        "wlre.ui.window_layout.configure_dialog"
+      ],
+      "resources": [],
+      "definitions": [
+        "NavigationWindow",
+        "main"
+      ],
+      "compatibility_entry": false
+    },
+    {
+      "path": "wlre/features/npc/__init__.py",
+      "module": "wlre.features.npc",
+      "owner": "npc",
+      "sha256": "7cc30df8f92f5ed46c93c32cb4cd07355cc064f8a0d9cc3e24fa073709a65434",
+      "lines": 1,
+      "imports": [
+        "wlre.features.npc"
+      ],
+      "resources": [],
+      "definitions": [],
+      "compatibility_entry": false
+    },
+    {
+      "path": "wlre/features/npc/domain/__init__.py",
+      "module": "wlre.features.npc.domain",
+      "owner": "npc",
+      "sha256": "c52317a67ffe3fcb6db5671009048f377ea4f4f9a341fddda9e69c8ece302760",
+      "lines": 1,
+      "imports": [
+        "wlre.features.npc.domain"
+      ],
+      "resources": [],
+      "definitions": [],
+      "compatibility_entry": false
+    },
+    {
+      "path": "wlre/features/npc/domain/npc_catalog.py",
+      "module": "wlre.features.npc.domain.npc_catalog",
+      "owner": "npc",
+      "sha256": "a67a2cb8ec6b58d401b957348dce372bc4d2fd4f9a7a3701a3aadeff75159e40",
+      "lines": 156,
+      "imports": [
+        "copy",
+        "copy.deepcopy",
+        "gzip",
+        "json",
+        "pathlib",
+        "pathlib.Path",
+        "wlre.paths",
+        "wlre.paths.RESOURCE_ROOT",
+        "wlre.services.items.catalog",
+        "wlre.services.items.catalog.CAT",
+        "wlre.services.world.runtime_1275",
+        "wlre.services.world.runtime_1275.active_runtime",
+        "wlre.services.world.runtime_1275.baseline_revision"
+      ],
+      "resources": [
+        "npc_event_index_1262.json.gz"
+      ],
+      "definitions": [
+        "_valid_index",
+        "NPCIndex",
+        "display_name",
+        "scene_npcs",
+        "npc_detail"
+      ],
+      "compatibility_entry": false
+    },
+    {
+      "path": "wlre/features/npc/domain/npc_interact.py",
+      "module": "wlre.features.npc.domain.npc_interact",
+      "owner": "npc",
+      "sha256": "5860cfcc6bab4c43b8a92c73d272f363e7349f541aaa4ca701dc5be66410bc89",
+      "lines": 117,
+      "imports": [
+        "copy",
+        "copy.deepcopy",
+        "gzip",
+        "hashlib",
+        "json",
+        "pathlib",
+        "pathlib.Path",
+        "wlre.paths",
+        "wlre.paths.RESOURCE_ROOT",
+        "wlre.services.world.runtime_1275",
+        "wlre.services.world.runtime_1275.active_runtime",
+        "wlre.services.world.runtime_1275.baseline_revision"
+      ],
+      "resources": [
+        "npc_interact_1262.json.gz"
+      ],
+      "definitions": [
+        "NPCInteractIndex"
+      ],
+      "compatibility_entry": false
+    },
+    {
+      "path": "wlre/features/npc/domain/npc_item_data.py",
+      "module": "wlre.features.npc.domain.npc_item_data",
+      "owner": "npc",
+      "sha256": "b4f867ffe758d72a6faa015f0831ce16406673a8e82adcd1782750e7403ae7eb",
+      "lines": 77,
+      "imports": [
+        "functools",
+        "functools.lru_cache",
+        "gzip",
+        "hashlib",
+        "json",
+        "pathlib",
+        "pathlib.Path",
+        "wlre.paths",
+        "wlre.paths.RESOURCE_ROOT",
+        "wlre.services.world.runtime_1275",
+        "wlre.services.world.runtime_1275.active_runtime"
+      ],
+      "resources": [],
+      "definitions": [
+        "load_items",
+        "item_catalog",
+        "sellable"
+      ],
+      "compatibility_entry": false
+    },
+    {
+      "path": "wlre/features/npc/domain/npc_localization.py",
+      "module": "wlre.features.npc.domain.npc_localization",
+      "owner": "npc",
+      "sha256": "9dd17248c1cb5b5022214028c47810c8f8e57cb7f8492f94f0fa95508bd69284",
+      "lines": 72,
+      "imports": [
+        "gzip",
+        "hashlib",
+        "json",
+        "pathlib",
+        "pathlib.Path",
+        "wlre.paths",
+        "wlre.paths.RESOURCE_ROOT",
+        "wlre.services.world.npc_asset_install",
+        "wlre.services.world.npc_asset_install.ASSETS",
+        "wlre.services.world.npc_asset_install.MAX_UNCOMPRESSED"
+      ],
+      "resources": [
+        "npc_battle_talk_1262.json.gz",
+        "npc_text_1262.json.gz"
+      ],
+      "definitions": [
+        "_catalog",
+        "load_text_data",
+        "load_battle_talk",
+        "battle_lines"
+      ],
+      "compatibility_entry": false
+    },
+    {
+      "path": "wlre/features/npc/domain/npc_shop.py",
+      "module": "wlre.features.npc.domain.npc_shop",
+      "owner": "npc",
+      "sha256": "635206dc99662c2959ee3e1ddbb6760e79254a3974ca02da1288fa1cd200f332",
+      "lines": 112,
+      "imports": [
+        "wlre.features.npc.domain.npc_interact",
+        "wlre.features.npc.domain.npc_interact.NPCInteractIndex",
+        "wlre.features.npc.domain.npc_item_data",
+        "wlre.features.npc.domain.npc_item_data.item_catalog",
+        "wlre.features.npc.domain.npc_item_data.sellable",
+        "wlre.network.wire",
+        "wlre.network.wire.Packet",
+        "wlre.network.wire.ProtocolError",
+        "wlre.network.wire.Writer",
+        "wlre.services.items.catalog",
+        "wlre.services.items.catalog.item_name",
+        "wlre.services.world.feature_resource_index",
+        "wlre.services.world.feature_resource_index.feature_note"
+      ],
+      "resources": [],
+      "definitions": [
+        "shop_catalog",
+        "purchase_wire_layout",
+        "sell_wire_layout",
+        "draft_purchase"
+      ],
+      "compatibility_entry": false
+    },
+    {
+      "path": "wlre/features/npc/domain/npc_shop_evidence.py",
+      "module": "wlre.features.npc.domain.npc_shop_evidence",
+      "owner": "npc",
+      "sha256": "6a9d33f8e5a9904e5f13c9928461992a8fd8ebbd08d650d8e4371d1bdb2682f8",
+      "lines": 133,
+      "imports": [
+        "wlre.network.wire",
+        "wlre.network.wire.ProtocolError"
+      ],
+      "resources": [],
+      "definitions": [
+        "defaults",
+        "observe",
+        "classify"
+      ],
+      "compatibility_entry": false
+    },
+    {
+      "path": "wlre/features/npc/domain/npc_talk.py",
+      "module": "wlre.features.npc.domain.npc_talk",
+      "owner": "npc",
+      "sha256": "0779325fe7ee6d5630dfeef173281261fd51db71b842bb49d212c6e570d7dfea",
+      "lines": 115,
+      "imports": [
+        "gzip",
+        "hashlib",
+        "json",
+        "pathlib",
+        "pathlib.Path",
+        "re",
+        "struct",
+        "wlre.paths",
+        "wlre.paths.RESOURCE_ROOT",
+        "wlre.services.world.npc_asset_install",
+        "wlre.services.world.npc_asset_install.ASSETS",
+        "wlre.services.world.runtime_1275",
+        "wlre.services.world.runtime_1275.active_runtime",
+        "wlre.services.world.runtime_1275.baseline_revision"
+      ],
+      "resources": [
+        "npc_talk_1262.json.gz"
+      ],
+      "definitions": [
+        "parse_talk_data",
+        "make_catalog",
+        "load_catalog",
+        "dialogue_text"
+      ],
+      "compatibility_entry": false
+    },
+    {
+      "path": "wlre/features/npc/ui/__init__.py",
+      "module": "wlre.features.npc.ui",
+      "owner": "npc",
+      "sha256": "9a2246f16da6534d572ecbcc6fb56754f137f44b88d0790e1bd4e7cf69bfe8b8",
+      "lines": 1,
+      "imports": [],
+      "resources": [],
+      "definitions": [],
+      "compatibility_entry": false
+    },
+    {
+      "path": "wlre/features/npc/ui/map_actions.py",
+      "module": "wlre.features.npc.ui.map_actions",
+      "owner": "npc",
+      "sha256": "50070ddac3666e8640f4978e80e30defd66ed76a5008e4e56617afdf4ec0d774",
+      "lines": 385,
+      "imports": [
+        "tkinter",
+        "tkinter.messagebox",
+        "tkinter.ttk",
+        "wlre.features.npc.domain.npc_catalog",
+        "wlre.features.npc.domain.npc_catalog.NPCIndex",
+        "wlre.features.npc.domain.npc_catalog.npc_detail",
+        "wlre.features.npc.domain.npc_catalog.scene_npcs",
+        "wlre.features.npc.domain.npc_item_data",
+        "wlre.features.npc.domain.npc_item_data.item_catalog",
+        "wlre.features.npc.domain.npc_item_data.sellable",
+        "wlre.features.npc.domain.npc_shop",
+        "wlre.features.npc.domain.npc_shop.shop_catalog",
+        "wlre.features.npc.domain.npc_talk",
+        "wlre.features.npc.domain.npc_talk.dialogue_text",
+        "wlre.features.npc.domain.npc_talk.load_catalog"
+      ],
+      "resources": [],
+      "definitions": [
+        "NpcMapActions"
+      ],
+      "compatibility_entry": false
+    },
+    {
+      "path": "wlre/features/portals/__init__.py",
+      "module": "wlre.features.portals",
+      "owner": "portals",
+      "sha256": "abf33ffe0d2c2f923cd22c8a22551809a20fd2986bdc5440cb653ed14f8796fa",
+      "lines": 1,
+      "imports": [
+        "wlre.features.portals"
+      ],
+      "resources": [],
+      "definitions": [],
+      "compatibility_entry": false
+    },
+    {
+      "path": "wlre/features/portals/domain/__init__.py",
+      "module": "wlre.features.portals.domain",
+      "owner": "portals",
+      "sha256": "c5e6e3399383f88d1c51ce7fc32271913e8cb4f92103a3c6d30fdc993a92c6a1",
+      "lines": 1,
+      "imports": [
+        "wlre.features.portals.domain"
+      ],
+      "resources": [],
+      "definitions": [],
+      "compatibility_entry": false
+    },
+    {
+      "path": "wlre/features/portals/domain/portal_travel.py",
+      "module": "wlre.features.portals.domain.portal_travel",
+      "owner": "portals",
+      "sha256": "add89537b237889afa6284dc58de3af5d9fdf9cf4dff78900f88e5b474bb316c",
+      "lines": 195,
+      "imports": [
+        "math",
+        "wlre.core.state_ownership",
+        "wlre.core.state_ownership.writes",
+        "wlre.features.portals.domain.portals",
+        "wlre.features.portals.domain.portals.Portals",
+        "wlre.network.wire",
+        "wlre.network.wire.Packet",
+        "wlre.network.wire.ProtocolError",
+        "wlre.network.wire.Writer",
+        "wlre.services.world.navigation",
+        "wlre.services.world.navigation.NavigationError",
+        "wlre.services.world.portal_policy",
+        "wlre.services.world.portal_policy.destination_problem"
+      ],
+      "resources": [],
+      "definitions": [
+        "PortalTravel"
+      ],
+      "compatibility_entry": false
+    },
+    {
+      "path": "wlre/features/portals/domain/portals.py",
+      "module": "wlre.features.portals.domain.portals",
+      "owner": "portals",
+      "sha256": "e92a30e3fb56854683ebe9cad7673a2ffa02df5f29009b8d8d84046ffac3eaf8",
+      "lines": 67,
+      "imports": [
+        "json",
+        "math",
+        "pathlib",
+        "pathlib.Path",
+        "wlre.paths",
+        "wlre.paths.RESOURCE_ROOT",
+        "wlre.services.world.runtime_1275",
+        "wlre.services.world.runtime_1275.active_runtime",
+        "wlre.services.world.runtime_1275.baseline_revision"
+      ],
+      "resources": [
+        "portals.json"
+      ],
+      "definitions": [
+        "Portals",
+        "nearest_marker"
+      ],
+      "compatibility_entry": false
+    },
+    {
+      "path": "wlre/features/portals/ui/__init__.py",
+      "module": "wlre.features.portals.ui",
+      "owner": "portals",
+      "sha256": "2f5d45e8cc082f5dd75e75bd5533f6a5dff5d15d372c3d3ae13a2f86d9234927",
+      "lines": 1,
+      "imports": [],
+      "resources": [],
+      "definitions": [],
+      "compatibility_entry": false
+    },
+    {
+      "path": "wlre/features/portals/ui/map_actions.py",
+      "module": "wlre.features.portals.ui.map_actions",
+      "owner": "portals",
+      "sha256": "8c1f66ca6fc53ba2b427569ca3f4c0ecc2058809f8bba08240de4bf0109bd022",
+      "lines": 43,
+      "imports": [
+        "wlre.services.world.portal_policy",
+        "wlre.services.world.portal_policy.allowed_rows",
+        "wlre.services.world.portal_policy.destination_problem"
+      ],
+      "resources": [],
+      "definitions": [
+        "PortalMapActions"
+      ],
+      "compatibility_entry": false
+    },
+    {
       "path": "wlre/launcher.py",
       "module": "wlre.launcher",
       "owner": "shared",
@@ -656,7 +1174,7 @@
       "path": "wlre/network/client.py",
       "module": "wlre.network.client",
       "owner": "shared",
-      "sha256": "835252ea136b29be99012600181bf37a82105783096fa63d4720a2345d53c469",
+      "sha256": "b869e649f2a6c78ba6b73284ff8a7e258b725cab0857121627fdbc696549815e",
       "lines": 482,
       "imports": [
         "queue",
@@ -667,6 +1185,8 @@
         "wlre.core.maintenance.PeriodicCleanup",
         "wlre.core.state",
         "wlre.core.state.State",
+        "wlre.features.portals.domain.portal_travel",
+        "wlre.features.portals.domain.portal_travel.PortalTravel",
         "wlre.network.command_envelope",
         "wlre.network.command_envelope.rejected_command_type",
         "wlre.network.command_envelope.validate_command",
@@ -730,8 +1250,6 @@
         "wlre.services.social.chat.sent_event",
         "wlre.services.world.movement",
         "wlre.services.world.movement.Movement",
-        "wlre.services.world.portal_travel",
-        "wlre.services.world.portal_travel.PortalTravel",
         "wlre.services.world.roaming",
         "wlre.services.world.roaming.Roaming"
       ],
@@ -982,24 +1500,24 @@
       "path": "wlre/network/npc_dialogue.py",
       "module": "wlre.network.npc_dialogue",
       "owner": "shared",
-      "sha256": "d120aba6468a26a3fce5003d6aa70f37b82f78faeda3339eb4bca709f9df2b17",
+      "sha256": "8b7c37c19e54d3ec330b82dee400c75ad673baa8d32ac7083b543746529644f4",
       "lines": 183,
       "imports": [
+        "wlre.features.npc.domain.npc_catalog",
+        "wlre.features.npc.domain.npc_catalog.NPCIndex",
+        "wlre.features.npc.domain.npc_interact",
+        "wlre.features.npc.domain.npc_interact.NPCInteractIndex",
+        "wlre.features.npc.domain.npc_shop",
+        "wlre.features.npc.domain.npc_shop.shop_catalog",
+        "wlre.features.npc.domain.npc_talk",
+        "wlre.features.npc.domain.npc_talk.load_catalog",
         "wlre.network.wire",
         "wlre.network.wire.Packet",
         "wlre.network.wire.ProtocolError",
         "wlre.network.wire.Reader",
         "wlre.network.wire.Writer",
         "wlre.services.battle.party",
-        "wlre.services.battle.party.own_team",
-        "wlre.services.world.npc_catalog",
-        "wlre.services.world.npc_catalog.NPCIndex",
-        "wlre.services.world.npc_interact",
-        "wlre.services.world.npc_interact.NPCInteractIndex",
-        "wlre.services.world.npc_shop",
-        "wlre.services.world.npc_shop.shop_catalog",
-        "wlre.services.world.npc_talk",
-        "wlre.services.world.npc_talk.load_catalog"
+        "wlre.services.battle.party.own_team"
       ],
       "resources": [],
       "definitions": [
@@ -1200,7 +1718,7 @@
       "path": "wlre/resource_manifest.py",
       "module": "wlre.resource_manifest",
       "owner": "shared",
-      "sha256": "afe23607430525e60d7f92ce71479497adba1cafb0464b16f9a3f0430198b4ef",
+      "sha256": "9b27518bb6f5e1b17d494daa291d20a8c4cffa25726c4f9deee27d99c94a031d",
       "lines": 78,
       "imports": [
         "PIL",
@@ -1210,12 +1728,12 @@
         "json",
         "pathlib",
         "pathlib.Path",
+        "wlre.features.npc.domain.npc_interact",
+        "wlre.features.npc.domain.npc_interact.EXPECTED_SHA256",
         "wlre.services.resource_compatibility",
         "wlre.services.resource_compatibility.load_supported_resources",
         "wlre.services.world.npc_asset_install",
         "wlre.services.world.npc_asset_install.ASSETS",
-        "wlre.services.world.npc_interact",
-        "wlre.services.world.npc_interact.EXPECTED_SHA256",
         "zipfile"
       ],
       "resources": [
@@ -2931,7 +3449,7 @@
       "path": "wlre/services/world/bundle_runtime_1275.py",
       "module": "wlre.services.world.bundle_runtime_1275",
       "owner": "shared",
-      "sha256": "55e56c9198828f6bd2180df1a99eead15cc7962baa91ad00d152d3edaf710951",
+      "sha256": "44a4baea37eccc806f252e35e6703211d4b157d192cae6b6a14ffca75df1c711",
       "lines": 306,
       "imports": [
         "__future__",
@@ -2942,6 +3460,8 @@
         "json",
         "pathlib",
         "pathlib.Path",
+        "wlre.features.npc.domain.npc_talk",
+        "wlre.features.npc.domain.npc_talk.parse_talk_data",
         "wlre.services.expedition.data",
         "wlre.services.expedition.data.ADVENTURE_1275_SHA256",
         "wlre.services.expedition.data.ADVENTURE_LEVEL_1275_SHA256",
@@ -2976,8 +3496,6 @@
         "wlre.services.world.eve_v115.derive_eve_index",
         "wlre.services.world.itemdata_v1",
         "wlre.services.world.itemdata_v1.parse_itemdata",
-        "wlre.services.world.npc_talk",
-        "wlre.services.world.npc_talk.parse_talk_data",
         "wlre.services.world.official_catalog_pipeline",
         "wlre.services.world.official_catalog_pipeline.AssetBinding",
         "wlre.services.world.preview_1275",
@@ -3575,200 +4093,113 @@
       "path": "wlre/services/world/npc_catalog.py",
       "module": "wlre.services.world.npc_catalog",
       "owner": "npc",
-      "sha256": "a67a2cb8ec6b58d401b957348dce372bc4d2fd4f9a7a3701a3aadeff75159e40",
-      "lines": 156,
+      "sha256": "00ef169688541273842a7813d1d9a9a888615d43e40d7eb796f47bbeb94343f5",
+      "lines": 4,
       "imports": [
-        "copy",
-        "copy.deepcopy",
-        "gzip",
-        "json",
-        "pathlib",
-        "pathlib.Path",
-        "wlre.paths",
-        "wlre.paths.RESOURCE_ROOT",
-        "wlre.services.items.catalog",
-        "wlre.services.items.catalog.CAT",
-        "wlre.services.world.runtime_1275",
-        "wlre.services.world.runtime_1275.active_runtime",
-        "wlre.services.world.runtime_1275.baseline_revision"
+        "wlre.compat",
+        "wlre.compat.alias_module",
+        "wlre.features.npc.domain.npc_catalog",
+        "wlre.services.world.npc_catalog"
       ],
-      "resources": [
-        "npc_event_index_1262.json.gz"
-      ],
-      "definitions": [
-        "_valid_index",
-        "NPCIndex",
-        "display_name",
-        "scene_npcs",
-        "npc_detail"
-      ],
-      "compatibility_entry": false
+      "resources": [],
+      "definitions": [],
+      "compatibility_entry": true
     },
     {
       "path": "wlre/services/world/npc_interact.py",
       "module": "wlre.services.world.npc_interact",
       "owner": "npc",
-      "sha256": "5860cfcc6bab4c43b8a92c73d272f363e7349f541aaa4ca701dc5be66410bc89",
-      "lines": 117,
+      "sha256": "69d0901ff8ab43ba1bdd2c772856d50a45e04a7c9b97c3b017e7d90a990269d4",
+      "lines": 4,
       "imports": [
-        "copy",
-        "copy.deepcopy",
-        "gzip",
-        "hashlib",
-        "json",
-        "pathlib",
-        "pathlib.Path",
-        "wlre.paths",
-        "wlre.paths.RESOURCE_ROOT",
-        "wlre.services.world.runtime_1275",
-        "wlre.services.world.runtime_1275.active_runtime",
-        "wlre.services.world.runtime_1275.baseline_revision"
+        "wlre.compat",
+        "wlre.compat.alias_module",
+        "wlre.features.npc.domain.npc_interact",
+        "wlre.services.world.npc_interact"
       ],
-      "resources": [
-        "npc_interact_1262.json.gz"
-      ],
-      "definitions": [
-        "NPCInteractIndex"
-      ],
-      "compatibility_entry": false
+      "resources": [],
+      "definitions": [],
+      "compatibility_entry": true
     },
     {
       "path": "wlre/services/world/npc_item_data.py",
       "module": "wlre.services.world.npc_item_data",
       "owner": "npc",
-      "sha256": "b4f867ffe758d72a6faa015f0831ce16406673a8e82adcd1782750e7403ae7eb",
-      "lines": 77,
+      "sha256": "5299fc1c067dbe92c070525a3302c85138634b0eb13ac0967cf15aaa1168ec3f",
+      "lines": 4,
       "imports": [
-        "functools",
-        "functools.lru_cache",
-        "gzip",
-        "hashlib",
-        "json",
-        "pathlib",
-        "pathlib.Path",
-        "wlre.paths",
-        "wlre.paths.RESOURCE_ROOT",
-        "wlre.services.world.runtime_1275",
-        "wlre.services.world.runtime_1275.active_runtime"
+        "wlre.compat",
+        "wlre.compat.alias_module",
+        "wlre.features.npc.domain.npc_item_data",
+        "wlre.services.world.npc_item_data"
       ],
       "resources": [],
-      "definitions": [
-        "load_items",
-        "item_catalog",
-        "sellable"
-      ],
-      "compatibility_entry": false
+      "definitions": [],
+      "compatibility_entry": true
     },
     {
       "path": "wlre/services/world/npc_localization.py",
       "module": "wlre.services.world.npc_localization",
       "owner": "npc",
-      "sha256": "9dd17248c1cb5b5022214028c47810c8f8e57cb7f8492f94f0fa95508bd69284",
-      "lines": 72,
+      "sha256": "679785394c05bf97c74358e1816377b37ec3d8db2d5f190f69e4351e85e3a923",
+      "lines": 4,
       "imports": [
-        "gzip",
-        "hashlib",
-        "json",
-        "pathlib",
-        "pathlib.Path",
-        "wlre.paths",
-        "wlre.paths.RESOURCE_ROOT",
-        "wlre.services.world.npc_asset_install",
-        "wlre.services.world.npc_asset_install.ASSETS",
-        "wlre.services.world.npc_asset_install.MAX_UNCOMPRESSED"
+        "wlre.compat",
+        "wlre.compat.alias_module",
+        "wlre.features.npc.domain.npc_localization",
+        "wlre.services.world.npc_localization"
       ],
-      "resources": [
-        "npc_battle_talk_1262.json.gz",
-        "npc_text_1262.json.gz"
-      ],
-      "definitions": [
-        "_catalog",
-        "load_text_data",
-        "load_battle_talk",
-        "battle_lines"
-      ],
-      "compatibility_entry": false
+      "resources": [],
+      "definitions": [],
+      "compatibility_entry": true
     },
     {
       "path": "wlre/services/world/npc_shop.py",
       "module": "wlre.services.world.npc_shop",
       "owner": "npc",
-      "sha256": "82ff5dec5a547844e023b411d4886a11683e813b4d71e6a548042dd520c6f806",
-      "lines": 112,
+      "sha256": "91eca718129ae674d8eed6169300a74af157c84451815ed12967da05b4fb9138",
+      "lines": 4,
       "imports": [
-        "wlre.network.wire",
-        "wlre.network.wire.Packet",
-        "wlre.network.wire.ProtocolError",
-        "wlre.network.wire.Writer",
-        "wlre.services.items.catalog",
-        "wlre.services.items.catalog.item_name",
-        "wlre.services.world.feature_resource_index",
-        "wlre.services.world.feature_resource_index.feature_note",
-        "wlre.services.world.npc_interact",
-        "wlre.services.world.npc_interact.NPCInteractIndex",
-        "wlre.services.world.npc_item_data",
-        "wlre.services.world.npc_item_data.item_catalog",
-        "wlre.services.world.npc_item_data.sellable"
+        "wlre.compat",
+        "wlre.compat.alias_module",
+        "wlre.features.npc.domain.npc_shop",
+        "wlre.services.world.npc_shop"
       ],
       "resources": [],
-      "definitions": [
-        "shop_catalog",
-        "purchase_wire_layout",
-        "sell_wire_layout",
-        "draft_purchase"
-      ],
-      "compatibility_entry": false
+      "definitions": [],
+      "compatibility_entry": true
     },
     {
       "path": "wlre/services/world/npc_shop_evidence.py",
       "module": "wlre.services.world.npc_shop_evidence",
       "owner": "npc",
-      "sha256": "6a9d33f8e5a9904e5f13c9928461992a8fd8ebbd08d650d8e4371d1bdb2682f8",
-      "lines": 133,
+      "sha256": "615de540e663dd6b9fc54cf2ab734535d7b84ce51a29233f973bbd2e967c9da9",
+      "lines": 4,
       "imports": [
-        "wlre.network.wire",
-        "wlre.network.wire.ProtocolError"
+        "wlre.compat",
+        "wlre.compat.alias_module",
+        "wlre.features.npc.domain.npc_shop_evidence",
+        "wlre.services.world.npc_shop_evidence"
       ],
       "resources": [],
-      "definitions": [
-        "defaults",
-        "observe",
-        "classify"
-      ],
-      "compatibility_entry": false
+      "definitions": [],
+      "compatibility_entry": true
     },
     {
       "path": "wlre/services/world/npc_talk.py",
       "module": "wlre.services.world.npc_talk",
       "owner": "npc",
-      "sha256": "0779325fe7ee6d5630dfeef173281261fd51db71b842bb49d212c6e570d7dfea",
-      "lines": 115,
+      "sha256": "6c0a51cf44b628f73e4cd55a8f14f53d22c8a242bca1d8800432da8714dae0b0",
+      "lines": 4,
       "imports": [
-        "gzip",
-        "hashlib",
-        "json",
-        "pathlib",
-        "pathlib.Path",
-        "re",
-        "struct",
-        "wlre.paths",
-        "wlre.paths.RESOURCE_ROOT",
-        "wlre.services.world.npc_asset_install",
-        "wlre.services.world.npc_asset_install.ASSETS",
-        "wlre.services.world.runtime_1275",
-        "wlre.services.world.runtime_1275.active_runtime",
-        "wlre.services.world.runtime_1275.baseline_revision"
+        "wlre.compat",
+        "wlre.compat.alias_module",
+        "wlre.features.npc.domain.npc_talk",
+        "wlre.services.world.npc_talk"
       ],
-      "resources": [
-        "npc_talk_1262.json.gz"
-      ],
-      "definitions": [
-        "parse_talk_data",
-        "make_catalog",
-        "load_catalog",
-        "dialogue_text"
-      ],
-      "compatibility_entry": false
+      "resources": [],
+      "definitions": [],
+      "compatibility_entry": true
     },
     {
       "path": "wlre/services/world/obstacle_scope.py",
@@ -3874,60 +4305,39 @@
       "path": "wlre/services/world/portal_travel.py",
       "module": "wlre.services.world.portal_travel",
       "owner": "portals",
-      "sha256": "93664aac302782411929e728985fece31f81304134ad3b5e095c07da954b14fc",
-      "lines": 195,
+      "sha256": "85154532da47605be617c4e5a80618ab2d3540c36bdce35d5e21b72cb1c2b725",
+      "lines": 4,
       "imports": [
-        "math",
-        "wlre.core.state_ownership",
-        "wlre.core.state_ownership.writes",
-        "wlre.network.wire",
-        "wlre.network.wire.Packet",
-        "wlre.network.wire.ProtocolError",
-        "wlre.network.wire.Writer",
-        "wlre.services.world.navigation",
-        "wlre.services.world.navigation.NavigationError",
-        "wlre.services.world.portal_policy",
-        "wlre.services.world.portal_policy.destination_problem",
-        "wlre.services.world.portals",
-        "wlre.services.world.portals.Portals"
+        "wlre.compat",
+        "wlre.compat.alias_module",
+        "wlre.features.portals.domain.portal_travel",
+        "wlre.services.world.portal_travel"
       ],
       "resources": [],
-      "definitions": [
-        "PortalTravel"
-      ],
-      "compatibility_entry": false
+      "definitions": [],
+      "compatibility_entry": true
     },
     {
       "path": "wlre/services/world/portals.py",
       "module": "wlre.services.world.portals",
       "owner": "portals",
-      "sha256": "e92a30e3fb56854683ebe9cad7673a2ffa02df5f29009b8d8d84046ffac3eaf8",
-      "lines": 67,
+      "sha256": "8589df1ba36a0419beff4b011dc690f469930ef165a063a039aad18f7475e5ad",
+      "lines": 4,
       "imports": [
-        "json",
-        "math",
-        "pathlib",
-        "pathlib.Path",
-        "wlre.paths",
-        "wlre.paths.RESOURCE_ROOT",
-        "wlre.services.world.runtime_1275",
-        "wlre.services.world.runtime_1275.active_runtime",
-        "wlre.services.world.runtime_1275.baseline_revision"
+        "wlre.compat",
+        "wlre.compat.alias_module",
+        "wlre.features.portals.domain.portals",
+        "wlre.services.world.portals"
       ],
-      "resources": [
-        "portals.json"
-      ],
-      "definitions": [
-        "Portals",
-        "nearest_marker"
-      ],
-      "compatibility_entry": false
+      "resources": [],
+      "definitions": [],
+      "compatibility_entry": true
     },
     {
       "path": "wlre/services/world/preview_1275.py",
       "module": "wlre.services.world.preview_1275",
       "owner": "shared",
-      "sha256": "10a8d2ffb4bd63f275f927475dfc93a3777e8e938507c5bb8d132803ea114c08",
+      "sha256": "2378db45a7c2ddf3aed51a40089a5904d6a16a99909f73314f1d0a92bb36a131",
       "lines": 193,
       "imports": [
         "__future__",
@@ -3943,6 +4353,10 @@
         "pathlib",
         "pathlib.Path",
         "struct",
+        "wlre.features.npc.domain.npc_interact",
+        "wlre.features.npc.domain.npc_interact.NPCInteractIndex",
+        "wlre.features.npc.domain.npc_shop",
+        "wlre.features.npc.domain.npc_shop.shop_catalog",
         "wlre.services.instance_catalog",
         "wlre.services.instance_catalog.parse_stages",
         "wlre.services.world.doors_1275",
@@ -3952,10 +4366,6 @@
         "wlre.services.world.game_data_1275.verify_archive",
         "wlre.services.world.npc_1275_eve",
         "wlre.services.world.npc_1275_eve.read_verified_zip",
-        "wlre.services.world.npc_interact",
-        "wlre.services.world.npc_interact.NPCInteractIndex",
-        "wlre.services.world.npc_shop",
-        "wlre.services.world.npc_shop.shop_catalog",
         "zipfile",
         "zipfile.ZipFile"
       ],
@@ -4059,7 +4469,7 @@
       "path": "wlre/services/world/resource_rebuilder.py",
       "module": "wlre.services.world.resource_rebuilder",
       "owner": "shared",
-      "sha256": "f8bdb320d82913c7fb76a7aef49f36ae98702f2490e6d33e617c73bbb8d9f687",
+      "sha256": "8d83c777d8e5a10f1c747beae8802d70cc71aae7365b85626d71419eaf39274f",
       "lines": 767,
       "imports": [
         "__future__",
@@ -4074,6 +4484,8 @@
         "pathlib.PurePosixPath",
         "re",
         "tempfile",
+        "wlre.features.npc.domain.npc_talk",
+        "wlre.features.npc.domain.npc_talk.parse_talk_data",
         "wlre.paths",
         "wlre.paths.RESOURCE_ROOT",
         "wlre.services.expedition.data",
@@ -4108,8 +4520,6 @@
         "wlre.services.world.npc_1275_eve.FILES",
         "wlre.services.world.npc_1275_eve.read_verified_zip",
         "wlre.services.world.npc_1275_eve.verify_file",
-        "wlre.services.world.npc_talk",
-        "wlre.services.world.npc_talk.parse_talk_data",
         "wlre.services.world.official_catalog_pipeline",
         "wlre.services.world.official_catalog_pipeline.AssetBinding",
         "wlre.services.world.preview_1275",
@@ -5175,13 +5585,15 @@
       "path": "wlre/ui/dashboard_builder.py",
       "module": "wlre.ui.dashboard_builder",
       "owner": "shared",
-      "sha256": "6a4267d1d6e34ae9172c26dda9290d4a33d8517a06734d331f610da1024bc4bd",
+      "sha256": "3c57d70a63590a1cb8e6c877d70ad112d27db476525f1be5bf64386099c4c19f",
       "lines": 101,
       "imports": [
         "tkinter",
         "tkinter.ttk",
         "wlre.features.instances.ui.instance_ui",
         "wlre.features.instances.ui.instance_ui.InstancePanel",
+        "wlre.features.minimap.ui.home_map",
+        "wlre.features.minimap.ui.home_map.HomeMap",
         "wlre.services.battle",
         "wlre.services.battle.auto_battle",
         "wlre.services.battle.auto_battle.defaults",
@@ -5202,8 +5614,6 @@
         "wlre.ui.expedition_ui.ExpeditionPanel",
         "wlre.ui.feature_windows",
         "wlre.ui.feature_windows.make_feature",
-        "wlre.ui.home_map",
-        "wlre.ui.home_map.HomeMap",
         "wlre.ui.overview_ui",
         "wlre.ui.overview_ui.OverviewPanel",
         "wlre.ui.party_guard_ui",
@@ -5583,7 +5993,7 @@
       "path": "wlre/ui/gui.py",
       "module": "wlre.ui.gui",
       "owner": "shared",
-      "sha256": "ee6801ac8dca79c24a1ca37e4efbe7899b9075cf19e42b229020cefea8ee0c50",
+      "sha256": "e49d6f49bc0ce0107fd32314d6673d186ee075970f70af4cec823c4aff09157f",
       "lines": 522,
       "imports": [
         "collections",
@@ -5603,6 +6013,8 @@
         "wlre.core.event_log.PHASES",
         "wlre.core.event_log.chinese",
         "wlre.core.event_log.lines",
+        "wlre.features.minimap.ui.navigation_gui",
+        "wlre.features.minimap.ui.navigation_gui.NavigationWindow",
         "wlre.network.client",
         "wlre.network.client.run_client",
         "wlre.services.battle.auto_battle",
@@ -5637,8 +6049,6 @@
         "wlre.ui.feature_windows.WINDOWS",
         "wlre.ui.login_controller",
         "wlre.ui.login_controller.LoginController",
-        "wlre.ui.navigation_gui",
-        "wlre.ui.navigation_gui.NavigationWindow",
         "wlre.ui.resource_view",
         "wlre.ui.resource_view.ResourceView",
         "wlre.ui.session_bridge",
@@ -5688,59 +6098,17 @@
       "path": "wlre/ui/home_map.py",
       "module": "wlre.ui.home_map",
       "owner": "minimap",
-      "sha256": "b439ebb9bd1282a25aaf18438400346d0caf3b3fb55ee5d8d39bb580ec34fcae",
-      "lines": 803,
+      "sha256": "e039fea9606362c04d91aa86c01bdb8627856de7211cd6be6325fa2337ce63dc",
+      "lines": 4,
       "imports": [
-        "PIL",
-        "PIL.Image",
-        "PIL.ImageTk",
-        "math",
-        "tkinter",
-        "tkinter.messagebox",
-        "tkinter.ttk",
-        "webbrowser",
-        "wlre.paths",
-        "wlre.paths.PROJECT_ROOT",
-        "wlre.services.world.display_position",
-        "wlre.services.world.display_position.current_position",
-        "wlre.services.world.map_names",
-        "wlre.services.world.map_names.map_label",
-        "wlre.services.world.map_names.parse_map_id",
-        "wlre.services.world.navigation",
-        "wlre.services.world.navigation.NavigationError",
-        "wlre.services.world.navigation.Repository",
-        "wlre.services.world.npc_catalog",
-        "wlre.services.world.npc_catalog.NPCIndex",
-        "wlre.services.world.npc_catalog.npc_detail",
-        "wlre.services.world.npc_catalog.scene_npcs",
-        "wlre.services.world.npc_interact",
-        "wlre.services.world.npc_interact.NPCInteractIndex",
-        "wlre.services.world.npc_item_data",
-        "wlre.services.world.npc_item_data.item_catalog",
-        "wlre.services.world.npc_item_data.sellable",
-        "wlre.services.world.npc_shop",
-        "wlre.services.world.npc_shop.shop_catalog",
-        "wlre.services.world.npc_talk",
-        "wlre.services.world.npc_talk.dialogue_text",
-        "wlre.services.world.npc_talk.load_catalog",
-        "wlre.services.world.portal_policy",
-        "wlre.services.world.portal_policy.allowed_rows",
-        "wlre.services.world.portal_policy.destination_problem",
-        "wlre.services.world.portals",
-        "wlre.services.world.portals.Portals",
-        "wlre.services.world.portals.nearest_marker",
-        "wlre.ui.minimap",
-        "wlre.ui.minimap.SmallMaps",
-        "wlre.ui.rounded_notebook",
-        "wlre.ui.rounded_notebook.RoundedNotebook",
-        "wlre.ui.window_layout",
-        "wlre.ui.window_layout.configure_dialog"
+        "wlre.compat",
+        "wlre.compat.alias_module",
+        "wlre.features.minimap.ui.home_map",
+        "wlre.ui.home_map"
       ],
       "resources": [],
-      "definitions": [
-        "HomeMap"
-      ],
-      "compatibility_entry": false
+      "definitions": [],
+      "compatibility_entry": true
     },
     {
       "path": "wlre/ui/instance_menu_icons.py",
@@ -5850,59 +6218,34 @@
       "path": "wlre/ui/minimap.py",
       "module": "wlre.ui.minimap",
       "owner": "minimap",
-      "sha256": "0b590717f64ce4b9adeab3fa49f11fd96f72bfde5dbdd066c31d65aeacca5e84",
-      "lines": 2,
+      "sha256": "2ae396c18ed538080d1419e55bded8c0b7815792f422e87cfd83701ff29b6d6f",
+      "lines": 4,
       "imports": [
-        "wlre.services.world.smallmaps",
-        "wlre.services.world.smallmaps.Projection",
-        "wlre.services.world.smallmaps.SmallMaps"
+        "wlre.compat",
+        "wlre.compat.alias_module",
+        "wlre.features.minimap.ui.minimap",
+        "wlre.ui.minimap"
       ],
       "resources": [],
       "definitions": [],
-      "compatibility_entry": false
+      "compatibility_entry": true
     },
     {
       "path": "wlre/ui/navigation_gui.py",
       "module": "wlre.ui.navigation_gui",
       "owner": "minimap",
-      "sha256": "b621235a8bb6f85442efda65e489717ac50c97ef484b8d2d797d97d6834221cd",
-      "lines": 273,
+      "sha256": "d632449d0850e4df37b2171c1190f51d8943f1d3743bed1f09ad0942e7c81b1b",
+      "lines": 8,
       "imports": [
-        "PIL",
-        "PIL.Image",
-        "PIL.ImageTk",
-        "json",
-        "tkinter",
-        "tkinter.filedialog",
-        "tkinter.messagebox",
-        "tkinter.ttk",
-        "wlre.services.world.coordinates",
-        "wlre.services.world.coordinates.Coordinates",
-        "wlre.services.world.display_position",
-        "wlre.services.world.display_position.current_position",
-        "wlre.services.world.map_names",
-        "wlre.services.world.map_names.map_choices",
-        "wlre.services.world.map_names.map_label",
-        "wlre.services.world.map_names.model_label",
-        "wlre.services.world.map_names.parse_map_id",
-        "wlre.services.world.navigation",
-        "wlre.services.world.navigation.NavigationError",
-        "wlre.services.world.navigation.Repository",
-        "wlre.ui.layout",
-        "wlre.ui.layout.heading",
-        "wlre.ui.minimap",
-        "wlre.ui.minimap.SmallMaps",
-        "wlre.ui.theme",
-        "wlre.ui.theme.install",
-        "wlre.ui.window_layout",
-        "wlre.ui.window_layout.configure_dialog"
+        "wlre.compat",
+        "wlre.compat.alias_module",
+        "wlre.features.minimap.ui.navigation_gui",
+        "wlre.features.minimap.ui.navigation_gui.main",
+        "wlre.ui.navigation_gui"
       ],
       "resources": [],
-      "definitions": [
-        "NavigationWindow",
-        "main"
-      ],
-      "compatibility_entry": false
+      "definitions": [],
+      "compatibility_entry": true
     },
     {
       "path": "wlre/ui/overview_ui.py",
@@ -11864,9 +12207,9 @@
     {
       "path": "npc_battle_talk_1262.json.gz",
       "consumers": [
+        "wlre.features.npc.domain.npc_localization",
         "wlre.resource_manifest",
         "wlre.services.world.npc_asset_install",
-        "wlre.services.world.npc_localization",
         "tests.test_npc_asset_install_v059"
       ],
       "migration": "retain_pending_equivalence_and_all_consumer_migration",
@@ -11875,8 +12218,8 @@
     {
       "path": "npc_event_index_1262.json.gz",
       "consumers": [
+        "wlre.features.npc.domain.npc_catalog",
         "wlre.resource_manifest",
-        "wlre.services.world.npc_catalog",
         "tests.test_npc_1275_eve",
         "tests.test_npc_catalog_v057"
       ],
@@ -11886,8 +12229,8 @@
     {
       "path": "npc_interact_1262.json.gz",
       "consumers": [
-        "wlre.resource_manifest",
-        "wlre.services.world.npc_interact"
+        "wlre.features.npc.domain.npc_interact",
+        "wlre.resource_manifest"
       ],
       "migration": "retain_pending_equivalence_and_all_consumer_migration",
       "deletion_authorized": false
@@ -11895,9 +12238,9 @@
     {
       "path": "npc_talk_1262.json.gz",
       "consumers": [
+        "wlre.features.npc.domain.npc_talk",
         "wlre.resource_manifest",
         "wlre.services.world.npc_asset_install",
-        "wlre.services.world.npc_talk",
         "tests.test_npc_asset_install_v059",
         "tests.test_npc_resource_integrity_v0510",
         "tests.test_npc_talk_v058"
@@ -11908,9 +12251,9 @@
     {
       "path": "npc_text_1262.json.gz",
       "consumers": [
+        "wlre.features.npc.domain.npc_localization",
         "wlre.resource_manifest",
         "wlre.services.world.npc_asset_install",
-        "wlre.services.world.npc_localization",
         "tests.test_npc_asset_install_v059",
         "tests.test_npc_resource_integrity_v0510"
       ],
@@ -11920,8 +12263,8 @@
     {
       "path": "portals.json",
       "consumers": [
-        "wlre.resource_manifest",
-        "wlre.services.world.portals"
+        "wlre.features.portals.domain.portals",
+        "wlre.resource_manifest"
       ],
       "migration": "retain_pending_equivalence_and_all_consumer_migration",
       "deletion_authorized": false

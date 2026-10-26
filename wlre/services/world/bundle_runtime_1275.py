@@ -150,7 +150,7 @@ def load_verified_bundle_runtime(*, sync_root=None):
     from wlre.services.world.preview_1275 import (
         Preview1275, PreviewNPCIndex, PreviewInteractIndex, parse_smith_1275)
     from wlre.services.world.itemdata_v1 import parse_itemdata
-    from wlre.services.world.npc_talk import parse_talk_data
+    from wlre.features.npc.domain.npc_talk import parse_talk_data
     from wlre.services.expedition.data import (
         parse_text_data, parse_catalog as parse_expedition,
         parse_npcs as parse_expedition_npcs,

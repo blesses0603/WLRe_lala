@@ -1,7 +1,19 @@
 {
   "schema_version": 1,
   "modules": {
+    "wlre.services.world.npc_catalog": "wlre.features.npc.domain.npc_catalog",
+    "wlre.services.world.npc_interact": "wlre.features.npc.domain.npc_interact",
+    "wlre.services.world.npc_item_data": "wlre.features.npc.domain.npc_item_data",
+    "wlre.services.world.npc_localization": "wlre.features.npc.domain.npc_localization",
+    "wlre.services.world.npc_shop": "wlre.features.npc.domain.npc_shop",
+    "wlre.services.world.npc_shop_evidence": "wlre.features.npc.domain.npc_shop_evidence",
+    "wlre.services.world.npc_talk": "wlre.features.npc.domain.npc_talk",
+    "wlre.services.world.portal_travel": "wlre.features.portals.domain.portal_travel",
+    "wlre.services.world.portals": "wlre.features.portals.domain.portals",
+    "wlre.ui.home_map": "wlre.features.minimap.ui.home_map",
     "wlre.ui.instance_menu_icons": "wlre.features.instances.ui.instance_menu_icons",
-    "wlre.ui.instance_ui": "wlre.features.instances.ui.instance_ui"
+    "wlre.ui.instance_ui": "wlre.features.instances.ui.instance_ui",
+    "wlre.ui.minimap": "wlre.features.minimap.ui.minimap",
+    "wlre.ui.navigation_gui": "wlre.features.minimap.ui.navigation_gui"
   }
 }
