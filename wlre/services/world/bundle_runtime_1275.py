@@ -30,6 +30,7 @@ _REQUIRED_TABLES = (
 # Optional: source-verified portal metadata. An absent or changed layout never
 # breaks the core ten-table NPC/recipe runtime or enables game packets.
 _PORTAL_TABLES = ('StageMapData_C', 'EveDoorLinks')
+_OPTIONAL_ROUTE_TABLES = ('DoorLinkData_C',)
 _ASSET_ROOT = 'Assets/ResourcesBuild/Data/'
 
 
@@ -135,7 +136,7 @@ def sync_pinned_runtime_bundles(*, sync_root=None,
     portal_count, portal_bytes = 0, 0
     portal_available = {}
     portal_failures = {}
-    for table in _PORTAL_TABLES:
+    for table in _PORTAL_TABLES + _OPTIONAL_ROUTE_TABLES:
         try:
             optional_plan = build_update_plan(
                 manifests['DataPackage'],
@@ -175,6 +176,8 @@ def sync_pinned_runtime_bundles(*, sync_root=None,
                 portal_available.get(table) for table in _PORTAL_TABLES),
             'portal_names_bundle_ready': bool(
                 portal_available.get('StageMapData_C')),
+            'portal_route_bundle_ready': bool(
+                portal_available.get('DoorLinkData_C')),
             'portal_bundles_downloaded': portal_count,
             'portal_bytes_downloaded': portal_bytes,
             'portal_sync_failures': portal_failures,
@@ -303,6 +306,7 @@ def load_verified_bundle_runtime(*, sync_root=None):
         portal_destinations, portal_names, portal_positions = {}, {}, {}
         portal_display_destinations = {}
         portal_link_evidence = {}
+        portal_extra_routes = []
         portal_metadata_status = 'missing_stage_map'
         optional = {}
         optional_failures = {}
@@ -310,7 +314,7 @@ def load_verified_bundle_runtime(*, sync_root=None):
         # Each optional Bundle must be traceable to a verified official
         # manifest. Do not erase failures with a silent 'continue': users need
         # to distinguish not-downloaded, damaged and unsupported TextAssets.
-        for table in _PORTAL_TABLES:
+        for table in _PORTAL_TABLES + _OPTIONAL_ROUTE_TABLES:
             try:
                 asset = _ASSET_ROOT + table + '.bytes'
                 portal_plan = build_update_plan(
@@ -375,6 +379,17 @@ def load_verified_bundle_runtime(*, sync_root=None):
                         else 'destination_links_missing_or_invalid')
             except (ValueError, KeyError, TypeError):
                 portal_metadata_status = 'stage_map_invalid'
+        # DoorLinkData has coordinates and destination IDs, but no C20-8
+        # event index. Keep its route network separate from ordinary doors.
+        if 'DoorLinkData_C' in optional:
+            try:
+                from wlre.services.world.portal_evidence_1275 import (
+                    read_only_door_link_routes)
+                portal_extra_routes = read_only_door_link_routes(
+                    optional['DoorLinkData_C'], scene_rows)
+            except (ValueError, TypeError, KeyError):
+                portal_schema_report['DoorLinkData_C'] = {
+                    'status': 'layout_unrecognized', 'can_send_packets': False}
         if len(recipes) != 1032 or any(
                 ident not in items or type(items[ident].get('open_used')) is not int
                 for ident in recipes):
@@ -441,6 +456,7 @@ def load_verified_bundle_runtime(*, sync_root=None):
             portal_positions=portal_positions,
             portal_display_destinations=portal_display_destinations,
             portal_link_evidence=portal_link_evidence,
+            portal_extra_routes=portal_extra_routes,
             portal_metadata_status=portal_metadata_status,
             portal_schema_report=portal_schema_report,
             portal_coverage=coverage,
