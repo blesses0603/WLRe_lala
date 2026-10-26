@@ -48,6 +48,8 @@ P1a 提交 `d808926` 的實際結果：純核心三平台 [40336014367](https://
 - 新檔完整 Ruff、舊檔未定義名稱／重複定義檢查、compileall、repository audit 與 diff check 通過。
 - 本批 CI 尚待提交／推送；保留既有完整三平台 PR 檢查，純核心 CI 另加入合作式取消測試。Windows／macOS 原生安裝包及正式服 E2E 仍未執行。
 
+P1b 首輪提交 `2d68ef9`：純核心三平台 [40339132736](https://github.com/blesses0603/WLRe_lala/actions/runs/40339132736) 成功；完整 [40339138846](https://github.com/blesses0603/WLRe_lala/actions/runs/40339138846) Ubuntu／macOS 成功，Windows 1 項新 Host 顯示斷言失敗（1239 項，跳過 7）。Windows 原生 Map 訊息尚未由事件迴圈處理，測試原先只呼叫 `update_idletasks`；已改以真實 Tcl 事件迴圈、最多 2 秒等待可見狀態，保留所有顯示斷言，不以 skip／取消安全檢查放行。此修復需重新跑三平台 CI，通過前不進入 P2。
+
 ## 尚未驗收
 
 - 新核心／新功能移植：以各批測試與 CI 另行追加，不引用舊 main 成功取代。

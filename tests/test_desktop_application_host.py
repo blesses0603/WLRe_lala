@@ -1,5 +1,6 @@
 """新核心與實際 Tk／既有主頁的整合，禁止測試連線官方站。"""
 import os
+import time
 import tkinter as tk
 import unittest
 from dataclasses import dataclass
@@ -31,6 +32,21 @@ class DesktopHostTests(unittest.TestCase):
         self.assertIsInstance(app, App)
         app.show_main()
         self.root.update_idletasks()
+        # Windows 的原生 Map 訊息不屬於 idle 工作，必須讓真實事件迴圈處理。
+        # 只等待必要的可見狀態，2 秒截止，不以跳過斷言掩蓋啟動失敗。
+        visible = tk.BooleanVar(self.root, value=False)
+        deadline = time.monotonic() + 2
+
+        def wait_for_map():
+            mapped = bool(app.overview_panel.winfo_ismapped())
+            if mapped or time.monotonic() >= deadline:
+                visible.set(mapped)
+            else:
+                self.root.after(10, wait_for_map)
+
+        self.root.after(0, wait_for_map)
+        self.root.wait_variable(visible)
+        self.assertTrue(visible.get(), '桌面啟動後 2 秒內主頁仍未顯示')
         self.assertTrue(app.overview_panel.winfo_ismapped())
         for method in ('open_feature', 'start_roaming', 'send', 'stop', 'close'):
             self.assertTrue(callable(getattr(app, method)))
