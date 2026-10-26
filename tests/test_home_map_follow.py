@@ -1,9 +1,10 @@
 import os
 import tkinter as tk
 import unittest
-from types import SimpleNamespace
 from unittest.mock import Mock,patch
 from wlre.ui.home_map import HomeMap
+from wlre.services.world.smallmaps import SmallMaps
+from wlre.services.world.navigation import NavigationError
 
 
 @unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt','Requires a desktop')
@@ -15,16 +16,20 @@ class AutomaticMap(unittest.TestCase):
         stage = lambda model, width: {
             'model_id': model, 'map_width': width, 'map_height': width,
             'small_offset_x': 12, 'small_offset_y': 12}
-        runtime = SimpleNamespace(
-            revision=1275,
-            stages={12903: stage(12903, 9360),
-                    12904: stage(12904, 10080)},
-            scene_names={12903: '水之迴廊', 12904: '海底宮殿通道'},
-            doors={}, portal_destinations={}, portal_positions={})
-        self.runtime_patch = patch('wlre.services.world.runtime_1275.active_runtime',
-                                   return_value=runtime)
-        self.runtime_patch.start()
-        self.addCleanup(self.runtime_patch.stop)
+        stages = {12903: (stage(12903, 9360), 'M12903'),
+                  12904: (stage(12904, 10080), 'M12904')}
+        def verified_scene(_maps, scene_id):
+            try:
+                return stages[scene_id]
+            except KeyError as exc:
+                raise NavigationError('1275 場景未驗證') from exc
+        # Patch only the minimap's official scene lookup. Global runtime is
+        # shared by NPC, item and portal services; replacing it in a GUI test
+        # would unintentionally break unrelated module initialization.
+        self.scene_patch = patch.object(SmallMaps, '_stage_1275',
+                                        autospec=True, side_effect=verified_scene)
+        self.scene_patch.start()
+        self.addCleanup(self.scene_patch.stop)
         self.root=tk.Tk();self.root.geometry('600x500')
         self.pick=Mock();self.move=Mock();self.portal=Mock()
         self.map=HomeMap(self.root,self.pick,Mock(),on_move=self.move,on_portal=self.portal,compact=True)
