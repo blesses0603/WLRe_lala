@@ -1,6 +1,7 @@
 import os
 import tkinter as tk
 import unittest
+from types import SimpleNamespace
 from unittest.mock import Mock,patch
 from wlre.ui.home_map import HomeMap
 
@@ -8,6 +9,22 @@ from wlre.ui.home_map import HomeMap
 @unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt','Requires a desktop')
 class AutomaticMap(unittest.TestCase):
     def setUp(self):
+        # GUI lifecycle test: supply independently verified 1275 scene rows.
+        # Real runtime must not silently use 1262 stage_coordinates when the
+        # official 1275 source has not yet been installed.
+        stage = lambda model, width: {
+            'model_id': model, 'map_width': width, 'map_height': width,
+            'small_offset_x': 12, 'small_offset_y': 12}
+        runtime = SimpleNamespace(
+            revision=1275,
+            stages={12903: stage(12903, 9360),
+                    12904: stage(12904, 10080)},
+            scene_names={12903: '水之迴廊', 12904: '海底宮殿通道'},
+            doors={}, portal_destinations={}, portal_positions={})
+        self.runtime_patch = patch('wlre.services.world.runtime_1275.active_runtime',
+                                   return_value=runtime)
+        self.runtime_patch.start()
+        self.addCleanup(self.runtime_patch.stop)
         self.root=tk.Tk();self.root.geometry('600x500')
         self.pick=Mock();self.move=Mock();self.portal=Mock()
         self.map=HomeMap(self.root,self.pick,Mock(),on_move=self.move,on_portal=self.portal,compact=True)
