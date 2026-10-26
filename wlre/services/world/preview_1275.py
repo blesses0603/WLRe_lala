@@ -143,6 +143,7 @@ class Preview1275:
     portal_positions: dict = field(default_factory=dict)
     portal_display_destinations: dict = field(default_factory=dict)
     portal_link_evidence: dict = field(default_factory=dict)
+    portal_extra_routes: list = field(default_factory=list)
     portal_metadata_status: str = 'missing_stage_map'
     portal_schema_report: dict = field(default_factory=dict)
     portal_coverage: dict = field(default_factory=dict)
@@ -202,6 +203,7 @@ def load_preview(data_archive, eve_archive):
     stage_map = link_table = None
     portal_display_destinations = {}
     portal_link_evidence = {}
+    portal_extra_routes = []
     portal_metadata_status = 'missing_stage_map'
     portal_schema_report = {}
     from wlre.services.world.portal_schema import recognize_portal_source
@@ -257,6 +259,7 @@ def load_preview(data_archive, eve_archive):
         portal_positions=portal_positions,
         portal_display_destinations=portal_display_destinations,
         portal_link_evidence=portal_link_evidence,
+        portal_extra_routes=portal_extra_routes,
         portal_metadata_status=portal_metadata_status,
         portal_schema_report=portal_schema_report,
         portal_coverage=coverage,
