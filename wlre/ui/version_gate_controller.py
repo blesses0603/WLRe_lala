@@ -145,6 +145,8 @@ class VersionGateController:
         # compositor; unlike a standalone Canvas they do not obscure artwork.
         shell = ttk.Frame(window, padding=(22, 16, 22, 14))
         shell.pack(fill="both", expand=True)
+        self._version_shell = shell
+        self._version_fit_job = None
 
         # Anchor the buttons BEFORE the data sections, so changing error text,
         # translation length or display scale cannot push them offscreen.
@@ -255,6 +257,12 @@ class VersionGateController:
         # A <Configure> event of this window is the only event which can
         # change label wraplength. Do not use a Canvas over the artwork.
         window.bind("<Configure>", self._resize_version_text, add="+")
+        # Textvariable writes can be processed before pack/grid have updated
+        # the requested section heights. Observe their settled geometry too.
+        for section in (alert, details, updates, footer):
+            section.bind('<Configure>', lambda event: self._schedule_version_fit(), add='+')
+        for variable in (self.version_gate_text, self._version_remote, self._lala_release_text):
+            variable.trace_add('write', lambda *args: self._schedule_version_fit())
         self._resize_version_text()
         self._render_version_window()
         window.lift()
@@ -276,6 +284,28 @@ class VersionGateController:
             value_label.configure(wraplength=max(240, width - 290))
         self._version_release_label.configure(wraplength=max(300, width - 108))
         self._version_footer_hint.configure(wraplength=max(300, width - 65))
+        self._schedule_version_fit()
+
+    def _schedule_version_fit(self):
+        window = self.version_window
+        if self._closing or window is None or not window.winfo_exists():
+            return
+        pending = getattr(self, '_version_fit_job', None)
+        if pending is not None:
+            window.after_cancel(pending)
+        self._version_fit_job = window.after_idle(self._fit_version_height)
+
+    def _fit_version_height(self):
+        """Allow late long status text to grow the view above its pinned footer."""
+        self._version_fit_job = None
+        window = self.version_window
+        if self._closing or window is None or not window.winfo_exists():
+            return
+        # GlassTheme inserts its own title bar above shell. The Toplevel's
+        # request includes that bar; shell.winfo_reqheight() omits it.
+        needed = min(window.winfo_reqheight(), window.winfo_screenheight() - 48)
+        if needed > window.winfo_height():
+            window.geometry(f'{window.winfo_width()}x{needed}')
 
     def hide_version_check(self):
         window = self.version_window

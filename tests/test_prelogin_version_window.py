@@ -304,6 +304,22 @@ class PreloginVersionWindowTests(unittest.TestCase):
         self.assertEqual(len(self.app._version_resource_values), 5)
         self.assertTrue(self.app._version_continue_button.winfo_ismapped())
 
+    def test_late_status_growth_refits_sections_including_theme_title_bar(self):
+        window = self.app.version_window
+        if window.winfo_screenheight() < 900:
+            self.skipTest('Requires enough vertical space to test automatic growth')
+        window.geometry('1000x590')
+        self.root.update()
+        self.app.version_gate_text.set('1275 正式資源尚未就緒，候選資料未經安全驗證。' * 4)
+        self.app._version_remote.set('缺少 DataCatalog 與 NPC 正式索引，尚未允許登入。' * 5)
+        self.app._lala_release_text.set('LaLa 正式 Release 狀態已檢查，暫無更新。' * 2)
+        self.root.update()
+        release = self.app._version_release_panel
+        self.assertTrue(release.winfo_ismapped())
+        self.assertLessEqual(release.winfo_rooty() + release.winfo_height(),
+                             self.app._version_progress.winfo_rooty())
+        self.assertGreater(window.winfo_height(), 590)
+
     def test_reopen_revokes_previous_approval(self):
         self.deliver(official_result())
         self.app.continue_to_login()
