@@ -36,17 +36,16 @@ class Portal1275UI(unittest.TestCase):
             self.root.tk.call('after', 'cancel', job)
         self.root.destroy()
 
-    def test_1275_verified_door_is_selectable_not_directly_sendable(self):
+    def test_unmarked_door_is_hidden_from_list_and_cannot_send(self):
         self.map.set_state({'player': {'scene': 12170}})
-        self.assertEqual(len(self.map.portal_rows), 1)
+        self.assertEqual(len(self.map.portal_rows), 0)
         self.assertIn('StageMapData 傳點名稱表', self.map.portal_info.get())
-        self.assertIn('點位待官方座標換算', self.map.portal_info.get())
-        self.assertIn('傳點 #2（官方名稱未取得）', self.map.portal_list.get(0))
+        self.assertNotIn('傳點 #2', self.map.portal_list.get(0))
+        self.assertEqual(len(self.map.portals.for_scene(12170)), 1)
         self.assertEqual(str(self.map.portal_go.cget('state')), 'disabled')
         self.map.portal_list.selection_set(0)
         self.map.choose_portal()
         self.picked.assert_not_called()
-        self.assertIn('目的地待核對', str(self.map.portal_go.cget('text')))
         self.assertFalse(self.map.go_portal())
         self.sent.assert_not_called()
 
@@ -55,6 +54,41 @@ class Portal1275UI(unittest.TestCase):
         self.map.show_audit()
         self.assertEqual(self.map.audit_window.title(),
                          '1275 官方門事件（位置預覽）')
+        from tkinter import ttk
+        def trees(widget):
+            for child in widget.winfo_children():
+                if isinstance(child, ttk.Treeview): yield child
+                yield from trees(child)
+        table = next(trees(self.map.audit_window))
+        self.assertEqual(len(table.get_children()), 1)
+
+    def test_list_hides_unmarked_door_while_audit_keeps_both(self):
+        runtime = SimpleNamespace(
+            doors={12170: [{'index': 1, 'x': 42, 'y': 64},
+                           {'index': 2, 'x': 43, 'y': 65}]},
+            portal_names={(12170, 1): '前往北島-北'},
+            portal_positions={(12170, 1): {
+                'scene': 12170, 'index': 1, 'x': 200, 'y': 300,
+                'position_verified': True, 'source_kind': '1275_eve_door_links_grid_scaled'}},
+            portal_metadata_status='destination_links_loaded')
+        with patch('wlre.services.world.runtime_1275.baseline_revision', return_value='1275'), \
+             patch('wlre.services.world.runtime_1275.active_runtime', return_value=runtime):
+            self.map.portals = Portals()
+        self.map.selected_id = 12170
+        self.map.image = object()
+        self.map.projection = SimpleNamespace(packet_to_pixel=lambda x, y: (x, y))
+        with patch.object(self.map, 'draw'):
+            self.map.refresh_portals()
+        self.assertEqual(len(self.map.portal_rows), 1)
+        self.assertIn('前往北島-北', self.map.portal_list.get(0))
+        self.map.show_audit()
+        from tkinter import ttk
+        def trees(widget):
+            for child in widget.winfo_children():
+                if isinstance(child, ttk.Treeview): yield child
+                yield from trees(child)
+        table = next(trees(self.map.audit_window))
+        self.assertEqual(len(table.get_children()), 2)
 
 
 if __name__ == '__main__':

@@ -2,7 +2,8 @@
 
 1275 Eve.NewDoor supplies source scene / door index / position. The game's
 StageMapData_C marker references a source event index; EveDoorLinks supplies a
-destination by ordinal. Bind only when all three sources agree exactly.
+destination by ordinal. Bind the unique scene/event identity across all sources;
+their event, marker and link coordinates are not interchangeable.
 
 This module NEVER approves C20-8 packets. Only a successful server scene
 snapshot can confirm an actual transfer.
@@ -237,7 +238,9 @@ def read_only_portal_destinations(stage_raw, link_raw, doors, scene_ids):
 def verified_portal_destinations(stage_raw, link_raw, doors, scene_ids):
     """Reconcile three independent official 1275 sources without packet approval.
 
-    Only exact scene, event-index, XY and valid destination evidence is shown.
+    Bind by unique scene/event identity, as EveDoorLinksData.GetDoorDataByIndex.
+    Event XY, marker XY and link grid XY are different coordinate spaces.
+    Position scaling/projection is validated independently before any action.
     An ambiguous or incomplete mapping remains unavailable to the UI.
     """
     markers = parse_stage_map_portals(stage_raw)
@@ -248,19 +251,26 @@ def verified_portal_destinations(stage_raw, link_raw, doors, scene_ids):
         if type(scene) is not int or scene not in scenes:
             continue
         scene_links = links.get(scene, ())
+        counts = {}
         for row in entries:
+            if isinstance(row, dict) and type(row.get('index')) is int:
+                counts[row['index']] = counts.get(row['index'], 0) + 1
+        for row in entries:
+            if not isinstance(row, dict):
+                continue
             index = row.get('index')
-            if type(index) is not int or index <= 0 or index > len(scene_links):
+            if (type(index) is not int or index <= 0 or index > len(scene_links)
+                    or counts.get(index) != 1):
                 continue
             marker = markers.get((scene, index))
             if not marker or marker['kind'] != 2:
                 continue
             link = scene_links[index - 1]
-            if (marker['x'] != row.get('x') or marker['y'] != row.get('y')
-                    or link['x'] != marker['x'] or link['y'] != marker['y']
+            if (link['scene'] != scene or link['index'] != index
                     or link['destination'] not in scenes):
                 continue
             result[(scene, index)] = dict(link, matched_stage_map=True,
+                                         event_x=row.get('x'), event_y=row.get('y'),
                                          destination_verified=True,
                                          trigger_verified=False)
     return result

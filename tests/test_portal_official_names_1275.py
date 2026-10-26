@@ -61,6 +61,10 @@ class OfficialPortalNames1275(unittest.TestCase):
             doors={11016: [{'index': 1, 'x': 2137, 'y': 2081}]},
             scene_names={11016: '新手海灘'},
             portal_names={(11016, 1): '海灘出口'},
+            portal_positions={(11016, 1): {
+                'scene': 11016, 'index': 1, 'x': 200, 'y': 300,
+                'position_verified': True,
+                'source_kind': '1275_eve_door_links_grid_scaled'}},
             portal_destinations={},
             portal_metadata_status='stage_map_ready')
         with patch('wlre.services.world.runtime_1275.baseline_revision',
@@ -69,6 +73,7 @@ class OfficialPortalNames1275(unittest.TestCase):
                 return_value=runtime):
             catalog = Portals()
         page = SimpleNamespace(
+            projection=SimpleNamespace(packet_to_pixel=lambda x, y: (x, y)),
             portals=catalog, selected_id=11016, image=object(),
             maps=Mock(), npc_index_error=False, npc_index=None,
             map_title=Mock(), portal_list=Mock(), npc_list=Mock(),

@@ -123,7 +123,7 @@ class Portals:
                                 and link.get('trigger_verified') is False
                                 and type(destination) is int
                                 and 0 < destination <= 65535
-                                and link.get('x') == x and link.get('y') == y)
+                                and link.get('event_x') == x and link.get('event_y') == y)
                             destination = destination if verified_target else None
                             target_label = (source_scene_label(destination, scene_names)
                                             if verified_target else '目的地未確認')
@@ -280,6 +280,13 @@ def portal_map_pixel(portal, projection):
             and 0 <= u <= 1024 and 0 <= v <= 1024):
         return None
     return (u, v)
+
+
+def marked_portals(rows, projection):
+    """Minimap list mirrors labeled markers; the full catalog stays auditable."""
+    return [row for row in rows if row.get('source_revision') != 1275 or (
+        bool(row.get('official_name') or row.get('display_destination_label'))
+        and portal_map_pixel(row, projection) is not None)]
 
 
 def nearest_marker(rows,projection,screen,event_x,event_y,radius=12):

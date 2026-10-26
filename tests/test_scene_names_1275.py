@@ -83,13 +83,19 @@ class SceneNames1275Tests(unittest.TestCase):
         page.map_title.set.assert_called_once_with('小地圖｜瑪雅野豬叢林二(12170)')
         listed = page.portal_list.insert.call_args_list[0].args[1]
         self.assertNotIn('瑪雅野豬叢林二(12170)', listed)
-        self.assertIn('傳點 #7', listed)
+        self.assertNotIn('傳點 #7', listed)
+        self.assertEqual(page.portal_rows, [])
+        self.assertEqual(catalog.for_scene(12170)[0]['index'], 7)
         self.assertIn('1275 場景 瑪雅野豬叢林二(12170)',
                       page.portal_status.set.call_args.args[0])
 
     def test_map_header_cannot_be_replaced_by_selected_portal_event(self):
         runtime = SimpleNamespace(
             scene_names={12170: '瑪雅野豬叢林二'},
+            portal_names={(12170, 7): '地圖出口'},
+            portal_positions={(12170, 7): {
+                'scene': 12170, 'index': 7, 'x': 200, 'y': 300,
+                'position_verified': True, 'source_kind': '1275_eve_door_links_grid_scaled'}},
             doors={12170: [{'index': 7, 'x': 5701, 'y': 3230}]})
         with patch('wlre.services.world.runtime_1275.baseline_revision',
                    return_value='1275'), patch(
@@ -97,6 +103,7 @@ class SceneNames1275Tests(unittest.TestCase):
                 return_value=runtime):
             catalog = Portals()
         page = SimpleNamespace(
+            projection=SimpleNamespace(packet_to_pixel=lambda x, y: (x, y)),
             portals=catalog, selected_id=12170, image=object(),
             maps=Mock(), npc_index_error=False, npc_index=None,
             map_title=Mock(), portal_list=Mock(), npc_list=Mock(),
@@ -108,11 +115,11 @@ class SceneNames1275Tests(unittest.TestCase):
         expected = '小地圖｜瑪雅野豬叢林二(12170)'
         page.map_title.set.assert_called_once_with(expected)
         row = page.portal_rows[0]
-        self.assertEqual(row['name'], '傳點 #7（官方名稱未取得）')
+        self.assertEqual(row['name'], '地圖出口')
         self.assertNotIn('門事件', row['name'])
         PortalInteractionMixin.select_portal(page, row)
         page.map_title.set.assert_called_once_with(expected)
-        page.on_pick.assert_not_called()
+        page.on_pick.assert_called_once_with(12170, 200, 300)
 
     def test_1275_missing_verified_scene_name_never_uses_1262_header(self):
         page = MinimapNavigationMixin()

@@ -11,7 +11,7 @@ from wlre.services.world.display_position import current_position
 from wlre.services.world.navigation import Repository, NavigationError
 from wlre.services.world.map_names import map_label, parse_map_id
 from wlre.services.world.portals import (Portals, nearest_marker,
-                                         portal_map_pixel, portal_source_diagnostic)
+                                         portal_map_pixel, portal_source_diagnostic, marked_portals)
 from wlre.services.world.portal_policy import allowed_rows, destination_problem
 from wlre.services.world.npc_catalog import NPCIndex, scene_npcs, npc_detail
 from wlre.services.world.npc_talk import load_catalog as load_npc_talks, dialogue_text
@@ -182,7 +182,9 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
                 and not self.portals.data.get('source_ready')):
             self.portals = Portals()
         recovery=self.image is None
-        self.portal_rows=allowed_rows(self.portals,self.selected_id,self.maps,recovery=recovery)
+        candidates=allowed_rows(self.portals,self.selected_id,self.maps,recovery=recovery)
+        self.portal_rows=marked_portals(candidates, getattr(self, 'projection', None))
+        hidden_count=len(candidates)-len(self.portal_rows)
         # A scene title is never derived from portal selection or door IDs.
         # Update it even before 1275 names become available, so old labels
         # cannot survive a scene change or an asynchronous source reload.
@@ -217,7 +219,7 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
             if self.portals.data.get('source_revision') == 1275:
                 empty = ('（1275 門事件資料尚未就緒）'
                          if not self.portals.data.get('source_ready')
-                         else '（此場景尚無經核對的傳點）')
+                         else '（無已標記傳點）')
             else:
                 empty = ('（沒有已確認的返回出口）' if recovery
                          else '（來源未列傳點）')
@@ -234,9 +236,9 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
                         not isinstance(source, str)
                         or not source.startswith('destination_links_')):
                     self.portal_info.set(portal_source_diagnostic(source))
-                elif named < len(self.portal_rows):
+                elif hidden_count:
                     self.portal_info.set(
-                        f'{len(self.portal_rows)-named} 個傳點未取得官方名稱')
+                        f'{hidden_count} 個未標記項目僅列於逐圖核對')
                 position_missing = sum(
                     not item.get('coordinate_valid') for item in self.portal_rows)
                 incompatible = sum(

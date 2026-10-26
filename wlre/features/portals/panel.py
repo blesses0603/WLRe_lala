@@ -21,6 +21,15 @@ class PortalInteractionMixin:
         label = ('手動確認換圖' if enabled and p.get('source_revision') == 1275
                  else '目的地待核對' if p and p.get('source_revision') == 1275
                  else '返回有圖地圖' if self.image is None else '直接嘗試換圖')
+        if p and p.get('source_revision') == 1275 and not enabled and p.get('destination_verified'):
+            if not p.get('coordinate_valid') or portal_map_pixel(p, getattr(self, 'projection', None)) is None:
+                label = '點位待核對'
+            elif not self.maps.has_image(p['destination']):
+                label = '目的地無地圖'
+            elif self.state.get('player',{}).get('scene') != self.selected_id:
+                label = '非目前地圖'
+            else:
+                label = '目前無法換圖'
         self.portal_go.configure(state='normal' if enabled else 'disabled',
                                  text=label)
 

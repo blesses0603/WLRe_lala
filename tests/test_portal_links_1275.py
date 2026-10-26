@@ -54,12 +54,12 @@ class PortalLinks1275Test(unittest.TestCase):
         link = parse_eve_door_links(link_bytes())
         self.assertEqual(link[12170][0]['destination'], 12171)
 
-    def test_only_exact_three_source_match_produces_destination(self):
+    def test_unique_three_source_identity_produces_destination(self):
         mapping = verified_mapping()
         self.assertEqual(mapping[(12170, 1)]['destination'], 12171)
         self.assertTrue(mapping[(12170, 1)]['destination_verified'])
         self.assertFalse(mapping[(12170, 1)]['trigger_verified'])
-        self.assertEqual(verified_mapping(marker_x=5702), {})
+        self.assertEqual(verified_mapping(marker_x=5702)[(12170, 1)]['destination'], 12171)
         self.assertEqual(verified_mapping(marker_index=2), {})
         self.assertEqual(verified_mapping(link_scene=12172), {})
         self.assertEqual(verified_mapping(link_destination=12000), {})
@@ -73,10 +73,12 @@ class PortalLinks1275Test(unittest.TestCase):
         display = read_only_portal_destinations(
             marker, link, doors, {12170, 12171})
         self.assertEqual(display, {(12170, 1): 12171})
-        # Strict transport proof still fails; the name must NOT grant
-        # authorization to send a C20-8 trigger.
-        self.assertEqual(verified_portal_destinations(
-            marker, link, doors, {12170, 12171}), {})
+        # Scene/EvtID provides the link. Event/marker/link coordinates need
+        # not be equal; projected position remains a separate action guard.
+        binding = verified_portal_destinations(marker, link, doors, {12170, 12171})
+        self.assertEqual(binding[(12170, 1)]['destination'], 12171)
+        self.assertEqual(binding[(12170, 1)]['event_x'], 5701)
+        self.assertEqual(binding[(12170, 1)]['x'], 200)
         runtime = SimpleNamespace(
             doors=doors, portal_display_destinations=display,
             portal_destinations={},
@@ -105,6 +107,10 @@ class PortalLinks1275Test(unittest.TestCase):
             duplicated, link_bytes(), {12170: [
                 {'index': 1, 'x': 5701, 'y': 3230}]},
             {12170, 12171}), {})
+        self.assertEqual(verified_portal_destinations(
+            stage_rows((12170, 2, 0, 1, 20, 30, 0, 0)), link_bytes(),
+            {12170: [{'index': 1, 'x': 42, 'y': 64},
+                     {'index': 1, 'x': 43, 'y': 64}]}, {12170, 12171}), {})
 
     def test_ui_uses_verified_destination_name_but_never_sends(self):
         mapping = verified_mapping()

@@ -135,8 +135,9 @@ class Portal1275RecoveryTests(unittest.TestCase):
                 'wlre.ui.home_map.scene_npcs', return_value=[]):
             HomeMap.refresh_portals(page)
         reload.assert_called_once()
-        self.assertEqual(len(page.portal_rows), 2)
-        self.assertIn('◇ ', page.portal_list.insert.call_args_list[0].args[1])
+        self.assertIs(page.portals, fresh)
+        self.assertEqual(len(page.portals.for_scene(SCENE)), 2)
+        self.assertEqual(page.portal_rows, [])
         self.assertIn('1275 場景', page.portal_status.set.call_args.args[0])
 
 

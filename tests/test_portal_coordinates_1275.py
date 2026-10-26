@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 from wlre.services.world.portal_links_1275 import verified_portal_positions
-from wlre.services.world.portals import Portals, portal_map_pixel, nearest_marker
+from wlre.services.world.portals import Portals, portal_map_pixel, nearest_marker, marked_portals
 from wlre.features.portals.panel import PortalInteractionMixin
 
 
@@ -37,6 +37,48 @@ class OffscreenProjection:
 
 
 class PortalPosition1275Tests(unittest.TestCase):
+    def test_list_contains_only_named_visible_markers_without_changing_catalog(self):
+        ready = {'source_revision': 1275, 'coordinate_valid': True,
+                 'official_name': '海灘出口', 'x': 200, 'y': 300}
+        reference = dict(ready, official_name=None, display_destination_label='北島-北(60000)')
+        unnamed = dict(ready, official_name=None)
+        offscreen = dict(ready, x=2000)
+        missing = dict(ready, coordinate_valid=False)
+        rows = [ready, reference, unnamed, offscreen, missing]
+        self.assertEqual(marked_portals(rows, IdentityProjection()), [ready, reference])
+        self.assertEqual(len(rows), 5)
+        self.assertEqual(marked_portals(rows, None), [])
+
+    def test_destination_uses_event_identity_and_separately_scaled_marker(self):
+        from wlre.services.world.portal_links_1275 import verified_portal_destinations
+        doors = {11016: [{'index': 1, 'x': 42, 'y': 64}]}
+        bindings = verified_portal_destinations(
+            stage_marker(), door_links(), doors, {11016, 11017})
+        runtime = SimpleNamespace(
+            doors=doors, portal_positions=position_fixture(), portal_destinations=bindings,
+            scene_names={11016: '新手海灘', 11017: '目的場景'})
+        with patch('wlre.services.world.runtime_1275.baseline_revision', return_value='1275'), \
+             patch('wlre.services.world.runtime_1275.active_runtime', return_value=runtime):
+            catalog = Portals()
+        row = catalog.for_scene(11016)[0]
+        self.assertTrue(row['destination_verified'])
+        self.assertTrue(row['direct_eligible'])
+        self.assertEqual(row['destination'], 11017)
+        self.assertEqual((row['x'], row['y']), (600, 600))
+        self.assertEqual(marked_portals([row], IdentityProjection()), [row])
+        page = PortalInteractionMixin()
+        page.selected_portal = row
+        page.maps = SimpleNamespace(has_image=lambda scene: True)
+        page.state = {'player': {'scene': 11016}}
+        page.selected_id = 11016
+        page.projection = IdentityProjection()
+        page.portal_go = Mock()
+        page.update_portal_button()
+        self.assertEqual(page.portal_go.configure.call_args.kwargs,
+                         {'state': 'normal', 'text': '手動確認換圖'})
+        page.maps = SimpleNamespace(has_image=lambda scene: False)
+        page.update_portal_button()
+        self.assertEqual(page.portal_go.configure.call_args.kwargs['text'], '目的地無地圖')
     def test_official_uimain_ratio_not_eve_common_grid_xy(self):
         points = position_fixture()
         self.assertEqual(points[(11016, 1)]['x'], 600)
