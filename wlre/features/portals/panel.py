@@ -195,7 +195,10 @@ class PortalInteractionMixin:
                      f"（來源座標 {report.get('reference_source_xy_count', 0)}、"
                      f"目的地落點 {report.get('reference_arrival_xy_count', 0)} 筆已換算）。"
                      f"另有 {report.get('door_link_data_route_count', 0)} 筆"
-                     f" DoorLinkData_C 獨立路線參考；不授權傳送。")
+                     f" DoorLinkData_C 獨立路線參考；"
+                     f"隱藏傳點 {report.get('stage_hidden_marker_count', 0)} 筆，"
+                     f"跨場景標記 {report.get('stage_cross_scene_marker_count', 0)} 筆；"
+                     "皆不授權傳送。")
         ttk.Label(win, text=text, wraplength=930).pack(fill='x', padx=10, pady=8)
         detail = tk.StringVar(value='選擇場景查看所有門索引與未完成項目；此視窗不送出換圖指令。')
         ttk.Label(win, textvariable=detail, wraplength=930).pack(fill='x', padx=10, pady=4)
@@ -244,6 +247,14 @@ class PortalInteractionMixin:
                                   f'{arrival if arrival is not None else "落點XY未校準"}'
                                   f'（僅供查閱）')
                 parts.append(f"#{door['index']}：" + '／'.join(labels) + route_text)
+            if row.get('hidden_stage_markers'):
+                parts.append(
+                    f"StageMap 隱藏傳點 {row['hidden_stage_markers']} 筆"
+                    "（EvtID 是目的場景，不是普通門事件索引）")
+            if row.get('cross_scene_stage_markers'):
+                parts.append(
+                    f"StageMap 跨場景標記 {row['cross_scene_stage_markers']} 筆"
+                    "（須另核對目標場景事件）")
             extra = [link for link in self.portals.data.get('official_route_references', [])
                      if link.get('scene') == row['scene']]
             if extra:
