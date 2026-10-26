@@ -35,4 +35,5 @@ def build_cooperative_widgets(page, controls):
     page.auto_reward_button.pack(side='left', padx=(8, 0))
     page.reward_note = tk.StringVar(value='獎勵：等待 S186-11 同步；不會自動購買付費寶箱')
     ttk.Label(page, textvariable=page.reward_note, style='Muted.TLabel',
-              anchor='w').pack(fill='x', before=page.body)
+              anchor='w', justify='left', wraplength=960).pack(
+                  fill='x', before=page.body)
