@@ -5,13 +5,16 @@ from wlre.services.world.portal_links_1275 import parse_stage_map_portals, parse
 
 
 def audit_portal_coverage(doors, stages, stage_raw=None, link_raw=None,
-                        positions=None, destinations=None, names=None):
+                        positions=None, destinations=None, names=None,
+                        link_evidence=None, extra_routes=None):
     """Only call after official source verification; never authorize a packet.
 
     Include scenes without doors and orphaned marker/link indices. An Eve event
     container without a StageMap marker is not automatically a missing exit.
     """
     positions, destinations, names = positions or {}, destinations or {}, names or {}
+    evidence = link_evidence if isinstance(link_evidence, dict) else {}
+    routes = extra_routes if isinstance(extra_routes, list) else []
     markers, links, marker_counts = {}, {}, Counter()
     statuses = {'StageMapData_C': 'missing', 'EveDoorLinks': 'missing'}
     for table, raw, reader in (
@@ -75,4 +78,17 @@ def audit_portal_coverage(doors, stages, stage_raw=None, link_raw=None,
             'all_sources_available': complete, 'scene_count': len(rows),
             'scene_table_count': len(expected_scenes), 'scenes': rows,
             'unresolved_portals': sum(row['unresolved'] for row in rows),
+            # Reference coverage is different from actionable C20-8 proof.
+            'official_link_reference_count': len(evidence),
+            'reference_source_xy_count': sum(
+                row.get('position_verified') is True for row in evidence.values()),
+            'reference_arrival_xy_count': sum(
+                row.get('arrival_verified') is True for row in evidence.values()),
+            'reference_missing_stage_marker_count': sum(
+                row.get('stage_marker_matched') is False for row in evidence.values()),
+            'reference_missing_eve_event_count': sum(
+                row.get('eve_event_matched') is False for row in evidence.values()),
+            'reference_unknown_target_count': sum(
+                row.get('destination_defined') is False for row in evidence.values()),
+            'door_link_data_route_count': len(routes),
             'can_send_packets': False, 'live_transfer_verified': False}
