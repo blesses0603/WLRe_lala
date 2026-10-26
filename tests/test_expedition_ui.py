@@ -54,13 +54,13 @@ class ExpeditionPanelTests(unittest.TestCase):
             (start_button, '啟動自動派遣'),
             (stop_button, '停止'),
         ):
-            image = str(button.cget('image'))
+            image = button.tk.splitlist(button.cget('image'))[0]
             self.assertTrue(image)
             self.assertEqual(self.root.tk.call('image', 'width', image), 28)
             self.assertEqual(button.cget('text'), expected_text)
             self.assertEqual(str(button.cget('compound')), 'none')
-        self.assertNotEqual(str(start_button.cget('image')),
-                            str(stop_button.cget('image')))
+        self.assertNotEqual(start_button.tk.splitlist(start_button.cget('image'))[0],
+                            stop_button.tk.splitlist(stop_button.cget('image'))[0])
         self.panel.render(self.state)
         start_button.invoke()
         self.assertEqual(self.app.send.call_args.args[0]['type'],
