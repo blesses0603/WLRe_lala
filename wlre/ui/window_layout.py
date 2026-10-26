@@ -6,7 +6,7 @@ Clamp popups to the visible display; fixed geometry cannot be resized.
 import tkinter as tk
 
 
-def _fit_mapped_display(window):
+def _fit_mapped_display(window, *, settle_ms=100):
     """初始映射穩定期間核對 WM 框架；停止後不干預使用者拖曳。"""
     if '_display_fit_binding' in vars(window):
         return
@@ -52,7 +52,7 @@ def _fit_mapped_display(window):
             settling = True
             if settle_job is not None:
                 window.after_cancel(settle_job)
-            settle_job = window.after(100, settled)
+            settle_job = window.after(settle_ms, settled)
         if settling and pending is None:
             pending = window.after_idle(fit)
 
@@ -88,6 +88,9 @@ def dialog_geometry(width, height, screen_width, screen_height, *, margin=24):
 def center_on_main(window, main, width, height, *, margin=24):
     """Size and center a toplevel on the dashboard; keep it on screen."""
     sw, sh = window.winfo_screenwidth(), window.winfo_screenheight()
+    # Cocoa 的選單列／視窗陰影需要額外邊緣空間，不能沿用 borderless 的預算。
+    if window.tk.call('tk', 'windowingsystem') == 'aqua':
+        margin = max(margin, 32)
     w, h, _, _ = dialog_geometry(width, height, sw, sh, margin=margin)
     # The dashboard already has a geometry even while initially withdrawn.
     try:

@@ -54,6 +54,19 @@ class CenterGeometry(unittest.TestCase):
         self.assertLessEqual(x + width, 1280 - 24)
         self.assertLessEqual(y + height, 720 - 24)
 
+    def test_aqua_navigation_budget_includes_menu_bar_and_shadow(self):
+        main = Mock()
+        main.winfo_x.return_value = main.winfo_y.return_value = 0
+        main.winfo_width.return_value = 1280
+        main.winfo_height.return_value = 800
+        window = Mock()
+        window.tk.call.return_value = 'aqua'
+        window.winfo_screenwidth.return_value = 1024
+        window.winfo_screenheight.return_value = 768
+        width, height, _, _ = center_on_main(window, main, 1120, 760)
+        self.assertLessEqual(width + 25, 1024)
+        self.assertLessEqual(height + 25, 768)
+
 
 @unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt' or sys.platform == 'darwin',
                      'Requires Tk / Xvfb')
@@ -89,25 +102,23 @@ class SecondaryFeatures(unittest.TestCase):
             popup.destroy()
 
     def test_closing_dialog_cancels_owned_initial_geometry_jobs(self):
-        from wlre.ui.window_layout import configure_dialog
+        from wlre.ui.window_layout import _fit_mapped_display, configure_dialog
         popup = tk.Toplevel(self.root)
         popup.withdraw()
+        # 延長測試自己的穩定期限，確保 CI 繪圖較慢也能觀察待清理工作。
+        _fit_mapped_display(popup, settle_ms=10_000)
         configure_dialog(popup, 300, 200)
-        captured = []
-        def close_after_map():
-            commands = set(popup._tclCommands)
-            owned = {job for job in self.root.tk.call('after', 'info')
-                     if str(self.root.tk.call('after', 'info', job)[0]) in commands}
-            captured.append(owned)
-            popup.destroy()
-        popup.bind('<Map>', lambda event: self.root.after_idle(close_after_map)
-                   if event.widget is popup else None, add='+')
         try:
             popup.deiconify()
             self.root.update()
-            self.assertTrue(captured)
-            self.assertTrue(captured[0])
-            self.assertFalse(captured[0] & set(self.root.tk.call('after', 'info')))
+            # 已完成原生 Map；從 Configure 回呼返回後才由測試關窗。
+            popup.event_generate('<Configure>')
+            commands = set(popup._tclCommands)
+            owned = {job for job in self.root.tk.call('after', 'info')
+                     if str(self.root.tk.call('after', 'info', job)[0]) in commands}
+            self.assertEqual(len(owned), 2)
+            popup.destroy()
+            self.assertFalse(owned & set(self.root.tk.call('after', 'info')))
         finally:
             if popup.winfo_exists():
                 popup.destroy()

@@ -27,6 +27,7 @@ jobs:
         shell: bash
     env:
       PYTHONUTF8: '1'
+      PYTHONFAULTHANDLER: '1'
       # GUI regression may create temporary LOCALAPPDATA roots; never fetch
       # official Bundles from test sessions. Auto-service has offline fixtures.
       WLRE_DISABLE_AUTO_CATALOG: '1'

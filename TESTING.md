@@ -120,3 +120,9 @@ P1b 首輪提交 `2d68ef9`：純核心三平台 [40339132736](https://github.com
 最後的映射穩定修正：僅在 Map 後 100ms 內追蹤頂層 Configure，合併 idle 核對以涵蓋稍晚的原生框架位置；到期停止追蹤，不持續干預使用者拖曳。Destroy 明確取消核對與穩定計時器，新增真實 Map／關窗測試驗證兩者都釋放。補充失敗診斷使用實際 Toplevel，兼容製作頁的內嵌 Frame。
 
 新增測試最初以 withdrawn 視窗的合成 Map 取不到工作，已改為真正映射後關閉並核對該 widget 的計時器；其後完整測試發現診斷訊息對 Frame 呼叫 title 不相容，已修復，未帶已知錯誤推送。模組 9 項、主畫面 8 項重驗成功。最終完整本地 **1,259 項，94.620 秒，OK，跳過 2 項**（`/tmp/lala-core-stable-map-final.log`）；名稱、compileall、audit、diff check 成功。原生 CI 結果仍以本批提交為準。
+
+提交 `ded589d` 的完整 40402183737 在 Windows／macOS 於新增的關窗測試原生崩潰，位置同為視窗仍處理 Map 回呼時被銷毀。沒有標為通過。fixture 改為等待真實 Map 完成，再從 Configure 回呼返回後由測試主體關窗；測試自己的穩定期限延長至 10 秒，生產預設仍 100ms，以排除 CI 繪圖速度。明確確認關窗前兩項幾何工作存在、關窗後全部取消，沒有刪除測試或跳過平台。
+
+Aqua 另外使用 32 單位初始邊緣預算容納原生選單列／陰影；Windows／X11 仍為原 24。新增純幾何回歸涵蓋 1024×768 的導航窗口及已觀測的 25 單位框架位置；實際像素斷言維持不變。完整 CI 開啟標準 PYTHONFAULTHANDLER，後續原生崩潰保留堆疊。
+
+本批視窗模組 **10 項通過**，最終本地完整 **1,260 項，98.916 秒，OK，跳過 2 項**（`/tmp/lala-core-final-aqua-budget.log`）。名稱、audit、diff check 通過。Windows／macOS 的 fixture 修正及導航範圍仍待本批原生 CI 驗證；通過前不合入資源分支。
