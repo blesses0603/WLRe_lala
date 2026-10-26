@@ -56,6 +56,7 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
                 'AdventureData_C', 'AdventureLvData_C',
                 'NpcData_C', 'NpcCareerData_C')}
         self.raw['StageMapData_C'] = struct.pack('<i', 0)
+        self.raw['DoorLinkData_C'] = struct.pack('<i', 0)
         self.raw['EveDoorLinks'] = '事件ID=10000\n'.encode('utf-16-le')
         self.items = {i: {'name': f'物品{i}', 'open_used': 0} for i in range(1, 1033)}
         self.recipes = {
@@ -281,7 +282,7 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
         self.assertEqual(runtime.texts[3], '正式文字')
         self.assertTrue(runtime.portal_status(10000)['exists'])
         self.assertFalse(runtime.can_send_packets)
-        self.assertEqual(self.extract.call_count, 12)
+        self.assertEqual(self.extract.call_count, 13)
         self.assertEqual(len(runtime.expedition['tasks']), 260)
         self.assertEqual(runtime.expedition['tasks']['1']['name'], '正式文字')
         self.assertEqual(runtime.expedition['source_kind'],
