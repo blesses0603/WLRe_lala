@@ -27,6 +27,33 @@ class CooperativeRewardInventoryIntegrity(unittest.TestCase):
         self.assertTrue(_safe_bag(state))
         self.assertIsNone(bag_claim_problem(state.inventory))
 
+    def test_free_chest_unlocks_after_real_bag_snapshot_without_old_item_catalog(self):
+        from unittest.mock import Mock
+        from wlre.features.cooperative.rewards import CooperativeRewardViewMixin
+        state = State(phase='world_ready', initial_data_complete=True)
+        state.player = {'role_id': 678, 'scene': 20000}
+        state.apply({'type': 'instance_reward_status', 'mode': 'coop',
+                     'reward_count': 3, 'win_stage': 0, 'open_reward': 1,
+                     'reward_mark': 1, 'npc_id': 0})
+        page = CooperativeRewardViewMixin()
+        page.cooperative = True
+        page.auto_reward_button = Mock()
+        page.reward_note = Mock()
+        page.render_cooperative_rewards(
+            state.instances['coop'], state.instances['main'],
+            True, False, state.inventory)
+        self.assertFalse(page._claim_ready)
+        self.assertIn('S23-5', page.reward_note.set.call_args.args[0])
+        # An actual S23-5 snapshot with an unknown current-version item
+        # must no longer be discarded by the 1262 stackability catalog.
+        state.apply({'type': 'bag_snapshot', 'capacity': 20,
+                     'items': [item(7)]})
+        page.render_cooperative_rewards(
+            state.instances['coop'], state.instances['main'],
+            True, False, state.inventory)
+        self.assertTrue(page._claim_ready)
+        self.assertIn('免費寶箱待領', page.reward_note.set.call_args.args[0])
+
     def test_duplicate_or_out_of_range_server_slots_are_rejected(self):
         for entries in ([item(1), item(1, item_id=65002)],
                         [item(21)], [item(0)], [item(1, count=0)]):
