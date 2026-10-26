@@ -48,6 +48,45 @@ class OverviewControls(unittest.TestCase):
                 self.assertEqual(button.cget('text'),'啟動')
                 self.assertFalse(button.halo_visible);self.assertIsNone(button.job)
 
+    def test_all_three_automation_buttons_switch_images_only_after_state_update(self):
+        for key, section in (
+            ('ai', 'auto_battle'),
+            ('roaming', 'roaming'),
+            ('expedition', 'expedition'),
+        ):
+            with self.subTest(feature=key):
+                button = self.panel.actions[key]
+                idle_photo = str(button.cget('image'))
+                self.assertTrue(idle_photo)
+                self.assertEqual(self.root.tk.call('image', 'width', idle_photo), 28)
+                self.assertEqual(button.cget('text'), '啟動')
+                self.state[section]['enabled'] = True
+                self.app.render(self.state)
+                self.root.update()
+                self.assertNotEqual(str(button.cget('image')), idle_photo)
+                self.assertEqual(button.cget('text'), '關閉')
+                self.assertTrue(button.active)
+                self.state[section]['enabled'] = False
+                self.app.render(self.state)
+                self.root.update()
+                self.assertEqual(str(button.cget('image')), idle_photo)
+                self.assertFalse(button.active)
+
+    def test_expedition_home_toggle_commands_unchanged_with_images(self):
+        button = self.panel.actions['expedition']
+        with patch.object(self.app.expedition_panel, 'start') as start, (
+                patch.object(self.app, 'send') as send):
+            button.invoke()
+            start.assert_called_once_with()
+            self.assertFalse(button.active)
+            self.assertEqual(button.cget('text'), '啟動')
+            self.state['expedition']['enabled'] = True
+            self.app.render(self.state)
+            self.root.update()
+            button.invoke()
+            send.assert_called_once_with({'type': 'stop_expedition'})
+            self.assertEqual(button.cget('text'), '關閉')
+
     def test_hidden_animation_pauses_and_disconnect_clears_halo(self):
         self.state['auto_battle']['enabled']=True;self.app.render(self.state);self.root.update()
         button=self.panel.actions['ai']
