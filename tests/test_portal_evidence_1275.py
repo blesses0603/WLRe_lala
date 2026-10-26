@@ -60,6 +60,12 @@ class OfficialLinkEvidenceTests(unittest.TestCase):
         self.assertIn('目的地', row['name'])
         self.assertFalse(row['destination_verified'])
         self.assertTrue(row['link_reference_only'])
+        self.assertEqual(row['reference_destination_scene_id'], 11017)
+        self.assertEqual(row['reference_destination_label'], '目的地(11017)')
+        self.assertEqual(row['reference_source_grid'], (200, 300))
+        self.assertEqual(row['reference_source_xy'], (600, 600))
+        self.assertEqual(row['reference_arrival_grid'], (5, 6))
+        self.assertEqual(row['reference_arrival_xy'], (10, 18))
         self.assertFalse(row['direct_eligible'])
         with self.assertRaises(ValueError):
             Portals.direct_target(row, 11016)
@@ -69,6 +75,8 @@ class OfficialLinkEvidenceTests(unittest.TestCase):
         catalog = get_catalog(portal_runtime(evidence))
         row, = catalog.for_scene(11016)
         self.assertEqual(row['id'], '1275-ref:11016:1')
+        self.assertEqual(row['reference_destination_scene_id'], 11017)
+        self.assertEqual(row['reference_arrival_xy'], (10, 18))
         self.assertEqual(row['coordinate_source'],
                          'official_link_reference_scaled')
         self.assertEqual(catalog.data['official_link_reference_count'], 1)
@@ -87,6 +95,11 @@ class OfficialLinkEvidenceTests(unittest.TestCase):
         self.assertIsNone(item['arrival_x'])
         self.assertIn('destination_scene_undefined', item['issues'])
         row, = get_catalog(portal_runtime(evidence)).for_scene(11016)
+        self.assertEqual(row['reference_destination_scene_id'], 15139)
+        self.assertIn('場景表未定義', row['reference_destination_label'])
+        self.assertIsNone(row['reference_arrival_xy'])
+        self.assertEqual(row['reference_arrival_grid'], (5, 6))
+        self.assertIsNone(row['destination'])
         self.assertFalse(row['direct_eligible'])
 
     def test_marker_without_geometry_cannot_place_fake_map_dot(self):
