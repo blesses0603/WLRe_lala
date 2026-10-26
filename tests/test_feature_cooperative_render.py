@@ -50,7 +50,7 @@ class CooperativeRenderingStructure(unittest.TestCase):
         page.render_cooperative_rewards(data, {}, True, False, bag)
         self.assertTrue(page._claim_ready)
         self.assertIn('免費寶箱待領', page.reward_note.set.call_args.args[0])
-        busy_bag = dict(bag, items={i: {} for i in range(8)})
+        busy_bag = dict(bag, items={i: {} for i in range(1, 9)})
         page.render_cooperative_rewards(data, {}, True, False, busy_bag)
         self.assertFalse(page._claim_ready)
         self.assertIn('剩餘 2 格', page.reward_note.set.call_args.args[0])
