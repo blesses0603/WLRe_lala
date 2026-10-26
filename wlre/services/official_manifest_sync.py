@@ -62,7 +62,7 @@ class ManifestSpec:
         return self.cache_path(root).with_suffix('.verified.json')
 
 
-def _fetch(url, *, limit, opener, timeout):
+def _fetch(url, *, limit, opener, timeout, cancel_event=None):
     parsed = urlsplit(url)
     if (parsed.scheme != 'https' or parsed.hostname != OFFICIAL_HOST
             or parsed.port is not None or parsed.query or parsed.fragment or
@@ -70,7 +70,9 @@ def _fetch(url, *, limit, opener, timeout):
         raise ManifestSyncError('Manifest URL is not the approved HTTPS source')
     try:
         with DownloadManager(opener=opener, timeout=timeout) as manager:
-            return manager.read(url, limit=limit)
+            return manager.read(url, limit=limit, cancel_event=cancel_event)
+    except InterruptedError:
+        raise
     except ManifestSyncError:
         raise
     except DownloadError as exc:
@@ -109,6 +111,17 @@ def _parse_index(data, spec, parser):
         raise
     except Exception as exc:
         raise ManifestSyncError('YooAsset Manifest full index parse failed') from exc
+
+
+def validate_manifest_bytes(data, spec, *, expected_crc32_le, parser=None):
+    """公開的完整性／身分驗證入口，供新快照與舊服務共同使用。"""
+    if (type(data) is not bytes or not 0 < len(data) <= MAX_MANIFEST_BYTES
+            or not isinstance(spec, ManifestSpec)
+            or type(expected_crc32_le) is not str or not _HASH.fullmatch(expected_crc32_le)):
+        raise ManifestSyncError('Invalid bounded Manifest verification input')
+    if _crc32_le(data) != expected_crc32_le.lower():
+        raise ManifestSyncError('Official Manifest .bytes / .hash CRC32 mismatch')
+    return _parse_index(data, spec, parser)
 
 
 @dataclass(frozen=True)
@@ -186,7 +199,8 @@ def read_verified_cached_manifest(spec, *, cache_root=None, parser=None):
                             receipt['hash_crc32_le'], target, False)
 
 
-def fetch_official_manifest(spec, *, cache_root=None, opener=None, timeout=20, parser=None):
+def fetch_official_manifest(spec, *, cache_root=None, opener=None, timeout=20, parser=None,
+                            cancel_event=None):
     """Fetch .hash + .bytes, authenticate and parse before caching.
 
     A remote .hash is checked on every call, including local cache hits. The
@@ -195,9 +209,11 @@ def fetch_official_manifest(spec, *, cache_root=None, opener=None, timeout=20, p
     """
     if not isinstance(spec, ManifestSpec):
         raise ManifestSyncError('Manifest requires a validated official version spec')
+    from wlre.core.primitives import check_cancelled
+    check_cancelled(cancel_event)
     opener = build_opener(_NoRedirect()).open if opener is None else opener
     hash_body = _fetch(spec.url('hash'), limit=MAX_HASH_BYTES,
-                       opener=opener, timeout=timeout)
+                       opener=opener, timeout=timeout, cancel_event=cancel_event)
     try:
         hash_text = hash_body.decode('ascii').lower()
     except UnicodeError as exc:
@@ -218,12 +234,13 @@ def fetch_official_manifest(spec, *, cache_root=None, opener=None, timeout=20, p
             pass  # Corrupt/inaccessible local cache is never trusted.
     if data is None:
         data = _fetch(spec.url('bytes'), limit=MAX_MANIFEST_BYTES,
-                      opener=opener, timeout=timeout)
+                      opener=opener, timeout=timeout, cancel_event=cancel_event)
         if _crc32_le(data) != hash_text:
             raise ManifestSyncError('Official Manifest .bytes / .hash CRC32 mismatch')
         downloaded = True
 
-    index = _parse_index(data, spec, parser)
+    index = validate_manifest_bytes(data, spec, expected_crc32_le=hash_text, parser=parser)
+    check_cancelled(cancel_event)
     if downloaded:
         _atomic_write(destination, data, prefix='.manifest_')
 

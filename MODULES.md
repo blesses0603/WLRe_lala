@@ -78,3 +78,16 @@ WorkerGroup 記錄遊戲連線、版本查詢、Release 查詢／下載背景工
 既有 HTTP／Manifest／Bundle 服務逐步接入此層，保持舊 import 與驗證 API。VersionDetector 重用既有已測版本表語意；HTTPS 傳輸已抽離至下述共用下載器，沒有再實作第二套遊戲傳輸或靜態資料庫。資源層不匯入 GUI，也不執行 Lua。
 
 共用下載器批次已完成 HTTP 傳輸抽離：`DownloadManager.read/download/verify_file/close` 統一來源驗證、長度與總時限、有限重試、取消、進度、原子檔案發佈及條件式 Range。它只依賴標準庫、來源政策及核心診斷，不執行資料解析、不擁有遊戲狀態、不決定版本／協定相容性。舊服務仍負責各自 Manifest 身分／CRC、Lua 索引及版本語意。可借用外部診斷，`close` 不關閉借用物件；沒有背景執行緒，回應及 partial 在返回／失敗時釋放。測試 `test_resource_downloader.py` 及原有官方服務回歸涵蓋此契約。
+
+## P2 場景快照服務契約（限定範圍已實作）
+
+| 元件 | 公開介面／責任 | 依賴與生命週期 | 驗證入口 |
+|---|---|---|---|
+| ResourceRequirement／ResourceStatus | 功能、索引、Package、完整路徑、版本化 Parser；缺口狀態 | 純資料契約；需求唯一且有界，不載入外部程式碼 | test_official_resource_manager |
+| ResourceGapAnalyzer | analyze；精確資產與必要閉包、加密拒絕、整批配額 | 現有 Manifest／增量規劃服務；無 I/O 掃站或自有背景工作 | 缺失／未知／加密／循環／配額測試 |
+| CompatibilityValidator | validate；已審核場景格式，不授權封包 | 場景 Parser；必要表為空、越界、重複、尾段均拒絕 | 場景／舊 API 回歸 |
+| SnapshotStore | put／read／current_id／commit／diagnose | 私人快取、storage.atomic；內容定址、鎖與原子 CAS；磁碟收據不授權正式查詢 | 競爭提交、寫入失敗、竄改、重複 JSON 鍵 |
+| OfficialResourceManager | refresh／diagnose／close、context manager | 版本、Manifest、共用下載器、Parser／驗證器／Store；單次 refresh 互斥，無自建執行緒。close 撤銷 view、取消 I/O，呼叫端仍須由 WorkerGroup 等待工作退出 | 整管線、變版／變 hash、取消／關閉、失敗保留舊收據 |
+| OfficialDataService | records／get；同一快照不可變查詢、明確 validated_at | 僅由當次成功 refresh 提供；下一次核對或關閉撤銷。無離線 current、無遊戲封包 API | 不可變、舊 view 撤銷、離線拒絕 |
+
+本批沒有新增事件、背景排程或遊戲狀態寫入；尚未建立 GUI 資源 Module 的 READY／啟動契約。場景名稱／模型關聯、各功能索引仍待逐項驗收；完整功能表的 P3～P6 狀態不因此改為完成。

@@ -8,10 +8,10 @@
 |---|---|---|---|
 | P0 | main／PR #57／全 Python AST／功能與依賴／資源探測／基準測試 | 完整清單、對照、依賴圖、測試證據及風險有來源，先提交報告 | ce159f5 已提交；三平台 CI 40333188720 成功，允許進入 P1 |
 | P1a | 不依賴 GUI 的設定、診斷、EventBus、Module／Manager、Application、投影狀態 | 非 READY 拒絕、依賴排序／循環拒絕、啟動回滾、停止清理、事件例外隔離、跨執行緒 mailbox、敏感內容不入紀錄 | 已實作；本地核心測試通過，完整回歸及本批 CI 另見 TESTING |
-| P1b | 桌面 adapter 接入、關閉排程與舊 API 回歸 | 啟動／關閉無 UI 回歸，背景停止可驗證，Windows／Ubuntu／macOS CI | 已實作桌面 host、背景工作納管與合作式取消；本地回歸通過，本批 CI 待推送驗證 |
-| P2a | 新官方來源、版本、下載與 Manifest 正式解析器 | 有界下載、TLS／來源／完整性、重試取消、未知格式拒絕；不啟用候選 | 第一批三平台 CI 全成功；共用下載器已抽離並接入四個服務，本地／真實來源驗證成功；本批 CI 另記，正式快照引用與安全快取清理未完成 |
-| P2b | Bundle／UnityFS／TextAsset、版本化 adapter | 真實官方樣本來源收據、精確 AssetPath、EOF／offset／schema 驗證、未知欄位保存 | 待實作 |
-| P2c | 相容性、缺口、官方快照服務 | 跨包版本一致、必要引用完整、原子提升、失敗不混版／不冒充最新 | 待實作 |
+| P1b | 桌面 adapter 接入、關閉排程與舊 API 回歸 | 啟動／關閉無 UI 回歸，背景停止可驗證，Windows／Ubuntu／macOS CI | 已實作桌面 host、背景工作納管與合作式取消；本地回歸及三平台 CI 通過；原生資源修復共用至資源分支，詳見 TESTING |
+| P2a | 新官方來源、版本、下載與 Manifest 正式解析器 | 有界下載、TLS／來源／完整性、重試取消、未知格式拒絕；不啟用候選 | 第一批三平台 CI 全成功；共用下載器已抽離並接入四個服務，本地／真實來源驗證成功；下載器及共用 UI 修復三平台 CI 已通過；限定場景快照本批新增，安全引用清理未完成 |
+| P2b | Bundle／UnityFS／TextAsset、版本化 adapter | 真實官方樣本來源收據、精確 AssetPath、EOF／offset／schema 驗證、未知欄位保存 | 已共用 UnityFS／精確擷取與場景 adapter，保留舊 API；其他格式 adapter 待續，本批 CI 另記 |
+| P2c | 相容性、缺口、官方快照服務 | 跨包版本一致、必要引用完整、原子提升、失敗不混版／不冒充最新 | 已實作限定場景定義 Manager／查詢、缺口、CAS 快照與離線拒絕；場景名稱／模型、其他索引跨表驗證及 GUI 接入待續，本批 CI 另記 |
 | P3a | NetworkManager／Codec／Router／Dispatcher／連線狀態 adapter | 既有 wire vectors、封包拒絕、單一 writer、取消／斷線／重連；不建立新未知協定 | 待實作 |
 | P3b | character／companion／party／battle／movement | 保留 UI 操作、AI 規則與即時狀態；停止與互斥、命令唯一性回歸 | 待實作 |
 | P4a | Scene／Minimap／CoordinateMapper | 當版場景覆蓋、尺寸／座標／投影單元測試；NPC 不繪圖 | 待實作 |

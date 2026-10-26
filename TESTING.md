@@ -91,3 +91,22 @@ P1b 首輪提交 `2d68ef9`：純核心三平台 [40339132736](https://github.com
 - Windows 原生 EXE／乾淨安裝、macOS 原生 APP：未打包；build dry-run 僅驗證建置計畫。
 - 新版官方 Bundle 全面解析、場景及動態網格位置：未由本次 Manifest 探測證明。
 - 效能／長時間執行／網路重連／完整關閉：P7 必須另有量測及結果。
+
+## 已通過的前置 CI（本批開始前重新確認）
+
+核心 `1750de7`：核心模組 [40361527383](https://github.com/blesses0603/WLRe_lala/actions/runs/40361527383)、資源模組 [40361527381](https://github.com/blesses0603/WLRe_lala/actions/runs/40361527381)、完整 [40361538388](https://github.com/blesses0603/WLRe_lala/actions/runs/40361538388) 的 Windows／Ubuntu／macOS 全部成功。
+
+資源子分支 `0be8209`：核心模組 [40361648226](https://github.com/blesses0603/WLRe_lala/actions/runs/40361648226)、資源模組 [40361648236](https://github.com/blesses0603/WLRe_lala/actions/runs/40361648236)、完整 [40361659842](https://github.com/blesses0603/WLRe_lala/actions/runs/40361659842) 的 Windows／Ubuntu／macOS 全部成功。這些結果包含先前 Windows 原生資源生命週期修復；新場景快照批次需另跑 CI，沒有引用舊成功當作新程式已驗收。
+
+## P2 場景定義快照批次
+
+- 新增 `test_official_resource_manager.py` **28 項**：生成的非遊戲 Manifest／Bundle header／場景表，沒有下載正式資源。包含欄位與來源 offset、不可變紀錄、舊 buffer／import API、未知來源／缺失／未知 Parser／加密／循環／整批配額拒絕、CAS 競爭、原子寫入失敗、JSON 與 SHA、更新期間變版／變 hash、離線拒絕、取消／關閉／重入、擷取前再次拒絕遭更改的快取。
+- 無 GUI／UnityPy 環境中，上述 28 項及既有 UnityTextAsset 12 項、instance protocol 8 項通過。全部官方服務測試 **120 項通過**（新 28 項包含其中）。
+- 完整回歸曾以 1,289 項、1,290 項通過；之後補上的相容入口與擷取前快取變更測試均有重驗，不將早先結果當成新增測試已跑。
+- 新資源程式、工具、測試及舊 Unity 相容入口完整 Ruff；舊服務名稱檢查、compileall、repository audit 與 diff check 通過。
+- 真實來源：2026-10-26T19:33:21Z，新 Manager 完成兩套 Manifest、必要場景 Bundle、精確擷取、解析、再次官方核對與原子快照，**1,337 筆**，`protocol_approved=False`。公開收據 `docs/rebuild/official_snapshot_probe.json`，原始資料僅在私人快取，沒有轉成隨程式提供的固定遊戲資料表。
+- 受控工具先因舊工具的 `.git` 存在檢查而拒絕雲端 `/workspace` 與 `/tmp` 空掛載標記；新工具改用真正的有界 Git 工作樹查詢，專案內／未知權限仍拒絕；沒有修改舊工具規則。修復後實際工具驗證成功。
+- Manager 尚未接入 GUI／舊 Runtime，不把本批視為逐功能正式遷移。UnityPy 的單次同步解壓只在返回後檢查取消，沒有硬式中斷或完整記憶體隔離；資源清理、長時間效能與 P7 量測仍待驗收。
+- 本批三平台模組與完整 CI 以 [PR #59 Checks](https://github.com/blesses0603/WLRe_lala/pull/59/checks) 的**本批提交**為準；保留全部必要工作，常規 CI 不下載官方 Bundle。
+
+本批審閱後最終完整本地回歸：**1,291 項，101.756 秒，OK，跳過 2 項**（`/tmp/lala-p2-snapshot-reviewed.log`）。此結果已包含公開 Manifest 驗證介面、舊 buffer／地圖 helper 相容性、擷取前快取再核對及全部新測試。沒有實際 EXE 打包或遊戲正式服 E2E。

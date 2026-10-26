@@ -41,7 +41,7 @@ flowchart TD
 
 P1a 已建立上述純核心、`core/primitives.py` 與回歸測試。P1b 由 `ui/application_host.py` 的過渡 DesktopModule 接入既有 App，正常入口與 GUI smoke 均使用新 Host；業務仍由舊功能提供，尚未完成逐功能移植。`StateManager` 是不可變投影，絕不將舊 `State` 直接分享給新模組。可執行 API 在 READY／RUNNING 才開放，停止先封鎖所有 API，之後依反向相依順序清理。詳細公開介面見 [模組契約](MODULES.md)。
 
-P2 第一批將四個官方查詢／同步服務的來源集中至 `resources_runtime/official/source.py`，完整 YooAsset Parser 由工具層移入正式共用層，工具保留相容匯出。VersionDetector 提供獨立於 LaLa 版本及登入權限的動態觀測；新正式快照／全功能資料服務尚未完成。舊固定版本 Runtime 仍是過渡實作，完整狀態見 [官方資源](OFFICIAL_RESOURCES.md)。
+P2 第一批將四個官方查詢／同步服務的來源集中至 `resources_runtime/official/source.py`，完整 YooAsset Parser 由工具層移入正式共用層，工具保留相容匯出。VersionDetector 提供獨立於 LaLa 版本及登入權限的動態觀測；完整官方快照／全功能資料服務尚未完成。舊固定版本 Runtime 仍是過渡實作，完整狀態見 [官方資源](OFFICIAL_RESOURCES.md)。
 
 第二批由 `resources_runtime/downloader` 統一四個官方服務的 HTTPS 讀取與檔案傳輸，包含總時限、有限退避、取消與發佈前完整性。分段只在來源明確支援時啟用，沒有並行爬站。遊戲 TCP 與 GitHub 主程式更新來源仍分開，沒有把官方靜態資料下載當成遊戲指令通道。
 
@@ -54,3 +54,21 @@ P2 第一批將四個官方查詢／同步服務的來源集中至 `resources_ru
 ## P0 關卡判定
 
 來源完整、版本／PR 狀態可核對、既有測試已建立、官方 Manifest 可取得，重要相依已有來源路徑。舊循環與固定版本屬明確隔離的遷移工作，沒有要求新核心先依賴它們。P0 報告提交後允許開始 P1；不表示官方資料管線、封包、地圖或全功能驗收通過。詳見 [移植計畫](MIGRATION_PLAN.md)、[測試紀錄](TESTING.md)。
+
+## P2 限定範圍快照的實際資料流
+
+```mermaid
+flowchart LR
+    Demand[明確功能資料需求] --> Gap[ResourceGapAnalyzer]
+    Observe[雙輪官方版本觀測] --> Manifest[兩套已驗證 Manifest]
+    Manifest --> Gap
+    Gap --> Download[必要 Bundle 閉包／共用下載器]
+    Download --> Extract[精確 Unity TextAsset]
+    Extract --> Parser[版本化場景 Parser]
+    Parser --> Validate[限定範圍相容性檢查]
+    Validate --> Recheck[版本及 Manifest hash 再核對]
+    Recheck --> CAS[SnapshotStore 原子 CAS]
+    CAS --> Query[不可變 OfficialDataService]
+```
+
+上述路徑已實作場景定義範圍，不是所有功能的資料快照。原始來源與未解讀位移保留於私人快取；舊 API 經相容入口使用相同 Parser。共享層暫時重用 `services/official_manifest_sync`／`official_incremental_sync` 的已測規劃與驗證，沒有建立另一套下載或遊戲資料庫。GUI、固定版本 Runtime 及其他功能尚未移植；不讓共享核心反向依賴 GUI，也不刪除舊資源。

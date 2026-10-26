@@ -68,45 +68,19 @@ def parse_cooperative_events(data):
 
 
 def parse_stages(data):
-    """Read ScenesData_C records via StageData:New (Lua/Logic/Data.lua)."""
-    r = Reader(data)
-    result = {}
-    for _ in range(_count(r)):
-        stage_id = r.u16()
-        r.take(2)  # landType / businessType
-        name_id = r.u32()
-        model_id = r.u16()
-        r.u16()  # musicName
-        r.take(3)  # limitType / isOpen / specialType
-        r.take(2)  # sceneLightId
-        r.take(4)  # englishName
-        max_members, tag, min_members, room_count, group = (r.u8() for _ in range(5))
-        flag = r.u16()
-        min_level = r.u16()
-        time_limit = r.u16()
-        r.take(20)  # five reserved UInt32
-        map_width, map_height = r.u16(), r.u16()
-        r.u8()  # camera angle
-        pos_x_ratio, pos_y_ratio = r.u8(), r.u8()
-        small_offset_x, small_offset_y = r.u16(), r.u16()
-        r.take(8)  # camera start/end X/Y
-        r.take(5)  # water / activity / hide-player / no-battle / second-job
-        if stage_id in result:
-            raise ProtocolError('重複 StageData ID')
-        result[stage_id] = {
-            'id': stage_id, 'name_id': name_id, 'model_id': model_id,
-            'max_members': max_members,
-            'min_members': min_members, 'min_level': min_level,
-            'time_minutes': time_limit, 'tag': tag,
-            'room_capacity': room_count, 'group': group, 'flag': flag,
-            # Official 1275 StageData ratios for EveDoorLinks grid XY.
-            # Only use these for separately checked portal map markers.
-            'pos_x_ratio': pos_x_ratio, 'pos_y_ratio': pos_y_ratio,
-            'map_width': map_width, 'map_height': map_height,
-            'small_offset_x': small_offset_x, 'small_offset_y': small_offset_y,
-        }
-    r.end()
-    return result
+    """舊 API 保留 dict 與 ProtocolError；正式解析器不依賴封包層。"""
+    from wlre.resources_runtime.parsers.scenes import SceneFormatError, parse_scene_table
+    try:
+        # 舊 Reader 接受可變 buffer；相容入口先有界複製，不分享可變來源。
+        if isinstance(data, (bytearray, memoryview)):
+            size = data.nbytes if isinstance(data, memoryview) else len(data)
+            if size > 4 + 20_000 * 76:
+                raise SceneFormatError('scene_source_size_invalid')
+            data = bytes(data)
+        table = parse_scene_table(data)
+    except SceneFormatError as exc:
+        raise ProtocolError(str(exc)) from exc
+    return {row['id']: dict(row) for row in table.records}
 
 
 def catalog(dungeon_data, cooperative_data, stage_data, names=None):

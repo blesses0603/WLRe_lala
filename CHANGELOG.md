@@ -10,6 +10,7 @@
 - P2 第一批：官方來源統一至指定 wlreftpsrc 主機，補上該來源 Content-Type／Accept 相容性；YooAsset 解析器移入正式共用層，保留工具 API；新增雙輪動態版本觀測及資源模組 CI。沒有啟用未驗收候選或移除舊資料。
 - P2 共用下載器：四個官方服務共用有界 HTTP、總時限、有限重試／退避、合作式取消與原子完整性發佈；保留 429 不重試。加入經來源能力確認的順序 Range，實際官方場景 Bundle 驗證成功；僅產生私有原始資料與公開雜湊／筆數證據。
 
+- P2 場景定義快照：新增精確需求缺口分析、限定格式驗證、跨版本再核對、內容定址收據與原子 CAS；Manager 提供不可變查詢，更新失敗不把舊快取冒充最新。UnityFS／StageData Parser 移到共享層，舊入口保留；1,337 筆官方場景受控驗證成功，名稱／模型及舊 Runtime 尚未遷移。
 - 修正完整 Windows 回歸中背景 GC 回收已關閉 Tk 資源造成的 `Tcl_AsyncDelete`：Root 生命週期在擁有者執行緒解除原生參照，保留其他 interpreter。新增隔離子程序及完整桌面背景 GC 回歸，不停用正式程式 GC、不跳過 Windows 測試。
 - 受控確認新官方資源站可取得 ResourcePath 及兩套 Manifest；未直接啟用未完成驗收的新資料。
 - 程式版本保持 0.6.1；沒有合併 main、建立 Release／Tag 或改動 Android Repository。
