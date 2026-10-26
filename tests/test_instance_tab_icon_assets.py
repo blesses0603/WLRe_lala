@@ -18,10 +18,22 @@ class InstanceIconAssetsTests(unittest.TestCase):
                 self.assertTrue(path.is_file(), str(path))
                 with Image.open(path) as image:
                     image.verify()
-                preview = menu_icon_image(label, 42)
+                preview = menu_icon_image(label, 34)
                 self.assertIsNotNone(preview)
                 self.assertEqual(preview.mode, 'RGBA')
-                self.assertLessEqual(max(preview.size), 42)
+                # Exactly the same dimensions and transparent round corners
+                # as every icon_image() dashboard tab, no blue square tile.
+                self.assertEqual(preview.size, (34, 34))
+                self.assertEqual(preview.getpixel((0, 0))[3], 0)
+                self.assertGreater(preview.getpixel((17, 17))[3], 100)
+
+    def test_dungeon_and_coop_are_visually_different_new_glyphs(self):
+        dungeon = menu_icon_image('副本', 34)
+        coop = menu_icon_image('協力', 34)
+        self.assertEqual(dungeon.size, coop.size)
+        self.assertNotEqual(dungeon.tobytes(), coop.tobytes())
+        self.assertEqual(menu_icon_image('主要', 34).tobytes(),
+                         dungeon.tobytes())
 
     def test_missing_optional_icon_does_not_break_tabs(self):
         self.assertIsNone(menu_icon_image('不存在的功能', 42))
