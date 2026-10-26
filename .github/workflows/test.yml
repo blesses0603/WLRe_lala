@@ -60,7 +60,25 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           python -c 'import platform, tkinter; print("macOS:", platform.mac_ver()[0], "arch:", platform.machine(), "Tk:", tkinter.TkVersion)'
-          python -m unittest discover -s tests -v
+          # 先驗證首個完整主畫面模組，避免原生事件迴圈卡住後只留下整批逾時。
+          python - <<'PY'
+          import faulthandler
+          import unittest
+          faulthandler.dump_traceback_later(90, exit=True)
+          try:
+              unittest.main(module=None, argv=['unittest', 'discover', '-s', 'tests', '-p', 'test_compact_crafting.py', '-v'])
+          finally:
+              faulthandler.cancel_dump_traceback_later()
+          PY
+          python - <<'PY'
+          import faulthandler
+          import unittest
+          faulthandler.dump_traceback_later(60, repeat=True)
+          try:
+              unittest.main(module=None, argv=['unittest', 'discover', '-s', 'tests', '-v'])
+          finally:
+              faulthandler.cancel_dump_traceback_later()
+          PY
           python WLRE_Client.py --smoke-test-gui
       - name: Validate packaged resources and build plan
         run: |

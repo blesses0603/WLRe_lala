@@ -88,3 +88,7 @@ P1b 首輪提交 `2d68ef9`：純核心三平台 [40339132736](https://github.com
 這是 CI 覆蓋修正，沒有修改遊戲功能或官方資料。各平台實際執行數、剩餘 skip 與完整結果以本批提交的 Actions 為準；若原生 Mac 測試失敗，先修復，不將先前綠色但跳過 GUI 的結果當作驗收。
 
 本批核心分支本地完整 **1,248 項，92.428 秒，OK，跳過 2 項**（`/tmp/lala-core-native-mac-guards.log`）。逐檔 AST 比對證明只有 29 個模組的顯示條件及必要 sys 匯入變動；沒有改動測試斷言／功能程式。名稱檢查、兩個新核心 GUI 測試 Ruff、compileall、audit、diff check 通過。macOS 執行結果必須等待本批原生 CI，不以 Linux 模擬結果聲稱通過。
+
+原生 GUI gate 提交 `a8e793e`：核心 40391064681／資源 40391064672 三平台成功；完整 40391075638 的 Ubuntu／Windows 成功，macOS 執行至 15 分鐘上限而取消。這不是 runner 排隊問題，不能記為通過。該工作最後完成 `test_character_sync_safety`，下一個測試模組為 `test_compact_crafting`；尚無堆疊足以確認實際卡點。
+
+追加 CI 診斷：macOS 先獨立執行完整製作 UI 8 項，90 秒未退出時由 faulthandler 輸出堆疊並非零結束；之後仍必須執行整套測試及原生 GUI smoke，整套每 60 秒提供診斷堆疊。保留 15 分鐘上限及所有斷言，沒有用跳過掩蓋。本地相同 preflight **8 項，12.814 秒通過**；整套診斷命令亦以連線／GUI **17 項通過**驗證。Mac CI 需重新執行，通過前不合入資源分支或開始依賴此結果的移植。
