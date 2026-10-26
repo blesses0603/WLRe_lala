@@ -97,8 +97,8 @@ class InstanceNavigation(unittest.TestCase):
         page.catalog_table.selection_set('catalog_2')  # 1262 coop ID 28
         page.on_catalog_selected()
         self.root.update()
-        self.assertTrue(page.create_button.instate(['disabled']))
-        self.assertIn('自動遠征仍開啟', page.creation_hint.get())
+        self.assertTrue(page.create_button.instate(['!disabled']))
+        self.assertNotIn('自動遠征仍開啟', page.creation_hint.get())
         self.assertTrue(page.creation_hint_label.winfo_ismapped())
         self.assertLess(page.creation_hint_label.winfo_rooty(),
                         page.catalog_table.winfo_rooty())
