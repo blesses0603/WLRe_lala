@@ -224,7 +224,7 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
                 sync_root=self.root, observe=lambda: snapshot,
                 retrieve=lambda spec, cache_root: self.verified[spec.package],
                 execute=execute)
-        self.assertEqual(execute.call_count, 3)
+        self.assertEqual(execute.call_count, 4)
         self.assertEqual(result['downloaded_bundles'], 1)
         self.assertFalse(result['portal_names_bundle_ready'])
         self.assertFalse(result['portal_metadata_ready'])
