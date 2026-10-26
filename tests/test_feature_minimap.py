@@ -103,6 +103,29 @@ class MinimapFeatureTests(unittest.TestCase):
         obj.canvas.create_oval.assert_not_called()
         obj.canvas.create_text.assert_not_called()
 
+    def test_portals_and_player_marker_remain_on_canvas(self):
+        obj = FakeMap()
+        obj.canvas = Mock()
+        obj.canvas.winfo_width.return_value = 1040
+        obj.canvas.winfo_height.return_value = 1040
+        obj.image, obj.route, obj.photo = None, None, None
+        obj._resize_job = None
+        obj.portal_rows = [{'kind': 'door', 'name': '返回出口',
+                            'direct_eligible': True}]
+        obj.npc_rows = [{'name': 'NPC測試', 'x': 100, 'y': 150}]
+        obj.state = {'player': {'scene': 10000}, 'location': {}}
+        with patch('wlre.features.minimap.map_view.portal_map_pixel',
+                   return_value=(100, 150)), patch(
+                'wlre.features.minimap.map_view.current_position',
+                return_value={'scene': 10000, 'x': 100, 'y': 150,
+                              'filled': True, 'kind': 'confirmed'}):
+            obj.draw()
+        ovals = [call.kwargs for call in obj.canvas.create_oval.call_args_list]
+        self.assertEqual(len(ovals), 2)  # portal, player; never NPC
+        self.assertEqual(ovals[0]['fill'], '#183e4d')
+        self.assertEqual(ovals[1]['fill'], '#ed4747')
+        obj.canvas.create_line.assert_called()  # portal spiral remains
+
     def test_invisible_npc_has_no_canvas_click_hotspot(self):
         obj = FakeMap()
         obj.npc_rows = [{'name': 'NPC測試', 'x': 100, 'y': 150}]
