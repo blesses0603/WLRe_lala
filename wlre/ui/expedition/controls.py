@@ -1,6 +1,7 @@
 """Build and wire the existing expedition preference controls without changing layout."""
 import tkinter as tk
 from tkinter import ttk
+from wlre.ui.automation_control_icons import apply_control_icon
 
 
 def build_controls(self, app):
@@ -32,8 +33,12 @@ def build_controls(self, app):
     self.item_combo = ttk.Combobox(row, textvariable=self.item, values=list(self.items), state='readonly', width=28)
     self.item_combo.pack(side='left', fill='x', expand=True, padx=6)
     self.start_button = ttk.Button(row, text='啟動自動派遣', command=self.start)
+    apply_control_icon(self.start_button, 'play')
     self.start_button.pack(side='left')
-    ttk.Button(row, text='停止', command=lambda: app.send({'type': 'stop_expedition'})).pack(side='left', padx=4)
+    self.stop_button = ttk.Button(
+        row, text='停止', command=lambda: app.send({'type': 'stop_expedition'}))
+    apply_control_icon(self.stop_button, 'pause')
+    self.stop_button.pack(side='left', padx=4)
     ttk.Button(row, text='儲存', command=self.save).pack(side='left')
 
 
