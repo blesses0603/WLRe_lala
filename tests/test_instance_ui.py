@@ -102,7 +102,11 @@ class InstanceNavigation(unittest.TestCase):
         self.assertTrue(page.creation_hint_label.winfo_ismapped())
         self.assertLess(page.creation_hint_label.winfo_rooty(),
                         page.catalog_table.winfo_rooty())
-        state['expedition']['enabled'] = False
+        state['expedition']['pending'] = {'started': 1}
+        panel.render(state, live=True)
+        self.assertTrue(page.create_button.instate(['disabled']))
+        self.assertIn('遠征等待回覆', page.creation_hint.get())
+        state['expedition']['pending'] = None
         panel.render(state, live=True)
         self.assertTrue(page.create_button.instate(['!disabled']))
         self.assertIn('可以建立公開／私人房間', page.creation_hint.get())
