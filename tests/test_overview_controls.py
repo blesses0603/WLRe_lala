@@ -56,20 +56,20 @@ class OverviewControls(unittest.TestCase):
         ):
             with self.subTest(feature=key):
                 button = self.panel.actions[key]
-                idle_photo = str(button.cget('image'))
+                idle_photo = button.tk.splitlist(button.cget('image'))[0]
                 self.assertTrue(idle_photo)
                 self.assertEqual(self.root.tk.call('image', 'width', idle_photo), 28)
                 self.assertEqual(button.cget('text'), '啟動')
                 self.state[section]['enabled'] = True
                 self.app.render(self.state)
                 self.root.update()
-                self.assertNotEqual(str(button.cget('image')), idle_photo)
+                self.assertNotEqual(button.tk.splitlist(button.cget('image'))[0], idle_photo)
                 self.assertEqual(button.cget('text'), '關閉')
                 self.assertTrue(button.active)
                 self.state[section]['enabled'] = False
                 self.app.render(self.state)
                 self.root.update()
-                self.assertEqual(str(button.cget('image')), idle_photo)
+                self.assertEqual(button.tk.splitlist(button.cget('image'))[0], idle_photo)
                 self.assertFalse(button.active)
 
     def test_expedition_home_toggle_commands_unchanged_with_images(self):
