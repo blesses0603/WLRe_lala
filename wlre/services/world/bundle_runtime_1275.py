@@ -440,7 +440,8 @@ def load_verified_bundle_runtime(*, sync_root=None):
         from wlre.services.world.portal_coverage import audit_portal_coverage
         coverage = audit_portal_coverage(doors, scene_rows,
             optional.get('StageMapData_C'), optional.get('EveDoorLinks'),
-            portal_positions, portal_destinations, portal_names)
+            portal_positions, portal_destinations, portal_names,
+            portal_link_evidence, portal_extra_routes)
         return Preview1275(
             npc_index=PreviewNPCIndex(npc),
             interact_index=PreviewInteractIndex(interacts),
