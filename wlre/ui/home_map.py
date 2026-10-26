@@ -178,8 +178,13 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
     def refresh_portals(self):
         # The UI may be constructed before the 1275 runtime finishes being
         # installed. Do not pin an empty pre-login portal snapshot forever.
-        if (self.portals.data.get('source_revision') == 1275
-                and not self.portals.data.get('source_ready')):
+        # The current client must never keep a previously loaded 1262
+        # portal list after the 1275 runtime has been installed. Replace the
+        # whole cached catalogue rather than mixing old/new rows.
+        previous_revision = self.portals.data.get('source_revision')
+        if (previous_revision in (1262, '1262')
+                or (previous_revision == 1275
+                    and not self.portals.data.get('source_ready'))):
             self.portals = Portals()
         recovery=self.image is None
         candidates=allowed_rows(self.portals,self.selected_id,self.maps,recovery=recovery)
