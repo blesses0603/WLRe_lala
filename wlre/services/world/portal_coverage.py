@@ -68,8 +68,17 @@ def audit_portal_coverage(doors, stages, stage_raw=None, link_raw=None,
                 if (scene, index) not in positions: reasons.append('position_unverified')
                 if (scene, index) not in destinations: reasons.append('destination_unverified')
             gaps += bool(reasons)
+            link_info = evidence.get((scene, index), {})
             details.append({'index': index, 'category': category, 'issues': reasons,
-                            'named': (scene, index) in names})
+                            'named': (scene, index) in names,
+                            'official_link_destination': link_info.get('destination'),
+                            'official_link_position': (
+                                (link_info.get('x'), link_info.get('y'))
+                                if link_info.get('position_verified') else None),
+                            'official_arrival_position': (
+                                (link_info.get('arrival_x'), link_info.get('arrival_y'))
+                                if link_info.get('arrival_verified') else None),
+                            'reference_only': bool(link_info)})
         rows.append({'scene': scene, 'in_scene_table': scene in expected_scenes,
                      'eve_doors': sum(counts.values()), 'ordinary_portals': ordinary,
                      'unresolved': gaps, 'details': details})
