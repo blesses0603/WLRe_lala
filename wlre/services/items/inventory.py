@@ -1,4 +1,6 @@
 """Server-backed bag updates and shared reservation accounting."""
+import copy
+
 from wlre.core.inventory_updates import add_item
 from wlre.network.wire import ProtocolError
 from wlre.services.items.catalog import item_name
@@ -12,8 +14,27 @@ def apply_inventory(state,event):
                'revision':inv.get('revision',0)+1,'use_failed':False,'field_supply':inv.get('field_supply',{}),'alchemy_slots':list(inv.get('alchemy_slots',[])),
                'expedition_slots':list(inv.get('expedition_slots',[])),
                'maintenance_slots':list(inv.get('maintenance_slots',[]))}
+        # S23-5 is an authoritative full slot snapshot. Do not rebuild it
+        # through add_item(): that path needs the historical 1262 stackability
+        # catalog and may mark an otherwise valid 1275 item as unreliable.
+        # The server already supplied a concrete slot and item count.
+        capacity = event['capacity']
+        if type(capacity) is not int or not 1 <= capacity <= 255:
+            fresh.update(reliable=False, sync_error='伺服器背包容量無效')
         for value in event['items']:
-            if not add_item(fresh,dict(value)):break
+            if not fresh['reliable']:
+                break
+            index, item_id, count = (value.get('index'), value.get('item_id'),
+                                     value.get('count'))
+            if (type(index) is not int or not 1 <= index <= capacity
+                    or type(item_id) is not int or not 1 <= item_id <= 65535
+                    or type(count) is not int or not 1 <= count <= 255
+                    or str(index) in fresh['items']):
+                fresh.update(reliable=False, sync_error='伺服器背包格位或數量資料不一致')
+                break
+            fresh['items'][str(index)] = copy.deepcopy(value)
+        if not fresh['reliable']:
+            fresh['items'] = {}
         reservations.refreshed(inv,fresh)
         state.inventory=fresh
     elif kind=='bag_add':
