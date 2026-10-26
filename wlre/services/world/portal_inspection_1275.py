@@ -78,6 +78,21 @@ def portal_inspection_text(portal):
     elif arrival_grid is not None:
         parts.append(f'落點原始格點 {arrival_grid}（倍率待核對）')
     if portal.get('destination_verified') is not True:
+        reason_labels = {
+            'missing_eve_door': '缺少門事件',
+            'duplicate_eve_door': '門事件索引重複',
+            'missing_normal_stage_marker': '缺少普通傳點標記',
+            'source_scene_undefined': '來源場景無正式定義',
+            'destination_scene_undefined': '目的場景無正式定義',
+            'source_coordinate_uncalibrated': '來源座標倍率未確認',
+            'arrival_coordinate_uncalibrated': '抵達座標倍率未確認',
+        }
+        issues = portal.get('reference_issues', ())
+        if isinstance(issues, (tuple, list)):
+            labels = list(dict.fromkeys(
+                reason_labels[x] for x in issues if x in reason_labels))
+            if labels:
+                parts.append('待核對：' + '、'.join(labels[:4]))
         parts.append('僅供查看，未核准換圖')
     else:
         parts.append('門索引交叉核對完成，伺服器傳送尚待驗收')
