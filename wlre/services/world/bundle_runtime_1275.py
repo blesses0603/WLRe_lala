@@ -429,6 +429,7 @@ def load_verified_bundle_runtime(*, sync_root=None):
             texts=texts,
             recipes=recipes,
             scene_ids=frozenset(scene_rows),
+            stages=scene_rows,
             scene_names=bind_scene_names(scene_rows, texts),
             portal_destinations=portal_destinations,
             portal_names=portal_names,

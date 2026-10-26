@@ -135,6 +135,7 @@ class Preview1275:
     texts: dict
     recipes: dict
     scene_ids: frozenset
+    stages: dict = field(default_factory=dict)
     doors: dict = field(default_factory=dict)
     scene_names: dict = field(default_factory=dict)
     portal_destinations: dict = field(default_factory=dict)
@@ -244,6 +245,7 @@ def load_preview(data_archive, eve_archive):
         texts=texts,
         recipes=parse_smith_1275(_table(data_archive, manifest, 'SmithData_C')),
         scene_ids=frozenset(stages),
+        stages=stages,
         scene_names=bind_scene_names(stages, texts),
         portal_destinations=portal_destinations,
         portal_names=portal_names,

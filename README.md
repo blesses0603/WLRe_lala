@@ -8,6 +8,8 @@
 
 > **模組化開發方向（PR #57）**：協力、一般副本、小地圖、NPC／傳點分別建立功能資料夾；每階段**同時**處理該功能舊離線／1262 資源的可信來源替代。未取得等價驗證來源、尚有其他模組引用或未通過回歸測試時保留舊檔，不為整理目錄直接刪除；官方已驗證 Bundle 可供正式 1275 Runtime 使用，但本機版本化快取、個人設定與 UI／導航必要資料不等於可全部刪除。詳見 [規劃文件](docs/MODULARIZATION_PLAN.md)。
 
+> **PR #57 官方 1275 小地圖缺口查核**：以 `output_1275.zip` 對照既有圖片，確認 550 張像素完全一致、沒有缺圖模型；主要缺漏是新版場景 `15138`（模型 `11139`）沒有舊場景對應，以及 12 個沒有原始圖片的場景座標欄位已變更。LaLa 以正式 1275 Runtime 解析 `ScenesData_C.model_id` 與投影參數，從現有圖片庫找回 `15138`；不新增「匯入 1275 小地圖」功能、不複製 550 張圖片、不冒用舊版導航圖。可執行 `py -m tools.audit_minimap_1275 output_1275.zip --pixel-audit` 複查，完整紀錄見 [小地圖缺口核對](docs/MINIMAP_1275_AUDIT.md)。
+
 > **官方 Manifest 來源決策（PR #56）**：DataPackage／MainPackage 各僅以 `.version`、`.bytes`、`.hash` 作為版本與資源清單的必要來源；**不下載、不依賴**官方 `.json`、`.report`。`ResourcePath_PC.dat` 仍供偵測資料路徑與 DataVer，對應的 `.bundle` 依實際功能需求增量下載與校驗。程式內自行建立的 `.json` 索引／收據屬於本機衍生資料，不是額外要求下載的官方 `.json`。
 
 > **PR #56 已審核 1275 Bundle 正式 Runtime 接入（開發測試中）**：LaLa 不再把手動安裝 `1275_DataCatalog.zip`／`1275_EveNpcIndex.zip` 當成唯一可用來源。若 Launcher 已從官方 `.version`、`.bytes`、`.hash` 驗證完整版本與所需 Bundle，主程式可用 `bundle_runtime_1275.py` 直接解析 NPC／互動、物品、對話、文字、製作、遠征、場景與門事件，交由既有 Runtime 與 `recipe_plan` 使用。仍須對兩份 Manifest 做固定 SHA-256、逐 Bundle MD5/CRC、Eve 固定 SHA、完整 Schema 與 1032 配方交叉校驗；缺少任一來源就拒絕啟用，不自動解鎖未驗收協定。使用者已回報已測功能正常；真實伺服器全流程逐項 E2E 證據與打包安裝仍待補齊，詳見 `docs/AUTO_COMPATIBILITY.md`。

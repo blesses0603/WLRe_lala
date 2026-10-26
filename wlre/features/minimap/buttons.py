@@ -31,6 +31,9 @@ class MinimapPickMixin:
         self.selected_portal=None
         self.selected_npc=None
         self.update_portal_button()
+        if not getattr(getattr(self, 'maps', None), 'supports_navigation', True):
+            self.note.set('1275 圖像與場景座標已校準，舊版點擊尋路未通過驗證。')
+            return False
         left,top,scale=self.view()
         u,v=(event.x-left)/scale,(event.y-top)/scale
         if not (0<=u<=1024 and 0<=v<=1024):return False

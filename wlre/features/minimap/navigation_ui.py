@@ -43,9 +43,12 @@ class MinimapNavigationMixin:
             self.projection,scene=self.maps.projection(self.selected_id)
             self.image=self.maps.image(scene)
             if self.image is not None:
-                try:self.mesh=self.repository.load(scene)
-                except NavigationError:pass
-                self.note.set(self.scene_display_name()+'｜原始小地圖')
+                if getattr(self.maps, 'supports_navigation', True):
+                    try:self.mesh=self.repository.load(scene)
+                    except NavigationError:pass
+                self.note.set(self.scene_display_name()+'｜官方 1275 場景座標（僅供檢視）'
+                              if getattr(self.maps, 'source_revision', None) == '1275'
+                              else self.scene_display_name()+'｜原始小地圖')
             else:
                 self.projection=None
                 self.note.set(self.scene_display_name()+'｜沒有原始小地圖；請使用左側返回出口。')

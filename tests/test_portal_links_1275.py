@@ -190,7 +190,11 @@ class PortalLinks1275Test(unittest.TestCase):
                              'x': 5701, 'y': 3230})
         move = Mock()
         service = PortalTravel(catalog=catalog)
-        packets = service.start_direct(state, move, row['id'], now=10.0)
+        # This unit fixture supplies an explicitly checked 1275 destination
+        # map; it must not rely on implicit 1262 coordinate-table fallback.
+        with patch('wlre.services.world.portal_policy.smallmaps',
+                   return_value=SimpleNamespace(has_image=lambda sid: sid == 12171)):
+            packets = service.start_direct(state, move, row['id'], now=10.0)
         self.assertEqual(len(packets), 1)
         self.assertEqual((packets[0].main, packets[0].sub), (20, 8))
         self.assertEqual(state.portal_travel['status'], 'awaiting_map')

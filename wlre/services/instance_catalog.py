@@ -75,7 +75,8 @@ def parse_stages(data):
         stage_id = r.u16()
         r.take(2)  # landType / businessType
         name_id = r.u32()
-        r.take(4)  # modelId / musicName
+        model_id = r.u16()
+        r.u16()  # musicName
         r.take(3)  # limitType / isOpen / specialType
         r.take(2)  # sceneLightId
         r.take(4)  # englishName
@@ -93,7 +94,8 @@ def parse_stages(data):
         if stage_id in result:
             raise ProtocolError('重複 StageData ID')
         result[stage_id] = {
-            'id': stage_id, 'name_id': name_id, 'max_members': max_members,
+            'id': stage_id, 'name_id': name_id, 'model_id': model_id,
+            'max_members': max_members,
             'min_members': min_members, 'min_level': min_level,
             'time_minutes': time_limit, 'tag': tag,
             'room_capacity': room_count, 'group': group, 'flag': flag,
