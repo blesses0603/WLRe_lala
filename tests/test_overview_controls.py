@@ -74,8 +74,8 @@ class OverviewControls(unittest.TestCase):
 
     def test_expedition_home_toggle_commands_unchanged_with_images(self):
         button = self.panel.actions['expedition']
-        with patch.object(self.app.expedition_panel, 'start') as start, (
-                patch.object(self.app, 'send') as send):
+        with patch.object(self.app.expedition_panel, 'start') as start, \
+                patch.object(self.app, 'send') as send:
             button.invoke()
             start.assert_called_once_with()
             self.assertFalse(button.active)
