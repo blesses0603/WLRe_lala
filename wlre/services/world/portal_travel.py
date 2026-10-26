@@ -56,6 +56,8 @@ class PortalTravel:
                        if p['id'] == portal_id), None)
         if portal is None:
             raise ProtocolError('傳點不屬於目前地圖，請重新選取')
+        if portal.get('source_revision') in (1262, '1262'):
+            raise ProtocolError('1262 舊傳點已從 1275 服務移除，請更新官方傳點清單')
         problem = destination_problem(portal)
         if problem:raise ProtocolError(problem)
         scene, x, y = self.catalog.target(portal, state.player.get('scene'))
@@ -99,6 +101,8 @@ class PortalTravel:
                        if p['id'] == portal_id), None)
         if portal is None:
             raise ProtocolError('傳點不屬於目前地圖，請重新選取')
+        if portal.get('source_revision') in (1262, '1262'):
+            raise ProtocolError('1262 舊傳點已從 1275 服務移除，請更新官方傳點清單')
         problem = destination_problem(portal)
         if problem:raise ProtocolError(problem)
         index = self.catalog.direct_target(portal, state.player.get('scene'))
