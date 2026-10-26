@@ -2,26 +2,18 @@
 
 No server command or payment is issued here. Network services retain authority.
 """
+from wlre.services.instance_rewards import bag_claim_problem
 
 
 class CooperativeRewardViewMixin:
     def render_cooperative_rewards(self, data, other, live, activity_blocked, inventory):
         inventory = inventory or {}
         reward = data.get('reward') or {}
-        bag_capacity = inventory.get('capacity')
-        bag_items = inventory.get('items')
-        safe_bag = (
-            inventory.get('ready') is True and inventory.get('reliable') is True
-            and type(bag_capacity) is int and 1 <= bag_capacity <= 255
-            and isinstance(bag_items, dict)
-            and bag_capacity - len(bag_items) >= 4
-            and not any(inventory.get(k) for k in (
-                'holds', 'alchemy_slots', 'expedition_slots', 'maintenance_slots'))
-            and not any((inventory.get('reserved') or {}).values())
-            and not (inventory.get('field_supply') or {}).get('pending')
-        )
-        reward_busy = any(data.get(k) for k in (
-            'claim_pending', 'cancel_pending', 'reward_uncertain'))
+        bag_issue = bag_claim_problem(inventory)
+        safe_bag = bag_issue is None
+        reward_busy = (any(data.get(k) is not None for k in (
+            'claim_pending', 'cancel_pending')) or
+            bool(data.get('reward_uncertain')))
         reward_operation_busy = any(
             part.get(k) is not None for part in (data, other)
             for k in ('create_pending', 'join_pending', 'leave_pending',
@@ -54,7 +46,12 @@ class CooperativeRewardViewMixin:
             if reward.get('open_reward') == 2:
                 reward_text = '付費寶箱待處理；不會自動購買或扣點'
             elif reward.get('open_reward') == 1:
-                reward_text = '免費寶箱待領' if safe_bag else '免費寶箱待領；包包空位未確認'
+                reward_text = '免費寶箱待領'
+                if bag_issue:
+                    reward_text += '；' + bag_issue
+                if not (type(reward.get('reward_mark')) is int
+                        and reward['reward_mark'] & 1):
+                    reward_text += '；伺服器尚未確認免費獎勵領取旗標'
             elif reward:
                 reward_text = '獎勵已同步，目前沒有開啟的寶箱'
             else:
@@ -65,5 +62,27 @@ class CooperativeRewardViewMixin:
                 reward_text = '獎勵操作待伺服器確認，不可重送'
             elif data.get('reward_uncertain'):
                 reward_text = '獎勵操作結果不明，請重新登入確認'
+            if reward.get('open_reward') in (1, 2):
+                unresolved = [key.replace('_uncertain', '') for part in
+                              (data, other) for key in
+                              ('create_uncertain', 'join_uncertain',
+                               'leave_uncertain', 'standby_uncertain',
+                               'start_uncertain', 'enter_uncertain')
+                              if part.get(key)]
+                if unresolved:
+                    names = {'create': '創房', 'join': '加入房間',
+                             'leave': '離開房間', 'standby': '協力準備',
+                             'start': '開始副本', 'enter': '進入副本'}
+                    reward_text += ('；' + '／'.join(
+                        dict.fromkeys(names.get(x, x) for x in unresolved))
+                        + '結果不明，安全鎖定領獎，請重新登入同步')
+                elif reward_operation_busy:
+                    reward_text += '；房間操作尚待伺服器確認，暫停領獎'
+                elif activity_blocked:
+                    reward_text += '；戰鬥或其他活動尚未結束，暫停領獎'
+                elif other.get('room'):
+                    reward_text += '；仍在一般副本房間，暫停領獎'
+                elif reward_fp and data.get('reward_handled_fingerprint') == reward_fp:
+                    reward_text += '；本次寶箱已發出操作要求，不重複送出'
             self.reward_note.set('獎勵：%s；自動領取%s' %
                                  (reward_text, '開' if self._auto_enabled else '關'))
