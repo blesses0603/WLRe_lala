@@ -41,6 +41,8 @@ flowchart TD
 
 P1a 已建立上述純核心、`core/primitives.py` 與回歸測試。P1b 由 `ui/application_host.py` 的過渡 DesktopModule 接入既有 App，正常入口與 GUI smoke 均使用新 Host；業務仍由舊功能提供，尚未完成逐功能移植。`StateManager` 是不可變投影，絕不將舊 `State` 直接分享給新模組。可執行 API 在 READY／RUNNING 才開放，停止先封鎖所有 API，之後依反向相依順序清理。詳細公開介面見 [模組契約](MODULES.md)。
 
+P2 第一批將四個官方查詢／同步服務的來源集中至 `resources_runtime/official/source.py`，完整 YooAsset Parser 由工具層移入正式共用層，工具保留相容匯出。VersionDetector 提供獨立於 LaLa 版本及登入權限的動態觀測；新正式快照／全功能資料服務尚未完成。舊固定版本 Runtime 仍是過渡實作，完整狀態見 [官方資源](OFFICIAL_RESOURCES.md)。
+
 ## 執行緒與關閉契約
 
 核心生命週期及同步事件分派由組裝執行緒擁有。跨執行緒通知採有界 mailbox，擁有者定量 drain；不將既有 socket 迴圈改成 async，也不在事件 handler 內下載資源。UI adapter 決定 Tk `after` 排程。停止依反向相依順序執行，釋放訂閱、計時器與工作；停止失敗必須報告，不得標示正常關閉。

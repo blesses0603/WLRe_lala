@@ -1,0 +1,46 @@
+{
+  "versions": {
+    "requested_exe_version": "1.3.0",
+    "observed_exe_version": "1.3.0",
+    "data_version": "1.3.21",
+    "data_package_version": "1275_2026_10_21_18_27_33_84",
+    "main_package_version": "1275_2026_10_21_18_29_38_49",
+    "resource_map_sha256": "9aa83ca46600e8a0ef0c78be638f6266dd64f1471a85156f4e9012f6a490fcce",
+    "source_url": "https://wlreftpsrc.chinesegamer.net/WLN/TW",
+    "observed_at": "2026-10-26T14:49:41+00:00",
+    "lala_version": "0.6.1"
+  },
+  "manifests": [
+    {
+      "package": "DataPackage",
+      "source": "https://wlreftpsrc.chinesegamer.net/WLN/TW/1.3.21/ResourcesPC/AssetBundle/DataPackage.bytes",
+      "hash_text": "dcace626",
+      "asset_count": 190,
+      "bundle_count": 22,
+      "downloaded": true,
+      "parser": "wlre.resources_runtime.parsers.yooasset",
+      "sha256": "8af6b9374d2e31e5bda4d82d2ec4be6b3a673e9188a522eb2c1b110e68c51dee",
+      "manifest_bytes": 16830,
+      "schema_version": "2.2.5",
+      "parser_version": 1,
+      "integrity": "verified",
+      "acceptance": "manifest_only"
+    },
+    {
+      "package": "MainPackage",
+      "source": "https://wlreftpsrc.chinesegamer.net/WLN/TW/1.3.21/ResourcesPC/AssetBundle/MainPackage.bytes",
+      "hash_text": "b4e21f83",
+      "asset_count": 21577,
+      "bundle_count": 1732,
+      "downloaded": true,
+      "parser": "wlre.resources_runtime.parsers.yooasset",
+      "sha256": "65da10fab29b8ce96247a18e611ee0ba3c5c3bc5cb71a42c4e177001a8c4ba49",
+      "manifest_bytes": 2564950,
+      "schema_version": "2.2.5",
+      "parser_version": 1,
+      "integrity": "verified",
+      "acceptance": "manifest_only"
+    }
+  ],
+  "runtime_activated": false
+}

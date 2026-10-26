@@ -16,11 +16,11 @@ from urllib.error import HTTPError, URLError
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from wlre.storage.paths import data_root
+from wlre.resources_runtime.official.source import ROOT as OFFICIAL_LUA_BASE
 
 
 MAX_LIST_BYTES = 512 * 1024
 MAX_ENTRIES = 20000
-OFFICIAL_LUA_BASE = 'https://wlreftp.chinesegamer.net/WLN/TW'
 _DATA_VER = re.compile(r'[0-9]{1,4}(?:\.[0-9]{1,4}){2}\Z')
 _PART = re.compile(r'[A-Za-z0-9_.-]{1,100}\Z')
 _MD5 = re.compile(r'[A-Fa-f0-9]{32}\Z')
@@ -80,7 +80,7 @@ def fetch_list(data_ver, *, opener=None, timeout=12, cache_bust=True):
     opener = build_opener(_NoRedirect()).open if opener is None else opener
     try:
         with opener(Request(url, headers={'User-Agent': 'WLRe-LaLa-LuaIndex/1',
-                                          'Accept': 'text/plain',
+                                          'Accept': '*/*',
                                           'Cache-Control': 'no-cache'}),
                     timeout=timeout) as response:
             if getattr(response, 'status', 200) != 200 or response.geturl() != url:

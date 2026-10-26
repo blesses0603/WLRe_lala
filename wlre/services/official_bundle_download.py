@@ -17,10 +17,9 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 import zlib
 
 from wlre.storage.paths import data_root
+from wlre.resources_runtime.official.source import OFFICIAL_HOST as OFFICIAL_BUNDLE_HOST, ROOT as BASE
 
 
-OFFICIAL_BUNDLE_HOST = 'wlreftp.chinesegamer.net'
-BASE = 'https://' + OFFICIAL_BUNDLE_HOST + '/WLN/TW'
 MAX_BUNDLE_BYTES = 256 * 1024 * 1024
 CHUNK_BYTES = 64 * 1024
 _NAME = re.compile(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,190}\.bundle\Z')

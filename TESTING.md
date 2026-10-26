@@ -50,6 +50,16 @@ P1a 提交 `d808926` 的實際結果：純核心三平台 [40336014367](https://
 
 P1b 首輪提交 `2d68ef9`：純核心三平台 [40339132736](https://github.com/blesses0603/WLRe_lala/actions/runs/40339132736) 成功；完整 [40339138846](https://github.com/blesses0603/WLRe_lala/actions/runs/40339138846) Ubuntu／macOS 成功，Windows 1 項新 Host 顯示斷言失敗（1239 項，跳過 7）。Windows 原生 Map 訊息尚未由事件迴圈處理，測試原先只呼叫 `update_idletasks`；已改以真實 Tcl 事件迴圈、最多 2 秒等待可見狀態，保留所有顯示斷言，不以 skip／取消安全檢查放行。此修復需重新跑三平台 CI，通過前不進入 P2。
 
+修復提交 `408f6b1`：純核心三平台 [40340313642](https://github.com/blesses0603/WLRe_lala/actions/runs/40340313642) 成功；完整 [40340324695](https://github.com/blesses0603/WLRe_lala/actions/runs/40340324695) 最終三平台均成功。該完整流程的 macOS 曾因 **The job was not acquired by Runner of type hosted even after multiple attempts** 取消，沒有執行任何測試；僅重跑該失敗工作後成功，沒有為容量問題修改／跳過測試。等待期間，已通過必要核心契約且無 UI 相依的 P2 來源／Parser 工作繼續，沒有將排隊當成驗收成功。
+
+## P2 第一批來源與正式 Parser
+
+- UI／UnityPy 環境的 `test_official*.py`：92 項通過；Manifest 專用測試 5 項通過。新版本觀測／來源／邊界 6 項包含其中。
+- 獨立無 GUI／UnityPy 環境，依資源 CI 選定七組版本／下載／Parser 測試：合計 68 項通過。嘗試完整 official 通配時，地圖影像稽核因該工具環境未安裝 Pillow 而 1 項匯入失敗；影像測試仍由完整 PR 安裝 Pillow 後執行，沒有降低合併檢查。
+- 最終完整本地回歸：**1,245 項，92.582 秒，OK，跳過 2 項**，`/tmp/lala-rebuild-p2a-full.log`。新檔 Ruff、舊檔名稱檢查、compileall、repository audit、diff check 與直接工具 CLI `--help` 通過。
+- 真實官方測試先發現 Accept 窄化會 406；調整為已觀測支援的 `*/*` 後，VersionDetector 兩輪六次版本讀取及兩份 Manifest 下載／CRC／完整解析成功，來源及 fingerprint 證據見 `docs/rebuild/official_pipeline_probe.json`。另外一般啟動的 cache-buster 查詢回報 `same_resources`。沒有登入遊戲、下載完整 Bundle、提升新 Runtime 或提交原始資源。
+- 本批獨立 CI：推送後執行資源三平台、純核心三平台及完整 PR 三平台；此處尚未預先標為通過。
+
 ## 尚未驗收
 
 - 新核心／新功能移植：以各批測試與 CI 另行追加，不引用舊 main 成功取代。

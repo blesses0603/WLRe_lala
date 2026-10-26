@@ -17,7 +17,7 @@ class OfficialLuaIndexTests(unittest.TestCase):
         self.assertEqual(len(got), 2)
         self.assertEqual(got['Lua/event.lua'], 'f380e6cd47545f6b811b6652057db741')
         self.assertEqual(list_url('1.3.21'),
-                         'https://wlreftp.chinesegamer.net/WLN/TW/1.3.21/'
+                         'https://wlreftpsrc.chinesegamer.net/WLN/TW/1.3.21/'
                          'LuaScripts/LuaScriptPathList.txt')
 
     def test_hash_difference(self):

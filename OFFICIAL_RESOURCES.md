@@ -1,6 +1,17 @@
 # 官方資源來源與遷移
 
-唯一權威來源：<https://wlreftpsrc.chinesegamer.net/WLN/TW/>。本工程不引入第三方遊戲資料庫，也不要求使用者手動準備 ZIP。現有程式使用的 `wlreftp` 網域及固定版本是待遷移項目，**尚未因本文件而切換**。
+唯一權威來源：<https://wlreftpsrc.chinesegamer.net/WLN/TW/>。本工程不引入第三方遊戲資料庫。P2 第一批已將既有版本、Manifest、Bundle 與 Lua 清單服務接到 `resources_runtime/official/source.py` 的統一來源；舊網域不再通過正式版本來源驗證。現有固定版本 Runtime 仍待後續替換，不因此放行未知遊戲協定。
+
+## P2 第一批實作與真實來源驗證
+
+- `resources_runtime/parsers/yooasset.py` 為唯一共用完整 Manifest 解析器，保留 Reader／ParseError／fingerprint 舊 API；工具 CLI 只保留相容匯出與私人索引功能。正式 `wlre` 程式不再反向匯入 `tools.resources.lala_manifest_full_index`。
+- 解析器實作版本 1、格式 2.2.5。此格式號是 Parser Adapter 身分，不是將遊戲版號鎖死；未知格式、尾段、重複及越界安全拒絕，輸入上限 8 MiB。
+- VersionDetector 明確接收客戶端 ExeVer，讀取當次官方映射與兩套 Package 版本；兩輪觀測一致才回傳不可變結果。記錄 LaLa 版本、要求／觀測的遊戲版本、DataVer、兩套 Package、來源、時間與原始映射／SHA，**沒有啟用 Runtime 或核准登入的 API**。
+- 2026-10-26T14:49Z 實際以新介面取得 1.3.0 → 1.3.21、兩套 1275 Manifest，CRC、完整索引及版本核對成功；受控證據見 [共用管線觀測](docs/rebuild/official_pipeline_probe.json)。使用一般啟動的 cache-buster 版本查詢另回報 `same_resources`。
+- 此官方 IIS 來源回傳 Content-Type `*/*`；受控比較證明 `Accept: text/plain, application/json` 為 406、`*/*`／無 Accept 為 200。版本及 Lua 清單改用 `*/*`，內容仍交由嚴格解析／hash／大小檢查，未以 MIME 放寬資料驗證。
+- 舊 Manifest 收據若來源 URL 不符新權威來源，不能假冒成新來源收據；依原機制重新取得、驗證再更新私有快取。沒有刪除舊使用者檔案或改寫其來源紀錄來繞過核對。
+
+本批沒有取代所有歷史靜態資料，也未建立完整 OfficialResourceManager／新快照切換。共用下載器整合、未知資源隔離、完整相容性與功能欄位缺口仍屬後續批次。不得將本次「Manifest 驗證」視為 Bundle／官方世界資料或正式遊戲驗收。
 
 ## P0 實際觀測
 

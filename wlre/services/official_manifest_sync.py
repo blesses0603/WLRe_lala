@@ -18,10 +18,9 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 import zlib
 
 from wlre.storage.paths import data_root
+from wlre.resources_runtime.official.source import OFFICIAL_HOST, ROOT as BASE
 
 
-OFFICIAL_HOST = 'wlreftp.chinesegamer.net'
-BASE = 'https://' + OFFICIAL_HOST + '/WLN/TW'
 MAX_MANIFEST_BYTES = 8 * 1024 * 1024
 MAX_HASH_BYTES = 8
 MAX_RECEIPT_BYTES = 4096
@@ -99,10 +98,10 @@ def _crc32_le(data):
 def _parse_index(data, spec, parser):
     if parser is None:
         try:
-            # Parser lives in Draft PR #53; until merged, fail closed.
-            from tools.resources.lala_manifest_full_index import parse_manifest
+            # 正式共用解析器不再依賴工具套件，未知格式仍安全拒絕。
+            from wlre.resources_runtime.parsers.yooasset import parse_manifest
         except ImportError as exc:
-            raise ManifestSyncError('YooAsset full index parser (#53) is required') from exc
+            raise ManifestSyncError('YooAsset runtime index parser is required') from exc
         parser = parse_manifest
     try:
         index = parser(data)

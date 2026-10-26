@@ -20,8 +20,8 @@ RESOURCE_MAP = b'''[
 {"ExeVer":"1.2.0","DataVer":"1.3.21"},
 {"ExeVer":"1.3.0","DataVer":"1.3.21"}
 ]'''
-MAIN = "https://wlreftp.chinesegamer.net/WLN/TW/1.3.21/ResourcesPC/AssetBundle/MainPackage.version"
-DATA = "https://wlreftp.chinesegamer.net/WLN/TW/1.3.21/ResourcesPC/AssetBundle/DataPackage.version"
+MAIN = "https://wlreftpsrc.chinesegamer.net/WLN/TW/1.3.21/ResourcesPC/AssetBundle/MainPackage.version"
+DATA = "https://wlreftpsrc.chinesegamer.net/WLN/TW/1.3.21/ResourcesPC/AssetBundle/DataPackage.version"
 MAIN_VALUE = b"1275_2026_10_21_18_29_38_49"
 DATA_VALUE = b"1275_2026_10_21_18_27_33_84"
 
@@ -44,16 +44,16 @@ class OfficialResourceVersionTests(unittest.TestCase):
 
     def test_reject_unapproved_domains_paths_query_and_credentials(self):
         bad = (
-            "http://wlreftp.chinesegamer.net/WLN/TW/ResourcePath_PC.dat",
-            "https://wlreftp.chinesegamer.net.evil.com/WLN/TW/ResourcePath_PC.dat",
-            "https://wlreftp.chinesegamer.net@evil.com/WLN/TW/ResourcePath_PC.dat",
-            "https://wlreftp.chinesegamer.net:443/WLN/TW/ResourcePath_PC.dat",
+            "http://wlreftpsrc.chinesegamer.net/WLN/TW/ResourcePath_PC.dat",
+            "https://wlreftpsrc.chinesegamer.net.evil.com/WLN/TW/ResourcePath_PC.dat",
+            "https://wlreftpsrc.chinesegamer.net@evil.com/WLN/TW/ResourcePath_PC.dat",
+            "https://wlreftpsrc.chinesegamer.net:443/WLN/TW/ResourcePath_PC.dat",
             "https://wlreupload.chinesegamer.net/wln/TW/ResourcePath_PC.dat",
-            "https://wlreftp.chinesegamer.net/WLN/TW/../../private.version",
-            "https://wlreftp.chinesegamer.net/WLN/TW/%2e%2e/ResourcePath_PC.dat",
-            "https://wlreftp.chinesegamer.net/WLN/TW/ResourcePath_PC.dat?token=secret",
-            "https://wlreftp.chinesegamer.net/WLN/TW/1.3.21/ResourcesPC/AssetBundle/OtherPackage.version",
-            "https://wlreftp.chinesegamer.net/WLN/TW/1.3.21/ResourcesPC/AssetBundle/MainPackage.version#fragment",
+            "https://wlreftpsrc.chinesegamer.net/WLN/TW/../../private.version",
+            "https://wlreftpsrc.chinesegamer.net/WLN/TW/%2e%2e/ResourcePath_PC.dat",
+            "https://wlreftpsrc.chinesegamer.net/WLN/TW/ResourcePath_PC.dat?token=secret",
+            "https://wlreftpsrc.chinesegamer.net/WLN/TW/1.3.21/ResourcesPC/AssetBundle/OtherPackage.version",
+            "https://wlreftpsrc.chinesegamer.net/WLN/TW/1.3.21/ResourcesPC/AssetBundle/MainPackage.version#fragment",
         )
         for url in bad:
             with self.subTest(url=url), self.assertRaises(VersionSourceError):
@@ -150,6 +150,7 @@ class OfficialResourceVersionTests(unittest.TestCase):
     def test_bounded_http_no_cross_host_redirect(self):
         def opener(req, timeout):
             self.assertIn("?1", req.full_url)
+            self.assertEqual(req.get_header('Accept'), '*/*')
             return FakeResponse(b"1262", req.full_url)
         from unittest.mock import patch
         with patch("wlre.services.official_version.time.time", return_value=1.123):

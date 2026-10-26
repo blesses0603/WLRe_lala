@@ -66,3 +66,13 @@ TCP、Packet／FrameDecoder、指令驗證、State 單寫入、SessionBridge、�
 WorkerGroup 記錄遊戲連線、版本查詢、Release 查詢／下載背景工作；重複工作拒絕、結束後釋放登記。關閉時先取消及隱藏視窗，以 Tk 計時器等待，最長 15 秒，再核對所有工作是否退出。不能立即中斷的單次 HTTP 等待仍受既有 12 秒逾時限制；不使用強制終止執行緒。未退出或取消 callback 失敗會保留 FAILED，交給桌面入口回報，不標示成功。
 
 版本閘門仍依原有來源驗證與 1275 Runtime 規則，不因加入取消而放行；更新下載仍驗證 SHA／ZIP CRC、原子更名且不安裝。取消會停止後續請求／串流／CRC 檢查，清除 partial 並保留既有成品。官方來源與固定版本的正式遷移仍屬 P2。測試：`test_rebuild_workers`、`test_desktop_application_host`、`test_shutdown_cancellation` 及既有登入／更新／連線回歸。
+
+## P2 第一批正式資源介面
+
+| 元件 | 公開介面與相依 | 安全／停止契約 | 驗證 |
+|---|---|---|---|
+| official/source | 唯一 ROOT／OFFICIAL_HOST、`package_url` | 路徑、Package 與副檔名白名單；沒有自動 I/O | test_official_resource_versions／原有來源拒絕測試 |
+| official/versions | `VersionDetector.observe(exe_version, cancel_event=...)`、OfficialVersions | 只觀測；明確身分、兩輪一致、取消停止後續請求；保留原始映射供分析，無正式啟用 API | 新 6 項及真實官方受控觀測 |
+| parsers/yooasset | `parse_manifest`、Reader、ParseError、bundle／asset fingerprint | 純標準庫、不依賴 tools、無背景工作；大小、EOF、bool、引用、重複與未知格式拒絕 | 既有 Parser／Manifest／增量測試及新邊界測試 |
+
+既有 HTTP／Manifest／Bundle 服務逐步接入此層，保持舊 import 與驗證 API。VersionDetector 目前重用既有 HTTPS／版本表解析的已測實作，尚未完成下一批共用下載器抽離；沒有再實作第二套遊戲傳輸或靜態資料庫。資源層不匯入 GUI，也不執行 Lua。

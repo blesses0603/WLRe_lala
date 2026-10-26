@@ -210,7 +210,7 @@ def build_update_plan(current, *, asset_paths=(), bundle_names=(), previous=None
     for name in sorted(roots):
         visit(name)
 
-    from tools.resources.lala_manifest_full_index import bundle_fingerprint
+    from wlre.resources_runtime.parsers.yooasset import bundle_fingerprint
     added = set(names) - set(old_names) if previous is not None else set()
     removed = set(old_names) - set(names) if previous is not None else set()
     modified = ({name for name in names.keys() & old_names.keys()

@@ -1,8 +1,8 @@
 """Read-only official game resource checks against the observed PC endpoints.
 
 Fiddler evidence (2026-10-22):
-  GET https://wlreftp.chinesegamer.net/WLN/TW/ResourcePath_PC.dat
-  GET https://wlreftp.chinesegamer.net/WLN/TW/{DataVer}/ResourcesPC/AssetBundle/{Package}.version
+  GET https://wlreftpsrc.chinesegamer.net/WLN/TW/ResourcePath_PC.dat
+  GET https://wlreftpsrc.chinesegamer.net/WLN/TW/{DataVer}/ResourcesPC/AssetBundle/{Package}.version
 Both .version responses were 27-byte YooAsset revision identifiers, 1275.
 No local game installation or login credentials are needed.
 """
@@ -18,6 +18,7 @@ from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from wlre.core.primitives import check_cancelled
+from wlre.resources_runtime.official.source import OFFICIAL_HOST, ROOT
 
 from wlre.services.resource_compatibility import (
     baseline_maps, load_supported_resources,
@@ -28,8 +29,6 @@ from wlre.services.resource_compatibility import (
 LA_LA_SUPPORTED_RESOURCES = load_supported_resources()
 BASELINE, BASELINE_MANIFEST = baseline_maps(LA_LA_SUPPORTED_RESOURCES)
 SUPPORTED_OFFICIAL_EXE_VERSION = LA_LA_SUPPORTED_RESOURCES["official_game_exe_version"]
-OFFICIAL_HOST = "wlreftp.chinesegamer.net"
-ROOT = "https://wlreftp.chinesegamer.net/WLN/TW"
 RESOURCE_MAP_URL = ROOT + "/ResourcePath_PC.dat"
 MAX_RESPONSE_BYTES = 16 * 1024
 _VERSION = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,63}\Z")
@@ -117,7 +116,8 @@ def fetch_bytes(url, *, timeout=12, opener=None, cache_bust=True):
     if opener is None:
         opener = build_opener(_ApprovedRedirect()).open
     headers = {
-        "Accept": "text/plain, application/json",
+        # 此官方來源的 .dat/.version 回應 Content-Type 為 */*；窄化 Accept 會 406。
+        "Accept": "*/*",
         "Cache-Control": "no-cache",
         "Pragma": "no-cache",
         "User-Agent": "WLRe-LaLa-VersionCheck/1",
