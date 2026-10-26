@@ -144,6 +144,7 @@ class Preview1275:
     portal_display_destinations: dict = field(default_factory=dict)
     portal_link_evidence: dict = field(default_factory=dict)
     portal_extra_routes: list = field(default_factory=list)
+    portal_stage_markers: list = field(default_factory=list)
     portal_metadata_status: str = 'missing_stage_map'
     portal_schema_report: dict = field(default_factory=dict)
     portal_coverage: dict = field(default_factory=dict)
@@ -204,6 +205,7 @@ def load_preview(data_archive, eve_archive):
     portal_display_destinations = {}
     portal_link_evidence = {}
     portal_extra_routes = []
+    portal_stage_markers = []
     portal_metadata_status = 'missing_stage_map'
     portal_schema_report = {}
     from wlre.services.world.portal_schema import recognize_portal_source
@@ -217,6 +219,9 @@ def load_preview(data_archive, eve_archive):
         # StageMapData.NameID is independently useful, even when links are
         # absent. Do not drop its official labels with the destination map.
         portal_names = verified_portal_names(stage_map, stages, texts)
+        from wlre.services.world.portal_evidence_1275 import (
+            read_only_stage_portal_markers)
+        portal_stage_markers = read_only_stage_portal_markers(stage_map, stages)
         portal_metadata_status = 'stage_map_ready'
         try:
             link_table = _table(data_archive, manifest, 'EveDoorLinks')
@@ -291,6 +296,7 @@ def load_preview(data_archive, eve_archive):
         portal_display_destinations=portal_display_destinations,
         portal_link_evidence=portal_link_evidence,
         portal_extra_routes=portal_extra_routes,
+        portal_stage_markers=portal_stage_markers,
         portal_metadata_status=portal_metadata_status,
         portal_schema_report=portal_schema_report,
         portal_coverage=coverage,
