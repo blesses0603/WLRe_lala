@@ -9,6 +9,7 @@ from wlre.paths import PROJECT_ROOT
 from wlre.ui.window_layout import configure_dialog
 from wlre.services.world.portal_policy import destination_problem
 from wlre.services.world.portals import portal_map_pixel, portal_source_diagnostic
+from wlre.services.world.portal_inspection_1275 import portal_inspection_text
 
 
 class PortalInteractionMixin:
@@ -46,7 +47,11 @@ class PortalInteractionMixin:
         self.portal_list.selection_clear(0,'end')
         self.portal_list.selection_set(self.list_rows.index(p))
         self.portal_list.see(self.list_rows.index(p))
-        self.portal_status.set(p['name']+'｜'+p.get('direct_note','尚未核對觸碰事件'))
+        inspection = portal_inspection_text(p)
+        status = (p['name'] + '｜' +
+                  (inspection + '｜' if inspection else '') +
+                  p.get('direct_note', '尚未核對觸碰事件'))
+        self.portal_status.set(status)
         self.update_portal_button()
         if (p.get('source_revision') == 1275 and self.on_pick is not None):
             # Selecting a list row is NOT proof that Eve.NewDoor grid XY
@@ -57,11 +62,11 @@ class PortalInteractionMixin:
                 self.on_pick(self.selected_id, p['x'], p['y'])
             elif not p.get('coordinate_valid'):
                 self.portal_status.set(
-                    p['name'] + '｜傳點位置尚未通過官方座標換算，'
+                    status + '｜傳點位置尚未通過官方座標換算，'
                     '已停用選點與換圖')
             else:
                 self.portal_status.set(
-                    p['name'] + '｜轉換後位置超出目前小地圖範圍，'
+                    status + '｜轉換後位置超出目前小地圖範圍，'
                     '已停用選點')
         self.draw()
 
