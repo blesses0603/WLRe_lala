@@ -1,6 +1,5 @@
 """1275 expedition integration regression; no official binary or network needed."""
 import hashlib
-import struct
 import tempfile
 import unittest
 from pathlib import Path

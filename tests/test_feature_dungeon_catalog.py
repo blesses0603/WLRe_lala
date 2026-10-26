@@ -1,6 +1,5 @@
 """P1b shared catalog UI keeps the existing normal/cooperative callbacks."""
 import unittest
-from types import SimpleNamespace
 from unittest.mock import Mock
 
 from wlre.ui.instance_catalog_ui import InstanceCatalogMixin, build_instance_catalog

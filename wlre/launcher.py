@@ -49,7 +49,7 @@ def ensure_extractor_environment(python, root):
                 if not valid(private):
                     raise RuntimeError('LaLa 私有環境 UnityPy 驗證失敗')
         return private
-    except (OSError, subprocess.CalledProcessError, RuntimeError) as exc:
+    except (OSError, subprocess.CalledProcessError, RuntimeError):
         # Do not rewrite the official login decision merely because this
         # development-only dependency installation failed.
         print('Launcher 解包依賴尚未就緒，登入限制仍依官方驗證結果。',

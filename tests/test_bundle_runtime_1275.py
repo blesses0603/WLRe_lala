@@ -333,8 +333,6 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
         self.assertFalse(runtime.can_send_packets)
 
     def test_optional_stage_map_not_cached_reports_precise_reason(self):
-        from wlre.services.official_incremental_sync import build_update_plan
-        plan = build_update_plan
         def fake_plan(manifest, *, asset_paths, cache_root):
             if 'StageMapData_C.bytes' in asset_paths[0]:
                 return SimpleNamespace(entries=[SimpleNamespace(action='download')])
@@ -418,7 +416,6 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
         for action in ('download', 'reuse_previous', 'cached'):
             with self.subTest(action=action), ExitStack() as stack:
                 self.patches(stack)
-                self.plan.entries[0].action = action
                 self.plan.entries[0].action = action
                 if action == 'cached':
                     stack.enter_context(patch(

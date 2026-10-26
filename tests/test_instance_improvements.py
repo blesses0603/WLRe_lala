@@ -1,6 +1,5 @@
 """Official 1262 dungeon/co-op safety and multi-round regression tests."""
 import unittest
-from unittest.mock import patch
 
 from wlre.core.state import State
 from wlre.network.client import SessionLogic

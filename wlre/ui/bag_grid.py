@@ -11,7 +11,7 @@ from wlre.services.items.combat_resources import CAT, heal_effects, available
 from wlre.services.items.catalog import item_display_name as item_name, verified_item_metadata
 from wlre.services.world.feature_resource_index import feature_note
 from wlre.services.world.auto_candidate_reader import candidate_item_name
-from wlre.ui.theme import PANEL, CYAN, group
+from wlre.ui.theme import CYAN
 
 COLUMNS = 6
 ROWS = 4

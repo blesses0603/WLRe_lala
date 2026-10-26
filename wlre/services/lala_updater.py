@@ -10,7 +10,6 @@ import os
 from pathlib import Path
 import platform
 import re
-import sys
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 

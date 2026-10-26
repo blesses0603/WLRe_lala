@@ -3,7 +3,7 @@ import tkinter as tk
 from wlre.ui.window_layout import configure_dialog
 from wlre.ui.rounded_notebook import RoundedNotebook
 from tkinter import ttk,messagebox
-from wlre.services.items.combat_resources import CAT, skill_rows, available, heal_effects, item_name, food_command, learned_command, field_context
+from wlre.services.items.combat_resources import CAT, skill_rows, food_command, learned_command, field_context
 from wlre.services.battle.battle_commands import owned_units
 from wlre.ui.crafting_browser import ItemIcons
 from wlre.ui.bag_grid import BagGrid

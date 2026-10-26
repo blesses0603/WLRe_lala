@@ -1,5 +1,4 @@
 import copy
-import struct
 import unittest
 from unittest.mock import patch
 

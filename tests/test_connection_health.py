@@ -2,7 +2,6 @@ import errno
 import queue
 import tempfile
 import unittest
-from pathlib import Path
 from unittest.mock import Mock, patch
 from wlre.network.connection_health import ConnectionHealth, configure_keepalive
 from wlre.ui.connection_status import ConnectionStatus

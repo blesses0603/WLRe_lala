@@ -231,7 +231,6 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
             self.portal_info.set('')
             if self.portals.data.get('source_revision') == 1275:
                 source = self.portals.data.get('portal_metadata_status')
-                named = sum(bool(p.get('official_name')) for p in self.portal_rows)
                 if source not in ('stage_map_ready', 'destination_links_loaded') and (
                         not isinstance(source, str)
                         or not source.startswith('destination_links_')):
@@ -239,23 +238,6 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
                 elif hidden_count:
                     self.portal_info.set(
                         f'{hidden_count} 個未標記項目僅列於逐圖核對')
-                position_missing = sum(
-                    not item.get('coordinate_valid') for item in self.portal_rows)
-                incompatible = sum(
-                    bool(item.get('coordinate_valid'))
-                    and portal_map_pixel(item, getattr(self, 'projection', None))
-                    is None for item in self.portal_rows)
-                notices = []
-                if position_missing:
-                    notices.append(
-                        f'{position_missing} 個點位待官方座標換算，暫不標記')
-                if incompatible:
-                    notices.append(
-                        f'{incompatible} 個點位與小地圖投影不相容，暫不標記')
-                if notices:
-                    prefix = self.portal_info.get()
-                    self.portal_info.set(
-                        (prefix + '｜' if prefix else '') + '；'.join(notices))
         if self.portals.data.get('source_revision') == 1275:
             count = len(self.portal_rows)
             if self.portals.data.get('source_ready'):

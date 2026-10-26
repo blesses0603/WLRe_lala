@@ -1,7 +1,6 @@
 """Validate a release tag and package a verified standalone Nuitka build."""
 import argparse
 import hashlib
-from pathlib import Path
 import zipfile
 
 from wlre import __version__

@@ -116,7 +116,7 @@ def ready():
         # NEVER replace these sources.
         source = active_runtime()
         from wlre.services.world.formal_candidate_bridge import (
-            FormalBridgeError, inspect_launcher_candidate)
+            inspect_launcher_candidate)
         # A matching candidate is checked AGAIN against the full, release-
         # pinned source before any shared recipe dict is touched. A mismatch
         # must never partially change game state.

@@ -1,5 +1,4 @@
-import json,os,tempfile,unittest
-from pathlib import Path
+import os,tempfile,unittest
 from wlre.storage import account_settings as store,server_lines
 from wlre.services.battle.auto_battle import defaults
 

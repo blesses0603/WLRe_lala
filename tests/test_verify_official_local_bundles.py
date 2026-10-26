@@ -1,6 +1,5 @@
 """Offline audit regression. Synthetic YooAsset archives, no CDN or game login."""
 import hashlib
-import io
 import json
 from pathlib import Path
 import struct
@@ -126,8 +125,6 @@ class OfflineVerifierTests(unittest.TestCase):
         extract.assert_not_called()
 
     def test_official_game_yoo_hashed_data_is_read_only(self):
-        import os
-        import tempfile
         yoo = self.root / 'WLRE_Data' / 'yoo'
         base = yoo / 'DataPackage' / 'BundleFiles' / '00'
         for idx, raw in enumerate(self.payloads):

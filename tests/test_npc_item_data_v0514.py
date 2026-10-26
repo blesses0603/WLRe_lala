@@ -1,6 +1,5 @@
 """No packaged 1262 item archive; active item metadata is release-verified 1275."""
 import gzip
-import hashlib
 import json
 import tempfile
 import unittest

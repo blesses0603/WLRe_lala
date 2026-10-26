@@ -23,7 +23,6 @@ from wlre.network.npc_dialogue import request_npc, advance_npc, close_npc_choice
 from wlre.services.items.combat_resources import learned_command, food_command, reserve, field_context
 from wlre.services.items import reservations
 from wlre.services.world.tent import command as tent_command
-import copy
 from wlre.services.battle.party_guard import validate as validate_party_guard
 from wlre.services.battle.combat import normal_skill, NORMALS
 from wlre.services.battle.battle_commands import plan_round, action_command, owned_units, slot

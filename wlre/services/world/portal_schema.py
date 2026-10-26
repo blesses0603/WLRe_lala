@@ -70,7 +70,7 @@ def parse_door_link_data(raw):
     destinationScene/u16, destinationX/u16, destinationY/u16.
     Do NOT derive a portal EvtID or actionable C20-8 trigger from this.
     """
-    count = _record_count(raw, _DOOR_LINK, 'DoorLinkData_C')
+    _record_count(raw, _DOOR_LINK, 'DoorLinkData_C')
     rows = []
     for offset in range(4, len(raw), _DOOR_LINK.size):
         source, x, y, destination, arrival_x, arrival_y = (

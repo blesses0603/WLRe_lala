@@ -144,7 +144,6 @@ class State:
     def apply(self, event):
         self.assert_writer()
         self.packet_count += 1
-        kind = event["type"]
         apply_recovery(self,event)
         apply_guild(self,event)
         apply_activity(self,event)

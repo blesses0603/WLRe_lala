@@ -22,7 +22,7 @@ from wlre.services.official_manifest_sync import (
 )
 from wlre.services.official_resource_sync import observe_official_versions
 from wlre.services.world.catalog_adapters import (
-    FEATURES, ParsedCatalog, SourceContract, parse_feature,
+    FEATURES, SourceContract, parse_feature,
 )
 from wlre.services.world.catalog_identity import (
     OfficialCatalogIdentity, identity_from_verified_manifests,

@@ -1,6 +1,5 @@
 """P1a third batch: cooperative status, rewards and shared list regression."""
 import unittest
-from types import SimpleNamespace
 from unittest.mock import Mock
 
 from wlre.ui.instance_ui import InstanceModePage

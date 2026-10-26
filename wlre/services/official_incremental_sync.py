@@ -12,7 +12,7 @@ import shutil
 import tempfile
 
 from wlre.services.official_bundle_download import (
-    BundleDownloadError, BundleSpec, MAX_BUNDLE_BYTES, _verified_file,
+    BundleDownloadError, BundleSpec, _verified_file,
     fetch_bundle, spec_from_manifest,
 )
 from wlre.services.official_manifest_sync import (

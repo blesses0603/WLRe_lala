@@ -1,7 +1,4 @@
 """Verified 1262 Eve interaction: read-only previews, safe manual reply."""
-import gzip
-import json
-import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
