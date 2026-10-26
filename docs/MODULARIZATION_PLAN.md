@@ -111,6 +111,7 @@ wlre/
 - [x] 將原本較粗的「副本／協力」與「地圖／NPC」再拆為協力／一般副本／小地圖／NPC 傳送等不同功能所有權。
 - [ ] 建立每張實作 PR 的精確 import dependency graph 和逐功能測試矩陣（開工前完成）。
 - [x] P1a 首批將協力準備、免費領獎／取消、自動免費領獎 UI 操作移至 `wlre/features/cooperative/buttons.py`，協力房間人數顯示移至 `rooms.py`；原 `InstanceModePage` 以 Mixin 保留舊匯入及方法契約，新增 `tests/test_feature_cooperative.py`。
+- [x] P1a 寶箱補強（2026-10-26）：1275 `S23-5` 背包快照直接保存伺服器明示的格位與數量，不再經 1262 `item_stackable.json` 重新配位；缺索引、重複或容量不符仍標不可靠。`S23-6` 新物品未知堆疊規則只容許明示空格的一件入袋，其餘安全拒絕。協力免費寶箱沿用至少四格的保守政策，並在 UI 精確顯示 S23-5 未同步、空位不足、保留物品或房間準備結果不明。準備操作逾時保留原房間及目標，**只有晚到的同房同狀態 S186-3** 才能解除不確定鎖。新增快照、回覆與 UI 回歸測試；尚無正式服領獎與 1275 滿袋政策 E2E，不得宣稱已發獎或可解除限制。
 - [x] P1a 第二批以 `features/cooperative/panel.py` 提供協力分頁入口，`features/cooperative/rooms.py` 負責協力人數核驗與費用確認欄位；建立／加入／離開房間的兩模式共用對話框搬到 `ui/instance_room_dialogs.py`，不複製一般副本程式；新增單元與 Tk GUI 回歸測試（等待本批 CI 驗證）。
 - [x] P1a 第三批抽出 `features/cooperative/widgets.py` 協力按鈕、`rewards.py` 領獎狀態、`rooms.py` 準備狀態顯示，以及 `ui/instance_room_list.py` 共用房間列表（避免兩種模式程式重複）；新增狀態與 Tk GUI 回歸測試（CI 待確認）。
 - [ ] P1a 正式服 E2E 及 1275 協力清單替代來源驗證。現行 `wlre/services/instance_browser.py` 仍讀取內建 `instance_catalog_1262.json`，且一般副本共用；目前未取得可靠的等價 1275 副本清單，故**必須保留、不可冒險移除**。
