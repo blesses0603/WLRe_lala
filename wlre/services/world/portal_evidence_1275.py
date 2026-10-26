@@ -25,6 +25,23 @@ def _packet_position(stage, x, y):
     return (a, b) if 0 <= a <= 65535 and 0 <= b <= 65535 else None
 
 
+def _projection_guard(stage):
+    """Require official current-version geometry before drawing old packed PNG."""
+    if not isinstance(stage, dict):
+        return None
+    keys = ('map_width', 'map_height', 'small_offset_x', 'small_offset_y')
+    if not all(type(stage.get(key)) is int for key in keys):
+        return None
+    width = 6992 if stage['map_width'] == 65535 else stage['map_width']
+    height = 6992 if stage['map_height'] == 65535 else stage['map_height']
+    if max(width, height) <= 0:
+        return None
+    return {'rate': 100 * (1024 - 24) / max(width, height),
+            'offset_x': stage['small_offset_x'],
+            'offset_y': stage['small_offset_y'],
+            'height': height}
+
+
 def read_only_portal_evidence(stage_raw, link_raw, doors, stages):
     """Preserve every official scene-local link, including unmarked entries.
 
@@ -74,6 +91,7 @@ def read_only_portal_evidence(stage_raw, link_raw, doors, stages):
                 'arrival_x': dst[0] if dst else None,
                 'arrival_y': dst[1] if dst else None,
                 'position_verified': src is not None,
+                'projection_guard': _projection_guard(stages.get(scene)),
                 'arrival_verified': dst is not None,
                 'destination_defined': target in stages,
                 'stage_marker_matched': marker_confirmed,
