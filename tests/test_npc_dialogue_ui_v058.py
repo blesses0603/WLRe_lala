@@ -1,4 +1,5 @@
 """NPC UI: explicit confirmation, disabled unverified NPCs, manual next."""
+import sys
 import os
 import tkinter as tk
 import unittest
@@ -7,7 +8,7 @@ from unittest.mock import Mock, patch
 from wlre.ui.home_map import HomeMap
 
 
-@unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt',
+@unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt' or sys.platform == 'darwin',
                      'Requires Tk display')
 class NPCDialogueUITests(unittest.TestCase):
     def setUp(self):

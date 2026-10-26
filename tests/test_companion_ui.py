@@ -1,3 +1,4 @@
+import sys
 import os
 import tkinter as tk
 import unittest
@@ -7,7 +8,7 @@ from unittest.mock import Mock
 from wlre.ui.companion_ui import CompanionPanel
 
 
-@unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt', 'Requires a desktop')
+@unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt' or sys.platform == 'darwin', 'Requires a desktop')
 class CompanionSelection(unittest.TestCase):
     def setUp(self):
         self.root = tk.Tk()

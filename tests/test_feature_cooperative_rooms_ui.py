@@ -1,4 +1,5 @@
 """P1a second batch: cooperative creation, joining, and leaving in Tk."""
+import sys
 import os
 import time
 import tkinter as tk
@@ -11,7 +12,7 @@ from wlre.ui.gui import App
 from wlre.features.cooperative.panel import CooperativeModePage
 
 
-@unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt',
+@unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt' or sys.platform == 'darwin',
                      'Requires a desktop/Xvfb')
 class CooperativeRoomDialogsUI(unittest.TestCase):
     def setUp(self):

@@ -1,4 +1,5 @@
 """Official 1262 C85-7 host start, ACK, safety and existing companion."""
+import sys
 import os
 import tkinter as tk
 import unittest
@@ -94,7 +95,7 @@ class StartChallenge(unittest.TestCase):
             logic.command({'type': 'instance_start', 'mode': 'coop'}, state)
 
 
-@unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt',
+@unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt' or sys.platform == 'darwin',
                      'Requires desktop/Xvfb')
 class StartChallengeUI(unittest.TestCase):
     def setUp(self):

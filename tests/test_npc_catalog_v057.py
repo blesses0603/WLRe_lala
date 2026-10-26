@@ -1,4 +1,5 @@
 """NPC phase-1: distinguish location references and actual EventData indices."""
+import sys
 import gzip
 import json
 import os
@@ -117,7 +118,7 @@ class NPCCatalogTests(unittest.TestCase):
                     NPCIndex(path)
 
 
-@unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt',
+@unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt' or sys.platform == 'darwin',
                      'Requires a desktop')
 class NPCSceneUITests(unittest.TestCase):
     def setUp(self):

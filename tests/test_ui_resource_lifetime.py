@@ -13,7 +13,7 @@ from PIL import Image, ImageTk
 from wlre.ui.resource_lifetime import install_root_lifetime
 
 
-@unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt', '需要桌面顯示環境')
+@unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt' or sys.platform == 'darwin', '需要桌面顯示環境')
 class UiResourceLifetimeTests(unittest.TestCase):
     def test_owned_resources_release_without_touching_another_interpreter(self):
         first, second = tk.Tk(), tk.Tk()

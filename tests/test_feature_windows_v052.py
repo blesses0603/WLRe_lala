@@ -1,4 +1,5 @@
 """v0.5.2: all secondary functions are fixed windows centered on main."""
+import sys
 import os
 import tkinter as tk
 import unittest
@@ -40,7 +41,7 @@ class CenterGeometry(unittest.TestCase):
         self.assertGreaterEqual(y,0)
 
 
-@unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt',
+@unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt' or sys.platform == 'darwin',
                      'Requires Tk / Xvfb')
 class SecondaryFeatures(unittest.TestCase):
     def setUp(self):

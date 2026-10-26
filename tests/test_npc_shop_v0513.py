@@ -1,4 +1,5 @@
 """1262 NPC stores: genuine Eve items, read-only UI, and fail-closed packets."""
+import sys
 import os
 import unittest
 from unittest.mock import Mock, patch
@@ -134,7 +135,7 @@ class ShopServerRepliesTests(unittest.TestCase):
             close_npc_shop(state,{'confirmed':True})
 
 
-@unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt','Requires Tk display')
+@unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt' or sys.platform == 'darwin','Requires Tk display')
 class NPCShopUITests(unittest.TestCase):
     def test_shop_preview_and_safe_close_dialog(self):
         import tkinter as tk

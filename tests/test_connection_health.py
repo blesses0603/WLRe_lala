@@ -1,3 +1,4 @@
+import sys
 import errno
 import queue
 import tempfile
@@ -263,7 +264,7 @@ class PollRecovery(unittest.TestCase):
 
 
 import os
-@unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt','Requires Tk display')
+@unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt' or sys.platform == 'darwin','Requires Tk display')
 class NativeFocusRegression(unittest.TestCase):
     def test_native_combobox_popdown_does_not_stop_background_detection(self):
         import tkinter as tk

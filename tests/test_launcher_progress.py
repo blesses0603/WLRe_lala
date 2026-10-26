@@ -1,4 +1,5 @@
 """Launcher splash view-model tests: no official network and no real Tk required."""
+import sys
 import io
 import os
 from contextlib import redirect_stdout
@@ -100,7 +101,7 @@ class LauncherProgressTests(unittest.TestCase):
             self.assertEqual(launcher_catalog.main(['--progress']), 0)
         self.assertIs(view.call_args.args[0], launcher_catalog.prepare_on_launch)
 
-    @unittest.skipUnless(os.name == 'nt' or bool(os.environ.get('DISPLAY')),
+    @unittest.skipUnless(os.name == 'nt' or bool(os.environ.get('DISPLAY')) or sys.platform == 'darwin',
                          'Requires an active desktop / Xvfb')
     def test_real_tk_splash_finishes_and_returns_candidate(self):
         """Isolate actual Tk creation/destruction in a bounded child process.

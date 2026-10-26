@@ -1,3 +1,4 @@
+import sys
 import os
 import tkinter as tk
 import unittest
@@ -7,7 +8,7 @@ from wlre.services.world.smallmaps import SmallMaps
 from wlre.services.world.navigation import NavigationError
 
 
-@unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt','Requires a desktop')
+@unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt' or sys.platform == 'darwin','Requires a desktop')
 class AutomaticMap(unittest.TestCase):
     def setUp(self):
         # GUI lifecycle test: supply independently verified 1275 scene rows.

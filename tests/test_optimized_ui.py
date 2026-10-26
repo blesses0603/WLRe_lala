@@ -1,3 +1,4 @@
+import sys
 import os,queue,tempfile,tkinter as tk,unittest
 from collections import deque
 from pathlib import Path
@@ -22,7 +23,7 @@ class BackgroundUpdates(unittest.TestCase):
         self.assertIsNone(app._pending_display)
 
 
-@unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt','Requires a desktop or Xvfb')
+@unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt' or sys.platform == 'darwin','Requires a desktop or Xvfb')
 class OptimizedWindow(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

@@ -1,3 +1,4 @@
+import sys
 import os
 import tempfile
 import tkinter as tk
@@ -9,7 +10,7 @@ from unittest.mock import Mock, patch
 from wlre.ui.expedition_ui import ExpeditionPanel
 
 
-@unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt', 'Requires a desktop')
+@unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt' or sys.platform == 'darwin', 'Requires a desktop')
 class ExpeditionPanelTests(unittest.TestCase):
     def setUp(self):
         self.folder = tempfile.TemporaryDirectory()

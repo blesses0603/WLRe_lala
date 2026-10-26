@@ -1,5 +1,6 @@
 """新核心與實際 Tk／既有主頁的整合，禁止測試連線官方站。"""
 import os
+import sys
 import time
 import tkinter as tk
 import unittest
@@ -12,7 +13,7 @@ from wlre.ui.application_host import DesktopHost
 from wlre.ui.gui import App
 
 
-@unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt', '需要桌面顯示環境')
+@unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt' or sys.platform == 'darwin', '需要桌面顯示環境')
 class DesktopHostTests(unittest.TestCase):
     def setUp(self):
         self.root = tk.Tk()

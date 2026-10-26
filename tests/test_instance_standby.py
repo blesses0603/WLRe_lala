@@ -1,4 +1,5 @@
 """Co-op standby uses current normal deployed NPC, never switches pets."""
+import sys
 import os
 import tkinter as tk
 import unittest
@@ -135,7 +136,7 @@ class StandbyNetwork(unittest.TestCase):
         self.assertIsNone(again.instances['coop']['standby_pending'])
 
 
-@unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt',
+@unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt' or sys.platform == 'darwin',
                      'Requires desktop/Xvfb')
 class StandbyUI(unittest.TestCase):
     def setUp(self):

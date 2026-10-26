@@ -1,4 +1,5 @@
 """Dedicated version-check window must use official server results exclusively."""
+import sys
 import os
 import tkinter as tk
 import unittest
@@ -33,7 +34,7 @@ def official_result(main="1262", data="1262", status="version_identifiers_match"
     }
 
 
-@unittest.skipUnless(os.environ.get("DISPLAY") or os.name == "nt",
+@unittest.skipUnless(os.environ.get("DISPLAY") or os.name == "nt" or sys.platform == 'darwin',
                      "需要桌面顯示環境")
 class PreloginVersionWindowTests(unittest.TestCase):
     def setUp(self):

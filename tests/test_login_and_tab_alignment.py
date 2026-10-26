@@ -1,10 +1,11 @@
+import sys
 import os, time, tkinter as tk, unittest
 from unittest.mock import patch
 from wlre.services.official_version import BASELINE
 from wlre.ui.gui import App
 
 
-@unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt','Requires a desktop')
+@unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt' or sys.platform == 'darwin','Requires a desktop')
 class LoginAndTabAlignment(unittest.TestCase):
     def setUp(self):
         self.root=tk.Tk();self.app=App(self.root);self.app.show_main();self.root.update()

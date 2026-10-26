@@ -1,4 +1,5 @@
 """Tk regression for 1275 doors on the minimap; no real game commands."""
+import sys
 import os
 import tkinter as tk
 import unittest
@@ -9,7 +10,7 @@ from wlre.ui.home_map import HomeMap
 from wlre.services.world.portals import Portals
 
 
-@unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt',
+@unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt' or sys.platform == 'darwin',
                      'Requires a desktop or Linux virtual display')
 class Portal1275UI(unittest.TestCase):
     def setUp(self):

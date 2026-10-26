@@ -1,3 +1,4 @@
+import sys
 import os
 import tkinter as tk
 import unittest
@@ -8,7 +9,7 @@ from wlre.ui.auto_battle_ui import SettingsEditor
 from wlre.ui.halo_button import edge_points,edge_overlay
 
 
-@unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt','Requires a desktop')
+@unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt' or sys.platform == 'darwin','Requires a desktop')
 class OverviewControls(unittest.TestCase):
     def setUp(self):
         # These tests verify local Tk controls, not remote update/version checks.

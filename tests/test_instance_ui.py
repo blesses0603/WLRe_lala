@@ -1,4 +1,5 @@
 """Regression tests for the instance and co-op navigation skeleton."""
+import sys
 import os
 import tkinter as tk
 import unittest
@@ -8,7 +9,7 @@ from tkinter import ttk
 from wlre.ui.gui import App
 
 
-@unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt', 'Requires a desktop or Xvfb')
+@unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt' or sys.platform == 'darwin', 'Requires a desktop or Xvfb')
 class InstanceNavigation(unittest.TestCase):
     def setUp(self):
         self.root = tk.Tk()

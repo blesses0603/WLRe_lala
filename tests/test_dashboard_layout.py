@@ -1,4 +1,5 @@
 """Run with a display (or xvfb-run) to catch clipped dashboard content."""
+import sys
 import os
 import tkinter as tk
 import unittest
@@ -8,7 +9,7 @@ from wlre.core.state import State
 from wlre.ui.gui import App
 
 
-@unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt','Requires a desktop or Xvfb')
+@unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt' or sys.platform == 'darwin','Requires a desktop or Xvfb')
 class DashboardLayout(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

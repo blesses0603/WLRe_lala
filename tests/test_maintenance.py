@@ -1,3 +1,4 @@
+import sys
 import copy
 import os
 import tempfile
@@ -38,7 +39,7 @@ class MaintenanceTests(unittest.TestCase):
         self.assertEqual(maintenance.backpack_stock(inv),{})
 
 
-@unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt','Requires a desktop')
+@unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt' or sys.platform == 'darwin','Requires a desktop')
 class MaintenanceUiTests(unittest.TestCase):
     def setUp(self):
         from wlre.ui.gui import App

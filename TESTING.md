@@ -78,3 +78,13 @@ P1b 首輪提交 `2d68ef9`：純核心三平台 [40339132736](https://github.com
 - Windows 原生 EXE／乾淨安裝、macOS 原生 APP：未打包；build dry-run 僅驗證建置計畫。
 - 新版官方 Bundle 全面解析、場景及動態網格位置：未由本次 Manifest 探測證明。
 - 效能／長時間執行／網路重連／完整關閉：P7 必須另有量測及結果。
+
+## macOS 原生 GUI 測試覆蓋修正批次
+
+資源子分支提交 `34b7866` 的三套三平台 CI 全部成功（核心 40389292080、資源 40389292107、完整 40389302668）。檢視完整測試紀錄發現各平台均收集 1,291 項，但 Ubuntu 跳過 2、Windows 跳過 7、macOS 跳過 132；macOS 其中 **131 項 GUI** 被僅接受 `DISPLAY`／Windows 的舊 decorator 排除，另外 1 項是確實只支援 Windows 的 DPAPI。
+
+29 個相關 GUI 測試模組加入 macOS 原生 Aqua 條件，不設定假的 DISPLAY、不刪測試或放寬斷言；Linux 無顯示環境仍跳過，Windows 行為保留。已有原生 Aqua smoke 測試以相同平台條件執行，本批讓一般功能與新 Host／原生資源測試也真正執行於 macOS。修正先提交核心分支，待三平台 CI 驗證後再正常合入資源子分支；不改寫歷史或修改 main。
+
+這是 CI 覆蓋修正，沒有修改遊戲功能或官方資料。各平台實際執行數、剩餘 skip 與完整結果以本批提交的 Actions 為準；若原生 Mac 測試失敗，先修復，不將先前綠色但跳過 GUI 的結果當作驗收。
+
+本批核心分支本地完整 **1,248 項，92.428 秒，OK，跳過 2 項**（`/tmp/lala-core-native-mac-guards.log`）。逐檔 AST 比對證明只有 29 個模組的顯示條件及必要 sys 匯入變動；沒有改動測試斷言／功能程式。名稱檢查、兩個新核心 GUI 測試 Ruff、compileall、audit、diff check 通過。macOS 執行結果必須等待本批原生 CI，不以 Linux 模擬結果聲稱通過。
