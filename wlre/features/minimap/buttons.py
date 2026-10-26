@@ -3,7 +3,6 @@
 Keep the existing single-click selection and guarded double-click callback.
 Only the app's existing movement/portal services can send commands.
 """
-import math
 from wlre.services.world.portals import nearest_marker
 
 
@@ -14,20 +13,8 @@ class MinimapPickMixin:
         if marker is not None:
             self.select_portal(marker)
             return False
-        # NPC markers are position references, not walk or event commands.
-        npc_candidates=[]
-        for npc in self.npc_rows:
-            if npc['x'] is None or npc['y'] is None or not 0<=npc['x']<=65535 or not 0<=npc['y']<=65535:
-                continue
-            u,v=self.projection.packet_to_pixel(npc['x'],npc['y'])
-            if not 0<=u<=1024 or not 0<=v<=1024:
-                continue
-            px,py=self.screen_pixel(u,v)
-            if math.hypot(px-event.x,py-event.y)<=8:
-                npc_candidates.append((math.hypot(px-event.x,py-event.y),npc))
-        if npc_candidates:
-            self.select_npc(min(npc_candidates,key=lambda x:x[0])[1])
-            return False
+        # NPCs have no visible markers. Do not leave invisible NPC hitboxes;
+        # NPC selection and interaction stay in the sidebar list only.
         self.selected_portal=None
         self.selected_npc=None
         self.update_portal_button()
