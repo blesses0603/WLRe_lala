@@ -55,6 +55,25 @@ class InstanceNavigation(unittest.TestCase):
                 self.assertTrue(page.enter_button.instate(['disabled']))
         self.assertFalse(self.errors, self.errors)
 
+    def test_new_icons_use_same_size_as_other_dashboard_tabs(self):
+        launcher = self.app.instance_launcher
+        controls = (
+            self.app.left_tabs.buttons[str(launcher)],
+            self.app.instance_panel.tabs.buttons[str(self.app.instance_panel.main_page)],
+            self.app.instance_panel.tabs.buttons[str(self.app.instance_panel.coop_page)],
+        )
+        for button in controls:
+            image = button.cget('image')
+            self.assertTrue(image)
+            self.assertEqual(int(self.root.tk.call('image', 'width', image)), 34)
+            self.assertEqual(int(self.root.tk.call('image', 'height', image)), 34)
+            self.assertEqual(button.cget('style'), 'Icon.Tab.TButton')
+        # Selecting co-op still uses the original Notebook navigation.
+        self.app.instance_panel.tabs.select(self.app.instance_panel.coop_page)
+        self.assertEqual(
+            self.app.instance_panel.tabs.select(),
+            str(self.app.instance_panel.coop_page))
+
     def test_compact_window_keeps_room_actions_above_the_lists(self):
         # A fixed-size popout must show both official and live room tables.
         panel = self.app.instance_panel
