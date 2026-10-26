@@ -88,6 +88,30 @@ class SecondaryFeatures(unittest.TestCase):
         finally:
             popup.destroy()
 
+    def test_closing_dialog_cancels_owned_initial_geometry_jobs(self):
+        from wlre.ui.window_layout import configure_dialog
+        popup = tk.Toplevel(self.root)
+        popup.withdraw()
+        configure_dialog(popup, 300, 200)
+        captured = []
+        def close_after_map():
+            commands = set(popup._tclCommands)
+            owned = {job for job in self.root.tk.call('after', 'info')
+                     if str(self.root.tk.call('after', 'info', job)[0]) in commands}
+            captured.append(owned)
+            popup.destroy()
+        popup.bind('<Map>', lambda event: self.root.after_idle(close_after_map)
+                   if event.widget is popup else None, add='+')
+        try:
+            popup.deiconify()
+            self.root.update()
+            self.assertTrue(captured)
+            self.assertTrue(captured[0])
+            self.assertFalse(captured[0] & set(self.root.tk.call('after', 'info')))
+        finally:
+            if popup.winfo_exists():
+                popup.destroy()
+
     def test_every_non_home_tab_is_a_launcher(self):
         self.assertEqual(tuple(self.app.feature_windows),tuple(WINDOWS))
         self.assertEqual(len(self.app.feature_launchers),7)

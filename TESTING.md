@@ -114,3 +114,9 @@ P1b 首輪提交 `2d68ef9`：純核心三平台 [40339132736](https://github.com
 修復原生座標四捨五入：映射後尺寸內縮一個座標單位。對五處導航可見性斷言，Windows／X11 仍嚴格要求 normal，另外確認實際映射；Aqua 只有在 resizable=False、minsize=maxsize 且實際映射時，才接受固定窗的 zoomed 回報。沒有改寫 Tk 的 state 值或把隱藏視窗當成正常；新增真實 Tk 測試證明隱藏窗會被拒絕，已映射固定窗才通過。既有選頁、選取、尺寸與禁止網路指令等斷言全保留。
 
 本批本地完整 **1,258 項，92.183 秒，OK，跳過 2 項**（`/tmp/lala-core-native-state-final.log`）；事件迴圈／可見性 4 項另驗成功，Ruff、名稱及 diff check 通過。本批 native CI 仍需重新驗證，不能以 local X11 結果代替 Aqua。
+
+提交 `d30ea5d` 的三平台模組與完整 Ubuntu／Windows 成功；Mac 完整 40399558610 實際 **1,258 項／154.262 秒**，已只剩導航視窗下緣 769 對 768 的一項 failure（跳過 3）。固定窗可見性與所有其他原生 GUI 項目通過。
+
+最後的映射穩定修正：僅在 Map 後 100ms 內追蹤頂層 Configure，合併 idle 核對以涵蓋稍晚的原生框架位置；到期停止追蹤，不持續干預使用者拖曳。Destroy 明確取消核對與穩定計時器，新增真實 Map／關窗測試驗證兩者都釋放。補充失敗診斷使用實際 Toplevel，兼容製作頁的內嵌 Frame。
+
+新增測試最初以 withdrawn 視窗的合成 Map 取不到工作，已改為真正映射後關閉並核對該 widget 的計時器；其後完整測試發現診斷訊息對 Frame 呼叫 title 不相容，已修復，未帶已知錯誤推送。模組 9 項、主畫面 8 項重驗成功。最終完整本地 **1,259 項，94.620 秒，OK，跳過 2 項**（`/tmp/lala-core-stable-map-final.log`）；名稱、compileall、audit、diff check 成功。原生 CI 結果仍以本批提交為準。

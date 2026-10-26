@@ -7,10 +7,12 @@ import tkinter as tk
 
 
 def _fit_mapped_display(window):
-    """WM 加上原生框架後，再依實際位置限制可見內容大小。"""
+    """初始映射穩定期間核對 WM 框架；停止後不干預使用者拖曳。"""
     if '_display_fit_binding' in vars(window):
         return
     pending = None
+    settle_job = None
+    settling = False
 
     def fit():
         nonlocal pending
@@ -19,7 +21,6 @@ def _fit_mapped_display(window):
             if not window.winfo_exists() or not window.winfo_ismapped():
                 return
             width, height = window.winfo_width(), window.winfo_height()
-            # 原生座標／內容尺寸可能各自四捨五入，保留一個實體座標單位。
             available_width = max(1, window.winfo_screenwidth() - max(0, window.winfo_x()) - 1)
             available_height = max(1, window.winfo_screenheight() - max(0, window.winfo_y()) - 1)
             fitted = min(width, available_width), min(height, available_height)
@@ -29,7 +30,6 @@ def _fit_mapped_display(window):
             window.minsize(min(minimum[0], fitted[0]), min(minimum[1], fitted[1]))
             if not any(window.resizable()):
                 window.maxsize(*fitted)
-            # 只改內容尺寸，保留 WM 已決定的位置，避免標題列偏移重複累加。
             window.geometry(f'{fitted[0]}x{fitted[1]}')
         except tk.TclError:
             try:
@@ -39,12 +39,39 @@ def _fit_mapped_display(window):
             if alive:
                 raise
 
+    def settled():
+        nonlocal settle_job, settling
+        settle_job = None
+        settling = False
+
     def schedule(event):
-        nonlocal pending
-        if event.widget is window and pending is None:
+        nonlocal pending, settle_job, settling
+        if event.widget is not window:
+            return
+        if event.type == tk.EventType.Map:
+            settling = True
+            if settle_job is not None:
+                window.after_cancel(settle_job)
+            settle_job = window.after(100, settled)
+        if settling and pending is None:
             pending = window.after_idle(fit)
 
+    def destroyed(event):
+        nonlocal pending, settle_job, settling
+        if event.widget is not window:
+            return
+        settling = False
+        for job in (pending, settle_job):
+            if job is not None:
+                try:
+                    window.after_cancel(job)
+                except tk.TclError:
+                    pass
+        pending = settle_job = None
+
     window.bind('<Map>', schedule, add='+')
+    window.bind('<Configure>', schedule, add='+')
+    window.bind('<Destroy>', destroyed, add='+')
     window._display_fit_binding = True
 
 

@@ -177,10 +177,14 @@ class DashboardLayout(unittest.TestCase):
         from wlre.ui.recovery_ui import SupplyPicker
         def check(window):
             self.root.update()
+            top = window.winfo_toplevel()
             self.assertGreaterEqual(window.winfo_x(),0)
             self.assertGreaterEqual(window.winfo_y(),0)
             self.assertLessEqual(window.winfo_x()+window.winfo_width(),self.root.winfo_screenwidth())
-            self.assertLessEqual(window.winfo_y()+window.winfo_height(),self.root.winfo_screenheight())
+            self.assertLessEqual(window.winfo_y()+window.winfo_height(),self.root.winfo_screenheight(),
+                                 f'{window}: {top.title()}, geometry={top.geometry()}, '
+                                 f'y={window.winfo_y()}, height={window.winfo_height()}, '
+                                 f'min={top.minsize()}, max={top.maxsize()}, state={top.state()}')
             self.assertLessEqual(window.winfo_width(),1240)
             self.assertLessEqual(window.winfo_height(),760)
             def inspect(parent):
