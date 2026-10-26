@@ -21,6 +21,10 @@ class Official1275MinimapTests(unittest.TestCase):
             15138: stage(11139, width=7200, height=7200),
             # Its 1262 geometry was 65535/65535, the 1275 dimensions differ.
             13216: stage(13216, width=3960, height=3960, offset_x=12, offset_y=12),
+            # Scene number and texture number differ even though both
+            # SmallMap2D_12050 and SmallMap2D_15129 exist in the cache.
+            12050: stage(15129, width=7938, height=11772,
+                         offset_x=165, offset_y=28),
         }
         self.runtime = SimpleNamespace(revision=1275, stages=self.stages)
         self.patch_runtime = patch('wlre.services.world.runtime_1275.active_runtime',
@@ -66,6 +70,13 @@ class Official1275MinimapTests(unittest.TestCase):
         self.assertFalse(maps.has_image(10002))
         with self.assertRaises(ValueError):
             maps.projection(10002)
+
+    def test_scene_12050_uses_official_model_15129_not_similar_scene_number(self):
+        maps = SmallMaps(source_revision='1275')
+        self.assertTrue(maps.has_image(12050))
+        projection, model = maps.projection(12050)
+        self.assertEqual(model, 'M15129')
+        self.assertEqual((projection.height, projection.offset_x), (11772, 165))
 
     def test_1275_image_stays_readonly_in_existing_minimap_page(self):
         page = MinimapNavigationMixin()
