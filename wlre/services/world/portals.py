@@ -71,6 +71,9 @@ class Portals:
                     portal_positions = getattr(verified, 'portal_positions', {})
                     if not isinstance(portal_positions, dict):
                         portal_positions = {}
+                    portal_evidence = getattr(verified, 'portal_link_evidence', {})
+                    if not isinstance(portal_evidence, dict):
+                        portal_evidence = {}
                     portal_metadata_status = getattr(
                         verified, 'portal_metadata_status', 'missing_stage_map')
                     portal_schema_report = getattr(
@@ -116,6 +119,22 @@ class Portals:
                                 and position.get('index') == index
                                 and type(map_x) is int and type(map_y) is int
                                 and 0 <= map_x <= 65535 and 0 <= map_y <= 65535)
+                            strict_valid_xy = valid_xy
+                            reference = portal_evidence.get((scene_id, index), {})
+                            if not isinstance(reference, dict):
+                                reference = {}
+                            reference_xy = (
+                                reference.get('source_kind') ==
+                                '1275_eve_door_links_reference'
+                                and reference.get('scene') == scene_id
+                                and reference.get('index') == index
+                                and reference.get('position_verified') is True
+                                and isinstance(reference.get('projection_guard'), dict)
+                                and type(reference.get('x')) is int
+                                and type(reference.get('y')) is int)
+                            if not valid_xy and reference_xy:
+                                map_x, map_y = reference['x'], reference['y']
+                                valid_xy = True
                             link = linked.get((scene_id, index), {})
                             if not isinstance(link, dict):
                                 link = {}
@@ -145,6 +164,14 @@ class Portals:
                             if (type(display_scene) is not int
                                     or not 0 < display_scene <= 65535):
                                 display_scene = None
+                            if (display_scene is None
+                                    and reference.get('source_kind') ==
+                                    '1275_eve_door_links_reference'
+                                    and reference.get('scene') == scene_id
+                                    and reference.get('index') == index
+                                    and type(reference.get('destination')) is int
+                                    and reference.get('destination_defined') is True):
+                                display_scene = reference['destination']
                             display_label = (source_scene_label(
                                 display_scene, scene_names)
                                 if display_scene is not None else
@@ -170,11 +197,15 @@ class Portals:
                                 'source_revision': 1275,
                                 'coordinate_valid': valid_xy,
                                 'coordinate_source': (
-                                    'verified_eve_door_links_scaled' if valid_xy
+                                    'verified_eve_door_links_scaled' if strict_valid_xy
+                                    else 'official_link_reference_scaled' if reference_xy
                                     else 'unverified_event_grid'),
                                 'projection_guard': (
-                                    position.get('projection_guard') if valid_xy
+                                    position.get('projection_guard') if strict_valid_xy
+                                    else reference.get('projection_guard') if reference_xy
                                     else None),
+                                'link_reference_only': bool(reference_xy and not strict_valid_xy),
+                                'reference_issues': reference.get('issues', ()),
                                 'x': map_x if valid_xy else None,
                                 'y': map_y if valid_xy else None,
                                 'event_grid_x': x,
@@ -182,9 +213,9 @@ class Portals:
                                 'event_ids': tuple(row.get('event_ids') or ()),
                                 'destination': destination,
                                 'destination_verified': verified_target,
-                                'direct_eligible': bool(verified_target and valid_xy and 1 <= index <= 65535),
-                                'direct_door_index': index if verified_target and valid_xy and 1 <= index <= 65535 else None,
-                                'door_index': index if verified_target and valid_xy and 1 <= index <= 65535 else None,
+                                'direct_eligible': bool(verified_target and strict_valid_xy and 1 <= index <= 65535),
+                                'direct_door_index': index if verified_target and strict_valid_xy and 1 <= index <= 65535 else None,
+                                'door_index': index if verified_target and strict_valid_xy and 1 <= index <= 65535 else None,
                                 'navigation_status': 'unverified',
                                 'direct_note': (
                                     '1275 門編號／位置／目的地已交叉核對；可在手動確認後單次試傳，'
@@ -195,6 +226,66 @@ class Portals:
                                     '未驗證時不畫點也不送出換圖封包'),
                             })
                         doors[str(scene_id)] = visible
+                    # EveDoorLinks can contain valid official links whose
+                    # event has no NewDoor row. Display them as reference-only
+                    # records. Their ordinal is NOT a verified C20-8 trigger.
+                    for key, reference in sorted(portal_evidence.items()):
+                        if (not isinstance(key, tuple) or len(key) != 2
+                                or not isinstance(reference, dict)):
+                            continue
+                        scene_id, index = key
+                        if (type(scene_id) is not int or type(index) is not int
+                                or not 0 < scene_id <= 65535 or not 0 < index <= 65535
+                                or reference.get('source_kind') !=
+                                '1275_eve_door_links_reference'
+                                or reference.get('scene') != scene_id
+                                or reference.get('index') != index):
+                            continue
+                        existing = doors.setdefault(str(scene_id), [])
+                        if any(row['index'] == index for row in existing):
+                            continue
+                        valid = (
+                            reference.get('position_verified') is True
+                            and isinstance(reference.get('projection_guard'), dict)
+                            and type(reference.get('x')) is int
+                            and type(reference.get('y')) is int)
+                        target = reference.get('destination')
+                        target_known = reference.get('destination_defined') is True
+                        target_label = (source_scene_label(target, scene_names)
+                                        if target_known else None)
+                        official_name = portal_names.get(key)
+                        if type(official_name) is not str or not official_name.strip():
+                            official_name = None
+                        label = (official_name or
+                                 ('前往 ' + target_label + '（官方連線參考）'
+                                  if target_label else
+                                  '傳點 #' + str(index) + '（連線未完整驗證）'))
+                        existing.append({
+                            'id': f'1275-ref:{scene_id}:{index}',
+                            'scene': scene_id, 'index': index,
+                            'name': label, 'official_name': official_name,
+                            'display_destination_label': target_label,
+                            'source_scene_label': source_scene_label(
+                                scene_id, scene_names),
+                            'source_scene_name_known': scene_id in scene_names,
+                            'destination_label': target_label or '目的地未確認',
+                            'kind': 'door', 'source_revision': 1275,
+                            'coordinate_valid': valid,
+                            'coordinate_source': 'official_link_reference_scaled',
+                            'projection_guard': (
+                                reference.get('projection_guard') if valid else None),
+                            'x': reference.get('x') if valid else None,
+                            'y': reference.get('y') if valid else None,
+                            'event_grid_x': None, 'event_grid_y': None,
+                            'event_ids': (), 'destination': None,
+                            'destination_verified': False,
+                            'direct_eligible': False,
+                            'direct_door_index': None, 'door_index': None,
+                            'link_reference_only': True,
+                            'reference_issues': reference.get('issues', ()),
+                            'navigation_status': 'unverified',
+                            'direct_note': '官方連線僅供唯讀定位；沒有核對門事件，不允許送出傳送封包',
+                        })
                     source_ready = True
                 except ValueError:
                     # During pre-login, verified files may not yet be installed.
@@ -204,6 +295,7 @@ class Portals:
                     'portals': doors, 'audit': [], 'entities': {},
                     'source_revision': 1275,
                     'door_count': door_count,
+                    'official_link_reference_count': (len(portal_evidence) if source_ready else 0),
                     'scene_names': scene_names,
                     'portal_metadata_status': (
                         portal_metadata_status if source_ready
