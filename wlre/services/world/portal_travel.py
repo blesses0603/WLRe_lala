@@ -48,6 +48,10 @@ class PortalTravel:
                 return  # repeated list clicks cannot restart or re-send a trigger
             raise ProtocolError('傳點移動尚未結束，請先停止移動')
         self.catalog = self.catalog or Portals()
+        if getattr(self.catalog, 'data', {}).get('source_revision') in (1262, '1262'):
+            # A long-lived worker may hold a pre-upgrade 1262 catalogue.
+            # Rebuild from the active 1275 source before any movement/packet.
+            self.catalog = Portals()
         portal = next((p for p in self.catalog.for_scene(state.player.get('scene'))
                        if p['id'] == portal_id), None)
         if portal is None:
@@ -87,6 +91,10 @@ class PortalTravel:
         if state.event_flow.get('blocked'):
             raise ProtocolError('等待目前伺服器事件結束後再觸發出口')
         self.catalog = self.catalog or Portals()
+        if getattr(self.catalog, 'data', {}).get('source_revision') in (1262, '1262'):
+            # A long-lived worker may hold a pre-upgrade 1262 catalogue.
+            # Rebuild from the active 1275 source before any movement/packet.
+            self.catalog = Portals()
         portal = next((p for p in self.catalog.for_scene(state.player.get('scene'))
                        if p['id'] == portal_id), None)
         if portal is None:
