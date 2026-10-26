@@ -6,7 +6,8 @@ from wlre.services.world.portal_links_1275 import parse_stage_map_portals, parse
 
 def audit_portal_coverage(doors, stages, stage_raw=None, link_raw=None,
                         positions=None, destinations=None, names=None,
-                        link_evidence=None, extra_routes=None):
+                        link_evidence=None, extra_routes=None,
+                        stage_markers=None):
     """Only call after official source verification; never authorize a packet.
 
     Include scenes without doors and orphaned marker/link indices. An Eve event
@@ -15,6 +16,7 @@ def audit_portal_coverage(doors, stages, stage_raw=None, link_raw=None,
     positions, destinations, names = positions or {}, destinations or {}, names or {}
     evidence = link_evidence if isinstance(link_evidence, dict) else {}
     routes = extra_routes if isinstance(extra_routes, list) else []
+    raw_markers = stage_markers if isinstance(stage_markers, list) else []
     markers, links, marker_counts = {}, {}, Counter()
     statuses = {'StageMapData_C': 'missing', 'EveDoorLinks': 'missing'}
     for table, raw, reader in (
@@ -35,6 +37,7 @@ def audit_portal_coverage(doors, stages, stage_raw=None, link_raw=None,
             statuses[table] = 'invalid'
     expected_scenes = set(stages)
     all_scenes = expected_scenes | set(doors) | set(links) | {scene for scene, _ in marker_counts}
+    all_scenes.update(row['scene'] for row in raw_markers if type(row.get('scene')) is int)
     for rows in links.values(): all_scenes.update(row['destination'] for row in rows)
     by_scene = {}
     for (scene, index), row in markers.items(): by_scene.setdefault(scene, {})[index] = row
@@ -80,6 +83,8 @@ def audit_portal_coverage(doors, stages, stage_raw=None, link_raw=None,
                                 if link_info.get('arrival_verified') else None),
                             'reference_only': bool(link_info)})
         rows.append({'scene': scene, 'in_scene_table': scene in expected_scenes,
+                     'hidden_stage_markers': sum(row.get('kind') == 3 for row in raw_markers if row.get('scene') == scene),
+                     'cross_scene_stage_markers': sum(row.get('kind') == 4 for row in raw_markers if row.get('scene') == scene),
                      'eve_doors': sum(counts.values()), 'ordinary_portals': ordinary,
                      'unresolved': gaps, 'details': details})
     complete = all(value == 'parsed' for value in statuses.values())
@@ -100,4 +105,9 @@ def audit_portal_coverage(doors, stages, stage_raw=None, link_raw=None,
             'reference_unknown_target_count': sum(
                 row.get('destination_defined') is False for row in evidence.values()),
             'door_link_data_route_count': len(routes),
+            'stage_hidden_marker_count': sum(row.get('kind') == 3 for row in raw_markers),
+            'stage_cross_scene_marker_count': sum(row.get('kind') == 4 for row in raw_markers),
+            'stage_hidden_no_target_count': sum(
+                row.get('kind') == 3 and row.get('destination') is None
+                for row in raw_markers),
             'can_send_packets': False, 'live_transfer_verified': False}
