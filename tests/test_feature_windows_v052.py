@@ -1,4 +1,5 @@
 """v0.5.2: all secondary functions are fixed windows centered on main."""
+from _tk_native_pump import create_root
 import sys
 import os
 import tkinter as tk
@@ -46,7 +47,7 @@ class CenterGeometry(unittest.TestCase):
 class SecondaryFeatures(unittest.TestCase):
     def setUp(self):
         from wlre.ui.gui import App
-        self.root=tk.Tk()
+        self.root=create_root()
         self.app=App(self.root)
         self.errors=[]
         self.root.report_callback_exception=lambda *e:self.errors.append(e)

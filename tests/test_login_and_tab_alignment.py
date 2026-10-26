@@ -1,3 +1,4 @@
+from _tk_native_pump import create_root
 import sys
 import os, time, tkinter as tk, unittest
 from unittest.mock import patch
@@ -8,7 +9,7 @@ from wlre.ui.gui import App
 @unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt' or sys.platform == 'darwin','Requires a desktop')
 class LoginAndTabAlignment(unittest.TestCase):
     def setUp(self):
-        self.root=tk.Tk();self.app=App(self.root);self.app.show_main();self.root.update()
+        self.root=create_root();self.app=App(self.root);self.app.show_main();self.root.update()
 
     def tearDown(self):
         for job in self.root.tk.call('after','info'):self.root.tk.call('after','cancel',job)

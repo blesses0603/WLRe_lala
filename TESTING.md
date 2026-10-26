@@ -92,3 +92,9 @@ P1b 首輪提交 `2d68ef9`：純核心三平台 [40339132736](https://github.com
 原生 GUI gate 提交 `a8e793e`：核心 40391064681／資源 40391064672 三平台成功；完整 40391075638 的 Ubuntu／Windows 成功，macOS 執行至 15 分鐘上限而取消。這不是 runner 排隊問題，不能記為通過。該工作最後完成 `test_character_sync_safety`，下一個測試模組為 `test_compact_crafting`；尚無堆疊足以確認實際卡點。
 
 追加 CI 診斷：macOS 先獨立執行完整製作 UI 8 項，90 秒未退出時由 faulthandler 輸出堆疊並非零結束；之後仍必須執行整套測試及原生 GUI smoke，整套每 60 秒提供診斷堆疊。保留 15 分鐘上限及所有斷言，沒有用跳過掩蓋。本地相同 preflight **8 項，12.814 秒通過**；整套診斷命令亦以連線／GUI **17 項通過**驗證。Mac CI 需重新執行，通過前不合入資源分支或開始依賴此結果的移植。
+
+診斷提交 `31b0f78`：核心／資源三平台成功；Mac preflight 在 90 秒明確失敗（完整 CI 40394023562，Mac job 121822151675）。堆疊確認第一項 `CompactCrafting.setUp` 的 `root.update()` 卡在 `_tkinter`，沒有進入功能斷言。現有來源 smoke 原已註記 unattended Cocoa 的隱藏 Toplevel 切換可能阻塞完整 update；單純把 GUI gate 打開不足以驗收。
+
+修復只在測試層：`_tk_native_pump.NativeTestRoot` 仍是真正 Tk root，Aqua 的 update 以 25ms 退出計時器驅動真正 mainloop，再處理 idle geometry；Windows／X11 繼續呼叫原 Tk.update。28 個測試模組改用此 root factory，AST 比對證明斷言與功能操作未變，子程序腳本沒有文字替換。不是把 update 換成 idle-only、假的 DISPLAY 或假 UI。新增 3 項實際 callback／計時器清理／callback 銷毀 root 測試通過。
+
+本批本地完整 **1,251 項，98.045 秒，OK，跳過 2 項**（`/tmp/lala-core-native-pump-full.log`），最後清理分支再驗 3 項成功。新檔／核心 GUI 測試 Ruff、28 檔名稱與 AST、compileall、audit、diff check 通過。Mac 整套 CI 改為每個 case／類別交接最多 90 秒輸出堆疊並非零結束，仍保留完整 suite、source GUI smoke 與 15 分鐘 job 上限；沒有延長等待掩蓋卡住。實際 Aqua 修復是否成功須由本批原生 CI 判定，不能由 Linux 的結果推論。

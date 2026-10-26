@@ -1,3 +1,4 @@
+from _tk_native_pump import create_root
 import sys
 import os
 import tkinter as tk
@@ -10,7 +11,7 @@ from wlre.core.state import State
 @unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt' or sys.platform == 'darwin','Requires a desktop or Xvfb')
 class CompactCrafting(unittest.TestCase):
     def setUp(self):
-        self.root=tk.Tk();self.app=App(self.root);self.errors=[]
+        self.root=create_root();self.app=App(self.root);self.errors=[]
         self.root.report_callback_exception=lambda *args:self.errors.append(args)
         self.app.show_main();self.app.open_feature('crafting');self.root.update()
         self.panel=self.app.crafting_panel;self.browser=self.panel.browser

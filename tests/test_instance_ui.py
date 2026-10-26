@@ -1,4 +1,5 @@
 """Regression tests for the instance and co-op navigation skeleton."""
+from _tk_native_pump import create_root
 import sys
 import os
 import tkinter as tk
@@ -12,7 +13,7 @@ from wlre.ui.gui import App
 @unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt' or sys.platform == 'darwin', 'Requires a desktop or Xvfb')
 class InstanceNavigation(unittest.TestCase):
     def setUp(self):
-        self.root = tk.Tk()
+        self.root = create_root()
         self.app = App(self.root)
         self.errors = []
         self.root.report_callback_exception = lambda *args: self.errors.append(args)

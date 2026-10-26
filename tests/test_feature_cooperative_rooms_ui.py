@@ -1,4 +1,5 @@
 """P1a second batch: cooperative creation, joining, and leaving in Tk."""
+from _tk_native_pump import create_root
 import sys
 import os
 import time
@@ -17,7 +18,7 @@ from wlre.features.cooperative.panel import CooperativeModePage
 class CooperativeRoomDialogsUI(unittest.TestCase):
     def setUp(self):
         with patch.object(App, 'start_version_check'):
-            self.root = tk.Tk()
+            self.root = create_root()
             self.app = App(self.root)
             self.app.show_main()
         self.app.live_active = True

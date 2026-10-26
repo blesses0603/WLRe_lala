@@ -1,4 +1,5 @@
 """1262 NPC stores: genuine Eve items, read-only UI, and fail-closed packets."""
+from _tk_native_pump import create_root
 import sys
 import os
 import unittest
@@ -140,7 +141,7 @@ class NPCShopUITests(unittest.TestCase):
     def test_shop_preview_and_safe_close_dialog(self):
         import tkinter as tk
         from wlre.ui.home_map import HomeMap
-        root=tk.Tk()
+        root=create_root()
         send=Mock()
         try:
             view=HomeMap(root,Mock(),Mock(),on_npc=send,on_npc_next=send,compact=True)

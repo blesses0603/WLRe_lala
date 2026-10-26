@@ -1,4 +1,5 @@
 """Tk regression for 1275 doors on the minimap; no real game commands."""
+from _tk_native_pump import create_root
 import sys
 import os
 import tkinter as tk
@@ -14,7 +15,7 @@ from wlre.services.world.portals import Portals
                      'Requires a desktop or Linux virtual display')
 class Portal1275UI(unittest.TestCase):
     def setUp(self):
-        self.root = tk.Tk()
+        self.root = create_root()
         self.root.geometry('640x500')
         self.picked = Mock()
         self.sent = Mock()

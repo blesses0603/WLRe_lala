@@ -73,9 +73,18 @@ jobs:
           python - <<'PY'
           import faulthandler
           import unittest
-          faulthandler.dump_traceback_later(60, repeat=True)
+          # 每個 case／類別交接均受限，卡住時保留精確堆疊並明確失敗。
+          class NativeResult(unittest.TextTestResult):
+              def startTest(self, test):
+                  faulthandler.dump_traceback_later(90, exit=True)
+                  super().startTest(test)
+              def stopTest(self, test):
+                  super().stopTest(test)
+                  faulthandler.dump_traceback_later(90, exit=True)
+          faulthandler.dump_traceback_later(90, exit=True)
           try:
-              unittest.main(module=None, argv=['unittest', 'discover', '-s', 'tests', '-v'])
+              unittest.main(module=None, argv=['unittest', 'discover', '-s', 'tests', '-v'],
+                            testRunner=unittest.TextTestRunner(verbosity=2, resultclass=NativeResult))
           finally:
               faulthandler.cancel_dump_traceback_later()
           PY

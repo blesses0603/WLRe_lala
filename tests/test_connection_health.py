@@ -1,3 +1,4 @@
+from _tk_native_pump import create_root
 import sys
 import errno
 import queue
@@ -271,7 +272,7 @@ class NativeFocusRegression(unittest.TestCase):
         from tkinter import ttk
         from types import SimpleNamespace
         from wlre.ui.gui import App
-        root=tk.Tk();self.addCleanup(root.destroy)
+        root=create_root();self.addCleanup(root.destroy)
         combo=ttk.Combobox(root,values=['A','B']);combo.pack();root.update()
         root.tk.call('ttk::combobox::Post',str(combo));root.update()
         root.tk.call('focus','-force',str(combo)+'.popdown.f.l');root.update()

@@ -1,3 +1,4 @@
+from _tk_native_pump import create_root
 import sys
 import os,queue,tempfile,tkinter as tk,unittest
 from collections import deque
@@ -31,7 +32,7 @@ class OptimizedWindow(unittest.TestCase):
         # Those workers can trigger cyclic GC of a retired Tcl interpreter
         # from a non-UI thread while later test cases create new Tk roots.
         with patch.object(App, 'start_version_check'):
-            cls.root=tk.Tk()
+            cls.root=create_root()
             cls.app=App(cls.root)
             cls.app.show_main()
             cls.root.update()

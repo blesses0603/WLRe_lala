@@ -1,3 +1,4 @@
+from _tk_native_pump import create_root
 import sys
 import os
 import tempfile
@@ -16,7 +17,7 @@ class ExpeditionPanelTests(unittest.TestCase):
         self.folder = tempfile.TemporaryDirectory()
         self.local_data = patch.dict(os.environ, {'LOCALAPPDATA': self.folder.name})
         self.local_data.start()
-        self.root = tk.Tk()
+        self.root = create_root()
         self.app = SimpleNamespace(root=self.root, live_active=True, _settings_key=None,
             snapshot={}, send=Mock(return_value=True), settings_identity=lambda: 'a'*64)
         self.catalog = {'levels': {'1': {'reduction': 0, 'difficulty': 2}}, 'tasks': {

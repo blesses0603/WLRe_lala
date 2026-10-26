@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from threading import Event, Thread
 from unittest.mock import patch
 
+from _tk_native_pump import create_root
+
 from wlre.core.application import Lifecycle, LifecycleError
 from wlre.ui.application_host import DesktopHost
 from wlre.ui.gui import App
@@ -16,7 +18,7 @@ from wlre.ui.gui import App
 @unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt' or sys.platform == 'darwin', '需要桌面顯示環境')
 class DesktopHostTests(unittest.TestCase):
     def setUp(self):
-        self.root = tk.Tk()
+        self.root = create_root()
         self.patcher = patch('wlre.ui.version_gate_controller.VersionGateController.start_version_check')
         self.patcher.start()
         self.host = DesktopHost(self.root)

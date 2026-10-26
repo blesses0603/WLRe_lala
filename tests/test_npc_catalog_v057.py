@@ -1,4 +1,5 @@
 """NPC phase-1: distinguish location references and actual EventData indices."""
+from _tk_native_pump import create_root
 import sys
 import gzip
 import json
@@ -123,7 +124,7 @@ class NPCCatalogTests(unittest.TestCase):
 class NPCSceneUITests(unittest.TestCase):
     def setUp(self):
         from wlre.ui.home_map import HomeMap
-        self.root = tk.Tk()
+        self.root = create_root()
         self.root.geometry('600x500')
         self.pick = Mock()
         self.portal = Mock()

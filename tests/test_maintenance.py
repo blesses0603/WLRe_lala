@@ -1,3 +1,4 @@
+from _tk_native_pump import create_root
 import sys
 import copy
 import os
@@ -47,7 +48,7 @@ class MaintenanceUiTests(unittest.TestCase):
         self.folder=tempfile.TemporaryDirectory()
         self.environment=patch.dict(os.environ,{'LOCALAPPDATA':self.folder.name,
                                              'WLRE_DISABLE_AUTO_CATALOG':'1'});self.environment.start()
-        self.root=tk.Tk();self.app=App(self.root);self.editor=SettingsEditor(self.app)
+        self.root=create_root();self.app=App(self.root);self.editor=SettingsEditor(self.app)
         self.page=self.editor.maintenance_page
         self.editor.tabs.select(self.page);self.root.update()
 

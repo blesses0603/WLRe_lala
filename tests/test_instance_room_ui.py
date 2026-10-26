@@ -1,4 +1,5 @@
 """Room join/leave UI: selection, confirmation, password and cross-mode locks."""
+from _tk_native_pump import create_root
 import sys
 import os
 import time
@@ -15,7 +16,7 @@ from wlre.core.state import State
                      'Requires desktop/Xvfb')
 class RoomUI(unittest.TestCase):
     def setUp(self):
-        self.root = tk.Tk()
+        self.root = create_root()
         self.app = App(self.root)
         self.app.show_main()
         self.app.live_active = True

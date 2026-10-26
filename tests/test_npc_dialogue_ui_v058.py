@@ -1,4 +1,5 @@
 """NPC UI: explicit confirmation, disabled unverified NPCs, manual next."""
+from _tk_native_pump import create_root
 import sys
 import os
 import tkinter as tk
@@ -12,7 +13,7 @@ from wlre.ui.home_map import HomeMap
                      'Requires Tk display')
 class NPCDialogueUITests(unittest.TestCase):
     def setUp(self):
-        self.root=tk.Tk()
+        self.root=create_root()
         self.root.geometry('640x520')
         self.send=Mock()
         self.map=HomeMap(self.root,Mock(),Mock(),on_npc=self.send,

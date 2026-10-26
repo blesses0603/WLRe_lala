@@ -1,4 +1,5 @@
 """Run with a display (or xvfb-run) to catch clipped dashboard content."""
+from _tk_native_pump import create_root
 import sys
 import os
 import tkinter as tk
@@ -13,7 +14,7 @@ from wlre.ui.gui import App
 class DashboardLayout(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.root=tk.Tk();cls.app=App(cls.root);cls.errors=[]
+        cls.root=create_root();cls.app=App(cls.root);cls.errors=[]
         cls.root.report_callback_exception=lambda *args:cls.errors.append(args)
         cls.app.show_main();cls.root.update()
 
