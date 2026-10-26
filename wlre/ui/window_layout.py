@@ -3,6 +3,48 @@
 All dialogs use the main dashboard's center instead of the screen center.
 Clamp popups to the visible display; fixed geometry cannot be resized.
 """
+import tkinter as tk
+
+
+def _fit_mapped_display(window):
+    """WM 加上原生框架後，再依實際位置限制可見內容大小。"""
+    if '_display_fit_binding' in vars(window):
+        return
+    pending = None
+
+    def fit():
+        nonlocal pending
+        pending = None
+        try:
+            if not window.winfo_exists() or not window.winfo_ismapped():
+                return
+            width, height = window.winfo_width(), window.winfo_height()
+            available_width = max(1, window.winfo_screenwidth() - max(0, window.winfo_x()))
+            available_height = max(1, window.winfo_screenheight() - max(0, window.winfo_y()))
+            fitted = min(width, available_width), min(height, available_height)
+            if fitted == (width, height):
+                return
+            minimum = window.minsize()
+            window.minsize(min(minimum[0], fitted[0]), min(minimum[1], fitted[1]))
+            if not any(window.resizable()):
+                window.maxsize(*fitted)
+            # 只改內容尺寸，保留 WM 已決定的位置，避免標題列偏移重複累加。
+            window.geometry(f'{fitted[0]}x{fitted[1]}')
+        except tk.TclError:
+            try:
+                alive = window.winfo_exists()
+            except tk.TclError:
+                alive = False
+            if alive:
+                raise
+
+    def schedule(event):
+        nonlocal pending
+        if event.widget is window and pending is None:
+            pending = window.after_idle(fit)
+
+    window.bind('<Map>', schedule, add='+')
+    window._display_fit_binding = True
 
 
 def dialog_geometry(width, height, screen_width, screen_height, *, margin=24):
@@ -25,14 +67,16 @@ def center_on_main(window, main, width, height, *, margin=24):
         mw, mh = main.winfo_width(), main.winfo_height()
         if mw <= 1 or mh <= 1:
             mw, mh = 1280, 800
-        x = max(0, min(sw-w, mx+(mw-w)//2))
-        y = max(0, min(sh-h, my+(mh-h)//2))
+        # 保留邊緣空間供原生標題列／視窗框，避免 WM 映射後把內容推到螢幕外。
+        x = max(0, min(sw-w-margin, mx+(mw-w)//2))
+        y = max(0, min(sh-h-margin, my+(mh-h)//2))
     except (AttributeError, TypeError):
         x, y = max(0, (sw-w)//2), max(0, (sh-h)//2)
     window.geometry(f'{w}x{h}+{x}+{y}')
     window.minsize(w, h)
     window.maxsize(w, h)
     window.resizable(False, False)
+    _fit_mapped_display(window)
     return w, h, x, y
 
 

@@ -98,3 +98,13 @@ P1b 首輪提交 `2d68ef9`：純核心三平台 [40339132736](https://github.com
 修復只在測試層：`_tk_native_pump.NativeTestRoot` 仍是真正 Tk root，Aqua 的 update 以 25ms 退出計時器驅動真正 mainloop，再處理 idle geometry；Windows／X11 繼續呼叫原 Tk.update。28 個測試模組改用此 root factory，AST 比對證明斷言與功能操作未變，子程序腳本沒有文字替換。不是把 update 換成 idle-only、假的 DISPLAY 或假 UI。新增 3 項實際 callback／計時器清理／callback 銷毀 root 測試通過。
 
 本批本地完整 **1,251 項，98.045 秒，OK，跳過 2 項**（`/tmp/lala-core-native-pump-full.log`），最後清理分支再驗 3 項成功。新檔／核心 GUI 測試 Ruff、28 檔名稱與 AST、compileall、audit、diff check 通過。Mac 整套 CI 改為每個 case／類別交接最多 90 秒輸出堆疊並非零結束，仍保留完整 suite、source GUI smoke 與 15 分鐘 job 上限；沒有延長等待掩蓋卡住。實際 Aqua 修復是否成功須由本批原生 CI 判定，不能由 Linux 的結果推論。
+
+有界 Aqua pump 提交 `0a55894`：核心 40395298214／資源 40395298316 三平台成功；完整 40395306705 的 Windows／Ubuntu 成功。Mac 製作 UI preflight 已通過，整套實際跑完 **1,251 項，186.302 秒**，但有 **8 failures／1 error／3 skipped**，未驗收通過。跳過為 Windows DPAPI 及兩項需更大 viewport 的重排測試，不再錯誤跳過 131 項 GUI。
+
+實際暴露並修復的三類問題：
+
+- Native Aqua 的 borderless 會重設 resizable，部分 Toplevel 設定還回傳不能轉為布林值的結果。Aqua 保留原生 WM 邊框與縮放狀態，Windows／X11 保留既有自訂邊框；最小化／恢復亦遵循同一政策。
+- 原生 WM 映射後，對話框實際下緣達 773，而螢幕高 768。共用定位保留邊緣空間，Map 後依實際座標校正內容大小；不在使用者拖曳時持續縮小，保留 resizable 設定及既有固定視窗政策。加入邊緣與真實 Tk 映射回歸。
+- 以 stdin 執行 unittest 時，Mac spawn 子程序嘗試匯入不存在的 `<stdin>`。改用 `python -m tools.run_native_unittest` 的真實檔案入口，保留同一套測試與 90 秒 deadline。新增隔離子程序測試驗證 spawn、失敗碼與阻塞 class setup 的堆疊／非零退出。
+
+修復後本地完整 **1,257 項，88.749 秒，OK，跳過 2 項**（`/tmp/lala-core-aqua-final-window.log`）；runner 額外 3 項通過，既有跨程序寫入 7 項透過新入口通過。Ruff、舊檔名稱、compileall、audit、diff check 通過。Mac 修復需由下一批 CI 實際確認，不預先標為成功。

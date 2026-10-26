@@ -24,6 +24,14 @@ CYAN = '#62c9e0'
 ASSETS = RESOURCE_ROOT.joinpath('assets')
 
 
+def native_titlebar(window):
+    """Aqua 的 borderless 會關閉 resizable，原生視窗須保留 WM 裝飾。"""
+    try:
+        return window.tk.call('tk', 'windowingsystem') == 'aqua'
+    except AttributeError:
+        return False
+
+
 class GlassGroup(ttk.Frame):
     """A captioned frame without the native labelframe's opaque title strip."""
     def __init__(self, parent, text='', padding=10, **kwargs):
@@ -164,7 +172,8 @@ class GlassTheme:
             item.bind('<Button-1>', start)
             item.bind('<B1-Motion>', drag)
             item.bind('<ButtonRelease-1>', lambda event=None: origin.clear())
-        window.overrideredirect(True)
+        if not native_titlebar(window):
+            window.overrideredirect(True)
         window.bind('<Map>', lambda event=None: self.restore(window, event)
                     if event is not None else None, add='+')
         window._glass_chrome = bar
@@ -212,8 +221,9 @@ class GlassTheme:
         # Tk's window procedure without its saved Python thread state (3.14).
         if not window.winfo_exists() or window.state() in ('iconic', 'withdrawn'):
             return
-        window._glass_restore = True
-        window.overrideredirect(False)
+        window._glass_restore = not native_titlebar(window)
+        if window._glass_restore:
+            window.overrideredirect(False)
         window.iconify()
 
     def restore(self, window, event):
@@ -229,7 +239,8 @@ class GlassTheme:
             return
         if getattr(window, '_glass_restore', False):
             window._glass_restore = False
-            window.overrideredirect(True)
+            if not native_titlebar(window):
+                window.overrideredirect(True)
         self.windows_chrome(window)
 
     def destroyed(self, window, event):

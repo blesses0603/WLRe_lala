@@ -60,34 +60,9 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           python -c 'import platform, tkinter; print("macOS:", platform.mac_ver()[0], "arch:", platform.machine(), "Tk:", tkinter.TkVersion)'
-          # 先驗證首個完整主畫面模組，避免原生事件迴圈卡住後只留下整批逾時。
-          python - <<'PY'
-          import faulthandler
-          import unittest
-          faulthandler.dump_traceback_later(90, exit=True)
-          try:
-              unittest.main(module=None, argv=['unittest', 'discover', '-s', 'tests', '-p', 'test_compact_crafting.py', '-v'])
-          finally:
-              faulthandler.cancel_dump_traceback_later()
-          PY
-          python - <<'PY'
-          import faulthandler
-          import unittest
-          # 每個 case／類別交接均受限，卡住時保留精確堆疊並明確失敗。
-          class NativeResult(unittest.TextTestResult):
-              def startTest(self, test):
-                  faulthandler.dump_traceback_later(90, exit=True)
-                  super().startTest(test)
-              def stopTest(self, test):
-                  super().stopTest(test)
-                  faulthandler.dump_traceback_later(90, exit=True)
-          faulthandler.dump_traceback_later(90, exit=True)
-          try:
-              unittest.main(module=None, argv=['unittest', 'discover', '-s', 'tests', '-v'],
-                            testRunner=unittest.TextTestRunner(verbosity=2, resultclass=NativeResult))
-          finally:
-              faulthandler.cancel_dump_traceback_later()
-          PY
+          # 真實模組入口支援 spawn；每個 case／類別交接有 90 秒診斷截止。
+          python -m tools.run_native_unittest --pattern test_compact_crafting.py
+          python -m tools.run_native_unittest
           python WLRE_Client.py --smoke-test-gui
       - name: Validate packaged resources and build plan
         run: |

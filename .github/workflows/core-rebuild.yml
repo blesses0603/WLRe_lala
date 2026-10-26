@@ -39,11 +39,14 @@ jobs:
           tests/test_desktop_application_host.py tests/test_shutdown_cancellation.py
           wlre/ui/resource_lifetime.py tests/test_ui_resource_lifetime.py
           tests/_tk_native_pump.py tests/test_native_test_pump.py
+          tools/run_native_unittest.py tests/test_native_unittest_runner.py
       - name: Run core unit and integration tests without GUI dependencies
         run: python -m unittest discover -s tests -p "test_rebuild_*.py" -v
       - name: Validate inventory tool
         run: python -m unittest discover -s tests -p test_core_rebuild_inventory.py -v
       - name: Validate cooperative cancellation without live downloads
         run: python -m unittest discover -s tests -p test_shutdown_cancellation.py -v
+      - name: Validate bounded native runner and spawn compatibility
+        run: python -m unittest discover -s tests -p test_native_unittest_runner.py -v
 
 # 既有 test.yml 的完整三平台 pull_request 檢查維持不變，不以本工作取代。

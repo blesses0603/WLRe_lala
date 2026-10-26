@@ -41,6 +41,19 @@ class CenterGeometry(unittest.TestCase):
         self.assertGreaterEqual(x,0)
         self.assertGreaterEqual(y,0)
 
+    def test_edge_clamp_reserves_room_for_native_window_frame(self):
+        main = Mock()
+        main.winfo_x.return_value = 900
+        main.winfo_y.return_value = 600
+        main.winfo_width.return_value = 1280
+        main.winfo_height.return_value = 800
+        window = Mock()
+        window.winfo_screenwidth.return_value = 1280
+        window.winfo_screenheight.return_value = 720
+        width, height, x, y = center_on_main(window, main, 1080, 650)
+        self.assertLessEqual(x + width, 1280 - 24)
+        self.assertLessEqual(y + height, 720 - 24)
+
 
 @unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt' or sys.platform == 'darwin',
                      'Requires Tk / Xvfb')
@@ -58,6 +71,22 @@ class SecondaryFeatures(unittest.TestCase):
         for job in self.root.tk.call('after','info'):
             self.root.tk.call('after','cancel',job)
         self.root.destroy()
+
+    def test_native_mapping_keeps_dialog_inside_actual_display(self):
+        from wlre.ui.window_layout import configure_dialog
+        popup = tk.Toplevel(self.root)
+        popup.withdraw()
+        try:
+            configure_dialog(popup, 300, 200)
+            sw, sh = popup.winfo_screenwidth(), popup.winfo_screenheight()
+            popup.geometry(f'+{sw-100}+{sh-100}')
+            popup.deiconify()
+            self.root.update()
+            self.assertLessEqual(popup.winfo_x() + popup.winfo_width(), sw)
+            self.assertLessEqual(popup.winfo_y() + popup.winfo_height(), sh)
+            self.assertEqual(tuple(map(int, popup.resizable())), (0, 0))
+        finally:
+            popup.destroy()
 
     def test_every_non_home_tab_is_a_launcher(self):
         self.assertEqual(tuple(self.app.feature_windows),tuple(WINDOWS))
