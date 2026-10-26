@@ -252,7 +252,8 @@ def load_preview(data_archive, eve_archive):
         pass
     from wlre.services.world.portal_coverage import audit_portal_coverage
     coverage = audit_portal_coverage(doors, stages, stage_map, link_table,
-                                    portal_positions, portal_destinations, portal_names)
+                                    portal_positions, portal_destinations, portal_names,
+        portal_link_evidence, portal_extra_routes)
     return Preview1275(
         npc_index=PreviewNPCIndex(eve['npc_event_index_1275.json.gz']),
         interact_index=PreviewInteractIndex(eve['npc_interact_1275.json.gz']),
