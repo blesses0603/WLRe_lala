@@ -160,7 +160,7 @@ py -m tools.resources.install_npc_text_1262 "WLRE_1262_NPC_繁中資料索引包
 
 > **v0.5.2 獨立視窗**：除主頁外，「組隊、夥伴出戰、遠征、副本、煉金、製作、經驗效率」皆由主頁入口開啟獨立固定視窗；所有視窗開啟時依**主視窗中心**定位，按右上角關閉只隱藏，不清除操作狀態；主畫面地圖、事件紀錄、聊天及戰場保留原來的即時監看。
 
-> **副本／協力官方圖示**：已加入原始遊戲 PNG 的自動載入支援（`wlre/resources/assets/instance-menu/Menu_Dungeon.png`、`Menu_Cooperate.png`）。這兩張**截圖右側原始貼圖尚未在現有資源中確認**，未取得前安全地顯示文字，不使用擷取截圖或猜造貼圖。來源與提取清單見 [圖示說明](wlre/resources/assets/instance-menu/SOURCE.md)。
+> **副本／協力 UI 圖示**：PR #57 已收錄使用者提供的 `Menu_Dungeon.png`、`Menu_Cooperate.png`，透過既有 `RoundedNotebook` 機制套用於主程式「副本」入口及房間管理「主要／協力」子分頁。圖像位元組與使用者來源一致；但**尚未確認其在官方 1275 Bundle 的 Sprite ID**，正式來源見 [圖示說明](wlre/resources/assets/instance-menu/SOURCE.md)。另附官方 Bundle 的唯讀提取器。自動化 `enabled`／`auto_continue` 僅代表設定，不再直接鎖住副本／協力；真實戰鬥、事件、背包保留操作 `pending/uncertain`、房間未確認等安全規則維持。
 
 
 **CI 建置規則（2026-10-19）**：Draft PR 與一般提交只自動跑 Windows／Linux／macOS 測試，**不自動編譯 EXE／APP**。需要提前實機驗證時可從 GitHub Actions 手動執行原生打包；正式標籤 `vX.Y.Z` 仍透過發版流程自動建置。詳細規則請見 [Nuitka 建置文件](docs/NUITKA_BUILD.md)。
