@@ -53,7 +53,22 @@ class CooperativeRenderingStructure(unittest.TestCase):
         busy_bag = dict(bag, items={i: {} for i in range(8)})
         page.render_cooperative_rewards(data, {}, True, False, busy_bag)
         self.assertFalse(page._claim_ready)
-        self.assertIn('包包空位未確認', page.reward_note.set.call_args.args[0])
+        self.assertIn('剩餘 2 格', page.reward_note.set.call_args.args[0])
+
+    def test_screen_shows_standby_uncertainty_instead_of_hiding_under_bag_warning(self):
+        page = CooperativeRewardViewMixin()
+        page.cooperative = True
+        page.auto_reward_button = Mock()
+        page.reward_note = Mock()
+        data = {'standby_uncertain': True,
+                'reward': {'open_reward': 1, 'reward_mark': 1,
+                           'reward_count': 3, 'win_stage': 3, 'npc_id': 0}}
+        page.render_cooperative_rewards(data, {}, True, False, {})
+        message = page.reward_note.set.call_args.args[0]
+        self.assertIn('S23-5', message)
+        self.assertIn('協力準備結果不明', message)
+        self.assertFalse(page._claim_ready)
+        self.assertFalse(page._cancel_ready)
 
     def test_pending_and_uncertain_reward_never_claimable(self):
         page = CooperativeRewardViewMixin()
