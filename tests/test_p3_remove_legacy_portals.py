@@ -134,9 +134,9 @@ class RemoveOldPortalsTests(unittest.TestCase):
             monster_list=Mock(), npc_message=Mock(), portal_status=Mock(),
             update_portal_button=Mock())
         with patch('wlre.ui.home_map.Portals',
-                   return_value=new_catalog()), patch(
-                'wlre.ui.home_map.scene_npcs',
-                side_effect=lambda scene, entities, index: entities):
+                   return_value=new_catalog()):
+            # Run the real scene_npcs adapter: it owns the verified field
+            # and keeps the NPC list independent from the portal catalog.
             HomeMap.refresh_portals(page)
         self.assertEqual(len(page.npc_rows), 1)
         self.assertEqual(page.npc_rows[0]['name'], '行商')
