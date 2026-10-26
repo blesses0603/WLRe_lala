@@ -457,7 +457,7 @@ def load_verified_bundle_runtime(*, sync_root=None):
         coverage = audit_portal_coverage(doors, scene_rows,
             optional.get('StageMapData_C'), optional.get('EveDoorLinks'),
             portal_positions, portal_destinations, portal_names,
-            portal_link_evidence, portal_extra_routes)
+            portal_link_evidence, portal_extra_routes, portal_stage_markers)
         return Preview1275(
             npc_index=PreviewNPCIndex(npc),
             interact_index=PreviewInteractIndex(interacts),
