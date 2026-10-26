@@ -1,7 +1,6 @@
 """Expedition team prediction, with background work kept off the Tk event loop."""
 import copy
 from concurrent.futures import ThreadPoolExecutor
-import tkinter as tk
 from wlre.services.expedition import choose_members
 from wlre.services.expedition_teams import success_details
 

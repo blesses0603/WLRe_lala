@@ -64,6 +64,9 @@ def set_standby(state, command, now=None):
     data['standby_pending'] = {
         'room_id': room_id, 'target': desired, 'started': now
     }
+    # Retain expected room/status after a timeout. A matching *later*
+    # authoritative S186-3 may resolve the uncertainty without resending.
+    data['standby_attempt'] = {'room_id': room_id, 'target': desired}
     data['status'] = ('準備指令已送出' if desired else '取消準備指令已送出') + '，等待房間資料確認'
     return [Packet(186, 7, Writer().u16(room_id).u8(int(desired)).build())]
 
@@ -73,17 +76,24 @@ def resolve(state, event):
         return
     data = state.instances['coop']
     pending = data.get('standby_pending')
-    if pending is None:
+    # Do not recover an expired action without its saved room/target identity.
+    expected = pending or (data.get('standby_attempt')
+                            if data.get('standby_uncertain') else None)
+    if expected is None:
         return
     if event.get('type') == 'instance_members':
-        if (event.get('room_id') == pending['room_id']
-                and event.get('standby') is pending['target']):
+        if (event.get('room_id') == expected['room_id']
+                and event.get('standby') is expected['target']
+                and (data.get('room') or {}).get('room_id') == expected['room_id']):
             data['standby_pending'] = None
-            data['standby_result'] = pending['target']
+            data['standby_uncertain'] = False
+            data['standby_attempt'] = None
+            data['standby_result'] = expected['target']
             data['status'] = ('協力準備已由伺服器確認'
-                              if pending['target'] else '協力取消準備已由伺服器確認')
+                              if expected['target'] else '協力取消準備已由伺服器確認')
     elif event.get('type') == 'instance_phase' and event.get('kind') == 2:
         data['standby_pending'] = None
+        data['standby_attempt'] = None
         data['standby_uncertain'] = True
         data['status'] = '房間已退出，準備要求結果不明；本連線禁止重試'
 

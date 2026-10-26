@@ -27,6 +27,10 @@ _REQUIRED_TABLES = (
     'AdventureData_C', 'AdventureLvData_C',
     'NpcData_C', 'NpcCareerData_C',
 )
+# Optional: source-verified portal metadata. An absent or changed layout never
+# breaks the core ten-table NPC/recipe runtime or enables game packets.
+_PORTAL_TABLES = ('StageMapData_C', 'EveDoorLinks')
+_OPTIONAL_ROUTE_TABLES = ('DoorLinkData_C',)
 _ASSET_ROOT = 'Assets/ResourcesBuild/Data/'
 
 
@@ -123,9 +127,60 @@ def sync_pinned_runtime_bundles(*, sync_root=None,
     except (OSError, ValueError, TypeError, KeyError,
             RuntimeError, IncrementalSyncError) as exc:
         raise BundleRuntimeUnavailable('必要官方 1275 Bundle 同步失敗') from exc
+
+    # StageMapData_C is independently useful for human-facing portal names.
+    # Never let an unavailable EveDoorLinks consume the entire optional sync
+    # budget or prevent StageMapData from being cached.
+    remaining_count = max_downloads - count
+    remaining_bytes = max_download_bytes - needed
+    portal_count, portal_bytes = 0, 0
+    portal_available = {}
+    portal_failures = {}
+    for table in _PORTAL_TABLES + _OPTIONAL_ROUTE_TABLES:
+        try:
+            optional_plan = build_update_plan(
+                manifests['DataPackage'],
+                asset_paths=(_ASSET_ROOT + table + '.bytes',),
+                cache_root=root / 'bundles')
+            needed_count = sum(entry.action != 'cached'
+                               for entry in optional_plan.entries)
+            needed_bytes = sum(entry.spec.file_size
+                               for entry in optional_plan.entries
+                               if entry.action != 'cached')
+            if not optional_plan.entries:
+                portal_failures[table] = 'asset_missing_from_manifest'
+                continue
+            if needed_count > remaining_count or needed_bytes > remaining_bytes:
+                portal_failures[table] = 'download_budget_exhausted'
+                continue
+            execute(optional_plan, cache_root=root / 'bundles', download=True,
+                    max_download_bytes=remaining_bytes,
+                    max_downloads=remaining_count)
+            if not all(_verified_file(
+                    row.spec.cache_path(root / 'bundles'), row.spec)
+                    for row in optional_plan.entries):
+                portal_failures[table] = 'bundle_integrity_failed'
+                continue
+            portal_available[table] = True
+            portal_count += needed_count
+            portal_bytes += needed_bytes
+            remaining_count -= needed_count
+            remaining_bytes -= needed_bytes
+        except (OSError, ValueError, TypeError, KeyError,
+                RuntimeError, IncrementalSyncError):
+            portal_failures[table] = 'bundle_sync_failed'
     return {'verified_bundles': len(plan.entries),
             'downloaded_bundles': count,
             'bytes_downloaded': needed,
+            'portal_metadata_ready': all(
+                portal_available.get(table) for table in _PORTAL_TABLES),
+            'portal_names_bundle_ready': bool(
+                portal_available.get('StageMapData_C')),
+            'portal_route_bundle_ready': bool(
+                portal_available.get('DoorLinkData_C')),
+            'portal_bundles_downloaded': portal_count,
+            'portal_bytes_downloaded': portal_bytes,
+            'portal_sync_failures': portal_failures,
             'assets_ready': False, 'can_send_packets': False}
 
 
@@ -159,6 +214,12 @@ def load_verified_bundle_runtime(*, sync_root=None):
     from wlre.services.world.doors_1275 import (
         SOURCE_SHA256 as EVE_SHA256, parse_doors_1275)
     from wlre.services.instance_catalog import parse_stages
+    from wlre.services.world.scene_names_1275 import bind_scene_names
+    from wlre.services.world.portal_schema import recognize_portal_source
+    from wlre.services.world.portal_links_1275 import (verified_portal_destinations,
+                                                      verified_portal_names,
+                                                      verified_portal_positions,
+                                                      read_only_portal_destinations)
 
     root = Path(sync_root) if sync_root is not None else data_root() / 'official_sync'
     # An optional four-feature *candidate* may be incomplete when the Eve
@@ -242,6 +303,109 @@ def load_verified_bundle_runtime(*, sync_root=None):
         scene_rows = parse_stages(sources['ScenesData_C'])
         stage = 'Eve'
         doors = parse_doors_1275(eve)
+        portal_destinations, portal_names, portal_positions = {}, {}, {}
+        portal_display_destinations = {}
+        portal_link_evidence = {}
+        portal_extra_routes = []
+        portal_stage_markers = []
+        portal_metadata_status = 'missing_stage_map'
+        optional = {}
+        optional_failures = {}
+        portal_schema_report = {}
+        # Each optional Bundle must be traceable to a verified official
+        # manifest. Do not erase failures with a silent 'continue': users need
+        # to distinguish not-downloaded, damaged and unsupported TextAssets.
+        for table in _PORTAL_TABLES + _OPTIONAL_ROUTE_TABLES:
+            try:
+                asset = _ASSET_ROOT + table + '.bytes'
+                portal_plan = build_update_plan(
+                    verified_data, asset_paths=(asset,), cache_root=bundle_root)
+                if not portal_plan.entries:
+                    optional_failures[table] = 'asset_missing_from_manifest'
+                    continue
+                if any(row.action != 'cached' for row in portal_plan.entries):
+                    optional_failures[table] = 'bundle_not_cached'
+                    continue
+                paths = tuple(row.spec.cache_path(bundle_root)
+                              for row in portal_plan.entries)
+                if any(not _verified_file(path, row.spec)
+                       for path, row in zip(paths, portal_plan.entries)):
+                    optional_failures[table] = 'bundle_integrity_failed'
+                    continue
+                binding = AssetBinding(
+                    asset, SourceContract(
+                        'scenes', table, 'stage-new-76-v1',
+                        '0' * 64, 'DataPackage', verified_data.spec.package_version))
+                payload = extract_textasset(binding, paths, loader=load_container)
+                verdict = recognize_portal_source(table, payload)
+                portal_schema_report[table] = verdict
+                if verdict['status'] != 'recognized':
+                    optional_failures[table] = 'layout_unrecognized'
+                    continue
+                optional[table] = payload
+            except (OSError, ValueError, TypeError, KeyError, RuntimeError):
+                # Never disclose filesystem paths or untrusted raw errors.
+                optional_failures[table] = 'textasset_extract_failed'
+                continue
+        if 'StageMapData_C' not in optional:
+            portal_metadata_status = optional_failures.get(
+                'StageMapData_C', 'missing_stage_map')
+        if 'StageMapData_C' in optional:
+            try:
+                portal_names = verified_portal_names(
+                    optional['StageMapData_C'], scene_rows, texts)
+                from wlre.services.world.portal_evidence_1275 import (
+                    read_only_stage_portal_markers)
+                portal_stage_markers = read_only_stage_portal_markers(
+                    optional['StageMapData_C'], scene_rows)
+                portal_metadata_status = 'stage_map_ready'
+                if 'EveDoorLinks' in optional:
+                    try:
+                        from wlre.services.world.portal_evidence_1275 import (read_only_portal_evidence)
+                        portal_link_evidence = read_only_portal_evidence(
+                            optional['StageMapData_C'], optional['EveDoorLinks'],
+                            doors, scene_rows)
+                        portal_positions = verified_portal_positions(
+                            optional['StageMapData_C'], optional['EveDoorLinks'],
+                            doors, scene_rows)
+                        portal_display_destinations = read_only_portal_destinations(
+                            optional['StageMapData_C'], optional['EveDoorLinks'],
+                            doors, scene_rows)
+                        portal_destinations = verified_portal_destinations(
+                            optional['StageMapData_C'], optional['EveDoorLinks'],
+                            doors, scene_rows)
+                        portal_metadata_status = 'destination_links_loaded'
+                    except (ValueError, KeyError, TypeError):
+                        portal_metadata_status = 'destination_links_missing_or_invalid'
+                else:
+                    portal_metadata_status = (
+                        'destination_links_' + optional_failures['EveDoorLinks']
+                        if 'EveDoorLinks' in optional_failures
+                        else 'destination_links_missing_or_invalid')
+            except (ValueError, KeyError, TypeError):
+                portal_metadata_status = 'stage_map_invalid'
+        # EveDoorLinks is independently useful for read-only routes even
+        # when the StageMap marker table has not been downloaded.
+        if not portal_link_evidence and 'EveDoorLinks' in optional:
+            try:
+                from wlre.services.world.portal_evidence_1275 import (
+                    read_only_portal_evidence)
+                portal_link_evidence = read_only_portal_evidence(
+                    optional.get('StageMapData_C'),
+                    optional['EveDoorLinks'], doors, scene_rows)
+            except (ValueError, TypeError, KeyError):
+                pass
+        # DoorLinkData has coordinates and destination IDs, but no C20-8
+        # event index. Keep its route network separate from ordinary doors.
+        if 'DoorLinkData_C' in optional:
+            try:
+                from wlre.services.world.portal_evidence_1275 import (
+                    read_only_door_link_routes)
+                portal_extra_routes = read_only_door_link_routes(
+                    optional['DoorLinkData_C'], scene_rows)
+            except (ValueError, TypeError, KeyError):
+                portal_schema_report['DoorLinkData_C'] = {
+                    'status': 'layout_unrecognized', 'can_send_packets': False}
         if len(recipes) != 1032 or any(
                 ident not in items or type(items[ident].get('open_used')) is not int
                 for ident in recipes):
@@ -289,6 +453,11 @@ def load_verified_bundle_runtime(*, sync_root=None):
         }
 
         stage = '正式 Runtime 建立'
+        from wlre.services.world.portal_coverage import audit_portal_coverage
+        coverage = audit_portal_coverage(doors, scene_rows,
+            optional.get('StageMapData_C'), optional.get('EveDoorLinks'),
+            portal_positions, portal_destinations, portal_names,
+            portal_link_evidence, portal_extra_routes, portal_stage_markers)
         return Preview1275(
             npc_index=PreviewNPCIndex(npc),
             interact_index=PreviewInteractIndex(interacts),
@@ -297,6 +466,18 @@ def load_verified_bundle_runtime(*, sync_root=None):
             texts=texts,
             recipes=recipes,
             scene_ids=frozenset(scene_rows),
+            stages=scene_rows,
+            scene_names=bind_scene_names(scene_rows, texts),
+            portal_destinations=portal_destinations,
+            portal_names=portal_names,
+            portal_positions=portal_positions,
+            portal_display_destinations=portal_display_destinations,
+            portal_link_evidence=portal_link_evidence,
+            portal_extra_routes=portal_extra_routes,
+            portal_stage_markers=portal_stage_markers,
+            portal_metadata_status=portal_metadata_status,
+            portal_schema_report=portal_schema_report,
+            portal_coverage=coverage,
             doors=doors, expedition=expedition,
         )
     except BundleRuntimeUnavailable:

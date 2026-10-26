@@ -5,6 +5,7 @@ from wlre.network.wire import ProtocolError
 from wlre.network.instance_actions import join_main_room, join_coop_room, leave_room
 from wlre.services.battle.party import own_team
 from wlre.services.instance_creation import _validated_password
+from wlre.services.instance_activity import instance_background_blockers
 
 ROOM_LIST_MAX_AGE = 120.0
 JOIN_TIMEOUT = 20.0
@@ -51,11 +52,11 @@ def _activity_guard(state, joining):
     post = state.battle.get('post_event') or {}
     if post and post.get('status') != 'completed':
         raise ProtocolError('請先完成戰後事件')
-    # AI intent may remain enabled outside a real battle; room mutations still
-    # wait for actual combat, event flow, movement and unfinished operations.
-    if any((state.roaming.get('enabled'), state.alchemy.get('enabled'),
-            state.crafting.get('auto_continue'), state.expedition.get('enabled'))):
-        raise ProtocolError('請先停止自動移動、遠征、煉金與製作')
+    # An enabled schedule alone is not an active room conflict.
+    # Active battle/event and unresolved operations remain guarded.
+    blockers = instance_background_blockers(state)
+    if blockers:
+        raise ProtocolError('請先確認其他作業：' + '／'.join(blockers))
     if joining and state.activities:
         raise ProtocolError('請先結束其他活動')
 

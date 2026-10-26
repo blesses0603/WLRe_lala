@@ -5,10 +5,21 @@ from tkinter import ttk, messagebox
 
 from wlre.ui.rounded_notebook import RoundedNotebook
 from wlre.ui.instance_menu_icons import menu_icon_photo
-from wlre.ui.window_layout import configure_dialog
+from wlre.ui.instance_room_dialogs import InstanceRoomDialogMixin
 from wlre.services.instance_browser import entries_for
 from wlre.services.battle.party import own_team
 from wlre.services.instance_room_flow import coop_completed_no_chest
+from wlre.services.instance_activity import instance_background_blockers
+from wlre.features.cooperative.buttons import CooperativeActionsMixin
+from wlre.features.cooperative.rooms import cooperative_headcount_status, CooperativeRoomStatusMixin
+from wlre.features.cooperative.rewards import CooperativeRewardViewMixin
+from wlre.features.cooperative.widgets import build_cooperative_widgets
+from wlre.ui.instance_room_list import InstanceRoomListMixin
+from wlre.ui.instance_catalog_ui import InstanceCatalogMixin, build_instance_catalog
+from wlre.features.dungeon.buttons import DungeonActionsMixin, build_dungeon_start_button
+from wlre.features.dungeon.rooms import dungeon_headcount_status
+from wlre.features.dungeon.readiness import DungeonRoomReadinessMixin
+from wlre.features.dungeon.details import dungeon_details
 
 
 def creation_block_reasons(state, mode, live):
@@ -48,19 +59,7 @@ def creation_block_reasons(state, mode, live):
     post = battle.get('post_event') or {}
     if post and post.get('status') != 'completed':
         reasons.append('戰後事件尚未完成')
-    for name, key, message in (
-        ('maintenance', 'pending', '修理／整理等待回覆'),
-        ('maintenance', 'uncertain', '修理／整理結果不明'),
-        ('expedition', 'pending', '遠征等待回覆'),
-        ('alchemy', 'pending', '煉金等待回覆'),
-        ('crafting', 'pending', '製作等待回覆'),
-        ('roaming', 'enabled', '自動移動仍開啟，請先停止'),
-        ('alchemy', 'enabled', '自動煉金仍開啟，請先停止'),
-        ('crafting', 'auto_continue', '自動製作仍開啟，請先停止'),
-        ('expedition', 'enabled', '自動遠征仍開啟，請先停止'),
-    ):
-        if (state.get(name) or {}).get(key):
-            reasons.append(message)
+    reasons.extend(instance_background_blockers(state))
     if mode == 'coop':
         if own_team(state):
             reasons.append('協力創房前請先退出一般隊伍')
@@ -84,49 +83,17 @@ def room_headcount_status(mode, data, local_role_id=None, *, can_begin=False):
     members = data.get('members')
     count = len(members) if isinstance(members, (list, tuple)) else 0
     if mode == 'coop':
-        capacity = room.get('capacity')
-        if type(capacity) is not int or not 1 <= capacity <= 8:
-            return '協力副本：房間容量尚未同步，暫不能判定是否滿員'
-        prefix = '協力副本：目前 %d/%d 人' % (count, capacity)
-        host = room.get('host_id')
-        if host is None and count:
-            host = members[0].get('role_id')
-        verified = (isinstance(members, (list, tuple))
-                    and count <= capacity and bool(count)
-                    and members[0].get('role_id') == host
-                    and host is not None)
-        if not verified:
-            return prefix + '；伺服器房主／成員名單尚未完整同步'
-        if count < capacity:
-            return prefix + '，尚缺 %d 人（協力須滿員）' % (capacity - count)
-        if room.get('standby') is True:
-            return prefix + '，已滿員；房間已進入準備狀態'
-        if can_begin:
-            return prefix + '，已滿員；房主可以準備／開始配對'
-        return prefix + '，已滿員；等待房主或其他開始條件確認'
+        return cooperative_headcount_status(room, members, count,
+                                            can_begin=can_begin)
 
-    stage = next((row for row in entries_for('main')
-                  if row['kind'] == 1 and row['map_id'] == room.get('room_id')),
-                 None)
-    if stage is None:
-        return '一般副本：尚未確認此房間所屬的官方副本，無法判定最低人數'
-    minimum, maximum = stage['min_members'], stage['max_members']
-    prefix = '一般副本：目前 %d/%d 人' % (count, minimum)
-    expected = room.get('members')
-    if (type(expected) is not int or count != expected
-            or not isinstance(members, (list, tuple))
-            or not any(member.get('role_id') == local_role_id for member in members)):
-        return prefix + '；伺服器成員名單尚未完整同步'
-    if count < minimum:
-        return prefix + '，尚缺 %d 人（上限 %d 人）' % (minimum - count, maximum)
-    if count > maximum:
-        return prefix + '；超出官方人數上限，請等待成員重新同步'
-    if can_begin:
-        return prefix + '，已達最低人數（上限 %d 人）；房主可以開始挑戰' % maximum
-    return prefix + '，已達最低人數（上限 %d 人）；等待房主或其他開始條件確認' % maximum
+    return dungeon_headcount_status(room, members, count, local_role_id,
+                                    can_begin=can_begin)
 
 
-class InstanceModePage(ttk.Frame):
+class InstanceModePage(CooperativeActionsMixin, CooperativeRewardViewMixin,
+                       CooperativeRoomStatusMixin, DungeonActionsMixin,
+                       DungeonRoomReadinessMixin, InstanceRoomListMixin,
+                       InstanceCatalogMixin, InstanceRoomDialogMixin, ttk.Frame):
     """Room browser; mutations remain locked pending official live validation."""
 
     def __init__(self, parent, *, cooperative, app=None):
@@ -150,42 +117,7 @@ class InstanceModePage(ttk.Frame):
         self.room_column=ttk.Frame(self.body,padding=(6,0,0,0))
         self.catalog_column.grid(row=0,column=0,sticky='nsew')
         self.room_column.grid(row=0,column=1,sticky='nsew')
-        self.catalog_heading = ttk.Label(
-            self.catalog_column, text="1262 官方副本清單（選擇後建立房間）",
-            style='Muted.TLabel')
-        self.catalog_heading.pack(anchor='w', pady=(0, 3))
-        self.catalog_columns = ('id', 'name', 'level', 'players', 'time')
-        catalog_host = ttk.Frame(self.catalog_column)
-        catalog_host.pack(fill='both', expand=True, pady=(0, 4))
-        self.catalog_table = ttk.Treeview(
-            catalog_host, columns=self.catalog_columns,
-            show='headings', selectmode='browse',
-            height=6 if cooperative else 8)
-        for field, title, width in (
-            ('id', 'ID', 48), ('name', '官方中文名稱／版本', 210),
-            ('level', '等級', 66), ('players', '人數', 76),
-            ('time', '時間', 80)
-        ):
-            self.catalog_table.heading(field, text=title)
-            self.catalog_table.column(field, width=width, anchor='w', stretch=True)
-        scroll = ttk.Scrollbar(catalog_host, orient='vertical',
-                               command=self.catalog_table.yview)
-        self.catalog_table.configure(yscrollcommand=scroll.set)
-        self.catalog_table.pack(side='left', fill='both', expand=True)
-        scroll.pack(side='right', fill='y')
-        for index, record in enumerate(self.catalog_records):
-            variant = (' (版本 %s)' % record['variant']) if record['variant'] else ''
-            members = ('%s～%s' % (record['min_members'], record['max_members'])
-                       if record['max_members'] else '依活動')
-            duration = ('%s 分' % record['time_minutes']
-                        if record['time_minutes'] else '依活動')
-            self.catalog_table.insert('', 'end', iid='catalog_%s' % index,
-                values=(record['id'], record['name'] + variant,
-                        record['min_level'] or '依活動', members, duration))
-        self.catalog_detail = tk.StringVar(value='點選官方副本名稱可查看來源 ID 與獎勵資料筆數。')
-        ttk.Label(self.catalog_column, textvariable=self.catalog_detail,
-                  style='Muted.TLabel',wraplength=530).pack(fill='x', pady=(0, 5))
-        self.catalog_table.bind('<<TreeviewSelect>>', self.on_catalog_selected)
+        build_instance_catalog(self, cooperative)
         ttk.Label(self.room_column, text='伺服器房間清單（選取後加入）',
                   style='Muted.TLabel').pack(anchor='w',pady=(0,2))
         self.room_list_note=tk.StringVar(value='尚未同步伺服器房間清單')
@@ -256,177 +188,12 @@ class InstanceModePage(ttk.Frame):
             controls, text='離開房間', command=self.request_leave, state='disabled')
         self.leave_button.pack(side='left', padx=(6, 0))
         if self.cooperative:
-            self.standby_button = ttk.Button(
-                controls, text='準備／開始配對',
-                command=self.request_standby, state='disabled')
-            self.standby_button.pack(side='left', padx=(8, 0))
-            self.companion_note = tk.StringVar(
-                value='出戰夥伴：沿用一般戰鬥設定（尚未同步）')
-            ttk.Label(self, textvariable=self.companion_note,
-                      style='Muted.TLabel').pack(
-                          anchor='w', before=self.body)
-            self.standby_note = tk.StringVar(value='協力準備：等待房間同步')
-            ttk.Label(self, textvariable=self.standby_note,
-                      style='Muted.TLabel').pack(
-                          anchor='w', before=self.body)
-            reward_controls = ttk.Frame(self)
-            reward_controls.pack(
-                fill='x', before=self.body, pady=(3, 2))
-            self.claim_button = ttk.Button(
-                reward_controls, text='領取免費協力獎勵',
-                command=self.request_reward_claim, state='disabled')
-            self.claim_button.pack(side='left')
-            self.cancel_reward_button = ttk.Button(
-                reward_controls, text='放棄目前寶箱',
-                command=self.request_reward_cancel, state='disabled')
-            self.cancel_reward_button.pack(side='left', padx=(8, 0))
-            self.auto_reward_button = ttk.Button(
-                reward_controls, text='開啟免費獎勵自動領取',
-                command=self.request_auto_reward, state='disabled')
-            self.auto_reward_button.pack(side='left', padx=(8, 0))
-            self.reward_note = tk.StringVar(value='獎勵：等待 S186-11 同步；不會自動購買付費寶箱')
-            ttk.Label(self, textvariable=self.reward_note, style='Muted.TLabel',
-                      anchor='w').pack(fill='x', before=self.body)
+            build_cooperative_widgets(self, controls)
         if not self.cooperative:
-            self.start_button = ttk.Button(
-                controls, text='房主開始挑戰',
-                command=self.request_start, state='disabled')
-            self.start_button.pack(side='left', padx=(8, 0))
+            build_dungeon_start_button(self, controls)
         self.enter_button = ttk.Button(controls, text='進入副本',
                                        command=self.request_enter, state='disabled')
         self.enter_button.pack(side='right')
-
-    def on_catalog_selected(self, _event=None):
-        selection = self.catalog_table.selection()
-        if not selection:
-            return
-        index = int(selection[0].removeprefix('catalog_'))
-        record = self.catalog_records[index]
-        self._update_create_button()
-        self.catalog_detail.set(
-            '副本 ID %s｜場景 %s｜獎勵資料 %s 筆；是否可進入仍以伺服器為準' %
-            (record['id'], record['map_id'], len(record['awards'])))
-
-    def _selected_catalog(self):
-        selected = self.catalog_table.selection()
-        if not selected:
-            return None
-        try:
-            index = int(selected[0].removeprefix('catalog_'))
-            return self.catalog_records[index]
-        except (ValueError, IndexError):
-            return None
-
-    def _update_create_button(self):
-        record = self._selected_catalog()
-        eligible = (self._creation_ready and record is not None
-                    and record['kind'] in (1, 2))
-        self.create_button.state(['!disabled'] if eligible else ['disabled'])
-        if record is None:
-            self.creation_hint.set('建立房間：請先點選官方副本清單的項目')
-        elif record['kind'] not in (1, 2):
-            self.creation_hint.set('此副本種類尚不支援建立房間')
-        elif eligible:
-            self.creation_hint.set('已選「%s」，可以建立公開／私人房間' % record['name'])
-        else:
-            reasons = self._creation_block_reasons
-            reason = '；'.join(reasons[:2]) if reasons else '請等待伺服器同步並檢查角色狀態'
-            if len(reasons) > 2:
-                reason += '（另有 %d 項限制）' % (len(reasons) - 2)
-            self.creation_hint.set('無法建立「%s」：%s' % (record['name'], reason))
-
-    def open_create_dialog(self):
-        record = self._selected_catalog()
-        if not self._creation_ready or record is None:
-            return
-        if record['kind'] not in (1, 2):
-            messagebox.showinfo('副本', '此副本類型尚不支援創建房間。',
-                                parent=self.winfo_toplevel())
-            return
-        root = self.winfo_toplevel()
-        dialog = tk.Toplevel(self.app.root if self.app is not None else root)
-        dialog.title('建立副本房間')
-        dialog.transient(root)
-        configure_dialog(dialog,470,355 if self.cooperative else 315)
-        form = ttk.Frame(dialog, padding=16)
-        form.pack(fill='both', expand=True)
-        ttk.Label(form, text=record['name'], style='Heading.TLabel').pack(
-            anchor='w', pady=(0, 8))
-        ttk.Label(form, text='創房以伺服器回覆為準，送出後不得重複點擊。',
-                  style='Muted.TLabel').pack(anchor='w', pady=(0, 8))
-        privacy = tk.StringVar(value='public')
-        password = tk.StringVar(value='')
-        def change_privacy():
-            if privacy.get() == 'public':
-                password.set('')
-                password_field.state(['disabled'])
-            else:
-                password_field.state(['!disabled'])
-        choices = ttk.Frame(form)
-        choices.pack(anchor='w', pady=(0, 6))
-        ttk.Radiobutton(choices, text='公開房間', value='public',
-                        variable=privacy, command=change_privacy).pack(side='left')
-        ttk.Radiobutton(choices, text='私人房間', value='private',
-                        variable=privacy, command=change_privacy).pack(side='left', padx=(15, 0))
-        ttk.Label(form, text='私人房間密碼（4 位數字）').pack(anchor='w')
-        password_field = ttk.Entry(form, textvariable=password, show='*', width=16)
-        password_field.pack(anchor='w', pady=(0, 8))
-        password_field.state(['disabled'])
-        count_var = tk.StringVar(value=str(record['min_members']))
-        if self.cooperative:
-            ttk.Label(form, text='協力房間人數').pack(anchor='w')
-            ttk.Spinbox(form, from_=record['min_members'], to=record['max_members'],
-                        textvariable=count_var, width=8).pack(anchor='w', pady=(0, 8))
-        buttons = ttk.Frame(form)
-        buttons.pack(fill='x')
-        def submit():
-            if not self._creation_ready or self.app is None or not self.app.live_active:
-                messagebox.showwarning('房間狀態', '尚未連線或目前不可創房。', parent=dialog)
-                return
-            private = privacy.get() == 'private'
-            secret = password.get() if private else ''
-            if private and (len(secret) != 4 or not secret.isascii()
-                            or not secret.isdecimal() or secret == '0000'):
-                messagebox.showwarning('私人密碼', '請輸入四位數字且不得為 0000。',
-                                       parent=dialog)
-                return
-            count = None
-            if self.cooperative:
-                try:
-                    count = int(count_var.get())
-                except ValueError:
-                    count = 0
-                if count < record['min_members'] or count > record['max_members']:
-                    messagebox.showwarning('房間人數', '協力人數超出副本允許範圍。',
-                                           parent=dialog)
-                    return
-            suffix = '此操作可能消耗門票或點數；沿用目前正常出戰夥伴。\\n' if self.cooperative else ''
-            message = ('即將建立「%s」%s房間。\\n%s'
-                       '送出後會等待伺服器確認；結果不明時請勿重試。確定嗎？'
-                       % (record['name'], '私人' if private else '公開', suffix))
-            if not messagebox.askyesno('確認建立副本房間', message, parent=dialog):
-                return
-            command = {
-                'type': 'instance_create', 'mode': self.mode,
-                'public': not private, 'password': secret,
-            }
-            if self.cooperative:
-                command.update(dungeon_id=record['id'], player_count=count,
-                               confirm_cost=True)
-            else:
-                command['map_id'] = record['map_id']
-            # This is only a local click guard; network-thread pending state
-            # is authoritative, even if the dialog is re-opened.
-            self._creation_ready = False
-            self._update_create_button()
-            password.set('')
-            dialog.destroy()
-            self.app.send(command)
-        ttk.Button(buttons, text='取消', command=dialog.destroy).pack(side='right')
-        ttk.Button(buttons, text='確認建立', command=submit).pack(side='right',
-                                                         padx=(0, 8))
-        dialog.grab_set()
-        dialog.focus_set()
 
     def selected_room(self):
         selected = self.entries.selection()
@@ -458,193 +225,6 @@ class InstanceModePage(ttk.Frame):
             self.claim_button.state(['!disabled'] if self._claim_ready else ['disabled'])
             self.cancel_reward_button.state(['!disabled'] if self._cancel_ready else ['disabled'])
             self.auto_reward_button.state(['!disabled'] if self._auto_toggle_ready else ['disabled'])
-
-    def open_join_dialog(self):
-        room = self.selected_room()
-        if not self._join_ready or room is None or self.app is None or not self.app.live_active:
-            return
-        updated = self._room_data.get('list_updated_at')
-        if updated is None or not 0 <= time.monotonic() - updated <= 120:
-            messagebox.showwarning('房間清單過期', '請重新更新伺服器房間清單。',
-                                   parent=self.winfo_toplevel())
-            return
-        root = self.winfo_toplevel()
-        dialog = tk.Toplevel(self.app.root if self.app is not None else root)
-        dialog.title('加入副本房間')
-        dialog.transient(root)
-        configure_dialog(dialog,460,250 if self.cooperative else 210)
-        form = ttk.Frame(dialog, padding=16)
-        form.pack(fill='both', expand=True)
-        ttk.Label(form, text='房間 #%s（%s）' %
-                  (room['room_id'], '公開' if room['public'] else '私人'),
-                  style='Heading.TLabel').pack(anchor='w', pady=(0, 8))
-        if self.cooperative:
-            ttk.Label(form, text='協力加入可能消耗點數／門票，請確認。',
-                      style='Muted.TLabel').pack(anchor='w', pady=(0, 8))
-        secret = tk.StringVar()
-        if not room['public']:
-            ttk.Label(form, text='私人房間密碼（4 位 ASCII 數字）').pack(anchor='w')
-            ttk.Entry(form, textvariable=secret, show='*', width=18).pack(
-                anchor='w', pady=(0, 8))
-        buttons = ttk.Frame(form)
-        buttons.pack(fill='x')
-
-        def submit():
-            if not self._join_ready or not self.app.live_active:
-                messagebox.showwarning('房間狀態', '房間狀態已變更，請重新整理。',
-                                       parent=dialog)
-                return
-            password = secret.get()
-            if not room['public'] and (
-                    len(password) != 4 or not password.isascii()
-                    or not password.isdecimal() or password == '0000'):
-                messagebox.showwarning('私人密碼', '請輸入四位 ASCII 數字，不能為 0000。',
-                                       parent=dialog)
-                return
-            warning = ('協力加入可能消耗點數或門票。\\n'
-                       if self.cooperative else '')
-            if not messagebox.askyesno(
-                    '確認加入', warning + '要加入房間 #%s 嗎？\\n'
-                    '只會送出一次，結果不明時請重新登入同步。' % room['room_id'],
-                    parent=dialog):
-                return
-            command = {'type': 'instance_join', 'mode': self.mode,
-                       'room_id': room['room_id'], 'password': password}
-            if self.cooperative:
-                command['confirm_cost'] = True
-            else:
-                command['sn'] = room['sn']
-            self._join_ready = False
-            self._update_room_buttons()
-            secret.set('')
-            dialog.destroy()
-            self.app.send(command)
-        ttk.Button(buttons, text='取消', command=dialog.destroy).pack(side='right')
-        ttk.Button(buttons, text='確認加入', command=submit).pack(
-            side='right', padx=(0, 8))
-        dialog.grab_set()
-        dialog.focus_set()
-
-    def request_leave(self):
-        if not self._leave_ready or self.app is None or not self.app.live_active:
-            return
-        current = self._room_data.get('room') or {}
-        if not current.get('room_id'):
-            return
-        if not messagebox.askyesno('確認離開副本房間',
-                                   '確定離開房間 #%s？\\n需要伺服器回覆才算成功。'
-                                   % current['room_id'],
-                                   parent=self.winfo_toplevel()):
-            return
-        self._leave_ready = False
-        self._update_room_buttons()
-        self.app.send({'type': 'instance_leave', 'mode': self.mode})
-
-    def request_standby(self):
-        if (not self.cooperative or not self._standby_ready or
-                self.app is None or not self.app.live_active):
-            return
-        room = self._room_data.get('room') or {}
-        target = not room.get('standby', False)
-        label = '準備／開始配對' if target else '取消準備'
-        warning = (
-            '房主確認後可能立即開始協力配對／挑戰。\\n'
-            '不會切換夥伴，會沿用角色原本出戰的夥伴。\\n'
-            if target else '取消目前協力準備／配對，不更換夥伴。\\n'
-        )
-        if not messagebox.askyesno(
-                '確認' + label,
-                '房間 #%s：%s？\\n%s' % (room['room_id'], label, warning),
-                parent=self.winfo_toplevel()):
-            return
-        self._standby_ready = False
-        self._update_room_buttons()
-        self.app.send({'type': 'instance_coop_standby', 'mode': 'coop',
-                       'standby': target})
-
-    def request_start(self):
-        if (self.cooperative or not self._start_ready or
-                self.app is None or not self.app.live_active):
-            return
-        current = self._room_data.get('room') or {}
-        room_id = current.get('room_id')
-        if not room_id:
-            return
-        if not messagebox.askyesno(
-                '確認開始副本',
-                '房間 #%s：確定由房主開始挑戰嗎？\\n'
-                '將沿用角色目前正常出戰的夥伴。\\n'
-                '送出後只等待伺服器確認，不會自動重送。' % room_id,
-                parent=self.winfo_toplevel()):
-            return
-        self._start_ready = False
-        self._update_room_buttons()
-        self.app.send({'type': 'instance_start', 'mode': 'main'})
-
-    def request_enter(self):
-        if (self.cooperative or not self._enter_ready or
-                self.app is None or not self.app.live_active):
-            return
-        room_id = (self._room_data.get('room') or {}).get('room_id')
-        if not room_id:
-            return
-        if not messagebox.askyesno(
-                '確認進入一般副本',
-                '房間 #%s 已經由伺服器開始。\n'
-                '確定手動要求進入副本場景？\n'
-                '不切換正常出戰夥伴、不自動重送。請以伺服器場景確認為準。' % room_id,
-                parent=self.winfo_toplevel()):
-            return
-        self._enter_ready = False
-        self._update_room_buttons()
-        self.app.send({'type': 'instance_enter', 'mode': 'main'})
-
-    def request_reward_claim(self):
-        if (not self.cooperative or not self._claim_ready or self.app is None
-                or not self.app.live_active):
-            return
-        if not messagebox.askyesno(
-                '確認領取免費寶箱',
-                '確定領取伺服器目前顯示的免費協力獎勵？\n'
-                '包包已同步且預留四格；操作逾時或結果不明不會重送。',
-                parent=self.winfo_toplevel()):
-            return
-        self._claim_ready = False
-        self._update_room_buttons()
-        self.app.send({'type': 'instance_reward_claim', 'mode': 'coop',
-                       'action': 'free'})
-
-    def request_reward_cancel(self):
-        if (not self.cooperative or not self._cancel_ready or self.app is None
-                or not self.app.live_active):
-            return
-        if not messagebox.askyesno(
-                '確認放棄協力獎勵',
-                '確定放棄目前的協力寶箱嗎？此操作可能無法復原。\n'
-                '不會購買付費寶箱，取消要求只會送出一次。',
-                parent=self.winfo_toplevel()):
-            return
-        self._cancel_ready = False
-        self._update_room_buttons()
-        self.app.send({'type': 'instance_reward_cancel', 'mode': 'coop',
-                       'confirm_cancel': True})
-
-    def request_auto_reward(self):
-        if (not self.cooperative or not self._auto_toggle_ready or self.app is None
-                or not self.app.live_active):
-            return
-        enabled = not self._auto_enabled
-        if enabled and not messagebox.askyesno(
-                '啟用自動免費領獎',
-                '只在收到免費寶箱 S186-11、包包可靠同步且有至少四格空位'
-                '時自動領取一次。\n不會購買付費寶箱、不會自動重送。'
-                '\n本設定僅對本次登入有效，確定啟用？',
-                parent=self.winfo_toplevel()):
-            return
-        self._auto_toggle_ready = False
-        self._update_room_buttons()
-        self.app.send({'type': 'instance_auto_reward', 'mode': 'coop',
-                       'enabled': enabled})
 
     def refresh_rooms(self):
         if self.app is not None and self.app.live_active:
@@ -711,107 +291,10 @@ class InstanceModePage(ttk.Frame):
                         ('create_pending','join_pending','leave_pending','standby_pending','start_pending', 'enter_pending'))
             and not any(other.get(k) for k in
                         ('create_uncertain','join_uncertain','leave_uncertain','standby_uncertain','start_uncertain', 'enter_uncertain')))
-        inventory = inventory or {}
-        reward = data.get('reward') or {}
-        bag_capacity = inventory.get('capacity')
-        bag_items = inventory.get('items')
-        safe_bag = (
-            inventory.get('ready') is True and inventory.get('reliable') is True
-            and type(bag_capacity) is int and 1 <= bag_capacity <= 255
-            and isinstance(bag_items, dict)
-            and bag_capacity - len(bag_items) >= 4
-            and not any(inventory.get(k) for k in (
-                'holds', 'alchemy_slots', 'expedition_slots', 'maintenance_slots'))
-            and not any((inventory.get('reserved') or {}).values())
-            and not (inventory.get('field_supply') or {}).get('pending')
-        )
-        reward_busy = any(data.get(k) for k in (
-            'claim_pending', 'cancel_pending', 'reward_uncertain'))
-        reward_operation_busy = any(
-            part.get(k) is not None for part in (data, other)
-            for k in ('create_pending', 'join_pending', 'leave_pending',
-                      'standby_pending', 'start_pending', 'enter_pending'))
-        reward_operation_busy = reward_operation_busy or any(
-            part.get(k) for part in (data, other)
-            for k in ('create_uncertain', 'join_uncertain', 'leave_uncertain',
-                      'standby_uncertain', 'start_uncertain', 'enter_uncertain'))
-        can_reward = (self.cooperative and bool(live) and not activity_blocked
-                      and not reward_busy and not reward_operation_busy
-                      and not other.get('room'))
-        reward_fp = (reward.get('reward_count'), reward.get('win_stage'),
-                     reward.get('open_reward'), reward.get('reward_mark'),
-                     reward.get('npc_id')) if reward else None
-        self._auto_enabled = bool(data.get('auto_claim_enabled'))
-        self._auto_toggle_ready = (
-            self.cooperative and bool(live) and not data.get('reward_uncertain'))
-        self._claim_ready = (
-            can_reward and safe_bag and reward.get('open_reward') == 1
-            and type(reward.get('reward_mark')) is int
-            and reward['reward_mark'] & 1 != 0
-            and data.get('reward_handled_fingerprint') != reward_fp)
-        self._cancel_ready = (
-            can_reward and reward.get('open_reward') in (1, 2)
-            and data.get('reward_handled_fingerprint') != reward_fp)
-        if self.cooperative:
-            self.auto_reward_button.configure(
-                text='關閉免費獎勵自動領取' if self._auto_enabled
-                else '開啟免費獎勵自動領取')
-            if reward.get('open_reward') == 2:
-                reward_text = '付費寶箱待處理；不會自動購買或扣點'
-            elif reward.get('open_reward') == 1:
-                reward_text = '免費寶箱待領' if safe_bag else '免費寶箱待領；包包空位未確認'
-            elif reward:
-                reward_text = '獎勵已同步，目前沒有開啟的寶箱'
-            else:
-                reward_text = '尚未收到 S186-11 協力獎勵狀態'
-                if data.get('phase') == 'matched' and data.get('room') is not None:
-                    reward_text += '；戰後房間仍待伺服器確認，不能推定可領獎'
-            if data.get('claim_pending') or data.get('cancel_pending'):
-                reward_text = '獎勵操作待伺服器確認，不可重送'
-            elif data.get('reward_uncertain'):
-                reward_text = '獎勵操作結果不明，請重新登入確認'
-            self.reward_note.set('獎勵：%s；自動領取%s' %
-                                 (reward_text, '開' if self._auto_enabled else '關'))
-        # Normal-dungeon start is host only. S85-4 roster must agree with
-        # the room count, and the official StageData minimum must be met.
-        stage = next((record for record in self.catalog_records
-                      if record['kind'] == 1 and
-                      record['map_id'] == current_room.get('room_id')), None)
-        valid_roster = (type(current_room.get('members')) is int
-                        and current_room['members'] == len(member_data)
-                        and any(member.get('role_id') == local_role_id
-                                for member in member_data))
-        min_reached = (stage is not None and valid_roster
-                       and stage['min_members'] <= len(member_data)
-                       <= stage['max_members'])
-        self._start_ready = (
-            not self.cooperative and bool(live) and min_reached
-            and data.get('phase') == 'waiting'
-            and current_room.get('host_id') == local_role_id
-            and not any(part.get(k) is not None
-                        for part in (data, other)
-                        for k in ('create_pending', 'join_pending',
-                                  'leave_pending', 'standby_pending', 'start_pending', 'enter_pending'))
-            and not any(part.get(k)
-                        for part in (data, other)
-                        for k in ('create_uncertain', 'join_uncertain',
-                                  'leave_uncertain', 'standby_uncertain', 'start_uncertain', 'enter_uncertain')))
-        self._enter_ready = (
-            not self.cooperative and bool(live) and not activity_blocked
-            and data.get('phase') == 'started'
-            and type(local_scene) is int and local_scene > 0
-            and local_scene != current_room.get('room_id')
-            and stage is not None
-            and any(member.get('role_id') == local_role_id for member in member_data)
-            and not other.get('room')
-            and not any(part.get(k) is not None
-                        for part in (data, other)
-                        for k in ('create_pending', 'join_pending', 'leave_pending',
-                                  'standby_pending', 'start_pending', 'enter_pending'))
-            and not any(part.get(k)
-                        for part in (data, other)
-                        for k in ('create_uncertain', 'join_uncertain', 'leave_uncertain',
-                                  'standby_uncertain', 'start_uncertain', 'enter_uncertain')))
+        self.render_cooperative_rewards(data, other, live, activity_blocked, inventory)
+        self.render_dungeon_readiness(
+            data, other, live, member_data, current_room,
+            local_role_id, local_scene, activity_blocked)
         # Apply the same cross-mode pending/uncertain reward locks as the
         # network services. Disabled buttons must not imply a safe operation.
         all_modes = (data, other)
@@ -835,93 +318,12 @@ class InstanceModePage(ttk.Frame):
         self.headcount_note.set(room_headcount_status(
             self.mode, data, local_role_id,
             can_begin=self._standby_ready if self.cooperative else self._start_ready))
-        if self.cooperative:
-            if not live:
-                explanation = '尚未登入'
-            elif not current_room:
-                explanation = '尚未加入協力房間'
-            elif data.get('create_pending') is not None:
-                explanation = '創房仍待伺服器確認；請勿重複創房'
-            elif data.get('create_uncertain'):
-                explanation = '創房結果仍不明；請重新登入同步，不要重複扣點'
-            elif data.get('standby_pending') is not None:
-                explanation = '已送出準備要求，等待伺服器房間狀態回覆'
-            elif data.get('standby_uncertain'):
-                explanation = '準備結果不明；請重新登入確認'
-            elif not member_data or host_id != local_role_id:
-                explanation = '目前不是伺服器確認的房主，只有房主可開始'
-            elif type(room_capacity) is not int or room_capacity <= 0:
-                explanation = '房間容量尚未同步'
-            elif len(member_data) < room_capacity:
-                explanation = '等待成員到齊：%d/%d 人' % (len(member_data), room_capacity)
-            elif data.get('phase') != 'waiting':
-                explanation = ('戰後房間尚未恢復準備狀態；確認獎勵後才可離房'
-                               if data.get('phase') == 'matched'
-                               else '房間階段：%s，尚不能開始' % data.get('phase'))
-            elif reward_locked or activity_blocked:
-                explanation = '其他活動或獎勵操作尚未結束'
-            elif self._standby_ready:
-                explanation = '房主與成員 %d/%d 已確認，可以按準備／開始配對' % (
-                    len(member_data), room_capacity)
-            else:
-                explanation = '有其他房間操作未確認；請查看上方狀態'
-            self.standby_note.set('協力準備：' + explanation)
+        self.render_cooperative_standby(
+            live, data, current_room, member_data, host_id, local_role_id,
+            room_capacity, reward_locked, activity_blocked)
         self.refresh_button.state(['!disabled'] if live else ['disabled'])
         self.note.set(data.get('status', '尚未查詢房間') if live else '尚未連線，無法查詢副本房間')
-        rooms = data.get('rooms', ())
-        if not live:
-            self.room_list_note.set('尚未連線，請登入後更新房間清單')
-        elif not data.get('ready'):
-            self.room_list_note.set('尚未更新房間清單，請點選上方「更新房間清單」')
-        elif rooms:
-            self.room_list_note.set('伺服器已同步 %d 間房，點選房間即可加入' % len(rooms))
-        else:
-            self.room_list_note.set('伺服器目前沒有可加入的房間，可以選擇副本後自行建立')
-        # Refresh a small, bounded list; never invent known dungeon names.
-        previous = self.selected_room()
-        key = (previous['room_id'], previous.get('sn')) if previous else None
-        self.entries.delete(*self.entries.get_children())
-        self._room_rows = list(rooms)
-        matched = None
-        for index, room in enumerate(rooms):
-            room_id = room['room_id']
-            capacity = room.get('capacity')
-            count = room.get('members', 0)
-            occupancy = '%s/%s 人' % (count, capacity) if capacity is not None else '%s 人' % count
-            self.entries.insert('', 'end', iid='room_%s' % index, values=(
-                '房間 #%s' % room_id,
-                occupancy,
-                '公開' if room.get('public') else '私人',
-            ))
-            if key == (room_id, room.get('sn')):
-                matched = 'room_%s' % index
-        if matched is not None:
-            self.entries.selection_set(matched)
-        self._update_room_buttons()
-        if self.cooperative:
-            self.standby_button.configure(
-                text='取消準備' if current_room.get('standby') else '準備／開始配對')
-            self.standby_button.state(
-                ['!disabled'] if self._standby_ready else ['disabled'])
-        current = data.get('room')
-        if current is not None:
-            count = len(data.get('members') or ())
-            status = '目前房間 #%s' % current.get('room_id', '待確認')
-            self.details.set('%s；已知成員 %s 人，階段：%s；%s%s' % (
-                status, count, data.get('phase', '待確認'),
-                data.get('status', '等待伺服器同步'),
-                '；' + instance_details(data, self.cooperative, local_role_id)
-                if instance_details(data, self.cooperative, local_role_id) else ''))
-        elif self.cooperative and data.get('reward'):
-            current_reward = data['reward']
-            self.details.set('協力獎勵旗標 %s，已完成 %s／%s 場；%s' % (
-                current_reward['reward_mark'], current_reward['win_stage'],
-                current_reward['reward_count'],
-                instance_details(data, True, local_role_id) or '以伺服器回覆為準'))
-        else:
-            self.details.set(
-                instance_details(data, self.cooperative, local_role_id)
-                or '未加入房間；進入、準備、領獎功能仍待正式伺服器驗證。')
+        self.render_room_list(data, live, local_role_id, instance_details)
         # Only a deliberate user click on a live, confirmed started room can enter.
         self.enter_button.state(['!disabled'] if self._enter_ready else ['disabled'])
 
@@ -945,26 +347,7 @@ def instance_details(data, cooperative=False, local_role_id=None):
         if data.get('mail_notice'):
             parts.append('伺服器通知獎品寄送信箱')
     else:
-        obj = data.get('objectives') or {}
-        targets = obj.get('targets') or {}
-        if targets:
-            parts.append('擊殺目標：' + '、'.join(
-                '#%s NPC%s %s/%s' % (idx, row.get('npc_id', '?'),
-                                     row.get('kills', 0), row.get('required', '?'))
-                for idx, row in sorted(targets.items())))
-        boss = obj.get('boss') or {}
-        if boss:
-            parts.append('Boss NPC%s：%s' % (
-                boss.get('npc_id', '?'), '已擊敗' if boss.get('defeated') else '未擊敗'))
-        score = (obj.get('scores') or {}).get(str(local_role_id))
-        if score:
-            parts.append('個人積分：小怪 %s／Boss %s' %
-                         (score.get('normal', 0), score.get('boss', 0)))
-        if obj.get('records'):
-            parts.append('新式副本結算紀錄：%s 人（依 S85-21-100）' %
-                         len(obj['records']))
-        if data.get('completed'):
-            parts.append('副本完成：伺服器已確認')
+        return dungeon_details(data, local_role_id)
     return '；'.join(parts)
 
 
@@ -973,11 +356,14 @@ class InstancePanel(ttk.Frame):
 
     def __init__(self, parent, app=None):
         super().__init__(parent, padding=6)
-        self.tabs = RoundedNotebook(self, borderless=True,
-                                    image_loader=menu_icon_photo)
+        self.tabs = RoundedNotebook(
+            self, borderless=True,
+            image_loader=lambda widget, title: menu_icon_photo(widget, title, 34))
         self.tabs.pack(fill='both', expand=True)
-        self.main_page = InstanceModePage(self.tabs, cooperative=False, app=app)
-        self.coop_page = InstanceModePage(self.tabs, cooperative=True, app=app)
+        from wlre.features.dungeon.panel import DungeonModePage
+        self.main_page = DungeonModePage(self.tabs, app=app)
+        from wlre.features.cooperative.panel import CooperativeModePage
+        self.coop_page = CooperativeModePage(self.tabs, app=app)
         self.tabs.add(self.main_page, text='主要')
         self.tabs.add(self.coop_page, text='協力')
 
@@ -991,12 +377,7 @@ class InstancePanel(ttk.Frame):
             or bool((state.get('event_flow') or {}).get('blocked'))
             or bool((state.get('battle') or {}).get('post_event')
                     and (state.get('battle') or {})['post_event'].get('status') != 'completed')
-            or any((state.get(k) or {}).get('pending') for k in
-                   ('maintenance', 'expedition', 'alchemy', 'crafting'))
-            or bool((state.get('maintenance') or {}).get('uncertain'))
-            or any((state.get(k) or {}).get('enabled')
-                   for k in ('roaming', 'alchemy', 'expedition'))
-            or bool((state.get('crafting') or {}).get('auto_continue'))
+            or bool(instance_background_blockers(state))
         )
         self.main_page.render(instances.get('main', {}), live=live,
                               other=instances.get('coop', {}),

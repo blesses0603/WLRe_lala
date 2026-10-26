@@ -1,5 +1,4 @@
 """Feature-level resource routing must remain diagnostic/read-only."""
-import hashlib
 import json
 from pathlib import Path
 import tempfile

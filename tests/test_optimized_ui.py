@@ -26,12 +26,30 @@ class BackgroundUpdates(unittest.TestCase):
 class OptimizedWindow(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.root=tk.Tk();cls.app=App(cls.root);cls.app.show_main();cls.root.update()
+        # GUI layout tests must not start real release/version HTTP workers.
+        # Those workers can trigger cyclic GC of a retired Tcl interpreter
+        # from a non-UI thread while later test cases create new Tk roots.
+        with patch.object(App, 'start_version_check'):
+            cls.root=tk.Tk()
+            cls.app=App(cls.root)
+            cls.app.show_main()
+            cls.root.update()
 
     @classmethod
     def tearDownClass(cls):
-        for job in cls.root.tk.call('after','info'):cls.root.tk.call('after','cancel',job)
-        cls.root.destroy()
+        import gc
+        root,app=cls.root,cls.app
+        for job in root.tk.call('after','info'):
+            root.tk.call('after','cancel',job)
+        try:
+            app.close()
+        finally:
+            # A class fixture otherwise retains all Tk Variables and images
+            # for the rest of unittest discovery, past root.destroy().
+            cls.app=None
+            cls.root=None
+            del app,root
+            gc.collect()
 
     def test_account_switch_restores_settings_without_starting_ai(self):
         from wlre.storage import account_settings as store

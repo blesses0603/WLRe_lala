@@ -17,6 +17,11 @@ from zipfile import ZipFile
 from wlre.services.world.game_data_1275 import read_manifest, verify_archive
 from wlre.services.world.npc_1275_eve import read_verified_zip
 from wlre.services.world.doors_1275 import parse_doors_1275
+from wlre.services.world.portal_links_1275 import (verified_portal_destinations,
+                                                    verified_portal_names,
+                                                    verified_portal_positions,
+                                                    read_only_portal_destinations,
+                                                    PortalLinkSourceError)
 
 MAX_UNCOMPRESSED = 16 * 1024 * 1024
 
@@ -130,7 +135,19 @@ class Preview1275:
     texts: dict
     recipes: dict
     scene_ids: frozenset
+    stages: dict = field(default_factory=dict)
     doors: dict = field(default_factory=dict)
+    scene_names: dict = field(default_factory=dict)
+    portal_destinations: dict = field(default_factory=dict)
+    portal_names: dict = field(default_factory=dict)
+    portal_positions: dict = field(default_factory=dict)
+    portal_display_destinations: dict = field(default_factory=dict)
+    portal_link_evidence: dict = field(default_factory=dict)
+    portal_extra_routes: list = field(default_factory=list)
+    portal_stage_markers: list = field(default_factory=list)
+    portal_metadata_status: str = 'missing_stage_map'
+    portal_schema_report: dict = field(default_factory=dict)
+    portal_coverage: dict = field(default_factory=dict)
     expedition: dict | None = None
     revision: int = 1275
     can_send_packets: bool = False
@@ -178,6 +195,89 @@ def load_preview(data_archive, eve_archive):
     eve = read_verified_zip(eve_archive)
 
     from wlre.services.instance_catalog import parse_stages
+    from wlre.services.world.scene_names_1275 import bind_scene_names
+    stages = parse_stages(_table(data_archive, manifest, 'ScenesData_C'))
+    texts = {int(k): v for k, v in _catalog(
+        data_archive, manifest, 'npc_text_1275.json.gz', 'TextData_C').items()}
+    doors = parse_doors_1275(_table(data_archive, manifest, 'Eve'))
+    portal_names, portal_destinations, portal_positions = {}, {}, {}
+    stage_map = link_table = None
+    portal_display_destinations = {}
+    portal_link_evidence = {}
+    portal_extra_routes = []
+    portal_stage_markers = []
+    portal_metadata_status = 'missing_stage_map'
+    portal_schema_report = {}
+    from wlre.services.world.portal_schema import recognize_portal_source
+    try:
+        stage_map = _table(data_archive, manifest, 'StageMapData_C')
+        portal_schema_report['StageMapData_C'] = recognize_portal_source(
+            'StageMapData_C', stage_map)
+        if portal_schema_report['StageMapData_C']['status'] != 'recognized':
+            portal_metadata_status = 'layout_unrecognized'
+            raise PortalLinkSourceError('StageMapData 不符合已知 1262 欄位結構')
+        # StageMapData.NameID is independently useful, even when links are
+        # absent. Do not drop its official labels with the destination map.
+        portal_names = verified_portal_names(stage_map, stages, texts)
+        from wlre.services.world.portal_evidence_1275 import (
+            read_only_stage_portal_markers)
+        portal_stage_markers = read_only_stage_portal_markers(stage_map, stages)
+        portal_metadata_status = 'stage_map_ready'
+        try:
+            link_table = _table(data_archive, manifest, 'EveDoorLinks')
+            portal_schema_report['EveDoorLinks'] = recognize_portal_source(
+                'EveDoorLinks', link_table)
+            if portal_schema_report['EveDoorLinks']['status'] != 'recognized':
+                raise PortalLinkSourceError('EveDoorLinks 不符合已知 UTF-16 格式')
+            from wlre.services.world.portal_evidence_1275 import (read_only_portal_evidence)
+            portal_link_evidence = read_only_portal_evidence(
+                stage_map, link_table, doors, stages)
+            portal_positions = verified_portal_positions(
+                stage_map, link_table, doors, stages)
+            portal_display_destinations = read_only_portal_destinations(
+                stage_map, link_table, doors, stages)
+            portal_destinations = verified_portal_destinations(
+                stage_map, link_table, doors, stages)
+            portal_metadata_status = 'destination_links_loaded'
+        except (ValueError, KeyError, TypeError, PortalLinkSourceError):
+            portal_metadata_status = 'destination_links_missing_or_invalid'
+    except (ValueError, KeyError, TypeError, PortalLinkSourceError):
+        # Optional source problems do not prevent the core verified runtime.
+        pass
+    # Recover official read-only destinations even if the optional StageMap
+    # file is absent. This does NOT populate actionable portal_destinations.
+    if not portal_link_evidence:
+        try:
+            if link_table is None:
+                link_table = _table(data_archive, manifest, 'EveDoorLinks')
+            link_verdict = recognize_portal_source('EveDoorLinks', link_table)
+            portal_schema_report['EveDoorLinks'] = link_verdict
+            if link_verdict['status'] == 'recognized':
+                stage_for_reference = (
+                    stage_map if portal_schema_report.get(
+                        'StageMapData_C', {}).get('status') == 'recognized'
+                    else None)
+                from wlre.services.world.portal_evidence_1275 import (
+                    read_only_portal_evidence)
+                portal_link_evidence = read_only_portal_evidence(
+                    stage_for_reference, link_table, doors, stages)
+        except (ValueError, TypeError, KeyError):
+            pass
+    # The independent route table contains no Eve event IDs; read-only.
+    try:
+        raw_routes = _table(data_archive, manifest, 'DoorLinkData_C')
+        verdict = recognize_portal_source('DoorLinkData_C', raw_routes)
+        portal_schema_report['DoorLinkData_C'] = verdict
+        if verdict['status'] == 'recognized':
+            from wlre.services.world.portal_evidence_1275 import (
+                read_only_door_link_routes)
+            portal_extra_routes = read_only_door_link_routes(raw_routes, stages)
+    except (ValueError, TypeError, KeyError):
+        pass
+    from wlre.services.world.portal_coverage import audit_portal_coverage
+    coverage = audit_portal_coverage(doors, stages, stage_map, link_table,
+                                    portal_positions, portal_destinations, portal_names,
+        portal_link_evidence, portal_extra_routes, portal_stage_markers)
     return Preview1275(
         npc_index=PreviewNPCIndex(eve['npc_event_index_1275.json.gz']),
         interact_index=PreviewInteractIndex(eve['npc_interact_1275.json.gz']),
@@ -185,9 +285,20 @@ def load_preview(data_archive, eve_archive):
               'npc_item_data_1275.json.gz', 'ItemData_C').items()},
         talks={int(k): v['text'] for k, v in _catalog(data_archive, manifest,
               'npc_talk_1275.json.gz', 'TalkData_C').items()},
-        texts={int(k): v for k, v in _catalog(data_archive, manifest,
-              'npc_text_1275.json.gz', 'TextData_C').items()},
+        texts=texts,
         recipes=parse_smith_1275(_table(data_archive, manifest, 'SmithData_C')),
-        scene_ids=frozenset(parse_stages(_table(data_archive, manifest, 'ScenesData_C'))),
-        doors=parse_doors_1275(_table(data_archive, manifest, 'Eve')),
+        scene_ids=frozenset(stages),
+        stages=stages,
+        scene_names=bind_scene_names(stages, texts),
+        portal_destinations=portal_destinations,
+        portal_names=portal_names,
+        portal_positions=portal_positions,
+        portal_display_destinations=portal_display_destinations,
+        portal_link_evidence=portal_link_evidence,
+        portal_extra_routes=portal_extra_routes,
+        portal_stage_markers=portal_stage_markers,
+        portal_metadata_status=portal_metadata_status,
+        portal_schema_report=portal_schema_report,
+        portal_coverage=coverage,
+        doors=doors,
     )

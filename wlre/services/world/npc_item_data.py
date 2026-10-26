@@ -9,7 +9,6 @@ import hashlib
 import json
 from functools import lru_cache
 from pathlib import Path
-from wlre.paths import RESOURCE_ROOT
 
 FILENAME = 'npc_item_data_1262.json.gz'
 SOURCE_SHA256 = '5fea03839a3e737ff33c5462fc553ab88966de5b02d1c95d71d3ffb54351ece1'

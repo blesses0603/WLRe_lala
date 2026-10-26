@@ -1,0 +1,189 @@
+"""Exhaustive read-only evidence for official 1275 EveDoorLinks.
+
+Each EveDoorLinks entry has a one-based scene-local ordinal according to
+EveDoorLinksData.GetDoorDataByIndex. Missing StageMapData entries must not
+erase a correctly decoded source position or destination. This index never
+authorizes C20-8, movement or a hidden-portal trigger.
+"""
+from __future__ import annotations
+
+from collections import Counter
+
+from wlre.services.world.portal_links_1275 import (
+    parse_eve_door_links, parse_stage_map_portals)
+
+
+def _packet_position(stage, x, y):
+    if not isinstance(stage, dict):
+        return None
+    rx, ry = stage.get('pos_x_ratio'), stage.get('pos_y_ratio')
+    if (type(rx) is not int or type(ry) is not int
+            or not 1 <= rx <= 255 or not 1 <= ry <= 255
+            or type(x) is not int or type(y) is not int):
+        return None
+    a, b = x * rx, y * ry
+    return (a, b) if 0 <= a <= 65535 and 0 <= b <= 65535 else None
+
+
+def _projection_guard(stage):
+    """Require official current-version geometry before drawing old packed PNG."""
+    if not isinstance(stage, dict):
+        return None
+    keys = ('map_width', 'map_height', 'small_offset_x', 'small_offset_y')
+    if not all(type(stage.get(key)) is int for key in keys):
+        return None
+    width = 6992 if stage['map_width'] == 65535 else stage['map_width']
+    height = 6992 if stage['map_height'] == 65535 else stage['map_height']
+    if max(width, height) <= 0:
+        return None
+    return {'rate': 100 * (1024 - 24) / max(width, height),
+            'offset_x': stage['small_offset_x'],
+            'offset_y': stage['small_offset_y'],
+            'height': height}
+
+
+def read_only_portal_evidence(stage_raw, link_raw, doors, stages):
+    """Preserve every official scene-local link, including unmarked entries.
+
+    Inputs must already be pinned and authenticated official TextAssets. A
+    matched name, location or destination is display evidence, never proof
+    of a server-accepted door index. Unknown scenes/ratios remain unknown;
+    their unscaled official grid coordinates are retained for diagnostics.
+    """
+    # A missing optional StageMap must not discard independently verified
+    # EveDoorLinks; without it all rows remain display-only.
+    markers = (parse_stage_map_portals(stage_raw)
+               if stage_raw is not None else {})
+    links = parse_eve_door_links(link_raw)
+    if not isinstance(doors, dict) or not isinstance(stages, dict):
+        raise TypeError('1275 傳點資料型別不符')
+    answer = {}
+    for scene, rows in links.items():
+        counts = Counter(
+            row['index'] for row in doors.get(scene, ())
+            if isinstance(row, dict) and type(row.get('index')) is int)
+        for link in rows:
+            idx, target = link['index'], link['destination']
+            marker = markers.get((scene, idx))
+            src = _packet_position(stages.get(scene), link['x'], link['y'])
+            dst = _packet_position(stages.get(target),
+                                   link['arrival_x'], link['arrival_y'])
+            event_unique = counts[idx] == 1
+            marker_confirmed = bool(marker and marker['kind'] == 2)
+            issues = []
+            if not event_unique:
+                issues.append('missing_eve_door' if counts[idx] == 0
+                              else 'duplicate_eve_door')
+            if not marker_confirmed:
+                issues.append('missing_normal_stage_marker')
+            if scene not in stages:
+                issues.append('source_scene_undefined')
+            if target not in stages:
+                issues.append('destination_scene_undefined')
+            if src is None:
+                issues.append('source_coordinate_uncalibrated')
+            if dst is None:
+                issues.append('arrival_coordinate_uncalibrated')
+            answer[(scene, idx)] = {
+                'scene': scene, 'index': idx, 'destination': target,
+                'source_grid_x': link['x'], 'source_grid_y': link['y'],
+                'arrival_grid_x': link['arrival_x'],
+                'arrival_grid_y': link['arrival_y'],
+                'x': src[0] if src else None,
+                'y': src[1] if src else None,
+                'arrival_x': dst[0] if dst else None,
+                'arrival_y': dst[1] if dst else None,
+                'position_verified': src is not None,
+                'projection_guard': _projection_guard(stages.get(scene)),
+                'arrival_verified': dst is not None,
+                'destination_defined': target in stages,
+                'stage_marker_matched': marker_confirmed,
+                'eve_event_matched': event_unique,
+                'name_id': marker['name_id'] if marker_confirmed else None,
+                'issues': tuple(issues),
+                'source_kind': '1275_eve_door_links_reference',
+                'can_send_packets': False,
+            }
+    return answer
+
+def read_only_door_link_routes(raw, stages):
+    """Read the independent official DoorLinkData_C route network.
+
+    This table encodes (source scene, XY, target scene, arrival XY), NOT an
+    Eve.NewDoor event index. Routes have separate route ordinals for listing;
+    they must never be converted into C20-8 door indices.
+    """
+    from wlre.services.world.portal_schema import parse_door_link_data
+    if not isinstance(stages, dict):
+        raise TypeError('1275 場景資料型別不符')
+    records = parse_door_link_data(raw)
+    result = []
+    counts = Counter()
+    for row in records:
+        scene, target = row['source_scene'], row['destination_scene']
+        counts[scene] += 1
+        src = _packet_position(stages.get(scene),
+                               row['source_x'], row['source_y'])
+        dst = _packet_position(stages.get(target),
+                               row['arrival_x'], row['arrival_y'])
+        result.append({
+            'scene': scene, 'route_ordinal': counts[scene],
+            'destination': target,
+            'source_grid_x': row['source_x'],
+            'source_grid_y': row['source_y'],
+            'arrival_grid_x': row['arrival_x'],
+            'arrival_grid_y': row['arrival_y'],
+            'x': src[0] if src else None,
+            'y': src[1] if src else None,
+            'arrival_x': dst[0] if dst else None,
+            'arrival_y': dst[1] if dst else None,
+            'position_verified': src is not None,
+            'arrival_verified': dst is not None,
+            'destination_defined': target in stages,
+            'projection_guard': _projection_guard(stages.get(scene)),
+            'source_kind': '1275_door_link_data_reference',
+            'event_index': None,
+            'can_send_packets': False,
+        })
+    return result
+
+def read_only_stage_portal_markers(raw, stages):
+    """All StageMapData kinds 2/3/4 without inventing a shared door index.
+
+    Official 1262 Lua's HiddenPortalNew uses Kind=3 PositionX/Y and EvtID as
+    the destination scene, but only when EvtID is nonzero. Kind=4 is a
+    cross-scene *reference*, not a confirmed destination or C20-8 trigger.
+    Ordinary Kind=2 map position comes from EveDoorLinks instead.
+    """
+    import struct
+    from wlre.services.world.portal_schema import inspect_stage_map
+    inspect_stage_map(raw)
+    if not isinstance(stages, dict):
+        raise TypeError('1275 場景資料型別不符')
+    answer = []
+    for offset in range(4, len(raw), 18):
+        scene, kind, cross, event_id, x, y, name_id, sorting = (
+            struct.unpack_from('<HBHIHHIB', raw, offset))
+        if kind not in (2, 3, 4):
+            continue
+        hidden = kind == 3
+        point = _packet_position(stages.get(scene), x, y) if hidden else None
+        destination = event_id if hidden and event_id > 0 else None
+        answer.append({
+            'scene': scene, 'kind': kind, 'event_id': event_id,
+            'cross_scene_reference': cross if kind == 4 else None,
+            'destination': destination,
+            'destination_defined': destination in stages if destination else False,
+            'source_grid_x': x, 'source_grid_y': y,
+            'x': point[0] if point else None,
+            'y': point[1] if point else None,
+            'name_id': name_id, 'sorting': sorting,
+            'position_verified': point is not None,
+            'projection_guard': _projection_guard(stages.get(scene))
+                                if hidden else None,
+            'source_kind': ('1275_hidden_stage_marker' if hidden
+                            else '1275_other_scene_marker' if kind == 4
+                            else '1275_normal_stage_marker'),
+            'can_send_packets': False,
+        })
+    return answer

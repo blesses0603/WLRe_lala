@@ -1,7 +1,6 @@
 """Package native app bundles with ditto to retain links, signatures and modes."""
 import argparse
 import hashlib
-from pathlib import Path
 import subprocess
 import sys
 import zipfile

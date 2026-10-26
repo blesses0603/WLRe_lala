@@ -5,6 +5,7 @@ import time
 from functools import lru_cache
 from tkinter import ttk
 from PIL import Image, ImageDraw
+from wlre.ui.automation_control_icons import control_icon_photo
 
 
 @lru_cache(maxsize=8)
@@ -72,6 +73,13 @@ class HaloButton(ttk.Button):
     def __init__(self,parent,command):
         super().__init__(parent,text='啟動',width=4,padding=(3,2),command=command)
         self.active=False;self.phase=0;self.job=None;self.started=None
+        self._control_icons = {
+            kind: control_icon_photo(self, kind)
+            for kind in ('play', 'pause')
+        }
+        if self._control_icons['play'] is not None:
+            self.configure(image=self._control_icons['play'],
+                           compound='none', width=0, padding=(2, 1))
         self.halo_owner=self
         self.surfaces=[];self.photos=[];self.halo_visible=False
         self.bind('<Map>',self.animate,add='+')
@@ -84,6 +92,12 @@ class HaloButton(ttk.Button):
         self.active=active
         if active:self.started=time.monotonic()
         self.configure(text='關閉' if self.active else '啟動')
+        icon = self._control_icons['pause' if self.active else 'play']
+        if icon is not None:
+            self.configure(image=icon, compound='none')
+        else:
+            self.configure(image='', compound='none', width=4,
+                           padding=(3, 2))
         if self.active:self.animate()
         else:
             self.pause();self.paint_edge()

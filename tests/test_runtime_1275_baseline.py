@@ -35,6 +35,35 @@ class Default1275Tests(unittest.TestCase):
                         fn()
         runtime_1275._default_runtime.cache_clear()
 
+    def test_bundle_portal_names_take_priority_when_formal_zip_lacks_them(self):
+        from wlre.services.world.bundle_runtime_1275 import (
+            BundleRuntimeUnavailable)
+        formal = SimpleNamespace(revision=1275,
+                                 portal_metadata_status='missing_stage_map')
+        enriched = SimpleNamespace(revision=1275,
+                                   portal_metadata_status='stage_map_ready',
+                                   portal_names={(11016, 1): '官方傳點名稱'})
+        with tempfile.TemporaryDirectory() as td:
+            data, eve = Path(td) / 'data.zip', Path(td) / 'eve.zip'
+            data.write_bytes(b'fake formal installed')
+            eve.write_bytes(b'fake index installed')
+            runtime_1275._default_runtime.cache_clear()
+            with patch.object(runtime_1275, '_paths', return_value=(data, eve)), patch(
+                'wlre.services.world.preview_1275.load_preview',
+                return_value=formal), patch(
+                'wlre.services.world.bundle_runtime_1275.load_verified_bundle_runtime',
+                return_value=enriched) as load_bundle:
+                self.assertIs(runtime_1275._default_runtime(), enriched)
+                load_bundle.assert_called_once_with()
+            runtime_1275._default_runtime.cache_clear()
+            with patch.object(runtime_1275, '_paths', return_value=(data, eve)), patch(
+                'wlre.services.world.preview_1275.load_preview',
+                return_value=formal), patch(
+                'wlre.services.world.bundle_runtime_1275.load_verified_bundle_runtime',
+                side_effect=BundleRuntimeUnavailable('only ten core tables')):
+                self.assertIs(runtime_1275._default_runtime(), formal)
+            runtime_1275._default_runtime.cache_clear()
+
     def test_formal_install_rechecks_staged_copies_before_any_commit(self):
         with tempfile.TemporaryDirectory() as td:
             source = Path(td) / 'source'

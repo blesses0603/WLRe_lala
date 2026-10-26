@@ -1,7 +1,6 @@
 """Validated preferences keyed by account and server hash; never store credentials."""
 from wlre.storage.paths import account_file
-import hashlib,json,os
-from pathlib import Path
+import hashlib,json
 from wlre.services.battle.auto_battle import defaults,validate
 from wlre.services.battle import party_guard
 from wlre.storage.atomic import file_lock,write_json

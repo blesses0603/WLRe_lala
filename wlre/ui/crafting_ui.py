@@ -1,5 +1,4 @@
 """Embedded icon crafting page and commands shared with queue/plan windows."""
-import tkinter as tk
 from tkinter import ttk,messagebox
 from wlre.services.items.crafting import recipe_plan
 from wlre.services.items.combat_resources import item_name

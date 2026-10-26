@@ -1,6 +1,4 @@
 """Launcher owns auto Catalog; offline tests for source/frozen entry parity."""
-from contextlib import redirect_stdout
-import io
 import json
 from pathlib import Path
 import tempfile

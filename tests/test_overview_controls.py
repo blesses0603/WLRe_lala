@@ -11,7 +11,10 @@ from wlre.ui.halo_button import edge_points,edge_overlay
 @unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt','Requires a desktop')
 class OverviewControls(unittest.TestCase):
     def setUp(self):
-        self.root=tk.Tk();self.app=App(self.root);self.app.show_main();self.root.update()
+        # These tests verify local Tk controls, not remote update/version checks.
+        # Keep all Tk lifecycle work on the test/UI thread with no HTTP workers.
+        with patch.object(App, 'start_version_check'):
+            self.root=tk.Tk();self.app=App(self.root);self.app.show_main();self.root.update()
         self.panel=self.app.overview_panel;self.app.live_active=True
         self.state=State().snapshot();self.state['player']={'role_id':1,'name':'測試角色','scene':12000}
         self.app.render(self.state);self.root.update()
@@ -44,6 +47,45 @@ class OverviewControls(unittest.TestCase):
                 self.app.render(self.state);self.root.update()
                 self.assertEqual(button.cget('text'),'啟動')
                 self.assertFalse(button.halo_visible);self.assertIsNone(button.job)
+
+    def test_all_three_automation_buttons_switch_images_only_after_state_update(self):
+        for key, section in (
+            ('ai', 'auto_battle'),
+            ('roaming', 'roaming'),
+            ('expedition', 'expedition'),
+        ):
+            with self.subTest(feature=key):
+                button = self.panel.actions[key]
+                idle_photo = button.tk.splitlist(button.cget('image'))[0]
+                self.assertTrue(idle_photo)
+                self.assertEqual(self.root.tk.call('image', 'width', idle_photo), 28)
+                self.assertEqual(button.cget('text'), '啟動')
+                self.state[section]['enabled'] = True
+                self.app.render(self.state)
+                self.root.update()
+                self.assertNotEqual(button.tk.splitlist(button.cget('image'))[0], idle_photo)
+                self.assertEqual(button.cget('text'), '關閉')
+                self.assertTrue(button.active)
+                self.state[section]['enabled'] = False
+                self.app.render(self.state)
+                self.root.update()
+                self.assertEqual(button.tk.splitlist(button.cget('image'))[0], idle_photo)
+                self.assertFalse(button.active)
+
+    def test_expedition_home_toggle_commands_unchanged_with_images(self):
+        button = self.panel.actions['expedition']
+        with patch.object(self.app.expedition_panel, 'start') as start, \
+                patch.object(self.app, 'send') as send:
+            button.invoke()
+            start.assert_called_once_with()
+            self.assertFalse(button.active)
+            self.assertEqual(button.cget('text'), '啟動')
+            self.state['expedition']['enabled'] = True
+            self.app.render(self.state)
+            self.root.update()
+            button.invoke()
+            send.assert_called_once_with({'type': 'stop_expedition'})
+            self.assertEqual(button.cget('text'), '關閉')
 
     def test_hidden_animation_pauses_and_disconnect_clears_halo(self):
         self.state['auto_battle']['enabled']=True;self.app.render(self.state);self.root.update()

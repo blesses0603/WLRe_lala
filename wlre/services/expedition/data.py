@@ -2,9 +2,7 @@
 from wlre.storage.paths import data_root as user_data_root
 import hashlib
 import json
-import os
 import struct
-from pathlib import Path
 
 from wlre.network.wire import Reader, ProtocolError
 from wlre.paths import RESOURCE_ROOT

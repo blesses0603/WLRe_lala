@@ -41,7 +41,8 @@ class RedesignedLayout(unittest.TestCase):
     def test_card_labels_inherit_same_readable_surface(self):
         self.app.left_tabs.select(self.app.overview_panel.master);self.root.update()
         theme=self.app.theme;data=theme.windows[str(self.root)];data['signature']=None;theme.paint(self.root)
-        card=self.app.overview_panel.cards['ai'];label=self.app.overview_panel.labels['ai'][0]
+        self.assertIn('ai', self.app.overview_panel.cards)
+        label=self.app.overview_panel.labels['ai'][0]
         x=label.winfo_rootx()-self.root.winfo_rootx();y=label.winfo_rooty()-self.root.winfo_rooty()
         image=data['widgets'][str(label)]['images'][0]
         actual=tuple(self.root.tk.call(str(image),'get',2,2))

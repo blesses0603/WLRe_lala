@@ -1,6 +1,5 @@
 """Background tint signatures: ordinary widgets never invalidate all image skins."""
 import unittest
-from unittest.mock import Mock
 
 from wlre.ui.theme_surfaces import section_layers
 

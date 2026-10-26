@@ -1,6 +1,5 @@
 """Future-week revision identity uses both official full versions, not 1275."""
 
-from pathlib import Path
 import tempfile
 import unittest
 import zlib

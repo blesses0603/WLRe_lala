@@ -48,10 +48,20 @@ class PortalTravel:
                 return  # repeated list clicks cannot restart or re-send a trigger
             raise ProtocolError('傳點移動尚未結束，請先停止移動')
         self.catalog = self.catalog or Portals()
+        cached_data = getattr(self.catalog, 'data', None)
+        if (isinstance(cached_data, dict)
+                and cached_data.get('source_revision') != 1275):
+            # Legacy portals.json has no revision tag in some installations.
+            # Both an explicit 1262 tag and an absent tag mean stale source.
+            self.catalog = Portals()
         portal = next((p for p in self.catalog.for_scene(state.player.get('scene'))
                        if p['id'] == portal_id), None)
         if portal is None:
             raise ProtocolError('傳點不屬於目前地圖，請重新選取')
+        if (isinstance(getattr(self.catalog, 'data', None), dict)
+                and self.catalog.data.get('source_revision') == 1275
+                and portal.get('source_revision') != 1275):
+            raise ProtocolError('舊版或無來源標記傳點已停用，請更新 1275 官方傳點清單')
         problem = destination_problem(portal)
         if problem:raise ProtocolError(problem)
         scene, x, y = self.catalog.target(portal, state.player.get('scene'))
@@ -87,10 +97,20 @@ class PortalTravel:
         if state.event_flow.get('blocked'):
             raise ProtocolError('等待目前伺服器事件結束後再觸發出口')
         self.catalog = self.catalog or Portals()
+        cached_data = getattr(self.catalog, 'data', None)
+        if (isinstance(cached_data, dict)
+                and cached_data.get('source_revision') != 1275):
+            # Legacy portals.json has no revision tag in some installations.
+            # Both an explicit 1262 tag and an absent tag mean stale source.
+            self.catalog = Portals()
         portal = next((p for p in self.catalog.for_scene(state.player.get('scene'))
                        if p['id'] == portal_id), None)
         if portal is None:
             raise ProtocolError('傳點不屬於目前地圖，請重新選取')
+        if (isinstance(getattr(self.catalog, 'data', None), dict)
+                and self.catalog.data.get('source_revision') == 1275
+                and portal.get('source_revision') != 1275):
+            raise ProtocolError('舊版或無來源標記傳點已停用，請更新 1275 官方傳點清單')
         problem = destination_problem(portal)
         if problem:raise ProtocolError(problem)
         index = self.catalog.direct_target(portal, state.player.get('scene'))

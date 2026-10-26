@@ -1,5 +1,4 @@
 """Catalog source bridge: raw Unity TextAsset -> reviewed format/derived Eve index."""
-import hashlib
 import unittest
 from unittest.mock import patch
 

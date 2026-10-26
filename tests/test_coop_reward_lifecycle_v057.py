@@ -127,7 +127,12 @@ class CoopLifecycle(unittest.TestCase):
             self.assertIn('coop_state source=instance_reward_status', logged)
             self.assertIn('reward_known=1 open_reward=1', logged)
             self.assertNotIn('PRIVATE-CHARACTER', logged)
-            self.assertNotIn('678', logged)
+            # A logging timestamp such as 08:33:03,678 is unrelated to
+            # a user's ID. Inspect only the structured diagnostic payload.
+            messages = '\n'.join(
+                line.split(' coop_state ', 1)[1]
+                for line in logged.splitlines() if ' coop_state ' in line)
+            self.assertNotIn('678', messages)
 
     def test_wire_reward_then_first_room_info_survives_and_trace_is_present(self):
         connection = Mock()

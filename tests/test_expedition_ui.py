@@ -47,6 +47,28 @@ class ExpeditionPanelTests(unittest.TestCase):
         self.panel.start()
         self.assertIn('重新登入', self.panel.status.get())
 
+    def test_expedition_window_uses_play_and_pause_without_changing_commands(self):
+        start_button = self.panel.start_button
+        stop_button = self.panel.stop_button
+        for button, expected_text in (
+            (start_button, '啟動自動派遣'),
+            (stop_button, '停止'),
+        ):
+            image = button.tk.splitlist(button.cget('image'))[0]
+            self.assertTrue(image)
+            self.assertEqual(self.root.tk.call('image', 'width', image), 28)
+            self.assertEqual(button.cget('text'), expected_text)
+            self.assertEqual(str(button.cget('compound')), 'none')
+        self.assertNotEqual(start_button.tk.splitlist(start_button.cget('image'))[0],
+                            stop_button.tk.splitlist(stop_button.cget('image'))[0])
+        self.panel.render(self.state)
+        start_button.invoke()
+        self.assertEqual(self.app.send.call_args.args[0]['type'],
+                         'start_expedition')
+        self.app.send.reset_mock()
+        stop_button.invoke()
+        self.app.send.assert_called_once_with({'type': 'stop_expedition'})
+
     def test_missing_catalog_disables_start_and_displays_requirement(self):
         self.panel.catalog = {'tasks': {}, 'levels': {}}
         self.panel.render(self.state)

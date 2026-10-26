@@ -1,5 +1,4 @@
 """Fixture-only tests: CI does not require proprietary game data binaries."""
-import hashlib
 import tempfile
 import unittest
 import warnings

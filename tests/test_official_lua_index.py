@@ -1,6 +1,5 @@
 """Offline synthetic tests for LuaScriptPathList parser and private cache."""
 
-from pathlib import Path
 import tempfile
 import unittest
 

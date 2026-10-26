@@ -59,13 +59,36 @@ def _default_runtime():
     legacy_present = data.exists() or eve.exists()
     if data.is_file() and eve.is_file():
         try:
-            return load_preview(data, eve)
+            formal = load_preview(data, eve)
         except (OSError, ValueError, KeyError, TypeError, EOFError,
                 UnicodeError, BadZipFile, LargeZipFile, zlib.error,
                 RuntimeError):
             # Do not delete, overwrite, or silently trust broken ZIPs.
             # Independently verify the entire official Bundle source instead.
             pass
+        else:
+            # A valid older full ZIP can omit optional portal assets. Do not
+            # permanently shadow separately verified official 1275 Bundles
+            # which do have StageMapData / EveDoorLinks evidence.
+            status = getattr(formal, 'portal_metadata_status',
+                             'missing_stage_map')
+            if status in ('missing_stage_map', 'stage_map_invalid'):
+                try:
+                    enriched = load_verified_bundle_runtime()
+                except (BundleRuntimeUnavailable, OSError, ValueError,
+                        KeyError, TypeError):
+                    pass
+                else:
+                    bundle_status = getattr(
+                        enriched, 'portal_metadata_status', 'missing_stage_map')
+                    if (getattr(enriched, 'revision', None) == 1275
+                            and (bundle_status in (
+                                'stage_map_ready', 'destination_links_loaded')
+                                or (isinstance(bundle_status, str)
+                                    and bundle_status.startswith('destination_links_'))
+                                or bool(getattr(enriched, 'portal_names', {})))):
+                        return enriched
+            return formal
 
     try:
         return load_verified_bundle_runtime()
@@ -93,7 +116,7 @@ def ready():
         # NEVER replace these sources.
         source = active_runtime()
         from wlre.services.world.formal_candidate_bridge import (
-            FormalBridgeError, inspect_launcher_candidate)
+            inspect_launcher_candidate)
         # A matching candidate is checked AGAIN against the full, release-
         # pinned source before any shared recipe dict is touched. A mismatch
         # must never partially change game state.

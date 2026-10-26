@@ -1,13 +1,15 @@
-"""Optional authentic 1262 sidebar sprites.
+"""User-supplied official 1275 Texture2D pictograms in LaLa tab style.
 
-The right-side menu icons in the supplied game screenshot are not included
-in the currently tracked official function-icons subset. Do not upscale or
-cut out screenshot pixels. The client uses text until these original
-transparent Unity sprites are supplied as PNG files.
+Only the transparent pictogram shapes are stored under assets/instance-menu.
+The same circular backing plate, border and 34 px tab size are used as the
+other dashboard tabs. No protocol or tab-navigation behavior changes.
 """
 from functools import lru_cache
-from PIL import Image, ImageOps, ImageTk
+
+from PIL import Image, ImageDraw, ImageOps, ImageTk
+
 from wlre.paths import RESOURCE_ROOT
+
 
 MENU_ASSETS = {
     '副本': 'Menu_Dungeon.png',
@@ -19,8 +21,9 @@ MENU_ASSETS = {
 }
 
 
-@lru_cache(maxsize=12)
-def menu_icon_image(title, size=29):
+@lru_cache(maxsize=24)
+def menu_icon_image(title, size=34):
+    """Render a transparent official glyph on the existing round tab badge."""
     name = MENU_ASSETS.get(title)
     if not name:
         return None
@@ -29,12 +32,32 @@ def menu_icon_image(title, size=29):
         return None
     try:
         with Image.open(path) as original:
-            return ImageOps.contain(original.convert('RGBA'),
-                                    (size,size),Image.Resampling.LANCZOS)
+            glyph = original.convert('RGBA')
+        bounds = glyph.getchannel('A').getbbox()
+        if not bounds:
+            return None
+        glyph = glyph.crop(bounds)
+        # Keep palette, border, padding and supersampling identical to
+        # function_icons.icon_image() for all other dashboard tabs.
+        scale = 3
+        badge = Image.new('RGBA', (size * scale, size * scale))
+        draw = ImageDraw.Draw(badge)
+        draw.ellipse((2, 2, size * scale - 3, size * scale - 3),
+                     fill=(45, 81, 101, 230),
+                     outline=(180, 225, 235, 235),
+                     width=scale)
+        foreground = ImageOps.contain(
+            glyph, (size * scale - 20, size * scale - 20),
+            Image.Resampling.LANCZOS)
+        badge.alpha_composite(
+            foreground,
+            ((badge.width - foreground.width) // 2,
+             (badge.height - foreground.height) // 2))
+        return badge.resize((size, size), Image.Resampling.LANCZOS)
     except (OSError, ValueError):
         return None
 
 
-def menu_icon_photo(widget, title, size=29):
-    image = menu_icon_image(title, size)
-    return ImageTk.PhotoImage(image, master=widget) if image is not None else None
+def menu_icon_photo(widget, title, size=34):
+    icon = menu_icon_image(title, size)
+    return ImageTk.PhotoImage(icon, master=widget) if icon is not None else None

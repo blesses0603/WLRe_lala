@@ -2,6 +2,7 @@
 from contextlib import ExitStack
 import hashlib
 import json
+import struct
 from pathlib import Path
 import tempfile
 import unittest
@@ -54,6 +55,9 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
                 'SmithData_C', 'ScenesData_C',
                 'AdventureData_C', 'AdventureLvData_C',
                 'NpcData_C', 'NpcCareerData_C')}
+        self.raw['StageMapData_C'] = struct.pack('<i', 0)
+        self.raw['DoorLinkData_C'] = struct.pack('<i', 0)
+        self.raw['EveDoorLinks'] = '事件ID=10000\n'.encode('utf-16-le')
         self.items = {i: {'name': f'物品{i}', 'open_used': 0} for i in range(1, 1033)}
         self.recipes = {
             i: {'item_id': i, 'tool_id': 39053, 'output': 1,
@@ -189,8 +193,43 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
         self.assertEqual(result['downloaded_bundles'], 1)
         self.assertFalse(result['assets_ready'])
         self.assertFalse(result['can_send_packets'])
-        self.assertEqual(len(plan.call_args.kwargs['asset_paths']), 10)
-        sync.assert_called_once()
+        self.assertEqual(plan.call_count, 4)
+        self.assertEqual(len(plan.call_args_list[0].kwargs['asset_paths']), 10)
+        self.assertEqual(len(plan.call_args_list[1].kwargs['asset_paths']), 1)
+        self.assertIn('StageMapData_C', plan.call_args_list[1].kwargs['asset_paths'][0])
+        self.assertEqual(len(plan.call_args_list[2].kwargs['asset_paths']), 1)
+        self.assertIn('EveDoorLinks', plan.call_args_list[2].kwargs['asset_paths'][0])
+        self.assertIn('DoorLinkData_C', plan.call_args_list[3].kwargs['asset_paths'][0])
+        self.assertEqual(sync.call_count, 4)
+        self.assertTrue(result['portal_names_bundle_ready'])
+        self.assertTrue(result['portal_metadata_ready'])
+
+    def test_optional_portal_bundle_failure_keeps_core_runtime_ready(self):
+        snapshot = self._official_snapshot()
+        supported = {'official_game_exe_version': '1.3.0', **self.supported}
+        rows = [SimpleNamespace(
+            action='download',
+            spec=SimpleNamespace(file_size=512,
+                                 cache_path=lambda root: self.root / 'verified.bundle'))]
+        execute = Mock(side_effect=[None, ValueError('optional portal asset failed'),
+                                    ValueError('optional link failed'), ValueError('optional route failed')])
+        with patch('wlre.services.world.bundle_runtime_1275._PINNED_MANIFEST_SHA256',
+                   self.pinned), patch(
+             'wlre.services.resource_compatibility.load_supported_resources',
+             return_value=supported), patch(
+             'wlre.services.official_incremental_sync.build_update_plan',
+             return_value=SimpleNamespace(entries=rows)), patch(
+             'wlre.services.official_bundle_download._verified_file',
+             return_value=True):
+            result = sync_pinned_runtime_bundles(
+                sync_root=self.root, observe=lambda: snapshot,
+                retrieve=lambda spec, cache_root: self.verified[spec.package],
+                execute=execute)
+        self.assertEqual(execute.call_count, 4)
+        self.assertEqual(result['downloaded_bundles'], 1)
+        self.assertFalse(result['portal_names_bundle_ready'])
+        self.assertFalse(result['portal_metadata_ready'])
+        self.assertFalse(result['can_send_packets'])
 
     def test_pinned_runtime_sync_rejects_version_switch_before_download(self):
         snapshot = self._official_snapshot()
@@ -243,11 +282,86 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
         self.assertEqual(runtime.texts[3], '正式文字')
         self.assertTrue(runtime.portal_status(10000)['exists'])
         self.assertFalse(runtime.can_send_packets)
-        self.assertEqual(self.extract.call_count, 10)
+        self.assertEqual(self.extract.call_count, 13)
         self.assertEqual(len(runtime.expedition['tasks']), 260)
         self.assertEqual(runtime.expedition['tasks']['1']['name'], '正式文字')
         self.assertEqual(runtime.expedition['source_kind'],
                          'verified_1275_official_bundle')
+
+    def test_portal_names_survive_missing_optional_eve_door_links(self):
+        # The official minimap label is StageMapData.NameID, not a transfer
+        # destination. Failure to load EveDoorLinks must not erase the name.
+        self.raw['StageMapData_C'] = (
+            struct.pack('<i', 1) +
+            struct.pack('<HBHIHHIB', 10000, 2, 0, 1, 500, 600, 3, 0))
+        def extract(binding, paths, loader=None):
+            name = binding.contract.source_name
+            if name == 'EveDoorLinks':
+                raise ValueError('optional link not available')
+            return self.raw[name]
+        self.extract.side_effect = extract
+        with ExitStack() as stack:
+            self.patches(stack)
+            runtime = load_verified_bundle_runtime(sync_root=self.root)
+        self.assertEqual(runtime.portal_names, {(10000, 1): '正式文字'})
+        self.assertEqual(runtime.portal_destinations, {})
+        self.assertEqual(runtime.portal_metadata_status,
+                         'destination_links_textasset_extract_failed')
+        self.assertEqual(len(runtime.recipes), 1032)
+
+    def test_known_1262_layout_recognized_from_verified_1275_bundles(self):
+        with ExitStack() as stack:
+            self.patches(stack)
+            runtime = load_verified_bundle_runtime(sync_root=self.root)
+        report = runtime.portal_schema_report
+        self.assertEqual(report['StageMapData_C']['schema'], 'stage-map-le-v1')
+        self.assertEqual(report['EveDoorLinks']['schema'],
+                         'eve-door-links-utf16le-v1')
+        self.assertFalse(report['StageMapData_C']['can_send_packets'])
+        self.assertFalse(report['EveDoorLinks']['can_send_packets'])
+
+    def test_unknown_stage_layout_preserves_core_runtime_and_diagnostic(self):
+        self.raw['StageMapData_C'] = b'\x01\x00\x00\x00unsupported_future'
+        with ExitStack() as stack:
+            self.patches(stack)
+            runtime = load_verified_bundle_runtime(sync_root=self.root)
+        self.assertEqual(runtime.portal_metadata_status, 'layout_unrecognized')
+        self.assertEqual(
+            runtime.portal_schema_report['StageMapData_C']['status'],
+            'layout_unrecognized')
+        self.assertEqual(runtime.portal_names, {})
+        self.assertEqual(runtime.portal_destinations, {})
+        self.assertEqual(len(runtime.recipes), 1032)
+        self.assertFalse(runtime.can_send_packets)
+
+    def test_optional_stage_map_not_cached_reports_precise_reason(self):
+        def fake_plan(manifest, *, asset_paths, cache_root):
+            if 'StageMapData_C.bytes' in asset_paths[0]:
+                return SimpleNamespace(entries=[SimpleNamespace(action='download')])
+            return self.plan
+        with ExitStack() as stack:
+            self.patches(stack)
+            stack.enter_context(patch(
+                'wlre.services.official_incremental_sync.build_update_plan',
+                side_effect=fake_plan))
+            runtime = load_verified_bundle_runtime(sync_root=self.root)
+        self.assertEqual(runtime.portal_metadata_status, 'bundle_not_cached')
+        self.assertEqual(runtime.portal_names, {})
+        self.assertEqual(runtime.portal_display_destinations, {})
+        self.assertEqual(len(runtime.recipes), 1032)
+
+    def test_optional_stage_map_extraction_error_is_not_silenced(self):
+        def extract(binding, paths, loader=None):
+            if binding.contract.source_name == 'StageMapData_C':
+                raise ValueError('malformed UnityFS text asset')
+            return self.raw[binding.contract.source_name]
+        self.extract.side_effect = extract
+        with ExitStack() as stack:
+            self.patches(stack)
+            runtime = load_verified_bundle_runtime(sync_root=self.root)
+        self.assertEqual(runtime.portal_metadata_status, 'textasset_extract_failed')
+        self.assertEqual(runtime.portal_names, {})
+        self.assertEqual(len(runtime.recipes), 1032)
 
     def test_verified_bundle_data_enters_real_crafting_plan(self):
         # This is the actual crafting service, not a read-only UI preview.
@@ -304,7 +418,6 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
         for action in ('download', 'reuse_previous', 'cached'):
             with self.subTest(action=action), ExitStack() as stack:
                 self.patches(stack)
-                self.plan.entries[0].action = action
                 self.plan.entries[0].action = action
                 if action == 'cached':
                     stack.enter_context(patch(
@@ -449,7 +562,8 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
         data, eve = formal / '1275_DataCatalog.zip', formal / '1275_EveNpcIndex.zip'
         data.write_bytes(b'data fixture')
         eve.write_bytes(b'eve fixture')
-        working = object()
+        working = SimpleNamespace(
+            revision=1275, portal_metadata_status='stage_map_ready')
         with patch('wlre.services.world.runtime_1275._paths',
                    return_value=(data, eve)), patch(
              'wlre.services.world.preview_1275.load_preview',

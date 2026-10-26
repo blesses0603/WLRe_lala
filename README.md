@@ -1,16 +1,26 @@
-# WLRe:LaLa | v0.6.1 開發版（PR #56 開發候選，未合併、未發布）
+# WLRe:LaLa | v0.6.1 開發版（已合併 main，尚未正式發布）
 
-> **版本狀態（2026-10-25）**：目前 main 仍為 **v0.6.0**；本 PR 為 **v0.6.1 開發候選，尚未合併或發行正式安裝包**。開發候選的編譯成品必須另外安裝／以原始碼執行，不會出現在「GitHub 正式 Release 更新」清單。官方 MainPackage／DataPackage 資料預設基準已調整為 **1275**，正式資料可由已驗證的官方 Bundle 自動重建，若資源不齊或格式不符仍會拒絕登入。現有封包邏輯仍需正式服驗收，不能把官方資源版本相符等同於所有功能完成相容。最近正式 Release 為 [v0.5.0](https://github.com/blesses0603/WLRe_lala/releases/tag/v0.5.0)。
+> **版本狀態（2026-10-26）**：`main` 整合 **v0.6.1 開發版**（PR #56、PR #57，後者三平台 CI #1115 通過），**使用者已回報本次測試的功能正常、未發現問題；逐功能正式服 E2E 證據與正式 Release／Tag／安裝包仍待驗收／發布**。官方 MainPackage／DataPackage 支援 1275 基準與已驗證 Bundle 的安全補建；資源缺失、校驗失敗或格式不相容時仍拒絕登入。資料版本相符不代表所有遊戲功能已通過驗收。最近正式 Release 為 [v0.5.0](https://github.com/blesses0603/WLRe_lala/releases/tag/v0.5.0)。
 
 **WLRe:LaLa** 是《飄流幻境 RE：星之方舟》的 Python 桌面客戶端工具，使用 Tkinter／ttk、遊戲封包與內建資源。桌面版獨立維護，Android 不在本倉庫的建置範圍內。
 
-[更新重點](#v0517-更新重點) · [啟動與建置](#啟動與建置) · [使用限制](#使用限制) · [測試](#測試與驗證) · [文件](#參考文件) · [版本歷史](版本歷史.md)
+[功能模組化與舊資源遷移](docs/MODULARIZATION_PLAN.md) · [啟動與建置](#啟動與建置) · [使用限制](#使用限制) · [測試](#測試與驗證) · [文件](#參考文件) · [版本歷史](版本歷史.md)
+
+> **模組化開發方向（PR #57）**：協力、一般副本、小地圖、NPC／傳點分別建立功能資料夾；每階段**同時**處理該功能舊離線／1262 資源的可信來源替代。未取得等價驗證來源、尚有其他模組引用或未通過回歸測試時保留舊檔，不為整理目錄直接刪除；官方已驗證 Bundle 可供正式 1275 Runtime 使用，但本機版本化快取、個人設定與 UI／導航必要資料不等於可全部刪除。詳見 [規劃文件](docs/MODULARIZATION_PLAN.md)。
+
+> **PR #57 模組化與舊傳點遷移（2026-10-26）**：P1 協力／副本、P2 小地圖、P3 NPC／傳點主要程式已拆分，P4 視窗／會話事件處理僅完成前兩批，尚非全模組化結案。1275 門事件清單採官方驗證來源，1262 舊傳點已從正常清單、UI 快取及換圖服務路徑排除；歷史 `portals.json` 保留稽核及其中 NPC／怪物資料參照，不做刪檔。NPC 只在側邊清單列出，不繪製於小地圖。PR #57 **CI #1115 三平台各 1,198 項測試通過**（Windows 跳過 7 項、Ubuntu 2 項、macOS 125 項）；不等於所有傳點已成功由伺服器換圖，也未執行完整實機 E2E／正式打包。**本版不建立 Release／Tag。**
+
+> **PR #57 官方 1275 小地圖缺口查核**：以 `output_1275.zip` 對照既有圖片，確認 550 張像素完全一致、沒有缺圖模型；主要缺漏是新版場景 `15138`（模型 `11139`）沒有舊場景對應，以及 12 個沒有原始圖片的場景座標欄位已變更。LaLa 以正式 1275 Runtime 解析 `ScenesData_C.model_id` 與投影參數，從現有圖片庫找回 `15138`；不新增「匯入 1275 小地圖」功能、不複製 550 張圖片、不冒用舊版導航圖。可執行 `py -m tools.audit_minimap_1275 output_1275.zip --pixel-audit` 複查，完整紀錄見 [小地圖缺口核對](docs/MINIMAP_1275_AUDIT.md)。
 
 > **官方 Manifest 來源決策（PR #56）**：DataPackage／MainPackage 各僅以 `.version`、`.bytes`、`.hash` 作為版本與資源清單的必要來源；**不下載、不依賴**官方 `.json`、`.report`。`ResourcePath_PC.dat` 仍供偵測資料路徑與 DataVer，對應的 `.bundle` 依實際功能需求增量下載與校驗。程式內自行建立的 `.json` 索引／收據屬於本機衍生資料，不是額外要求下載的官方 `.json`。
 
-> **PR #56 已審核 1275 Bundle 正式 Runtime 接入（開發測試中）**：LaLa 不再把手動安裝 `1275_DataCatalog.zip`／`1275_EveNpcIndex.zip` 當成唯一可用來源。若 Launcher 已從官方 `.version`、`.bytes`、`.hash` 驗證完整版本與所需 Bundle，主程式可用 `bundle_runtime_1275.py` 直接解析 NPC／互動、物品、對話、文字、製作、遠征、場景與門事件，交由既有 Runtime 與 `recipe_plan` 使用。仍須對兩份 Manifest 做固定 SHA-256、逐 Bundle MD5/CRC、Eve 固定 SHA、完整 Schema 與 1032 配方交叉校驗；缺少任一來源就拒絕啟用，不自動解鎖未驗收協定。真實伺服器 E2E 與打包安裝尚待驗收，詳見 `docs/AUTO_COMPATIBILITY.md`。\n\n> **PR #56 自動相容性判定（v0.6.1 開發候選）**：Launcher 下載並校驗官方 Manifest／Bundle 後，會針對 NPC、商店、製作與場景執行第二層版本身分、Schema、來源 SHA-256、長度與筆數判定；快取命中也必須重新核對來源。新版私有 `compatibility_report.json` 與 `candidate.zip` SHA-256 綁定，主程式僅顯示唯讀狀態。**資料相容不代表遊戲協定相容，也不會自動解除登入或交易限制**。詳細設計見 [自動相容性判定](docs/AUTO_COMPATIBILITY.md)。正式 EXE 打包與未取得的官方 Bundle 實檔驗收暫緩。
+> **PR #56 已審核 1275 Bundle 正式 Runtime 接入（開發測試中）**：LaLa 不再把手動安裝 `1275_DataCatalog.zip`／`1275_EveNpcIndex.zip` 當成唯一可用來源。若 Launcher 已從官方 `.version`、`.bytes`、`.hash` 驗證完整版本與所需 Bundle，主程式可用 `bundle_runtime_1275.py` 直接解析 NPC／互動、物品、對話、文字、製作、遠征、場景與門事件，交由既有 Runtime 與 `recipe_plan` 使用。仍須對兩份 Manifest 做固定 SHA-256、逐 Bundle MD5/CRC、Eve 固定 SHA、完整 Schema 與 1032 配方交叉校驗；缺少任一來源就拒絕啟用，不自動解鎖未驗收協定。使用者已回報已測功能正常；真實伺服器全流程逐項 E2E 證據與打包安裝仍待補齊，詳見 `docs/AUTO_COMPATIBILITY.md`。
 
-> **Launcher 資源缺口自動診斷**：每次啟動會以唯讀方式盤點完整 1275 正式資料是否缺少 `1275_DataCatalog.zip`、`1275_EveNpcIndex.zip`，若檔案存在則以固定 SHA-256／Schema 核對內部資料。登入前視窗顯示缺少或損壞的來源；詳細清單可執行 `py -m tools.diagnose_lala_resources`，或加上 `--json`。缺口檢測不是把未驗證候選資料直接提升為正式遊戲資源。## v0.6.0 更新重點（2026-10-23，1275 資源預設基準，開發候選）
+> **PR #56 自動相容性判定（v0.6.1 開發候選）**：Launcher 下載並校驗官方 Manifest／Bundle 後，會針對 NPC、商店、製作與場景執行第二層版本身分、Schema、來源 SHA-256、長度與筆數判定；快取命中也必須重新核對來源。新版私有 `compatibility_report.json` 與 `candidate.zip` SHA-256 綁定，主程式僅顯示唯讀狀態。**資料相容不代表遊戲協定相容，也不會自動解除登入或交易限制**。詳細設計見 [自動相容性判定](docs/AUTO_COMPATIBILITY.md)。正式 EXE 打包與未取得的官方 Bundle 實檔驗收暫緩。
+
+> **Launcher 資源缺口自動診斷**：每次啟動會以唯讀方式盤點完整 1275 正式資料是否缺少 `1275_DataCatalog.zip`、`1275_EveNpcIndex.zip`，若檔案存在則以固定 SHA-256／Schema 核對內部資料。登入前視窗顯示缺少或損壞的來源；詳細清單可執行 `py -m tools.diagnose_lala_resources`，或加上 `--json`。缺口檢測不是把未驗證候選資料直接提升為正式遊戲資源。
+
+## v0.6.0 更新重點（2026-10-23，1275 資源預設基準，開發候選）
 > **Launcher 既有檔案整合與自動續補（PR #56）**：同步 1275 四類必要資料後，自動依當次官方 DataPackage Manifest 盤點全部原始 `.bytes`，重用**現存且校驗通過**的正式表格／索引與私人 Bundle 快取，缺少時從官方驗證下載（每輪額外上限 4 Bundle／16 MiB）；結果保存在版本化私有 `verified_raw_inventory.zip`，下次啟動可續補。Eve、ItemData_C、TalkData_C 若符合已審核格式則另產生未核准的唯讀候選索引。**全量原始資料完成不代表登入核准**；正式雙 ZIP 僅在擁有原版固定 SHA Manifest 且所有檔案逐項通過後才可安全組裝並交由原有載入器驗證。詳見 [自動相容性與補建規則](docs/AUTO_COMPATIBILITY.md)。
 
 - 主程式內建官方 MainPackage／DataPackage 版本基準改為 1275，完整 Manifest 對照檢查；若未安裝通過 SHA-256 及 Schema 校驗的 1275 來源，登入前阻擋，不會退回 1262 舊索引。
@@ -152,7 +162,7 @@ py -m tools.resources.install_npc_text_1262 "WLRE_1262_NPC_繁中資料索引包
 
 > **v0.5.2 獨立視窗**：除主頁外，「組隊、夥伴出戰、遠征、副本、煉金、製作、經驗效率」皆由主頁入口開啟獨立固定視窗；所有視窗開啟時依**主視窗中心**定位，按右上角關閉只隱藏，不清除操作狀態；主畫面地圖、事件紀錄、聊天及戰場保留原來的即時監看。
 
-> **副本／協力官方圖示**：已加入原始遊戲 PNG 的自動載入支援（`wlre/resources/assets/instance-menu/Menu_Dungeon.png`、`Menu_Cooperate.png`）。這兩張**截圖右側原始貼圖尚未在現有資源中確認**，未取得前安全地顯示文字，不使用擷取截圖或猜造貼圖。來源與提取清單見 [圖示說明](wlre/resources/assets/instance-menu/SOURCE.md)。
+> **副本／協力 UI 圖示**：PR #57 已換成使用者提供的 1275 Texture2D「螺旋門／三星三人」。`Menu_Dungeon.png`、`Menu_Cooperate.png` 是移除來源內建藍底後的透明圖案，並由 `instance_menu_icons.py` 統一繪製其他分頁既有的深色圓底、淺色外框與 34px 尺寸。主程式「副本」入口和房間管理「主要／協力」子分頁使用同套設計；資產來源與驗證限制見 [圖示說明](wlre/resources/assets/instance-menu/SOURCE.md)。自動化僅設定 `enabled`／`auto_continue` 時不會鎖住房間，真實的 `pending/uncertain`、戰鬥與事件安全鎖仍維持。
 
 
 **CI 建置規則（2026-10-19）**：Draft PR 與一般提交只自動跑 Windows／Linux／macOS 測試，**不自動編譯 EXE／APP**。需要提前實機驗證時可從 GitHub Actions 手動執行原生打包；正式標籤 `vX.Y.Z` 仍透過發版流程自動建置。詳細規則請見 [Nuitka 建置文件](docs/NUITKA_BUILD.md)。
@@ -208,7 +218,8 @@ py -m tools.resources.install_npc_text_1262 "WLRE_1262_NPC_繁中資料索引包
 - **v0.5.1**：副本／協力及相關改善的開發版，透過 PR #23 合併 main；部分正式伺服器端到端驗收仍待完成。**不建立 `v0.5.1` Git Tag，也不發布 Release**。
 - **v0.5.2**：全功能獨立視窗及協力創房／房主準備的修復，已合併 main，未發布 Release。
 - **v0.5.3**：一般副本與協力房間人數、缺額、可否開始的說明，僅開發版，不建立 Tag 或 Release。
-- **v0.6.0**：預定下一次正式 Release，屆時才把應用版本調整為 `0.6.0`、建立並推送 `v0.6.0` Tag，由既有 Actions 執行 Windows／macOS Nuitka 編譯。一般 PR／main 更新只執行跨平台測試。
+- **v0.6.0**：已整合至 main 的開發版，未建立 Tag 或正式 Release。
+- **v0.6.1**：PR #56 已合併至 main；Windows／Ubuntu／macOS CI #822 通過，使用者於 2026-10-25 回報已測功能正常，但未提供逐項測試清單；完整正式服 E2E 證據、安裝與發版驗收仍待補齊。未建立 v0.6.1 Tag 或正式 Release。一般 PR／main 更新只執行跨平台測試。
 
 ## 啟動與建置
 
@@ -220,7 +231,7 @@ py -m tools.resources.install_npc_text_1262 "WLRE_1262_NPC_繁中資料索引包
 
 原始碼相關依賴請參閱 `requirements-ui.txt`，Windows Nuitka 細節請見 [建置說明](docs/NUITKA_BUILD.md)。
 
-> **UnityFS 解包器（PR #56，v0.6.1 開發候選）**：原生 Windows／macOS 建置流程已加入 `requirements-extractor.txt`（固定 UnityPy 版本），預計隨 EXE／APP 一併封裝，使用者不需另外安裝 Python/UnityPy。新建置自檢 `--self-test-unityfs` 會核對內建模組及 LZ4／Brotli。**正式打包產物與真實官方 Bundle 解包仍須分別驗收**；此功能尚未隨目前 main 或既有 Release 發布。
+> **UnityFS 解包器（PR #56，v0.6.1 開發候選）**：原生 Windows／macOS 建置流程已加入 `requirements-extractor.txt`（固定 UnityPy 版本），預計隨 EXE／APP 一併封裝，使用者不需另外安裝 Python/UnityPy。新建置自檢 `--self-test-unityfs` 會核對內建模組及 LZ4／Brotli。**正式打包產物與真實官方 Bundle 解包仍須分別驗收**；相關程式已合併 main，但尚未發布正式 Release。
 
 > **Launcher 自動資源候選（同一 Draft PR）**：LaLa 的原始碼版啟動器及 Nuitka 正式入口共用資源準備服務，**先顯示 Launcher 資源準備進度視窗，再開啟主程式**，並讀取官方版本與兩包 Manifest，依精確 AssetPath 下載／校驗必要 Bundle、解包並把新版候選資料存入個人快取；**不需自行建立 bindings.json**。登入前版本視窗僅顯示 Launcher 的唯讀狀態，不會再次下載。沒有網路、官方更動未知格式或超過下載額度時安全停止。新生成的 SHA 僅作完整性校驗，不代表正式版本已核准，未知新版仍不會自動解除登入封鎖。Launcher 會以真實事件顯示 Manifest 驗證、必要 Bundle 完成筆數、四類資料解包及候選快取狀態，不顯示猜測百分比。開發者也可使用 `python -m tools.plan_official_catalog --download --parse` 單獨執行；正式 EXE 仍需打包與真實 Bundle 驗收。
 
@@ -246,7 +257,7 @@ python -m tools.build.build_nuitka --dry-run
 
 ## 參考文件
 
-- [整體架構](docs/ARCHITECTURE.md) · [模組索引](docs/STRUCTURE.md) · [介面配置](docs/UI_LAYOUT.md) · [重構進度](docs/REFACTOR_CHECKLIST.md) · [第 10 項稽核](docs/PHASE10_AUDIT.md)
+- [模組化路線圖](docs/MODULARIZATION_PLAN.md) · [整體架構](docs/ARCHITECTURE.md) · [模組索引](docs/STRUCTURE.md) · [介面配置](docs/UI_LAYOUT.md) · [重構進度](docs/REFACTOR_CHECKLIST.md) · [第 10 項稽核](docs/PHASE10_AUDIT.md)
 - [遠征](docs/EXPEDITION.md) · [戰後維護](docs/MAINTENANCE.md) · [配點](docs/attribute_points_1262.md) · [超空間袋](docs/room_storage_1262.md)
 - [協定](docs/PROTOCOLS.md) · [副本／協力正式服驗收清單](docs/INSTANCE_ACCEPTANCE_V051.md) · [連線診斷](docs/CONNECTION_DIAGNOSTICS.md) · [建置與發佈](docs/NUITKA_BUILD.md)
 

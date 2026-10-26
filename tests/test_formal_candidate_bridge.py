@@ -5,7 +5,7 @@ from pathlib import Path
 import struct
 import tempfile
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 from zipfile import ZipFile
 
 from wlre.services.resource_compatibility import load_supported_resources
