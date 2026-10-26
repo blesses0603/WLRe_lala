@@ -70,9 +70,12 @@ class InstanceNavigation(unittest.TestCase):
             # GlassTheme.skin() wraps the original ttk style at runtime as
             # Glass<serial>.Icon.Tab.TButton. Preserve that existing effect
             # instead of assuming the unskinned style name on every OS.
-            self.assertRegex(
-                button.cget('style'),
-                r'^(?:Glass[0-9]+\\.)?Icon\\.Tab\\.TButton
+            style = button.cget('style')
+            self.assertTrue(
+                style == 'Icon.Tab.TButton'
+                or (style.startswith('Glass')
+                    and style.endswith('.Icon.Tab.TButton')),
+                style)
         # Selecting co-op still uses the original Notebook navigation.
         self.app.instance_panel.tabs.select(self.app.instance_panel.coop_page)
         self.assertEqual(
