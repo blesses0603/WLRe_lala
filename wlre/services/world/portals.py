@@ -5,6 +5,7 @@ import math
 from pathlib import Path
 from wlre.services.world.scene_names_1275 import source_scene_label
 from wlre.services.world.portal_inspection_1275 import link_inspection_fields
+from wlre.services.world.portal_dedup_1275 import deduplicate_1275_portals
 
 
 
@@ -47,6 +48,7 @@ class Portals:
                 # positions as read-only map markers; NEVER reuse 1262 routes.
                 source_ready = False
                 doors = {}
+                duplicate_report = {}
                 scene_names = {}
                 door_count = 0
                 coverage = {}
@@ -356,8 +358,12 @@ class Portals:
                             'door_index': None, 'navigation_status': 'unverified',
                             'link_reference_only': True,
                             'hidden_destination_scene_id': target,
+                            'source_grid_x': marker.get('source_grid_x'),
+                            'source_grid_y': marker.get('source_grid_y'),
+                            'name_id': marker.get('name_id'),
                             'direct_note': '隱藏傳點僅供顯示。EvtID 是目的場景編號，不是 C20-8 門索引。',
                         })
+                    doors, duplicate_report = deduplicate_1275_portals(doors)
                     source_ready = True
                 except ValueError:
                     # During pre-login, verified files may not yet be installed.
@@ -386,6 +392,7 @@ class Portals:
                         for item in row),
                     'source_ready': source_ready,
                     'portal_coverage': coverage if source_ready else {},
+                    'portal_duplicate_report': duplicate_report if source_ready else {},
                 }
                 self.audit = {}
                 return
