@@ -102,3 +102,44 @@ def read_only_portal_evidence(stage_raw, link_raw, doors, stages):
                 'can_send_packets': False,
             }
     return answer
+
+def read_only_door_link_routes(raw, stages):
+    """Read the independent official DoorLinkData_C route network.
+
+    This table encodes (source scene, XY, target scene, arrival XY), NOT an
+    Eve.NewDoor event index. Routes have separate route ordinals for listing;
+    they must never be converted into C20-8 door indices.
+    """
+    from wlre.services.world.portal_schema import parse_door_link_data
+    if not isinstance(stages, dict):
+        raise TypeError('1275 場景資料型別不符')
+    records = parse_door_link_data(raw)
+    result = []
+    counts = Counter()
+    for row in records:
+        scene, target = row['source_scene'], row['destination_scene']
+        counts[scene] += 1
+        src = _packet_position(stages.get(scene),
+                               row['source_x'], row['source_y'])
+        dst = _packet_position(stages.get(target),
+                               row['arrival_x'], row['arrival_y'])
+        result.append({
+            'scene': scene, 'route_ordinal': counts[scene],
+            'destination': target,
+            'source_grid_x': row['source_x'],
+            'source_grid_y': row['source_y'],
+            'arrival_grid_x': row['arrival_x'],
+            'arrival_grid_y': row['arrival_y'],
+            'x': src[0] if src else None,
+            'y': src[1] if src else None,
+            'arrival_x': dst[0] if dst else None,
+            'arrival_y': dst[1] if dst else None,
+            'position_verified': src is not None,
+            'arrival_verified': dst is not None,
+            'destination_defined': target in stages,
+            'projection_guard': _projection_guard(stages.get(scene)),
+            'source_kind': '1275_door_link_data_reference',
+            'event_index': None,
+            'can_send_packets': False,
+        })
+    return result
