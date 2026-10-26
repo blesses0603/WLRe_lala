@@ -119,6 +119,31 @@ class RemoveOldPortalsTests(unittest.TestCase):
         self.assertEqual(page.list_rows, [])
         self.assertIn('1275 場景', page.portal_status.set.call_args.args[0])
 
+    def test_portal_cleanup_does_not_discard_legacy_npc_sidebar_entries(self):
+        # Historical portals.json also bundled NPC/monster entities.
+        # They remain reference-only sidebar data after portal retirement.
+        old = old_catalog()
+        old.data['entities'] = {'60001': [{
+            'kind': 0, 'name': '行商', 'x': 120, 'y': 80,
+            'index': 123, 'npc_id': 900,
+        }]}
+        page = SimpleNamespace(
+            portals=old, image=object(), selected_id=SCENE,
+            maps=Mock(), projection=None, npc_index_error=False,
+            npc_index=None, portal_list=Mock(), npc_list=Mock(),
+            monster_list=Mock(), npc_message=Mock(), portal_status=Mock(),
+            update_portal_button=Mock())
+        with patch('wlre.ui.home_map.Portals',
+                   return_value=new_catalog()), patch(
+                'wlre.ui.home_map.scene_npcs',
+                side_effect=lambda scene, entities, index: entities):
+            HomeMap.refresh_portals(page)
+        self.assertEqual(len(page.npc_rows), 1)
+        self.assertEqual(page.npc_rows[0]['name'], '行商')
+        self.assertNotIn('舊版出口',
+                         str(page.portal_list.insert.call_args_list))
+        self.assertIn('1275 場景', page.portal_status.set.call_args.args[0])
+
     def test_cached_legacy_cannot_trigger_direct_teleport(self):
         state = State()
         state.player = {'scene': SCENE, 'role_id': 17}
