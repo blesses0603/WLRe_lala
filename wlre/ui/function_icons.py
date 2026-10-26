@@ -36,7 +36,7 @@ def action_icon_photo(widget, title, size=24):
 
 def icon_photo(widget, title, size=34):
     if title=='副本':
-        official=menu_icon_photo(widget,title,max(size,42))
+        official=menu_icon_photo(widget,title,size)
         if official is not None:
             return official
     name=ICONS.get(title)
