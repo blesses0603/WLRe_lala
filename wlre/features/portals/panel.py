@@ -68,6 +68,10 @@ class PortalInteractionMixin:
     def go_portal(self):
         if not self.selected_portal:return False
         try:
+            if self.state.get('battle', {}).get('active'):
+                raise ValueError('戰鬥中無法換圖。')
+            if self.state.get('event_flow', {}).get('blocked'):
+                raise ValueError('伺服器事件尚未結束，暫不能換圖。')
             problem=destination_problem(self.selected_portal,self.maps)
             if problem:raise ValueError(problem)
             self.portals.direct_target(self.selected_portal,self.state.get('player',{}).get('scene'))
@@ -78,18 +82,6 @@ class PortalInteractionMixin:
                 raise ValueError('傳點座標未通過目前地圖投影校驗，禁止換圖。')
             if self.on_portal is None:
                 raise ValueError('尚未接上本機角色的出口觸發功能。')
-            if self.selected_portal.get('source_revision') == 1275:
-                label = self.selected_portal.get('destination_label', '未知目的地')
-                # One explicit user confirmation. Server still decides whether
-                # the existing C20-8 door event can cause a scene transition.
-                if not messagebox.askyesno(
-                        '1275 傳點單次確認',
-                        '目的地：' + label + '\n'
-                        '官方門事件、座標與目的地已交叉核對，'
-                        '但正式伺服器是否接受此觸碰指令仍待驗證。\n'
-                        '只送出一次請求，不會強制改場景或自動重試。是否繼續？',
-                        parent=self):
-                    return False
             self.on_portal(self.selected_portal['id'])
             return True
         except ValueError as exc:
@@ -114,6 +106,8 @@ class PortalInteractionMixin:
                 self.portals.data.get('portal_metadata_status'))
             ttk.Label(win, text='傳點名稱／位置資料：' + status,
                       wraplength=680).pack(fill='x', padx=10)
+            ttk.Button(win, text='全場景核對', command=self.show_all_portal_coverage).pack(
+                anchor='e', padx=10, pady=4)
             # Data-format recognition is NOT equivalent to official server
             # transfer validation. Display concise verified source evidence.
             schema_report = self.portals.data.get('portal_schema_report', {})
@@ -184,4 +178,56 @@ class PortalInteractionMixin:
         tree.configure(yscrollcommand=bar.set);tree.pack(fill='both',expand=True)
         for row in self.portals.audit.values():
             tree.insert('', 'end',iid=str(row['scene']),values=(row['scene'],row['name'],row['count'],row['normal'],row['event'],row.get('direct_ready',0),row['status']))
+
+    def show_all_portal_coverage(self):
+        """Display every scene from the authenticated source audit, not UI filters."""
+        report = self.portals.data.get('portal_coverage', {})
+        win = tk.Toplevel(self)
+        win.title('1275 全場景傳點核對')
+        configure_dialog(win, 980, 620)
+        ready = report.get('all_sources_available') is True
+        text = (f"已核對 {report.get('scene_count', 0)} 個場景；"
+                f"{report.get('unresolved_portals', 0)} 個一般傳點仍有來源對應缺口。"
+                if ready else '官方門索引、名稱標記或連線來源不完整，尚不能宣稱全場景已核對。')
+        ttk.Label(win, text=text, wraplength=930).pack(fill='x', padx=10, pady=8)
+        detail = tk.StringVar(value='選擇場景查看所有門索引與未完成項目；此視窗不送出換圖指令。')
+        ttk.Label(win, textvariable=detail, wraplength=930).pack(fill='x', padx=10, pady=4)
+        body = ttk.Frame(win)
+        body.pack(fill='both', expand=True, padx=10, pady=8)
+        columns = ('scene', 'name', 'events', 'portals', 'gaps', 'source')
+        table = ttk.Treeview(body, columns=columns, show='headings')
+        for key, title, width in zip(columns,
+                ('場景', '官方名稱', '門事件數', '一般傳點數', '待核對數', '來源'),
+                (80, 260, 100, 110, 110, 210)):
+            table.heading(key, text=title)
+            table.column(key, width=width, stretch=False)
+        bar = ttk.Scrollbar(body, orient='vertical', command=table.yview)
+        bar.pack(side='right', fill='y')
+        table.configure(yscrollcommand=bar.set)
+        table.pack(fill='both', expand=True)
+        reasons = {'duplicate_stage_marker': '重複標記索引', 'missing_stage_marker': '缺少標記',
+                   'missing_eve_door': '缺少門事件', 'duplicate_eve_door': '重複門事件索引',
+                   'missing_door_link': '缺少門連線', 'unknown_destination_scene': '目的場景不在官方表',
+                   'position_unverified': '座標待核對', 'destination_unverified': '目的地待核對'}
+        rows = {str(row['scene']): row for row in report.get('scenes', [])}
+        for key, row in rows.items():
+            name = self.portals.data.get('scene_names', {}).get(row['scene'], '名稱未取得')
+            table.insert('', 'end', iid=key, values=(row['scene'], name, row['eve_doors'],
+                row['ordinary_portals'], row['unresolved'],
+                '官方場景表' if row['in_scene_table'] else '表外引用，待核對'))
+        def selected(event=None):
+            selection = table.selection()
+            if not selection: return
+            row = rows[selection[0]]
+            parts = []
+            for door in row['details']:
+                labels = [reasons.get(reason, '來源待核對') for reason in door['issues']]
+                if not labels:
+                    labels = [{'hidden_portal': '隱藏傳點，獨立規則',
+                               'event_container_only': '事件容器，未列為地圖出口',
+                               'source_incomplete': '來源未齊'}.get(door['category'], '來源對應通過')]
+                parts.append(f"#{door['index']}：" + '／'.join(labels))
+            detail.set('；'.join(parts) if parts else '此場景沒有門索引或傳點標記。')
+        table.bind('<<TreeviewSelect>>', selected)
+        return win
 

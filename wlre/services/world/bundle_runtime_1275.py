@@ -417,6 +417,10 @@ def load_verified_bundle_runtime(*, sync_root=None):
         }
 
         stage = '正式 Runtime 建立'
+        from wlre.services.world.portal_coverage import audit_portal_coverage
+        coverage = audit_portal_coverage(doors, scene_rows,
+            optional.get('StageMapData_C'), optional.get('EveDoorLinks'),
+            portal_positions, portal_destinations, portal_names)
         return Preview1275(
             npc_index=PreviewNPCIndex(npc),
             interact_index=PreviewInteractIndex(interacts),
@@ -432,6 +436,7 @@ def load_verified_bundle_runtime(*, sync_root=None):
             portal_display_destinations=portal_display_destinations,
             portal_metadata_status=portal_metadata_status,
             portal_schema_report=portal_schema_report,
+            portal_coverage=coverage,
             doors=doors, expedition=expedition,
         )
     except BundleRuntimeUnavailable:

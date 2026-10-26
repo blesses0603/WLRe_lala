@@ -143,6 +143,7 @@ class Preview1275:
     portal_display_destinations: dict = field(default_factory=dict)
     portal_metadata_status: str = 'missing_stage_map'
     portal_schema_report: dict = field(default_factory=dict)
+    portal_coverage: dict = field(default_factory=dict)
     expedition: dict | None = None
     revision: int = 1275
     can_send_packets: bool = False
@@ -196,6 +197,7 @@ def load_preview(data_archive, eve_archive):
         data_archive, manifest, 'npc_text_1275.json.gz', 'TextData_C').items()}
     doors = parse_doors_1275(_table(data_archive, manifest, 'Eve'))
     portal_names, portal_destinations, portal_positions = {}, {}, {}
+    stage_map = link_table = None
     portal_display_destinations = {}
     portal_metadata_status = 'missing_stage_map'
     portal_schema_report = {}
@@ -229,6 +231,9 @@ def load_preview(data_archive, eve_archive):
     except (ValueError, KeyError, TypeError, PortalLinkSourceError):
         # Optional source problems do not prevent the core verified runtime.
         pass
+    from wlre.services.world.portal_coverage import audit_portal_coverage
+    coverage = audit_portal_coverage(doors, stages, stage_map, link_table,
+                                    portal_positions, portal_destinations, portal_names)
     return Preview1275(
         npc_index=PreviewNPCIndex(eve['npc_event_index_1275.json.gz']),
         interact_index=PreviewInteractIndex(eve['npc_interact_1275.json.gz']),
@@ -246,5 +251,6 @@ def load_preview(data_archive, eve_archive):
         portal_display_destinations=portal_display_destinations,
         portal_metadata_status=portal_metadata_status,
         portal_schema_report=portal_schema_report,
+        portal_coverage=coverage,
         doors=doors,
     )

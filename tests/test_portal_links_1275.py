@@ -138,7 +138,7 @@ class PortalLinks1275Test(unittest.TestCase):
         with self.assertRaises(ValueError):
             Portals.direct_target(row, 12171)
 
-    def test_confirmed_route_manual_send_requires_explicit_consent(self):
+    def test_validated_route_click_sends_once_without_confirmation_popup(self):
         mapping = verified_mapping()
         runtime = SimpleNamespace(
             doors={12170: [{'index': 1, 'x': 5701, 'y': 3230}]},
@@ -160,13 +160,18 @@ class PortalLinks1275Test(unittest.TestCase):
         page.on_portal = Mock()
         with patch('wlre.features.portals.panel.messagebox.askyesno',
                    return_value=False) as confirm:
-            self.assertFalse(page.go_portal())
-            confirm.assert_called_once()
-        page.on_portal.assert_not_called()
-        with patch('wlre.features.portals.panel.messagebox.askyesno',
-                   return_value=True):
             self.assertTrue(page.go_portal())
+            confirm.assert_not_called()
         page.on_portal.assert_called_once_with(row['id'])
+
+        for key in ('battle', 'event_flow'):
+            page.on_portal.reset_mock()
+            page.state = {'player': {'scene': 12170}, key: {
+                'active' if key == 'battle' else 'blocked': True}}
+            with patch('wlre.features.portals.panel.messagebox.askyesno') as confirm:
+                self.assertFalse(page.go_portal())
+                confirm.assert_not_called()
+            page.on_portal.assert_not_called()
 
     def test_confirmed_manual_try_sends_once_then_waits_for_server_scene(self):
         runtime = SimpleNamespace(

@@ -90,6 +90,23 @@ class Portal1275UI(unittest.TestCase):
         table = next(trees(self.map.audit_window))
         self.assertEqual(len(table.get_children()), 2)
 
+    def test_global_review_includes_scenes_without_any_doors(self):
+        from wlre.services.world.portal_coverage import audit_portal_coverage
+        self.map.portals.data['portal_coverage'] = audit_portal_coverage(
+            {12170: [{'index': 2}]}, {12170, 12171, 12172})
+        window = self.map.show_all_portal_coverage()
+        self.root.update_idletasks()
+        from tkinter import ttk
+        def trees(widget):
+            for child in widget.winfo_children():
+                if isinstance(child, ttk.Treeview): yield child
+                yield from trees(child)
+        table = next(trees(window))
+        self.assertEqual(set(table.get_children()), {'12170', '12171', '12172'})
+        self.assertEqual(table.item('12171', 'values')[2], '0')
+        self.sent.assert_not_called()
+        window.destroy()
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -48,8 +48,11 @@ class Portals:
                 doors = {}
                 scene_names = {}
                 door_count = 0
+                coverage = {}
                 try:
                     verified = active_runtime()
+                    coverage = getattr(verified, 'portal_coverage', {})
+                    if not isinstance(coverage, dict): coverage = {}
                     # Only names bound to this exact verified 1275 runtime are
                     # permitted. Legacy map_names.json is NOT a name fallback.
                     scene_names = getattr(verified, 'scene_names', {})
@@ -214,6 +217,7 @@ class Portals:
                         bool(item.get('destination_verified')) for row in doors.values()
                         for item in row),
                     'source_ready': source_ready,
+                    'portal_coverage': coverage if source_ready else {},
                 }
                 self.audit = {}
                 return
