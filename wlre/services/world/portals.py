@@ -77,6 +77,12 @@ class Portals:
                     portal_extra_routes = getattr(verified, 'portal_extra_routes', [])
                     if not isinstance(portal_extra_routes, list):
                         portal_extra_routes = []
+                    portal_stage_markers = getattr(verified, 'portal_stage_markers', [])
+                    if not isinstance(portal_stage_markers, list):
+                        portal_stage_markers = []
+                    portal_texts = getattr(verified, 'texts', {})
+                    if not isinstance(portal_texts, dict):
+                        portal_texts = {}
                     portal_metadata_status = getattr(
                         verified, 'portal_metadata_status', 'missing_stage_map')
                     portal_schema_report = getattr(
@@ -289,6 +295,61 @@ class Portals:
                             'navigation_status': 'unverified',
                             'direct_note': '官方連線僅供唯讀定位；沒有核對門事件，不允許送出傳送封包',
                         })
+                    # HiddenPortalNew uses StageMap Kind=3 PositionX/Y and
+                    # EvtID as its destination scene. This is NOT a normal
+                    # Eve.NewDoor index and never enables C20-8.
+                    for ordinal, marker in enumerate(portal_stage_markers, 1):
+                        if not isinstance(marker, dict) or marker.get('kind') != 3:
+                            continue
+                        scene_id = marker.get('scene')
+                        if type(scene_id) is not int or not 0 < scene_id <= 65535:
+                            continue
+                        valid = (
+                            marker.get('position_verified') is True
+                            and isinstance(marker.get('projection_guard'), dict)
+                            and type(marker.get('x')) is int
+                            and type(marker.get('y')) is int)
+                        target = marker.get('destination')
+                        target_known = (
+                            marker.get('destination_defined') is True
+                            and type(target) is int and 0 < target <= 65535)
+                        dest_label = (source_scene_label(target, scene_names)
+                                      if target_known else None)
+                        name = portal_texts.get(marker.get('name_id'))
+                        if (type(name) is not str or not name.strip()
+                                or len(name) > 160
+                                or any(ord(ch) < 32 for ch in name)):
+                            name = None
+                        else:
+                            name = name.strip()
+                        doors.setdefault(str(scene_id), []).append({
+                            'id': f'1275-hidden:{scene_id}:{ordinal}',
+                            'scene': scene_id, 'index': f'H{ordinal}',
+                            'name': (name or
+                                     ('前往 ' + dest_label + '（隱藏傳點參考）'
+                                      if dest_label else '隱藏傳點（目的地未確認）')),
+                            'official_name': name,
+                            'display_destination_label': dest_label,
+                            'source_scene_label': source_scene_label(
+                                scene_id, scene_names),
+                            'source_scene_name_known': scene_id in scene_names,
+                            'destination_label': dest_label or '目的地未確認',
+                            'kind': 'link', 'source_revision': 1275,
+                            'coordinate_valid': valid,
+                            'coordinate_source': '1275_hidden_stage_marker',
+                            'projection_guard': (
+                                marker.get('projection_guard') if valid else None),
+                            'x': marker.get('x') if valid else None,
+                            'y': marker.get('y') if valid else None,
+                            'event_grid_x': None, 'event_grid_y': None,
+                            'event_ids': (), 'destination': None,
+                            'destination_verified': False,
+                            'direct_eligible': False, 'direct_door_index': None,
+                            'door_index': None, 'navigation_status': 'unverified',
+                            'link_reference_only': True,
+                            'hidden_destination_scene_id': target,
+                            'direct_note': '隱藏傳點僅供顯示。EvtID 是目的場景編號，不是 C20-8 門索引。',
+                        })
                     source_ready = True
                 except ValueError:
                     # During pre-login, verified files may not yet be installed.
@@ -301,6 +362,8 @@ class Portals:
                     'official_link_reference_count': (len(portal_evidence) if source_ready else 0),
                     'official_route_reference_count': (len(portal_extra_routes) if source_ready else 0),
                     'official_route_references': (portal_extra_routes if source_ready else []),
+                    'official_stage_marker_count': (len(portal_stage_markers) if source_ready else 0),
+                    'official_stage_markers': (portal_stage_markers if source_ready else []),
                     'scene_names': scene_names,
                     'portal_metadata_status': (
                         portal_metadata_status if source_ready
