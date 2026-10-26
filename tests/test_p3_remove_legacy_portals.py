@@ -60,6 +60,38 @@ class RemoveOldPortalsTests(unittest.TestCase):
         self.assertEqual(result.data['portal_metadata_status'],
                          'legacy_portals_disabled')
 
+    def test_unversioned_legacy_snapshot_also_gets_replaced(self):
+        stale = old_catalog()
+        stale.data.pop('source_revision')
+        page = SimpleNamespace(
+            portals=stale, image=object(), selected_id=SCENE,
+            maps=Mock(), projection=None, npc_index_error=False, npc_index=None,
+            portal_list=Mock(), npc_list=Mock(), monster_list=Mock(),
+            npc_message=Mock(), portal_status=Mock(),
+            update_portal_button=Mock())
+        with patch('wlre.ui.home_map.Portals', return_value=new_catalog()) as reload, \
+                patch('wlre.ui.home_map.scene_npcs', return_value=[]):
+            HomeMap.refresh_portals(page)
+        reload.assert_called_once_with()
+        self.assertEqual(page.portal_rows, [])
+        self.assertEqual(page.portals.data['source_revision'], 1275)
+
+    def test_mixed_legacy_row_under_1275_catalog_cannot_send_packets(self):
+        current = new_catalog()
+        current.for_scene = lambda scene: [{
+            'id': '1262:60001:7', 'scene': SCENE, 'source_revision': 1262,
+            'direct_door_index': 7, 'destination': SCENE,
+            'direct_eligible': True, 'destination_verified': True,
+        }] if scene == SCENE else []
+        travel = PortalTravel(catalog=current)
+        state = State()
+        state.player = {'scene': SCENE, 'role_id': 17}
+        move = Mock()
+        with self.assertRaises(ProtocolError):
+            travel.start_direct(state, move, '1262:60001:7', 10.0)
+        move.stop.assert_not_called()
+        self.assertIsNone(travel.pending)
+
     def test_explicit_archived_fixture_is_still_readable(self):
         # Retain historical evidence without admitting it to the live list.
         with tempfile.TemporaryDirectory() as directory:
