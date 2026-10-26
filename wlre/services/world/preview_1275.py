@@ -239,6 +239,25 @@ def load_preview(data_archive, eve_archive):
     except (ValueError, KeyError, TypeError, PortalLinkSourceError):
         # Optional source problems do not prevent the core verified runtime.
         pass
+    # Recover official read-only destinations even if the optional StageMap
+    # file is absent. This does NOT populate actionable portal_destinations.
+    if not portal_link_evidence:
+        try:
+            if link_table is None:
+                link_table = _table(data_archive, manifest, 'EveDoorLinks')
+            link_verdict = recognize_portal_source('EveDoorLinks', link_table)
+            portal_schema_report['EveDoorLinks'] = link_verdict
+            if link_verdict['status'] == 'recognized':
+                stage_for_reference = (
+                    stage_map if portal_schema_report.get(
+                        'StageMapData_C', {}).get('status') == 'recognized'
+                    else None)
+                from wlre.services.world.portal_evidence_1275 import (
+                    read_only_portal_evidence)
+                portal_link_evidence = read_only_portal_evidence(
+                    stage_for_reference, link_table, doors, stages)
+        except (ValueError, TypeError, KeyError):
+            pass
     # The independent route table contains no Eve event IDs; read-only.
     try:
         raw_routes = _table(data_archive, manifest, 'DoorLinkData_C')
