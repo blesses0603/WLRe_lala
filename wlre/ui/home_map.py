@@ -269,6 +269,14 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
                   else '此圖沒有小地圖，來源未列可確認的返回出口；請使用官方客戶端離開。')
         else:
             text=f'可見 {len(self.portal_rows)} 個傳點；{ready} 個可直接嘗試；已隱藏缺圖及目的地未確認的入口。'
+        if self.portals.data.get('source_revision') == 1275:
+            duplicate = self.portals.data.get('portal_duplicate_report', {})
+            if isinstance(duplicate, dict):
+                removed = (duplicate.get('duplicate_event_id_removed', 0)
+                           + duplicate.get('duplicate_hidden_removed', 0))
+                if removed:
+                    text += (f'｜清單已去除 {removed} 筆重複顯示；'
+                             '同 ID 衝突的傳點已停用傳送。')
         self.portal_status.set(text)
         self.update_portal_button()
 
