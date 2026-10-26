@@ -50,6 +50,8 @@ def group(parent, **kwargs):
 
 
 def install(root):
+    from wlre.ui.resource_lifetime import install_root_lifetime
+    install_root_lifetime(root)
     """Install once per Tcl interpreter; also discover later popup windows."""
     if not hasattr(root, 'tk'):
         return None
