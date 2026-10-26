@@ -22,6 +22,7 @@ def portal_source_diagnostic(status):
         'bundle_sync_failed': '官方傳點資料同步失敗，尚未取得正式內容',
         'missing_stage_map': '尚未取得官方 StageMapData 傳點名稱表',
         'core_runtime_unavailable': '1275 核心資料尚未完成驗證',
+        'legacy_portals_disabled': '目前僅使用 1275 官方傳點；1262 舊清單已停用，請確認官方版本與同步',
     }
     if type(status) is not str:
         return '尚無 1275 傳點名稱載入狀態'
