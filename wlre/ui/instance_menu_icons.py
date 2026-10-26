@@ -1,9 +1,8 @@
-"""Optional authentic 1262 sidebar sprites.
+"""User-provided WLRE-style dungeon/co-op icons with safe text fallback.
 
-The right-side menu icons in the supplied game screenshot are not included
-in the currently tracked official function-icons subset. Do not upscale or
-cut out screenshot pixels. The client uses text until these original
-transparent Unity sprites are supplied as PNG files.
+Exact original Bundle provenance has not yet been independently verified.
+Images are taken only from the resource directory, without screenshot
+processing or changes to the game client.
 """
 from functools import lru_cache
 from PIL import Image, ImageOps, ImageTk
