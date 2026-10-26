@@ -38,6 +38,19 @@ class CooperativeRewardInventoryIntegrity(unittest.TestCase):
                 self.assertEqual(state.inventory['items'], {})
                 self.assertFalse(_safe_bag(state))
 
+    def test_unknown_new_item_delta_requires_explicit_free_slot(self):
+        state = State()
+        state.apply({'type': 'bag_snapshot', 'capacity': 20,
+                     'items': [item(7)]})
+        state.apply({'type': 'bag_add', 'item': item(9, 65002, 1)})
+        self.assertTrue(state.inventory['reliable'])
+        self.assertEqual(state.inventory['items']['9']['item_id'], 65002)
+        # When stack semantics cannot be proved, a second or ambiguous
+        # delta must not manufacture an inventory position.
+        state.apply({'type': 'bag_add', 'item': item(0, 65003, 2)})
+        self.assertFalse(state.inventory['reliable'])
+        self.assertFalse(_safe_bag(state))
+
     def test_full_or_unsynced_bag_does_not_unlock_claim(self):
         state = State()
         self.assertIn('S23-5', bag_claim_problem(state.inventory))
