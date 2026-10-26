@@ -358,7 +358,7 @@ class InstancePanel(ttk.Frame):
         super().__init__(parent, padding=6)
         self.tabs = RoundedNotebook(
             self, borderless=True,
-            image_loader=lambda widget, title: menu_icon_photo(widget, title, 42))
+            image_loader=lambda widget, title: menu_icon_photo(widget, title, 34))
         self.tabs.pack(fill='both', expand=True)
         from wlre.features.dungeon.panel import DungeonModePage
         self.main_page = DungeonModePage(self.tabs, app=app)
