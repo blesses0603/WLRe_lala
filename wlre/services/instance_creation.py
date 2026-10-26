@@ -8,6 +8,7 @@ from wlre.network.wire import ProtocolError
 from wlre.network.instance_actions import create_main_room, create_coop_room
 from wlre.services.instance_browser import entries_for
 from wlre.services.battle.party import own_team
+from wlre.services.instance_activity import instance_background_blockers
 
 CREATE_TIMEOUT = 20.0
 COOP_REJECTIONS = {
@@ -54,11 +55,11 @@ def create(state, command, now=None):
         raise ProtocolError('戰鬥或事件進行中不可創房')
     if state.battle.get('post_event') and state.battle['post_event'].get('status') != 'completed':
         raise ProtocolError('請先完成戰後事件')
-    # An armed AI is passive outside combat; it must not block room creation.
-    # Active battles, post-events and other actual activities remain guarded.
-    if (state.roaming.get('enabled') or state.alchemy.get('enabled')
-            or state.crafting.get('auto_continue') or state.expedition.get('enabled')):
-        raise ProtocolError('請先停止自動移動、製作、煉金或遠征')
+    # Enabled automation preferences are passive. A pending/unresolved
+    # inventory/server operation still cannot race a room mutation.
+    blockers = instance_background_blockers(state)
+    if blockers:
+        raise ProtocolError('請先確認其他作業：' + '／'.join(blockers))
     if mode == 'coop' and own_team(state):
         raise ProtocolError('協力創房前請先離開一般隊伍')
     if (mode == 'coop' and (state.instances['coop'].get('reward') or {}).get('open_reward')):
