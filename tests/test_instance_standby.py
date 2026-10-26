@@ -93,6 +93,32 @@ class StandbyNetwork(unittest.TestCase):
                 with self.assertRaises(ProtocolError):
                     request(logic, state)
 
+    def test_late_matching_s186_3_recovers_timed_out_standby_without_resend(self):
+        state, logic = make_session()
+        request(logic, state, True)
+        pending = state.instances['coop']['standby_pending']
+        self.assertTrue(expire(state, pending['started'] + 20))
+        self.assertTrue(state.instances['coop']['standby_uncertain'])
+        # New status must match both the same room and requested target.
+        state.apply(decode(member_event(standby=False)))
+        self.assertTrue(state.instances['coop']['standby_uncertain'])
+        state.apply(decode(member_event(standby=True, room_id=92)))
+        self.assertTrue(state.instances['coop']['standby_uncertain'])
+        state.apply(decode(member_event(standby=True, room_id=91)))
+        self.assertFalse(state.instances['coop']['standby_uncertain'])
+        self.assertIsNone(state.instances['coop']['standby_attempt'])
+        self.assertIs(state.instances['coop']['standby_result'], True)
+        self.assertIsNone(state.instances['coop']['standby_pending'])
+
+    def test_nonmatching_status_never_clears_unknown_standby(self):
+        state, logic = make_session()
+        request(logic, state, True)
+        pending = state.instances['coop']['standby_pending']
+        expire(state, pending['started'] + 20)
+        state.apply(decode(member_event(standby=False, room_id=91)))
+        self.assertTrue(state.instances['coop']['standby_uncertain'])
+        self.assertIsNotNone(state.instances['coop']['standby_attempt'])
+
     def test_timeout_unknown_outcome_and_disconnect(self):
         state, logic = make_session()
         request(logic, state)
