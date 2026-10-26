@@ -121,6 +121,14 @@ class OfficialLinkEvidenceTests(unittest.TestCase):
                             for x in catalog.for_scene(11016)))
 
 
+    def test_missing_stage_map_still_preserves_authenticated_links(self):
+        evidence = read_only_portal_evidence(
+            None, links(),
+            {11016: [{'index': 1, 'x': 42, 'y': 64}]}, stages())
+        self.assertEqual(evidence[11016, 1]['destination'], 11017)
+        self.assertFalse(evidence[11016, 1]['stage_marker_matched'])
+        self.assertFalse(evidence[11016, 1]['can_send_packets'])
+
     def test_independent_door_link_data_has_no_event_index(self):
         from wlre.services.world.portal_evidence_1275 import (
             read_only_door_link_routes)
