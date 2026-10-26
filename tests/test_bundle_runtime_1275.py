@@ -211,7 +211,7 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
             spec=SimpleNamespace(file_size=512,
                                  cache_path=lambda root: self.root / 'verified.bundle'))]
         execute = Mock(side_effect=[None, ValueError('optional portal asset failed'),
-                                    ValueError('optional link failed')])
+                                    ValueError('optional link failed'), ValueError('optional route failed')])
         with patch('wlre.services.world.bundle_runtime_1275._PINNED_MANIFEST_SHA256',
                    self.pinned), patch(
              'wlre.services.resource_compatibility.load_supported_resources',
