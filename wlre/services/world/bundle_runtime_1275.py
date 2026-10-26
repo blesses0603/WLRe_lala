@@ -307,6 +307,7 @@ def load_verified_bundle_runtime(*, sync_root=None):
         portal_display_destinations = {}
         portal_link_evidence = {}
         portal_extra_routes = []
+        portal_stage_markers = []
         portal_metadata_status = 'missing_stage_map'
         optional = {}
         optional_failures = {}
@@ -353,6 +354,10 @@ def load_verified_bundle_runtime(*, sync_root=None):
             try:
                 portal_names = verified_portal_names(
                     optional['StageMapData_C'], scene_rows, texts)
+                from wlre.services.world.portal_evidence_1275 import (
+                    read_only_stage_portal_markers)
+                portal_stage_markers = read_only_stage_portal_markers(
+                    optional['StageMapData_C'], scene_rows)
                 portal_metadata_status = 'stage_map_ready'
                 if 'EveDoorLinks' in optional:
                     try:
@@ -469,6 +474,7 @@ def load_verified_bundle_runtime(*, sync_root=None):
             portal_display_destinations=portal_display_destinations,
             portal_link_evidence=portal_link_evidence,
             portal_extra_routes=portal_extra_routes,
+            portal_stage_markers=portal_stage_markers,
             portal_metadata_status=portal_metadata_status,
             portal_schema_report=portal_schema_report,
             portal_coverage=coverage,
