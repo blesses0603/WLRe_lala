@@ -379,6 +379,17 @@ def load_verified_bundle_runtime(*, sync_root=None):
                         else 'destination_links_missing_or_invalid')
             except (ValueError, KeyError, TypeError):
                 portal_metadata_status = 'stage_map_invalid'
+        # EveDoorLinks is independently useful for read-only routes even
+        # when the StageMap marker table has not been downloaded.
+        if not portal_link_evidence and 'EveDoorLinks' in optional:
+            try:
+                from wlre.services.world.portal_evidence_1275 import (
+                    read_only_portal_evidence)
+                portal_link_evidence = read_only_portal_evidence(
+                    optional.get('StageMapData_C'),
+                    optional['EveDoorLinks'], doors, scene_rows)
+            except (ValueError, TypeError, KeyError):
+                pass
         # DoorLinkData has coordinates and destination IDs, but no C20-8
         # event index. Keep its route network separate from ordinary doors.
         if 'DoorLinkData_C' in optional:
