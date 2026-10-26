@@ -60,6 +60,19 @@ P1b 首輪提交 `2d68ef9`：純核心三平台 [40339132736](https://github.com
 - 真實官方測試先發現 Accept 窄化會 406；調整為已觀測支援的 `*/*` 後，VersionDetector 兩輪六次版本讀取及兩份 Manifest 下載／CRC／完整解析成功，來源及 fingerprint 證據見 `docs/rebuild/official_pipeline_probe.json`。另外一般啟動的 cache-buster 查詢回報 `same_resources`。沒有登入遊戲、下載完整 Bundle、提升新 Runtime 或提交原始資源。
 - 本批獨立 CI：推送後執行資源三平台、純核心三平台及完整 PR 三平台；此處尚未預先標為通過。
 
+提交 `19074fc` 的實際 CI：[資源 40344585103](https://github.com/blesses0603/WLRe_lala/actions/runs/40344585103)、[核心 40344585562](https://github.com/blesses0603/WLRe_lala/actions/runs/40344585562)、[完整 40344609347](https://github.com/blesses0603/WLRe_lala/actions/runs/40344609347) 三組三平台 **全部成功**。
+
+## P2 共用下載器批次
+
+- 下載器新增 **15 項**單元／檔案整合測試通過：有限重試、429／404 不重試、慢速總時限、來源與大小、取消、原子覆寫保護、斷流重試不混接、條件式 Range／回退、錯誤 Range 拒絕、轉址回應釋放與共享診斷生命週期。
+- 既有官方服務 92 項回歸通過。接入時曾發現轉址的舊錯誤訊息相容性失敗，已保留 `Manifest response location/status unexpected` 並重驗通過，沒有改弱既有斷言。
+- 完整本地曾執行 1,259 項通過（97.894 秒、跳過 2）。補上 HTTP IncompleteRead 斷流恢復測試後，最終完整回歸另記，不把先前結果當作新測試已跑。
+- 真實官方受控測試：一個 430,359-byte Bundle、HEAD 200／兩段 GET 206、三項完整性、UnityFS／完整 AssetPath 擷取及 1,337 筆場景表解析成功。僅驗證來源與既有 Parser，不是完整正式世界快照或遊戲 E2E。
+- 新增程式 Ruff、既有服務名稱檢查、compileall、repository audit、diff check 通過。原始 Bundle／表格只留 `/workspace/output/lala-core-rebuild-downloader`；公開報告只含來源／雜湊／長度／筆數。
+- 本批 CI 待提交／推送驗證；未發布／打包，未刪除歷史資源或使用者設定。
+
+本批最終完整本地回歸：**1,260 項，91.864 秒，OK，跳過 2 項**，`/tmp/lala-rebuild-downloader-final.log`。舊 1,259 項成功結果沒有取代新增斷流測試後的完整執行。下載器及其後資源管線將以 `feature/lala-core-rebuild-resources` 的獨立 PR 審查，依賴核心分支 `19074fc`。
+
 ## 尚未驗收
 
 - 新核心／新功能移植：以各批測試與 CI 另行追加，不引用舊 main 成功取代。

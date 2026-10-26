@@ -2,7 +2,7 @@ name: Official resource module tests
 
 on:
   push:
-    branches: [feature/lala-core-rebuild]
+    branches: [feature/lala-core-rebuild, feature/lala-core-rebuild-resources]
   workflow_dispatch:
 
 permissions:
@@ -30,7 +30,9 @@ jobs:
       - name: Install static checker
         run: python -m pip install ruff==0.17.2
       - name: Check formal resource parser and observation interfaces
-        run: python -m ruff check wlre/resources_runtime tests/test_official_resource_versions.py
+        run: >-
+          python -m ruff check wlre/resources_runtime
+          tests/test_official_resource_versions.py tests/test_resource_downloader.py
       - name: Test source identity and parser with synthetic fixtures only
         run: |
           python -m unittest discover -s tests -p test_official_resource_versions.py -v
@@ -40,5 +42,6 @@ jobs:
           python -m unittest discover -s tests -p test_official_bundle_download.py -v
           python -m unittest discover -s tests -p test_official_incremental_sync.py -v
           python -m unittest discover -s tests -p test_official_lua_index.py -v
+          python -m unittest discover -s tests -p test_resource_downloader.py -v
 
 # 常規工作不下載正式 Manifest／Bundle，也不取代既有完整 PR 三平台檢查。

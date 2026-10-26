@@ -2,7 +2,7 @@ name: Core rebuild module tests
 
 on:
   push:
-    branches: [feature/lala-core-rebuild]
+    branches: [feature/lala-core-rebuild, feature/lala-core-rebuild-resources]
   workflow_dispatch:
 
 permissions:

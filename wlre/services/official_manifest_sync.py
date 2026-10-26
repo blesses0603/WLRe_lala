@@ -12,12 +12,13 @@ import os
 from pathlib import Path
 import re
 import tempfile
-from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
-from urllib.request import HTTPRedirectHandler, Request, build_opener
+from urllib.request import build_opener
 import zlib
 
 from wlre.storage.paths import data_root
+from wlre.resources_runtime.downloader import DownloadError, DownloadManager
+from wlre.resources_runtime.downloader.https import NoRedirect as _NoRedirect
 from wlre.resources_runtime.official.source import OFFICIAL_HOST, ROOT as BASE
 
 
@@ -61,11 +62,6 @@ class ManifestSpec:
         return self.cache_path(root).with_suffix('.verified.json')
 
 
-class _NoRedirect(HTTPRedirectHandler):
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
-        raise ManifestSyncError('Manifest URL redirected; origin unverified')
-
-
 def _fetch(url, *, limit, opener, timeout):
     parsed = urlsplit(url)
     if (parsed.scheme != 'https' or parsed.hostname != OFFICIAL_HOST
@@ -73,20 +69,15 @@ def _fetch(url, *, limit, opener, timeout):
             parsed.username is not None or parsed.password is not None):
         raise ManifestSyncError('Manifest URL is not the approved HTTPS source')
     try:
-        with opener(Request(url, headers={'User-Agent': 'WLRe-LaLa-ManifestSync/1'}),
-                    timeout=timeout) as response:
-            if response.geturl() != url or getattr(response, 'status', 200) != 200:
-                raise ManifestSyncError('Manifest response location/status unexpected')
-            declared = response.headers.get('Content-Length') if hasattr(response, 'headers') else None
-            if declared is not None and (not declared.isdecimal() or int(declared) > limit):
-                raise ManifestSyncError('Manifest response too large')
-            body = response.read(limit + 1)
-            if not body or len(body) > limit:
-                raise ManifestSyncError('Manifest response empty or too large')
-            if declared is not None and len(body) != int(declared):
-                raise ManifestSyncError('Manifest response truncated')
-            return body
-    except (OSError, HTTPError, URLError) as exc:
+        with DownloadManager(opener=opener, timeout=timeout) as manager:
+            return manager.read(url, limit=limit)
+    except ManifestSyncError:
+        raise
+    except DownloadError as exc:
+        if exc.args and exc.args[0] in ('unexpected_official_response', 'official_redirect_rejected'):
+            raise ManifestSyncError('Manifest response location/status unexpected') from None
+        raise ManifestSyncError('Official Manifest download failed') from None
+    except (OSError, ValueError) as exc:
         raise ManifestSyncError('Official Manifest download failed') from exc
 
 

@@ -1,0 +1,32 @@
+{
+  "observed_at": "2026-10-26T15:30:40+00:00",
+  "source_url": "https://wlreftpsrc.chinesegamer.net/WLN/TW/1.3.21/ResourcesPC/AssetBundle/datapackage_data_s.bundle",
+  "package_version": "1275_2026_10_21_18_27_33_84",
+  "bundle_bytes": 430359,
+  "bundle_sha256": "e0925ea31297c231db6acff040775d1a5badfaf7a4b56c950a2b899564d177a8",
+  "md5_crc_size_verified": true,
+  "requests": [
+    {
+      "method": "HEAD",
+      "status": 200,
+      "range": null
+    },
+    {
+      "method": "GET",
+      "status": 206,
+      "range": "bytes=0-215179"
+    },
+    {
+      "method": "GET",
+      "status": 206,
+      "range": "bytes=215180-430358"
+    }
+  ],
+  "exact_asset_path": "Assets/ResourcesBuild/Data/ScenesData_C.bytes",
+  "textasset_bytes": 101616,
+  "textasset_sha256": "6ab292b209a842f0e04c50a44e0d336d51f737c40f15fa061c11cb04abb75910",
+  "scene_records": 1337,
+  "parser": "existing reviewed instance_catalog.parse_stages",
+  "runtime_activated": false,
+  "game_e2e": false
+}

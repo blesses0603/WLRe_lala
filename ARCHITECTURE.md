@@ -43,6 +43,8 @@ P1a 已建立上述純核心、`core/primitives.py` 與回歸測試。P1b 由 `u
 
 P2 第一批將四個官方查詢／同步服務的來源集中至 `resources_runtime/official/source.py`，完整 YooAsset Parser 由工具層移入正式共用層，工具保留相容匯出。VersionDetector 提供獨立於 LaLa 版本及登入權限的動態觀測；新正式快照／全功能資料服務尚未完成。舊固定版本 Runtime 仍是過渡實作，完整狀態見 [官方資源](OFFICIAL_RESOURCES.md)。
 
+第二批由 `resources_runtime/downloader` 統一四個官方服務的 HTTPS 讀取與檔案傳輸，包含總時限、有限退避、取消與發佈前完整性。分段只在來源明確支援時啟用，沒有並行爬站。遊戲 TCP 與 GitHub 主程式更新來源仍分開，沒有把官方靜態資料下載當成遊戲指令通道。
+
 ## 執行緒與關閉契約
 
 核心生命週期及同步事件分派由組裝執行緒擁有。跨執行緒通知採有界 mailbox，擁有者定量 drain；不將既有 socket 迴圈改成 async，也不在事件 handler 內下載資源。UI adapter 決定 Tk `after` 排程。停止依反向相依順序執行，釋放訂閱、計時器與工作；停止失敗必須報告，不得標示正常關閉。

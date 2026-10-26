@@ -75,4 +75,6 @@ WorkerGroup 記錄遊戲連線、版本查詢、Release 查詢／下載背景工
 | official/versions | `VersionDetector.observe(exe_version, cancel_event=...)`、OfficialVersions | 只觀測；明確身分、兩輪一致、取消停止後續請求；保留原始映射供分析，無正式啟用 API | 新 6 項及真實官方受控觀測 |
 | parsers/yooasset | `parse_manifest`、Reader、ParseError、bundle／asset fingerprint | 純標準庫、不依賴 tools、無背景工作；大小、EOF、bool、引用、重複與未知格式拒絕 | 既有 Parser／Manifest／增量測試及新邊界測試 |
 
-既有 HTTP／Manifest／Bundle 服務逐步接入此層，保持舊 import 與驗證 API。VersionDetector 目前重用既有 HTTPS／版本表解析的已測實作，尚未完成下一批共用下載器抽離；沒有再實作第二套遊戲傳輸或靜態資料庫。資源層不匯入 GUI，也不執行 Lua。
+既有 HTTP／Manifest／Bundle 服務逐步接入此層，保持舊 import 與驗證 API。VersionDetector 重用既有已測版本表語意；HTTPS 傳輸已抽離至下述共用下載器，沒有再實作第二套遊戲傳輸或靜態資料庫。資源層不匯入 GUI，也不執行 Lua。
+
+共用下載器批次已完成 HTTP 傳輸抽離：`DownloadManager.read/download/verify_file/close` 統一來源驗證、長度與總時限、有限重試、取消、進度、原子檔案發佈及條件式 Range。它只依賴標準庫、來源政策及核心診斷，不執行資料解析、不擁有遊戲狀態、不決定版本／協定相容性。舊服務仍負責各自 Manifest 身分／CRC、Lua 索引及版本語意。可借用外部診斷，`close` 不關閉借用物件；沒有背景執行緒，回應及 partial 在返回／失敗時釋放。測試 `test_resource_downloader.py` 及原有官方服務回歸涵蓋此契約。

@@ -11,7 +11,21 @@
 - 此官方 IIS 來源回傳 Content-Type `*/*`；受控比較證明 `Accept: text/plain, application/json` 為 406、`*/*`／無 Accept 為 200。版本及 Lua 清單改用 `*/*`，內容仍交由嚴格解析／hash／大小檢查，未以 MIME 放寬資料驗證。
 - 舊 Manifest 收據若來源 URL 不符新權威來源，不能假冒成新來源收據；依原機制重新取得、驗證再更新私有快取。沒有刪除舊使用者檔案或改寫其來源紀錄來繞過核對。
 
-本批沒有取代所有歷史靜態資料，也未建立完整 OfficialResourceManager／新快照切換。共用下載器整合、未知資源隔離、完整相容性與功能欄位缺口仍屬後續批次。不得將本次「Manifest 驗證」視為 Bundle／官方世界資料或正式遊戲驗收。
+第一批沒有取代所有歷史靜態資料，也未建立完整 OfficialResourceManager／新快照切換。共用下載器見下一節；未知資源隔離、完整相容性與功能欄位缺口仍屬後續批次。不得將「Manifest 驗證」視為 Bundle／官方世界資料或正式遊戲驗收。
+
+## P2 共用下載器批次
+
+`resources_runtime/downloader` 已由四個既有官方服務共同使用，沒有再保留四份 HTTP 讀取／Bundle 串流的實作。既有 Manifest／Bundle／Lua／版本公開 API 與錯誤類別保留；版本服務對同一檔案的 cache-buster 相容回退仍維持一次。
+
+- 只允許識別過的官方端點；拒絕轉址並釋放回應，不提供目錄爬取或第三方來源。TLS／Proxy／CA 使用標準環境設定。
+- 記憶體讀取上限 8 MiB，單檔上限 256 MiB；總時限及每次 I/O 逾時分開。以 `read1` 檢查慢速串流總時限，重試預設最多兩次、指數退避；4xx（含 429）不自動重試。
+- 取消在請求、讀取、退避及發佈前檢查；不靠終止執行緒。下載／完整性失敗清除本次 partial，既有成品不變。
+- 檔案大小、Manifest MD5／CRC32 LE 全部符合後，才 fsync 並原子更名。快取仍重新核對三項，不將快取命中等同官方版本最新。
+- 分段為明確可選，最多 4 段、順序請求。必須先確認 HEAD 長度、Accept-Ranges 與強 ETag，再使用 If-Range 及精確 Content-Range；不支援時單次 GET，異常不拼接混合資料。
+- 結構化診斷僅固定代碼／數值，進度為不可變資料；不輸出回應內容、例外文字或敏感請求。Downloader 不關閉借用的應用程式診斷服務。
+- 本批只自動清除自己未完成的 partial；**未實作會刪除舊快照／使用者檔案的 LRU 清理**。正式快照引用與安全快取清理仍待後續批次。
+
+2026-10-26T15:30Z，針對 Manifest 中精確 `ScenesData_C.bytes` 所在的 `datapackage_data_s.bundle`（430,359 bytes）進行一次受控實測：HEAD 200、兩段 GET 206，大小／MD5／CRC 通過；UnityFS header 與完整 AssetPath 核對後擷取 101,616-byte 原始表，現有已審核的 `instance_catalog.parse_stages` 讀出 **1,337 筆場景定義**。證據見 [下載與場景表觀測](docs/rebuild/official_download_probe.json)。原始 Bundle／TextAsset 只留私人輸出，沒有啟用新 Runtime、建立遊戲資料庫或宣稱所有地圖／導航已驗收。
 
 ## P0 實際觀測
 

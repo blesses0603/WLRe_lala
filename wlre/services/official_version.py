@@ -15,9 +15,10 @@ import zlib
 from urllib.error import HTTPError, URLError
 from datetime import datetime, timezone
 from urllib.parse import urlsplit
-from urllib.request import HTTPRedirectHandler, Request, build_opener
+from urllib.request import HTTPRedirectHandler, build_opener
 
 from wlre.core.primitives import check_cancelled
+from wlre.resources_runtime.downloader import DownloadError, DownloadManager
 from wlre.resources_runtime.official.source import OFFICIAL_HOST, ROOT
 
 from wlre.services.resource_compatibility import (
@@ -81,6 +82,17 @@ class _ApprovedRedirect(HTTPRedirectHandler):
 
 def _request_problem(exc):
     """Public-safe failure category; never put remote headers, URLs or tokens in UI."""
+    if isinstance(exc, DownloadError):
+        if exc.http_status is not None:
+            return f"HTTP {exc.http_status}（官方 CDN 拒絕或找不到檔案）"
+        if exc.failure_kind is not None:
+            return {'dns': 'DNS 無法解析官方網域', 'tls': 'TLS 憑證驗證失敗',
+                    'timeout': '連線逾時', 'refused': '官方伺服器拒絕連線',
+                    'protocol': 'HTTP 回應中斷或格式無法確認',
+                    'network': '無法取得回應'}.get(exc.failure_kind, '無法取得回應')
+        if exc.args and exc.args[0] == 'official_download_deadline_exceeded':
+            return '連線逾時'
+        return '官方回應來源、大小或內容驗證失敗'
     if isinstance(exc, HTTPError):
         return f"HTTP {exc.code}（官方 CDN 拒絕或找不到檔案）"
     if isinstance(exc, (TimeoutError, socket.timeout)):
@@ -105,7 +117,7 @@ def _request_problem(exc):
     return "無法取得回應"
 
 
-def fetch_bytes(url, *, timeout=12, opener=None, cache_bust=True):
+def fetch_bytes(url, *, timeout=12, opener=None, cache_bust=True, cancel_event=None):
     """GET with an optional numeric cache buster and a strict payload cap."""
     validate_source(url)
     # The official Unity PC client appends an unkeyed numeric cache buster.
@@ -115,41 +127,27 @@ def fetch_bytes(url, *, timeout=12, opener=None, cache_bust=True):
     validate_source(target)
     if opener is None:
         opener = build_opener(_ApprovedRedirect()).open
-    headers = {
-        # 此官方來源的 .dat/.version 回應 Content-Type 為 */*；窄化 Accept 會 406。
-        "Accept": "*/*",
-        "Cache-Control": "no-cache",
-        "Pragma": "no-cache",
-        "User-Agent": "WLRe-LaLa-VersionCheck/1",
-    }
-
     def read_one(request_url):
         validate_source(request_url)
-        with opener(Request(request_url, headers=headers), timeout=timeout) as response:
-            returned = response.geturl()
-            validate_source(returned)
-            if urlsplit(returned).path != urlsplit(url).path:
-                raise VersionSourceError("回應網址與預期不一致")
-            if getattr(response, "status", 200) != 200:
-                raise VersionSourceError("官方回應不是 HTTP 200")
-            body = response.read(MAX_RESPONSE_BYTES + 1)
-            if len(body) > MAX_RESPONSE_BYTES:
-                raise VersionSourceError("官方版本回應超過安全上限")
-            return body
+        with DownloadManager(opener=opener, timeout=timeout) as manager:
+            return manager.read(request_url, limit=MAX_RESPONSE_BYTES, cancel_event=cancel_event)
 
     try:
         return read_one(target)
-    except HTTPError as exc:
-        # Some CDNs reject an unfamiliar cache-busting query. Retry exactly
-        # once with the observed canonical HTTPS path; never change host or TLS.
-        if exc.code not in (400, 403, 404) or "?" in url:
-            raise VersionSourceError(_request_problem(exc)) from exc
+    except InterruptedError:
+        raise
+    except DownloadError as exc:
+        # 保留 CDN 拒絕數字 query 時，回到同一來源／檔案的單次相容重試。
+        if exc.http_status not in (400, 403, 404) or "?" in url or target == url:
+            raise VersionSourceError(_request_problem(exc)) from None
         try:
             return read_one(url)
+        except InterruptedError:
+            raise
         except (OSError, ValueError) as retry_exc:
-            raise VersionSourceError(_request_problem(retry_exc)) from retry_exc
+            raise VersionSourceError(_request_problem(retry_exc)) from None
     except (OSError, ValueError) as exc:
-        raise VersionSourceError(_request_problem(exc)) from exc
+        raise VersionSourceError(_request_problem(exc)) from None
 
 
 def parse_version(body):
@@ -324,7 +322,8 @@ def check_official_game_resources(*, fetcher=fetch_bytes, exe_version=SUPPORTED_
     if cancel_event is not None:
         def fetcher(url):
             check_cancelled(cancel_event)
-            result = original_fetcher(url)
+            result = (original_fetcher(url, cancel_event=cancel_event)
+                      if original_fetcher is fetch_bytes else original_fetcher(url))
             check_cancelled(cancel_event)
             return result
     checked_at = datetime.now(timezone.utc).isoformat(timespec="seconds")

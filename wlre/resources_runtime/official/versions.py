@@ -41,7 +41,7 @@ class VersionDetector:
     def _read(self, url, cancel_event):
         check_cancelled(cancel_event)
         result = (self._fetcher(url) if self._fetcher is not None
-                  else fetch_bytes(url, cache_bust=False))
+                  else fetch_bytes(url, cache_bust=False, cancel_event=cancel_event))
         check_cancelled(cancel_event)
         return result
 

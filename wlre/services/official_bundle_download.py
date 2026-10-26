@@ -6,17 +6,13 @@ URLs are now confirmed; this service still is not wired into startup or login.
 """
 
 from dataclasses import dataclass
-import hashlib
-import os
 from pathlib import Path
 import re
-import tempfile
-from urllib.error import HTTPError, URLError
-from urllib.parse import urlsplit
-from urllib.request import HTTPRedirectHandler, Request, build_opener
-import zlib
+from urllib.request import build_opener
 
 from wlre.storage.paths import data_root
+from wlre.resources_runtime.downloader import DownloadManager, FileIntegrity
+from wlre.resources_runtime.downloader.https import NoRedirect as _NoRedirect
 from wlre.resources_runtime.official.source import OFFICIAL_HOST as OFFICIAL_BUNDLE_HOST, ROOT as BASE
 
 
@@ -85,77 +81,25 @@ def spec_from_manifest(*, data_ver, package, index, name):
 
 
 def _verified_file(path, spec):
-    if not path.is_file() or path.stat().st_size != spec.file_size:
-        return False
-    md5 = hashlib.md5(usedforsecurity=False)
-    crc = 0
-    with path.open('rb') as stream:
-        for chunk in iter(lambda: stream.read(CHUNK_BYTES), b''):
-            md5.update(chunk)
-            crc = zlib.crc32(chunk, crc)
-    return (md5.hexdigest() == spec.file_hash.lower() and
-            (crc & 0xffffffff).to_bytes(4, 'little').hex() == spec.file_crc.lower())
+    identity = FileIntegrity(spec.file_size, spec.file_hash, spec.file_crc)
+    with DownloadManager() as manager:
+        return manager.verify_file(path, identity)
 
 
-class _NoRedirect(HTTPRedirectHandler):
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
-        raise BundleDownloadError('Bundle URL redirected; source has not been verified')
-
-
-def fetch_bundle(spec, *, cache_root=None, opener=None, timeout=20):
-    """GET one pinned official bundle, verify size+MD5+CRC, atomically cache.
-
-    No parallelism, retries, automatic package scanning or deletion. Offline
-    tests inject an opener; the default opener rejects every redirect.
-    """
+def fetch_bundle(spec, *, cache_root=None, opener=None, timeout=20,
+                 cancel_event=None, progress=None, segments=1):
+    """共用下載器核對大小、MD5、CRC 後原子快取；保留舊 Path API。"""
     if not isinstance(spec, BundleSpec):
         raise BundleDownloadError('Bundle requires validated Manifest metadata')
-    url = spec.url
-    parsed = urlsplit(url)
-    if parsed.scheme != 'https' or parsed.hostname != OFFICIAL_BUNDLE_HOST:
-        raise BundleDownloadError('Source is not the approved official CDN')
-    destination = spec.cache_path(cache_root)
-    if _verified_file(destination, spec):
-        return destination
-    destination.parent.mkdir(parents=True, exist_ok=True)
     opener = build_opener(_NoRedirect()).open if opener is None else opener
-    pending = None
+    manager = DownloadManager(opener=opener, timeout=timeout)
+    identity = FileIntegrity(spec.file_size, spec.file_hash, spec.file_crc)
     try:
-        with opener(Request(url, headers={'User-Agent': 'WLRe-LaLa-OfficialSync/1'}),
-                    timeout=timeout) as response:
-            if response.geturl() != url or getattr(response, 'status', 200) != 200:
-                raise BundleDownloadError('Unexpected remote Bundle response')
-            declared = response.headers.get('Content-Length') if hasattr(response, 'headers') else None
-            if declared is not None and (not declared.isdecimal() or int(declared) != spec.file_size):
-                raise BundleDownloadError('Official Bundle response size differs from Manifest')
-            md5 = hashlib.md5(usedforsecurity=False)
-            crc = 0
-            length = 0
-            with tempfile.NamedTemporaryFile(dir=destination.parent,
-                                             prefix='.bundle_', suffix='.partial',
-                                             delete=False) as handle:
-                pending = Path(handle.name)
-                while True:
-                    chunk = response.read(CHUNK_BYTES)
-                    if not chunk:
-                        break
-                    length += len(chunk)
-                    if length > spec.file_size:
-                        raise BundleDownloadError('Downloaded Bundle exceeds declared size')
-                    md5.update(chunk)
-                    crc = zlib.crc32(chunk, crc)
-                    handle.write(chunk)
-                handle.flush()
-                os.fsync(handle.fileno())
-        # YooAsset FileCRC is CRC32 encoded in *little-endian byte order*.
-        # The usual f'{crc:08x}' reverses that order and rejects valid Bundles.
-        if (length != spec.file_size or md5.hexdigest() != spec.file_hash.lower() or
-                (crc & 0xffffffff).to_bytes(4, 'little').hex() != spec.file_crc.lower()):
-            raise BundleDownloadError('Official Bundle size/hash/CRC verification failed')
-        os.replace(pending, destination)
-        return destination
-    except (OSError, HTTPError, URLError) as exc:
-        raise BundleDownloadError('Official Bundle download failed') from exc
+        return manager.download(spec.url, identity, spec.cache_path(cache_root),
+                                cancel_event=cancel_event, progress=progress, segments=segments)
+    except InterruptedError:
+        raise
+    except (OSError, ValueError) as exc:
+        raise BundleDownloadError('Official Bundle download or verification failed') from exc
     finally:
-        if pending is not None:
-            pending.unlink(missing_ok=True)
+        manager.close()

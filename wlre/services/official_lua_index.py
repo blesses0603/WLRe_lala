@@ -12,10 +12,11 @@ from pathlib import Path
 import re
 import tempfile
 import time
-from urllib.error import HTTPError, URLError
-from urllib.request import HTTPRedirectHandler, Request, build_opener
+from urllib.request import build_opener
 
 from wlre.storage.paths import data_root
+from wlre.resources_runtime.downloader import DownloadManager
+from wlre.resources_runtime.downloader.https import NoRedirect as _NoRedirect
 from wlre.resources_runtime.official.source import ROOT as OFFICIAL_LUA_BASE
 
 
@@ -68,28 +69,16 @@ def parse_list(body):
     return result
 
 
-class _NoRedirect(HTTPRedirectHandler):
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
-        raise LuaIndexError('Lua list unexpectedly redirected')
-
-
 def fetch_list(data_ver, *, opener=None, timeout=12, cache_bust=True):
     """Fetch the one fixed official index URL with a bounded response."""
     canonical = list_url(data_ver)
     url = canonical + ('?' + str(time.time()) if cache_bust else '')
     opener = build_opener(_NoRedirect()).open if opener is None else opener
     try:
-        with opener(Request(url, headers={'User-Agent': 'WLRe-LaLa-LuaIndex/1',
-                                          'Accept': '*/*',
-                                          'Cache-Control': 'no-cache'}),
-                    timeout=timeout) as response:
-            if getattr(response, 'status', 200) != 200 or response.geturl() != url:
-                raise LuaIndexError('Unexpected official Lua list response')
-            raw = response.read(MAX_LIST_BYTES + 1)
-            if len(raw) > MAX_LIST_BYTES:
-                raise LuaIndexError('Official Lua list exceeds size limit')
-    except (OSError, HTTPError, URLError) as exc:
-        raise LuaIndexError('Cannot reach official Lua list endpoint') from exc
+        with DownloadManager(opener=opener, timeout=timeout) as manager:
+            raw = manager.read(url, limit=MAX_LIST_BYTES)
+    except (OSError, ValueError) as exc:
+        raise LuaIndexError('Cannot reach or validate official Lua list endpoint') from exc
     return parse_list(raw)
 
 
