@@ -44,7 +44,8 @@ class Portals:
             # The desktop client is 1275-only. An older revision is NOT a
             # reason to fall through to the tracked 1262 portals.json file.
             # Keep that legacy file solely for explicit fixture/audit reads.
-            if baseline_revision() != '1275':
+            revision = baseline_revision()
+            if revision != '1275':
                 self.data = {
                     'portals': {}, 'audit': [], 'entities': {},
                     'source_revision': 1275, 'source_ready': False,
@@ -53,7 +54,7 @@ class Portals:
                 }
                 self.audit = {}
                 return
-            if baseline_revision() == '1275':
+            if revision == '1275':
                 # The verified 1275 Eve table includes a door index and its
                 # local coordinates, but not an audited destination or proof
                 # that C20-8 is safe on this server. Expose the original
