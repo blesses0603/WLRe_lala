@@ -17,26 +17,46 @@ def _coop(state):
     return state.instances['coop']
 
 
-def _safe_bag(state):
-    bag = state.inventory
-    if not bag.get('ready') or not bag.get('reliable'):
-        return False
-    capacity = bag.get('capacity')
-    items = bag.get('items')
-    if type(capacity) is not int or not 1 <= capacity <= 255 or not isinstance(items, dict):
-        return False
-    # The server receipt can have up to four distinct awards; do not infer
-    # stackability before knowing actual IDs. This is deliberately conservative.
-    if capacity - len(items) < 4:
-        return False
-    if any(bag.get(k) for k in ('holds', 'alchemy_slots', 'expedition_slots',
-                               'maintenance_slots')):
-        return False
-    if any(v for v in (bag.get('reserved') or {}).values()):
-        return False
+def bag_claim_problem(bag):
+    """Read-only reason for the same conservative four-slot claim rule.
+
+    The 1262 UICooperateAward client checks two empty slots. S186-10 can
+    contain up to four award records, so LaLa continues to require four
+    until the 1275 server's exact reward/overflow policy is verified.
+    """
+    if not isinstance(bag, dict) or bag.get('ready') is not True:
+        return '尚未收到 S23-5 背包完整快照'
+    if bag.get('reliable') is not True:
+        return 'S23 背包資料未通過一致性驗證，請重新登入同步'
+    capacity, items = bag.get('capacity'), bag.get('items')
+    if (type(capacity) is not int or not 1 <= capacity <= 255
+            or not isinstance(items, dict)):
+        return '背包容量或格位資料未確認'
+    occupied = set()
+    for key in items:
+        try:
+            index = int(key)
+        except (TypeError, ValueError):
+            return '背包格位索引無效'
+        if not 1 <= index <= capacity or index in occupied:
+            return '背包格位索引超出容量或重複'
+        occupied.add(index)
+    empty = capacity - len(occupied)
+    if empty < 4:
+        return f'背包剩餘 {empty} 格，保守領獎需要至少 4 格'
+    if any(bag.get(k) for k in ('holds', 'alchemy_slots',
+                               'expedition_slots', 'maintenance_slots')):
+        return '背包仍有其他功能保留的物品或格位'
+    reserved = bag.get('reserved') or {}
+    if not isinstance(reserved, dict) or any(reserved.values()):
+        return '背包仍有未完成的物品數量保留'
     if (bag.get('field_supply') or {}).get('pending'):
-        return False
-    return True
+        return '補給正在使用背包，待伺服器確認'
+    return None
+
+
+def _safe_bag(state):
+    return bag_claim_problem(state.inventory) is None
 
 
 def _guard(state):
@@ -197,8 +217,9 @@ def tick(state, now=None):
     reward = data.get('reward')
     if not isinstance(reward, dict) or reward.get('open_reward') != 1:
         return []
-    if not _safe_bag(state):
-        data['auto_claim_note'] = '包包同步／空位不足，暫停自動領取（未送出封包）'
+    issue = bag_claim_problem(state.inventory)
+    if issue:
+        data['auto_claim_note'] = issue + '，暫停自動領取（未送出封包）'
         return []
     try:
         return claim(state, {'mode': 'coop', 'action': 'free'}, now)
