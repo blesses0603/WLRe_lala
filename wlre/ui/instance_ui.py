@@ -9,6 +9,7 @@ from wlre.ui.instance_room_dialogs import InstanceRoomDialogMixin
 from wlre.services.instance_browser import entries_for
 from wlre.services.battle.party import own_team
 from wlre.services.instance_room_flow import coop_completed_no_chest
+from wlre.services.instance_activity import instance_background_blockers
 from wlre.features.cooperative.buttons import CooperativeActionsMixin
 from wlre.features.cooperative.rooms import cooperative_headcount_status, CooperativeRoomStatusMixin
 from wlre.features.cooperative.rewards import CooperativeRewardViewMixin
@@ -58,19 +59,7 @@ def creation_block_reasons(state, mode, live):
     post = battle.get('post_event') or {}
     if post and post.get('status') != 'completed':
         reasons.append('戰後事件尚未完成')
-    for name, key, message in (
-        ('maintenance', 'pending', '修理／整理等待回覆'),
-        ('maintenance', 'uncertain', '修理／整理結果不明'),
-        ('expedition', 'pending', '遠征等待回覆'),
-        ('alchemy', 'pending', '煉金等待回覆'),
-        ('crafting', 'pending', '製作等待回覆'),
-        ('roaming', 'enabled', '自動移動仍開啟，請先停止'),
-        ('alchemy', 'enabled', '自動煉金仍開啟，請先停止'),
-        ('crafting', 'auto_continue', '自動製作仍開啟，請先停止'),
-        ('expedition', 'enabled', '自動遠征仍開啟，請先停止'),
-    ):
-        if (state.get(name) or {}).get(key):
-            reasons.append(message)
+    reasons.extend(instance_background_blockers(state))
     if mode == 'coop':
         if own_team(state):
             reasons.append('協力創房前請先退出一般隊伍')
@@ -387,12 +376,7 @@ class InstancePanel(ttk.Frame):
             or bool((state.get('event_flow') or {}).get('blocked'))
             or bool((state.get('battle') or {}).get('post_event')
                     and (state.get('battle') or {})['post_event'].get('status') != 'completed')
-            or any((state.get(k) or {}).get('pending') for k in
-                   ('maintenance', 'expedition', 'alchemy', 'crafting'))
-            or bool((state.get('maintenance') or {}).get('uncertain'))
-            or any((state.get(k) or {}).get('enabled')
-                   for k in ('roaming', 'alchemy', 'expedition'))
-            or bool((state.get('crafting') or {}).get('auto_continue'))
+            or bool(instance_background_blockers(state))
         )
         self.main_page.render(instances.get('main', {}), live=live,
                               other=instances.get('coop', {}),
