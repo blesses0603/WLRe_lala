@@ -15,7 +15,7 @@ def portal_source_diagnostic(status):
         'bundle_integrity_failed': '傳點 Bundle 校驗不符，已拒絕使用',
         'textasset_extract_failed': '傳點 Bundle 已找到，但 TextAsset 解包失敗',
         'stage_map_invalid': '傳點名稱表二進位格式尚未通過驗證',
-        'layout_unrecognized': '新版傳點資料不符合 1262 已知欄位，須重新審核格式',
+        'layout_unrecognized': '門連線資料未通過格式解析，請查看下方具體診斷；尚不能判定新版欄位已變更',
         'download_budget_exhausted': '傳點資料下載超過安全額度，已保留既有功能',
         'bundle_sync_failed': '官方傳點資料同步失敗，尚未取得正式內容',
         'missing_stage_map': '尚未取得官方 StageMapData 傳點名稱表',

@@ -28,6 +28,29 @@ def eve_links():
 
 
 class Portal1262LayoutRecognition(unittest.TestCase):
+    def test_explicit_bracketed_scene_header_matches_lua_contract(self):
+        raw = ('\ufeff[事件ID]=12170\r\n'
+               '原場景位置[X:200,Y:300][12171][X:100,Y:200]\r\n').encode('utf-16-le')
+        shape = recognize_portal_source('EveDoorLinks', raw)
+        self.assertEqual(shape['status'], 'recognized')
+        self.assertEqual(shape['scene_count'], 1)
+        self.assertEqual(shape['link_count'], 1)
+        self.assertFalse(shape['can_send_packets'])
+
+    def test_failed_links_explain_fixed_reason_without_leaking_source(self):
+        raw = ('PRIVATE_UNKNOWN_HEADER\n'
+               '原場景位置[X:200,Y:300][12171][X:100,Y:200]\n').encode('utf-16-le')
+        shape = recognize_portal_source('EveDoorLinks', raw)
+        self.assertEqual(shape['status'], 'layout_unrecognized')
+        self.assertEqual(shape['reason_code'], 'scene_header_unrecognized')
+        self.assertNotIn('PRIVATE', str(shape))
+        self.assertFalse(shape['can_send_packets'])
+
+    def test_binary_length_failure_is_distinct_from_text_header_failure(self):
+        shape = recognize_portal_source('DoorLinkData_C', struct.pack('<i', 2) + bytes(12))
+        self.assertEqual(shape['reason_code'], 'record_length_mismatch')
+        self.assertFalse(shape['can_send_packets'])
+
     def test_stage_map_fields_match_1262_lua_without_hardcoding_revision(self):
         raw = stage_map(
             (11016, 2, 0, 1, 20, 30, 92000, 1),

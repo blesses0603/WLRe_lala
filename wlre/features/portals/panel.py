@@ -117,7 +117,20 @@ class PortalInteractionMixin:
                     elif report.get('status') == 'recognized':
                         formats.append(table + '：結構相容')
                     else:
-                        formats.append(table + '：版型待重新核對')
+                        # Recognizer hints are fixed text; unknown reports get
+                        # a generic message rather than exposing raw payloads.
+                        hints = {
+                            'scene_header_unrecognized': '場景標頭未辨識',
+                            'scene_header_invalid': '場景標頭重複或編號無效',
+                            'link_fields_unrecognized': '連線行方括號欄位不符',
+                            'link_value_invalid': '座標或目的地欄位格式不符',
+                            'encoding_invalid': 'UTF-16LE 編碼不符',
+                            'record_length_mismatch': '表頭筆數與記錄長度不符',
+                            'source_length_invalid': '來源長度或型別不符',
+                            'value_out_of_range': '編號或座標超出範圍',
+                        }
+                        formats.append(table + '：' + hints.get(
+                            report.get('reason_code'), '版型待重新核對'))
                 ttk.Label(win, text='1262 欄位格式比對：' + '／'.join(formats),
                           wraplength=680).pack(fill='x', padx=10)
             if not self.portals.data.get('source_ready'):

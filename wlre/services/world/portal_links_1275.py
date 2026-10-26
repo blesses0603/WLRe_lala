@@ -78,7 +78,9 @@ def verified_portal_names(stage_raw, scene_ids, texts):
 
 _POINT = re.compile(r'^\s*[^:：\[\],]+[:：]\s*(\d+)\s*,\s*'
                     r'[^:：\[\],]+[:：]\s*(\d+)\s*$')
-_HEADER = re.compile(r'^\s*事件ID\s*=\s*(\d+)\s*$')
+# Data.LoadEveDoorLinks locates 事件ID then reads the value after '='.
+# Preserve both explicit header spellings; do not search arbitrary offsets.
+_HEADER = re.compile(r'^\s*(?:事件ID|\[事件ID\])\s*=\s*(\d+)\s*$')
 
 
 def parse_eve_door_links(raw):

@@ -98,6 +98,29 @@ _READERS = {
 }
 
 
+def _failure_detail(error):
+    """Only emit fixed diagnostic codes/text; never raw source or exception data."""
+    reasons = (
+        ('缺少場景標頭', 'scene_header_unrecognized', '未辨識場景標頭；應為事件ID=編號或[事件ID]=編號'),
+        ('場景 ID 重複或無效', 'scene_header_invalid', '場景標頭重複或編號超出範圍'),
+        ('連線格式未知', 'link_fields_unrecognized', '門連線行缺少原場景位置或三組方括號欄位'),
+        ('座標或目的地不合法', 'link_value_invalid', '門連線座標或目的地欄位未通過數字格式驗證'),
+        ('超出範圍', 'value_out_of_range', '門連線編號或座標超出已審核範圍'),
+        ('文字編碼無效', 'encoding_invalid', '門連線文字不是有效的 UTF-16LE'),
+        ('筆數與記錄長度不符', 'record_length_mismatch', '表頭筆數與完整檔案的記錄長度不符'),
+        ('長度不合法', 'source_length_invalid', '門連線資料長度或型別不符'),
+        ('資料長度或型別無效', 'source_length_invalid', '表格資料長度或型別不符'),
+    )
+    current = error
+    for _ in range(4):
+        if current is None: break
+        for marker, code, hint in reasons:
+            if marker in str(current):
+                return {'reason_code': code, 'parse_hint': hint}
+        current = current.__cause__
+    return {'reason_code': 'unrecognized_layout', 'parse_hint': '資料未通過已審核結構；需核對實際來源'}
+
+
 def recognize_portal_source(source, raw):
     """Return a bounded, JSON-friendly verdict without guessing a new schema.
 
@@ -110,6 +133,7 @@ def recognize_portal_source(source, raw):
                 'schema': None, 'can_send_packets': False}
     try:
         return _READERS[source](raw)
-    except PortalSchemaUnrecognized:
+    except PortalSchemaUnrecognized as exc:
         return {'source': source, 'schema': None,
-                'status': 'layout_unrecognized', 'can_send_packets': False}
+                'status': 'layout_unrecognized', 'can_send_packets': False,
+                **_failure_detail(exc)}
