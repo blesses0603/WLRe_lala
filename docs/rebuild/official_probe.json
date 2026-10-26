@@ -1,0 +1,31 @@
+{
+  "observed_at": "2026-10-26T13:36:08.721902+00:00",
+  "source": "https://wlreftpsrc.chinesegamer.net/WLN/TW/1.3.21/ResourcesPC/AssetBundle/",
+  "packages": [
+    {
+      "package": "MainPackage",
+      "version": "1275_2026_10_21_18_29_38_49",
+      "size": 2564950,
+      "sha256": "65da10fab29b8ce96247a18e611ee0ba3c5c3bc5cb71a42c4e177001a8c4ba49",
+      "crc32_le": "b4e21f83",
+      "format": "2.2.5",
+      "assets": 21577,
+      "bundles": 1732,
+      "integrity": "verified",
+      "runtime_acceptance": "not_run"
+    },
+    {
+      "package": "DataPackage",
+      "version": "1275_2026_10_21_18_27_33_84",
+      "size": 16830,
+      "sha256": "8af6b9374d2e31e5bda4d82d2ec4be6b3a673e9188a522eb2c1b110e68c51dee",
+      "crc32_le": "dcace626",
+      "format": "2.2.5",
+      "assets": 190,
+      "bundles": 22,
+      "integrity": "verified",
+      "runtime_acceptance": "not_run"
+    }
+  ],
+  "activated": false
+}
