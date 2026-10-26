@@ -4,6 +4,7 @@ import json
 import math
 from pathlib import Path
 from wlre.services.world.scene_names_1275 import source_scene_label
+from wlre.services.world.portal_inspection_1275 import link_inspection_fields
 
 
 
@@ -132,6 +133,8 @@ class Portals:
                             reference = portal_evidence.get((scene_id, index), {})
                             if not isinstance(reference, dict):
                                 reference = {}
+                            inspection = link_inspection_fields(
+                                reference, scene_id, index, scene_names)
                             reference_xy = (
                                 reference.get('source_kind') ==
                                 '1275_eve_door_links_reference'
@@ -214,7 +217,7 @@ class Portals:
                                     else reference.get('projection_guard') if reference_xy
                                     else None),
                                 'link_reference_only': bool(reference_xy and not strict_valid_xy),
-                                'reference_issues': reference.get('issues', ()),
+                                **inspection,
                                 'x': map_x if valid_xy else None,
                                 'y': map_y if valid_xy else None,
                                 'event_grid_x': x,
@@ -258,6 +261,8 @@ class Portals:
                             and isinstance(reference.get('projection_guard'), dict)
                             and type(reference.get('x')) is int
                             and type(reference.get('y')) is int)
+                        inspection = link_inspection_fields(
+                            reference, scene_id, index, scene_names)
                         target = reference.get('destination')
                         target_known = reference.get('destination_defined') is True
                         target_label = (source_scene_label(target, scene_names)
@@ -291,19 +296,22 @@ class Portals:
                             'direct_eligible': False,
                             'direct_door_index': None, 'door_index': None,
                             'link_reference_only': True,
-                            'reference_issues': reference.get('issues', ()),
+                            **inspection,
                             'navigation_status': 'unverified',
                             'direct_note': '官方連線僅供唯讀定位；沒有核對門事件，不允許送出傳送封包',
                         })
                     # HiddenPortalNew uses StageMap Kind=3 PositionX/Y and
                     # EvtID as its destination scene. This is NOT a normal
                     # Eve.NewDoor index and never enables C20-8.
-                    for ordinal, marker in enumerate(portal_stage_markers, 1):
+                    hidden_by_scene = {}
+                    for marker in portal_stage_markers:
                         if not isinstance(marker, dict) or marker.get('kind') != 3:
                             continue
                         scene_id = marker.get('scene')
                         if type(scene_id) is not int or not 0 < scene_id <= 65535:
                             continue
+                        hidden_by_scene[scene_id] = hidden_by_scene.get(scene_id, 0) + 1
+                        ordinal = hidden_by_scene[scene_id]
                         valid = (
                             marker.get('position_verified') is True
                             and isinstance(marker.get('projection_guard'), dict)
