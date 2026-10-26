@@ -74,6 +74,9 @@ class Portals:
                     portal_evidence = getattr(verified, 'portal_link_evidence', {})
                     if not isinstance(portal_evidence, dict):
                         portal_evidence = {}
+                    portal_extra_routes = getattr(verified, 'portal_extra_routes', [])
+                    if not isinstance(portal_extra_routes, list):
+                        portal_extra_routes = []
                     portal_metadata_status = getattr(
                         verified, 'portal_metadata_status', 'missing_stage_map')
                     portal_schema_report = getattr(
@@ -296,6 +299,8 @@ class Portals:
                     'source_revision': 1275,
                     'door_count': door_count,
                     'official_link_reference_count': (len(portal_evidence) if source_ready else 0),
+                    'official_route_reference_count': (len(portal_extra_routes) if source_ready else 0),
+                    'official_route_references': (portal_extra_routes if source_ready else []),
                     'scene_names': scene_names,
                     'portal_metadata_status': (
                         portal_metadata_status if source_ready
