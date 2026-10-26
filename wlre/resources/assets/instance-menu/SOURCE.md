@@ -1,23 +1,33 @@
-# 副本／協力圖示來源（PR #57，2026-10-26）
+# 官方 1275 副本與協力圖示來源（PR #57）
 
-已加入使用者提供的兩張 PNG：
-- `Menu_Dungeon.png`：副本主程式導覽入口、房間管理「主要」子分頁。
-- `Menu_Cooperate.png`：房間管理「協力」子分頁。
+## 來源
+使用者另外提供兩張從 Unity `Texture2D` 提取的圖片：
 
-本次上傳已比對 Git blob SHA，與使用者給定的檔案 **完全一致**；
-**原始官方 1275 Bundle 路徑、Sprite / Texture2D 的 path_id
-尚未驗證**。因此不宣稱兩張檔案已從官方 1275 Bundle
-重新提取，不會自行把截圖加工冒充原始素材。
+| 程式中圖示 | 使用者提供之原始提取檔 |
+| --- | --- |
+| `Menu_Dungeon.png` | `Btn_DungeonList02_Texture2D_7291917609996986674_41c38d89ac31.png` |
+| `Menu_Cooperate.png` | `Btn_DungeonCooperate02_Texture2D_2261232642749247050_41c38d89ac31.png` |
 
-UI 載入沿用 `instance_menu_icons.py` 與 `RoundedNotebook`；
-找不到圖示或圖片無法開啟時，安全退回原有文字分頁，
-不影響「副本／協力」功能。
+兩張原圖都是 85×85 RGBA，內容分別為螺旋門與三星三人。
+提取檔名稱具有 Texture2D / PathID 線索，但尚未獨立核對
+完整官方 Bundle SHA 或 SpriteAtlas，故**不宣稱已完成
+1275 原始資產校驗**。
 
-如需重取官方原始素材，請用另附的
-`WLRE_1275_Official_UI_Extractor.zip`，指定遊戲客戶端的
-`_Data/yoo/MainPackage/BundleFiles` 掃描；
-僅有 `.bytes`、`.hash` 的 1275 Manifest 壓縮包不含圖片。
-提取結果含 CSV 原始 bundle/path_id 資訊，可對比上述檔案是否相同。
+## LaLa UI 處理
 
-未提供的 `Menu_Tasks.png`、`Menu_Events.png` 和
-`Menu_GuildCommission.png` 仍不會以不相關圖示替代。
+LaLa 其他分頁既有的 `function_icons.icon_image()` 使用
+深藍圓形底板、淺色描邊與 34px 目標尺寸。
+原提取檔自帶藍色背景，直接縮小會形成突兀的藍色方塊。
+因此 **本目錄 PNG 儲存的是從上述新圖分離的透明圖案，
+不是未修改的原始提取檔**：
+
+- 保留原圖案的星星／人像、螺旋門輪廓與抗鋸齒；
+  移除內建藍色底板、保留透明通道。
+- `instance_menu_icons.menu_icon_image()` 套用與既有
+  主分頁完全相同的圓底填色、外框、內距及 3 倍超採樣。
+- 主程式「副本」與視窗內「主要／協力」子分頁一律 34px。
+- `RoundedNotebook` 的原本選取效果、hover、方向鍵及
+  分頁切換不變；圖片異常時仍使用文字回退。
+
+這次只是圖片與顯示樣式調整，沒有修改伺服器封包、
+協力領獎、自動化功能鎖或其他模組的業務邏輯。
