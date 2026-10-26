@@ -58,20 +58,8 @@ class MinimapCanvasMixin:
                 spiral.extend((px+math.cos(angle)*radius,py+math.sin(angle)*radius))
             self.canvas.create_line(*spiral,fill=color,width=2,smooth=True)
             if selected:self.canvas.create_text(px,py-14,text=p['name'],fill='white',anchor='s')
-        for npc in self.npc_rows:
-            x,y=npc['x'],npc['y']
-            if x is None or y is None or not 0<=x<=65535 or not 0<=y<=65535:
-                continue
-            u,v=self.projection.packet_to_pixel(x,y)
-            if not 0<=u<=1024 or not 0<=v<=1024:
-                continue
-            px,py=self.screen_pixel(u,v)
-            selected=npc is self.selected_npc
-            radius=5 if selected else 3
-            self.canvas.create_oval(px-radius,py-radius,px+radius,py+radius,
-                                    fill='#be8bec',outline='#fff3c1' if selected else '')
-            if selected:
-                self.canvas.create_text(px,py-12,text=npc['name'],fill='white',anchor='s')
+        # NPCs remain available in the sidebar roster only.  No minimap
+        # symbols (including the selected NPC) are drawn for them.
         location=self.state.get('location',{})
         fix=location.get('confirmed')
         displayed=current_position(self.state)
