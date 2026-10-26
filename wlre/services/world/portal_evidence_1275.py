@@ -146,3 +146,44 @@ def read_only_door_link_routes(raw, stages):
             'can_send_packets': False,
         })
     return result
+
+def read_only_stage_portal_markers(raw, stages):
+    """All StageMapData kinds 2/3/4 without inventing a shared door index.
+
+    Official 1262 Lua's HiddenPortalNew uses Kind=3 PositionX/Y and EvtID as
+    the destination scene, but only when EvtID is nonzero. Kind=4 is a
+    cross-scene *reference*, not a confirmed destination or C20-8 trigger.
+    Ordinary Kind=2 map position comes from EveDoorLinks instead.
+    """
+    import struct
+    from wlre.services.world.portal_schema import inspect_stage_map
+    inspect_stage_map(raw)
+    if not isinstance(stages, dict):
+        raise TypeError('1275 場景資料型別不符')
+    answer = []
+    for offset in range(4, len(raw), 18):
+        scene, kind, cross, event_id, x, y, name_id, sorting = (
+            struct.unpack_from('<HBHIHHIB', raw, offset))
+        if kind not in (2, 3, 4):
+            continue
+        hidden = kind == 3
+        point = _packet_position(stages.get(scene), x, y) if hidden else None
+        destination = event_id if hidden and event_id > 0 else None
+        answer.append({
+            'scene': scene, 'kind': kind, 'event_id': event_id,
+            'cross_scene_reference': cross if kind == 4 else None,
+            'destination': destination,
+            'destination_defined': destination in stages if destination else False,
+            'source_grid_x': x, 'source_grid_y': y,
+            'x': point[0] if point else None,
+            'y': point[1] if point else None,
+            'name_id': name_id, 'sorting': sorting,
+            'position_verified': point is not None,
+            'projection_guard': _projection_guard(stages.get(scene))
+                                if hidden else None,
+            'source_kind': ('1275_hidden_stage_marker' if hidden
+                            else '1275_other_scene_marker' if kind == 4
+                            else '1275_normal_stage_marker'),
+            'can_send_packets': False,
+        })
+    return answer
