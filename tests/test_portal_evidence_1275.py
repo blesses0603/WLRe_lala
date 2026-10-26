@@ -129,9 +129,17 @@ class OfficialLinkEvidenceTests(unittest.TestCase):
             events, stages())
         self.assertIn('duplicate_eve_door', evidence[11016, 1]['issues'])
         catalog = get_catalog(portal_runtime(evidence, events))
-        self.assertEqual(len(catalog.for_scene(11016)), 2)
-        self.assertTrue(all(not x['direct_eligible']
-                            for x in catalog.for_scene(11016)))
+        # A duplicate Eve index no longer creates duplicate UI rows.
+        rows = catalog.for_scene(11016)
+        self.assertEqual(len(rows), 1)
+        self.assertFalse(rows[0]['direct_eligible'])
+        self.assertIsNone(rows[0]['direct_door_index'])
+        self.assertFalse(rows[0]['coordinate_valid'])
+        self.assertIn('duplicate_eve_door', rows[0]['reference_issues'])
+        self.assertEqual(
+            catalog.data['portal_duplicate_report']['duplicate_event_id_removed'], 1)
+        with self.assertRaises(ValueError):
+            Portals.direct_target(rows[0], 11016)
 
 
     def test_missing_stage_map_still_preserves_authenticated_links(self):
