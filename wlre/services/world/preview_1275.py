@@ -142,6 +142,7 @@ class Preview1275:
     portal_names: dict = field(default_factory=dict)
     portal_positions: dict = field(default_factory=dict)
     portal_display_destinations: dict = field(default_factory=dict)
+    portal_link_evidence: dict = field(default_factory=dict)
     portal_metadata_status: str = 'missing_stage_map'
     portal_schema_report: dict = field(default_factory=dict)
     portal_coverage: dict = field(default_factory=dict)
@@ -200,6 +201,7 @@ def load_preview(data_archive, eve_archive):
     portal_names, portal_destinations, portal_positions = {}, {}, {}
     stage_map = link_table = None
     portal_display_destinations = {}
+    portal_link_evidence = {}
     portal_metadata_status = 'missing_stage_map'
     portal_schema_report = {}
     from wlre.services.world.portal_schema import recognize_portal_source
@@ -220,6 +222,9 @@ def load_preview(data_archive, eve_archive):
                 'EveDoorLinks', link_table)
             if portal_schema_report['EveDoorLinks']['status'] != 'recognized':
                 raise PortalLinkSourceError('EveDoorLinks 不符合已知 UTF-16 格式')
+            from wlre.services.world.portal_evidence_1275 import (read_only_portal_evidence)
+            portal_link_evidence = read_only_portal_evidence(
+                stage_map, link_table, doors, stages)
             portal_positions = verified_portal_positions(
                 stage_map, link_table, doors, stages)
             portal_display_destinations = read_only_portal_destinations(
@@ -251,6 +256,7 @@ def load_preview(data_archive, eve_archive):
         portal_names=portal_names,
         portal_positions=portal_positions,
         portal_display_destinations=portal_display_destinations,
+        portal_link_evidence=portal_link_evidence,
         portal_metadata_status=portal_metadata_status,
         portal_schema_report=portal_schema_report,
         portal_coverage=coverage,
