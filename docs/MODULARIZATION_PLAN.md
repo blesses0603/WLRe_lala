@@ -119,6 +119,7 @@ wlre/
 - [x] P1b 第二批：共同副本官方清單的 Treeview／選取／建立條件搬至 `ui/instance_catalog_ui.py`；兩種模式仍共用，同步新增 API 和狀態回歸測試。CI #854 曾因新檔縮排錯誤失敗，已於後續提交修復；修正後 CI #855 三平台成功。
 - [x] P2 第一批：地圖畫布、單擊／雙擊、場景載入及導航狀態更新移至 `features/minimap/`，保留 `HomeMap` 公開介面與導航安全限制；相關回歸測試已納入 #855。
 - [x] P3 第一批：NPC 對話、唯讀商店、選項、傳點與手動觸發 UI 抽至 `features/npc/` 和 `features/portals/`；舊 `HomeMap` 仍組裝地圖／怪物／NPC／傳點清單，未改變伺服器操作。新增安全／介面回歸測試（CI 待驗證）。
+- [x] P3 第二批（2026-10-26，程式已提交、CI/正式服驗收分開）：補強 1275 官方 `EveDoorLinks` 唯讀證據在 `Portals` → `PortalInteractionMixin` 的資料傳遞。門事件與缺門事件連線均可檢視**來源原始格點、來源換算座標、目的場景名稱／ID、抵達原始格點、抵達換算座標**；官方場景表未定義的目的地只顯示明確 ID 與缺定義原因，不虛構倍率。選取傳點會顯示缺標記、缺門事件、倍率不足等原因。隱藏傳點 H 編號改為同場景內獨立序號，避免跨地圖跳號。採用 `services/world/portal_inspection_1275.py` 讓 UI 僅讀受驗證 Runtime 資料，不把參考目的地寫入可執行 `destination`、不提升 `direct_eligible` 或解除 C20-8 驗證閘門；正式服換圖 E2E 尚未進行。新增 `tests/test_p3_portal_inspection_1275.py` 及既有門連線回歸測試。**沒有重新匯入 1275 小地圖圖片**。
 - [x] P4 第一批：`App.open_feature/hide_feature/hide_all_features/open_instances/hide_instances/open_resources/open_attributes` 移至 `ui/feature_navigation.py`，只移動 Tk 視窗生命週期，不動 Worker、TCP、State 或事件佇列；新增權限與視窗單例相容測試（CI 待驗證）。
 - [x] P4 第二批：`App._poll_once()` 移至 `ui/session_event_coordinator.py`，`App` 以 Mixin 保持原方法（`App._poll_once()`）供舊 GUI 與測試使用；Tk `poll()` 排程、版本閘門、網路 Worker、封包、State.apply 順序不更動。新增 `tests/test_feature_session_event_coordinator.py` 檢驗事件/快照順序、會話結束復原、健康事件不覆寫遊戲 State。跨平台 CI 與真實登入/斷線 E2E 分開回報。
 - [x] P5 安全回歸底線：新增 `tests/test_feature_resource_safety.py`，驗證 1275 已驗證 NPC 索引不回退舊 NPC 事件資料、沒有可信傳送目的地時不啟用傳點、原必要封裝資源尚未遭刪除（最新 CI 待確認）。
