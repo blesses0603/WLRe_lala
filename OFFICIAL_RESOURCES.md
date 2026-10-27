@@ -59,12 +59,12 @@
 
 ## P2 場景定義快照批次
 
-`OfficialResourceManager.refresh(exe_version, scope=..., requirements=(...))` 已串接動態版本、兩套 Manifest、必要 Bundle 閉包、精確 TextAsset 擷取、場景格式驗證與原子快照。這是明確範圍的資料服務，**不是全遊戲資料或未知遊戲協定相容性核准**；目前唯一審核過的需求是 `SCENE_DEFINITIONS`。
+`OfficialResourceManager.refresh(exe_version, scope=..., requirements=(...))` 已串接動態版本、兩套 Manifest、必要 Bundle 閉包、精確 TextAsset 擷取、場景格式驗證與原子快照。這是明確範圍的資料服務，**不是全遊戲資料或未知遊戲協定相容性核准**；目前已審核 `SCENE_DEFINITIONS` 與後續新增的 `TEXT_DEFINITIONS`；各自驗收範圍見下方批次。
 
 - `ResourceGapAnalyzer` 依功能需求、完整 AssetPath 與程式內註冊的 Parser 配對，只查當次已驗證 Manifest。缺少觀測、缺少資產、未知配對、錯誤結構分別為 UNKNOWN／MISSING／UNSUPPORTED／INVALID；加密 Bundle 不支援。任何必要需求不完整，整批不下載 Bundle、不切換快照。完整閉包跨 Package 共用 24 檔／64 MiB 配額。
 - UnityFS 實作移到 `resources_runtime/parsers/unity_textasset.py`；舊 `AssetBinding` 入口、錯誤類別、loader patch 點及地圖稽核使用的 container helper 保留。新入口直接接收已由 Manifest 驗證的完整 AssetPath，沒有捏造來源 SHA 合約來擷取資產。
 - `parsers/scenes.py` 是唯一 StageData:New 76-byte 解析器，驗證筆數、精確長度、EOF 與重複 ID。舊 `instance_catalog.parse_stages` 維持 dict／ProtocolError API。新資料為不可變紀錄，保留原始來源 SHA、每列 offset／長度及未解讀範圍。零尺寸的虛擬場景不被誤刪，但不能據此導航。
-- `CompatibilityValidator` 目前驗收場景定義欄位；`name_id`／`model_id` 跨資源關聯仍未驗收，收據明列 unresolved_relations。沒有把數字引用當成名稱、圖片、傳點或可行走證據。其他功能的 adapter 尚未完成，不能因同寬資料而任意標成可用。
+- `CompatibilityValidator` 依 adapter 驗收來源欄位；單一場景 Parser 的收據仍列 `name_id`／`model_id` 為 unresolved_relations，後續跨資源稽核另記 references，不能將模型內容誤標為已驗收。沒有把數字引用當成名稱、圖片、傳點或可行走證據。其他功能的 adapter 尚未完成，不能因同寬資料而任意標成可用。
 - 下載後再次觀測版本映射、兩套 Package 版本與兩套 Manifest hash，一致才發佈。整份快照記錄來源、LaLa／官方版本、Package／Manifest、時間、完整性、Parser／schema、原始來源與未解讀位移；原始資料僅留私人內容定址快取。
 - `SnapshotStore` 使用跨程序檔案鎖及 compare-and-swap 原子指標；另一工作已更新時拒絕晚到的提交。失敗保留前一份收據，partial 由本次工作清除，不刪除既有快照／使用者資料。快取 JSON 有大小、重複鍵、路徑及 SHA 驗證。
 - 查詢服務只能由新一次 `refresh` 產生；沒有以磁碟收據直接重新開啟「當前資料」的 API。開始重新核對或關閉會撤銷既有 view，失敗後只有 `diagnose` 的 `unverified_cache_diagnostic_only` 收據。已取得的不可變數值仍是歷史觀測，不能作為遊戲指令授權。`protocol_approved` 永遠 False。
@@ -80,7 +80,7 @@ python -m tools.check_official_resource_snapshot --exe-version <客戶端版本>
 
 工具以有界 Git 查詢確認私人快取不在工作樹；權限／安全目錄狀態不明時拒絕。雲端掛載的空 `.git` 標記不等同有效 Repository。沒有更動其他舊工具的保守路徑規則。此工具需 Git、UnityPy 及官方 HTTPS，輸出不含原始表格或帳號資料。
 
-待續：場景名稱／模型與其他功能 Parser 的逐項跨表驗證、P1 生命週期資源模組接入、舊 Runtime 消費者遷移與安全引用清理。尚未刪除任何 1262／1275 檔案，也未把這批限定範圍驗收擴張為全功能相容。
+待續：模型內容與缺口原因、其他功能 Parser 的逐項跨表驗證、GUI／舊 Runtime 消費者遷移與安全引用清理；名稱／模型索引稽核與 P1 生命週期接入已補於下方批次。尚未刪除任何 1262／1275 檔案，也未把這批限定範圍驗收擴張為全功能相容。
 
 ## P2 場景引用稽核批次（2026-10-27）
 

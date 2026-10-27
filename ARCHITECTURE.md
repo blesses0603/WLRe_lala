@@ -64,7 +64,7 @@ flowchart LR
     Manifest --> Gap
     Gap --> Download[必要 Bundle 閉包／共用下載器]
     Download --> Extract[精確 Unity TextAsset]
-    Extract --> Parser[版本化場景 Parser]
+    Extract --> Parser[版本化場景／文字 Parser]
     Parser --> Validate[限定範圍相容性檢查]
     Validate --> Recheck[版本及 Manifest hash 再核對]
     Recheck --> CAS[SnapshotStore 原子 CAS]

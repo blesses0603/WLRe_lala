@@ -185,3 +185,9 @@ Aqua 另外使用 32 單位初始邊緣預算容納原生選單列／陰影；Wi
 完整本地先以 **1,332 項，91.034 秒，OK，跳過 2 項** 通過；新增工具清理失敗回歸後，最終完整 **1,333 項，88.239 秒，OK，跳過 2 項**（`/tmp/lala-resource-lifecycle-final.log`）。之後再強化停止與結果寫入的互斥邊界，相關 17 項重驗成功，未更動 GUI／遊戲協定。最終遠端 CI 仍需對應本批提交，不以此本地或前批結果取代。
 
 2026-10-27T00:20:40Z，已透過 Application／OfficialResourceModule 真實核對官方場景與文字快照並成功清理，來源收據見 [生命週期批次報告](docs/rebuild/P2_RESOURCE_MODULE_REPORT.md)。GUI／舊 Runtime 尚未移植；同步解壓不能硬式中斷，停止超時須失敗。正式服 E2E／原生 EXE 打包仍未執行。
+
+### 資源 Module 程式提交三平台驗收結果
+
+`4d299b8` 的核心 [40426290882](https://github.com/blesses0603/WLRe_lala/actions/runs/40426290882)、資源 [40426291006](https://github.com/blesses0603/WLRe_lala/actions/runs/40426291006)、完整 [40426297999](https://github.com/blesses0603/WLRe_lala/actions/runs/40426297999) **九個工作全部成功**。完整 suite 均收集 **1,333 項**：Ubuntu 139.864 秒／跳過 2；Windows 341.080 秒／跳過 7；macOS 141.901 秒／跳過 3，另有原生 GUI preflight 8 項通過。兩個大 viewport 情境仍受 runner 螢幕限制，不把 skip 當成已實測；正式服 E2E／EXE 打包未執行。
+
+收尾僅校正架構／契約／來源說明與移植表的過時進度、記錄本批 CI，不更動程式或測試；repository audit／diff check 通過。此文件提交仍保留相同三平台工作及完整 PR 檢查，以 PR #59 Checks 作為最終整合結果，不另以文件修改繞過檢查。

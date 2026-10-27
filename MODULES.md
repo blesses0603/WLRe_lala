@@ -85,12 +85,12 @@ WorkerGroup 記錄遊戲連線、版本查詢、Release 查詢／下載背景工
 |---|---|---|---|
 | ResourceRequirement／ResourceStatus | 功能、索引、Package、完整路徑、版本化 Parser；缺口狀態 | 純資料契約；需求唯一且有界，不載入外部程式碼 | test_official_resource_manager |
 | ResourceGapAnalyzer | analyze；精確資產與必要閉包、加密拒絕、整批配額 | 現有 Manifest／增量規劃服務；無 I/O 掃站或自有背景工作 | 缺失／未知／加密／循環／配額測試 |
-| CompatibilityValidator | validate；已審核場景格式，不授權封包 | 場景 Parser；必要表為空、越界、重複、尾段均拒絕 | 場景／舊 API 回歸 |
+| CompatibilityValidator | validate；已審核場景／文字格式，不授權封包 | 場景／文字 Parser；必要表為空、越界、重複、尾段均拒絕 | 場景／舊 API 回歸 |
 | SnapshotStore | put／read／current_id／commit／diagnose | 私人快取、storage.atomic；內容定址、鎖與原子 CAS；磁碟收據不授權正式查詢 | 競爭提交、寫入失敗、竄改、重複 JSON 鍵 |
 | OfficialResourceManager | refresh／diagnose／close、context manager | 版本、Manifest、共用下載器、Parser／驗證器／Store；單次 refresh 互斥，無自建執行緒。close 撤銷 view、取消 I/O，呼叫端仍須由 WorkerGroup 等待工作退出 | 整管線、變版／變 hash、取消／關閉、失敗保留舊收據 |
-| OfficialDataService | records／get；同一快照不可變查詢、明確 validated_at | 僅由當次成功 refresh 提供；下一次核對或關閉撤銷。無離線 current、無遊戲封包 API | 不可變、舊 view 撤銷、離線拒絕 |
+| OfficialDataService | records／get／scene_reference／reference_summary；同一快照不可變查詢、明確 validated_at | 僅由當次成功 refresh 提供；下一次核對或關閉撤銷。無離線 current、無遊戲封包 API | 不可變、舊 view 撤銷、離線拒絕 |
 
-本批沒有新增事件、背景排程或遊戲狀態寫入；尚未建立 GUI 資源 Module 的 READY／啟動契約。場景名稱／模型關聯、各功能索引仍待逐項驗收；完整功能表的 P3～P6 狀態不因此改為完成。
+初次場景快照批次沒有新增事件或背景排程；後續已補名稱／模型索引稽核與資源 Module 的 READY／啟動契約，見下方。GUI 接入、模型內容及其他功能索引仍待逐項驗收；完整功能表的 P3～P6 狀態不因此改為完成。
 
 ## P2 場景引用稽核契約
 
