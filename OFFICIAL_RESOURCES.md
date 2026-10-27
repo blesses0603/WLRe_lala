@@ -68,7 +68,7 @@
 - 下載後再次觀測版本映射、兩套 Package 版本與兩套 Manifest hash，一致才發佈。整份快照記錄來源、LaLa／官方版本、Package／Manifest、時間、完整性、Parser／schema、原始來源與未解讀位移；原始資料僅留私人內容定址快取。
 - `SnapshotStore` 使用跨程序檔案鎖及 compare-and-swap 原子指標；另一工作已更新時拒絕晚到的提交。失敗保留前一份收據，partial 由本次工作清除，不刪除既有快照／使用者資料。快取 JSON 有大小、重複鍵、路徑及 SHA 驗證。
 - 查詢服務只能由新一次 `refresh` 產生；沒有以磁碟收據直接重新開啟「當前資料」的 API。開始重新核對或關閉會撤銷既有 view，失敗後只有 `diagnose` 的 `unverified_cache_diagnostic_only` 收據。已取得的不可變數值仍是歷史觀測，不能作為遊戲指令授權。`protocol_approved` 永遠 False。
-- Manager 不建立背景執行緒；組裝端應透過既有 WorkerGroup 呼叫同步 refresh，避免阻塞 Tk。取消／close 在下載與階段邊界檢查；UnityPy 單次同步解壓不會被強制中斷，返回後再檢查取消。GUI／舊 Runtime 尚未接上新快照。
+- Manager 不建立背景執行緒；組裝端應透過既有 WorkerGroup 呼叫同步 refresh，避免阻塞 Tk。取消／close 在下載與階段邊界檢查；UnityPy 單次同步解壓不會被強制中斷，返回後再檢查取消。GUI 唯讀頁已接上新快照；地圖／舊 Runtime 尚未遷移。
 
 2026-10-26T19:33:21Z，使用新管線重新向官方核對並完成 1,337 筆場景定義快照；兩份 Manifest 與來源表 SHA 均與先前觀測一致。公開證據見 [快照驗證收據](docs/rebuild/official_snapshot_probe.json)。正式查詢只在當次核對後提供，並未宣稱舊 Runtime 已遷移、所有地圖已補齊或正式遊戲驗收成功。
 
@@ -80,7 +80,7 @@ python -m tools.check_official_resource_snapshot --exe-version <客戶端版本>
 
 工具以有界 Git 查詢確認私人快取不在工作樹；權限／安全目錄狀態不明時拒絕。雲端掛載的空 `.git` 標記不等同有效 Repository。沒有更動其他舊工具的保守路徑規則。此工具需 Git、UnityPy 及官方 HTTPS，輸出不含原始表格或帳號資料。
 
-待續：模型內容與缺口原因、其他功能 Parser 的逐項跨表驗證、GUI／舊 Runtime 消費者遷移與安全引用清理；名稱／模型索引稽核與 P1 生命週期接入已補於下方批次。尚未刪除任何 1262／1275 檔案，也未把這批限定範圍驗收擴張為全功能相容。
+待續：模型內容與缺口原因、其他功能 Parser 的逐項跨表驗證、地圖／舊 Runtime 消費者遷移與安全引用清理；名稱／模型索引稽核與 P1 生命週期接入已補於下方批次。尚未刪除任何 1262／1275 檔案，也未把這批限定範圍驗收擴張為全功能相容。
 
 ## P2 場景引用稽核批次（2026-10-27）
 
@@ -90,10 +90,16 @@ python -m tools.check_official_resource_snapshot --exe-version <客戶端版本>
 
 僅取得必要的 430,359-byte 場景 Bundle 與 3,627,854-byte 文字 Bundle，沒有掃站或下載全套地圖。公開[來源與缺口統計收據](docs/rebuild/official_scene_references_probe.json)不含原始表格／遊戲圖像；原始資料只留私人快取。15 筆名稱缺口不以場景 ID、門名稱或舊版名稱冒充已驗證名稱。
 
-受控命令：在前述驗證工具加上 `--scene-references`。只有資料結構與引用稽核已執行，`geometry_ready` 仍 False、模型內容 UNKNOWN、`protocol_approved` 仍 False；歷史消費者／GUI 尚未遷移，舊檔案未移除。
+受控命令：在前述驗證工具加上 `--scene-references`。只有資料結構與引用稽核已執行，`geometry_ready` 仍 False、模型內容 UNKNOWN、`protocol_approved` 仍 False；歷史業務消費者尚未遷移；GUI 唯讀頁已接入，舊檔案未移除。
 
 ## P1／P2 生命週期與受控工具
 
 `OfficialResourceModule` 已納管 Manager、單一背景工作、私人單槽結果與完成事件背壓；初始化不連網。呼叫端只使用 READY／RUNNING 公開 API。`cancel` 或重新排程會立即撤銷舊查詢；停止先關閉傳輸再有界等待，超時標 FAILED。沒有事件回呼直接操作 Tk 或遊戲連線。
 
 快照驗證工具透過 Application 組裝這個 Module，擁有者 poll／pump 等待成功，預設整批截止 120 秒、上限 300 秒（`--timeout-seconds`）；先完成生命週期清理再寫報告。2026-10-27T00:20:40Z 此入口再次核對官方，讀得相同 1,337 場景／39,947 文字與缺口統計，正常結束並撤銷 view；[來源收據](docs/rebuild/official_resource_lifecycle_probe.json)不包含原始資料。這不等於 GUI 已整合、網格已驗收或正式服 E2E。
+
+## P2 九項欄位稽核與 GUI（2026-10-27）
+
+2026-10-27T00:55:20Z 再次核對官方：1,337 場景／39,947 文字，尺寸定義 1,337 筆有效；名稱有效 1,322／缺少 15，模型索引有效 1,127／缺少 210。模型內容、圖像、座標轉換、傳點、網格與即時障礙尚未由新管線驗收，全部 UNKNOWN。圖像／導航／傳送完整驗收數均為 0；這是本管線的驗收範圍，不能推論舊版地圖都不存在或不能使用。
+
+[欄位來源收據](docs/rebuild/official_scene_fields_probe.json)只含已驗證來源與統計，不含原始遊戲資料。小地圖「資料」開啟唯讀核對頁，可按已知官方客戶端版本更新，必要 Bundle 由同一管線取得，不需準備 ZIP。未取得版本時輸入留空，不寫死版本。沒有更新登入／協定准入，也不將這些資料直接交給移動或傳送。

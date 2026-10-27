@@ -191,3 +191,15 @@ Aqua 另外使用 32 單位初始邊緣預算容納原生選單列／陰影；Wi
 `4d299b8` 的核心 [40426290882](https://github.com/blesses0603/WLRe_lala/actions/runs/40426290882)、資源 [40426291006](https://github.com/blesses0603/WLRe_lala/actions/runs/40426291006)、完整 [40426297999](https://github.com/blesses0603/WLRe_lala/actions/runs/40426297999) **九個工作全部成功**。完整 suite 均收集 **1,333 項**：Ubuntu 139.864 秒／跳過 2；Windows 341.080 秒／跳過 7；macOS 141.901 秒／跳過 3，另有原生 GUI preflight 8 項通過。兩個大 viewport 情境仍受 runner 螢幕限制，不把 skip 當成已實測；正式服 E2E／EXE 打包未執行。
 
 收尾僅校正架構／契約／來源說明與移植表的過時進度、記錄本批 CI，不更動程式或測試；repository audit／diff check 通過。此文件提交仍保留相同三平台工作及完整 PR 檢查，以 PR #59 Checks 作為最終整合結果，不另以文件修改繞過檢查。
+
+## P2 場景欄位與 GUI 唯讀核對批次
+
+基準 `a39765f` 的核心 [40427048250](https://github.com/blesses0603/WLRe_lala/actions/runs/40427048250)、資源 [40427048180](https://github.com/blesses0603/WLRe_lala/actions/runs/40427048180)、完整 [40427054864](https://github.com/blesses0603/WLRe_lala/actions/runs/40427054864) 九項成功後開始。main 仍為 `2dd6694`，版本 0.6.1。
+
+新增 **22 項**：`test_scene_fields` 11 項、`test_scene_data_window` 8 項、桌面 Host 2 項與模組安全錯誤碼 1 項；原 Manager 28／Module 原有 17 及舊 UI 均保留。包括資料就緒分離、不可變／租約、提交中取消、唯讀 GUI 到真實背景管線、搜尋分頁／固定欄位、來源與錯誤狀態、頁尾可見、遊戲命令佇列不變、關窗持續處理 Tk 回呼及等待所有工作。
+
+曾以 1,354 項通過；收尾文件更新時一度覆寫 README／CHANGELOG，既有 README 稽核測試因此失敗。已從基準完整恢復兩檔，只附加本批內容，原稽核 5 項重驗通過；沒有刪測試或修改期待值。之後完整回歸另觸發 Tcl_AsyncDelete：以獨立場景視窗／未安裝 Root 清理的隔離程序確定重現，退出 -4。視窗改用既有共用 Root 清理，新增隔離回歸，背景 GC 不再接觸原生 Tcl；未把崩潰輪次標通過。
+
+修正後開啟 PYTHONFAULTHANDLER 的完整本地 **1,355 項，95.955 秒，OK，跳過 2 項**（`/tmp/lala-scene-ui-safe-final.log`）。新程式／測試 Ruff、舊 GUI 名稱檢查、compileall、repository audit、diff check 通過；純資源 workflow 命令亦在無 GUI 依賴環境通過。GUI 測試留在完整三平台 suite，純資料／控制器測試加入資源模組 CI，不降低必要 PR 檢查。
+
+受控官方資料於 2026-10-27T00:55:20Z 核對成功，九項欄位統計及來源見 [本批報告](docs/rebuild/P2_SCENE_GUI_REPORT.md)。本機 X11 Tk 未辨識 CJK 字型，中文字形量測為 0；本地截圖不列為完整中文字形視覺驗收。原生跨平台功能 CI、正式服 E2E、EXE 打包及人工視覺驗收分開記錄；後三者未宣稱通過。本批遠端結果以 PR #59 對應提交的核心／資源／完整三平台 Checks 為準。

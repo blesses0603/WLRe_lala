@@ -100,6 +100,21 @@ class App(LoginController, AccountController,
         root.after(1,self.start_version_check)
         root.after(50,self.poll)
 
+    def attach_official_scene_data(self, api):
+        from wlre.features.scene_data.controller import SceneDataController
+        self._official_scene_data = SceneDataController(api)
+        self.home_map.official_data_button.configure(command=self.open_official_scene_data, state='normal')
+        return self._official_scene_data.close
+
+    def poll_official_scene_data(self):
+        self._official_scene_data.tick()
+
+    def open_official_scene_data(self):
+        result = self._version_gate_result or {}
+        remote = result.get('remote') or {}
+        version = remote.get('official_exe_version', '')
+        self._official_scene_data.open(self.root, version if isinstance(version, str) else '')
+
     def assert_ui_thread(self):
         if threading.get_ident()!=self._ui_thread:raise RuntimeError("UI changes must run on the Tk thread")
 

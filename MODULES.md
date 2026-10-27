@@ -90,7 +90,7 @@ WorkerGroup 記錄遊戲連線、版本查詢、Release 查詢／下載背景工
 | OfficialResourceManager | refresh／diagnose／close、context manager | 版本、Manifest、共用下載器、Parser／驗證器／Store；單次 refresh 互斥，無自建執行緒。close 撤銷 view、取消 I/O，呼叫端仍須由 WorkerGroup 等待工作退出 | 整管線、變版／變 hash、取消／關閉、失敗保留舊收據 |
 | OfficialDataService | records／get／scene_reference／reference_summary；同一快照不可變查詢、明確 validated_at | 僅由當次成功 refresh 提供；下一次核對或關閉撤銷。無離線 current、無遊戲封包 API | 不可變、舊 view 撤銷、離線拒絕 |
 
-初次場景快照批次沒有新增事件或背景排程；後續已補名稱／模型索引稽核與資源 Module 的 READY／啟動契約，見下方。GUI 接入、模型內容及其他功能索引仍待逐項驗收；完整功能表的 P3～P6 狀態不因此改為完成。
+初次場景快照批次沒有新增事件或背景排程；後續已補名稱／模型索引稽核與資源 Module 的 READY／啟動契約，見下方。GUI 唯讀頁已接入；地圖業務消費者、模型內容及其他功能索引仍待逐項驗收；完整功能表的 P3～P6 狀態不因此改為完成。
 
 ## P2 場景引用稽核契約
 
@@ -112,6 +112,14 @@ WorkerGroup 記錄遊戲連線、版本查詢、Release 查詢／下載背景工
 | 背壓 | 一個工作／一個結果槽；`poll` 送完成事件時 EventBus 滿載則保留通知，下一 tick 重試，未交付前拒絕新更新，不靜默遺失或無界累積 |
 | 取消／停止 | 立即撤銷舊 view，合作式取消下載；晚到成功不啟用。停止先 close Manager 再有界 join，清理結果與事件參照。超時仍有工作必須 FAILED，不假裝 STOPPED |
 | 錯誤／資料 | 固定錯誤碼，不輸出原始 I/O 例外；失敗只有帶診斷標示的舊收據，不啟用離線資料。current 返回既有不可變 DataService，停止後租約失效 |
-| 測試／使用者 | `test_official_resource_module.py`；命令列 `managed_snapshot` 已組裝 Application。GUI／舊 Runtime 消費者未移植 |
+| 測試／使用者 | `test_official_resource_module.py`；命令列 `managed_snapshot` 已組裝 Application。GUI 唯讀頁已接入；地圖／舊 Runtime 消費者未移植 |
 
-預設停止 join 2 秒，可明確設定至多 30 秒；同步 UnityPy 解壓不能硬式中斷。未能及時退出時回報失敗，不能承諾強制終止；GUI 移植須先非阻塞等待合作式取消，再呼叫核心 stop。
+預設停止 join 2 秒，可明確設定至多 30 秒；同步 UnityPy 解壓不能硬式中斷。未能及時退出時回報失敗，不能承諾強制終止；GUI 已非阻塞等待合作式取消，再呼叫核心 stop。
+
+## P2 場景欄位與 GUI 契約
+
+- `assess_scene_fields`／`SceneAssessment`：九項欄位的狀態、固定理由碼與分離的可讀名稱／地圖／導航就緒狀態。缺少引用身分或歧義拒絕，虛擬零尺寸保留為 MISSING，不刪場景；所有未接入來源保持 UNKNOWN，傳送一律未核准。
+- `OfficialDataService.scene_assessments()`／`scene_field_summary()`：同一快照不可變逐場景 DTO 與統計；refresh／cancel／close 後不可繼續查詢。來源收據包含同份統計，不另建人工資料庫。
+- `features/scene_data/controller`：只經公開資源 API 更新／取消／查詢；窗口關閉釋放引用，不持有遊戲狀態。`window` 提供版本輸入、來源版本與核對時間、搜尋／100 筆分頁、鎖定表格與欄位詳情。沒有獨立 timer、Thread、網路或遊戲指令。獨立開啟也會安裝共用 Root 資源清理，原生參照由 UI 擁有者釋放。
+- DesktopHost 將 official_resources 宣告為桌面相依；唯一 pump 納管新資料與舊 GUI，關閉等待兩群工作。Manager.close／revoke 不等待磁碟提交；提交結束後先換租約再查取消，避免晚到結果啟用。不可中斷的原子提交可能留下完整診斷收據，但不提供當前查詢。
+- 測試：`test_scene_fields`、`test_scene_data_window`、`test_desktop_application_host`，另保留 Manager／Module 全部回歸。

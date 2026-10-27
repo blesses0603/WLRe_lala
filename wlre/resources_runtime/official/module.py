@@ -47,6 +47,13 @@ def _refresh(manager, exe_version, scope, requirements, cancel, results, result_
         service = manager.refresh(exe_version, scope=scope, requirements=requirements,
                                   cancel_event=cancel)
         outcome = _Outcome('current', 'official_scope_validated', service)
+    except ResourceRefreshError as exc:
+        reviewed = {'official_resource_gaps', 'official_resource_incompatible',
+                    'official_resource_extract_failed', 'official_versions_changed_during_refresh',
+                    'official_manifest_changed_during_refresh', 'official_bundle_cache_changed',
+                    'official_manifest_cache_changed'}
+        code = str(exc) if str(exc) in reviewed else 'official_resource_refresh_failed'
+        outcome = _Outcome('failed', code)
     except InterruptedError:
         outcome = _Outcome('cancelled', 'official_refresh_cancelled')
     except Exception:  # noqa: BLE001 -- 外部 I/O 邊界不洩漏憑證／原始例外，結果交擁有者處理。

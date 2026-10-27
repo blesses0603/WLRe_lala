@@ -96,6 +96,7 @@ def main(argv=None):
                 'acceptance_scope': ('scene_reference_audit_only' if args.scene_references
                                      else 'scene_definitions_only'),
                 'references': service.reference_summary(),
+                'scene_fields': service.scene_field_summary(),
                 'protocol_approved': service.protocol_approved,
                 'live_game_e2e': 'not_executed',
                 'legacy_consumers_migrated': False,

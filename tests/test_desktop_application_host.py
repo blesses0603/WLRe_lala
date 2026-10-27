@@ -103,6 +103,47 @@ class DesktopHostTests(unittest.TestCase):
             worker.join(2)
         self.assertFalse(worker.is_alive())
 
+
+    def test_resource_worker_close_keeps_tk_responsive_and_releases_all_workers(self):
+        app, entered, release = self.host.module.app, Event(), Event()
+
+        def waiting(*args, cancel_event=None, **kwargs):
+            entered.set()
+            cancel_event.wait(3)
+            release.wait(3)
+            raise InterruptedError()
+
+        with patch.object(self.host.resources._manager, 'refresh', side_effect=waiting):
+            from wlre.resources_runtime.official.contracts import SCENE_DEFINITIONS
+            self.host.resources.api.refresh('2.0.0', scope='scenes', requirements=(SCENE_DEFINITIONS,))
+            try:
+                self.assertTrue(entered.wait(2))
+                app.close()
+                self.assertEqual(self.host.core.state, Lifecycle.RUNNING)
+                self.assertEqual(self.host.resources.api.status().phase, 'cancel_requested')
+                heartbeat = tk.BooleanVar(self.root, value=False)
+                self.root.after(0, lambda: heartbeat.set(True))
+                self.root.wait_variable(heartbeat)
+                self.assertTrue(heartbeat.get())
+            finally:
+                release.set()
+            # root 會在 shutdown 時銷毀；改以既有工作群有界等待後由 host 收尾。
+            deadline = time.monotonic() + 2
+            while self.host.resources.api.status().workers and time.monotonic() < deadline:
+                Event().wait(0.002)
+            self.host._wait_for_workers()
+            self.assertEqual(self.host.core.state, Lifecycle.STOPPED)
+            self.assertEqual(self.host.resources._workers.pending(), 0)
+
+    def test_scene_data_entry_is_attached_to_public_resource_api(self):
+        app = self.host.module.app
+        self.assertEqual(str(app.home_map.official_data_button['state']), 'normal')
+        app.open_official_scene_data()
+        self.root.update_idletasks()
+        self.assertTrue(app._official_scene_data.window.winfo_exists())
+        self.assertEqual(app._official_scene_data.window.tree.get_children(), ())
+        self.assertEqual(self.host.resources.api.status().phase, 'idle')
+
     def test_event_handler_can_close_desktop_without_scheduling_after_destroy(self):
         @dataclass(frozen=True)
         class CloseRequested:

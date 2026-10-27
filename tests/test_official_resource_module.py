@@ -329,3 +329,19 @@ class SnapshotLifecycleToolTests(unittest.TestCase):
             self.assertEqual(main(['--exe-version', '2.0.0', '--cache-root', root,
                                    '--report', str(report)]), 2)
             self.assertFalse(report.exists())
+
+
+class ResourceFailureCodeTests(unittest.TestCase):
+    def test_only_reviewed_codes_reach_owner_status(self):
+        from wlre.resources_runtime.official.module import _refresh
+        for incoming, expected in (
+            ('official_versions_changed_during_refresh', 'official_versions_changed_during_refresh'),
+            ('private-token-example', 'official_resource_refresh_failed')):
+            with self.subTest(incoming=incoming):
+                from queue import Queue
+                from threading import Lock
+                manager = unittest.mock.Mock()
+                manager.refresh.side_effect = ResourceRefreshError(incoming)
+                results = Queue(1)
+                _refresh(manager, '2.0.0', 'scenes', (SCENE_DEFINITIONS,), Event(), results, Lock(), Event())
+                self.assertEqual(results.get_nowait().code, expected)

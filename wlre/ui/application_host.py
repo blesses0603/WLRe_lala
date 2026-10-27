@@ -5,6 +5,8 @@ from dataclasses import dataclass
 
 from wlre.core.application import Application, LifecycleError, ManagedModule, ModuleSpec
 from wlre.core.application.workers import WorkerGroup
+from wlre.resources_runtime.official.module import OfficialResourceModule
+from wlre.storage.paths import data_root
 
 
 @dataclass(frozen=True)
@@ -17,7 +19,8 @@ class DesktopStatus:
 class DesktopModule(ManagedModule):
     def __init__(self, root, app_factory, request_close):
         super().__init__(ModuleSpec(
-            'legacy_desktop', '保留現有畫面與功能，轉接新核心的生命週期', ('status',)), api=self)
+            'legacy_desktop', '保留現有畫面與功能，轉接新核心的生命週期', ('status',),
+            dependencies=('official_resources',)), api=self)
         self.root = root
         self._app_factory = app_factory
         self._request_close = request_close
@@ -33,6 +36,12 @@ class DesktopModule(ManagedModule):
         self.own(self.tasks.close, timeout=0.05)
         self.app = self._app_factory(self.root, tasks=self.tasks)
         self.app._request_shutdown = self._request_close
+        attach = getattr(self.app, 'attach_official_scene_data', None)
+        if callable(attach):
+            cleanup = attach(context.dependencies['official_resources'])
+            if not callable(cleanup):
+                raise TypeError('scene_data_cleanup_required')
+            self.own(cleanup)
 
     def _destroy(self):
         try:
@@ -52,7 +61,8 @@ class DesktopModule(ManagedModule):
 
 
 class DesktopHost:
-    def __init__(self, root, *, app_factory=None, close_timeout=15, clock=time.monotonic):
+    def __init__(self, root, *, app_factory=None, close_timeout=15, clock=time.monotonic,
+                 resource_module=None):
         if not 0 < close_timeout <= 30:
             raise ValueError('invalid_desktop_close_timeout')
         if app_factory is None:
@@ -66,7 +76,9 @@ class DesktopHost:
         self._pump_job = None
         self._close_job = None
         self.module = DesktopModule(root, app_factory, self.request_close)
-        self.core = Application([self.module])
+        self.resources = (resource_module if resource_module is not None else
+                          OfficialResourceModule(data_root() / 'official_resources_v1'))
+        self.core = Application([self.resources, self.module])
 
     def start(self):
         self.core.initialize()
@@ -76,6 +88,11 @@ class DesktopHost:
     def _pump(self):
         self._pump_job = None
         if not self._closing:
+            self.resources.api.poll()
+            app = self.module.app
+            poll = getattr(app, 'poll_official_scene_data', None)
+            if callable(poll):
+                poll()
             self.core.pump()
             if not self._closing:
                 self._pump_job = self.root.after(20, self._pump)
@@ -106,12 +123,14 @@ class DesktopHost:
             if isinstance(child, tk.Toplevel):
                 child.withdraw()
         self.root.withdraw()
+        self.resources.api.cancel()
         self.module.tasks.request_stop_all()
         self._wait_for_workers()
 
     def _wait_for_workers(self):
         self._close_job = None
-        if self.module.tasks.pending() and self._clock() < self._deadline:
+        pending = self.module.tasks.pending() + self.resources.api.status().workers
+        if pending and self._clock() < self._deadline:
             self._close_job = self.root.after(20, self._wait_for_workers)
             return
         try:

@@ -71,16 +71,22 @@ flowchart LR
     CAS --> Query[不可變 OfficialDataService]
 ```
 
-上述路徑已實作場景定義範圍，不是所有功能的資料快照。原始來源與未解讀位移保留於私人快取；舊 API 經相容入口使用相同 Parser。共享層暫時重用 `services/official_manifest_sync`／`official_incremental_sync` 的已測規劃與驗證，沒有建立另一套下載或遊戲資料庫。GUI、固定版本 Runtime 及其他功能尚未移植；不讓共享核心反向依賴 GUI，也不刪除舊資源。
+上述路徑已實作場景定義範圍，不是所有功能的資料快照。原始來源與未解讀位移保留於私人快取；舊 API 經相容入口使用相同 Parser。共享層暫時重用 `services/official_manifest_sync`／`official_incremental_sync` 的已測規劃與驗證，沒有建立另一套下載或遊戲資料庫。GUI 唯讀頁已接入；固定版本 Runtime、地圖繪圖及其他業務功能尚未移植；不讓共享核心反向依賴 GUI，也不刪除舊資源。
 
 ## P2 場景名稱與模型引用核對
 
 同次已驗證 DataPackage 需求可包含場景與文字表；`SourceAdapter` 將完整路徑、Parser、schema、來源收據集中管理，保留既有場景 API。名稱只透過 `name_id` 連結文字；模型只透過 `model_id` 連結 MainPackage 的已觀測官方場景路徑及 address，不能拿 `scene_id` 代替。
 
-`SceneReference` 分開回報名稱、模型 Manifest 身分及模型內容狀態。跨表缺口保留為 MISSING／INVALID／UNSUPPORTED，沒有猜名稱、下載所有場景或核准導航；模型內容仍 UNKNOWN。這是附帶缺口的唯讀稽核範圍，不能當作「所有引用完整」的正式遊戲資料。GUI／遊戲封包消費者尚未切換。
+`SceneReference` 分開回報名稱、模型 Manifest 身分及模型內容狀態。跨表缺口保留為 MISSING／INVALID／UNSUPPORTED，沒有猜名稱、下載所有場景或核准導航；模型內容仍 UNKNOWN。這是附帶缺口的唯讀稽核範圍，不能當作「所有引用完整」的正式遊戲資料。GUI 唯讀消費者已接入；遊戲封包消費者尚未切換。
 
 ## P1／P2 官方資源生命週期接入
 
 `OfficialResourceModule` 透過既有 `ManagedModule`／`WorkerGroup` 納管同步 Manager，不新增第二套下載器或事件系統。初始化／啟動不自動連網；擁有者明確 refresh 後，唯一背景工作更新資源，結果先進私人單槽 mailbox。擁有者 tick 呼叫 `api.poll()` 接收結果，再由 `Application.pump()` 分派小型完成事件，完整表格不進 EventBus。
 
-快照驗證命令列已使用這個真實組裝入口；context 結束撤銷查詢、停止傳輸、等待工作，全部成功才寫驗證報告。桌面 host 尚未接入本資源 Module，沒有將背景更新塞進 Tk 主執行緒；後續 GUI 需以既有 tick／非阻塞關閉流程接入。
+快照驗證命令列已使用這個真實組裝入口；context 結束撤銷查詢、停止傳輸、等待工作，全部成功才寫驗證報告。桌面 host 已接入資源 Module 與 GUI 唯讀頁，背景更新不在 Tk 主執行緒執行；沿用既有 tick 與非阻塞關閉流程，地圖與遊戲業務消費者仍待移植。
+
+## P2 場景欄位需求與唯讀消費者
+
+`scene_fields` 定義名稱、模型索引、尺寸、模型內容、圖像、座標轉換、傳點目的地、官方網格與即時障礙九項需求。只採本次已驗證來源能證明的值；UNKNOWN 不等於有效，正尺寸不等於座標轉換完成。結果為不可變 DTO，整批統計寫入同份收據，查詢沿用撤銷租約。
+
+`features/scene_data` 擁有純控制器與 Tk 視窗，僅取得資源 Module 公開 API，沒有遊戲命令介面。DesktopModule 明確依賴 official_resources；Host 輪詢結果，UI 只在狀態／快照變更時重繪，每頁至多 100 筆。失敗或取消立即清空目前資料，保留正確版本／核對時間語意；登入驗證、舊地圖與導航來源均未切換。

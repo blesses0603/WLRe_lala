@@ -19,6 +19,10 @@ from wlre.resources_runtime.official.references import (
     audit_scene_references,
     reference_summary,
 )
+from wlre.resources_runtime.official.scene_fields import (
+    assess_scene_fields,
+    scene_field_summary,
+)
 from wlre.resources_runtime.official.snapshots import SnapshotStore
 from wlre.resources_runtime.official.source import ROOT
 from wlre.resources_runtime.official.versions import VersionDetector
@@ -51,6 +55,7 @@ class OfficialDataService:
     _indexes: object = field(repr=False)
     _revoked: Event = field(repr=False, compare=False)
     _references: tuple = field(default=(), repr=False)
+    _assessments: tuple = field(default=(), repr=False)
 
     def _check(self):
         if self._revoked.is_set():
@@ -75,6 +80,14 @@ class OfficialDataService:
         self._check()
         return reference_summary(self._references)
 
+    def scene_assessments(self):
+        self._check()
+        return self._assessments
+
+    def scene_field_summary(self):
+        self._check()
+        return scene_field_summary(self._assessments)
+
     @property
     def protocol_approved(self):
         # 靜態資料解析成功永遠不等於遊戲封包相容性核准。
@@ -91,7 +104,6 @@ class OfficialResourceManager:
         self._opener = opener
         self._closed = Event()
         self._refresh_lock = Lock()
-        self._publication_lock = Lock()
         self._lease = Event()
 
     def __enter__(self):
@@ -102,15 +114,14 @@ class OfficialResourceManager:
         self.close()
 
     def close(self):
-        with self._publication_lock:
-            self._closed.set()
-            self._lease.set()
-            self._transport.close()
+        # 不等待磁碟提交鎖；UI 可立即取消，發布端必須再次檢查關閉。
+        self._closed.set()
+        self._lease.set()
+        self._transport.close()
 
     def revoke_views(self):
         """停止或重新排程時立即撤銷查詢；不永久關閉傳輸。"""
-        with self._publication_lock:
-            self._lease.set()
+        self._lease.set()
 
     def diagnose(self, scope):
         return self._store.diagnose(scope)
@@ -199,6 +210,8 @@ class OfficialResourceManager:
         text_table = next((table for table in tables if isinstance(table, TextTable)), None)
         references = (() if scene_table is None else
                       audit_scene_references(scene_table, text_table, manifests['MainPackage']))
+        assessments = (() if scene_table is None else
+                       assess_scene_fields(scene_table.records, references))
         # 驗證與下載可能跨過官方更新；版本映射及兩套 hash 全部再核對。
         after = detector.observe(exe_version, cancel_event=cancellation)
         if _version_identity(after) != _version_identity(versions):
@@ -236,15 +249,18 @@ class OfficialResourceManager:
             'resource_map_blob': self._store.put(versions.resource_map_raw),
             'manifests': manifest_receipts, 'bundles': bundle_receipts, 'sources': source_receipts,
             'references': reference_summary(references),
+            'scene_fields': scene_field_summary(assessments),
             'acceptance': 'validated_requested_scope', 'protocol_approved': False,
             'previous_snapshot': previous,
         }
-        with self._publication_lock:
-            check_cancelled(cancellation)
-            snapshot_id = self._store.commit(scope, document, expected_current=previous)
-            self._lease = Event()
-            return OfficialDataService(snapshot_id, scope, versions, checked_at,
-                                       MappingProxyType(indexes), self._lease, references)
+        # 整次 refresh 已由 _refresh_lock 串行化，磁碟提交另有跨程序 CAS。
+        check_cancelled(cancellation)
+        snapshot_id = self._store.commit(scope, document, expected_current=previous)
+        self._lease = Event()
+        # close 先設關閉旗標再撤銷租約：任何交錯都不能返回可用的新 view。
+        check_cancelled(cancellation)
+        return OfficialDataService(snapshot_id, scope, versions, checked_at,
+                                   MappingProxyType(indexes), self._lease, references, assessments)
 
 
 def _version_identity(versions):

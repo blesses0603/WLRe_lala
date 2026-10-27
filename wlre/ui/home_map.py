@@ -82,6 +82,8 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
         header.grid(row=0,column=0,sticky='ew')
         self.columnconfigure(0,weight=1)
         self.rowconfigure(1,weight=1)
+        self.official_data_button=ttk.Button(header,text='資料',width=5,state='disabled')
+        self.official_data_button.pack(side='right',padx=(4,0))
         self.map_title=tk.StringVar(value='小地圖｜等待角色地圖')
         ttk.Label(header,textvariable=self.map_title,style='Heading.TLabel',wraplength=350).pack(side='left',fill='x',expand=True)
         self.portal_status=tk.StringVar(value='單擊選取傳點，按換圖按鈕或雙擊才送出；不會自動走路。')
