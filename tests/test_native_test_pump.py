@@ -10,6 +10,15 @@ from _tk_native_pump import assert_normal_display, create_root, pump_native_even
 @unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt' or sys.platform == 'darwin',
                      'Requires native Tk or Xvfb')
 class NativeTestPumpTests(unittest.TestCase):
+    def test_plain_root_releases_variables_and_cancels_pending_work(self):
+        root = create_root()
+        variable = tk.StringVar(root, value='owned fixture')
+        fired = []
+        root.after(0, lambda: fired.append(True))
+        root.destroy()
+        self.assertIsNone(variable._tk)
+        self.assertEqual(fired, [])
+
     def test_real_callbacks_execute_and_private_quit_timer_is_released(self):
         root = create_root()
         self.addCleanup(root.destroy)

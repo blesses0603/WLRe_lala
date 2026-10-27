@@ -135,6 +135,23 @@ class DesktopHostTests(unittest.TestCase):
             self.assertEqual(self.host.core.state, Lifecycle.STOPPED)
             self.assertEqual(self.host.resources._workers.pending(), 0)
 
+    def test_finish_quiesces_callbacks_before_disposing_child_windows(self):
+        app = self.host.module.app
+        app.open_official_scene_data()
+        window = app._official_scene_data.window
+        original = window.destroy
+        observed = []
+
+        def checked_destroy():
+            observed.append((app._closing, app.stop_event.is_set(),
+                             bool(self.root.tk.call('after', 'info'))))
+            original()
+
+        with patch.object(window, 'destroy', side_effect=checked_destroy):
+            self.host.finish()
+        self.assertEqual(observed, [(True, True, False)])
+        self.assertEqual(self.host.core.state, Lifecycle.STOPPED)
+
     def test_scene_data_entry_is_attached_to_public_resource_api(self):
         app = self.host.module.app
         self.assertEqual(str(app.home_map.official_data_button['state']), 'normal')

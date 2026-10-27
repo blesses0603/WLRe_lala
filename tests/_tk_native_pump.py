@@ -35,7 +35,11 @@ class NativeTestRoot(tk.Tk):
 
 
 def create_root():
-    return NativeTestRoot()
+    # 最小測試視窗也必須遵循正式桌面的擁有者清理，不能將 Tcl 留給背景 GC。
+    from wlre.ui.resource_lifetime import install_root_lifetime
+    root = NativeTestRoot()
+    install_root_lifetime(root)
+    return root
 
 
 def assert_normal_display(testcase, window):

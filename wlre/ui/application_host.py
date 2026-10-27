@@ -43,6 +43,18 @@ class DesktopModule(ManagedModule):
                 raise TypeError('scene_data_cleanup_required')
             self.own(cleanup)
 
+    def on_stop(self):
+        # 在任何子視窗 destroy 前先禁止回呼／新工作；Native destroy 可能重入 Tk。
+        if self.app is not None:
+            self.app._closing = True
+            self.app.stop_event.set()
+        self.tasks.request_stop_all()
+        try:
+            for job in self.root.tk.call('after', 'info'):
+                self.root.tk.call('after', 'cancel', job)
+        except tk.TclError:
+            pass  # Root 已由外部關閉，仍由登記的清理完成其他資源釋放。
+
     def _destroy(self):
         try:
             exists = self.root.winfo_exists()

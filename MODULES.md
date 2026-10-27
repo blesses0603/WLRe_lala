@@ -120,6 +120,6 @@ WorkerGroup 記錄遊戲連線、版本查詢、Release 查詢／下載背景工
 
 - `assess_scene_fields`／`SceneAssessment`：九項欄位的狀態、固定理由碼與分離的可讀名稱／地圖／導航就緒狀態。缺少引用身分或歧義拒絕，虛擬零尺寸保留為 MISSING，不刪場景；所有未接入來源保持 UNKNOWN，傳送一律未核准。
 - `OfficialDataService.scene_assessments()`／`scene_field_summary()`：同一快照不可變逐場景 DTO 與統計；refresh／cancel／close 後不可繼續查詢。來源收據包含同份統計，不另建人工資料庫。
-- `features/scene_data/controller`：只經公開資源 API 更新／取消／查詢；窗口關閉釋放引用，不持有遊戲狀態。`window` 提供版本輸入、來源版本與核對時間、搜尋／100 筆分頁、鎖定表格與欄位詳情。沒有獨立 timer、Thread、網路或遊戲指令。獨立開啟也會安裝共用 Root 資源清理，原生參照由 UI 擁有者釋放。
+- `features/scene_data/controller`：只經公開資源 API 更新／取消／查詢；窗口關閉釋放引用，不持有遊戲狀態。`window` 提供版本輸入、來源版本與核對時間、搜尋／100 筆分頁、鎖定表格與欄位詳情。沒有獨立 timer、Thread、網路或遊戲指令。獨立開啟也會安裝共用 Root 資源清理，原生參照由 UI 擁有者釋放。Root 關閉前先取消 timer；DesktopModule 在銷毀任何子視窗前先停止 App 回呼與新工作，防止原生銷毀重入事件迴圈。
 - DesktopHost 將 official_resources 宣告為桌面相依；唯一 pump 納管新資料與舊 GUI，關閉等待兩群工作。Manager.close／revoke 不等待磁碟提交；提交結束後先換租約再查取消，避免晚到結果啟用。不可中斷的原子提交可能留下完整診斷收據，但不提供當前查詢。
 - 測試：`test_scene_fields`、`test_scene_data_window`、`test_desktop_application_host`，另保留 Manager／Module 全部回歸。

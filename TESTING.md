@@ -203,3 +203,11 @@ Aqua 另外使用 32 單位初始邊緣預算容納原生選單列／陰影；Wi
 修正後開啟 PYTHONFAULTHANDLER 的完整本地 **1,355 項，95.955 秒，OK，跳過 2 項**（`/tmp/lala-scene-ui-safe-final.log`）。新程式／測試 Ruff、舊 GUI 名稱檢查、compileall、repository audit、diff check 通過；純資源 workflow 命令亦在無 GUI 依賴環境通過。GUI 測試留在完整三平台 suite，純資料／控制器測試加入資源模組 CI，不降低必要 PR 檢查。
 
 受控官方資料於 2026-10-27T00:55:20Z 核對成功，九項欄位統計及來源見 [本批報告](docs/rebuild/P2_SCENE_GUI_REPORT.md)。本機 X11 Tk 未辨識 CJK 字型，中文字形量測為 0；本地截圖不列為完整中文字形視覺驗收。原生跨平台功能 CI、正式服 E2E、EXE 打包及人工視覺驗收分開記錄；後三者未宣稱通過。本批遠端結果以 PR #59 對應提交的核心／資源／完整三平台 Checks 為準。
+
+### macOS 原生關閉順序與最小測試 Root 修正
+
+`43f3874` 的核心 [40431660615](https://github.com/blesses0603/WLRe_lala/actions/runs/40431660615)、資源 [40431660579](https://github.com/blesses0603/WLRe_lala/actions/runs/40431660579) 六項成功，完整 [40431664790](https://github.com/blesses0603/WLRe_lala/actions/runs/40431664790) 的 Ubuntu／Windows 成功，macOS 仍在背景 GC 時 Tcl_AsyncDelete 崩潰，未標通過。堆疊還顯示版本查詢工作，不能僅把失敗當作資源測試超時處理。
+
+補強三處：DesktopModule.on_stop 先禁止 App 回呼／新工作、取消 timer，再清理子視窗；共用 Root 清理在原生 destroy 前取消 timer，避免 Aqua 重入期間啟動延後的版本查詢；最小 `create_root` 測試視窗也必須安裝與正式桌面相同的擁有者清理，不能只靠有沒有套用主題。沒有關閉背景 GC、排除平台、刪除測試或換成假 Tk。
+
+新增關閉順序與最小 Root 兩項（本批累計新增 **24 項**）。桌面 7 項、原生迴圈 5 項、既有原生資源生命週期 3 項均通過。開啟 PYTHONFAULTHANDLER 的最終本地完整 **1,357 項，94.278 秒，OK，跳過 2 項**（`/tmp/lala-scene-ui-native-safe.log`）；Ruff、repository audit／diff check 通過。修正提交仍須等待對應的完整三平台 CI，不能以本地成功或其他平台成功取代 macOS 驗收。

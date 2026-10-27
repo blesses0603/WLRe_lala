@@ -79,6 +79,9 @@ def install_root_lifetime(root):
         if get_ident() != owner:
             raise RuntimeError('Tk root must be destroyed by its owning thread')
         try:
+            # Aqua 銷毀原生視窗可能重入事件迴圈，先取消 timer，避免關閉途中啟動新工作。
+            for job in interpreter.call('after', 'info'):
+                interpreter.call('after', 'cancel', job)
             return original()
         finally:
             # 不讓 root 的覆寫方法繼續保留原生 interpreter 於 closure。
