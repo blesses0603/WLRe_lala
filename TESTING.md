@@ -175,3 +175,13 @@ Aqua 另外使用 32 單位初始邊緣預算容納原生選單列／陰影；Wi
 完整本地 **1,316 項，91.833 秒，OK，跳過 2 項**（`/tmp/lala-scene-references-full.log`）；後續只調整既有場景 Finding 代碼的相容性，相關 41 項重驗通過。官方受控請求另外核對 1,337 場景／39,947 文字，收據與缺口見 [本批報告](docs/rebuild/P2_SCENE_REFERENCES_REPORT.md)，不當作實機遊戲驗收。已將引用測試加入資源三平台模組 CI；舊名稱 UI 測試保留於完整 CI，保留完整三平台 PR 檢查；常規 CI 不下載正式 Bundle。本批遠端結果需等提交後，不能以基準成功取代。
 
 資源模組首次 CI `40425151470`：新增引用 13 項與原 Manager 28 項均通過，但額外加入的舊名稱測試匯入 HomeMap／Pillow，與純標準庫資源 job 的環境契約不符；Ubuntu／macOS 缺 Pillow 而失敗，未標通過。已將該 UI 測試保留在具備 UI 依賴的既有完整三平台 suite，資源 job 仍跑新增引用及舊文字 API 測試。沒有刪除測試、增加 skip 或降低必要 PR 檢查；修正另提交並重驗。
+
+## P1／P2 官方資源 Module 生命週期批次
+
+前批修正提交 `78ead6d` 的核心 [40425298992](https://github.com/blesses0603/WLRe_lala/actions/runs/40425298992)、資源 [40425298746](https://github.com/blesses0603/WLRe_lala/actions/runs/40425298746)、完整 [40425305656](https://github.com/blesses0603/WLRe_lala/actions/runs/40425305656) 三平台九項均成功後，繼續本批提交。沒有把首次失敗或被新提交取消的工作標通過。
+
+新增 `test_official_resource_module.py` **17 項通過**，使用真實 Thread 與合成傳輸：核心 READY／owner、初始化不連網、結果／完成事件背壓、取消晚到成功、舊 view 撤銷、失敗診斷與恢復、合作式停止／未退出 FAILED、停止後不再寫入、啟動失敗、工具期限及清理失敗不發布報告。全部資源 workflow 命令於無 Pillow 環境通過；新模組、工具、Parser 及測試 Ruff、compileall、repository audit、diff check 通過。
+
+完整本地先以 **1,332 項，91.034 秒，OK，跳過 2 項** 通過；新增工具清理失敗回歸後，最終完整 **1,333 項，88.239 秒，OK，跳過 2 項**（`/tmp/lala-resource-lifecycle-final.log`）。之後再強化停止與結果寫入的互斥邊界，相關 17 項重驗成功，未更動 GUI／遊戲協定。最終遠端 CI 仍需對應本批提交，不以此本地或前批結果取代。
+
+2026-10-27T00:20:40Z，已透過 Application／OfficialResourceModule 真實核對官方場景與文字快照並成功清理，來源收據見 [生命週期批次報告](docs/rebuild/P2_RESOURCE_MODULE_REPORT.md)。GUI／舊 Runtime 尚未移植；同步解壓不能硬式中斷，停止超時須失敗。正式服 E2E／原生 EXE 打包仍未執行。

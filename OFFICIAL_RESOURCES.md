@@ -91,3 +91,9 @@ python -m tools.check_official_resource_snapshot --exe-version <客戶端版本>
 僅取得必要的 430,359-byte 場景 Bundle 與 3,627,854-byte 文字 Bundle，沒有掃站或下載全套地圖。公開[來源與缺口統計收據](docs/rebuild/official_scene_references_probe.json)不含原始表格／遊戲圖像；原始資料只留私人快取。15 筆名稱缺口不以場景 ID、門名稱或舊版名稱冒充已驗證名稱。
 
 受控命令：在前述驗證工具加上 `--scene-references`。只有資料結構與引用稽核已執行，`geometry_ready` 仍 False、模型內容 UNKNOWN、`protocol_approved` 仍 False；歷史消費者／GUI 尚未遷移，舊檔案未移除。
+
+## P1／P2 生命週期與受控工具
+
+`OfficialResourceModule` 已納管 Manager、單一背景工作、私人單槽結果與完成事件背壓；初始化不連網。呼叫端只使用 READY／RUNNING 公開 API。`cancel` 或重新排程會立即撤銷舊查詢；停止先關閉傳輸再有界等待，超時標 FAILED。沒有事件回呼直接操作 Tk 或遊戲連線。
+
+快照驗證工具透過 Application 組裝這個 Module，擁有者 poll／pump 等待成功，預設整批截止 120 秒、上限 300 秒（`--timeout-seconds`）；先完成生命週期清理再寫報告。2026-10-27T00:20:40Z 此入口再次核對官方，讀得相同 1,337 場景／39,947 文字與缺口統計，正常結束並撤銷 view；[來源收據](docs/rebuild/official_resource_lifecycle_probe.json)不包含原始資料。這不等於 GUI 已整合、網格已驗收或正式服 E2E。

@@ -12,7 +12,7 @@
 
 真實官方資料於 2026-10-27T00:12:30Z 核對：1,337 場景、39,947 文字；有效名稱 1,322／缺少 15；模型 Manifest 身分有效 1,127／缺少 210，涉及 202 個缺少模型 ID。只讀必要兩個 Bundle，版本／hash 前後一致；見 [來源收據](official_scene_references_probe.json)。不是遊戲伺服器 E2E。
 
-【CI 狀態】提交前尚未執行本批遠端 CI，提交後以 PR #59 Checks 及 TESTING.md 的對應提交紀錄為準。上一提交九個成功工作不當作本批通過。
+【CI 狀態】`9964fb0` 首次資源 CI 暴露額外 UI 測試缺少 Pillow，已以 `78ead6d` 修正環境分工。修正提交的核心 [40425298992](https://github.com/blesses0603/WLRe_lala/actions/runs/40425298992)、資源 [40425298746](https://github.com/blesses0603/WLRe_lala/actions/runs/40425298746)、完整 [40425305656](https://github.com/blesses0603/WLRe_lala/actions/runs/40425305656) 三平台九項均成功，未降低既有檢查。
 
 【尚未完成】模型內容／官方掃描網格、缺少名稱及模型的來源原因、資源 Module 生命週期、GUI／舊 Runtime 遷移、其他 Parser、P3～P7、正式服 E2E 與 EXE 打包。
 

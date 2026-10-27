@@ -78,3 +78,9 @@ flowchart LR
 同次已驗證 DataPackage 需求可包含場景與文字表；`SourceAdapter` 將完整路徑、Parser、schema、來源收據集中管理，保留既有場景 API。名稱只透過 `name_id` 連結文字；模型只透過 `model_id` 連結 MainPackage 的已觀測官方場景路徑及 address，不能拿 `scene_id` 代替。
 
 `SceneReference` 分開回報名稱、模型 Manifest 身分及模型內容狀態。跨表缺口保留為 MISSING／INVALID／UNSUPPORTED，沒有猜名稱、下載所有場景或核准導航；模型內容仍 UNKNOWN。這是附帶缺口的唯讀稽核範圍，不能當作「所有引用完整」的正式遊戲資料。GUI／遊戲封包消費者尚未切換。
+
+## P1／P2 官方資源生命週期接入
+
+`OfficialResourceModule` 透過既有 `ManagedModule`／`WorkerGroup` 納管同步 Manager，不新增第二套下載器或事件系統。初始化／啟動不自動連網；擁有者明確 refresh 後，唯一背景工作更新資源，結果先進私人單槽 mailbox。擁有者 tick 呼叫 `api.poll()` 接收結果，再由 `Application.pump()` 分派小型完成事件，完整表格不進 EventBus。
+
+快照驗證命令列已使用這個真實組裝入口；context 結束撤銷查詢、停止傳輸、等待工作，全部成功才寫驗證報告。桌面 host 尚未接入本資源 Module，沒有將背景更新塞進 Tk 主執行緒；後續 GUI 需以既有 tick／非阻塞關閉流程接入。

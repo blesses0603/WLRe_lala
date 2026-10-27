@@ -99,3 +99,19 @@ WorkerGroup 記錄遊戲連線、版本查詢、Release 查詢／下載背景工
 - `official/references.audit_scene_references`：同次場景／文字／MainPackage 索引的唯讀稽核；缺少文字不猜名稱，重複模型 ID、路徑與 address 不一致、缺 Bundle 或加密分別拒絕。模型內容與幾何不在本次驗收範圍。
 - `OfficialDataService.scene_reference(scene_id)`／`reference_summary()`：沿用整份快照租約，refresh／close 後失效；沒有遊戲傳送、繪圖或導航授權。
 - 無新增事件／背景工作／GUI 依賴；完整生命週期模組接入另批執行。測試入口 `test_official_scene_references.py`，常規 CI 使用合成樣本。
+
+## P1／P2 OfficialResourceModule 契約
+
+| 項目 | 已實作行為 |
+|---|---|
+| 職責／依賴 | 官方範圍快照取得與租約／工作清理；依賴既有 ManagedModule、WorkerGroup、EventBus、OfficialResourceManager，不依賴 GUI／Android API |
+| 公開 API | `module.api.refresh(exe_version, scope=..., requirements=(...))`、`poll()`、`status()`、`cancel()`、`current()`、`diagnose(scope)`；只在 READY／RUNNING 且擁有者執行緒可呼叫 |
+| 初始化／啟動 | 登記清理、建立 Manager 與受管工作群；沒有自動 I/O 或啟動資料更新 |
+| 工作狀態 | idle → refreshing → current／failed／cancelled；取消尚未返回的工作為 cancel_requested，不把生命週期 RUNNING 當作資料可用 |
+| 事件 | 不訂閱事件；`ResourceRefreshFinished(job_id, scope, phase, snapshot_id, code)` 只有固定代碼／識別。事件是當時觀測，不能授權遊戲指令，消費者仍須 current 查詢 |
+| 背壓 | 一個工作／一個結果槽；`poll` 送完成事件時 EventBus 滿載則保留通知，下一 tick 重試，未交付前拒絕新更新，不靜默遺失或無界累積 |
+| 取消／停止 | 立即撤銷舊 view，合作式取消下載；晚到成功不啟用。停止先 close Manager 再有界 join，清理結果與事件參照。超時仍有工作必須 FAILED，不假裝 STOPPED |
+| 錯誤／資料 | 固定錯誤碼，不輸出原始 I/O 例外；失敗只有帶診斷標示的舊收據，不啟用離線資料。current 返回既有不可變 DataService，停止後租約失效 |
+| 測試／使用者 | `test_official_resource_module.py`；命令列 `managed_snapshot` 已組裝 Application。GUI／舊 Runtime 消費者未移植 |
+
+預設停止 join 2 秒，可明確設定至多 30 秒；同步 UnityPy 解壓不能硬式中斷。未能及時退出時回報失敗，不能承諾強制終止；GUI 移植須先非阻塞等待合作式取消，再呼叫核心 stop。

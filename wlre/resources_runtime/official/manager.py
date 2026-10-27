@@ -107,6 +107,11 @@ class OfficialResourceManager:
             self._lease.set()
             self._transport.close()
 
+    def revoke_views(self):
+        """停止或重新排程時立即撤銷查詢；不永久關閉傳輸。"""
+        with self._publication_lock:
+            self._lease.set()
+
     def diagnose(self, scope):
         return self._store.diagnose(scope)
 
