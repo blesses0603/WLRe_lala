@@ -211,3 +211,11 @@ Aqua 另外使用 32 單位初始邊緣預算容納原生選單列／陰影；Wi
 補強三處：DesktopModule.on_stop 先禁止 App 回呼／新工作、取消 timer，再清理子視窗；共用 Root 清理在原生 destroy 前取消 timer，避免 Aqua 重入期間啟動延後的版本查詢；最小 `create_root` 測試視窗也必須安裝與正式桌面相同的擁有者清理，不能只靠有沒有套用主題。沒有關閉背景 GC、排除平台、刪除測試或換成假 Tk。
 
 新增關閉順序與最小 Root 兩項（本批累計新增 **24 項**）。桌面 7 項、原生迴圈 5 項、既有原生資源生命週期 3 項均通過。開啟 PYTHONFAULTHANDLER 的最終本地完整 **1,357 項，94.278 秒，OK，跳過 2 項**（`/tmp/lala-scene-ui-native-safe.log`）；Ruff、repository audit／diff check 通過。修正提交仍須等待對應的完整三平台 CI，不能以本地成功或其他平台成功取代 macOS 驗收。
+
+### 保存 destroy 回呼的原生參照清理
+
+`3037929` 的核心 [40432885053](https://github.com/blesses0603/WLRe_lala/actions/runs/40432885053)、資源 [40432885045](https://github.com/blesses0603/WLRe_lala/actions/runs/40432885045)、完整 [40432890036](https://github.com/blesses0603/WLRe_lala/actions/runs/40432890036) 九項全部成功，包含 macOS 原生完整檢查。
+
+邊界檢查另在隔離程序重現：呼叫端保存已執行的 `root.destroy` 回呼，閉包仍保留原生 interpreter；將該回呼放在循環物件後由背景 GC 回收，退出 -4／Tcl_AsyncDelete。Root 清理完成後必須明確清空 interpreter／原始方法閉包參照，而不只移除 root 的覆寫屬性；保存的回呼在擁有者重複執行亦安全。新增獨立隔離回歸，本批累計 **25 項**，沒有關閉正式或整套測試的 GC。
+
+原生資源生命週期 4 項通過；最終本地完整 **1,358 項，94.583 秒，OK，跳過 2 項**（`/tmp/lala-scene-ui-callback-safe.log`），Ruff／repository audit／diff check 通過。本修正仍須執行同樣三平台 CI，最終結果以 PR #59 對應提交 Checks 為準；不把上一提交成功當作本次已完成。

@@ -49,6 +49,33 @@ class UiResourceLifetimeTests(unittest.TestCase):
         self.assertTrue(root.winfo_exists())
         root.destroy()
 
+    def test_retained_destroy_callback_does_not_keep_native_interpreter(self):
+        script = """
+import gc, tkinter as tk
+from threading import Thread
+from types import SimpleNamespace
+from wlre.ui.resource_lifetime import install_root_lifetime
+gc.disable()
+def cycle():
+    root = tk.Tk()
+    install_root_lifetime(root)
+    saved = root.destroy
+    saved(); saved()
+    holder = SimpleNamespace(cleanup=saved)
+    holder.self = holder
+cycle()
+worker = Thread(target=gc.collect)
+worker.start(); worker.join(10)
+if worker.is_alive():
+    raise RuntimeError('retained cleanup did not release')
+print('retained cleanup owner release passed')
+"""
+        result = subprocess.run([sys.executable, '-c', script], capture_output=True,
+                                text=True, timeout=20, check=False,
+                                cwd=Path(__file__).resolve().parents[1])
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn('retained cleanup owner release passed', result.stdout)
+
     def test_background_gc_after_close_in_isolated_process(self):
         # 若回歸成 Tcl_AsyncDelete，僅讓子程序失敗，不擊落整套測試。
         script = '''

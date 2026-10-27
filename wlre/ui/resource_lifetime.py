@@ -76,8 +76,11 @@ def install_root_lifetime(root):
     owner, interpreter, original = get_ident(), root.tk, root.destroy
 
     def destroy():
+        nonlocal interpreter, original
         if get_ident() != owner:
             raise RuntimeError('Tk root must be destroyed by its owning thread')
+        if interpreter is None:
+            return None
         try:
             # Aqua 銷毀原生視窗可能重入事件迴圈，先取消 timer，避免關閉途中啟動新工作。
             for job in interpreter.call('after', 'info'):
@@ -86,6 +89,10 @@ def install_root_lifetime(root):
         finally:
             # 不讓 root 的覆寫方法繼續保留原生 interpreter 於 closure。
             root.__dict__.pop('destroy', None)
-            _release(interpreter)
+            try:
+                _release(interpreter)
+            finally:
+                # ExitStack／測試清理可繼續持有本回呼，不能讓閉包保留原生指標。
+                interpreter = original = None
 
     root.destroy = destroy
