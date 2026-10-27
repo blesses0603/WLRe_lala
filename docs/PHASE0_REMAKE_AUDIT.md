@@ -75,8 +75,8 @@
 | 桌面原始碼與測試規模盤點 | 已完成靜態統計 | 以本文件的 main 基準為準；未在本回合執行程式測試 |
 | 逐檔依賴／API 對照 | 有可重用成果，待審查整合 | PR #58 的 `main_inventory.json`、`FILE_MAPPING.md` |
 | wire／login／基本 session golden cases | 部分完成 | PR #60；補齊來源核實與 Battle／Map 案例 |
-| Battle 行為矩陣與協定往返 | 待完成 | 建立事件序列、命令、回覆、錯誤與取消案例 |
-| Map／移動／傳點行為矩陣 | 待完成 | 每項座標／傳點連到資料來源與正式服驗收狀態 |
+| Battle 行為矩陣與協定往返 | 已建立需求矩陣初稿，待補協定證據 | 見 [Battle／Map 矩陣](PHASE0_BATTLE_MAP_MATRIX.md)；仍需補狀態圖、來源及逐案例測試 |
+| Map／移動／傳點行為矩陣 | 已建立需求矩陣初稿，待逐項核實 | 見 [Battle／Map 矩陣](PHASE0_BATTLE_MAP_MATRIX.md)；座標／傳點來源與正式服狀態仍待填證據 |
 | 跨平台共用界線 ADR | 待完成 | 比對 Android 複本的實際差異後決定共用契約範圍 |
 | 新 UI 技術與架構正式決策 | 未決策（刻意保留） | P0 不猜選 toolkit；由小型可驗證原型比較後決定 |
 
@@ -93,5 +93,6 @@
 ## 8. 本次執行紀錄
 
 - 讀取 main tree、README、入口、協定模組、Battle／Map 代表檔、測試與 workflow 結構，並檢視既有重製 PR 的範圍。
+- 建立 [Battle／Map 跨平台行為與驗收矩陣初稿](PHASE0_BATTLE_MAP_MATRIX.md)，列出 12 個 Battle、12 個 Map、7 個 Android lifecycle 候選案例；尚未轉成正式封包 golden 或完成端到端測試。
 - 本文件只記錄靜態盤點與決策缺口；沒有改動既有功能程式碼、沒有調整版本號、沒有合併任何 PR、沒有建立 Release／Tag。
 - 本回合沒有執行本機測試或 APK／EXE 打包，也沒有宣稱正式服 E2E 完成。
