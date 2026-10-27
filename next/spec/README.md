@@ -10,7 +10,8 @@
 | `behavior/` | 文字規格（封包框架、登入與會話…），每份標明來源與未決事項 |
 | `golden/` | golden packet 測試案例（JSON） |
 | `verify_golden.py` | **獨立驗證器**：不引用舊程式的第二份實作，用來確認規格自洽 |
-| `../tools-python/gen_golden.py` | 由舊版參考實作產生 golden（唯一會 import `wlre` 的地方） |
+| `../tools-python/gen_golden.py` | 由舊版參考實作產生 golden（會 import `wlre`） |
+| `../tools-python/analyze_deps.py` | 舊版依賴分析（會 import `wlre`，不屬於規格） |
 
 ## 案例格式
 
@@ -30,6 +31,7 @@
 | `wire_stream` | `chunks_hex`、`key`、`call_finish` | `result`、`packets`、`finish_result` |
 | `encode` | `command`（login／select_role）、`args` | `result`、`packet`、`frame_hex` |
 | `decode` | `packet` | `result`、`event` |
+| `scenario` | `role_index`、`steps`（`receive` 一個 S→C 封包，或 `new_session`） | 每步的 `sent`（依序送出的 C→S 封包）、`error`（`null`／`login_rejected`／`protocol_error`）、`state` 快照 |
 
 ### 比對規則
 

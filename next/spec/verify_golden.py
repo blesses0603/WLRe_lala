@@ -183,9 +183,82 @@ def decode(main, sub, payload):
     return ev
 
 
+# ---------------------------------------------------------------- session model (independent)
+class SessionError(Exception):
+    def __init__(self, kind):
+        super().__init__(kind)
+        self.kind = kind
+
+
+class Session:
+    """Second implementation of the P0 session reactions, written from the behavior doc."""
+
+    def __init__(self, role_index):
+        self.role_index = role_index
+        self.authenticated = False
+        self.world_ack = False
+        self.phase = "connecting"
+        self.init_done = False
+        self.has_player = False
+
+    def snapshot(self):
+        return {"authenticated": self.authenticated, "world_acknowledged": self.world_ack,
+                "phase": self.phase, "initial_data_complete": self.init_done, "has_player": self.has_player}
+
+    def receive(self, main, sub, payload):
+        ev = decode(main, sub, payload)              # may raise ProtoError (not expected in scenarios)
+        t = ev["type"]
+        # state layer first (State.apply), then the session layer (SessionLogic.receive)
+        if t == "login_result":
+            self.phase = "authenticated" if ev["result"] == 0 else "login_failed"
+        elif t == "role_list_available":
+            self.phase = "role_selection"
+        elif t == "world_player":
+            self.has_player, self.phase = True, "world_received"
+        elif t == "initial_data_complete":
+            self.init_done = True
+        sent = []
+        if t == "heartbeat_request":
+            sent.append({"main": 63, "sub": 5, "payload_hex": ""})
+        elif t == "login_result":
+            if ev["result"] != 0:
+                raise SessionError("login_rejected")
+            if ev["login_kind"] != 2:
+                raise SessionError("protocol_error")
+            self.authenticated = True
+        elif t == "role_list_available" and self.role_index is not None:
+            sent.append(select_packet(self.role_index))
+            self.phase = "role_selected_awaiting_world"
+        if self.has_player and self.init_done and not self.world_ack:
+            sent += [{"main": 12, "sub": 1, "payload_hex": ""}, {"main": 3, "sub": 2, "payload_hex": ""}]
+            self.world_ack, self.phase = True, "world_ready"
+        return sent
+
+
+def check_scenario(case):
+    sess = Session(case["role_index"])
+    for i, step in enumerate(case["steps"]):
+        want = step["expect"]
+        if step.get("new_session"):
+            sess = Session(case["role_index"])
+            got = {"state": sess.snapshot()}
+        else:
+            p = step["receive"]
+            try:
+                sent = sess.receive(p["main"], p["sub"], bytes.fromhex(p["payload_hex"]))
+                got = {"sent": sent, "error": None, "state": sess.snapshot()}
+            except SessionError as exc:
+                got = {"sent": [], "error": exc.kind, "state": sess.snapshot()}
+        if got != want:
+            return f"step {i}: expected {want!r}\n      got      {got!r}"
+    return None
+
+
 # ---------------------------------------------------------------- runner
 def check(case):
-    t, exp = case["type"], case["expected"]
+    t, exp = case["type"], case["expected"] if "expected" in case else None
+    if t == "scenario":
+        return check_scenario(case)
     try:
         if t == "wire_encode":
             p = case["packet"]

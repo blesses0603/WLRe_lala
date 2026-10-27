@@ -1,0 +1,31 @@
+{
+  "id": "scenario/login_rejected",
+  "priority": "P0",
+  "type": "scenario",
+  "role_index": 1,
+  "steps": [
+    {
+      "receive": {
+        "main": 63,
+        "sub": 7,
+        "payload_hex": "0502"
+      },
+      "expect": {
+        "sent": [],
+        "error": "login_rejected",
+        "state": {
+          "authenticated": false,
+          "world_acknowledged": false,
+          "phase": "login_failed",
+          "initial_data_complete": false,
+          "has_player": false
+        }
+      }
+    }
+  ],
+  "source": {
+    "grade": "reference_impl",
+    "ref": "wlre/network/wire.py,protocol.py,layouts.py (read and executed)"
+  },
+  "notes": "result != 0 ends the session; the state layer already recorded phase=login_failed"
+}

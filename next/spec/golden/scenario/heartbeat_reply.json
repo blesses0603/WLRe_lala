@@ -1,0 +1,37 @@
+{
+  "id": "scenario/heartbeat_reply",
+  "priority": "P0",
+  "type": "scenario",
+  "role_index": null,
+  "steps": [
+    {
+      "receive": {
+        "main": 1,
+        "sub": 23,
+        "payload_hex": ""
+      },
+      "expect": {
+        "sent": [
+          {
+            "main": 63,
+            "sub": 5,
+            "payload_hex": ""
+          }
+        ],
+        "error": null,
+        "state": {
+          "authenticated": false,
+          "world_acknowledged": false,
+          "phase": "connecting",
+          "initial_data_complete": false,
+          "has_player": false
+        }
+      }
+    }
+  ],
+  "source": {
+    "grade": "reference_impl",
+    "ref": "wlre/network/wire.py,protocol.py,layouts.py (read and executed)"
+  },
+  "notes": "every S1-23 is answered with exactly one C63-5; state is untouched"
+}

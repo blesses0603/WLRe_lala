@@ -1,0 +1,49 @@
+{
+  "id": "scenario/role_list_without_role_index",
+  "priority": "P0",
+  "type": "scenario",
+  "role_index": null,
+  "steps": [
+    {
+      "receive": {
+        "main": 63,
+        "sub": 7,
+        "payload_hex": "0002"
+      },
+      "expect": {
+        "sent": [],
+        "error": null,
+        "state": {
+          "authenticated": true,
+          "world_acknowledged": false,
+          "phase": "authenticated",
+          "initial_data_complete": false,
+          "has_player": false
+        }
+      }
+    },
+    {
+      "receive": {
+        "main": 63,
+        "sub": 1,
+        "payload_hex": "01062c6e668a32750a02f4010000e0010000780000006400000040e20100000000000903000001030b000000160000000005082b0000000000000000000a000000140000001e000000280000000500ffffffff020000000300000004000000020842006500740061003702f4010000e0010000780000006400000040e20100000000000903000001030b000000160000000005082b0000000000000000000a000000140000001e000000280000000500ffffffff020000000300000004000000"
+      },
+      "expect": {
+        "sent": [],
+        "error": null,
+        "state": {
+          "authenticated": true,
+          "world_acknowledged": false,
+          "phase": "role_selection",
+          "initial_data_complete": false,
+          "has_player": false
+        }
+      }
+    }
+  ],
+  "source": {
+    "grade": "reference_impl",
+    "ref": "wlre/network/wire.py,protocol.py,layouts.py (read and executed)"
+  },
+  "notes": "no configured role -> nothing is sent; phase waits at role_selection"
+}

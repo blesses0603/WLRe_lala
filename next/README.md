@@ -17,17 +17,19 @@
 
 | 編號 | 項目 | 狀態 |
 |---|---|---|
-| 0-1 | 參考核心抽取清單與依賴盤點 | 🔄 部分：已量測依賴（見下），清單文件尚未更新 |
+| 0-1 | 參考核心抽取清單與依賴盤點 | ✅ `EXTRACTION.md` + 可重現的 `analyze_deps.py`；清單中尚有「未量測」項目 |
 | 0-2 | 無介面的參考 CLI | ⏳ 未開始（`reference-python/` 目前為空） |
-| 0-3 | Golden Packet：P0（框架、登入、選角、初始化） | ✅ 37 個案例，獨立驗證器 37/37 相符 |
+| 0-3 | Golden Packet：P0（框架、登入、選角、初始化） | ✅ 46 個案例（含 9 個會話 scenario），獨立驗證器 46/46 相符 |
 | 0-4 | 舊測試盤點分類 | ⏳ 未開始 |
 | 0-5 | 新 repo 骨架與 CI | ⏳ 未開始（本資料夾尚無 CI 工作流程） |
 
-### 已量測的依賴事實（舊 repo，commit `2dd6694`）
+### 已量測的依賴事實（舊 repo，commit `2dd6694`；詳見 `EXTRACTION.md`）
 
-- `network/`、`core/`、`storage/`：沒有 Tk／PIL 引用。`services/`：只有 `world/smallmaps.py` 引用 PIL。
-- 層間仍是網狀依賴（`network→services` 58 處、`core→services` 20 處、`services→network` 40 處的 import），
-  所以新版不能照搬舊檔案結構，需要先重新定義單向分層。
+- `network/`、`core/`、`storage/`、`services/` 沒有任何引用 `ui/features` 的 import。
+- 模組層級的 import 循環只有 **1 組、26 個模組，全在 `services/`**（資源管線、目錄、NPC 資料與物品／製作規則）；
+  `network/`、`core/`、`storage/` 的模組都不在循環內，但套件之間是網狀依賴（例如 network→services 60 條模組邊）。
+- 實際 import `protocol`、`state`、`client` 時不會載入 `tkinter`、`PIL`、`UnityPy`（它們是函式內延遲載入），
+  但靜態分析顯示這三個模組的傳遞依賴會**參照**到它們（`protocol` 72 個模組、`state` 96、`client` 124）。
 - 在沒有 `tkinter` 的環境執行 4 個協定／狀態測試模組：39 項中 36 通過、1 跳過、2 錯誤；
   兩個錯誤是測試本身 `import wlre.ui.gui`，不是核心程式依賴 UI。
 
@@ -36,7 +38,8 @@
 ```
 next/
   spec/                 與語言無關的規格與 golden（見 spec/README.md）
-  tools-python/         由參考實作產生 golden 的工具
+  tools-python/         gen_golden.py（產生 golden）、analyze_deps.py（依賴盤點）
+  EXTRACTION.md         0-1 抽取清單與量測事實
   reference-python/     （預留）從舊版抽出、不含 Tk 的參考核心與 CLI
 ```
 

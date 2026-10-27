@@ -1,0 +1,31 @@
+{
+  "id": "scenario/login_wrong_kind",
+  "priority": "P0",
+  "type": "scenario",
+  "role_index": 1,
+  "steps": [
+    {
+      "receive": {
+        "main": 63,
+        "sub": 7,
+        "payload_hex": "0000"
+      },
+      "expect": {
+        "sent": [],
+        "error": "protocol_error",
+        "state": {
+          "authenticated": false,
+          "world_acknowledged": false,
+          "phase": "authenticated",
+          "initial_data_complete": false,
+          "has_player": false
+        }
+      }
+    }
+  ],
+  "source": {
+    "grade": "synthetic",
+    "ref": "hand-built boundary case"
+  },
+  "notes": "formal login must answer kind 2. OBSERVED QUIRK: State.apply already set phase=authenticated before the session layer raised; a port may choose to keep or tighten this"
+}

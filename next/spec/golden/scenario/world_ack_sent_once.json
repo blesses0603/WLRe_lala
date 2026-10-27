@@ -1,0 +1,96 @@
+{
+  "id": "scenario/world_ack_sent_once",
+  "priority": "P0",
+  "type": "scenario",
+  "role_index": null,
+  "steps": [
+    {
+      "receive": {
+        "main": 3,
+        "sub": 1,
+        "payload_hex": "2923000001082b6400c8000102030500000006000000000002b90b00000000ba0b070000000a41006c006900630065000000000000000000000c00"
+      },
+      "expect": {
+        "sent": [],
+        "error": null,
+        "state": {
+          "authenticated": false,
+          "world_acknowledged": false,
+          "phase": "world_received",
+          "initial_data_complete": false,
+          "has_player": true
+        }
+      }
+    },
+    {
+      "receive": {
+        "main": 1,
+        "sub": 11,
+        "payload_hex": ""
+      },
+      "expect": {
+        "sent": [
+          {
+            "main": 12,
+            "sub": 1,
+            "payload_hex": ""
+          },
+          {
+            "main": 3,
+            "sub": 2,
+            "payload_hex": ""
+          }
+        ],
+        "error": null,
+        "state": {
+          "authenticated": false,
+          "world_acknowledged": true,
+          "phase": "world_ready",
+          "initial_data_complete": true,
+          "has_player": true
+        }
+      }
+    },
+    {
+      "receive": {
+        "main": 1,
+        "sub": 11,
+        "payload_hex": ""
+      },
+      "expect": {
+        "sent": [],
+        "error": null,
+        "state": {
+          "authenticated": false,
+          "world_acknowledged": true,
+          "phase": "world_ready",
+          "initial_data_complete": true,
+          "has_player": true
+        }
+      }
+    },
+    {
+      "receive": {
+        "main": 3,
+        "sub": 1,
+        "payload_hex": "2923000001082b6400c8000102030500000006000000000002b90b00000000ba0b070000000a41006c006900630065000000000000000000000c00"
+      },
+      "expect": {
+        "sent": [],
+        "error": null,
+        "state": {
+          "authenticated": false,
+          "world_acknowledged": true,
+          "phase": "world_received",
+          "initial_data_complete": true,
+          "has_player": true
+        }
+      }
+    }
+  ],
+  "source": {
+    "grade": "reference_impl",
+    "ref": "wlre/network/wire.py,protocol.py,layouts.py (read and executed)"
+  },
+  "notes": "acknowledgement is never repeated. OBSERVED QUIRK: a second S3-1 moves phase back to world_received even though world_acknowledged stays true"
+}

@@ -175,6 +175,17 @@ def role_payload(index, name, level=10):
     return b
 
 
+def world_player_payload():
+    wp = struct.pack("<IBHHH", 9001, 1, 11016, 100, 200) + bytes([1, 2, 3]) + struct.pack("<II", 5, 6)
+    wp += bytes([0, 0]) + bytes([2]) + struct.pack("<HI", 3001, 0) + struct.pack("<HI", 3002, 7)
+    wp += u8str("Alice") + bytes(8) + u8str("") + struct.pack("<H", 12)
+    return wp
+
+
+def roles_payload():
+    return role_payload(1, "測試甲", 10) + role_payload(2, "Beta", 55)
+
+
 def decode_cases():
     dec_case("decode", "login_result_ok", Packet(63, 7, bytes([0, 2])), "result=0 kind=2")
     dec_case("decode", "login_result_rejected", Packet(63, 7, bytes([5, 2])), "non-zero result is still decoded; the session layer decides to raise")
@@ -183,16 +194,14 @@ def decode_cases():
     acct = struct.pack("<I", 4242) + bytes([8]) + b"fakeuser" + bytes([8]) + b"fakepass" + bytes([1]) + b"1"
     dec_case("decode", "account_identity_drops_credentials", Packet(1, 4, acct),
              "server echoes account/password/save flag; decoder keeps ONLY account_id, never the strings", SYN)
-    roles = role_payload(1, "測試甲", 10) + role_payload(2, "Beta", 55)
+    roles = roles_payload()
     dec_case("decode", "role_list_two_roles", Packet(63, 1, roles), "synthetic roles; name is u8 byte-length + UTF-16LE; "
              "max_hp/max_sp already include summed *_hp / *_sp bonuses", SYN)
     dec_case("decode", "role_list_truncated", Packet(63, 1, roles[:-3]), "truncation -> rejected, no partial list", SYN)
     bad = bytearray(role_payload(3, "Bad"))
     dec_case("decode", "role_list_invalid_index", Packet(63, 1, bytes(bad)), "index must be 1 or 2", SYN)
-    wp = struct.pack("<IBHHH", 9001, 1, 11016, 100, 200) + bytes([1, 2, 3]) + struct.pack("<II", 5, 6)
-    wp += bytes([0, 0]) + bytes([2]) + struct.pack("<HI", 3001, 0) + struct.pack("<HI", 3002, 7)
-    wp += u8str("Alice") + bytes(8) + u8str("") + struct.pack("<H", 12)
-    dec_case("decode", "world_player", Packet(3, 1, wp), "private namecard fields (8 bytes + signature) are consumed, not exposed", SYN)
+    dec_case("decode", "world_player", Packet(3, 1, world_player_payload()),
+             "private namecard fields (8 bytes + signature) are consumed, not exposed", SYN)
     dec_case("decode", "gold_snapshot", Packet(26, 4, struct.pack("<I", 1234)))
     dec_case("decode", "gold_delta_gain_notify", Packet(26, 1, struct.pack("<IB", 50, 1)))
     dec_case("decode", "gold_delta_loss_silent", Packet(26, 2, struct.pack("<IB", 50, 0)), "sub 2 is a loss: delta is negative")
@@ -205,9 +214,78 @@ def decode_cases():
              "S51-1 uses 7-byte records; a partial record drops the WHOLE update and keeps state (tolerance case)", SYN, "P2")
 
 
+# ---------------------------------------------------------------- session scenarios
+def scenario_cases():
+    """Drive the legacy SessionLogic exactly like run_client: decode -> State.apply -> logic.receive."""
+    from wlre.core.state import State
+    from wlre.network.client import SessionLogic
+
+    sess = {}
+
+    def new(role_index):
+        sess["state"], sess["logic"] = State(phase="connecting"), SessionLogic(role_index)
+
+    def snapshot():
+        st, lg = sess["state"], sess["logic"]
+        return {"authenticated": lg.authenticated, "world_acknowledged": lg.world_acknowledged,
+                "phase": st.phase, "initial_data_complete": bool(st.initial_data_complete),
+                "has_player": bool(st.player)}
+
+    def classify(exc):
+        return {"LoginRejected": "login_rejected", "ProtocolError": "protocol_error"}.get(type(exc).__name__, "other")
+
+    def run(cid, role_index, script, notes, source=REF):
+        new(role_index)
+        steps = []
+        for item in script:
+            if item == "new_session":
+                new(role_index)
+                steps.append({"new_session": True, "expect": {"state": snapshot()}})
+                continue
+            pkt = item
+            step = {"receive": packet_json(pkt)}
+            try:
+                ev = decode(pkt, sess["state"].player.get("role_id"))
+                sess["state"].apply(ev)
+                sent = sess["logic"].receive(ev, sess["state"])
+                step["expect"] = {"sent": [packet_json(p) for p in sent], "error": None, "state": snapshot()}
+            except Exception as exc:  # noqa: BLE001 - the error class is the observable behavior
+                step["expect"] = {"sent": [], "error": classify(exc), "state": snapshot()}
+            steps.append(step)
+        write("scenario", {"id": f"scenario/{cid}", "priority": "P0", "type": "scenario", "role_index": role_index,
+                           "steps": steps, "source": source, "notes": notes})
+
+    ok = Packet(63, 7, bytes([0, 2]))
+    roles = Packet(63, 1, roles_payload())
+    player = Packet(3, 1, world_player_payload())
+    done = Packet(1, 11)
+    hb = Packet(1, 23)
+
+    run("heartbeat_reply", None, [hb], "every S1-23 is answered with exactly one C63-5; state is untouched")
+    run("login_ok_then_select_role", 1, [ok, roles],
+        "after a formal login result and a role list, the configured role index is sent as C63-2")
+    run("role_list_without_role_index", None, [ok, roles],
+        "no configured role -> nothing is sent; phase waits at role_selection")
+    run("login_rejected", 1, [Packet(63, 7, bytes([5, 2]))],
+        "result != 0 ends the session; the state layer already recorded phase=login_failed")
+    run("login_wrong_kind", 1, [Packet(63, 7, bytes([0, 0]))],
+        "formal login must answer kind 2. OBSERVED QUIRK: State.apply already set phase=authenticated before the "
+        "session layer raised; a port may choose to keep or tighten this", SYN)
+    run("world_ready_complete_then_player", None, [done, player],
+        "C12-1 and C3-2 are sent once both S1-11 and S3-1 have arrived, in this order")
+    run("world_ready_player_then_complete", None, [player, done],
+        "same acknowledgement when S3-1 arrives first")
+    run("world_ack_sent_once", None, [player, done, done, player],
+        "acknowledgement is never repeated. OBSERVED QUIRK: a second S3-1 moves phase back to world_received "
+        "even though world_acknowledged stays true")
+    run("reconnect_starts_clean", None, [player, done, "new_session", done],
+        "a new connection builds a fresh State and session logic; nothing is inherited, so S1-11 alone sends nothing")
+
+
 if __name__ == "__main__":
     wire_cases()
     login_cases()
     decode_cases()
+    scenario_cases()
     n = sum(1 for _ in GOLDEN.rglob("*.json"))
     print(f"wrote {n} golden cases under {GOLDEN.relative_to(ROOT)}")
