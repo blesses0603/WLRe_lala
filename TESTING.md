@@ -172,4 +172,6 @@ Aqua 另外使用 32 單位初始邊緣預算容納原生選單列／陰影；Wi
 
 新增 `test_official_scene_references.py` **13 項通過**，使用非遊戲合成樣本，測試文字格式／offset／舊 API、缺少與無效名稱、精確模型身分／歧義／加密／缺包、雙來源原子快照及撤銷。原 Manager 28 項、場景名稱 6 項通過。新 Parser／Manager／工具及測試 Ruff、舊檔名稱檢查、compileall、repository audit、diff check 通過。
 
-完整本地 **1,316 項，91.833 秒，OK，跳過 2 項**（`/tmp/lala-scene-references-full.log`）；後續只調整既有場景 Finding 代碼的相容性，相關 41 項重驗通過。官方受控請求另外核對 1,337 場景／39,947 文字，收據與缺口見 [本批報告](docs/rebuild/P2_SCENE_REFERENCES_REPORT.md)，不當作實機遊戲驗收。已將引用與舊名稱測試加入資源三平台模組 CI，保留完整三平台 PR 檢查；常規 CI 不下載正式 Bundle。本批遠端結果需等提交後，不能以基準成功取代。
+完整本地 **1,316 項，91.833 秒，OK，跳過 2 項**（`/tmp/lala-scene-references-full.log`）；後續只調整既有場景 Finding 代碼的相容性，相關 41 項重驗通過。官方受控請求另外核對 1,337 場景／39,947 文字，收據與缺口見 [本批報告](docs/rebuild/P2_SCENE_REFERENCES_REPORT.md)，不當作實機遊戲驗收。已將引用測試加入資源三平台模組 CI；舊名稱 UI 測試保留於完整 CI，保留完整三平台 PR 檢查；常規 CI 不下載正式 Bundle。本批遠端結果需等提交後，不能以基準成功取代。
+
+資源模組首次 CI `40425151470`：新增引用 13 項與原 Manager 28 項均通過，但額外加入的舊名稱測試匯入 HomeMap／Pillow，與純標準庫資源 job 的環境契約不符；Ubuntu／macOS 缺 Pillow 而失敗，未標通過。已將該 UI 測試保留在具備 UI 依賴的既有完整三平台 suite，資源 job 仍跑新增引用及舊文字 API 測試。沒有刪除測試、增加 skip 或降低必要 PR 檢查；修正另提交並重驗。

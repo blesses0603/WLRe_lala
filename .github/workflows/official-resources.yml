@@ -47,7 +47,6 @@ jobs:
           python -m unittest discover -s tests -p test_resource_downloader.py -v
           python -m unittest discover -s tests -p test_official_resource_manager.py -v
           python -m unittest discover -s tests -p test_official_scene_references.py -v
-          python -m unittest discover -s tests -p test_scene_names_1275.py -v
           python -m unittest discover -s tests -p test_unity_textasset.py -v
           python -m unittest discover -s tests -p test_instance_protocol.py -v
 
