@@ -87,5 +87,5 @@
 ## 7. 進度紀錄
 
 - 本次：新增重製規劃文件，並完成第一輪 GitHub main 靜態程式碼盤點，詳見 [Phase 0 盤點報告](PHASE0_REMAKE_AUDIT.md)。
-- Phase 0 尚未結案：Battle／Map 狀態圖、命令／事件矩陣、來源等級與跨平台 contracts ADR 仍待補齊。
+- 已建立 [Battle／Map 跨平台行為與驗收矩陣初稿](PHASE0_BATTLE_MAP_MATRIX.md)；Phase 0 尚未結案，狀態圖、實際協定往返、來源等級與跨平台 contracts ADR 仍待補齊。
 - 本次僅修改文件，未改動功能程式碼或版本號，未合併 main、未建立正式 Release／Tag。
