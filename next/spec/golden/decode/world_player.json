@@ -1,0 +1,50 @@
+{
+  "id": "decode/world_player",
+  "priority": "P0",
+  "type": "decode",
+  "direction": "server_to_client",
+  "packet": {
+    "main": 3,
+    "sub": 1,
+    "payload_hex": "2923000001082b6400c8000102030500000006000000000002b90b00000000ba0b070000000a41006c006900630065000000000000000000000c00"
+  },
+  "expected": {
+    "result": "ok",
+    "event": {
+      "main": 3,
+      "sub": 1,
+      "type": "world_player",
+      "player": {
+        "role_id": 9001,
+        "sex": 1,
+        "scene": 11016,
+        "x": 100,
+        "y": 200,
+        "face": 1,
+        "head": 2,
+        "body": 3,
+        "palette1": 5,
+        "palette5": 6,
+        "header_frame": 0,
+        "second_job_effect": false,
+        "equips": [
+          {
+            "item_id": 3001,
+            "design_id": 0
+          },
+          {
+            "item_id": 3002,
+            "design_id": 7
+          }
+        ],
+        "name": "Alice",
+        "title_id": 12
+      }
+    }
+  },
+  "source": {
+    "grade": "synthetic",
+    "ref": "hand-built boundary case"
+  },
+  "notes": "private namecard fields (8 bytes + signature) are consumed, not exposed"
+}

@@ -1,0 +1,26 @@
+{
+  "id": "decode/login_result_rejected",
+  "priority": "P0",
+  "type": "decode",
+  "direction": "server_to_client",
+  "packet": {
+    "main": 63,
+    "sub": 7,
+    "payload_hex": "0502"
+  },
+  "expected": {
+    "result": "ok",
+    "event": {
+      "main": 63,
+      "sub": 7,
+      "type": "login_result",
+      "result": 5,
+      "login_kind": 2
+    }
+  },
+  "source": {
+    "grade": "reference_impl",
+    "ref": "wlre/network/wire.py,protocol.py,layouts.py (read and executed)"
+  },
+  "notes": "non-zero result is still decoded; the session layer decides to raise"
+}

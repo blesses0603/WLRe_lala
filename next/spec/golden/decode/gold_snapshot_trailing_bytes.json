@@ -1,0 +1,20 @@
+{
+  "id": "decode/gold_snapshot_trailing_bytes",
+  "priority": "P0",
+  "type": "decode",
+  "direction": "server_to_client",
+  "packet": {
+    "main": 26,
+    "sub": 4,
+    "payload_hex": "0100000000"
+  },
+  "expected": {
+    "result": "rejected",
+    "error": "unexpected trailing bytes: 1"
+  },
+  "source": {
+    "grade": "synthetic",
+    "ref": "hand-built boundary case"
+  },
+  "notes": "strict decoding: trailing bytes are rejected"
+}

@@ -1,0 +1,16 @@
+{
+  "id": "wire/reject_oversize_body",
+  "priority": "P0",
+  "type": "wire_encode_oversize",
+  "key": 173,
+  "payload_length": 65534,
+  "expected": {
+    "result": "rejected",
+    "error": "body exceeds uint16 length"
+  },
+  "source": {
+    "grade": "synthetic",
+    "ref": "hand-built boundary case"
+  },
+  "notes": "body = 2 + payload_length = 65536 > uint16 -> encode must reject"
+}

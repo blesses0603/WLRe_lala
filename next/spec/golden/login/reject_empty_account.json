@@ -1,0 +1,22 @@
+{
+  "id": "login/reject_empty_account",
+  "priority": "P0",
+  "type": "encode",
+  "command": "login",
+  "args": {
+    "account": "",
+    "password": "pw",
+    "login_kind": 2,
+    "platform": 3,
+    "language": 0
+  },
+  "expected": {
+    "result": "rejected",
+    "error": "empty credentials"
+  },
+  "source": {
+    "grade": "reference_impl",
+    "ref": "wlre/network/wire.py,protocol.py,layouts.py (read and executed)"
+  },
+  "notes": "empty credentials rejected before any byte is built"
+}

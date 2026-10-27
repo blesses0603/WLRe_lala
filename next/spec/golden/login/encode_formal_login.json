@@ -1,0 +1,27 @@
+{
+  "id": "login/encode_formal_login",
+  "priority": "P0",
+  "type": "encode",
+  "command": "login",
+  "args": {
+    "account": "testuser",
+    "password": "testpass",
+    "login_kind": 2,
+    "platform": 3,
+    "language": 0
+  },
+  "expected": {
+    "result": "ok",
+    "packet": {
+      "main": 63,
+      "sub": 7,
+      "payload_hex": "02000300087465737475736572087465737470617373"
+    },
+    "frame_hex": "696bb5ad92aaafadaeada5d9c8ded9d8dec8dfa5d9c8ded9ddccdede"
+  },
+  "source": {
+    "grade": "reference_impl",
+    "ref": "wlre/network/wire.py,protocol.py,layouts.py (read and executed)"
+  },
+  "notes": "kind=2 formal login, platform=3, language=0; credentials are fake"
+}

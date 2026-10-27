@@ -1,0 +1,20 @@
+{
+  "id": "decode/role_list_truncated",
+  "priority": "P0",
+  "type": "decode",
+  "direction": "server_to_client",
+  "packet": {
+    "main": 63,
+    "sub": 1,
+    "payload_hex": "01062c6e668a32750a02f4010000e0010000780000006400000040e20100000000000903000001030b000000160000000005082b0000000000000000000a000000140000001e000000280000000500ffffffff020000000300000004000000020842006500740061003702f4010000e0010000780000006400000040e20100000000000903000001030b000000160000000005082b0000000000000000000a000000140000001e000000280000000500ffffffff020000000300000004"
+  },
+  "expected": {
+    "result": "rejected",
+    "error": "offset 188: need 4, have 1"
+  },
+  "source": {
+    "grade": "synthetic",
+    "ref": "hand-built boundary case"
+  },
+  "notes": "truncation -> rejected, no partial list"
+}

@@ -1,0 +1,18 @@
+{
+  "id": "login/reject_select_role_0",
+  "priority": "P0",
+  "type": "encode",
+  "command": "select_role",
+  "args": {
+    "index": 0
+  },
+  "expected": {
+    "result": "rejected",
+    "error": "role index must be 1 or 2"
+  },
+  "source": {
+    "grade": "reference_impl",
+    "ref": "wlre/network/wire.py,protocol.py,layouts.py (read and executed)"
+  },
+  "notes": "only role slots 1 and 2 exist"
+}

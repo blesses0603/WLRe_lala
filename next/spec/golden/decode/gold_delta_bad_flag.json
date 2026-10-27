@@ -1,0 +1,20 @@
+{
+  "id": "decode/gold_delta_bad_flag",
+  "priority": "P0",
+  "type": "decode",
+  "direction": "server_to_client",
+  "packet": {
+    "main": 26,
+    "sub": 1,
+    "payload_hex": "3200000007"
+  },
+  "expected": {
+    "result": "rejected",
+    "error": "S26 金幣通知旗標無效"
+  },
+  "source": {
+    "grade": "synthetic",
+    "ref": "hand-built boundary case"
+  },
+  "notes": "flag must be 0 or 1"
+}

@@ -1,0 +1,27 @@
+{
+  "id": "wire/decode_fragmented",
+  "priority": "P0",
+  "type": "wire_stream",
+  "key": 173,
+  "chunks_hex": [
+    "696bae",
+    "ad92",
+    "afac"
+  ],
+  "call_finish": false,
+  "expected": {
+    "result": "ok",
+    "packets": [
+      {
+        "main": 63,
+        "sub": 2,
+        "payload_hex": "01"
+      }
+    ]
+  },
+  "source": {
+    "grade": "reference_impl",
+    "ref": "wlre/network/wire.py,protocol.py,layouts.py (read and executed)"
+  },
+  "notes": "frame split across 3 reads; no packet until complete"
+}

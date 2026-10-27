@@ -1,0 +1,20 @@
+{
+  "id": "wire/reject_bad_magic",
+  "priority": "P0",
+  "type": "wire_stream",
+  "key": 173,
+  "chunks_hex": [
+    "adadafadacba"
+  ],
+  "call_finish": false,
+  "expected": {
+    "result": "rejected",
+    "packets": [],
+    "error": "bad frame magic; incomplete capture or different wire codec"
+  },
+  "source": {
+    "grade": "synthetic",
+    "ref": "hand-built boundary case"
+  },
+  "notes": "magic != C4 C6 -> ProtocolError (whole stream is poisoned)"
+}

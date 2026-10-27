@@ -1,0 +1,25 @@
+{
+  "id": "decode/gold_snapshot",
+  "priority": "P0",
+  "type": "decode",
+  "direction": "server_to_client",
+  "packet": {
+    "main": 26,
+    "sub": 4,
+    "payload_hex": "d2040000"
+  },
+  "expected": {
+    "result": "ok",
+    "event": {
+      "main": 26,
+      "sub": 4,
+      "type": "gold_snapshot",
+      "amount": 1234
+    }
+  },
+  "source": {
+    "grade": "reference_impl",
+    "ref": "wlre/network/wire.py,protocol.py,layouts.py (read and executed)"
+  },
+  "notes": ""
+}

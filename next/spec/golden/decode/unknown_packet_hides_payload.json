@@ -1,0 +1,25 @@
+{
+  "id": "decode/unknown_packet_hides_payload",
+  "priority": "P0",
+  "type": "decode",
+  "direction": "server_to_client",
+  "packet": {
+    "main": 99,
+    "sub": 99,
+    "payload_hex": "7365637265742d6279746573"
+  },
+  "expected": {
+    "result": "ok",
+    "event": {
+      "main": 99,
+      "sub": 99,
+      "type": "unimplemented",
+      "payload_bytes": 12
+    }
+  },
+  "source": {
+    "grade": "synthetic",
+    "ref": "hand-built boundary case"
+  },
+  "notes": "unknown packets report only payload_bytes, never the content (may hold credentials)"
+}

@@ -1,0 +1,15 @@
+{
+  "id": "wire/encode_max_body",
+  "priority": "P0",
+  "type": "wire_encode_oversize",
+  "key": 173,
+  "payload_length": 65533,
+  "expected": {
+    "result": "ok"
+  },
+  "source": {
+    "grade": "synthetic",
+    "ref": "hand-built boundary case"
+  },
+  "notes": "body = 65535 is the largest accepted size"
+}

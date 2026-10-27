@@ -1,0 +1,35 @@
+{
+  "id": "wire/decode_coalesced",
+  "priority": "P0",
+  "type": "wire_stream",
+  "key": 173,
+  "chunks_hex": [
+    "696bafadacba696baead92afac696babadb7a97fa9adad"
+  ],
+  "call_finish": false,
+  "expected": {
+    "result": "ok",
+    "packets": [
+      {
+        "main": 1,
+        "sub": 23,
+        "payload_hex": ""
+      },
+      {
+        "main": 63,
+        "sub": 2,
+        "payload_hex": "01"
+      },
+      {
+        "main": 26,
+        "sub": 4,
+        "payload_hex": "d2040000"
+      }
+    ]
+  },
+  "source": {
+    "grade": "reference_impl",
+    "ref": "wlre/network/wire.py,protocol.py,layouts.py (read and executed)"
+  },
+  "notes": "three frames in one read, order preserved"
+}

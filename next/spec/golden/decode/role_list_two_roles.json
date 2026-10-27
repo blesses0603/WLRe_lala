@@ -1,0 +1,91 @@
+{
+  "id": "decode/role_list_two_roles",
+  "priority": "P0",
+  "type": "decode",
+  "direction": "server_to_client",
+  "packet": {
+    "main": 63,
+    "sub": 1,
+    "payload_hex": "01062c6e668a32750a02f4010000e0010000780000006400000040e20100000000000903000001030b000000160000000005082b0000000000000000000a000000140000001e000000280000000500ffffffff020000000300000004000000020842006500740061003702f4010000e0010000780000006400000040e20100000000000903000001030b000000160000000005082b0000000000000000000a000000140000001e000000280000000500ffffffff020000000300000004000000"
+  },
+  "expected": {
+    "result": "ok",
+    "event": {
+      "main": 63,
+      "sub": 1,
+      "type": "role_list_available",
+      "roles": [
+        {
+          "index": 1,
+          "name": "測試甲",
+          "level": 10,
+          "element": 2,
+          "max_hp": 547,
+          "hp": 480,
+          "max_sp": 186,
+          "sp": 100,
+          "exp": 123456,
+          "gold": 777,
+          "sex": 1,
+          "head": 3,
+          "palette1": 11,
+          "palette5": 22,
+          "degree": 0,
+          "job": 5,
+          "scene": 11016,
+          "delete_time": 0.0,
+          "locked": false,
+          "bonuses": {
+            "core_hp": 10,
+            "core_sp": 20,
+            "emblem_hp": 30,
+            "emblem_sp": 40,
+            "ride_hp": 5,
+            "star_hp": -1,
+            "star_sp": 2,
+            "relation_hp": 3,
+            "relation_sp": 4
+          }
+        },
+        {
+          "index": 2,
+          "name": "Beta",
+          "level": 55,
+          "element": 2,
+          "max_hp": 547,
+          "hp": 480,
+          "max_sp": 186,
+          "sp": 100,
+          "exp": 123456,
+          "gold": 777,
+          "sex": 1,
+          "head": 3,
+          "palette1": 11,
+          "palette5": 22,
+          "degree": 0,
+          "job": 5,
+          "scene": 11016,
+          "delete_time": 0.0,
+          "locked": false,
+          "bonuses": {
+            "core_hp": 10,
+            "core_sp": 20,
+            "emblem_hp": 30,
+            "emblem_sp": 40,
+            "ride_hp": 5,
+            "star_hp": -1,
+            "star_sp": 2,
+            "relation_hp": 3,
+            "relation_sp": 4
+          }
+        }
+      ],
+      "parsed": true
+    }
+  },
+  "source": {
+    "grade": "synthetic",
+    "ref": "hand-built boundary case"
+  },
+  "notes": "synthetic roles; name is u8 byte-length + UTF-16LE; max_hp/max_sp already include summed *_hp / *_sp bonuses"
+}

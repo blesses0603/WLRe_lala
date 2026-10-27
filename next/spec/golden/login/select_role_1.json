@@ -1,0 +1,22 @@
+{
+  "id": "login/select_role_1",
+  "priority": "P0",
+  "type": "encode",
+  "command": "select_role",
+  "args": {
+    "index": 1
+  },
+  "expected": {
+    "result": "ok",
+    "packet": {
+      "main": 63,
+      "sub": 2,
+      "payload_hex": "01"
+    }
+  },
+  "source": {
+    "grade": "reference_impl",
+    "ref": "wlre/network/wire.py,protocol.py,layouts.py (read and executed)"
+  },
+  "notes": ""
+}

@@ -1,0 +1,20 @@
+{
+  "id": "wire/encode_with_payload",
+  "priority": "P0",
+  "type": "wire_encode",
+  "key": 173,
+  "packet": {
+    "main": 63,
+    "sub": 2,
+    "payload_hex": "01"
+  },
+  "expected": {
+    "result": "ok",
+    "frame_hex": "696baead92afac"
+  },
+  "source": {
+    "grade": "reference_impl",
+    "ref": "wlre/network/wire.py,protocol.py,layouts.py (read and executed)"
+  },
+  "notes": "frame = XOR(key, C4 C6 + u16le(len(body)) + main + sub + payload)"
+}

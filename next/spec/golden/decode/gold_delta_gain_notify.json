@@ -1,0 +1,26 @@
+{
+  "id": "decode/gold_delta_gain_notify",
+  "priority": "P0",
+  "type": "decode",
+  "direction": "server_to_client",
+  "packet": {
+    "main": 26,
+    "sub": 1,
+    "payload_hex": "3200000001"
+  },
+  "expected": {
+    "result": "ok",
+    "event": {
+      "main": 26,
+      "sub": 1,
+      "type": "gold_delta",
+      "delta": 50,
+      "notify": true
+    }
+  },
+  "source": {
+    "grade": "reference_impl",
+    "ref": "wlre/network/wire.py,protocol.py,layouts.py (read and executed)"
+  },
+  "notes": ""
+}

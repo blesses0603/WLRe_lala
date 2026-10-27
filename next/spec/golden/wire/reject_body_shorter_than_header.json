@@ -1,0 +1,20 @@
+{
+  "id": "wire/reject_body_shorter_than_header",
+  "priority": "P0",
+  "type": "wire_stream",
+  "key": 173,
+  "chunks_hex": [
+    "696bacadac"
+  ],
+  "call_finish": false,
+  "expected": {
+    "result": "rejected",
+    "packets": [],
+    "error": "frame shorter than main/sub header"
+  },
+  "source": {
+    "grade": "synthetic",
+    "ref": "hand-built boundary case"
+  },
+  "notes": "declared size < 2 cannot hold main/sub"
+}

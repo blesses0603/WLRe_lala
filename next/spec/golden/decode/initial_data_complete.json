@@ -1,0 +1,24 @@
+{
+  "id": "decode/initial_data_complete",
+  "priority": "P0",
+  "type": "decode",
+  "direction": "server_to_client",
+  "packet": {
+    "main": 1,
+    "sub": 11,
+    "payload_hex": ""
+  },
+  "expected": {
+    "result": "ok",
+    "event": {
+      "main": 1,
+      "sub": 11,
+      "type": "initial_data_complete"
+    }
+  },
+  "source": {
+    "grade": "reference_impl",
+    "ref": "wlre/network/wire.py,protocol.py,layouts.py (read and executed)"
+  },
+  "notes": ""
+}

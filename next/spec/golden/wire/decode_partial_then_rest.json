@@ -1,0 +1,31 @@
+{
+  "id": "wire/decode_partial_then_rest",
+  "priority": "P0",
+  "type": "wire_stream",
+  "key": 173,
+  "chunks_hex": [
+    "696babadb7a97fa9adad696b",
+    "afadacba"
+  ],
+  "call_finish": false,
+  "expected": {
+    "result": "ok",
+    "packets": [
+      {
+        "main": 26,
+        "sub": 4,
+        "payload_hex": "d2040000"
+      },
+      {
+        "main": 1,
+        "sub": 23,
+        "payload_hex": ""
+      }
+    ]
+  },
+  "source": {
+    "grade": "reference_impl",
+    "ref": "wlre/network/wire.py,protocol.py,layouts.py (read and executed)"
+  },
+  "notes": "complete frame followed by the head of the next"
+}

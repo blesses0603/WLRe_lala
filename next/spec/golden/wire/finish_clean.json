@@ -1,0 +1,31 @@
+{
+  "id": "wire/finish_clean",
+  "priority": "P0",
+  "type": "wire_stream",
+  "key": 173,
+  "chunks_hex": [
+    "696bafadacba696baead92afac"
+  ],
+  "call_finish": true,
+  "expected": {
+    "result": "ok",
+    "packets": [
+      {
+        "main": 1,
+        "sub": 23,
+        "payload_hex": ""
+      },
+      {
+        "main": 63,
+        "sub": 2,
+        "payload_hex": "01"
+      }
+    ],
+    "finish_result": "ok"
+  },
+  "source": {
+    "grade": "reference_impl",
+    "ref": "wlre/network/wire.py,protocol.py,layouts.py (read and executed)"
+  },
+  "notes": ""
+}

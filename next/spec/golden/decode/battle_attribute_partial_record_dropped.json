@@ -1,0 +1,27 @@
+{
+  "id": "decode/battle_attribute_partial_record_dropped",
+  "priority": "P2",
+  "type": "decode",
+  "direction": "server_to_client",
+  "packet": {
+    "main": 51,
+    "sub": 1,
+    "payload_hex": "0000000000000000"
+  },
+  "expected": {
+    "result": "ok",
+    "event": {
+      "main": 51,
+      "sub": 1,
+      "type": "battle_attribute_invalid",
+      "payload_bytes": 8,
+      "complete_records": 1,
+      "trailing_bytes": 1
+    }
+  },
+  "source": {
+    "grade": "synthetic",
+    "ref": "hand-built boundary case"
+  },
+  "notes": "S51-1 uses 7-byte records; a partial record drops the WHOLE update and keeps state (tolerance case)"
+}

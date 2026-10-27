@@ -1,0 +1,26 @@
+{
+  "id": "decode/login_result_ok",
+  "priority": "P0",
+  "type": "decode",
+  "direction": "server_to_client",
+  "packet": {
+    "main": 63,
+    "sub": 7,
+    "payload_hex": "0002"
+  },
+  "expected": {
+    "result": "ok",
+    "event": {
+      "main": 63,
+      "sub": 7,
+      "type": "login_result",
+      "result": 0,
+      "login_kind": 2
+    }
+  },
+  "source": {
+    "grade": "reference_impl",
+    "ref": "wlre/network/wire.py,protocol.py,layouts.py (read and executed)"
+  },
+  "notes": "result=0 kind=2"
+}
