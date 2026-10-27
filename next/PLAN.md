@@ -30,7 +30,7 @@
 | 0-3 | P0 golden（框架、登入、選角、初始化） | ✅ 46 案例，獨立驗證 46/46 |
 | 0-4 | 舊測試盤點分類（1,198 項；哪些可轉 golden） | ⏳ 未開始 |
 | 0-5 | 新 repo 骨架與 CI（Windows／Ubuntu／macOS） | ⏳ 未開始 |
-| 0-6 | **官方資源探測工具**（見第 5 節） | ⏳ 未開始，優先 |
+| 0-6 | **官方資源探測工具**（見第 5 節） | ✅ `tools-python/probe_official.py`＋離線測試 25 項；2026-10-27 已實際掃描官方 CDN；規格見 `spec/behavior/official-*.md`。AssetBundle／Lua／Voice 完整列表尚未執行 |
 
 ### 後續階段（概要，細節待階段 0 完成後定）
 
@@ -49,12 +49,15 @@
 
 ## 5. 官方資源來源（0-6 的依據）
 
-- 入口 `https://wlreftp.chinesegamer.net/WLN/TW/` 會 302 轉到 `https://wlreftpsrc.chinesegamer.net/WLN/TW/`。**必須跟隨轉址，不可寫死。**
+- 入口 `https://wlreftp.chinesegamer.net/WLN/TW/` 對應的實際主機是 `wlreftpsrc.chinesegamer.net`。**必須跟隨轉址，不可寫死。**
+  2026-10-27 實測：網址含結尾 `/` 時直接回 200；不含 `/` 時回 **301**（原本記載的 302 未觀察到）。
 - 根目錄（2026-10-27 觀察）：版本資料夾 `1.0.0`、`1.3.20`、`1.3.21`，`Voice/`，`DownloadUrl_{PC,ANDROID,IOS}.txt`，
-  `ResourcePath_{PC,ANDROID,IOS}.dat`（二進位，約 124～164 bytes，格式未知），`web.config`。
+  `ResourcePath_{PC,ANDROID,IOS}.dat`（約 124～164 bytes；2026-10-27 已確認**不是二進位**，是帶多餘尾逗號的 JSON 版本對照表，
+  見 `spec/behavior/official-resource-path.md`），`web.config`（列表可見，GET 回 404）。
 - `1.3.21/`：公告文字與圖片、`LuaScripts/`（`Lua/` 與 `LuaScriptPathList.txt`）、`ResourcesPC/`（`AssetBundle/`、`Config.txt`、`ServerList.txt`、`VerifyServer.txt`）、`ResourcesAndroid/`、`ResourcesIOS/`。
 - 規劃中的同步流程（**推測，尚未驗證**）：啟動時讀 `ResourcePath_*.dat` 或最新版資料夾 → 與本機 manifest 比對 → 只下載差異。
-- 開發這段的環境需要能連官方伺服器；雲端沙箱連不上（代理回 403），所以由本機執行。
+- 開發這段的環境需要能連官方伺服器。先前記載雲端沙箱連不上（代理回 403）；**2026-10-27 的雲端工作階段可以連上**，
+  0-6 的掃描就是在雲端執行。之後的環境不一定都能連，連不上時改由本機執行。
 
 ### 0-6 具體工作
 
@@ -83,6 +86,8 @@
 python3 -I next/tools-python/gen_golden.py   # 在舊 repo 根目錄；會覆寫 golden/
 python3 -I next/spec/verify_golden.py         # 獨立驗證，全部相符回傳 0
 python3 -I next/tools-python/analyze_deps.py  # 依賴盤點
+python3 -I -m unittest discover -s next/tools-python -p 'test_*.py'   # 0-6 離線測試（不連網）
+python3 -I next/tools-python/probe_official.py scan --base-url <第 5 節的入口網址>   # 連官方 CDN，輸出到 ~/.lala-cache/official/
 ```
 
 ## 8. 尚未涵蓋、不能假設的事

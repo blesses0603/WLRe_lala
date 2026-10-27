@@ -22,6 +22,7 @@
 | 0-3 | Golden Packet：P0（框架、登入、選角、初始化） | ✅ 46 個案例（含 9 個會話 scenario），獨立驗證器 46/46 相符 |
 | 0-4 | 舊測試盤點分類 | ⏳ 未開始 |
 | 0-5 | 新 repo 骨架與 CI | ⏳ 未開始（本資料夾尚無 CI 工作流程） |
+| 0-6 | 官方資源探測工具 | ✅ `tools-python/probe_official.py`；已實際掃描官方 CDN（2026-10-27），規格見 `spec/behavior/official-*.md` |
 
 ### 已量測的依賴事實（舊 repo，commit `2dd6694`；詳見 `EXTRACTION.md`）
 
@@ -38,7 +39,8 @@
 ```
 next/
   spec/                 與語言無關的規格與 golden（見 spec/README.md）
-  tools-python/         gen_golden.py（產生 golden）、analyze_deps.py（依賴盤點）
+  tools-python/         gen_golden.py（產生 golden）、analyze_deps.py（依賴盤點）、
+                        probe_official.py（0-6 官方資源探測）與其離線測試
   EXTRACTION.md         0-1 抽取清單與量測事實
   reference-python/     （預留）從舊版抽出、不含 Tk 的參考核心與 CLI
 ```

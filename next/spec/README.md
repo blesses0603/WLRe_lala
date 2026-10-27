@@ -12,6 +12,8 @@
 | `verify_golden.py` | **獨立驗證器**：不引用舊程式的第二份實作，用來確認規格自洽 |
 | `../tools-python/gen_golden.py` | 由舊版參考實作產生 golden（會 import `wlre`） |
 | `../tools-python/analyze_deps.py` | 舊版依賴分析（會 import `wlre`，不屬於規格） |
+| `../tools-python/probe_official.py` | 0-6 官方 CDN 探測：列目錄、SHA-256、manifest 與差異比對（不 import `wlre`；輸出只放本機快取） |
+| `behavior/official-*.md` | 官方 CDN 列表、版本對照表、設定與清單檔的**欄位格式**（不含伺服器位址等實際值） |
 
 ## 案例格式
 
