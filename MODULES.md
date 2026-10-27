@@ -91,3 +91,11 @@ WorkerGroup 記錄遊戲連線、版本查詢、Release 查詢／下載背景工
 | OfficialDataService | records／get；同一快照不可變查詢、明確 validated_at | 僅由當次成功 refresh 提供；下一次核對或關閉撤銷。無離線 current、無遊戲封包 API | 不可變、舊 view 撤銷、離線拒絕 |
 
 本批沒有新增事件、背景排程或遊戲狀態寫入；尚未建立 GUI 資源 Module 的 READY／啟動契約。場景名稱／模型關聯、各功能索引仍待逐項驗收；完整功能表的 P3～P6 狀態不因此改為完成。
+
+## P2 場景引用稽核契約
+
+- `parsers/texts.parse_text_table`：有界 UTF-16 LE 文字表，驗證筆數、ID、長度、編碼及 EOF；回傳不可變紀錄、SHA 與各列來源範圍。既有 `expedition.data.parse_text_data` 維持 dict／ProtocolError 入口。
+- `official/adapters`：程式內審核的 `SCENE_DEFINITIONS`／`TEXT_DEFINITIONS` 精確配對。不同 Parser 各有來源格式與收據，不再把文字表當成 76-byte 場景表。
+- `official/references.audit_scene_references`：同次場景／文字／MainPackage 索引的唯讀稽核；缺少文字不猜名稱，重複模型 ID、路徑與 address 不一致、缺 Bundle 或加密分別拒絕。模型內容與幾何不在本次驗收範圍。
+- `OfficialDataService.scene_reference(scene_id)`／`reference_summary()`：沿用整份快照租約，refresh／close 後失效；沒有遊戲傳送、繪圖或導航授權。
+- 無新增事件／背景工作／GUI 依賴；完整生命週期模組接入另批執行。測試入口 `test_official_scene_references.py`，常規 CI 使用合成樣本。

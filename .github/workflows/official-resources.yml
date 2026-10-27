@@ -33,7 +33,7 @@ jobs:
         run: >-
           python -m ruff check wlre/resources_runtime
           tests/test_official_resource_versions.py tests/test_resource_downloader.py
-          tests/test_official_resource_manager.py tools/check_official_resource_snapshot.py
+          tests/test_official_resource_manager.py tests/test_official_scene_references.py tools/check_official_resource_snapshot.py
           wlre/services/world/unity_textasset.py
       - name: Test source identity and parser with synthetic fixtures only
         run: |
@@ -46,6 +46,8 @@ jobs:
           python -m unittest discover -s tests -p test_official_lua_index.py -v
           python -m unittest discover -s tests -p test_resource_downloader.py -v
           python -m unittest discover -s tests -p test_official_resource_manager.py -v
+          python -m unittest discover -s tests -p test_official_scene_references.py -v
+          python -m unittest discover -s tests -p test_scene_names_1275.py -v
           python -m unittest discover -s tests -p test_unity_textasset.py -v
           python -m unittest discover -s tests -p test_instance_protocol.py -v
 

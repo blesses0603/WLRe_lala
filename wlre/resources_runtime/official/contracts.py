@@ -3,9 +3,9 @@ from dataclasses import dataclass
 from enum import Enum
 
 from wlre.core.primitives import identifier
-from wlre.resources_runtime.parsers.scenes import PARSER_ID
+from wlre.resources_runtime.official.adapters import SCENES, TEXTS, adapter_for
 
-SCENES_ASSET = 'Assets/ResourcesBuild/Data/ScenesData_C.bytes'
+SCENES_ASSET = SCENES.asset_path
 
 
 class ResourceStatus(str, Enum):
@@ -42,7 +42,9 @@ class ResourceRequirement:
 
 
 SCENE_DEFINITIONS = ResourceRequirement(
-    'scene_definitions', 'scene', 'DataPackage', SCENES_ASSET, PARSER_ID)
+    'scene_definitions', 'scene', SCENES.package, SCENES.asset_path, SCENES.parser_id)
+TEXT_DEFINITIONS = ResourceRequirement(
+    'text_definitions', 'scene', TEXTS.package, TEXTS.asset_path, TEXTS.parser_id)
 
 
 @dataclass(frozen=True)
@@ -65,6 +67,4 @@ def validated_requirements(requirements):
 
 def supported_requirement(requirement):
     # 程式內審核過的格式／完整路徑配對，不接受資料自行宣告為任意 Parser。
-    return (requirement.parser_id == PARSER_ID
-            and requirement.package == 'DataPackage'
-            and requirement.asset_path == SCENES_ASSET)
+    return adapter_for(requirement) is not None

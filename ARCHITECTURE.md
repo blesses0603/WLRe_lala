@@ -72,3 +72,9 @@ flowchart LR
 ```
 
 上述路徑已實作場景定義範圍，不是所有功能的資料快照。原始來源與未解讀位移保留於私人快取；舊 API 經相容入口使用相同 Parser。共享層暫時重用 `services/official_manifest_sync`／`official_incremental_sync` 的已測規劃與驗證，沒有建立另一套下載或遊戲資料庫。GUI、固定版本 Runtime 及其他功能尚未移植；不讓共享核心反向依賴 GUI，也不刪除舊資源。
+
+## P2 場景名稱與模型引用核對
+
+同次已驗證 DataPackage 需求可包含場景與文字表；`SourceAdapter` 將完整路徑、Parser、schema、來源收據集中管理，保留既有場景 API。名稱只透過 `name_id` 連結文字；模型只透過 `model_id` 連結 MainPackage 的已觀測官方場景路徑及 address，不能拿 `scene_id` 代替。
+
+`SceneReference` 分開回報名稱、模型 Manifest 身分及模型內容狀態。跨表缺口保留為 MISSING／INVALID／UNSUPPORTED，沒有猜名稱、下載所有場景或核准導航；模型內容仍 UNKNOWN。這是附帶缺口的唯讀稽核範圍，不能當作「所有引用完整」的正式遊戲資料。GUI／遊戲封包消費者尚未切換。

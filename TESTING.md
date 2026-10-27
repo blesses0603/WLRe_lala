@@ -165,3 +165,11 @@ Aqua 另外使用 32 單位初始邊緣預算容納原生選單列／陰影；Wi
 完整三平台均收集 1,260 項：Ubuntu 131.876 秒／跳過 2，Windows 166.770 秒／跳過 7，macOS 192.532 秒／跳過 3；Mac 另執行製作 UI preflight 8 項成功。原先誤跳過的 GUI gate 已打開，仍有兩項大 viewport 測試因原生 runner 螢幕不足而跳過，另 1 項為 Windows DPAPI。沒有宣稱這兩個畫面尺寸情境已實測。
 
 以正常 merge 帶回資源分支，沒有改寫歷史、沒有合併 main。TESTING 衝突已逐段保留資源與核心兩邊完整紀錄，另外通過 staged conflict-marker／diff check。合入後本地完整 **1,303 項，99.807 秒，OK，跳過 2 項**（`/tmp/lala-resources-native-integrated.log`），包含場景快照、下載器、舊協定／UI 及新原生測試支援。資源分支的最終三平台整合結果需以本 merge 提交的 PR #59 Checks 為準；原始官方資料、使用者設定及舊資產均未刪除。
+
+## P2 場景名稱與模型引用批次
+
+基準 `a88fc51` 的核心 [40405926554](https://github.com/blesses0603/WLRe_lala/actions/runs/40405926554)、資源 [40405926539](https://github.com/blesses0603/WLRe_lala/actions/runs/40405926539)、完整 [40405932541](https://github.com/blesses0603/WLRe_lala/actions/runs/40405932541) 三平台九項成功後，才開始本批。
+
+新增 `test_official_scene_references.py` **13 項通過**，使用非遊戲合成樣本，測試文字格式／offset／舊 API、缺少與無效名稱、精確模型身分／歧義／加密／缺包、雙來源原子快照及撤銷。原 Manager 28 項、場景名稱 6 項通過。新 Parser／Manager／工具及測試 Ruff、舊檔名稱檢查、compileall、repository audit、diff check 通過。
+
+完整本地 **1,316 項，91.833 秒，OK，跳過 2 項**（`/tmp/lala-scene-references-full.log`）；後續只調整既有場景 Finding 代碼的相容性，相關 41 項重驗通過。官方受控請求另外核對 1,337 場景／39,947 文字，收據與缺口見 [本批報告](docs/rebuild/P2_SCENE_REFERENCES_REPORT.md)，不當作實機遊戲驗收。已將引用與舊名稱測試加入資源三平台模組 CI，保留完整三平台 PR 檢查；常規 CI 不下載正式 Bundle。本批遠端結果需等提交後，不能以基準成功取代。

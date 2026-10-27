@@ -60,29 +60,13 @@ def load_catalog():
 
 
 def parse_text_data(text_data):
-    """Strictly read official TextData_C v1; no guessed fields or fallback.
-
-    Used by the expedition name mapper and the read-only automatic asset
-    inventory. An unknown binary layout fails closed without overwriting
-    any previously reviewed runtime text.
-    """
-    if type(text_data) is not bytes or not 4 < len(text_data) <= 16 * 1024 * 1024:
-        raise ProtocolError('文字資料來源缺失或大小不合法')
-    r = Reader(text_data)
-    count = r.i32()
-    if not 1 <= count <= 1000000:
-        raise ProtocolError('文字資料筆數錯誤')
-    texts = {}
-    for _ in range(count):
-        key, size = r.u32(), r.u16()
-        if size % 2 or key in texts:
-            raise ProtocolError('文字資料長度或識別碼錯誤')
-        try:
-            texts[key] = r.take(size).decode('utf-16-le')
-        except UnicodeDecodeError as exc:
-            raise ProtocolError('文字資料編碼錯誤') from exc
-    r.end()
-    return texts
+    """舊文字 API 維持 dict／ProtocolError；與正式資源管線共用解析器。"""
+    from wlre.resources_runtime.parsers.texts import TextFormatError, parse_text_table
+    try:
+        table = parse_text_table(text_data)
+    except TextFormatError as exc:
+        raise ProtocolError(str(exc)) from exc
+    return {row['id']: row['text'] for row in table.records}
 
 
 def attach_names(catalog, text_data):

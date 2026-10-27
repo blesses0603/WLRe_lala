@@ -3,6 +3,7 @@
 A door's source scene is NOT its transfer destination. Names are read-only
 labels and never grant an event index, navigation route, or packet permission.
 """
+from wlre.resources_runtime.official.references import scene_display_name
 
 
 def bind_scene_names(stages, texts):
@@ -16,11 +17,10 @@ def bind_scene_names(stages, texts):
         name_id = stage.get('name_id')
         if type(name_id) is not int or name_id <= 0:
             continue
-        name = texts.get(name_id)
-        if (type(name) is not str or not name.strip()
-                or len(name) > 160 or any(ord(ch) < 32 for ch in name)):
+        name = scene_display_name(texts.get(name_id))
+        if name is None:
             continue
-        result[scene_id] = name.strip()
+        result[scene_id] = name
     return result
 
 

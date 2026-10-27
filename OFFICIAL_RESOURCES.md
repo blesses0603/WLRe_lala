@@ -81,3 +81,13 @@ python -m tools.check_official_resource_snapshot --exe-version <客戶端版本>
 工具以有界 Git 查詢確認私人快取不在工作樹；權限／安全目錄狀態不明時拒絕。雲端掛載的空 `.git` 標記不等同有效 Repository。沒有更動其他舊工具的保守路徑規則。此工具需 Git、UnityPy 及官方 HTTPS，輸出不含原始表格或帳號資料。
 
 待續：場景名稱／模型與其他功能 Parser 的逐項跨表驗證、P1 生命週期資源模組接入、舊 Runtime 消費者遷移與安全引用清理。尚未刪除任何 1262／1275 檔案，也未把這批限定範圍驗收擴張為全功能相容。
+
+## P2 場景引用稽核批次（2026-10-27）
+
+新增審核過的 `TEXT_DEFINITIONS`；與場景表同批下載、解析並重新核對官方版本／兩套 Manifest hash 後原子提交。`--scene-references` 啟用此受控驗證；預設原有場景定義工具行為保留。每個來源收據的 `unresolved_relations` 是該 Parser 單獨能證明的範圍，跨表結果另外記在 `references`，沒有宣稱模型內容已補齊。
+
+本次實際官方核對時間為 2026-10-27T00:12:30Z：場景 1,337 筆、文字 39,947 筆。名稱 VALID 1,322／MISSING 15；模型 Manifest 身分 VALID 1,127／MISSING 210，974 個相異模型中有 202 個未在已識別官方索引中找到。缺少項的原因尚未確認，不自行歸類為廢棄、漏包或可替代。775 個已識別官方場景資產僅提供索引身分，不能證明幾何／可行走網格。
+
+僅取得必要的 430,359-byte 場景 Bundle 與 3,627,854-byte 文字 Bundle，沒有掃站或下載全套地圖。公開[來源與缺口統計收據](docs/rebuild/official_scene_references_probe.json)不含原始表格／遊戲圖像；原始資料只留私人快取。15 筆名稱缺口不以場景 ID、門名稱或舊版名稱冒充已驗證名稱。
+
+受控命令：在前述驗證工具加上 `--scene-references`。只有資料結構與引用稽核已執行，`geometry_ready` 仍 False、模型內容 UNKNOWN、`protocol_approved` 仍 False；歷史消費者／GUI 尚未遷移，舊檔案未移除。

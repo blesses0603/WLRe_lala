@@ -1,0 +1,144 @@
+{
+  "schema_version": 1,
+  "validated_at": "2026-10-27T00:12:30+00:00",
+  "snapshot_id": "252f6625eee84d38623dddb5a7e7ed54b6bc2c727027a1185ae895a1345cea5f",
+  "source_url": "https://wlreftpsrc.chinesegamer.net/WLN/TW",
+  "lala_version": "0.6.1",
+  "observed_exe_version": "1.3.0",
+  "data_version": "1.3.21",
+  "data_package_version": "1275_2026_10_21_18_27_33_84",
+  "main_package_version": "1275_2026_10_21_18_29_38_49",
+  "manifest_receipts": [
+    {
+      "crc32_le": "dcace626",
+      "data_ver": "1.3.21",
+      "integrity": "crc32_verified_https_source",
+      "manifest_name": "DataPackage.bytes",
+      "package": "DataPackage",
+      "package_version": "1275_2026_10_21_18_27_33_84",
+      "parser_id": "yooasset-2.2.5",
+      "parser_version": 1,
+      "sha256": "8af6b9374d2e31e5bda4d82d2ec4be6b3a673e9188a522eb2c1b110e68c51dee",
+      "size": 16830,
+      "source_url": "https://wlreftpsrc.chinesegamer.net/WLN/TW/1.3.21/ResourcesPC/AssetBundle/DataPackage.bytes"
+    },
+    {
+      "crc32_le": "b4e21f83",
+      "data_ver": "1.3.21",
+      "integrity": "crc32_verified_https_source",
+      "manifest_name": "MainPackage.bytes",
+      "package": "MainPackage",
+      "package_version": "1275_2026_10_21_18_29_38_49",
+      "parser_id": "yooasset-2.2.5",
+      "parser_version": 1,
+      "sha256": "65da10fab29b8ce96247a18e611ee0ba3c5c3bc5cb71a42c4e177001a8c4ba49",
+      "size": 2564950,
+      "source_url": "https://wlreftpsrc.chinesegamer.net/WLN/TW/1.3.21/ResourcesPC/AssetBundle/MainPackage.bytes"
+    }
+  ],
+  "bundle_receipts": [
+    {
+      "data_ver": "1.3.21",
+      "file_crc": "ec25a891",
+      "file_hash": "c3581ba9fcea38a28bda4d55c367c796",
+      "file_size": 430359,
+      "integrity": "size_md5_crc32_verified",
+      "name": "datapackage_data_s.bundle",
+      "package": "DataPackage",
+      "package_version": "1275_2026_10_21_18_27_33_84",
+      "source_url": "https://wlreftpsrc.chinesegamer.net/WLN/TW/1.3.21/ResourcesPC/AssetBundle/datapackage_data_s.bundle"
+    },
+    {
+      "data_ver": "1.3.21",
+      "file_crc": "a23ee983",
+      "file_hash": "1144d88eec49f22c71dfed4cc204f170",
+      "file_size": 3627854,
+      "integrity": "size_md5_crc32_verified",
+      "name": "datapackage_data_t.bundle",
+      "package": "DataPackage",
+      "package_version": "1275_2026_10_21_18_27_33_84",
+      "source_url": "https://wlreftpsrc.chinesegamer.net/WLN/TW/1.3.21/ResourcesPC/AssetBundle/datapackage_data_t.bundle"
+    }
+  ],
+  "source_receipts": [
+    {
+      "acceptance_scope": "scene_definitions_only",
+      "asset_path": "Assets/ResourcesBuild/Data/ScenesData_C.bytes",
+      "index": "scene_definitions",
+      "module": "scene",
+      "package": "DataPackage",
+      "parser_id": "stage-new-76-v1",
+      "parser_version": 1,
+      "record_count": 1337,
+      "record_size": 76,
+      "records_offset": 4,
+      "schema_version": 1,
+      "sha256": "6ab292b209a842f0e04c50a44e0d336d51f737c40f15fa061c11cb04abb75910",
+      "size": 101616,
+      "uninterpreted_ranges": [
+        [
+          2,
+          2
+        ],
+        [
+          10,
+          11
+        ],
+        [
+          32,
+          20
+        ],
+        [
+          56,
+          1
+        ],
+        [
+          63,
+          13
+        ]
+      ],
+      "unresolved_relations": [
+        "name_id",
+        "model_id"
+      ]
+    },
+    {
+      "acceptance_scope": "text_definitions_only",
+      "asset_path": "Assets/ResourcesBuild/Data/TextData_C.bytes",
+      "index": "text_definitions",
+      "module": "scene",
+      "package": "DataPackage",
+      "parser_id": "text-data-v1",
+      "parser_version": 1,
+      "record_count": 39947,
+      "record_size": null,
+      "records_offset": 4,
+      "schema_version": 1,
+      "sha256": "5c61277ec3044616938db58750cba116e623f66e01f33aef4f98a72d88204ea4",
+      "size": 1550282,
+      "uninterpreted_ranges": [],
+      "unresolved_relations": []
+    }
+  ],
+  "record_count": 1337,
+  "acceptance_scope": "scene_reference_audit_only",
+  "references": {
+    "scene_count": 1337,
+    "name_statuses": {
+      "VALID": 1322,
+      "MISSING": 15
+    },
+    "model_manifest_statuses": {
+      "VALID": 1127,
+      "MISSING": 210
+    },
+    "distinct_models": 974,
+    "missing_distinct_models": 202,
+    "model_content_status": "UNKNOWN",
+    "geometry_ready": false
+  },
+  "protocol_approved": false,
+  "live_game_e2e": "not_executed",
+  "legacy_consumers_migrated": false,
+  "offline_current_view_allowed": false
+}

@@ -4,7 +4,10 @@ import json
 import subprocess
 from pathlib import Path
 
-from wlre.resources_runtime.official.contracts import SCENE_DEFINITIONS
+from wlre.resources_runtime.official.contracts import (
+    SCENE_DEFINITIONS,
+    TEXT_DEFINITIONS,
+)
 from wlre.resources_runtime.official.manager import OfficialResourceManager
 from wlre.storage.atomic import write_json
 
@@ -31,13 +34,17 @@ def main(argv=None):
     parser.add_argument('--exe-version', required=True, help='明確指定客戶端 ExeVer，不猜預設版號')
     parser.add_argument('--cache-root', required=True, type=Path, help='Git 工作樹以外的私人快取')
     parser.add_argument('--report', required=True, type=Path, help='只含來源、大小與筆數的 JSON 收據')
+    parser.add_argument('--scene-references', action='store_true',
+                        help='同次核對官方文字名稱及 MainPackage 模型索引；不驗收幾何')
     args = parser.parse_args(argv)
     try:
         cache_root = private_cache(args.cache_root)
         with OfficialResourceManager(cache_root) as manager:
-            service = manager.refresh(args.exe_version, scope='scene_definitions',
-                                       requirements=(SCENE_DEFINITIONS,))
-            receipt = manager.diagnose('scene_definitions')['document']
+            scope = 'scene_references' if args.scene_references else 'scene_definitions'
+            requirements = ((SCENE_DEFINITIONS, TEXT_DEFINITIONS) if args.scene_references
+                            else (SCENE_DEFINITIONS,))
+            service = manager.refresh(args.exe_version, scope=scope, requirements=requirements)
+            receipt = manager.diagnose(scope)['document']
             report = {
                 'schema_version': 1, 'validated_at': service.validated_at,
                 'snapshot_id': service.snapshot_id, 'source_url': receipt['source_url'],
@@ -50,7 +57,9 @@ def main(argv=None):
                 'bundle_receipts': receipt['bundles'],
                 'source_receipts': receipt['sources'],
                 'record_count': len(service.records('scene_definitions')),
-                'acceptance_scope': 'scene_definitions_only',
+                'acceptance_scope': ('scene_reference_audit_only' if args.scene_references
+                                     else 'scene_definitions_only'),
+                'references': service.reference_summary(),
                 'protocol_approved': service.protocol_approved,
                 'live_game_e2e': 'not_executed',
                 'legacy_consumers_migrated': False,

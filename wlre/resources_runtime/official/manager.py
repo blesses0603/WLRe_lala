@@ -8,20 +8,22 @@ from types import MappingProxyType
 
 from wlre.core.primitives import check_cancelled, identifier
 from wlre.resources_runtime.downloader import DownloadManager, FileIntegrity
+from wlre.resources_runtime.official.adapters import adapter_for
 from wlre.resources_runtime.official.compatibility import CompatibilityValidator
 from wlre.resources_runtime.official.contracts import (
     ResourceStatus,
     validated_requirements,
 )
 from wlre.resources_runtime.official.gaps import ResourceGapAnalyzer
+from wlre.resources_runtime.official.references import (
+    audit_scene_references,
+    reference_summary,
+)
 from wlre.resources_runtime.official.snapshots import SnapshotStore
 from wlre.resources_runtime.official.source import ROOT
 from wlre.resources_runtime.official.versions import VersionDetector
-from wlre.resources_runtime.parsers.scenes import (
-    PARSER_VERSION,
-    SCHEMA_VERSION,
-    UNINTERPRETED_RANGES,
-)
+from wlre.resources_runtime.parsers.scenes import SceneTable
+from wlre.resources_runtime.parsers.texts import TextTable
 from wlre.resources_runtime.parsers.unity_textasset import (
     UnityTextAssetError,
     extract_exact_textasset,
@@ -48,6 +50,7 @@ class OfficialDataService:
     validated_at: str
     _indexes: object = field(repr=False)
     _revoked: Event = field(repr=False, compare=False)
+    _references: tuple = field(default=(), repr=False)
 
     def _check(self):
         if self._revoked.is_set():
@@ -61,6 +64,16 @@ class OfficialDataService:
         if type(record_id) is not int:
             raise ValueError('integer_official_record_id_required')
         return next((row for row in self.records(index) if row['id'] == record_id), None)
+
+    def scene_reference(self, scene_id):
+        self._check()
+        if type(scene_id) is not int:
+            raise ValueError('integer_scene_id_required')
+        return next((row for row in self._references if row.scene_id == scene_id), None)
+
+    def reference_summary(self):
+        self._check()
+        return reference_summary(self._references)
 
     @property
     def protocol_approved(self):
@@ -146,7 +159,7 @@ class OfficialResourceManager:
             paths[key] = path
             bundle_receipts.append({**asdict(spec), 'source_url': spec.url,
                                     'integrity': 'size_md5_crc32_verified'})
-        indexes, source_receipts, findings = {}, [], []
+        indexes, source_receipts, findings, tables = {}, [], [], []
         for requirement, plan in zip(requirements, gap_report.plans, strict=True):
             check_cancelled(cancellation)
             selected = tuple(paths[(row.spec.package, row.spec.name)] for row in plan.entries)
@@ -172,14 +185,15 @@ class OfficialResourceManager:
                 raise ResourceRefreshError('official_resource_incompatible', findings=tuple(findings))
             source_sha = self._store.put(raw)
             indexes[requirement.index] = result.table.records
+            tables.append(result.table)
             source_receipts.append({
                 **asdict(requirement), 'sha256': source_sha, 'size': len(raw),
-                'parser_version': PARSER_VERSION, 'schema_version': SCHEMA_VERSION,
-                'record_count': len(result.table.records), 'records_offset': 4,
-                'record_size': 76, 'uninterpreted_ranges': UNINTERPRETED_RANGES,
-                'unresolved_relations': ['name_id', 'model_id'],
-                'acceptance_scope': 'scene_definitions_only',
+                **adapter_for(requirement).receipt(result.table),
             })
+        scene_table = next((table for table in tables if isinstance(table, SceneTable)), None)
+        text_table = next((table for table in tables if isinstance(table, TextTable)), None)
+        references = (() if scene_table is None else
+                      audit_scene_references(scene_table, text_table, manifests['MainPackage']))
         # 驗證與下載可能跨過官方更新；版本映射及兩套 hash 全部再核對。
         after = detector.observe(exe_version, cancel_event=cancellation)
         if _version_identity(after) != _version_identity(versions):
@@ -216,6 +230,7 @@ class OfficialResourceManager:
             'resource_map_sha256': hashlib.sha256(versions.resource_map_raw).hexdigest(),
             'resource_map_blob': self._store.put(versions.resource_map_raw),
             'manifests': manifest_receipts, 'bundles': bundle_receipts, 'sources': source_receipts,
+            'references': reference_summary(references),
             'acceptance': 'validated_requested_scope', 'protocol_approved': False,
             'previous_snapshot': previous,
         }
@@ -224,7 +239,7 @@ class OfficialResourceManager:
             snapshot_id = self._store.commit(scope, document, expected_current=previous)
             self._lease = Event()
             return OfficialDataService(snapshot_id, scope, versions, checked_at,
-                                       MappingProxyType(indexes), self._lease)
+                                       MappingProxyType(indexes), self._lease, references)
 
 
 def _version_identity(versions):
