@@ -4,6 +4,7 @@
 用法：py -3 -m tools.audit_all_resource_database
 """
 import argparse
+from contextlib import closing
 from collections import Counter
 import hashlib
 import json
@@ -45,7 +46,7 @@ def audit(database, root=RESOURCE_ROOT):
         result['error'] = 'database_missing'
         return result
     try:
-        with sqlite3.connect(database.resolve().as_uri() + '?mode=ro', uri=True) as db:
+        with closing(sqlite3.connect(database.resolve().as_uri() + '?mode=ro', uri=True)) as db:
             tables = {row[0] for row in db.execute(
                 "SELECT name FROM sqlite_master WHERE type='table'")}
             if not {'bundled_resources', 'bundled_active'} <= tables:
