@@ -40,6 +40,19 @@ class BundledDatabaseTests(unittest.TestCase):
             with closing(sqlite3.connect(database)) as db:
                 self.assertEqual(db.execute('SELECT count(*) FROM bundled_active').fetchone()[0], len(names))
 
+    def test_identical_source_does_not_rewrite_active_row(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            dbpath = root / 'resources.sqlite3'
+            (root / 'catalog.json').write_bytes(b'{\"ok\":true}')
+            self.assertEqual(load_bundled_json('catalog.json', root=root, database=dbpath), {'ok': True})
+            with closing(sqlite3.connect(dbpath)) as db:
+                db.execute('PRAGMA query_only=ON')
+                # A fully populated, identical SQLite entry must need no write.
+                self.assertEqual(load_bundled_json('catalog.json', root=root, database=dbpath), {'ok': True})
+            (root / 'catalog.json').unlink()
+            self.assertEqual(load_bundled_json('catalog.json', root=root, database=dbpath), {'ok': True})
+
     def test_rejects_corrupt_database_content(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
