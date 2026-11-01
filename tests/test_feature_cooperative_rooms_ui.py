@@ -1,4 +1,6 @@
 """P1a second batch: cooperative creation, joining, and leaving in Tk."""
+
+from gui_support import isolate_gui_background_checks
 import os
 import time
 import tkinter as tk
@@ -15,6 +17,7 @@ from wlre.features.cooperative.panel import CooperativeModePage
                      'Requires a desktop/Xvfb')
 class CooperativeRoomDialogsUI(unittest.TestCase):
     def setUp(self):
+        isolate_gui_background_checks(self)
         with patch.object(App, 'start_version_check'):
             self.root = tk.Tk()
             self.app = App(self.root)

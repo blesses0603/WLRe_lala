@@ -1,4 +1,6 @@
 """Official 1262: C85-9 entry and server-paired C186 combat."""
+
+from gui_support import isolate_gui_background_checks
 import os
 import tkinter as tk
 import unittest
@@ -152,6 +154,7 @@ class Entry(unittest.TestCase):
                      'Requires desktop/Xvfb')
 class EntryUI(unittest.TestCase):
     def setUp(self):
+        isolate_gui_background_checks(self)
         from wlre.ui.gui import App
         self.root = tk.Tk()
         self.app = App(self.root)

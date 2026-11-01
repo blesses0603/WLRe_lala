@@ -1,4 +1,6 @@
 """Dedicated version-check window must use official server results exclusively."""
+
+from gui_support import isolate_gui_background_checks
 import os
 import tkinter as tk
 import unittest
@@ -37,6 +39,7 @@ def official_result(main="1262", data="1262", status="version_identifiers_match"
                      "需要桌面顯示環境")
 class PreloginVersionWindowTests(unittest.TestCase):
     def setUp(self):
+        isolate_gui_background_checks(self)
         self.root = tk.Tk()
         self.patcher = patch.object(VersionGateController, "start_version_check")
         self.patcher.start()

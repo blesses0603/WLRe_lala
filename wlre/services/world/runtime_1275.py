@@ -133,7 +133,7 @@ def ready():
         from wlre.services.items.crafting import activate_1275_recipes
         if getattr(source, 'catalog_identity', None) is None:
             activate_1275_recipes(source)
-        return True, '1275 正式資料通過來源校驗，可供功能模組使用；遊戲協定仍須獨立驗收'
+        return True, f'{source.revision} 正式資料通過來源校驗，可供功能模組使用；遊戲協定仍須獨立驗收'
     except (Runtime1275Unavailable, OSError, ValueError) as exc:
         message = str(exc)
         if isinstance(exc, Runtime1275Unavailable):

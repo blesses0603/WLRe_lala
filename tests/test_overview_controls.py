@@ -1,3 +1,5 @@
+
+from gui_support import isolate_gui_background_checks
 import os
 import tkinter as tk
 import unittest
@@ -11,6 +13,7 @@ from wlre.ui.halo_button import edge_points,edge_overlay
 @unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt','Requires a desktop')
 class OverviewControls(unittest.TestCase):
     def setUp(self):
+        isolate_gui_background_checks(self)
         # These tests verify local Tk controls, not remote update/version checks.
         # Keep all Tk lifecycle work on the test/UI thread with no HTTP workers.
         with patch.object(App, 'start_version_check'):

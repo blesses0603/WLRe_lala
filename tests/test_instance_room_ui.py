@@ -1,4 +1,6 @@
 """Room join/leave UI: selection, confirmation, password and cross-mode locks."""
+
+from gui_support import isolate_gui_background_checks
 import os
 import time
 import tkinter as tk
@@ -14,6 +16,7 @@ from wlre.core.state import State
                      'Requires desktop/Xvfb')
 class RoomUI(unittest.TestCase):
     def setUp(self):
+        isolate_gui_background_checks(self)
         self.root = tk.Tk()
         self.app = App(self.root)
         self.app.show_main()

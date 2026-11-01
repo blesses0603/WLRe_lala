@@ -213,6 +213,7 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
             if isinstance(old_entities, dict) and old_entities:
                 self._legacy_map_entities = old_entities
             self.portals = Portals()
+        revision_label = str(self.portals.data.get('source_revision') or '官方新版')
         recovery=self.image is None
         candidates=allowed_rows(self.portals,self.selected_id,self.maps,recovery=recovery)
         self.portal_rows=marked_portals(candidates, getattr(self, 'projection', None))
@@ -252,7 +253,7 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
                 self.monster_rows.append(e)
         if not self.list_rows:
             if is_official_revision(self.portals.data.get('source_revision')):
-                empty = ('（1275 門事件資料尚未就緒）'
+                empty = (f'（{revision_label} 門事件資料尚未就緒）'
                          if not self.portals.data.get('source_ready')
                          else '（無已標記傳點）')
             else:
@@ -293,11 +294,11 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
                                if isinstance(name_status, str)
                                and name_status.startswith('destination_links_')
                                else ''))
-                text = (f'1275 場景 {scene}：{count} 個傳點，'
+                text = (f'{revision_label} 場景 {scene}：{count} 個傳點，'
                         f'{ready} 個可手動確認試傳。{hint}'
                         '實際換圖以伺服器回覆為準。')
             else:
-                text = ('1275 官方門事件索引尚未完成校驗／安裝；'
+                text = (f'{revision_label} 官方門事件索引尚未完成校驗／安裝；'
                         '下次切換地圖會重新讀取，不使用 1262 舊傳點。')
         elif recovery:
             text=(f'此圖沒有小地圖；左側保留 {ready} 個返回有圖地圖的出口。' if ready
