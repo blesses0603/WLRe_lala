@@ -18,7 +18,10 @@ def activate_1275_recipes(runtime):
     object would leave stale 1262 data in existing components.
     """
     from wlre.services.world.catalog_source_policy import source_for
-    if source_for('crafting').kind != 'verified_1275_runtime' or runtime.revision != 1275:
+    from wlre.services.world.runtime_1275 import baseline_revision
+    if (baseline_revision() != '1275' or
+            source_for('crafting').kind != 'verified_1275_runtime' or
+            runtime.revision != 1275):
         raise ValueError('不能把非 1275 製作資料當成新版本')
     checked = {}
     for item_id, recipe in runtime.recipes.items():
