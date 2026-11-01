@@ -79,6 +79,15 @@ def read_pinned_legacy_bytes(name, *, root=None, database=None):
     if row is None:
         raise FileNotFoundError('1262 歷史資源尚未匯入 SQLite: ' + name)
     digest, data = row
+    if name in ('npc_talk_1262.json.gz', 'npc_text_1262.json.gz', 'npc_battle_talk_1262.json.gz'):
+        from wlre.services.world.npc_asset_install import ASSETS
+        expected = ASSETS[name]
+        if digest != expected[0] or len(data) != expected[1]:
+            raise ValueError('1262 NPC 歷史資源固定版本指紋不符')
+    if name == 'npc_interact_1262.json.gz':
+        from wlre.services.world.npc_interact import EXPECTED_SHA256
+        if digest != EXPECTED_SHA256 or len(data) != 19914:
+            raise ValueError('1262 NPC 選項歷史資源固定版本指紋不符')
     if (not isinstance(digest, str) or not re.fullmatch('[0-9a-f]{64}', digest)
             or not isinstance(data, bytes) or len(data) > 16 * 1024 * 1024
             or hashlib.sha256(data).hexdigest() != digest):
