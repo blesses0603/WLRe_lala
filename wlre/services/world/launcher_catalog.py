@@ -121,6 +121,22 @@ def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
             failure_feature, failure_stage = details['feature'], details['stage']
         if progress is not None:
             progress(phase, details)
+    if real_launcher_run:
+        # Discover live independent package revisions and manifest digests.
+        # This metadata cannot approve gameplay assets or network packets.
+        try:
+            from wlre.services.world.runtime_manifest_identity import (
+                discover_runtime_identity)
+            identity = discover_runtime_identity()
+            if progress is not None:
+                progress('runtime_identity_verified', {
+                    'data': identity.packages['DataPackage'].version,
+                    'main': identity.packages['MainPackage'].version,
+                    'data_assets': identity.packages['DataPackage'].asset_count,
+                    'main_assets': identity.packages['MainPackage'].asset_count})
+        except Exception:
+            if progress is not None:
+                progress('runtime_identity_unavailable', {})
     if real_launcher_run and env.get('WLRE_SYNC_LEGACY_1275') == '1':
         # Legacy 1275 synchronization is opt-in only. The primary launcher
         # always discovers the live official MainPackage/DataPackage pair via
