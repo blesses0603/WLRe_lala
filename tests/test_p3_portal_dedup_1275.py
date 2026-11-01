@@ -105,7 +105,7 @@ class DuplicatePortalsTest(unittest.TestCase):
         self.assertEqual(info['duplicate_event_id_removed'], 0)
 
     def test_current_runtime_duplicate_eve_index_does_not_unlock_transfer(self):
-        runtime = SimpleNamespace(
+        runtime = SimpleNamespace(revision=1275, 
             doors={11016: [
                 {'index': 1, 'x': 200, 'y': 300},
                 {'index': 1, 'x': 400, 'y': 500},
