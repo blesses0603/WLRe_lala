@@ -31,6 +31,19 @@ def load_bundled_bytes(name, *, root=None, database=None, refresh=False):
     source = Path(root) / name
     path = (Path(database) if database is not None else data_root() /
             'official_sync' / 'derived_catalogs' / 'resource_inventory.sqlite3')
+    # A shipped, independently pinned full seed supplies a clean installation.
+    seed = Path(root) / 'resource_catalog_seed.sqlite3'
+    if not source.is_file() and seed.is_file():
+        needs_seed = not path.is_file()
+        if not needs_seed:
+            with closing(sqlite3.connect(path.resolve().as_uri() + '?mode=ro', uri=True)) as existing:
+                try:
+                    needs_seed = existing.execute('SELECT 1 FROM bundled_active WHERE name=?', (name,)).fetchone() is None
+                except sqlite3.OperationalError:
+                    needs_seed = True
+        if needs_seed:
+            from wlre.storage.full_resource_seed import provision_seed
+            provision_seed(seed, path)
     # A missing DB and missing file must not create an empty user database.
     if not path.is_file() and not source.is_file():
         raise FileNotFoundError('Bundled resource missing: ' + name)
