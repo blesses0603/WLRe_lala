@@ -38,7 +38,10 @@ class SeedOnlyRuntimeTests(unittest.TestCase):
             build_seed(RESOURCE_ROOT,root/SEED_NAME)
             shutil.copy2(RESOURCE_ROOT.parent.parent/'WLRE_Client.py',base/'WLRE_Client.py')
             env=dict(os.environ,LOCALAPPDATA=str(base/'new_user'),WLRE_DISABLE_AUTO_CATALOG='1')
-            for args in (['WLRE_Client.py','--self-test'],['-c','from wlre.ui.gui import App;from wlre.storage.defaults import load_default_profile;from wlre.storage.server_lines import load;assert load();assert load_default_profile()']):
+            commands=[['WLRE_Client.py','--self-test'],['-c','from wlre.ui.gui import App;from wlre.storage.defaults import load_default_profile;from wlre.storage.server_lines import load;assert load();assert load_default_profile()']]
+            if os.environ.get('DISPLAY') or os.name=='nt' or sys.platform=='darwin':
+                commands.append(['WLRE_Client.py','--smoke-test-gui'])
+            for args in commands:
                 result=subprocess.run([sys.executable,*args],cwd=base,env=env,capture_output=True,text=True,timeout=60)
                 self.assertEqual(result.returncode,0,result.stdout+result.stderr)
 
