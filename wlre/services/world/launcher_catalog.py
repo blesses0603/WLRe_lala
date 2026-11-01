@@ -1,7 +1,7 @@
 """Launcher-owned official resource preparation, never the login view.
 
 Both the source-code bootstrapper and the compiled desktop entry point call
-this service BEFORE starting Tk. Candidate catalogs are read-only and cannot
+this service BEFORE starting Tk. Catalog reports are read-only and cannot
 approve game versions, login, navigation or network packet sending.
 """
 from __future__ import annotations
@@ -94,7 +94,7 @@ def _store_status(report, *, root=None):
 
 
 def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
-    """Synchronously prepare a candidate before Tk starts.
+    """Synchronously prepare official resources before Tk starts.
 
     Failure is reported without blocking LaLa's own official login check.
     Callers must not treat any return value or the private receipt as approval.
@@ -122,7 +122,7 @@ def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
         if progress is not None:
             progress(phase, details)
     if real_launcher_run:
-        # The four-feature candidate may fail before the full 1275 runtime
+        # The four-feature catalog may fail before the full 1275 runtime
         # files are prepared (e.g. a separately audited Eve decoder). Give
         # the fixed-version runtime its own bounded official Bundle sync.
         # Failure is informational, never a login/pass-packet authorization.
@@ -171,30 +171,6 @@ def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
                 result.get('can_send_packets') is False and
                 result.get('approved') is False):
             data_compatibility = 'compatible'
-        # Automatic promotion is only eligible in a real Launcher run after
-        # four independently validated sources and the full pinned archives
-        # are available. Injected test runners/roots never touch live files.
-        if (real_launcher_run and data_compatibility == 'compatible'):
-            from wlre.services.world.formal_candidate_bridge import (
-                promote_reviewed_archives)
-            if progress is not None:
-                progress('formal_check', {})
-            try:
-                bridge = promote_reviewed_archives(key)
-            except Exception:
-                # The legacy two-ZIP installation is OPTIONAL when the
-                # independently pinned official Bundle runtime is present.
-                # Do not turn a successfully verified candidate receipt into
-                # 'error' just because legacy ZIP reconciliation failed.
-                # runtime_1275.ready() separately revalidates the candidate
-                # against its independently verified full runtime and
-                # strictly rejects any actual source mismatch before
-                # activating recipes or permitting login.
-                if progress is not None:
-                    progress('formal_checked', {'status': 'optional_failed'})
-            else:
-                if progress is not None:
-                    progress('formal_checked', {'status': bridge['status']})
         status = result['status']
     except Exception:
         # Keep reason out of local receipts; failures can include file paths,
@@ -245,14 +221,14 @@ def main(argv=None):
     else:
         result = prepare_on_launch()
     status = result['status']
-    print('LaLa Launcher 官方資源候選：' +
+    print('LaLa Launcher 官方資源狀態：' +
           ('資料格式檢查通過，協定仍待審核'
            if status == 'review_required' and
            result.get('data_compatibility') == 'compatible'
            else '已建立，尚待相容性審核' if status == 'review_required'
            else '未完成；仍維持原有登入安全檢查' if status == 'error'
            else '已略過'), flush=True)
-    # Failure to build a *candidate* must not suppress the real login gate.
+    # Resource preparation failure must not suppress the real login gate.
     return 0
 
 
