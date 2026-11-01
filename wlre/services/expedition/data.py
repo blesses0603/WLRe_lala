@@ -149,7 +149,8 @@ def load_verified_1275_catalog():
 
     if baseline_revision() != '1275':
         raise Runtime1275Unavailable('正式資源基準不是 1275')
-    runtime = active_runtime()
+    from wlre.services.world.catalog_source_policy import official_runtime
+    runtime = official_runtime('expedition')
     if runtime.revision != 1275:
         raise Runtime1275Unavailable('遠征資料來源版本不符合 1275')
     # If the exact official .version/.bytes/.hash and verified Bundle source
