@@ -107,6 +107,7 @@ class Default1275Tests(unittest.TestCase):
     def test_npc_and_shop_take_pinned_1275_index(self):
         row = {'index': 12, 'npc_id': 888, 'x': 11, 'y': 12, 'event_count': 1}
         runtime = SimpleNamespace(
+            revision=1275,
             npc_index=SimpleNamespace(scenes={'10000': [row]}),
             interact_index=SimpleNamespace(scenes={10000: {3: {
                 'index': 3, 'form_kind': 3, 'items': [], 'link_number': 0}}}),
@@ -120,7 +121,7 @@ class Default1275Tests(unittest.TestCase):
         item_catalog.cache_clear()
 
     def test_legacy_portals_not_reused_when_1275_selected(self):
-        runtime = SimpleNamespace(doors={10000: [{'index': 1}]})
+        runtime = SimpleNamespace(revision=1275, doors={10000: [{'index': 1}]})
         with patch.object(runtime_1275, 'active_runtime', return_value=runtime):
             catalog = Portals()
             self.assertEqual(catalog.for_scene(10000), [])
