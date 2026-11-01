@@ -10,6 +10,7 @@ verification. Never infer indices from list position, NPC ID, MapActionNpcData,
 or portal IDs.
 """
 import gzip
+import io
 import json
 from pathlib import Path
 from wlre.paths import RESOURCE_ROOT
@@ -45,14 +46,16 @@ class NPCIndex:
                 return
         self.path = Path(path) if path is not None else RESOURCE_ROOT/'npc_event_index_1262.json.gz'
         self.scenes = {}
-        if not self.path.is_file():
-            if path is None:
-                raise FileNotFoundError('官方 NPC 資料尚未隨套件安裝')
+        cached = None
+        if path is None and not self.path.is_file():
+            from wlre.storage.bundled_database import read_pinned_legacy_bytes
+            cached = read_pinned_legacy_bytes('npc_event_index_1262.json.gz')
+        if path is not None and not self.path.is_file():
             return
         if self.path.suffix == '.gz':
             # Bound decompression before JSON parsing to reject corrupt or
             # maliciously expanded resource data.
-            with gzip.open(self.path, 'rb') as stream:
+            with (gzip.GzipFile(fileobj=io.BytesIO(cached)) if cached is not None else gzip.open(self.path, 'rb')) as stream:
                 raw = stream.read(16 * 1024 * 1024 + 1)
             if len(raw) > 16 * 1024 * 1024:
                 raise ValueError('NPC 索引檔超過安全上限')
