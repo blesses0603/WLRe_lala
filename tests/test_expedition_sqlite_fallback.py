@@ -1,5 +1,6 @@
 """Regression: missing bundled expedition JSON must still load verified SQLite data."""
 import json
+from contextlib import closing
 from pathlib import Path
 import sqlite3
 from tempfile import TemporaryDirectory
@@ -18,7 +19,7 @@ class ExpeditionSQLiteFallbackTests(unittest.TestCase):
             raw = json.dumps(payload).encode('utf-8')
             import hashlib
             digest = hashlib.sha256(raw).hexdigest()
-            with sqlite3.connect(database) as db:
+            with closing(sqlite3.connect(database)) as db, db:
                 db.execute('CREATE TABLE bundled_active (name TEXT PRIMARY KEY, sha256 TEXT NOT NULL)')
                 db.execute('CREATE TABLE bundled_resources (name TEXT NOT NULL, sha256 TEXT NOT NULL, data BLOB NOT NULL, PRIMARY KEY(name,sha256))')
                 db.execute('INSERT INTO bundled_active VALUES (?,?)', ('expedition_catalog.json', digest))
