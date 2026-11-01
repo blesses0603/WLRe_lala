@@ -121,7 +121,10 @@ def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
             failure_feature, failure_stage = details['feature'], details['stage']
         if progress is not None:
             progress(phase, details)
-    if real_launcher_run:
+    if real_launcher_run and env.get('WLRE_SYNC_LEGACY_1275') == '1':
+        # Legacy 1275 synchronization is opt-in only. The primary launcher
+        # always discovers the live official MainPackage/DataPackage pair via
+        # run_auto_catalog; historical pinned resources must not gate it.
         # The four-feature candidate may fail before the full 1275 runtime
         # files are prepared (e.g. a separately audited Eve decoder). Give
         # the fixed-version runtime its own bounded official Bundle sync.
