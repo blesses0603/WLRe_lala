@@ -1,5 +1,5 @@
 """Full runtime integration from synthetic verified manifests and TextAssets."""
-from contextlib import ExitStack
+from contextlib import ExitStack, closing
 from copy import deepcopy
 import hashlib
 import sqlite3
@@ -221,12 +221,12 @@ class OfficialCatalogMigrationTests(unittest.TestCase):
         from pathlib import Path
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / 'catalog.sqlite3'
-            with sqlite3.connect(path) as db:
+            with closing(sqlite3.connect(path)) as db, db:
                 db.execute('CREATE TABLE official_catalog_versions '
                            '(catalog_key TEXT PRIMARY KEY, verified_count INTEGER NOT NULL CHECK(verified_count=4))')
                 db.execute('INSERT INTO official_catalog_versions VALUES (?,4)', ('a'*64,))
             parsed = {f: ParsedCatalog('b'*64, f, f+'.bytes', 'schema-v1', 'c'*64, 1, {}) for f in FEATURES}
             store_official_catalog(path, parsed)
-            with sqlite3.connect(path) as db:
+            with closing(sqlite3.connect(path)) as db, db:
                 self.assertEqual(db.execute('SELECT verified_count FROM official_catalog_versions ORDER BY catalog_key').fetchall(), [(4,), (5,)])
             self.assertEqual(set(active_official_catalog(path)['sources']), set(FEATURES))
