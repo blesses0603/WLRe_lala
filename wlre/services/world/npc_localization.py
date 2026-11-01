@@ -4,6 +4,7 @@ NpcTalkData_C references TextData_C, never TalkData_C. Optional text file
 must be independently verified before loading. This module does not issue packets.
 """
 import gzip
+import io
 import hashlib
 import json
 from pathlib import Path
@@ -14,13 +15,18 @@ from wlre.services.world.npc_asset_install import ASSETS, MAX_UNCOMPRESSED
 
 def _catalog(filename, expected_source, path=None):
     target=Path(path) if path is not None else RESOURCE_ROOT/filename
-    if not target.is_file():return {}
+    cached = None
+    if path is None and not target.is_file():
+        from wlre.storage.bundled_database import read_pinned_legacy_bytes
+        cached = read_pinned_legacy_bytes(filename)
+    elif not target.is_file():
+        return {}
     if path is None:
         expected_digest, expected_size, _, _, _ = ASSETS[filename]
         if (target.stat().st_size != expected_size
                 or hashlib.sha256(target.read_bytes()).hexdigest() != expected_digest):
             raise ValueError('官方 1262 本地化檔案 SHA-256 或大小不符')
-    with gzip.open(target,'rb') as stream:
+    with (gzip.GzipFile(fileobj=io.BytesIO(cached)) if cached is not None else gzip.open(target,'rb')) as stream:
         data=stream.read(MAX_UNCOMPRESSED+1)
     if len(data)>MAX_UNCOMPRESSED:raise ValueError('本地化資源解壓超出限制')
     doc=json.loads(data.decode('utf-8'))
