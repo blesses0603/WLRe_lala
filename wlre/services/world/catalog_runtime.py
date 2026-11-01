@@ -53,6 +53,13 @@ def select_catalog_runtime(remote, candidate, *, reviewed_keys=()):
            not isinstance(features[name].get("sha256"), str) or
            not _KEY.fullmatch(features[name]["sha256"]) for name in FEATURES):
         return CatalogRuntimeDecision(key, "blocked", "invalid_feature_receipt")
+    # A caller must supply a concrete release-reviewed identity collection.
+    # A string is not a set of keys (substring membership is unsafe), and
+    # malformed entries must never be treated as approval evidence.
+    if (not isinstance(reviewed_keys, (tuple, list, set, frozenset))
+            or any(type(entry) is not str or not _KEY.fullmatch(entry)
+                   for entry in reviewed_keys)):
+        return CatalogRuntimeDecision(key, "blocked", "invalid_review_policy")
     if key not in reviewed_keys:
         return CatalogRuntimeDecision(key, "review_required",
                                       "release_review_missing", tuple(FEATURES))
