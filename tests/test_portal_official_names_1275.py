@@ -32,7 +32,7 @@ class OfficialPortalNames1275(unittest.TestCase):
 
     def test_official_name_does_not_unlock_transfer(self):
         runtime = SimpleNamespace(
-            doors={11016: [
+            revision=1275, doors={11016: [
                 {'index': 1, 'x': 2137, 'y': 2081},
                 {'index': 2, 'x': 2200, 'y': 2030}]},
             scene_names={11016: '新手海灘'},
@@ -58,7 +58,7 @@ class OfficialPortalNames1275(unittest.TestCase):
 
     def test_map_title_uses_scene_name_and_portals_use_official_names(self):
         runtime = SimpleNamespace(
-            doors={11016: [{'index': 1, 'x': 2137, 'y': 2081}]},
+            revision=1275, doors={11016: [{'index': 1, 'x': 2137, 'y': 2081}]},
             scene_names={11016: '新手海灘'},
             portal_names={(11016, 1): '海灘出口'},
             portal_positions={(11016, 1): {
@@ -88,7 +88,7 @@ class OfficialPortalNames1275(unittest.TestCase):
 
     def test_missing_stage_map_is_explained_not_silently_treated_as_no_name_id(self):
         runtime = SimpleNamespace(
-            doors={11016: [{'index': 1, 'x': 2137, 'y': 2081}]},
+            revision=1275, doors={11016: [{'index': 1, 'x': 2137, 'y': 2081}]},
             scene_names={11016: '新手海灘'}, portal_names={},
             portal_metadata_status='missing_stage_map')
         with patch('wlre.services.world.runtime_1275.baseline_revision',
