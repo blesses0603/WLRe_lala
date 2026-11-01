@@ -45,7 +45,9 @@ class BundledNPCResourceTests(unittest.TestCase):
             (directory/'npc_text_1262.json.gz').write_bytes(b'fake')
             with patch('wlre.services.world.npc_talk.RESOURCE_ROOT',directory), patch(
                     'wlre.services.world.runtime_1275.baseline_revision',
-                    return_value='1262'):
+                    return_value='1262'), patch(
+                    'wlre.storage.bundled_database.load_legacy_resource',
+                    return_value=b'fake'):
                 with self.assertRaises(ValueError):load_catalog()
             with patch('wlre.services.world.npc_localization.RESOURCE_ROOT',directory):
                 with self.assertRaises(ValueError):load_text_data()
