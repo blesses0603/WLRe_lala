@@ -41,9 +41,12 @@ class NPCInteractTests(unittest.TestCase):
         self.assertIsNone(self.index.choices(10000,1,{10001:'要。'}))
 
     def test_default_missing_index_disables_npc_options(self):
-        with patch('wlre.services.world.npc_interact.RESOURCE_ROOT',
-                   Path('/nonexistent-catalogue-location-1262')):
-            self.assertIsNone(NPCInteractIndex().choices(10000,1,TALKS))
+        with patch('wlre.services.world.runtime_1275.baseline_revision',
+                   return_value='1275'), patch(
+                   'wlre.services.world.runtime_1275.active_runtime',
+                   side_effect=ValueError('official NPC index missing')):
+            with self.assertRaises(ValueError):
+                NPCInteractIndex()
 
     def make_state(self,scene=10000,index=1):
         state=State()

@@ -67,7 +67,8 @@ class Portals:
                 door_count = 0
                 coverage = {}
                 try:
-                    verified = active_runtime()
+                    from wlre.services.world.catalog_source_policy import official_runtime
+                    verified = official_runtime('maps')
                     coverage = getattr(verified, 'portal_coverage', {})
                     if not isinstance(coverage, dict): coverage = {}
                     # Only names bound to this exact verified 1275 runtime are

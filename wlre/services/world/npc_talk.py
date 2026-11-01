@@ -5,6 +5,7 @@ the extracted game TextAsset is unavailable. A supplied file's SHA256 proves
 integrity of that file, not that its source is official.
 """
 import gzip
+import io
 import hashlib
 import json
 import re
@@ -71,15 +72,19 @@ def load_catalog(path=None):
         if baseline_revision() == '1275':
             return dict(active_runtime().talks)
     path = Path(path) if path is not None else RESOURCE_ROOT / CATALOG_NAME
-    if not path.is_file():
+    cached = None
+    if path == RESOURCE_ROOT / CATALOG_NAME:
+        from wlre.storage.bundled_database import load_legacy_resource
+        cached = load_legacy_resource(CATALOG_NAME)
+    elif not path.is_file():
         return {}
     if path == RESOURCE_ROOT / CATALOG_NAME:
         from wlre.services.world.npc_asset_install import ASSETS
         expected_sha, expected_size, _, _, _ = ASSETS[CATALOG_NAME]
-        if (path.stat().st_size != expected_size
-                or hashlib.sha256(path.read_bytes()).hexdigest() != expected_sha):
+        if (len(cached if cached is not None else path.read_bytes()) != expected_size
+                or hashlib.sha256(cached if cached is not None else path.read_bytes()).hexdigest() != expected_sha):
             raise ValueError('官方 1262 NPC 對話資源內容校驗失敗')
-    with gzip.open(path, 'rb') as stream:
+    with (gzip.GzipFile(fileobj=io.BytesIO(cached)) if cached is not None else gzip.open(path, 'rb')) as stream:
         contents = stream.read(MAX_BINARY_BYTES + 1)
     if len(contents) > MAX_BINARY_BYTES:
         raise ValueError('NPC 對話索引解壓縮超過安全上限')

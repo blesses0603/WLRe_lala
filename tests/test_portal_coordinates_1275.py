@@ -54,7 +54,7 @@ class PortalPosition1275Tests(unittest.TestCase):
         doors = {11016: [{'index': 1, 'x': 42, 'y': 64}]}
         bindings = verified_portal_destinations(
             stage_marker(), door_links(), doors, {11016, 11017})
-        runtime = SimpleNamespace(
+        runtime = SimpleNamespace(revision=1275, 
             doors=doors, portal_positions=position_fixture(), portal_destinations=bindings,
             scene_names={11016: '新手海灘', 11017: '目的場景'})
         with patch('wlre.services.world.runtime_1275.baseline_revision', return_value='1275'), \
@@ -103,7 +103,7 @@ class PortalPosition1275Tests(unittest.TestCase):
             {11016: {'pos_x_ratio': 3, 'pos_y_ratio': 2}}), {})
 
     def test_unverified_eve_event_grid_is_not_displayed_or_clickable(self):
-        runtime = SimpleNamespace(
+        runtime = SimpleNamespace(revision=1275, 
             scene_names={11016: '新手海灘'},
             doors={11016: [{'index': 1, 'x': 42, 'y': 64}]},
             portal_positions={}, portal_destinations={})
@@ -123,7 +123,7 @@ class PortalPosition1275Tests(unittest.TestCase):
         self.assertFalse(row['direct_eligible'])
 
     def test_verified_projection_is_in_bounds_and_can_set_target_once(self):
-        runtime = SimpleNamespace(
+        runtime = SimpleNamespace(revision=1275, 
             scene_names={11016: '新手海灘'},
             doors={11016: [{'index': 1, 'x': 42, 'y': 64}]},
             portal_positions=position_fixture(), portal_destinations={})

@@ -13,8 +13,8 @@ CATALOG_FILE = RESOURCE_ROOT / "instance_catalog_1262.json"
 
 @lru_cache(maxsize=1)
 def official_catalog():
-    from wlre.storage.bundled_database import load_bundled_json
-    value = load_bundled_json(CATALOG_FILE.name, root=CATALOG_FILE.parent)
+    from wlre.storage.bundled_database import load_legacy_resource
+    value = json.loads(load_legacy_resource(CATALOG_FILE.name).decode('utf-8-sig'))
     records = value.get("records")
     counts = value.get("counts", {})
     if value.get("version") != 1262 or not value.get("verified_source"):
