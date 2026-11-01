@@ -13,10 +13,6 @@ def self_test():
     from wlre.paths import RESOURCE_ROOT
     from wlre.resource_manifest import validate_resources
     validate_resources(RESOURCE_ROOT)
-    seed = RESOURCE_ROOT / 'legacy_catalog_seed.sqlite3'
-    if seed.is_file():
-        from wlre.storage.initial_catalog import verify_seed
-        verify_seed(seed)
     assert callable(ImageTk.PhotoImage) and tkinter.TkVersion>=8.6
     return 0
 
@@ -109,12 +105,6 @@ def main():
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('WLRE.Client.ByChiNing')
         # Native EXE / macOS APP is its own launcher. Prepare verified
         # private candidates BEFORE importing Tk, never in login callbacks.
-        from wlre.paths import RESOURCE_ROOT
-        from wlre.storage.initial_catalog import provision_seed
-        from wlre.storage.paths import data_root
-        seed = RESOURCE_ROOT / 'legacy_catalog_seed.sqlite3'
-        if seed.is_file():
-            provision_seed(seed, data_root() / 'official_sync' / 'derived_catalogs' / 'resource_inventory.sqlite3')
         from wlre.services.world.launcher_catalog import prepare_on_launch
         from wlre.launcher_progress import run_with_progress
         run_with_progress(prepare_on_launch)
