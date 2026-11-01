@@ -67,3 +67,34 @@ def select_catalog_runtime(remote, candidate, *, reviewed_keys=()):
     # not automatic activation or protocol approval.
     return CatalogRuntimeDecision(key, "reviewed_source",
                                   "runtime_validation_required", tuple(FEATURES))
+
+
+def validate_reviewed_catalog(remote, candidate, *, reviewed_keys=(),
+                              package_versions=None, contracts=None,
+                              source_payloads=None):
+    """Offline all-or-nothing verification; never authorizes game packets.
+
+    Release-reviewed contracts and source bytes must be supplied separately.
+    Candidate receipts are cross-checked after independent SHA/schema parsing.
+    """
+    decision = select_catalog_runtime(remote, candidate, reviewed_keys=reviewed_keys)
+    if decision.status != "reviewed_source":
+        raise ValueError("Catalog identity has not passed release review")
+    from wlre.services.world.catalog_adapters import (
+        CatalogAdapterError, parse_selected)
+    identity = candidate["official_identity"]
+    expected_versions = {entry["name"]: entry["full_version"]
+                         for entry in identity["packages"]}
+    if (not isinstance(package_versions, dict)
+            or package_versions != expected_versions):
+        raise CatalogAdapterError("Official package version pair mismatch")
+    parsed = parse_selected(
+        catalog_key=decision.catalog_key,
+        package_versions=package_versions,
+        contracts=contracts,
+        source_payloads=source_payloads)
+    receipts = candidate["features"]
+    for name, result in parsed.items():
+        if result.source_sha256 != receipts[name]["sha256"]:
+            raise CatalogAdapterError("Candidate feature receipt does not match verified source")
+    return parsed

@@ -59,5 +59,33 @@ class CatalogRuntimeTests(unittest.TestCase):
             select_catalog_runtime(self.remote, self.candidate).status, "blocked")
 
 
+    def test_invalid_review_policy_fails_closed(self):
+        for policy in (self.key, None, (self.key, "not-a-key")):
+            with self.subTest(policy=policy):
+                result = select_catalog_runtime(
+                    self.remote, self.candidate, reviewed_keys=policy)
+                self.assertEqual(result.reason, "invalid_review_policy")
+
+    def test_reviewed_catalog_requires_independent_sources(self):
+        from wlre.services.world.catalog_runtime import validate_reviewed_catalog
+        from wlre.services.world.catalog_adapters import CatalogAdapterError
+        versions = {row["name"]: row["full_version"]
+                    for row in self.candidate["official_identity"]["packages"]}
+        with self.assertRaises(CatalogAdapterError):
+            validate_reviewed_catalog(
+                self.remote, self.candidate, reviewed_keys=(self.key,),
+                package_versions=versions, contracts={}, source_payloads={})
+        versions["MainPackage"] = "wrong"
+        with self.assertRaises(CatalogAdapterError):
+            validate_reviewed_catalog(
+                self.remote, self.candidate, reviewed_keys=(self.key,),
+                package_versions=versions, contracts={}, source_payloads={})
+
+    def test_unreviewed_catalog_never_loads(self):
+        from wlre.services.world.catalog_runtime import validate_reviewed_catalog
+        with self.assertRaises(ValueError):
+            validate_reviewed_catalog(self.remote, self.candidate)
+
+
 if __name__ == "__main__":
     unittest.main()
