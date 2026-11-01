@@ -4,6 +4,8 @@ API remains exposed from wlre.ui.crafting_browser for existing callers.
 """
 from wlre.paths import RESOURCE_ROOT
 from wlre.ui.crafting.icon_cache import DECODED_SPRITES
+import io
+from wlre.storage.bundled_database import load_bundled_json, load_bundled_bytes
 import json
 import zipfile
 from collections import OrderedDict
@@ -11,11 +13,11 @@ import tkinter as tk
 from PIL import ImageTk
 
 BASE = RESOURCE_ROOT
-ICON_MAP = json.loads((BASE / 'item_icon_map.json').read_text(encoding='utf-8'))['items']
+ICON_MAP = load_bundled_json('item_icon_map.json', root=BASE)['items']
 
 
 class ItemIcons:
-    def __init__(self,master):self.master=master;self.archive=zipfile.ZipFile(BASE/'item_icons.zip');self.cache=OrderedDict()
+    def __init__(self,master):self.master=master;self.archive=zipfile.ZipFile(io.BytesIO(load_bundled_bytes('item_icons.zip', root=BASE)));self.cache=OrderedDict()
     def get(self,item_id,size=64):
         name=ICON_MAP.get(str(item_id),{}).get('icon','s1000')+'.png'
         if name not in self.archive.NameToInfo:name='s1000.png'
