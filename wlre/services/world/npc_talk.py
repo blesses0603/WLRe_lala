@@ -69,7 +69,7 @@ def load_catalog(path=None):
     """Use pinned 1275 text when the application baseline is 1275."""
     if path is None:
         from wlre.services.world.runtime_1275 import baseline_revision, active_runtime
-        if baseline_revision() == '1275':
+        if baseline_revision() != '1262':
             return dict(active_runtime().talks)
     path = Path(path) if path is not None else RESOURCE_ROOT / CATALOG_NAME
     cached = None

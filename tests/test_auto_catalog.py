@@ -30,15 +30,15 @@ def crc(raw):
 
 
 class AutoCatalogTests(unittest.TestCase):
-    def test_new_smith_schema_only_for_reviewed_official_manifest(self):
+    def test_smith_schema_recognizes_reviewed_layouts_for_independent_versions(self):
         from wlre.services.world.auto_catalog import _bindings_for_snapshot
         current = {'packages': {'DataPackage': '1286_2026_10_29_13_42_37_94'}}
         newer = {'packages': {'DataPackage': '1287_2026_11_01_12_00_00_00'}}
         def crafting(snapshot):
             return next(b.contract.schema_id for b in _bindings_for_snapshot(snapshot)
                         if b.contract.feature == 'crafting')
-        self.assertEqual(crafting(current), 'smith-new-35-v1')
-        self.assertEqual(crafting(newer), 'smith-new-33-v1')
+        self.assertEqual(crafting(current), 'smith-reviewed-v1')
+        self.assertEqual(crafting(newer), 'smith-reviewed-v1')
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -53,7 +53,9 @@ class AutoCatalogTests(unittest.TestCase):
             'checked_at_utc': '2026-10-24T00:00:00+00:00',
             'assets_ready': False,
         }
+        from test_itemdata_v1 import sample
         self.bytes = {
+            'items': struct.pack('<I', 1) + sample(),
             'npc': json.dumps({'schema_version': 1, 'source': 'EventData.NewNpc',
                                'scenes': {}, 'record_count': 0}).encode(),
             'shops': json.dumps({'schema_version': 1, 'source': 'EventData.NewInteract',
@@ -180,7 +182,7 @@ class AutoCatalogTests(unittest.TestCase):
             'bundle_plan', 'bundle_sync'])
         self.assertEqual(events[1][1]['package'], 'DataPackage')
         self.assertEqual(events[2][1]['package'], 'MainPackage')
-        self.assertEqual(phases.count('extract'), 4)
+        self.assertEqual(phases.count('extract'), 5)
         completed = [info for stage, info in events if stage == 'bundle_item']
         self.assertEqual(len(completed), 1)
         self.assertEqual(completed[0]['completed'], 1)

@@ -151,6 +151,10 @@ class Preview1275:
     expedition: dict | None = None
     revision: int = 1275
     can_send_packets: bool = False
+    catalog_identity: object = None
+    source_sha256: dict = field(default_factory=dict)
+    recipe_catalog: list = field(default_factory=list)
+    record_counts: dict = field(default_factory=dict)
 
     def npc_for_scene(self, scene):
         return self.npc_index.for_scene(scene)

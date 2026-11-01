@@ -7,6 +7,10 @@ from wlre.services.world.catalog_source_policy import verified_runtime_for_offic
 
 class OfficialRuntimeBridgeTests(unittest.TestCase):
     def setUp(self):
+        for name, value in (('_active', None), ('_attempted', False)):
+            state = patch('wlre.services.world.dynamic_bundle_runtime.' + name, value)
+            state.start()
+            self.addCleanup(state.stop)
         self.remote = {
             'resource_path': '1.3.21', 'official_exe_version': '1.3.0',
             'newer_official_client': False,
@@ -20,10 +24,11 @@ class OfficialRuntimeBridgeTests(unittest.TestCase):
     def test_new_official_versions_do_not_fallback_to_old_runtime(self):
         with patch('wlre.services.resource_compatibility.load_supported_resources',
                    return_value=self.pinned), patch(
-            'wlre.services.world.catalog_source_policy.official_runtime') as runtime:
+            'wlre.services.world.dynamic_bundle_runtime.activate_for_official',
+            side_effect=ValueError('unavailable')) as runtime:
             with self.assertRaises(ValueError):
                 verified_runtime_for_official('npc', self.remote)
-            runtime.assert_not_called()
+            runtime.assert_called_once_with(self.remote)
 
     def test_exact_pinned_pair_may_use_verified_runtime(self):
         self.remote['packages'] = {
@@ -32,14 +37,17 @@ class OfficialRuntimeBridgeTests(unittest.TestCase):
         expected = SimpleNamespace(revision=1275)
         with patch('wlre.services.resource_compatibility.load_supported_resources',
                    return_value=self.pinned), patch(
-            'wlre.services.world.catalog_source_policy.official_runtime',
+            'wlre.services.world.dynamic_bundle_runtime.activate_for_official',
             return_value=expected) as runtime:
             self.assertIs(verified_runtime_for_official('npc', self.remote), expected)
-            runtime.assert_called_once_with('npc')
+            runtime.assert_called_once_with(self.remote)
 
     def test_invalid_feature_and_client_rejected(self):
         with self.assertRaises(ValueError):
             verified_runtime_for_official('social', self.remote)
+        from wlre.services.items.crafting import RECIPES
+        saved = dict(RECIPES)
+        self.addCleanup(lambda: (RECIPES.clear(), RECIPES.update(saved)))
         self.remote['newer_official_client'] = True
         with self.assertRaises(ValueError):
             verified_runtime_for_official('npc', self.remote)

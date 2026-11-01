@@ -38,7 +38,7 @@ class NPCIndex:
         # Runtime never resolves NPC event indices from 1262 while baseline 1275.
         if path is None:
             from wlre.services.world.runtime_1275 import baseline_revision, active_runtime
-            if baseline_revision() == '1275':
+            if baseline_revision() != '1262':
                 from wlre.services.world.catalog_source_policy import official_runtime
                 active = official_runtime('npc')
                 self.path = None

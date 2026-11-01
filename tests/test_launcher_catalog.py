@@ -14,6 +14,15 @@ from wlre.services.world.launcher_catalog import (
 
 class LauncherCatalogTests(unittest.TestCase):
     def setUp(self):
+        identity = patch('wlre.services.world.runtime_manifest_identity.discover_runtime_identity',
+                         side_effect=ValueError('offline fixture'))
+        identity.start()
+        self.addCleanup(identity.stop)
+        dynamic = patch('wlre.services.world.dynamic_bundle_runtime.prepare_dynamic_runtime')
+        self.dynamic_prepare = dynamic.start()
+        from types import SimpleNamespace
+        self.dynamic_prepare.return_value = SimpleNamespace(source_sha256={})
+        self.addCleanup(dynamic.stop)
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
@@ -107,7 +116,8 @@ class LauncherCatalogTests(unittest.TestCase):
                    return_value={}), \
              patch('wlre.services.world.resource_gap_diagnostics.save_report'):
             result = prepare_on_launch(environ={})
-        pinned_sync.assert_called_once_with()
+        pinned_sync.assert_not_called()
+        self.dynamic_prepare.assert_called_once_with(sync=True)
         self.assertEqual(automatic.call_count, 2)
         automatic.assert_any_call(download=True, parse=False)
         self.assertEqual(result['status'], 'downloaded_unparsed')

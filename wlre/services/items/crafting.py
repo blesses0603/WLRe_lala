@@ -35,11 +35,26 @@ def activate_1275_recipes(runtime):
     RECIPES.update(checked)
     return len(RECIPES)
 
+
+def activate_dynamic_recipes(runtime):
+    """Publish the full current catalog in place; packets remain unapproved."""
+    if runtime.catalog_identity is None or runtime.can_send_packets is not False:
+        raise ValueError('缺少官方完整 Runtime 來源')
+    checked = {}
+    for item_id, row in runtime.recipes.items():
+        item = runtime.items.get(item_id)
+        if not isinstance(item, dict) or type(item.get('open_used')) is not int:
+            raise ValueError('配方物品來源缺失')
+        checked[str(item_id)] = {**row, 'open_used': item['open_used'], 'read_only': True}
+    RECIPES.clear()
+    RECIPES.update(checked)
+    return len(checked)
+
 SPEED={39053:15,39007:2,39045:3,37202:3}
 
 def confirmed_unlocked(recipe):
     """Only unconditional recipes are confirmed until library marks sync exists."""
-    return bool(recipe) and recipe.get('open_used',0)==0 and not any(recipe.get(k,0) for k in ('design_id','time_id','limit_kind'))
+    return bool(recipe) and not recipe.get('read_only', False) and recipe.get('open_used',0)==0 and not any(recipe.get(k,0) for k in ('design_id','time_id','limit_kind'))
 
 def defaults():return {'ready':False,'queue':{},'active':0,'started_at':None,'running':False,'auto_continue':False,'pending':None,'completion_requested':False,'completed':0,'status':'等待製作排程同步','revision':0,'human_index':0,'human_id':0,'uncertain':False}
 def room_defaults():return {'owner':None,'current_owner':None,'ready':False,'items':{},'revision':0}

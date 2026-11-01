@@ -22,7 +22,7 @@ class NPCInteractIndex:
     def __init__(self, path=None):
         if path is None:
             from wlre.services.world.runtime_1275 import baseline_revision, active_runtime
-            if baseline_revision() == '1275':
+            if baseline_revision() != '1262':
                 self.path = None
                 self.scenes = active_runtime().interact_index.scenes
                 return

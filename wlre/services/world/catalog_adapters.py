@@ -14,14 +14,15 @@ import re
 import struct
 from typing import Mapping
 
-FEATURES = ('npc', 'shops', 'crafting', 'scenes')
+FEATURES = ('npc', 'shops', 'crafting', 'scenes', 'items')
 MAX_SOURCE_BYTES = 16 * 1024 * 1024
 MAX_ROWS = 20000
 _HEX64 = re.compile(r'[a-f0-9]{64}\Z')
 _SCHEMAS = {
+    'items': ('itemdata-v1',),
     'npc': ('eve-npc-json-v1',),
     'shops': ('eve-interact-json-v1',),
-    'crafting': ('smith-new-33-v1', 'smith-new-35-v1'),
+    'crafting': ('smith-new-33-v1', 'smith-new-35-v1', 'smith-reviewed-v1'),
     'scenes': ('stage-new-76-v1',),
 }
 
@@ -126,6 +127,20 @@ def _binary_table(raw: bytes, record_size: int):
 
 def _decode(contract: SourceContract, raw: bytes):
     schema = contract.schema_id
+    if schema == 'smith-reviewed-v1':
+        from dataclasses import replace
+        if len(raw) < 4:
+            raise CatalogAdapterError('Truncated Smith header')
+        count = struct.unpack_from('<i', raw)[0]
+        if not 0 <= count <= MAX_ROWS:
+            raise CatalogAdapterError('Invalid Smith count')
+        size = 33 if len(raw) == 4 + count * 33 else 35
+        _binary_table(raw, size)
+        return _decode(replace(contract, schema_id=f'smith-new-{size}-v1'), raw)
+    if schema == 'itemdata-v1':
+        from wlre.services.world.itemdata_v1 import parse_itemdata
+        rows = parse_itemdata(raw)
+        return rows, len(rows)
     if schema == 'eve-npc-json-v1':
         return _json_scenes(raw, source='EventData.NewNpc',
                             required_fields=('index', 'npc_id', 'x', 'y'))

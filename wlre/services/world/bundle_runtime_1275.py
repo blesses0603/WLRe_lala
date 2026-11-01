@@ -184,7 +184,7 @@ def sync_pinned_runtime_bundles(*, sync_root=None,
             'assets_ready': False, 'can_send_packets': False}
 
 
-def load_verified_bundle_runtime(*, sync_root=None):
+def load_verified_bundle_runtime(*, sync_root=None, _verified_context=None):
     """Load working NPC/shop/item/crafting/scene data without manual ZIPs.
 
     No network access or download occurs here. This call independently checks
@@ -229,34 +229,43 @@ def load_verified_bundle_runtime(*, sync_root=None):
     #
     # This path performs NO network requests. The separate pre-login online
     # version gate must confirm the server still uses this release baseline.
-    baseline = load_supported_resources()
-    versions = baseline['packages']
-    if (set(versions) != set(_PINNED_MANIFEST_SHA256) or
-            any(versions[p]['revision'] != '1275'
-                for p in _PINNED_MANIFEST_SHA256)):
-        raise BundleRuntimeUnavailable('LaLa 內建正式 1275 版本基準不符')
-    private_manifests = root / 'manifests'
-    manifests = {}
-    for package in ('DataPackage', 'MainPackage'):
-        spec = ManifestSpec(_PINNED_DATA_VER, package,
-                            versions[package]['manifest'])
-        try:
-            verified = read_verified_cached_manifest(
-                spec, cache_root=private_manifests)
-        except (ManifestSyncError, OSError) as exc:
-            raise BundleRuntimeUnavailable(
-                '缺少已驗證的官方 Manifest 快取：' + package) from exc
-        try:
-            with verified.cache_path.open('rb') as handle:
-                raw = handle.read(MAX_MANIFEST_BYTES + 1)
-        except OSError as exc:
-            raise BundleRuntimeUnavailable(
-                '已驗證的 Manifest 檔案不存在：' + package) from exc
-        if (verified.spec != spec or not 0 < len(raw) <= MAX_MANIFEST_BYTES
-                or hashlib.sha256(raw).hexdigest() != _PINNED_MANIFEST_SHA256[package]):
-            raise BundleRuntimeUnavailable(
-                '官方 Manifest 不是本版經獨立 SHA-256 審核的內容：' + package)
-        manifests[package] = verified
+    dynamic = _verified_context is not None
+    if dynamic:
+        snapshot, manifests, identity = _verified_context
+        from wlre.services.world.catalog_identity import identity_from_verified_manifests
+        if identity_from_verified_manifests(snapshot, manifests) != identity:
+            raise BundleRuntimeUnavailable('官方動態 Manifest 身分不一致')
+        revision = int(snapshot['packages']['DataPackage'].split('_', 1)[0])
+    else:
+        revision = 1275
+        baseline = load_supported_resources()
+        versions = baseline['packages']
+        if (set(versions) != set(_PINNED_MANIFEST_SHA256) or
+                any(versions[p]['revision'] != '1275'
+                    for p in _PINNED_MANIFEST_SHA256)):
+            raise BundleRuntimeUnavailable('LaLa 內建正式 1275 版本基準不符')
+        private_manifests = root / 'manifests'
+        manifests = {}
+        for package in ('DataPackage', 'MainPackage'):
+            spec = ManifestSpec(_PINNED_DATA_VER, package,
+                                versions[package]['manifest'])
+            try:
+                verified = read_verified_cached_manifest(
+                    spec, cache_root=private_manifests)
+            except (ManifestSyncError, OSError) as exc:
+                raise BundleRuntimeUnavailable(
+                    '缺少已驗證的官方 Manifest 快取：' + package) from exc
+            try:
+                with verified.cache_path.open('rb') as handle:
+                    raw = handle.read(MAX_MANIFEST_BYTES + 1)
+            except OSError as exc:
+                raise BundleRuntimeUnavailable(
+                    '已驗證的 Manifest 檔案不存在：' + package) from exc
+            if (verified.spec != spec or not 0 < len(raw) <= MAX_MANIFEST_BYTES
+                    or hashlib.sha256(raw).hexdigest() != _PINNED_MANIFEST_SHA256[package]):
+                raise BundleRuntimeUnavailable(
+                    '官方 Manifest 不是本版經獨立 SHA-256 審核的內容：' + package)
+            manifests[package] = verified
 
     verified_data = manifests['DataPackage']
     bundle_root = root / 'bundles'
@@ -283,26 +292,43 @@ def load_verified_bundle_runtime(*, sync_root=None):
 
         stage = 'Eve'
         eve = sources['Eve']
-        if hashlib.sha256(eve).hexdigest() != EVE_SHA256:
+        if not dynamic and hashlib.sha256(eve).hexdigest() != EVE_SHA256:
             raise BundleRuntimeUnavailable('1275 Eve 來源 SHA-256 不符')
         npc = json.loads(derive_eve_index(eve, 'EventData.NewNpc'))
         interacts = json.loads(derive_eve_index(eve, 'EventData.NewInteract'))
-        if (npc.get('record_count') != 10975
+        if not dynamic and (npc.get('record_count') != 10975
                 or interacts.get('record_count') != 1634
                 or len(npc.get('scenes', {})) != 1262):
             raise BundleRuntimeUnavailable('NPC／互動事件數不符合已審核 1275 資料')
         stage = 'ItemData_C'
         items = parse_itemdata(sources['ItemData_C'])
+        if dynamic:
+            for rows in interacts['scenes'].values():
+                for interaction in rows:
+                    if interaction['form_kind'] not in (2, 3):
+                        continue
+                    for offer in interaction['items']:
+                        if offer['kind'] == 3 and (offer['database_kind'] != 2
+                                or offer['text_id'] not in items):
+                            raise BundleRuntimeUnavailable('商店商品缺少同版 ItemData 來源')
         stage = 'TalkData_C'
         talk_rows = parse_talk_data(sources['TalkData_C'])
         stage = 'TextData_C'
         texts = parse_text_data(sources['TextData_C'])
         stage = 'SmithData_C'
-        recipes = parse_smith_1275(sources['SmithData_C'])
+        if dynamic:
+            from wlre.services.world.dynamic_bundle_runtime import parse_runtime_recipes
+            recipes, recipe_catalog = parse_runtime_recipes(sources['SmithData_C'], items)
+        else:
+            recipes = parse_smith_1275(sources['SmithData_C'])
         stage = 'ScenesData_C'
         scene_rows = parse_stages(sources['ScenesData_C'])
         stage = 'Eve'
-        doors = parse_doors_1275(eve)
+        if dynamic:
+            from wlre.services.world.doors_1275 import parse_verified_doors
+            doors = parse_verified_doors(eve)
+        else:
+            doors = parse_doors_1275(eve)
         portal_destinations, portal_names, portal_positions = {}, {}, {}
         portal_display_destinations = {}
         portal_link_evidence = {}
@@ -406,7 +432,7 @@ def load_verified_bundle_runtime(*, sync_root=None):
             except (ValueError, TypeError, KeyError):
                 portal_schema_report['DoorLinkData_C'] = {
                     'status': 'layout_unrecognized', 'can_send_packets': False}
-        if len(recipes) != 1032 or any(
+        if (not dynamic and len(recipes) != 1032) or any(
                 ident not in items or type(items[ident].get('open_used')) is not int
                 for ident in recipes):
             raise BundleRuntimeUnavailable('1275 製作配方與物品開放狀態未完成交叉驗證')
@@ -417,7 +443,7 @@ def load_verified_bundle_runtime(*, sync_root=None):
         # This is the same independently audited 1275 source identity that
         # the older full-ZIP loader validates before expedition dispatch.
         stage = 'AdventureData_C／AdventureLvData_C'
-        if (hashlib.sha256(sources['AdventureData_C']).hexdigest()
+        if not dynamic and (hashlib.sha256(sources['AdventureData_C']).hexdigest()
                 != ADVENTURE_1275_SHA256 or
                 hashlib.sha256(sources['AdventureLvData_C']).hexdigest()
                 != ADVENTURE_LEVEL_1275_SHA256):
@@ -427,7 +453,7 @@ def load_verified_bundle_runtime(*, sync_root=None):
         stage = 'NpcData_C／NpcCareerData_C'
         expedition_npcs = parse_expedition_npcs(
             sources['NpcData_C'], sources['NpcCareerData_C'])
-        if (len(expedition['tasks']) != 260
+        if not dynamic and (len(expedition['tasks']) != 260
                 or len(expedition['levels']) != 10
                 or len(expedition_npcs) != 7561):
             raise BundleRuntimeUnavailable('1275 遠征任務／夥伴資料筆數不符')
@@ -443,8 +469,9 @@ def load_verified_bundle_runtime(*, sync_root=None):
             named[key] = {**quest, 'name': name, 'area_label': area}
         expedition = {
             **expedition, 'tasks': named, 'npcs': expedition_npcs,
-            'revision': 1275,
-            'source_kind': 'verified_1275_official_bundle',
+            'revision': revision,
+            'source_kind': ('verified_dynamic_official_bundle' if dynamic
+                            else 'verified_1275_official_bundle'),
             'source_sha256': {
                 **expedition['source_sha256'],
                 'NpcData_C': hashlib.sha256(sources['NpcData_C']).hexdigest(),
@@ -458,7 +485,7 @@ def load_verified_bundle_runtime(*, sync_root=None):
             optional.get('StageMapData_C'), optional.get('EveDoorLinks'),
             portal_positions, portal_destinations, portal_names,
             portal_link_evidence, portal_extra_routes, portal_stage_markers)
-        return Preview1275(
+        runtime = Preview1275(
             npc_index=PreviewNPCIndex(npc),
             interact_index=PreviewInteractIndex(interacts),
             items=items,
@@ -478,8 +505,21 @@ def load_verified_bundle_runtime(*, sync_root=None):
             portal_metadata_status=portal_metadata_status,
             portal_schema_report=portal_schema_report,
             portal_coverage=coverage,
-            doors=doors, expedition=expedition,
+            doors=doors, expedition=expedition, revision=revision,
         )
+        if dynamic:
+            from dataclasses import replace
+            runtime = replace(runtime, catalog_identity=identity,
+                              source_sha256={k: hashlib.sha256(v).hexdigest()
+                                             for k, v in sources.items()},
+                              recipe_catalog=recipe_catalog,
+                              record_counts={
+                                  'npc': npc['record_count'],
+                                  'shops': interacts['record_count'],
+                                  'items': len(items), 'crafting': len(recipe_catalog),
+                                  'scenes': len(scene_rows),
+                                  'expedition': len(expedition['tasks'])})
+        return runtime
     except BundleRuntimeUnavailable:
         raise
     except (OSError, ValueError, KeyError, TypeError, RuntimeError) as exc:

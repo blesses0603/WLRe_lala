@@ -30,6 +30,12 @@ def fake_config(main_revision="1262", data_revision="1262"):
 
 
 class BundledResourceCompatibilityTests(unittest.TestCase):
+    def setUp(self):
+        activation = patch('wlre.services.world.dynamic_bundle_runtime.activate_for_official',
+                           side_effect=ValueError('offline baseline fixture'))
+        activation.start()
+        self.addCleanup(activation.stop)
+
     def test_real_bundled_file_derives_official_gate_baseline(self):
         data = load_supported_resources()
         numbers, full = baseline_maps(data)

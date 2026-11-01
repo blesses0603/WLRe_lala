@@ -3,6 +3,8 @@
 Door indices are matched against Eve NewDoor data, never list row numbers.
 Server S7-1/S12-1 remains authoritative for the resulting map and position.
 """
+
+from wlre.services.world.catalog_source_policy import is_official_revision
 from wlre.core.state_ownership import writes
 import math
 from wlre.services.world.portals import Portals
@@ -50,7 +52,7 @@ class PortalTravel:
         self.catalog = self.catalog or Portals()
         cached_data = getattr(self.catalog, 'data', None)
         if (isinstance(cached_data, dict)
-                and cached_data.get('source_revision') != 1275):
+                and not is_official_revision(cached_data.get('source_revision'))):
             # Legacy portals.json has no revision tag in some installations.
             # Both an explicit 1262 tag and an absent tag mean stale source.
             self.catalog = Portals()
@@ -59,8 +61,8 @@ class PortalTravel:
         if portal is None:
             raise ProtocolError('傳點不屬於目前地圖，請重新選取')
         if (isinstance(getattr(self.catalog, 'data', None), dict)
-                and self.catalog.data.get('source_revision') == 1275
-                and portal.get('source_revision') != 1275):
+                and is_official_revision(self.catalog.data.get('source_revision'))
+                and not is_official_revision(portal.get('source_revision'))):
             raise ProtocolError('舊版或無來源標記傳點已停用，請更新 1275 官方傳點清單')
         problem = destination_problem(portal)
         if problem:raise ProtocolError(problem)
@@ -99,7 +101,7 @@ class PortalTravel:
         self.catalog = self.catalog or Portals()
         cached_data = getattr(self.catalog, 'data', None)
         if (isinstance(cached_data, dict)
-                and cached_data.get('source_revision') != 1275):
+                and not is_official_revision(cached_data.get('source_revision'))):
             # Legacy portals.json has no revision tag in some installations.
             # Both an explicit 1262 tag and an absent tag mean stale source.
             self.catalog = Portals()
@@ -108,8 +110,8 @@ class PortalTravel:
         if portal is None:
             raise ProtocolError('傳點不屬於目前地圖，請重新選取')
         if (isinstance(getattr(self.catalog, 'data', None), dict)
-                and self.catalog.data.get('source_revision') == 1275
-                and portal.get('source_revision') != 1275):
+                and is_official_revision(self.catalog.data.get('source_revision'))
+                and not is_official_revision(portal.get('source_revision'))):
             raise ProtocolError('舊版或無來源標記傳點已停用，請更新 1275 官方傳點清單')
         problem = destination_problem(portal)
         if problem:raise ProtocolError(problem)

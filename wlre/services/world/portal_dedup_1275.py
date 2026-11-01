@@ -5,6 +5,8 @@ or XY collisions alone do not prove duplicate transport events: one entry
 can represent several different doors or arrival points.
 This module never edits authenticated source data or grants C20-8.
 """
+
+from wlre.services.world.catalog_source_policy import is_official_revision
 from collections import Counter
 
 
@@ -32,7 +34,7 @@ def deduplicate_1275_portals(scene_rows):
         hidden_ids = set()
         result = []
         for portal in candidates:
-            if not isinstance(portal, dict) or portal.get('source_revision') != 1275:
+            if not isinstance(portal, dict) or not is_official_revision(portal.get('source_revision')):
                 result.append(portal)
                 continue
             kind, idx = portal.get('kind'), portal.get('index')

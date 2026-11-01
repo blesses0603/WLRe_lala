@@ -34,10 +34,11 @@ class AutoCatalogError(ValueError):
 # a moved/renamed asset requires new developer review before parsing.
 _ASSET_ROOT = 'Assets/ResourcesBuild/Data/'
 _SOURCE_MAP = {
+    'items': ('ItemData_C.bytes', 'ItemData_C', 'itemdata-v1', ()),
     'npc': ('Eve.bytes', 'EventData.NewNpc', 'eve-npc-json-v1', ()),
     'shops': ('Eve.bytes', 'EventData.NewInteract', 'eve-interact-json-v1',
               ('ItemData_C.bytes',)),
-    'crafting': ('SmithData_C.bytes', 'SmithData_C', 'smith-new-33-v1', ()),
+    'crafting': ('SmithData_C.bytes', 'SmithData_C', 'smith-reviewed-v1', ()),
     'scenes': ('ScenesData_C.bytes', 'ScenesData_C', 'stage-new-76-v1', ()),
 }
 # This is a *planning-only* placeholder, never used to accept data.
@@ -47,12 +48,10 @@ _PENDING_DIGEST = '0' * 64
 def _bindings_for_snapshot(snapshot):
     package = 'DataPackage'
     revision = snapshot['packages'][package]
-    schema_override = ('smith-new-35-v1' if revision == '1286_2026_10_29_13_42_37_94' else None)
     return tuple(
         AssetBinding(_ASSET_ROOT + _SOURCE_MAP[feature][0],
                      SourceContract(feature, _SOURCE_MAP[feature][1],
-                                    (schema_override if feature == 'crafting' and schema_override
-                                     else _SOURCE_MAP[feature][2]), _PENDING_DIGEST,
+                                    _SOURCE_MAP[feature][2], _PENDING_DIGEST,
                                     package, revision),
                      tuple(_ASSET_ROOT + name for name in _SOURCE_MAP[feature][3]))
         for feature in FEATURES

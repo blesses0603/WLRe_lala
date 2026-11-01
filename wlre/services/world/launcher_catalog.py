@@ -19,7 +19,7 @@ STATUS_FILENAME = 'launcher_catalog_status.json'
 MAX_STATUS_BYTES = 4096
 STATES = frozenset(('verified_official', 'downloaded_unparsed',
                    'preview', 'error'))
-FAILURE_FEATURES = frozenset(('npc', 'shops', 'crafting', 'scenes'))
+FAILURE_FEATURES = frozenset(('npc', 'shops', 'crafting', 'scenes', 'items'))
 FAILURE_STAGES = frozenset(('UnityFS／TextAsset', 'Eve 二進位事件',
                             'ItemData 二進位表', '資料 Schema',
                             '未分類解包例外', '未分類 Schema 例外'))
@@ -137,6 +137,17 @@ def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
         except Exception:
             if progress is not None:
                 progress('runtime_identity_unavailable', {})
+    if real_launcher_run:
+        try:
+            from wlre.services.world.dynamic_bundle_runtime import prepare_dynamic_runtime
+            if progress is not None:
+                progress('runtime_bundle_plan', {})
+            prepare_dynamic_runtime(sync=True)
+            if progress is not None:
+                progress('runtime_bundle_ready', {})
+        except (OSError, ValueError, RuntimeError):
+            if progress is not None:
+                progress('runtime_bundle_unavailable', {})
     if real_launcher_run and env.get('WLRE_SYNC_LEGACY_1275') == '1':
         # Legacy 1275 synchronization is opt-in only. The primary launcher
         # always discovers the live official MainPackage/DataPackage pair via

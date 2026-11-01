@@ -30,7 +30,7 @@ STEP_LABELS = {
     'bundle_verify': '重新核對 Bundle 完整性',
     'extract': '解包並驗證遊戲資料',
     'official_store': '建立版本化私人快取',
-    'compatibility_check': '核對四類資料的相容性',
+    'compatibility_check': '核對五類資料的相容性',
     'compatibility_ready': '資料格式檢查通過，協定仍待驗證',
     'formal_check': '核對完整正式 1275 資料來源',
     'formal_checked': '正式資源載入條件檢查完成',
@@ -45,9 +45,9 @@ STEP_LABELS = {
     'download_ready': 'Bundle 同步完成',
     'verified_official': '官方資源資料已建立',
     'extract_failed': '官方資源資料解析失敗',
-    'runtime_bundle_plan': '核對正式 1275 所需的官方 Bundle',
-    'runtime_bundle_ready': '正式 1275 Bundle 已下載並完成完整性校驗',
-    'runtime_bundle_unavailable': '正式 1275 Bundle 尚未補齊或驗證，將繼續官方資源資料流程',
+    'runtime_bundle_plan': '核對當次官方版本所需的 Bundle',
+    'runtime_bundle_ready': '官方 Runtime Bundle 已下載並完成完整性校驗',
+    'runtime_bundle_unavailable': '官方 Runtime Bundle 尚未補齊或驗證，將繼續官方資源資料流程',
 }
 _BG = '#101927'
 _PANEL = '#172539'

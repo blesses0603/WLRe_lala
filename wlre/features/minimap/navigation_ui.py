@@ -3,6 +3,8 @@
 No movement commands are emitted. Original HomeMap methods remain callable
 through inheritance. This layer keeps missing image / stale navigation closed.
 """
+
+from wlre.services.world.catalog_source_policy import is_official_revision
 from wlre.services.world.navigation import NavigationError
 from wlre.services.world.map_names import map_label, parse_map_id
 from wlre.services.world.scene_names_1275 import source_scene_label
@@ -19,7 +21,7 @@ class MinimapNavigationMixin:
         scene_id = self.selected_id
         catalog = getattr(self, 'portals', None)
         data = getattr(catalog, 'data', {}) if catalog is not None else {}
-        if data.get('source_revision') == 1275:
+        if is_official_revision(data.get('source_revision')):
             if type(scene_id) is not int or not 0 <= scene_id <= 65535:
                 # Untrusted/stale scene snapshots must not crash the UI.
                 # Do not guess a 1262 name or silently select a different map.
@@ -47,7 +49,7 @@ class MinimapNavigationMixin:
                     try:self.mesh=self.repository.load(scene)
                     except NavigationError:pass
                 self.note.set(self.scene_display_name()+'｜官方 1275 場景座標（僅供檢視）'
-                              if getattr(self.maps, 'source_revision', None) == '1275'
+                              if is_official_revision(getattr(self.maps, 'source_revision', None))
                               else self.scene_display_name()+'｜原始小地圖')
             else:
                 self.projection=None

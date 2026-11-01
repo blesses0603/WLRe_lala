@@ -47,7 +47,7 @@ class SmallMaps:
             from wlre.services.world.runtime_1275 import baseline_revision
             source_revision = baseline_revision()
         self.source_revision = str(source_revision or '1262')
-        self.supports_navigation = self.source_revision != '1275'
+        self.supports_navigation = self.source_revision == '1262'
         self.path=Path(path) if path else RESOURCE_ROOT.joinpath('smallmaps.zip')
         self._database_archive = None
         if path is None:
@@ -65,7 +65,7 @@ class SmallMaps:
         scene = parse_map_id(logical_map)
         runtime = active_runtime()
         stages = getattr(runtime, 'stages', None)
-        if (getattr(runtime, 'revision', None) != 1275
+        if (str(getattr(runtime, 'revision', None)) != self.source_revision
                 or not isinstance(stages, dict)):
             raise NavigationError('1275 官方場景尺寸尚未經完整校驗。')
         row = stages.get(scene)
@@ -83,7 +83,7 @@ class SmallMaps:
         return row, 'M' + str(model).zfill(5)
 
     def has_image(self, logical_map):
-        if self.source_revision == '1275':
+        if self.source_revision != '1262':
             try:
                 self._stage_1275(logical_map)
                 return True
@@ -107,7 +107,7 @@ class SmallMaps:
         return zipfile.ZipFile(io.BytesIO(self._database_archive) if self._database_archive is not None else self.path)
 
     def projection(self,logical_map):
-        if self.source_revision == '1275':
+        if self.source_revision != '1262':
             stage, model = self._stage_1275(logical_map)
             height = 6992 if stage['map_height'] == 65535 else stage['map_height']
             # Verified 1275 stage geometry, no 1262 navigation graph origin.
@@ -116,7 +116,7 @@ class SmallMaps:
         return Projection(stage,origin),scene
 
     def for_model(self,model,logical_map=None):
-        if self.source_revision == '1275':
+        if self.source_revision != '1262':
             raise NavigationError('1275 小地圖尚無經新版校驗的導航網格。')
         model=parse_map_id(model)
         if logical_map is not None:

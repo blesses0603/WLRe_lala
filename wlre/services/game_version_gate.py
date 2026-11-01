@@ -55,6 +55,14 @@ def run_prelogin_check(sources=None, *, checker=None):
         remote = check_official_versions(sources)
     else:
         remote = check_official_game_resources()
+    runtime_state = 'unverified'
+    if checker is None and sources is None:
+        from wlre.services.world.dynamic_bundle_runtime import activate_for_official
+        try:
+            activate_for_official(remote)
+            runtime_state = 'verified'
+        except (OSError, ValueError, RuntimeError):
+            runtime_state = 'unavailable'
     packages = remote.get("packages", {})
     package_changed = (
         remote.get("status") == "resources_changed" or
@@ -123,4 +131,4 @@ def run_prelogin_check(sources=None, *, checker=None):
     return {"status": status, "blocked": blocked, "message": message,
             "remote": remote, "baseline": dict(BASELINE),
             "baseline_label": support, "database_comparison": database_comparison,
-            "source": "official_remote_only"}
+            "source": "official_remote_only", "dynamic_runtime": runtime_state}

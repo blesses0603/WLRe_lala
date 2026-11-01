@@ -44,7 +44,14 @@ def store_official_catalog(db_path, parsed):
         try:
             db.execute('BEGIN IMMEDIATE')
             db.execute('CREATE TABLE IF NOT EXISTS official_catalog_versions '
-                       '(catalog_key TEXT PRIMARY KEY, verified_count INTEGER NOT NULL CHECK(verified_count=4))')
+                       '(catalog_key TEXT PRIMARY KEY, verified_count INTEGER NOT NULL CHECK(verified_count>=4))')
+            sql = db.execute("SELECT sql FROM sqlite_master WHERE name='official_catalog_versions'").fetchone()[0]
+            if 'CHECK(verified_count=4)' in sql:
+                db.execute('ALTER TABLE official_catalog_versions RENAME TO official_catalog_versions_v1')
+                db.execute('CREATE TABLE official_catalog_versions '
+                           '(catalog_key TEXT PRIMARY KEY, verified_count INTEGER NOT NULL CHECK(verified_count>=4))')
+                db.execute('INSERT INTO official_catalog_versions SELECT * FROM official_catalog_versions_v1')
+                db.execute('DROP TABLE official_catalog_versions_v1')
             db.execute('CREATE TABLE IF NOT EXISTS official_catalog_sources '
                        '(catalog_key TEXT NOT NULL, feature TEXT NOT NULL, '
                        'source_name TEXT NOT NULL, schema_id TEXT NOT NULL, '
@@ -62,7 +69,9 @@ def store_official_catalog(db_path, parsed):
                     raise ValueError('Immutable official source identity changed')
                 db.execute('INSERT OR IGNORE INTO official_catalog_sources VALUES (?,?,?,?,?,?)',
                            (key, feature, *values))
-            db.execute('INSERT OR IGNORE INTO official_catalog_versions VALUES (?,4)', (key,))
+            db.execute('INSERT INTO official_catalog_versions VALUES (?,?) '
+                       'ON CONFLICT(catalog_key) DO UPDATE SET verified_count=excluded.verified_count',
+                       (key, len(FEATURES)))
             db.execute('INSERT INTO official_catalog_active VALUES (1,?) '
                        'ON CONFLICT(singleton) DO UPDATE SET catalog_key=excluded.catalog_key', (key,))
             db.commit()

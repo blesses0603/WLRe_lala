@@ -26,6 +26,15 @@ def response(main="1275", data="1275", *, state="same_resources",
 
 
 class RemoteGameVersionTests(unittest.TestCase):
+    def setUp(self):
+        from wlre.services.items.crafting import RECIPES
+        saved = dict(RECIPES)
+        self.addCleanup(lambda: (RECIPES.clear(), RECIPES.update(saved)))
+        for name, value in (('_active', None), ('_attempted', False)):
+            item = patch('wlre.services.world.dynamic_bundle_runtime.' + name, value)
+            item.start()
+            self.addCleanup(item.stop)
+
     def test_database_identity_requires_both_exact_package_versions(self):
         from wlre.services.game_version_gate import compare_database_identity
         identity = {'data_ver': '1.3.22.1', 'exe_version': '1.3.0', 'packages': [
