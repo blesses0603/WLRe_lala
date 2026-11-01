@@ -14,6 +14,8 @@ class FullResourceSeedTests(unittest.TestCase):
             base=Path(directory);root=base/'empty_resources';root.mkdir()
             build_seed(RESOURCE_ROOT,root/SEED_NAME)
             db=base/'new_user.sqlite3'
+            from wlre.storage.bundled_database import load_legacy_resource
+            self.assertEqual(load_legacy_resource('npc_text_1262.json.gz',root=root,database=db),(RESOURCE_ROOT/'npc_text_1262.json.gz').read_bytes())
             for name in SOURCE_MANIFEST:
                 self.assertEqual(load_bundled_bytes(name,root=root,database=db),(RESOURCE_ROOT/name).read_bytes())
             with closing(sqlite3.connect(db)) as conn:

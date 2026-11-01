@@ -147,6 +147,12 @@ def load_legacy_resource(name, *, root=None, database=None):
     try:
         return read_pinned_legacy_bytes(name, database=database)
     except FileNotFoundError:
+        seed = Path(root) / 'resource_catalog_seed.sqlite3'
+        if seed.is_file():
+            from wlre.storage.full_resource_seed import provision_seed
+            target_db = Path(database) if database is not None else data_root() / 'official_sync' / 'derived_catalogs' / 'resource_inventory.sqlite3'
+            provision_seed(seed, target_db)
+            return read_pinned_legacy_bytes(name, database=target_db)
         path = Path(root) / name
         if not path.is_file():
             raise
