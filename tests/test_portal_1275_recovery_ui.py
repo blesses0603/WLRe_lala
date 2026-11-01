@@ -17,7 +17,7 @@ class Portal1275UI(unittest.TestCase):
         self.root.geometry('640x500')
         self.picked = Mock()
         self.sent = Mock()
-        runtime = SimpleNamespace(doors={12170: [
+        runtime = SimpleNamespace(revision=1275, doors={12170: [
             {'index': 2, 'x': 5701, 'y': 3230, 'event_ids': [2]}]})
         with patch('wlre.services.world.runtime_1275.baseline_revision',
                    return_value='1275'), patch(
@@ -64,6 +64,7 @@ class Portal1275UI(unittest.TestCase):
 
     def test_list_hides_unmarked_door_while_audit_keeps_both(self):
         runtime = SimpleNamespace(
+            revision=1275,
             doors={12170: [{'index': 1, 'x': 42, 'y': 64},
                            {'index': 2, 'x': 43, 'y': 65}]},
             portal_names={(12170, 1): '前往北島-北'},

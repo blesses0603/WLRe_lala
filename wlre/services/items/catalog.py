@@ -9,38 +9,28 @@ def skill_name(skill_id):return CAT['skills'].get(str(skill_id),{}).get('name',f
 
 
 def item_display_name(item_id):
-    """Prefer independently release-pinned 1275 ItemData names for UI only.
+    """UI 名稱統一優先使用經獨立驗證的 1275 Runtime。
 
-    This never changes skill/item effects, bag counts or any packet decision.
-    When the complete pinned runtime is absent, retain the previous display
-    name; screens separately report the classification/candidate status.
+    SQLite 與自動候選資料不覆蓋正式版本名稱；缺正式來源時，
+    僅可使用自動候選的唯讀名稱作顯示回退，且絕不授權物品操作。
     """
     if type(item_id) is int and item_id > 0:
-        from wlre.services.world.resource_database import candidate_database_item_name
-        candidate = candidate_database_item_name(item_id)
-        if candidate:
-            return candidate
         from wlre.services.world.runtime_1275 import (
-            Runtime1275Unavailable, active_runtime, baseline_revision)
+            Runtime1275Unavailable, baseline_revision)
         try:
             if baseline_revision() == '1275':
-                try:
-                    item = active_runtime().items.get(item_id)
-                    if (type(item) is dict and
-                            isinstance(item.get('name'), str) and
-                            item['name'].strip()):
-                        return item['name']
-                except (Runtime1275Unavailable, OSError, ValueError, KeyError):
-                    pass
-                # Data may already have been safely received and decoded into
-                # a version-isolated preview. Names are DISPLAY-ONLY, never
-                # used for item effects, trade, crafting or packet decisions.
-                from wlre.services.world.auto_candidate_reader import candidate_item_name
-                candidate = candidate_item_name(item_id)
-                if candidate is not None:
-                    return candidate
+                from wlre.services.world.catalog_source_policy import official_runtime
+                item = official_runtime('items').items.get(item_id)
+                if (type(item) is dict and isinstance(item.get('name'), str)
+                        and item['name'].strip()):
+                    return item['name']
         except (Runtime1275Unavailable, OSError, ValueError, KeyError):
             pass
+    if type(item_id) is int and 1 <= item_id <= 65535:
+        from wlre.services.world.auto_candidate_reader import candidate_item_name
+        preview_name = candidate_item_name(item_id)
+        if isinstance(preview_name, str) and preview_name.strip():
+            return preview_name
     return item_name(item_id)
 
 

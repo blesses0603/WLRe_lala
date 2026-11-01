@@ -27,7 +27,7 @@ def official_reference(target=11017, known=True):
 
 
 def catalog(reference, *, event=True):
-    runtime = SimpleNamespace(
+    runtime = SimpleNamespace(revision=1275, 
         doors={11016: [{'index': 1, 'x': 42, 'y': 64}]} if event else {},
         portal_destinations={}, portal_positions={},
         portal_names={}, portal_display_destinations={},
@@ -114,7 +114,7 @@ class P3PortalInspectionTests(unittest.TestCase):
         page.draw.assert_called_once_with()
 
     def test_hidden_links_use_scene_local_ordinal(self):
-        runtime = SimpleNamespace(
+        runtime = SimpleNamespace(revision=1275, 
             doors={}, portal_names={}, portal_destinations={},
             portal_positions={}, portal_link_evidence={},
             scene_names={11016: '新手海灘', 11017: '目的地'},

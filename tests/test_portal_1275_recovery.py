@@ -13,7 +13,7 @@ SCENE = 12170
 
 
 def official_doors():
-    runtime = SimpleNamespace(doors={SCENE: [
+    runtime = SimpleNamespace(revision=1275, doors={SCENE: [
         {'index': 7, 'x': 5701, 'y': 3230, 'event_ids': [2]},
         {'index': 13, 'x': 6012, 'y': 3265, 'event_ids': [6]},
     ]})
@@ -64,7 +64,7 @@ class Portal1275RecoveryTests(unittest.TestCase):
         self.assertEqual(catalog.for_scene(SCENE), [])
 
     def test_malformed_records_do_not_turn_into_live_entries(self):
-        runtime = SimpleNamespace(doors={SCENE: [
+        runtime = SimpleNamespace(revision=1275, doors={SCENE: [
             {'index': 5}, {'index': '6', 'x': 3, 'y': 4},
             {'index': 7, 'x': -1, 'y': 3},
             {'index': 8, 'x': 70000, 'y': 3},

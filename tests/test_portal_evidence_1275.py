@@ -29,6 +29,7 @@ def stages():
 
 def portal_runtime(evidence, doors=None):
     return SimpleNamespace(
+        revision=1275,
         doors=doors or {}, portal_destinations={}, portal_positions={},
         portal_display_destinations={}, portal_names={},
         portal_link_evidence=evidence,

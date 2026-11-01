@@ -28,8 +28,11 @@ def baseline_revision():
     document = load_supported_resources()
     packages = document['packages']
     versions = {packages[key]['revision'] for key in ('DataPackage', 'MainPackage')}
+    # DataPackage and MainPackage have independent release sequences.
+    # This legacy API describes the single-revision 1275 runtime only;
+    # mixed revisions must be handled by a version-pair-aware runtime.
     if len(versions) != 1:
-        raise Runtime1275Unavailable('MainPackage 與 DataPackage 基準必須一致')
+        raise Runtime1275Unavailable('目前 1275 Runtime 不支援不同版本的 MainPackage／DataPackage 組合')
     return versions.pop()
 
 

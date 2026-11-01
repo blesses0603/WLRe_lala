@@ -116,7 +116,7 @@ class FeatureResourceIndexTests(unittest.TestCase):
         with patch('wlre.services.world.runtime_1275.baseline_revision',
                    return_value='1275'), \
              patch('wlre.services.world.runtime_1275.active_runtime',
-                   return_value=SimpleNamespace(items=values)):
+                   return_value=SimpleNamespace(revision=1275, items=values)):
             metadata = verified_item_metadata(34144)
             self.assertEqual(metadata['source_revision'], 1275)
             self.assertFalse(metadata['npc_sale_allowed'])
@@ -139,7 +139,7 @@ class FeatureResourceIndexTests(unittest.TestCase):
     def test_item_name_prefers_only_full_pinned_runtime(self):
         from types import SimpleNamespace
         from wlre.services.items.catalog import item_display_name, item_name
-        runtime = SimpleNamespace(items={1234: {'name': '1275 正式物品名稱'}})
+        runtime = SimpleNamespace(revision=1275, items={1234: {'name': '1275 正式物品名稱'}})
         with patch('wlre.services.world.runtime_1275.baseline_revision',
                    return_value='1275'), patch(
              'wlre.services.world.runtime_1275.active_runtime',
