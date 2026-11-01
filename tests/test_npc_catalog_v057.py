@@ -1,5 +1,7 @@
 """NPC phase-1: distinguish location references and actual EventData indices."""
 import gzip
+import io
+from wlre.storage.full_resource_seed import read_config
 import json
 import os
 from pathlib import Path
@@ -21,7 +23,8 @@ def verified_index_file(path, scenes):
 class NPCCatalogTests(unittest.TestCase):
     def test_bundled_official_eve_index(self):
         index = NPCIndex()
-        self.assertTrue(index.path.is_file())
+        self.assertFalse(index.path.is_file())
+        self.assertTrue(read_config(index.path.name, root=RESOURCE_ROOT))
         self.assertEqual(index.path.name, 'npc_event_index_1262.json.gz')
         self.assertEqual(len(index.scenes), 1256)
         self.assertEqual(sum(map(len, index.scenes.values())), 10879)
@@ -32,7 +35,7 @@ class NPCCatalogTests(unittest.TestCase):
 
     def test_gzip_catalog_decodes_without_loss(self):
         source = RESOURCE_ROOT/'npc_event_index_1262.json.gz'
-        with gzip.open(source, 'rt', encoding='utf-8') as stream:
+        with gzip.open(io.BytesIO(read_config(source.name, root=RESOURCE_ROOT)), 'rt', encoding='utf-8') as stream:
             data=json.load(stream)
         self.assertEqual(data['version'], 1262)
         self.assertEqual(data['source'], 'EventData.NewNpc')

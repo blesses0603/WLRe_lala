@@ -1,7 +1,7 @@
 """P5 fail-closed resource contracts when only 1275 runtime evidence exists.
 
-These tests do not authorize removal of bundled resources. Replace their
-assumptions only alongside audited parity data and clean-package E2E.
+Logical resource names remain required database entries after source removal.
+Official runtime authorization remains independent from bundled storage.
 """
 import unittest
 from types import SimpleNamespace
@@ -13,7 +13,7 @@ from wlre.services.world.portals import Portals
 
 
 class ResourceSafetyContract(unittest.TestCase):
-    def test_unreplaced_legacy_assets_are_still_packaged(self):
+    def test_legacy_logical_entries_remain_required_in_database(self):
         names = set(REQUIRED_RESOURCES)
         self.assertEqual(len(names), len(REQUIRED_RESOURCES))
         for name in (

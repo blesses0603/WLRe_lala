@@ -4,6 +4,7 @@ import sqlite3
 import tempfile
 import unittest
 from wlre.paths import RESOURCE_ROOT
+from wlre.storage.full_resource_seed import read_config
 from wlre.storage.full_resource_seed import build_seed, verify_seed, SOURCE_MANIFEST, SEED_NAME
 from wlre.storage.bundled_database import load_bundled_bytes
 
@@ -15,9 +16,9 @@ class FullResourceSeedTests(unittest.TestCase):
             build_seed(RESOURCE_ROOT,root/SEED_NAME)
             db=base/'new_user.sqlite3'
             from wlre.storage.bundled_database import load_legacy_resource
-            self.assertEqual(load_legacy_resource('npc_text_1262.json.gz',root=root,database=db),(RESOURCE_ROOT/'npc_text_1262.json.gz').read_bytes())
+            self.assertEqual(load_legacy_resource('npc_text_1262.json.gz',root=root,database=db),read_config('npc_text_1262.json.gz', root=RESOURCE_ROOT))
             for name in SOURCE_MANIFEST:
-                self.assertEqual(load_bundled_bytes(name,root=root,database=db),(RESOURCE_ROOT/name).read_bytes())
+                self.assertEqual(load_bundled_bytes(name,root=root,database=db),read_config(name, root=RESOURCE_ROOT))
             with closing(sqlite3.connect(db)) as conn:
                 self.assertEqual(conn.execute('SELECT count(*) FROM bundled_active').fetchone()[0],27)
             self.assertEqual(list(root.iterdir()),[root/SEED_NAME])
@@ -40,7 +41,35 @@ class FullResourceSeedTests(unittest.TestCase):
                 conn.execute('CREATE TABLE user_settings (value TEXT)')
                 conn.execute("INSERT INTO user_settings VALUES ('preserve')")
             name=next(iter(SOURCE_MANIFEST))
-            self.assertEqual(load_bundled_bytes(name,root=root,database=db),(RESOURCE_ROOT/name).read_bytes())
+            self.assertEqual(load_bundled_bytes(name,root=root,database=db),read_config(name, root=RESOURCE_ROOT))
             with closing(sqlite3.connect(db)) as conn:
                 self.assertEqual(conn.execute('SELECT count(*) FROM bundled_active').fetchone()[0],27)
                 self.assertEqual(conn.execute('SELECT value FROM user_settings').fetchone()[0],'preserve')
+
+
+class SourceRemovalTests(unittest.TestCase):
+    def test_checkout_contains_complete_database_and_no_replaced_files(self):
+        self.assertTrue(verify_seed(RESOURCE_ROOT / SEED_NAME))
+        for name in SOURCE_MANIFEST:
+            with self.subTest(name=name):
+                self.assertFalse((RESOURCE_ROOT / name).exists())
+                raw=read_config(name, root=RESOURCE_ROOT)
+                import hashlib
+                self.assertEqual((len(raw), hashlib.sha256(raw).hexdigest()), SOURCE_MANIFEST[name])
+
+    def test_missing_seed_does_not_silently_return_unverified_config(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            (root/'default_profile.json').write_bytes(b'{}')
+            with self.assertRaises(FileNotFoundError):
+                read_config('default_profile.json', root=root)
+
+    def test_database_only_migration_and_read_only_audit(self):
+        from wlre.storage.resource_migration import migrate_resources
+        from tools.audit_all_resource_database import audit
+        with tempfile.TemporaryDirectory() as directory:
+            database=Path(directory)/'user.sqlite3'
+            self.assertEqual(migrate_resources(RESOURCE_ROOT,database),27)
+            report=audit(database,RESOURCE_ROOT)
+            self.assertTrue(report['all_identical'],report)
+            self.assertEqual(report['summary']['identical'],27)

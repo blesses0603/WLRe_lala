@@ -33,7 +33,16 @@ def build_seed(root,destination):
     destination.parent.mkdir(parents=True,exist_ok=True)
     with tempfile.TemporaryDirectory(dir=destination.parent) as directory:
         staged=Path(directory)/'seed.sqlite3'
-        migrate_resources(root,staged)
+        source=Path(root)/SEED_NAME
+        if source.is_file():
+            # A clean checkout carries the complete reviewed database.
+            # Copy it directly; never reconstruct removed resource files.
+            import shutil
+            verify_seed(source)
+            shutil.copyfile(source,staged)
+        else:
+            # Explicit offline import remains available for resource maintainers.
+            migrate_resources(root,staged)
         verify_seed(staged)
         # Publish without overwriting another build's result.
         import os
@@ -82,7 +91,7 @@ def read_config(name, *, root):
     """Read shipped policy/config from the pinned seed, never user SQLite."""
     root=Path(root);seed=root/SEED_NAME
     if not seed.is_file():
-        return (root/name).read_bytes()
+        raise FileNotFoundError('完整初始資料庫遺失，請還原 '+str(seed))
     # Each policy row has an independent reviewed digest; validate only the
     # requested bytes here. Full verification belongs to installation/selftest.
     if name not in SOURCE_MANIFEST:

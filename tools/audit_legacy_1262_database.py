@@ -39,10 +39,11 @@ def audit(database, root=RESOURCE_ROOT):
                 path = Path(root) / name
                 entry = {"name": name, "status": "not_checked"}
                 result["files"].append(entry)
-                if not path.is_file():
+                from wlre.storage.full_resource_seed import SEED_NAME, read_config
+                if not path.is_file() and not (Path(root) / SEED_NAME).is_file():
                     entry["status"] = "source_missing"
                     continue
-                raw = path.read_bytes()
+                raw = path.read_bytes() if path.is_file() else read_config(name, root=root)
                 digest = hashlib.sha256(raw).hexdigest()
                 entry["source_sha256"] = digest
                 active = db.execute(

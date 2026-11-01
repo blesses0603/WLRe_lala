@@ -33,6 +33,10 @@ def audit(index, local_archive, decoded=None):
     models = sorted({int(match[1]) for name in bundles
         if (match := re.fullmatch(r'mainpackage_scene_(\d+)\.bundle', name))})
     rows, local_ids = [], set()
+    if local_archive is None:
+        from wlre.paths import RESOURCE_ROOT
+        from wlre.storage.full_resource_seed import read_config
+        local_archive = io.BytesIO(read_config('smallmaps.zip', root=RESOURCE_ROOT))
     with ZipFile(local_archive) as z:
         entries = z.namelist()
         if len(entries) != len(set(entries)): raise ValueError('Duplicate local image entries')
@@ -80,7 +84,7 @@ def main():
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--manifest', type=Path, help='Pinned 1275 MainPackage .bytes for offline ID audit')
     group.add_argument('--online', action='store_true', help='Observe official versions, verify and fetch needed map Bundles')
-    parser.add_argument('--local', type=Path, default=Path('wlre/resources/smallmaps.zip'))
+    parser.add_argument('--local', type=Path, default=None, help='選用小地圖 ZIP；預設讀取隨附資料庫')
     parser.add_argument('--output-dir', type=Path, required=True)
     args = parser.parse_args()
     if args.output_dir.exists(): raise FileExistsError(args.output_dir)

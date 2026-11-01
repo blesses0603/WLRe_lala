@@ -8,6 +8,7 @@ from wlre.network.client import SessionLogic
 from wlre.services.battle import auto_battle
 from wlre.network.wire import ProtocolError
 from PIL import Image
+from wlre.storage.full_resource_seed import read_config
 B=Path(__file__).resolve().parents[1]/'wlre/resources'
 
 def setup():
@@ -123,16 +124,16 @@ class Concurrency(unittest.TestCase):
 
 class Images(unittest.TestCase):
  def test_catalog_mapping_complete(self):
-  self.assertEqual(set(json.loads((B/'item_icon_map.json').read_text())['items']),set(CAT['items']))
+  self.assertEqual(set(json.loads(read_config('item_icon_map.json', root=B).decode('utf-8'))['items']),set(CAT['items']))
  def test_all_png_valid(self):
-  with zipfile.ZipFile(B/'item_icons.zip') as z:
+  with zipfile.ZipFile(io.BytesIO(read_config('item_icons.zip', root=B))) as z:
    self.assertEqual(len(z.namelist()),4334)
    for n in z.namelist():
     with self.subTest(n=n):
      with Image.open(io.BytesIO(z.read(n))) as image:image.verify()
  def test_coverage(self):
-  items=json.loads((B/'item_icon_map.json').read_text())['items'];r=json.loads((B/'item_icon_coverage.json').read_text())
-  with zipfile.ZipFile(B/'item_icons.zip') as z:
+  items=json.loads(read_config('item_icon_map.json', root=B).decode('utf-8'))['items'];r=json.loads(read_config('item_icon_coverage.json', root=B).decode('utf-8'))
+  with zipfile.ZipFile(io.BytesIO(read_config('item_icons.zip', root=B))) as z:
    for sid,row in items.items():self.assertEqual(row['original_available'],row['icon']+'.png' in z.NameToInfo)
   self.assertEqual(r['items_with_original_images'],9855);self.assertEqual(r['items_with_missing_icons'],1432)
 

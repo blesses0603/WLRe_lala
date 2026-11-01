@@ -11,7 +11,10 @@ def migrate_resources(root, database):
     files = sorted(p for p in root.iterdir()
                    if p.is_file() and p.suffix in ('.json', '.zip', '.gz'))
     if not files:
-        raise ValueError('沒有可匯入的資源')
+        from wlre.storage.full_resource_seed import SEED_NAME, provision_seed
+        if (root / SEED_NAME).is_file():
+            return provision_seed(root / SEED_NAME, database)
+        raise ValueError('沒有可匯入的資源或完整初始資料庫')
     database.parent.mkdir(parents=True, exist_ok=True)
     with closing(sqlite3.connect(database, timeout=15)) as db, db:
         db.execute('CREATE TABLE IF NOT EXISTS bundled_resources (name TEXT NOT NULL, sha256 TEXT NOT NULL, data BLOB NOT NULL, PRIMARY KEY(name,sha256))')

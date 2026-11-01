@@ -9,6 +9,7 @@ from wlre.network.wire import Packet, ProtocolError, Writer
 from wlre.services.expedition import Expedition, duration, validate, choose_members
 from wlre.services.expedition_data import parse_catalog, attach_names
 from wlre.paths import RESOURCE_ROOT
+from wlre.storage.full_resource_seed import read_config
 from wlre.services.items.combat_resources import available
 import json
 
@@ -183,7 +184,7 @@ class ExpeditionAutomation(ExpeditionFixture, unittest.TestCase):
 
 class ExpeditionWire(unittest.TestCase):
     def test_bundled_official_catalog_uses_minutes_and_level_reduction(self):
-        value = json.loads((RESOURCE_ROOT / 'expedition_catalog.json').read_text(encoding='utf8'))
+        value = json.loads(read_config('expedition_catalog.json', root=RESOURCE_ROOT).decode('utf-8'))
         self.assertEqual(len(value['tasks']), 260)
         self.assertEqual(len(value['levels']), 10)
         self.assertEqual(value['tasks']['1']['name'], '遺跡探索 I')
@@ -400,5 +401,5 @@ class ExpeditionClaiming(ExpeditionFixture, unittest.TestCase):
         w = Writer().u8(1).u8(1).u16(0).u16(0).u8(10).u32(34014).u32(2)
         self.assertEqual(decode(Packet(31, 16, w.build()))['rewards'], [self.award])
         from wlre.services.expedition import claim_space
-        official = json.loads((RESOURCE_ROOT / 'expedition_catalog.json').read_text(encoding='utf8'))
+        official = json.loads(read_config('expedition_catalog.json', root=RESOURCE_ROOT).decode('utf-8'))
         self.assertTrue(all(claim_space(q) is not None for q in official['tasks'].values()))

@@ -50,7 +50,9 @@ def build_seed(resource_root, destination):
             db.execute('CREATE TABLE bundled_active (name TEXT PRIMARY KEY, sha256 TEXT NOT NULL)')
             db.execute('CREATE TABLE bundled_resources (name TEXT NOT NULL, sha256 TEXT NOT NULL, data BLOB NOT NULL, PRIMARY KEY(name,sha256))')
             for name in NAMES:
-                raw = (resource_root / name).read_bytes()
+                from wlre.storage.full_resource_seed import read_config
+                source = resource_root / name
+                raw = source.read_bytes() if source.is_file() else read_config(name, root=resource_root)
                 digest = hashlib.sha256(raw).hexdigest()
                 if name in pinned_hashes() and pinned_hashes()[name] != digest:
                     raise ValueError('資源固定 SHA-256 不符: ' + name)

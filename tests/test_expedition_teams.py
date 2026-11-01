@@ -5,6 +5,7 @@ import random
 import unittest
 
 from wlre.paths import RESOURCE_ROOT
+from wlre.storage.full_resource_seed import read_config
 from wlre.services.expedition import Expedition, validate
 from wlre.services.expedition_teams import choose_members, success_details, condition_met
 from test_expedition import ExpeditionFixture, role, catalog
@@ -69,7 +70,7 @@ class TeamSuccess(unittest.TestCase):
             self.assertEqual(tuple(r['index'] for r in team), tuple(-i for i in expected[-1]))
 
     def test_official_recommendations_and_npc_metadata_are_bundled(self):
-        c = json.loads((RESOURCE_ROOT / 'expedition_catalog.json').read_text())
+        c = json.loads(read_config('expedition_catalog.json', root=RESOURCE_ROOT).decode('utf-8'))
         self.assertEqual(len(c['npcs']), 7543)
         self.assertTrue(all(len(q['recommendations']) == 4 for q in c['tasks'].values()))
         q = next(q for q in c['tasks'].values() if q['name'] == '入侵威脅 II')

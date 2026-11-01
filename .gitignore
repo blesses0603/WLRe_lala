@@ -7,5 +7,3 @@ dist_nuitka/
 
 .macos-build-env/
 
-# Generated verified full resource database (built from reviewed sources).
-/wlre/resources/resource_catalog_seed.sqlite3
