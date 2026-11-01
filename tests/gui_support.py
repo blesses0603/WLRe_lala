@@ -23,7 +23,7 @@ def isolate_gui_background_checks(case):
             if worker.name in ('official-version-check', 'lala-release-check'):
                 worker.join(timeout=1)
         for key in list(vars(case)):
-            if not key.startswith('_') and key not in original_attributes:
+            if not key.startswith('_') and key not in original_attributes and key != 'tearDown_exceptions':
                 setattr(case, key, None)
         gc.collect()
 
