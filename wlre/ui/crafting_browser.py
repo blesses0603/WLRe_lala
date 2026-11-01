@@ -8,6 +8,7 @@ from wlre.services.items.crafting import RECIPES, recipe_plan, effective_time, c
 from wlre.services.items.catalog import item_display_name as item_name
 from wlre.services.items.crafting_browser_model import Favorites, owned_counts, material_rows, availability, tool_status, room_known
 from wlre.services.world.feature_resource_index import feature_note
+from wlre.services.world.dynamic_bundle_runtime import current_catalog_token
 from wlre.core.efficiency import duration
 from wlre.ui.crafting.item_icons import ItemIcons, ICON_MAP
 from wlre.ui.crafting.queue_view import CraftingQueueMixin
@@ -19,6 +20,7 @@ class CraftingBrowser(CraftingQueueMixin):
     def __init__(self,panel,embedded=False):
         self.panel=panel;self.app=panel.app;self.state=panel.state;self.page=0;self.rows=[];self.selected=None;self.filter_key='all';self.grid_key=None;self.detail_key=None;self.tool_key=None;self.search_job=None;self.refresh_job=None;self.state_key=None
         self.favorite_store=Favorites();self.icons=None;self.closed=False
+        self._catalog_token=current_catalog_token()
         self.embedded=embedded;self.page_size=12
         if embedded:
             w=self.window=ttk.Frame(panel);w.pack(fill='both',expand=True)
@@ -74,7 +76,18 @@ class CraftingBrowser(CraftingQueueMixin):
         self.tick_job=self.window.after(1000,self.tick)
         if embedded:self.window.bind('<Map>',lambda e:self.refresh() if e.widget is self.window else None)
 
+    def refresh_runtime_catalog(self):
+        token=current_catalog_token()
+        if token==getattr(self,'_catalog_token',None):
+            return False
+        self._catalog_token=token
+        self.grid_key=self.detail_key=self.tool_key=self.state_key=None
+        self.rows=[];self.selected=None;self.page=0
+        self.favorite_store=Favorites(self.favorite_store.path)
+        return True
+
     def update_state(self,state):
+        self.refresh_runtime_catalog()
         self.state=state;c=state.get('crafting',{});inv=state.get('inventory',{});room=state.get('furniture',{})
         key=(state.get('player',{}).get('role_id'),self.app.live_active,inv.get('revision'),inv.get('ready'),inv.get('reliable'),room.get('revision'),room.get('owner'),room.get('ready'),c.get('revision'),c.get('pending'),c.get('uncertain'),c.get('status'))
         if key!=self.state_key:
@@ -101,6 +114,7 @@ class CraftingBrowser(CraftingQueueMixin):
     def refresh(self,force=False):
         self.refresh_job=None
         if self.closed:return
+        force=self.refresh_runtime_catalog() or force
         self.state=self.panel.state;c=self.state.get('crafting',{})
         capacity=5 if any(v['item_id']==39050 and v.get('status')==0 for v in self.state.get('furniture',{}).get('items',{}).values()) else 3
         self.queue_label.set(f"製作排程：{len(c.get('queue',{}))}/{capacity}")

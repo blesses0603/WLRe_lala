@@ -67,19 +67,19 @@ class SmallMaps:
         stages = getattr(runtime, 'stages', None)
         if (str(getattr(runtime, 'revision', None)) != self.source_revision
                 or not isinstance(stages, dict)):
-            raise NavigationError('1275 官方場景尺寸尚未經完整校驗。')
+            raise NavigationError('目前官方場景資料與小地圖綁定版本不同，請重新載入。')
         row = stages.get(scene)
         if not isinstance(row, dict) or type(row.get('model_id')) is not int:
-            raise NavigationError('1275 官方場景尚未列出此場景的模型資料。')
+            raise NavigationError('目前官方場景資料沒有此場景的模型對應。')
         model = row['model_id']
         if not 1 <= model <= 65535 or self.entries.get(model) not in self.archive_entries:
-            raise NavigationError('此 1275 場景沒有對應的已核對小地圖圖片。')
+            raise NavigationError('此官方場景的模型沒有對應的小地圖圖片。')
         width, height = row.get('map_width'), row.get('map_height')
         offset_x, offset_y = row.get('small_offset_x'), row.get('small_offset_y')
         if (any(type(v) is not int for v in (width, height, offset_x, offset_y))
                 or not 1 <= width <= 65535 or not 1 <= height <= 65535
                 or not 0 <= offset_x <= 1024 or not 0 <= offset_y <= 1024):
-            raise NavigationError('1275 官方小地圖投影參數無效。')
+            raise NavigationError('目前官方場景的小地圖投影參數無效。')
         return row, 'M' + str(model).zfill(5)
 
     def has_image(self, logical_map):

@@ -104,6 +104,14 @@ def dynamic_attempted():
     return _attempted
 
 
+
+def current_catalog_token():
+    """Identity for cached consumers, including a failed/invalidated runtime."""
+    runtime=current_runtime()
+    identity=getattr(runtime,'catalog_identity',None)
+    return (dynamic_attempted(),getattr(identity,'key',None))
+
+
 def invalidate_runtime():
     global _active, _attempted, _generation
     with _activation_lock:

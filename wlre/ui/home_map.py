@@ -177,7 +177,7 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
             status_parent.bind('<Configure>',wrap_status,add='+')
         self.after_idle(self.draw)
 
-    def refresh_portals(self):
+    def refresh_runtime_sources(self):
         # The UI may be constructed before the 1275 runtime finishes being
         # installed. Do not pin an empty pre-login portal snapshot forever.
         # The current client must never keep a previously loaded 1262
@@ -186,9 +186,22 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
         from wlre.services.world.dynamic_bundle_runtime import current_runtime, dynamic_attempted
         runtime = current_runtime()
         key = runtime.catalog_identity.key if runtime is not None else None
-        if key != getattr(self, '_runtime_catalog_key', None):
+        changed = key != getattr(self, '_runtime_catalog_key', None)
+        if changed:
+            self.selected_npc=self.selected_portal=None
+            for name in ('npc_shop_window','npc_choice_window','npc_history_window'):
+                window=getattr(self,name,None)
+                if window is not None:
+                    try:
+                        if window.winfo_exists():
+                            window.destroy()
+                    except tk.TclError:
+                        pass
+                    setattr(self,name,None)
             # Rebind all UI snapshots together; old NPC/talk/item IDs cannot
             # survive a timestamp-only republish with the same numeric version.
+            self.route = self.image = self.photo = self.mesh = self.projection = None
+            self.map_error = '官方資源版本已更新，正在重新載入目前場景'
             self.maps = SmallMaps()
             self.portals = Portals()
             self.npc_index = runtime.npc_index if runtime is not None else None
@@ -202,6 +215,10 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
             self.npc_index = None
             self.npc_interacts.scenes = {}
             self.npc_talks = {}
+        return changed
+
+    def refresh_portals(self):
+        HomeMap.refresh_runtime_sources(self)
         previous_revision = self.portals.data.get('source_revision')
         if (not is_official_revision(previous_revision)
                 or not self.portals.data.get('source_ready')):

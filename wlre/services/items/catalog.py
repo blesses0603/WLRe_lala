@@ -49,7 +49,8 @@ def verified_item_metadata(item_id):
     try:
         if baseline_revision() == '1262':
             return None
-        item = active_runtime().items.get(item_id)
+        runtime = active_runtime()
+        item = runtime.items.get(item_id)
     except (Runtime1275Unavailable, OSError, ValueError, KeyError):
         return None
     if (type(item) is not dict
@@ -61,5 +62,5 @@ def verified_item_metadata(item_id):
             'base_price': item['price'], 'base_sell_price': item['sell_price'],
             'npc_sale_allowed': (item['restrict'] & 0x10) == 0,
             'need_level': item['need_level'], 'open_used': item['open_used'],
-            'source_revision': active_runtime().revision, 'effects_verified': False,
+            'source_revision': runtime.revision, 'effects_verified': False,
             'can_send_packets': False}

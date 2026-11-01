@@ -19,7 +19,7 @@ class ExpeditionPlannerMixin:
         return plan_quests(quests, roles, threshold, npcs)
 
     def request_plans(self, quests, idle, threshold):
-        key = repr(([q['id'] for q in quests], idle, threshold))
+        key = repr((getattr(self,'_catalog_token',None), quests, idle, threshold))
         if key == self.plan_key: return
         self.plan_key = key
         self.plans = {}
@@ -34,6 +34,10 @@ class ExpeditionPlannerMixin:
 
     def collect_plans(self):
         self.plan_job = None
+        refresh=getattr(self,'refresh_runtime_catalog',None)
+        if callable(refresh) and refresh():
+            self.render(self.app.snapshot)
+            return
         if self.plan_future is None: return
         if not self.plan_future.done():
             self.plan_job = self.after(50, self.collect_plans)

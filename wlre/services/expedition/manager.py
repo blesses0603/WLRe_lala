@@ -8,6 +8,7 @@ import time
 
 from wlre.network.wire import Packet, Writer, ProtocolError
 from .data import load_catalog, load_active_catalog
+from wlre.services.world.dynamic_bundle_runtime import current_catalog_token
 from wlre.services.items.combat_resources import CAT, available
 from wlre.core.inventory_updates import STACKABLE
 from .teams import choose_members, condition_met, success_details
@@ -155,6 +156,7 @@ class Expedition:
         self.catalog = catalog
         self.pending = None
         self.next_check = 0
+        self._catalog_token=current_catalog_token()
 
     @writes('expedition')
     def start(self, state, settings):
@@ -171,6 +173,7 @@ class Expedition:
                 # automatic dispatch, reward decisions or NPC team conditions.
                 raise ProtocolError(
                     '遠征缺少完整且已驗證的目前版本資料；禁止自動派遣') from exc
+        self._catalog_token=current_catalog_token()
         if not self.catalog.get('tasks') or not self.catalog.get('levels'):
             raise ProtocolError('內建遠征資料不完整，請更新完整程式')
         if not e['ready'] or not e['outpost_ready']: raise ProtocolError('等待遠征與駐紮所資料同步')
@@ -254,6 +257,9 @@ class Expedition:
                 self.stop(state, '遠征操作逾時未確認，已停止且不會重送；請重新登入同步')
             return []
         if not e['enabled'] or e['uncertain'] or now < self.next_check: return []
+        if self.catalog_override is None and current_catalog_token()!=self._catalog_token:
+            self.stop(state,'官方資源已更新，請依新資料重新啟動遠征')
+            return []
         self.next_check = now + 2
         reason = blocked(state)
         if reason:

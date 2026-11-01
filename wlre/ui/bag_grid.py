@@ -273,7 +273,8 @@ class BagGrid(ttk.Frame):
         capacity = self.inventory.get('capacity')
         self.summary.set(f"{len(rows)} / {capacity if capacity is not None else '?'} 格｜{feature_note('bag')}")
         self.page_label.set(f'{self.page + 1} / {pages}')
-        signature = (tuple((index, item['item_id'], item.get('count'),
+        from wlre.services.world.dynamic_bundle_runtime import current_catalog_token
+        signature = (current_catalog_token(), tuple((index, _name, item['item_id'], item.get('count'),
                            item.get('locked'), item.get('limited_time'),
                            item.get('available_time'), available(self.inventory, index))
                            for index, item, _name in rows), self.page, self.index_selected,

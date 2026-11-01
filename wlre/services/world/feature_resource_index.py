@@ -83,6 +83,19 @@ def describe_feature(feature, *, report=None, revisions=None, root=None):
               'missing': list(expected), 'state': 'index_unavailable',
               'message': MESSAGES['index_unavailable'], 'display_only': True,
               'assets_ready': False, 'can_send_packets': False}
+    if revisions is None and report is None and root is None:
+        from wlre.services.world.dynamic_bundle_runtime import current_runtime, dynamic_attempted
+        runtime=current_runtime()
+        if runtime is not None:
+            digests=getattr(runtime,'source_sha256',{})
+            if not isinstance(digests,dict): digests={}
+            missing=[path for path,table in zip(expected,FEATURE_TABLES[feature])
+                     if not isinstance(digests.get(table),str) or len(digests[table])!=64]
+            return {**status,'collected':len(expected)-len(missing),'missing':missing,
+                    'state':'verified_runtime' if not missing else 'partial_runtime',
+                    'message':'目前官方 Runtime 資料已驗證' if not missing else '目前官方 Runtime 資料仍有缺口'}
+        if dynamic_attempted():
+            return {**status,'state':'runtime_unavailable','message':'目前官方 Runtime 尚未完成驗證'}
     if revisions is None:
         from wlre.services.resource_compatibility import load_supported_resources
         packages = load_supported_resources()['packages']

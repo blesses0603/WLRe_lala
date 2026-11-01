@@ -4,6 +4,7 @@ from functools import lru_cache
 from wlre.services.battle.auto_battle import validate, ACTION_IDS
 from wlre.services.battle.battle_commands import ACTIONS, owned_units
 from wlre.services.items.combat_resources import CAT, skill_rows, field_context
+from wlre.services.items.catalog import item_display_name
 
 NAMES={0:'略過此格',**{sid:ACTIONS[mode] for sid,mode in ACTION_IDS.items()}}
 TARGETS={1:'最低HP',2:'屬性優先',3:'最高HP'}
@@ -17,7 +18,9 @@ GROUPS=(('bDeadAction','deadAction','同方陣亡',1),('bEnemyHPAction','enemyHp
 def action_label(row):
     sid=row['id']
     if sid in NAMES:return NAMES[sid]
-    source=CAT['items'] if row['kind']==2 else CAT['skills']
+    if row['kind']==2:
+        return f'{item_display_name(sid)} ({sid})'
+    source=CAT['skills']
     return f"{source.get(str(sid),{}).get('name','未知')} ({sid})"
 
 
@@ -55,7 +58,7 @@ def action_entries(state,who,item):
         counts={}
         for value in state.get('inventory',{}).get('items',{}).values():
             counts[value['item_id']]=counts.get(value['item_id'],0)+value['count']
-        data=[(sid,f"{name} ({sid})｜持有 {counts.get(sid,0)}") for sid,name in supply_catalogue()]
+        data=[(sid,f"{item_display_name(sid)} ({sid})｜持有 {counts.get(sid,0)}") for sid,name in supply_catalogue()]
         data.sort(key=lambda row:(row[0] not in counts,row[0]))
     else:data=[entry for entry in confirmed_skill_entries(state,who) if entry[0] not in special]
     return entries+data

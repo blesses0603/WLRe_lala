@@ -5,6 +5,7 @@ Server S7-1/S12-1 remains authoritative for the resulting map and position.
 """
 
 from wlre.services.world.catalog_source_policy import is_official_revision
+from wlre.services.world.dynamic_bundle_runtime import current_catalog_token
 from wlre.core.state_ownership import writes
 import math
 from wlre.services.world.portals import Portals
@@ -18,6 +19,7 @@ class PortalTravel:
 
     def __init__(self, catalog=None):
         self.catalog = catalog
+        self._catalog_token=current_catalog_token()
         self.pending = None
         self.deadline = None
         self.event_finished = False
@@ -46,10 +48,17 @@ class PortalTravel:
     @writes('portal_travel')
     def start(self, state, movement, portal_id, now):
         if self.pending:
+            if current_catalog_token()!=self._catalog_token:
+                self.cancel(state,'官方資源已更新，請重新選取傳點')
+                movement.stop(state,'官方資源已更新，已停止舊傳點移動')
+                raise ProtocolError('官方資源已更新，請重新選取傳點')
             if self.pending['id'] == portal_id:
                 return  # repeated list clicks cannot restart or re-send a trigger
             raise ProtocolError('傳點移動尚未結束，請先停止移動')
-        self.catalog = self.catalog or Portals()
+        token=current_catalog_token()
+        if self.catalog is None or token!=self._catalog_token:
+            self.catalog=Portals()
+            self._catalog_token=token
         cached_data = getattr(self.catalog, 'data', None)
         if (isinstance(cached_data, dict)
                 and not is_official_revision(cached_data.get('source_revision'))):
@@ -171,6 +180,10 @@ class PortalTravel:
     def tick(self, state, movement, now):
         p = self.pending
         if not p:
+            return []
+        if current_catalog_token()!=self._catalog_token:
+            self.cancel(state,'官方資源已更新，已清除舊傳點請求；請重新選取')
+            movement.stop(state,'官方資源已更新，已停止舊傳點移動')
             return []
         if self.deadline is not None:
             if self.event_finished:

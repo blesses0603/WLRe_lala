@@ -35,6 +35,10 @@ class MinimapNavigationMixin:
         self.map_title.set('小地圖｜' + MinimapNavigationMixin.scene_display_name(self))
 
     def show_map(self,map_id):
+        refresh_sources=getattr(self,'refresh_runtime_sources',None)
+        if callable(refresh_sources):
+            refresh_sources()
+        self.map_error=None
         self.route=None
         self.image=None
         self.mesh=None
@@ -53,10 +57,13 @@ class MinimapNavigationMixin:
                               else self.scene_display_name()+'｜原始小地圖')
             else:
                 self.projection=None
-                self.note.set(self.scene_display_name()+'｜沒有原始小地圖；請使用左側返回出口。')
+                self.map_error='目前場景的對應小地圖圖片尚未就緒'
+                self.note.set(self.scene_display_name()+'｜'+self.map_error+'。')
         except (OSError,ValueError,KeyError) as exc:
             self.image=None;self.mesh=None;self.projection=None
-            self.note.set(str(exc))
+            self.map_error=str(exc)
+            self.note.set(self.map_error)
+        self._map_runtime_catalog_key=getattr(self,'_runtime_catalog_key',None)
         self.refresh_portals()
         self.draw()
 
@@ -65,7 +72,11 @@ class MinimapNavigationMixin:
         self.state=state or {}
         self.update_portal_button()
         scene=self.state.get('player',{}).get('scene')
-        if scene is not None and (force or scene!=self.selected_id):
+        refresh_sources=getattr(self,'refresh_runtime_sources',None)
+        runtime_changed=refresh_sources() if callable(refresh_sources) else False
+        runtime_changed = runtime_changed or (getattr(self,'_map_runtime_catalog_key',None) !=
+                                               getattr(self,'_runtime_catalog_key',None))
+        if scene is not None and (force or runtime_changed or scene!=self.selected_id):
             self.show_map(scene)
         self.update_npc_buttons()
         self.show_dialogue_status()
