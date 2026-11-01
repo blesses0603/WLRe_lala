@@ -1,0 +1,35 @@
+name: Preserve verified resource database
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/materialize-resource-seed.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  preserve:
+    if: github.head_ref == 'feature/catalog-runtime-adapter' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ github.head_ref }}
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.12'
+      - name: Build and verify complete SQLite replacement
+        run: |
+          python -m wlre.storage.full_resource_seed --output wlre/resources/resource_catalog_seed.sqlite3
+          python -c "from pathlib import Path; p=Path('wlre/resources/resource_catalog_seed.sqlite3'); assert p.stat().st_size < 100*1024*1024; print('Verified SQLite bytes:', p.stat().st_size)"
+      - name: Preserve database before removing original files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f wlre/resources/resource_catalog_seed.sqlite3
+          git diff --cached --quiet && exit 0
+          git commit -m "data: preserve complete verified SQLite before removing legacy sources"
+          git push origin HEAD:feature/catalog-runtime-adapter
