@@ -37,7 +37,7 @@ class CraftingBrowser(CraftingQueueMixin):
         self.source_label=tk.StringVar(value=feature_note('crafting'))
         ttk.Label(header,textvariable=self.source_label,style='Muted.TLabel').pack(side='right',padx=4)
         searchbar=ttk.Frame(box);searchbar.pack(fill='x',pady=(0,4))
-        self.only_tools=tk.BooleanVar(value=True);ttk.Checkbutton(searchbar,text='只列小屋已有設備',variable=self.only_tools,command=lambda:self.refresh(force=True)).pack(side='left')
+        self.only_tools=tk.BooleanVar(value=False);ttk.Checkbutton(searchbar,text='只列小屋已有設備',variable=self.only_tools,command=lambda:self.refresh(force=True)).pack(side='left')
         ttk.Label(searchbar,text='搜尋').pack(side='left',padx=(8,4))
         self.search=tk.StringVar();search=ttk.Entry(searchbar,textvariable=self.search,width=16);search.pack(side='left',fill='x',expand=True);search.bind('<KeyRelease>',self.defer_search)
         body=ttk.Frame(box);body.pack(fill='both',expand=True)
@@ -68,7 +68,7 @@ class CraftingBrowser(CraftingQueueMixin):
         if embedded:bottom.grid(row=3,column=0,sticky='ew',pady=(6,0))
         else:bottom.pack(side='bottom',fill='x',pady=(6,0),before=body)
         self.favorite_count=tk.StringVar();ttk.Label(bottom,textvariable=self.favorite_count,style='Muted.TLabel').pack(side='left',padx=(0,8))
-        self.message=tk.StringVar(value='自動隱藏鎖定及條件未確認項目；缺材料仍可查看')
+        self.message=tk.StringVar(value='可查看配方與材料；製作依設備、庫存及條件判斷')
         ttk.Label(bottom,textvariable=self.message,style='Muted.TLabel',wraplength=0 if embedded else 760,width=1 if embedded else 0).pack(side='right',fill='x',expand=True)
         for section in (side,right,self.material_box):section._surface_fill=(13,32,48,190)
         self.queue_window=None;self.refresh(force=True)
@@ -120,12 +120,12 @@ class CraftingBrowser(CraftingQueueMixin):
         self.queue_label.set(f"製作排程：{len(c.get('queue',{}))}/{capacity}")
         self.source_label.set(feature_note('crafting'))
         self.favorite_count.set(f'我的最愛：{len(self.favorite_store.ids)}/100'+('' if self.embedded else '（儲存於本機）'))
-        tool_ids=sorted({r['tool_id'] for r in RECIPES.values() if confirmed_unlocked(r)})
+        tool_ids=sorted({r['tool_id'] for r in RECIPES.values()})
         signature=(self.only_tools.get(),room_known(self.state),tuple((sid,tool_status(self.state,sid)) for sid in tool_ids))
         if force or signature!=self.tool_key:
             self.tool_key=signature;selected=self.filter_key;self.tool_tree.delete(*self.tool_tree.get_children())
             self.tool_tree.insert('','end',iid='favorites',text='♡ 我的最愛')
-            self.tool_tree.insert('','end',iid='all',text='已確認未鎖定項目')
+            self.tool_tree.insert('','end',iid='all',text='全部配方')
             for sid in tool_ids:
                 status=tool_status(self.state,sid)
                 if self.only_tools.get() and room_known(self.state) and status!='已擺放':continue

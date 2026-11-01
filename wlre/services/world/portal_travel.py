@@ -98,6 +98,10 @@ class PortalTravel:
     @writes('portal_travel')
     def start_direct(self, state, movement, portal_id, now):
         if self.pending:
+            if current_catalog_token()!=self._catalog_token:
+                self.cancel(state,'官方資源已更新，請重新選取傳點')
+                movement.stop(state,'官方資源已更新，已停止舊傳點移動')
+                raise ProtocolError('官方資源已更新，請重新選取傳點')
             if self.pending['id'] == portal_id:
                 return []
             raise ProtocolError('已有出口請求等待回覆，請勿連續切換傳點')
@@ -107,7 +111,10 @@ class PortalTravel:
             raise ProtocolError('戰鬥中不能觸發出口')
         if state.event_flow.get('blocked'):
             raise ProtocolError('等待目前伺服器事件結束後再觸發出口')
-        self.catalog = self.catalog or Portals()
+        token=current_catalog_token()
+        if self.catalog is None or token!=self._catalog_token:
+            self.catalog=Portals()
+            self._catalog_token=token
         cached_data = getattr(self.catalog, 'data', None)
         if (isinstance(cached_data, dict)
                 and not is_official_revision(cached_data.get('source_revision'))):
