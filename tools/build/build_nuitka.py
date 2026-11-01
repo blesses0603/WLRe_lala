@@ -190,7 +190,6 @@ def main(argv=None):
         with log.open('a',encoding='utf8') as stream:
             stream.write('Import library: '+str(library)+'\nStaged library: '+str(staged)+'\nHeader: '+str(header)+'\n')
         prepare_dependencies(python,environment,log,args.upgrade_deps)
-        from wlre.services.world.npc_asset_install import ASSETS
         from wlre.storage.initial_catalog import build_seed
         build_seed(ROOT/'wlre/resources', ROOT/'wlre/resources/legacy_catalog_seed.sqlite3')
         if args.diagnose_compiler:
