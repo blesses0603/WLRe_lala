@@ -6,6 +6,7 @@ from wlre.services.world.navigation import Repository
 from wlre.network.protocol import walk
 from wlre.network.wire import ProtocolError
 from wlre.services.battle.party import own_team
+from wlre.services.world.dynamic_bundle_runtime import current_catalog_token
 
 
 class Movement:
@@ -16,6 +17,7 @@ class Movement:
         self.converter=converter
         self.repository=repository
         self.active=False
+        self.catalog_token=current_catalog_token()
         self.points=[]
         self.index=1
         self.position=None
@@ -46,6 +48,7 @@ class Movement:
         elif state.location.get('confirmed_is_current'):
             start=(fix['x'],fix['y']);start_height=None
         else:raise ProtocolError('起點位置不明：先前座標同步沒有本機定位或可續用的推算位置')
+        token=current_catalog_token()
         self.converter=self.converter or Coordinates()
         self.repository=self.repository or Repository()
         route=self.converter.route(self.repository,scene,start,(x,y),start_height=start_height)
@@ -63,6 +66,9 @@ class Movement:
                 px,py=self.converter.to_packet(scene,point[0],point[2])
                 if math.hypot(px-cx,py-cy)>radius+1e-6:
                     raise ProtocolError('導航路徑會離開徘徊範圍，重新選點')
+        if current_catalog_token()!=token:
+            raise ProtocolError('規劃途中官方資源已更新，請重新選點。')
+        self.catalog_token=token
         self.points=points;self.position=points[0];self.index=1
         self.scene=scene;self.role_id=state.player['role_id'];self.revision=state.navigation.get('revision')
         self.next_due=now+self.interval
@@ -102,6 +108,8 @@ class Movement:
     @writes('movement')
     def tick(self,state,now):
         if not self.active:return []
+        if current_catalog_token()!=self.catalog_token:
+            self.stop(state,'官方資源已更新，請重新選點移動');return []
         if (state.player.get('role_id')!=self.role_id or state.player.get('scene')!=self.scene
                 or state.battle.get('active') or state.event_flow.get('blocked')
                 or state.navigation.get('revision')!=self.revision

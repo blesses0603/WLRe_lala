@@ -106,6 +106,9 @@ def summarize(state, live, guard, now=None):
             elif min(due)==0: timing='最快完成 0 小時（可領獎）'
             else: timing=f'最快完成 {min(due)/3600:.1f} 小時'
             expedition_text+='\n'+timing
+    reason=expedition.get('status','')
+    if reason and reason not in ('尚未啟動','等待遠征與駐紮所資料同步。'):
+        expedition_text+='\n'+reason
     if expedition.get('uncertain'):
         expedition_text='結果未確認｜請重新登入同步'
     if not live:

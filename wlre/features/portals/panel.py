@@ -43,6 +43,7 @@ class PortalInteractionMixin:
         self.select_portal(p)
 
     def select_portal(self,p):
+        self.picked_destination=None
         self.selected_npc=None
         self.npc_list.selection_clear(0,'end')
         self.selected_portal=p

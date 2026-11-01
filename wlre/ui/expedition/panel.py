@@ -101,7 +101,7 @@ class ExpeditionPanel(
         if live and self.app._settings_key and self.app._settings_key != self.key:
             self.load_settings(self.app._settings_key)
         self.update_inventory(state.get('inventory', {}))
-        self.start_button.configure(state='normal' if live and e.get('ready') and e.get('outpost_ready')
+        self.start_button.configure(state='normal' if live
                                     and self.catalog.get('tasks')
                                     and self.catalog.get('source_kind') != 'automatic_1275_unapproved_preview'
                                     and not e.get('enabled') and not e.get('uncertain') else 'disabled')

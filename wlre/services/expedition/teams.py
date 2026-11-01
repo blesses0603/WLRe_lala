@@ -55,7 +55,7 @@ def success_details(quest, roles, npcs=None):
 
 
 def choose_members(quest, roles, threshold, npcs=None):
-    eligible = [r for r in roles if r['faith'] >= quest['faith_cost'] or r['faith'] < threshold]
+    eligible = list(roles)
     models = tuple(sorted((_model(r, npcs or {}) for r in eligible), key=lambda m: m[0]))
     recs = tuple((tuple(r['condition']), r['bonus']) for r in quest.get('recommendations', []) if r['condition'][0] and r['bonus'])
     indices = _choose_cached(tuple(quest['condition']), recs, quest.get('success_rate', 0),

@@ -79,6 +79,9 @@ class MinimapCanvasMixin:
         local=self.state.get('local_movement')
         if local and local.get('scene')==self.selected_id:
             targets=[local['target']]
+        picked=getattr(self,'picked_destination',None)
+        if picked and picked.get('scene')==self.selected_id:
+            targets=[picked]
         if targets:
             target=max(targets,key=lambda t:t.get('packet_number',0))
             x,y=self.screen_pixel(*self.projection.packet_to_pixel(target['x'],target['y']))

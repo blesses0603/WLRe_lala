@@ -134,13 +134,12 @@ class MinimapFeatureTests(unittest.TestCase):
         obj.select_npc.assert_not_called()
         obj.on_pick.assert_called_once_with(10000, 100, 150)
 
-        # For 1275 the normal navigation guard still prohibits movement.
+        # A missing route mesh does not prohibit selecting a destination.
         obj.maps = SimpleNamespace(supports_navigation=False)
         obj.on_pick.reset_mock()
-        self.assertFalse(obj.pick(SimpleNamespace(x=108, y=158)))
+        self.assertTrue(obj.pick(SimpleNamespace(x=108, y=158)))
         obj.select_npc.assert_not_called()
-        obj.on_pick.assert_not_called()
-        self.assertIn('未通過驗證', obj.note.set.call_args.args[0])
+        obj.on_pick.assert_called_once_with(10000,100,150)
 
     def test_sidebar_npc_selection_remains_available(self):
         from wlre.features.npc.panel import NPCInteractionMixin

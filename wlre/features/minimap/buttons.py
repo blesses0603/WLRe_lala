@@ -18,9 +18,6 @@ class MinimapPickMixin:
         self.selected_portal=None
         self.selected_npc=None
         self.update_portal_button()
-        if not getattr(getattr(self, 'maps', None), 'supports_navigation', True):
-            self.note.set('1275 圖像與場景座標已校準，舊版點擊尋路未通過驗證。')
-            return False
         left,top,scale=self.view()
         u,v=(event.x-left)/scale,(event.y-top)/scale
         if not (0<=u<=1024 and 0<=v<=1024):return False
@@ -28,7 +25,12 @@ class MinimapPickMixin:
         x,y=round(x),round(y)
         if not (0<=x<=65535 and 0<=y<=65535):
             self.note.set('此處超出遊戲座標範圍。');return False
-        return self.on_pick(self.selected_id,x,y) is not False
+        if self.on_pick(self.selected_id,x,y) is False:
+            return False
+        self.picked_destination={'scene':self.selected_id,'x':x,'y':y}
+        draw=getattr(self,'draw',None)
+        if callable(draw) and hasattr(self,'state'):draw()
+        return True
 
     def double_pick(self,event):
         marker=nearest_marker(self.portal_rows,self.projection,self.screen_pixel,event.x,event.y) if self.projection else None

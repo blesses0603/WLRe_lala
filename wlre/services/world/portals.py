@@ -56,10 +56,9 @@ class Portals:
                 self.audit = {}
                 return
             if revision != '1262':
-                # The verified 1275 Eve table includes a door index and its
-                # local coordinates, but not an audited destination or proof
-                # that C20-8 is safe on this server. Expose the original
-                # positions as read-only map markers; NEVER reuse 1262 routes.
+                # Build markers from the active runtime. Manual triggers require
+                # a matched destination, scaled position and valid door index;
+                # the presence of a dynamic Catalog identity is not a blocker.
                 source_ready = False
                 doors = {}
                 duplicate_report = {}
@@ -242,8 +241,7 @@ class Portals:
                                 'event_ids': tuple(row.get('event_ids') or ()),
                                 'destination': destination,
                                 'destination_verified': verified_target,
-                                'direct_eligible': bool(verified_target and strict_valid_xy and 1 <= index <= 65535
-                                                        and getattr(verified, 'catalog_identity', None) is None),
+                                'direct_eligible': bool(verified_target and strict_valid_xy and 1 <= index <= 65535),
                                 'direct_door_index': index if verified_target and strict_valid_xy and 1 <= index <= 65535 else None,
                                 'door_index': index if verified_target and strict_valid_xy and 1 <= index <= 65535 else None,
                                 'navigation_status': 'unverified',

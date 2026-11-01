@@ -110,8 +110,19 @@ class SmallMaps:
         if self.source_revision != '1262':
             stage, model = self._stage_1275(logical_map)
             height = 6992 if stage['map_height'] == 65535 else stage['map_height']
-            # Verified 1275 stage geometry, no 1262 navigation graph origin.
-            return Projection({**stage, 'offset_y': height}, (0, 0, 0)), model
+            origin=(0,0,0)
+            self.supports_navigation=False
+            from wlre.services.world.dynamic_bundle_runtime import current_runtime
+            if current_runtime() is not None:
+                self.coordinates=self.coordinates or Coordinates()
+                try:
+                    _matched,matched_model,origin=self.coordinates.mapping(logical_map)
+                    if matched_model!=model:
+                        raise NavigationError('導航模型與目前小地圖不同。')
+                    self.supports_navigation=True
+                except NavigationError:
+                    origin=(0,0,0)
+            return Projection({**stage, 'offset_y': height}, origin), model
         stage,scene,origin=self.coordinates.mapping(logical_map)
         return Projection(stage,origin),scene
 

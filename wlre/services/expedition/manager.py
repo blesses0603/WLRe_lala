@@ -176,11 +176,17 @@ class Expedition:
         self._catalog_token=current_catalog_token()
         if not self.catalog.get('tasks') or not self.catalog.get('levels'):
             raise ProtocolError('內建遠征資料不完整，請更新完整程式')
-        if not e['ready'] or not e['outpost_ready']: raise ProtocolError('等待遠征與駐紮所資料同步')
+        if not e['ready'] or not e['outpost_ready']:
+            e.update(enabled=True,settings=settings,status='已啟用自動派遣，等待遠征與駐紮所資料同步')
+            self.next_check=0
+            return
         level = self.catalog['levels'].get(str(e['level']))
         if not level: raise ProtocolError('此遠征等級缺少官方資料')
         reason = blocked(state)
-        if reason: raise ProtocolError(reason)
+        if reason:
+            e.update(enabled=True,settings=settings,status='已啟用自動派遣；'+reason)
+            self.next_check=0
+            return
         e.update(enabled=True, settings=settings, status=f"自動派遣已啟動（預計超過 {settings['min_hours']:g} 小時）")
         self.next_check = 0
 
@@ -260,6 +266,9 @@ class Expedition:
         if self.catalog_override is None and current_catalog_token()!=self._catalog_token:
             self.stop(state,'官方資源已更新，請依新資料重新啟動遠征')
             return []
+        if not e['ready'] or not e['outpost_ready']:
+            e['status']='已啟用自動派遣，等待遠征與駐紮所資料同步'
+            return []
         self.next_check = now + 2
         reason = blocked(state)
         if reason:
@@ -334,13 +343,13 @@ class Expedition:
         e = state.expedition
         inv = state.inventory
         if not inv.get('ready') or not inv.get('reliable'):
-            self.stop(state, '背包資料尚不可靠，請等待同步後重新啟動')
+            e['status']='等待背包資料同步，暫停補好友度；同步後自動繼續'
             return None
         stock = recovery_stock(inv)
         deficit = target - role['faith']
         if item_id == 0:
             if sum(faith_gain(sid) * amount for sid, amount in stock.items()) < deficit:
-                self.stop(state, '背包內可用的好友度恢復物品不足，已停止自動派遣')
+                e['status']='等待足夠的好友度恢復物品，補齊後自動繼續'
                 return None
             options = []
             for sid, amount in stock.items():
@@ -369,7 +378,7 @@ class Expedition:
                 remaining -= used
             if not remaining: break
         if remaining or len(slots) > 255:
-            self.stop(state, '好友度恢復物品不足，已停止自動派遣')
+            e['status']='等待足夠的好友度恢復物品，補齊後自動繼續'
             return None
         w = Writer().u8(role['index']).u8(len(slots))
         for index, (_, used) in slots.items(): w.u8(1).u16(int(index)).u16(item_id).u16(used)

@@ -102,8 +102,8 @@ class Official1275MinimapTests(unittest.TestCase):
         click.on_pick, click.on_move = Mock(), Mock()
         click.view = lambda: (0, 0, 1)
         click.double_pick(SimpleNamespace(x=300, y=300))
-        click.on_pick.assert_not_called()
-        click.on_move.assert_not_called()
+        click.on_pick.assert_called_once()
+        click.on_move.assert_called_once_with()
 
 
 if __name__ == '__main__':

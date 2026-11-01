@@ -55,8 +55,8 @@ class DynamicMinimapReloadTests(unittest.TestCase):
         self.assertIsNotNone(self.page.projection)
         self.assertEqual(self.page.image.size,(1024,1024))
         self.assertIsNone(self.page.map_error)
-        self.assertIsNone(self.page.mesh)
-        self.page.repository.load.assert_not_called()
+        self.assertIsNotNone(self.page.mesh)
+        self.page.repository.load.assert_called_once_with('M12170')
         self.page.refresh_portals.assert_called_once_with()
 
     def test_runtime_rebind_closes_stale_npc_windows_and_selections(self):

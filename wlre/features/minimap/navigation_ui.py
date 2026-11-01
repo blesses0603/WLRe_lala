@@ -39,6 +39,7 @@ class MinimapNavigationMixin:
         if callable(refresh_sources):
             refresh_sources()
         self.map_error=None
+        self.picked_destination=None
         self.route=None
         self.image=None
         self.mesh=None
@@ -52,9 +53,11 @@ class MinimapNavigationMixin:
                 if getattr(self.maps, 'supports_navigation', True):
                     try:self.mesh=self.repository.load(scene)
                     except NavigationError:pass
-                self.note.set(self.scene_display_name()+f'｜官方 {self.maps.source_revision} 場景座標（僅供檢視）'
-                              if is_official_revision(getattr(self.maps, 'source_revision', None))
-                              else self.scene_display_name()+'｜原始小地圖')
+                if is_official_revision(getattr(self.maps, 'source_revision', None)):
+                    action='單擊選目標，雙擊移動' if self.mesh is not None else '可選目標，導航資料尚未就緒'
+                    self.note.set(self.scene_display_name()+f'｜官方 {self.maps.source_revision} 場景座標｜'+action)
+                else:
+                    self.note.set(self.scene_display_name()+'｜原始小地圖')
             else:
                 self.projection=None
                 self.map_error='目前場景的對應小地圖圖片尚未就緒'

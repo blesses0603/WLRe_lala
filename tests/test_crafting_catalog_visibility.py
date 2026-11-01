@@ -133,6 +133,9 @@ class CraftingVisibilityWindowTests(unittest.TestCase):
             self.addCleanup(item.stop)
         self.browser=CraftingBrowser(self.panel,embedded=True)
         self.addCleanup(self.browser.close)
+        # Process native Map/Configure events before asserting visible widgets.
+        # update_idletasks alone can leave a Windows toplevel unmapped.
+        self.root.update()
         self.root.update_idletasks()
 
     def test_window_shows_cards_workbenches_and_materials_before_house_sync(self):
