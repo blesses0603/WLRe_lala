@@ -59,3 +59,29 @@ def load_dynamic_runtime_metadata(remote, *, db_path):
         counts[feature] = count
         digests[feature] = digest
     return DynamicRuntime(key, versions, counts, digests)
+
+
+def load_parsed_dynamic_runtime(remote, *, parsed):
+    """Accept complete independently parsed current-version records, not counts."""
+    from wlre.services.world.catalog_adapters import FEATURES, ParsedCatalog
+    try:
+        key = official_catalog_key(remote)
+        versions = official_package_versions(remote)
+        if type(parsed) is not dict or set(parsed) != set(FEATURES):
+            raise DynamicRuntimeUnavailable('Incomplete parsed source set')
+        for feature in FEATURES:
+            item = parsed[feature]
+            if (type(item) is not ParsedCatalog or item.feature != feature
+                    or item.catalog_key != key or item.assets_ready is not False
+                    or item.can_send_packets is not False):
+                raise DynamicRuntimeUnavailable('Unverified runtime source')
+        return {
+            'catalog_key': key,
+            'package_versions': versions,
+            'records': {f: parsed[f].records for f in FEATURES},
+            'record_counts': {f: parsed[f].record_count for f in FEATURES},
+            'assets_ready': False,
+            'can_send_packets': False,
+        }
+    except (ValueError, TypeError, KeyError) as exc:
+        raise DynamicRuntimeUnavailable('Dynamic runtime unavailable') from exc
