@@ -1,5 +1,6 @@
 """Tests for read-only full resource inventory audit."""
 import hashlib
+from contextlib import closing
 from pathlib import Path
 import sqlite3
 from tempfile import TemporaryDirectory
@@ -18,7 +19,7 @@ class FullResourceAuditTests(unittest.TestCase):
             (assets / 'b.zip').write_bytes(b'zip-content')
             (assets / 'c.gz').write_bytes(b'compressed')
             database = root / 'db.sqlite3'
-            with sqlite3.connect(database) as db:
+            with closing(sqlite3.connect(database)) as db, db:
                 db.execute('CREATE TABLE bundled_active (name TEXT PRIMARY KEY, sha256 TEXT NOT NULL)')
                 db.execute('CREATE TABLE bundled_resources (name TEXT NOT NULL, sha256 TEXT NOT NULL, data BLOB NOT NULL, PRIMARY KEY(name,sha256))')
                 a = (assets / 'a.json').read_bytes()
@@ -40,7 +41,7 @@ class FullResourceAuditTests(unittest.TestCase):
             self.assertEqual(missing['error'], 'database_missing')
             database = root / 'db.sqlite3'
             digest = hashlib.sha256(b'hello').hexdigest()
-            with sqlite3.connect(database) as db:
+            with closing(sqlite3.connect(database)) as db, db:
                 db.execute('CREATE TABLE bundled_active (name TEXT PRIMARY KEY, sha256 TEXT NOT NULL)')
                 db.execute('CREATE TABLE bundled_resources (name TEXT NOT NULL, sha256 TEXT NOT NULL, data BLOB NOT NULL, PRIMARY KEY(name,sha256))')
                 db.execute('INSERT INTO bundled_active VALUES (?,?)', ('a.json', digest))
