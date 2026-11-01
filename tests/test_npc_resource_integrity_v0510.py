@@ -49,7 +49,9 @@ class BundledNPCResourceTests(unittest.TestCase):
                     'wlre.storage.bundled_database.load_legacy_resource',
                     return_value=b'fake'):
                 with self.assertRaises(ValueError):load_catalog()
-            with patch('wlre.services.world.npc_localization.RESOURCE_ROOT',directory):
+            with patch('wlre.services.world.npc_localization.RESOURCE_ROOT',directory), patch(
+                    'wlre.storage.bundled_database.load_legacy_resource',
+                    return_value=b'fake'):
                 with self.assertRaises(ValueError):load_text_data()
 
 
