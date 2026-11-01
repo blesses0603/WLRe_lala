@@ -73,9 +73,9 @@ def load_catalog(path=None):
             return dict(active_runtime().talks)
     path = Path(path) if path is not None else RESOURCE_ROOT / CATALOG_NAME
     cached = None
-    if path == RESOURCE_ROOT / CATALOG_NAME and not path.is_file():
-        from wlre.storage.bundled_database import read_pinned_legacy_bytes
-        cached = read_pinned_legacy_bytes(CATALOG_NAME)
+    if path == RESOURCE_ROOT / CATALOG_NAME:
+        from wlre.storage.bundled_database import load_legacy_resource
+        cached = load_legacy_resource(CATALOG_NAME)
     elif not path.is_file():
         return {}
     if path == RESOURCE_ROOT / CATALOG_NAME:
