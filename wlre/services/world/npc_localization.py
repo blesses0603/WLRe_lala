@@ -23,8 +23,9 @@ def _catalog(filename, expected_source, path=None):
         return {}
     if path is None:
         expected_digest, expected_size, _, _, _ = ASSETS[filename]
-        if (target.stat().st_size != expected_size
-                or hashlib.sha256(target.read_bytes()).hexdigest() != expected_digest):
+        raw = cached if cached is not None else target.read_bytes()
+        if (len(raw) != expected_size
+                or hashlib.sha256(raw).hexdigest() != expected_digest):
             raise ValueError('官方 1262 本地化檔案 SHA-256 或大小不符')
     with (gzip.GzipFile(fileobj=io.BytesIO(cached)) if cached is not None else gzip.open(target,'rb')) as stream:
         data=stream.read(MAX_UNCOMPRESSED+1)
