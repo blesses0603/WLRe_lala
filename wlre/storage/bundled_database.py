@@ -93,3 +93,31 @@ def read_pinned_legacy_bytes(name, *, root=None, database=None):
             or hashlib.sha256(data).hexdigest() != digest):
         raise ValueError('1262 歷史資源 SQLite 完整性驗證失敗')
     return data
+
+
+def load_legacy_resource(name, *, root=None, database=None):
+    """Prefer validated SQLite data; use verified bundled files on a fresh install.
+
+    Database corruption must fail closed; only a missing DB/row may fall back
+    to the existing resource file. Never write to the database here.
+    """
+    if root is None:
+        from wlre.paths import RESOURCE_ROOT
+        root = RESOURCE_ROOT
+    try:
+        return read_pinned_legacy_bytes(name, database=database)
+    except FileNotFoundError:
+        path = Path(root) / name
+        if not path.is_file():
+            raise
+        raw = path.read_bytes()
+        if len(raw) > 16 * 1024 * 1024:
+            raise ValueError('1262 歷史檔案超過大小上限')
+        import re
+        from wlre.services.world.npc_asset_install import ASSETS
+        from wlre.services.world.npc_interact import EXPECTED_SHA256
+        pinned = ({k: v[0] for k, v in ASSETS.items()} |
+                  {'npc_interact_1262.json.gz': EXPECTED_SHA256})
+        if name in pinned and hashlib.sha256(raw).hexdigest() != pinned[name]:
+            raise ValueError('1262 歷史檔案與固定版本指紋不符')
+        return raw
