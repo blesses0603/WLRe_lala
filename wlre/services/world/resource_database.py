@@ -33,10 +33,7 @@ def record_inventory(path, catalog_key, payloads, *, identity=None):
         db.execute('CREATE TABLE IF NOT EXISTS versions (id INTEGER PRIMARY KEY, catalog_key TEXT UNIQUE NOT NULL)')
         db.execute('CREATE TABLE IF NOT EXISTS version_identities (version_id INTEGER PRIMARY KEY, identity TEXT NOT NULL)')
         db.execute('CREATE TABLE IF NOT EXISTS resources (version_id INTEGER NOT NULL, name TEXT NOT NULL, sha256 TEXT NOT NULL, data BLOB NOT NULL, PRIMARY KEY(version_id,name))')
-        db.execute('CREATE TABLE IF NOT EXISTS candidate_rows (version_id INTEGER NOT NULL, source TEXT NOT NULL, row_key TEXT NOT NULL, data TEXT NOT NULL, PRIMARY KEY(version_id,source,row_key))')
-        # Rebuild older derived indexes under the read-only policy. Official
-        # raw source tables are retained unchanged.
-        db.execute("DELETE FROM candidate_rows WHERE source IN ('smith_35', 'smith_35_untimed')")
+        db.execute('CREATE TABLE IF NOT EXISTS parsed_resource_rows (version_id INTEGER NOT NULL, source TEXT NOT NULL, row_key TEXT NOT NULL, data TEXT NOT NULL, PRIMARY KEY(version_id,source,row_key))')
         db.execute('CREATE TABLE IF NOT EXISTS sync_state (singleton INTEGER PRIMARY KEY CHECK(singleton=1), active_id INTEGER NOT NULL)')
         db.execute('CREATE TABLE IF NOT EXISTS version_parents (version_id INTEGER PRIMARY KEY, parent_id INTEGER)')
         if 'previous_id' not in {row[1] for row in db.execute('PRAGMA table_info(sync_state)')}:
@@ -71,49 +68,6 @@ def record_inventory(path, catalog_key, payloads, *, identity=None):
                        (current, name, digests[name], data))
         row_changes = None
         legacy_recipe_changes = None
-        smith = payloads.get('candidate_indexes/smith_recipes_35.json')
-        if smith is None:
-            smith = payloads.get('candidate_indexes/smith_recipes_1286.json')
-        if smith is not None:
-            document = json.loads(smith)
-            if (document.get('approved') is not False or type(document.get('revision')) is not int
-                    or not 0 < document['revision'] <= 999999
-                    or not isinstance(document.get('records'), list)):
-                raise ValueError('Invalid Smith candidate')
-            rows = {}
-            for row in document['records']:
-                key = row.get('candidate_row_key')
-                if (type(key) is not int or key < 1 or str(key) in rows
-                        or type(row.get('time_id')) is not int
-                        or row.get('recipe_id', key) != key):
-                    raise ValueError('Invalid Smith candidate key')
-                row = {**row, 'recipe_id': key, 'read_only': row['time_id'] != 0}
-                rows[str(key)] = json.dumps(row, ensure_ascii=True, sort_keys=True, separators=(',', ':'))
-            prior_id = previous if previous and db.execute('SELECT 1 FROM candidate_rows WHERE version_id=? AND source=? LIMIT 1', (previous[0], 'smith_35_recipe_id_v1')).fetchone() else None
-            old = dict(db.execute('SELECT row_key,data FROM candidate_rows WHERE version_id=? AND source=?', (prior_id[0], 'smith_35_recipe_id_v1'))) if prior_id else {}
-            existing_rows = dict(db.execute('SELECT row_key,data FROM candidate_rows WHERE version_id=? AND source=?', (current, 'smith_35_recipe_id_v1')))
-            if existing_rows and existing_rows != rows:
-                raise ValueError('Candidate changed for the same catalog identity')
-            if not existing_rows:
-                db.executemany('INSERT INTO candidate_rows VALUES (?, ?, ?, ?)',
-                               ((current, 'smith_35_recipe_id_v1', k, v) for k, v in rows.items()))
-            row_changes = {'previous_available': bool(prior_id),
-                           'added': sorted(rows.keys() - old.keys()) if prior_id else [],
-                           'changed': sorted(k for k in rows.keys() & old.keys() if rows[k] != old[k]),
-                           'removed': sorted(old.keys() - rows.keys())}
-            if previous:
-                legacy_raw = db.execute('SELECT data FROM resources WHERE version_id=? AND name=?',
-                                        (previous[0], 'SmithData_C.bytes')).fetchone()
-                if legacy_raw:
-                    from wlre.services.world.preview_1275 import parse_smith_1275
-                    from wlre.services.items.crafting_official_v1286 import RecipeCatalog, compare_legacy_recipes
-                    try:
-                        legacy = parse_smith_1275(legacy_raw[0])
-                    except ValueError:
-                        pass  # A 35-byte previous version uses stable recipe IDs above.
-                    else:
-                        legacy_recipe_changes = compare_legacy_recipes(
-                            legacy, RecipeCatalog([json.loads(value) for value in rows.values()]))
         item_changes = None
         item_raw = tables.get('ItemData_C.bytes')
         if item_raw is not None:
@@ -135,11 +89,11 @@ def record_inventory(path, catalog_key, payloads, *, identity=None):
                         previous_status = 'parsed'
                     except ValueError:
                         previous_status = 'parse_failed'
-                old_saved = dict(db.execute('SELECT row_key,data FROM candidate_rows WHERE version_id=? AND source=?', (current, 'items_v1')))
+                old_saved = dict(db.execute('SELECT row_key,data FROM parsed_resource_rows WHERE version_id=? AND source=?', (current, 'items_v1')))
                 if old_saved and old_saved != new_items:
                     raise RuntimeError('Item rows changed for the same catalog identity')
                 if not old_saved:
-                    db.executemany('INSERT INTO candidate_rows VALUES (?, ?, ?, ?)',
+                    db.executemany('INSERT INTO parsed_resource_rows VALUES (?, ?, ?, ?)',
                                    ((current, 'items_v1', k, v) for k, v in new_items.items()))
                 item_changes = {'status': 'parsed', 'count': len(new_items),
                                 'previous_available': previous_status == 'parsed',
@@ -191,12 +145,12 @@ def record_inventory(path, catalog_key, payloads, *, identity=None):
                     previous_status = 'parsed'
                 except (ValueError, TypeError, KeyError, OverflowError):
                     previous_status = 'parse_failed'
-            saved = dict(db.execute('SELECT row_key,data FROM candidate_rows WHERE version_id=? AND source=?',
+            saved = dict(db.execute('SELECT row_key,data FROM parsed_resource_rows WHERE version_id=? AND source=?',
                                     (current, source)))
             if saved and saved != rows:
                 raise ValueError('Parsed rows changed for the same catalog identity')
             if not saved:
-                db.executemany('INSERT INTO candidate_rows VALUES (?, ?, ?, ?)',
+                db.executemany('INSERT INTO parsed_resource_rows VALUES (?, ?, ?, ?)',
                                ((current, source, k, v) for k, v in rows.items()))
             other_changes[source] = {'status': 'parsed', 'count': len(rows),
                                      'previous_available': previous_status == 'parsed',
