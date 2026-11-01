@@ -28,12 +28,11 @@ class NPCInteractIndex:
                 return
         self.path = Path(path) if path is not None else RESOURCE_ROOT / NAME
         self.scenes = {}
-        if not self.path.is_file():
-            if path is None:
-                from wlre.storage.bundled_database import read_pinned_legacy_bytes
-                raw = read_pinned_legacy_bytes(NAME)
-            else:
-                raise FileNotFoundError(self.path)
+        if path is None:
+            from wlre.storage.bundled_database import load_legacy_resource
+            raw = load_legacy_resource(NAME)
+        elif not self.path.is_file():
+            raise FileNotFoundError(self.path)
         else:
             raw = self.path.read_bytes()
         if len(raw) > 128 * 1024:
