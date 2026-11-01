@@ -25,7 +25,7 @@ class InitialCatalogTests(unittest.TestCase):
         with TemporaryDirectory() as temp:
             root = Path(temp)
             seed = build_seed(RESOURCE_ROOT, root / 'seed.sqlite3')
-            with closing(sqlite3.connect(seed)) as db:
+            with closing(sqlite3.connect(seed)) as db, db:
                 db.execute('UPDATE bundled_resources SET data=? WHERE name=?', (b'corrupt', NAMES[0]))
             with self.assertRaises(ValueError):
                 verify_seed(seed)
