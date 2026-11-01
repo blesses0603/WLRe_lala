@@ -1,0 +1,6 @@
+# Resource identities are pinned byte-for-byte across build platforms.
+wlre/resources/*.json text eol=lf
+wlre/resources/*.zip -text
+wlre/resources/*.gz -text
+wlre/resources/**/*.png -text
+wlre/resources/**/*.ico -text
