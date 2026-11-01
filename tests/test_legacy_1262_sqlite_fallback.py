@@ -1,5 +1,6 @@
 """1262 historical SQLite fallback regression, no server or user DB required."""
 import hashlib
+from contextlib import closing
 from pathlib import Path
 import sqlite3
 from tempfile import TemporaryDirectory
@@ -17,7 +18,7 @@ class LegacySQLiteFallbackTests(unittest.TestCase):
         digest = hashlib.sha256(original).hexdigest()
         with TemporaryDirectory() as folder:
             db_path = Path(folder) / 'resources.sqlite3'
-            with sqlite3.connect(db_path) as db:
+            with closing(sqlite3.connect(db_path)) as db, db:
                 db.execute('CREATE TABLE bundled_active (name TEXT PRIMARY KEY, sha256 TEXT NOT NULL)')
                 db.execute('CREATE TABLE bundled_resources (name TEXT NOT NULL, sha256 TEXT NOT NULL, data BLOB NOT NULL, PRIMARY KEY(name,sha256))')
                 db.execute('INSERT INTO bundled_active VALUES (?,?)', ('npc_event_index_1262.json.gz', digest))
@@ -31,14 +32,14 @@ class LegacySQLiteFallbackTests(unittest.TestCase):
         with TemporaryDirectory() as folder:
             root = Path(folder)
             db_path = root / 'catalog.sqlite3'
-            with sqlite3.connect(db_path) as db:
+            with closing(sqlite3.connect(db_path)) as db, db:
                 db.execute('CREATE TABLE bundled_active (name TEXT PRIMARY KEY, sha256 TEXT NOT NULL)')
                 db.execute('CREATE TABLE bundled_resources (name TEXT, sha256 TEXT, data BLOB, PRIMARY KEY(name,sha256))')
                 db.execute('INSERT INTO bundled_active VALUES (?,?)', (name, digest))
                 db.execute('INSERT INTO bundled_resources VALUES (?,?,?)', (name, digest, original))
             (root / name).write_bytes(b'wrong source')
             self.assertEqual(load_legacy_resource(name, root=root, database=db_path), original)
-            with sqlite3.connect(db_path) as db:
+            with closing(sqlite3.connect(db_path)) as db, db:
                 db.execute('UPDATE bundled_resources SET data=? WHERE name=?', (b'corrupt', name))
             with self.assertRaises(ValueError):
                 load_legacy_resource(name, root=root, database=db_path)
