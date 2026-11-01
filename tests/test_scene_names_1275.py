@@ -28,7 +28,7 @@ class SceneNames1275Tests(unittest.TestCase):
         self.assertEqual(source_scene_label(12174, expected), '場景 12174')
 
     def test_official_1275_scene_label_matches_door_source_not_destination(self):
-        runtime = SimpleNamespace(
+        runtime = SimpleNamespace(revision=1275, 
             scene_names={12170: '瑪雅野豬叢林二', 12171: '瑪雅野豬叢林三'},
             doors={
                 12170: [{'index': 7, 'x': 5701, 'y': 3230, 'event_ids': [5]}],
@@ -52,7 +52,7 @@ class SceneNames1275Tests(unittest.TestCase):
         self.assertFalse(source_a['direct_eligible'])
 
     def test_missing_1275_scene_text_never_uses_1262_guess(self):
-        runtime = SimpleNamespace(doors={12170: [
+        runtime = SimpleNamespace(revision=1275, doors={12170: [
             {'index': 7, 'x': 5701, 'y': 3230, 'event_ids': []}]})
         with patch('wlre.services.world.runtime_1275.baseline_revision',
                    return_value='1275'), patch(
@@ -65,7 +65,7 @@ class SceneNames1275Tests(unittest.TestCase):
         self.assertNotIn('瑪雅野豬叢林二', row['name'])
 
     def test_map_title_and_portal_list_use_identical_verified_1275_name(self):
-        runtime = SimpleNamespace(
+        runtime = SimpleNamespace(revision=1275, 
             scene_names={12170: '瑪雅野豬叢林二'},
             doors={12170: [{'index': 7, 'x': 5701, 'y': 3230, 'event_ids': []}]})
         with patch('wlre.services.world.runtime_1275.baseline_revision',
@@ -90,7 +90,7 @@ class SceneNames1275Tests(unittest.TestCase):
                       page.portal_status.set.call_args.args[0])
 
     def test_map_header_cannot_be_replaced_by_selected_portal_event(self):
-        runtime = SimpleNamespace(
+        runtime = SimpleNamespace(revision=1275, 
             scene_names={12170: '瑪雅野豬叢林二'},
             portal_names={(12170, 7): '地圖出口'},
             portal_positions={(12170, 7): {
