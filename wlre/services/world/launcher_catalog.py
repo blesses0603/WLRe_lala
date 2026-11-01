@@ -1,7 +1,7 @@
 """Launcher-owned official resource preparation, never the login view.
 
 Both the source-code bootstrapper and the compiled desktop entry point call
-this service BEFORE starting Tk. Catalog reports are read-only and cannot
+this service BEFORE starting Tk. Official catalog reports are informational and cannot
 approve game versions, login, navigation or network packet sending.
 """
 from __future__ import annotations
@@ -17,7 +17,7 @@ from wlre.storage.paths import data_root
 STATUS_SCHEMA = 3
 STATUS_FILENAME = 'launcher_catalog_status.json'
 MAX_STATUS_BYTES = 4096
-STATES = frozenset(('review_required', 'downloaded_unparsed',
+STATES = frozenset(('verified_official', 'downloaded_unparsed',
                    'preview', 'error'))
 FAILURE_FEATURES = frozenset(('npc', 'shops', 'crafting', 'scenes'))
 FAILURE_STAGES = frozenset(('UnityFS／TextAsset', 'Eve 二進位事件',
@@ -94,7 +94,7 @@ def _store_status(report, *, root=None):
 
 
 def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
-    """Synchronously prepare official resources before Tk starts.
+    """Synchronously verify official resources before Tk starts.
 
     Failure is reported without blocking LaLa's own official login check.
     Callers must not treat any return value or the private receipt as approval.
@@ -122,7 +122,7 @@ def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
         if progress is not None:
             progress(phase, details)
     if real_launcher_run:
-        # The four-feature catalog may fail before the full 1275 runtime
+        # The four-feature candidate may fail before the full 1275 runtime
         # files are prepared (e.g. a separately audited Eve decoder). Give
         # the fixed-version runtime its own bounded official Bundle sync.
         # Failure is informational, never a login/pass-packet authorization.
@@ -156,7 +156,7 @@ def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
             if progress is not None:
                 fallback['progress'] = progress
             result = runner(**fallback)
-        if result['status'] not in ('review_required', 'downloaded_unparsed'):
+        if result['status'] not in ('verified_official', 'downloaded_unparsed'):
             raise ValueError('Launcher official resources are not available')
         key = result['catalog_key']
         if type(key) is not str or len(key) != 64 or any(
@@ -169,8 +169,11 @@ def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
                 result.get('protocol_compatibility') == 'unverified' and
                 result.get('assets_ready') is False and
                 result.get('can_send_packets') is False and
-                result.get('approved') is False):
+                result['status'] == 'verified_official'):
             data_compatibility = 'compatible'
+        # The Launcher is never allowed to promote downloaded indexes into
+        # a formal gameplay runtime. Only independently verified runtime
+        # assets can be selected by the gameplay source policy.
         status = result['status']
     except Exception:
         # Keep reason out of local receipts; failures can include file paths,
@@ -221,14 +224,14 @@ def main(argv=None):
     else:
         result = prepare_on_launch()
     status = result['status']
-    print('LaLa Launcher 官方資源狀態：' +
+    print('LaLa Launcher 官方資源檢查：' +
           ('資料格式檢查通過，協定仍待審核'
-           if status == 'review_required' and
+           if status == 'verified_official' and
            result.get('data_compatibility') == 'compatible'
-           else '已建立，尚待相容性審核' if status == 'review_required'
+           else '已下載，資料尚未完成驗證' if status == 'downloaded_unparsed'
            else '未完成；仍維持原有登入安全檢查' if status == 'error'
            else '已略過'), flush=True)
-    # Resource preparation failure must not suppress the real login gate.
+    # Source discovery never overrides the independent login safety gate.
     return 0
 
 

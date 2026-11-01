@@ -59,15 +59,11 @@ class VersionGateController:
         receipt = read_launcher_status()
         code = None if receipt is None else receipt['status']
         self._launcher_catalog_status = {
-            'review_required': (
-                'Launcher 四類資料格式相容，遊戲協定仍待審核'
-                if receipt is not None and
-                   receipt.get('data_compatibility') == 'compatible'
-                else 'Launcher 已建立候選，資料及協定仍待審核'),
-            'downloaded_unparsed': 'Launcher 僅下載資料，尚未驗證解包',
-            'error': 'Launcher 四類候選準備未完成；1275 正式 Bundle 仍由獨立校驗器檢查',
+            'verified_official': 'Launcher 官方來源已驗證；遊戲協定仍須獨立驗收',
+            'downloaded_unparsed': 'Launcher 已下載資料，尚未驗證解析',
+            'error': 'Launcher 官方資源準備未完成；正式 Bundle 仍獨立校驗',
             'preview': 'Launcher 僅預覽下載計畫',
-        }.get(code, '尚無 Launcher 自動資源準備紀錄')
+        }.get(code, '尚無 Launcher 官方資源同步紀錄')
         if receipt and receipt.get('failure_feature') and receipt.get('failure_stage'):
             feature = {'npc': 'NPC', 'shops': '商店', 'crafting': '製作',
                        'scenes': '場景'}[receipt['failure_feature']]
@@ -82,7 +78,7 @@ class VersionGateController:
         if gaps is not None:
             if gaps['formal_ready']:
                 self._launcher_catalog_status += '｜舊式雙 ZIP 亦已通過校驗'
-            elif (receipt is not None and code == 'review_required'
+            elif (receipt is not None and code == 'verified_official'
                     and receipt.get('data_compatibility') == 'compatible'):
                 # The former ZIP-only diagnostic is not the authoritative
                 # verdict for independently validated official Bundles.
@@ -92,7 +88,7 @@ class VersionGateController:
                 # Old ZIPs are optional when a separately pinned full Bundle
                 # runtime is used. Keep this clearly supplemental.
                 self._launcher_catalog_status += '｜舊式 ZIP（非唯一來源）：' + summarize(gaps)
-        if receipt is not None and receipt.get('status') in ('review_required', 'downloaded_unparsed'):
+        if receipt is not None and receipt.get('status') in ('verified_official', 'downloaded_unparsed'):
             from wlre.services.world.resource_rebuilder import read_inventory_summary, read_processing_summary
             raw_inventory = read_inventory_summary(receipt['catalog_key'])
             if raw_inventory is not None:
@@ -102,9 +98,9 @@ class VersionGateController:
                     f"重用 {raw_inventory['existing_or_cached_reused']}")
             processing = read_processing_summary(receipt['catalog_key'])
             if processing:
-                done = sum(state in ('已解析', '候選已解析') for state in processing.values())
+                done = sum(state in ('已解析', '已解析') for state in processing.values())
                 pending = [name for name, state in processing.items()
-                           if state not in ('已解析', '候選已解析')]
+                           if state not in ('已解析', '已解析')]
                 self._launcher_catalog_status += f'｜資料解析 {done}/{len(processing)}'
                 if pending:
                     self._launcher_catalog_status += '；待處理：' + '、'.join(pending)

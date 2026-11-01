@@ -88,7 +88,7 @@ def main(argv=None):
                 max_download_bytes=args.max_mib * 1024 * 1024,
                 max_downloads=args.max_files)
             print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
-            print('LaLa 自動模式：新版本只儲存私人候選資料，不解除登入限制。')
+            print('LaLa 自動模式：官方資源驗證結果僅供資料同步，不解除登入或封包限制。')
             return 0
         bindings = load_bindings(args.bindings)
         if args.parse:

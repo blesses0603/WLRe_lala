@@ -90,12 +90,6 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
             'wlre.services.world.launcher_catalog.read_launcher_status',
             return_value=self.receipt))
         stack.enter_context(patch(
-            'wlre.services.world.auto_catalog._trusted_cached_candidate',
-            return_value={'catalog_key': self.key}))
-        stack.enter_context(patch(
-            'wlre.services.world.formal_candidate_bridge._identity_from_metadata',
-            return_value=self.identity))
-        stack.enter_context(patch(
             'wlre.services.official_manifest_sync.read_verified_cached_manifest',
             side_effect=lambda spec, cache_root=None: self.verified[spec.package]))
         stack.enter_context(patch(
@@ -375,9 +369,6 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
             source = load_verified_bundle_runtime(sync_root=self.root)
             stack.enter_context(patch.object(
                 runtime_1275, 'active_runtime', return_value=source))
-            stack.enter_context(patch(
-                'wlre.services.world.formal_candidate_bridge.inspect_launcher_candidate',
-                return_value={'status': 'not_requested'}))
             enabled, details = runtime_1275.ready()
         self.assertTrue(enabled)
         self.assertIn('協定仍須獨立驗收', details)
@@ -463,13 +454,9 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
             status = stack.enter_context(patch(
                 'wlre.services.world.launcher_catalog.read_launcher_status',
                 side_effect=AssertionError('optional status must not be read')))
-            candidate = stack.enter_context(patch(
-                'wlre.services.world.auto_catalog._trusted_cached_candidate',
-                side_effect=AssertionError('optional candidate must not be read')))
             source = load_verified_bundle_runtime(sync_root=self.root)
         self.assertEqual(len(source.recipes), 1032)
         status.assert_not_called()
-        candidate.assert_not_called()
 
     def test_schema_error_refuses_partial_data_activation(self):
         with ExitStack() as stack:

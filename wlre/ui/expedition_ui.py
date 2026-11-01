@@ -27,8 +27,7 @@ class ExpeditionPanel(_ExpeditionPanel):
         try:
             return load_catalog()
         except (OSError, ValueError, KeyError, EOFError, UnicodeError):
-            from wlre.services.world.auto_candidate_reader import candidate_expedition_catalog
-            return candidate_expedition_catalog() or {
+            return {
                 'tasks': {}, 'levels': {},
                 'source_kind': 'formal_sources_missing'}
 

@@ -8,7 +8,6 @@ from wlre.services.expedition_data import load_active_catalog
 from wlre.ui.layout import heading
 from wlre.ui.expedition_display import task_name
 from wlre.services.world.feature_resource_index import feature_note
-from wlre.services.world.auto_candidate_reader import candidate_expedition_catalog
 from .controls import build_controls, bind_control_changes
 from .settings import ExpeditionSettingsMixin
 from .planner import ExpeditionPlannerMixin
@@ -26,9 +25,8 @@ class ExpeditionPanel(
         try:
             return load_active_catalog()
         except (OSError, ValueError, KeyError, EOFError, UnicodeError):
-            return (candidate_expedition_catalog() or
-                    {'tasks': {}, 'levels': {},
-                     'source_kind': 'formal_sources_missing'})
+            return {'tasks': {}, 'levels': {},
+                    'source_kind': 'formal_sources_missing'}
 
     def __init__(self, parent, app):
         super().__init__(parent, padding=6)

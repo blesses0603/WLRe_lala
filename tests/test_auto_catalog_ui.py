@@ -18,7 +18,7 @@ class LauncherResourceUiTests(unittest.TestCase):
                 self.value = value
 
         receipt = {
-            'schema_version': 2, 'status': 'review_required',
+            'schema_version': 2, 'status': 'verified_official',
             'catalog_key': 'a' * 64, 'data_compatibility': 'compatible',
             'checked_at_utc': '2026-10-25T00:00:00+00:00'}
         old_zip_report = {

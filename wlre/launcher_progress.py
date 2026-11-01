@@ -13,7 +13,7 @@ import threading
 
 STEPS = (
     'official_version', 'manifest', 'bundle_plan', 'bundle_sync',
-    'bundle_verify', 'extract', 'candidate_write',
+    'bundle_verify', 'extract', 'official_store',
 )
 FEATURE_LABELS = {
     'npc': 'NPC 事件', 'shops': '商店與物品',
@@ -29,7 +29,7 @@ STEP_LABELS = {
     'bundle_item': '逐個驗證 Bundle 完整性',
     'bundle_verify': '重新核對 Bundle 完整性',
     'extract': '解包並驗證遊戲資料',
-    'candidate_write': '建立版本化私人快取',
+    'official_store': '建立版本化私人快取',
     'compatibility_check': '核對四類資料的相容性',
     'compatibility_ready': '資料格式檢查通過，協定仍待驗證',
     'formal_check': '核對完整正式 1275 資料來源',
@@ -40,14 +40,14 @@ STEP_LABELS = {
     'raw_rebuild_unavailable': '部分原始資源仍待補建',
     'classification_ready': '現有資料分類索引已更新',
     'classification_unavailable': '分類索引暫不可用，原有安全限制不變',
-    'cached_candidate': '已使用驗證過的私人候選快取',
+    'cached_official': '已使用驗證過的正式 SQLite 快取',
     'preview_ready': '資源預覽完成',
     'download_ready': 'Bundle 同步完成',
-    'candidate_ready': '候選資料已建立',
-    'extract_failed': '候選資料解析失敗',
+    'verified_official': '官方資源資料已建立',
+    'extract_failed': '官方資源資料解析失敗',
     'runtime_bundle_plan': '核對正式 1275 所需的官方 Bundle',
     'runtime_bundle_ready': '正式 1275 Bundle 已下載並完成完整性校驗',
-    'runtime_bundle_unavailable': '正式 1275 Bundle 尚未補齊或驗證，將繼續候選資料流程',
+    'runtime_bundle_unavailable': '正式 1275 Bundle 尚未補齊或驗證，將繼續官方資源資料流程',
 }
 _BG = '#101927'
 _PANEL = '#172539'
@@ -67,11 +67,11 @@ def progress_message(phase, details=None):
                         and 1 <= len(value) <= 6 for value in (data, main))):
             names = f'DataPackage {data}／MainPackage {main}'
             if state == 'changed':
-                return f'偵測到官方資源版本異動（{names}）；自動準備新版候選'
+                return f'偵測到官方資源版本異動（{names}）；自動準備新版官方資源'
             if state == 'first_observation':
-                return f'首次記錄官方資源版本（{names}）；開始驗證候選'
+                return f'首次記錄官方資源版本（{names}）；開始驗證官方資源'
             return f'官方資源版本未變（{names}）；重新核對既有資料'
-        return '已比對官方資源版本，候選仍需獨立校驗'
+        return '已比對官方資源版本，官方資源仍需獨立校驗'
     if phase == 'runtime_bundle_ready':
         done, downloaded = details.get('completed'), details.get('downloaded')
         if (type(done) is int and type(downloaded) is int
@@ -81,12 +81,12 @@ def progress_message(phase, details=None):
         total, existing = details.get('total'), details.get('existing')
         if (type(total) is int and type(existing) is int
                 and 0 <= existing <= total <= 100000):
-            return f'已分類 {total} 筆官方資源；本機已有 {existing} 筆原始候選'
+            return f'已分類 {total} 筆官方資源；本機已有 {existing} 筆原始官方資源'
     if phase in ('raw_resource_item', 'raw_rebuild_ready'):
         done, total = details.get('completed'), details.get('total')
         if (type(done) is int and type(total) is int
                 and 0 <= done <= total and total > 0):
-            message = f'已驗證整理 {done} / {total} 份官方資源（原始資料候選）'
+            message = f'已驗證整理 {done} / {total} 份官方資源（原始資料官方資源）'
             blockers = details.get('formal_blockers')
             if (phase == 'raw_rebuild_ready' and type(blockers) is list
                     and 0 < len(blockers) <= 8
@@ -115,7 +115,7 @@ def progress_message(phase, details=None):
             'already_verified': '完整正式資源已安裝並通過交叉驗證',
             'installed_and_verified': '完整正式資源已安全安裝並重新校驗',
             'awaiting_complete_reviewed_archives': '四類資料格式相容；舊式 ZIP 未齊（可改走已驗證 Bundle）',
-            'optional_failed': '舊式 ZIP 交叉驗證未通過；候選結果仍保留，正式 Bundle 需獨立驗證',
+            'optional_failed': '舊式 ZIP 交叉驗證未通過；官方資源結果仍保留，正式 Bundle 需獨立驗證',
         }
         return choices.get(status, '正式來源仍需獨立驗證')
     if phase == 'extract_failed':
@@ -126,7 +126,7 @@ def progress_message(phase, details=None):
                     '未分類解包例外', '未分類 Schema 例外')
         if feature in FEATURE_LABELS and stage in reviewed:
             return f'{FEATURE_LABELS[feature]}：{stage} 驗證失敗'
-        return '新版候選資料格式未通過驗證'
+        return '新版官方資源資料格式未通過驗證'
     if phase == 'extract':
         feature = details.get('feature')
         if feature in FEATURE_LABELS:
@@ -137,14 +137,14 @@ def progress_message(phase, details=None):
 def _format_stage(phase):
     if phase in ('raw_rebuild', 'raw_resource_item', 'raw_rebuild_ready',
                  'raw_rebuild_unavailable'):
-        return '補建資源清單（候選不直接啟用）'
+        return '補建資源清單（官方資源不直接啟用）'
     if phase in ('classification_ready', 'classification_unavailable'):
         return '現有官方資源索引分類'
     if phase == 'bundle_item':
         return f'第 {STEPS.index("bundle_sync") + 1} / {len(STEPS)} 階段'
-    if phase == 'cached_candidate':
+    if phase == 'cached_official':
         return '已驗證快取，無須重新解包'
-    if phase in ('preview_ready', 'download_ready', 'candidate_ready'):
+    if phase in ('preview_ready', 'download_ready', 'verified_official'):
         return '資源準備結果已確認'
     try:
         return f'第 {STEPS.index(phase) + 1} / {len(STEPS)} 階段'
@@ -287,16 +287,16 @@ def run_with_progress(task):
                 break
         if state['done']:
             receipt = state['result'] or {}
-            if receipt.get('status') == 'review_required':
+            if receipt.get('status') == 'verified_official':
                 stage.set('Launcher 資料準備已完成')
-                detail.set('候選快取已建立或校驗完成，等待遊戲相容性審核。')
+                detail.set('官方資源快取已建立或校驗完成，等待遊戲相容性審核。')
                 footer.set('現在開啟 LaLa 主程式，由官方版本安全檢查決定登入。')
                 root.after(700, root.quit)
             else:
                 stage.set('Launcher 將繼續開啟 LaLa')
                 detail.set(state['last_error'] or
-                           '候選資源未完成；主程式仍會獨立檢查官方遊戲版本。')
-                footer.set('候選資料未啟用；原有登入安全檢查仍有效。')
+                           '官方資源資源未完成；主程式仍會獨立檢查官方遊戲版本。')
+                footer.set('官方資源資料未啟用；原有登入安全檢查仍有效。')
                 root.after(1100, root.quit)
         else:
             root.after(80, pump)

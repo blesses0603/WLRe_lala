@@ -8,7 +8,6 @@ import sqlite3
 import json
 from contextlib import closing
 from pathlib import PurePosixPath
-from functools import lru_cache
 
 
 def record_inventory(path, catalog_key, payloads, *, identity=None):
@@ -66,6 +65,7 @@ def record_inventory(path, catalog_key, payloads, *, identity=None):
             db.execute('INSERT INTO resources VALUES (?, ?, ?, ?) '
                        'ON CONFLICT(version_id,name) DO UPDATE SET sha256=excluded.sha256, data=excluded.data',
                        (current, name, digests[name], data))
+        # Persist only derived rows from verified official raw tables.
         row_changes = None
         legacy_recipe_changes = None
         item_changes = None
@@ -191,20 +191,10 @@ def read_active_database_identity(path):
         return None
 
 
-@lru_cache(maxsize=2)
-def _read_item_names(path, catalog_key, mtime, size):
-    """Decode the stored raw table; stored derived JSON is not trusted."""
-    try:
-        items = read_catalog_tables(path, catalog_key, ('items',))['items']
-        return {key: value['name'] for key, value in items.items()}
-    except (sqlite3.Error, OSError, ValueError, TypeError, KeyError):
-        return {}
-
-
 def read_catalog_tables(path, catalog_key, sources):
     """Read and reparse requested tables from one database catalog identity.
 
-    This is a read-only candidate interface, not a gameplay authorization.
+    This is a read-only raw resource interface, not a gameplay authorization.
     Missing, damaged or unparseable inputs fail the entire requested snapshot.
     """
     from pathlib import Path
@@ -269,25 +259,3 @@ def read_catalog_tables(path, catalog_key, sources):
         raise ValueError('Catalog database cannot be read') from exc
 
 
-def candidate_database_item_name(item_id, *, root=None):
-    """Display-only current Launcher item name; never a packet authority."""
-    from pathlib import Path
-    from wlre.storage.paths import data_root
-    from wlre.services.world.launcher_catalog import read_launcher_status
-    if type(item_id) is not int or not 1 <= item_id <= 65535:
-        return None
-    base = Path(root) if root is not None else data_root() / 'official_sync'
-    receipt = read_launcher_status(root=base)
-    if not receipt or receipt.get('status') not in ('review_required', 'downloaded_unparsed'):
-        return None
-    key = receipt.get('catalog_key')
-    if not key:
-        return None
-    path = base / 'derived_catalogs' / 'resource_inventory.sqlite3'
-    try:
-        stat = path.stat()
-        if not path.is_file() or path.is_symlink():
-            return None
-        return _read_item_names(path.resolve(), key, stat.st_mtime_ns, stat.st_size).get(item_id)
-    except OSError:
-        return None

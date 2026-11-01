@@ -45,7 +45,7 @@ class LauncherProgressTests(unittest.TestCase):
         self.assertEqual(_format_stage('bundle_item'), _format_stage('bundle_sync'))
 
         self.assertEqual(_format_stage('official_version'), f'第 1 / {len(STEPS)} 階段')
-        self.assertEqual(_format_stage('candidate_write'),
+        self.assertEqual(_format_stage('official_store'),
                          f'第 {len(STEPS)} / {len(STEPS)} 階段')
         self.assertNotIn('%', progress_message('bundle_sync', {'count': 1, 'bytes': 10}))
 
@@ -54,7 +54,7 @@ class LauncherProgressTests(unittest.TestCase):
             'state': 'changed', 'data': '1257', 'main': '1257'})
         self.assertIn('版本異動', text)
         self.assertIn('1257', text)
-        self.assertIn('候選', text)
+        self.assertIn('官方資源', text)
         self.assertNotIn('登入成功', text)
         self.assertIn('首次記錄', progress_message('official_revision', {
             'state': 'first_observation', 'data': '1246', 'main': '1246'}))
@@ -76,13 +76,13 @@ class LauncherProgressTests(unittest.TestCase):
             progress('official_version', {})
             progress('manifest', {'package': 'MainPackage'})
             phases.append('complete')
-            return {'status': 'review_required'}
+            return {'status': 'verified_official'}
         with patch.dict(os.environ, {'WLRE_DISABLE_AUTO_CATALOG': ''}, clear=False), \
              patch('wlre.launcher_progress.sys.platform', 'linux'), \
              patch.dict(os.environ, {'DISPLAY': ''}), \
              redirect_stdout(io.StringIO()) as output:
             outcome = run_with_progress(task)
-        self.assertEqual(outcome['status'], 'review_required')
+        self.assertEqual(outcome['status'], 'verified_official')
         self.assertEqual(phases, ['complete'])
         self.assertIn('MainPackage', output.getvalue())
 
@@ -95,7 +95,7 @@ class LauncherProgressTests(unittest.TestCase):
 
     def test_progress_cli_uses_same_launcher_service(self):
         with patch('wlre.launcher_progress.run_with_progress',
-                   return_value={'status': 'review_required'}) as view, \
+                   return_value={'status': 'verified_official'}) as view, \
              redirect_stdout(io.StringIO()):
             self.assertEqual(launcher_catalog.main(['--progress']), 0)
         self.assertIs(view.call_args.args[0], launcher_catalog.prepare_on_launch)
@@ -117,10 +117,10 @@ def task(*, progress):
     progress('manifest', {'package': 'DataPackage'})
     progress('bundle_sync', {'count': 1, 'bytes': 4096})
     progress('bundle_item', {'completed': 1, 'total': 1, 'action': 'cached'})
-    progress('candidate_ready', {})
-    return {'status': 'review_required', 'assets_ready': False}
+    progress('verified_official', {})
+    return {'status': 'verified_official', 'assets_ready': False}
 result = run_with_progress(task)
-assert result['status'] == 'review_required'
+assert result['status'] == 'verified_official'
 assert result['assets_ready'] is False
 """
         env = dict(os.environ, WLRE_DISABLE_AUTO_CATALOG='')

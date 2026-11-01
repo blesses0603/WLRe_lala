@@ -118,17 +118,10 @@ def ready():
         # Bundle bytes can supply runtime data. Candidate ZIP indexes alone
         # NEVER replace these sources.
         source = active_runtime()
-        from wlre.services.world.formal_candidate_bridge import (
-            inspect_launcher_candidate)
-        # A matching candidate is checked AGAIN against the full, release-
-        # pinned source before any shared recipe dict is touched. A mismatch
-        # must never partially change game state.
-        bridge = inspect_launcher_candidate(source)
+        # Independently pinned runtime sources are validated by active_runtime().
+        # Do not consult obsolete Launcher candidate ZIP receipts.
         from wlre.services.items.crafting import activate_1275_recipes
         activate_1275_recipes(source)
-        if bridge['status'] == 'matches_formal_sources':
-            return True, ('1275 正式資料完整驗證，且 Launcher 四類候選與正式來源一致；'
-                          '遊戲協定仍須獨立驗收')
         return True, '1275 正式資料通過來源校驗，可供功能模組使用；遊戲協定仍須獨立驗收'
     except (Runtime1275Unavailable, OSError, ValueError) as exc:
         message = str(exc)

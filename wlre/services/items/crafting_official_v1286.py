@@ -33,22 +33,6 @@ class RecipeCatalog:
         return [self.get(key) for key in self.by_item.get(item_id, ())]
 
 
-def load_candidate_catalog(*, root=None):
-    """Read recipes from the Launcher catalog; not a gameplay approval."""
-    from pathlib import Path
-    from wlre.storage.paths import data_root
-    from wlre.services.world.launcher_catalog import read_launcher_status
-    from wlre.services.world.resource_database import read_catalog_tables
-    base = Path(root) if root is not None else data_root() / 'official_sync'
-    receipt = read_launcher_status(root=base)
-    if (not receipt or receipt.get('status') not in ('review_required', 'downloaded_unparsed')
-            or not receipt.get('catalog_key')):
-        raise ValueError('尚無可讀取的官方配方候選資料')
-    path = base / 'derived_catalogs' / 'resource_inventory.sqlite3'
-    rows = read_catalog_tables(path, receipt['catalog_key'], ['recipes'])['recipes']
-    return RecipeCatalog(rows)
-
-
 def compare_legacy_recipes(old_recipes, new_catalog):
     """Compare 1275 product-keyed recipes to 1286 recipe-keyed records.
 

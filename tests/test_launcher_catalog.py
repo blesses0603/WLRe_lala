@@ -20,14 +20,14 @@ class LauncherCatalogTests(unittest.TestCase):
 
     def test_success_writes_unapproved_private_receipt(self):
         runner = Mock(return_value={
-            'status': 'review_required',
+            'status': 'verified_official',
             'catalog_key': 'f' * 64,
             'assets_ready': False,
             'can_send_packets': False,
         })
         result = prepare_on_launch(root=self.root, runner=runner, environ={})
         runner.assert_called_once_with(download=True, parse=True)
-        self.assertEqual(result['status'], 'review_required')
+        self.assertEqual(result['status'], 'verified_official')
         self.assertFalse(result['assets_ready'])
         self.assertEqual(result['data_compatibility'], 'unverified')
         self.assertEqual(result['protocol_compatibility'], 'unverified')
@@ -43,7 +43,7 @@ class LauncherCatalogTests(unittest.TestCase):
 
     def test_explicit_schema_compatible_still_never_approves_login(self):
         runner = Mock(return_value={
-            'status': 'review_required',
+            'status': 'verified_official',
             'catalog_key': 'a' * 64,
             'data_compatibility': 'compatible',
             'protocol_compatibility': 'unverified',
@@ -61,7 +61,7 @@ class LauncherCatalogTests(unittest.TestCase):
 
     def test_unverified_protocol_or_omitted_authorization_cannot_claim_compatibility(self):
         runner = Mock(return_value={
-            'status': 'review_required', 'catalog_key': 'b'*64,
+            'status': 'verified_official', 'catalog_key': 'b'*64,
             'data_compatibility': 'compatible',
             'protocol_compatibility': 'compatible',
             'assets_ready': False, 'can_send_packets': False, 'approved': False})
@@ -70,7 +70,7 @@ class LauncherCatalogTests(unittest.TestCase):
 
     def test_invalid_receipt_cannot_claim_protocol_approval(self):
         runner = Mock(return_value={
-            'status': 'review_required', 'catalog_key': 'c'*64,
+            'status': 'verified_official', 'catalog_key': 'c'*64,
             'data_compatibility': 'compatible',
             'protocol_compatibility': 'unverified',
             'assets_ready': False, 'can_send_packets': False, 'approved': False})
@@ -120,12 +120,9 @@ class LauncherCatalogTests(unittest.TestCase):
         self.assertEqual(
             read_launcher_status(root=self.root / 'official_sync'), result)
 
-    def test_optional_legacy_zip_reconciliation_cannot_poison_verified_candidate(self):
-        # The user's real 1275 screenshot showed 'candidate/formal source
-        # reconciliation failed' because a *legacy ZIP installer* raised
-        # after the candidate passed all four data schemas.
-        candidate = {
-            'status': 'review_required', 'catalog_key': 'c' * 64,
+    def test_launcher_never_promotes_downloaded_indexes(self):
+        source = {
+            'status': 'verified_official', 'catalog_key': 'c' * 64,
             'data_compatibility': 'compatible',
             'protocol_compatibility': 'unverified',
             'assets_ready': False, 'can_send_packets': False, 'approved': False}
@@ -135,24 +132,15 @@ class LauncherCatalogTests(unittest.TestCase):
              patch('wlre.services.world.bundle_runtime_1275.sync_pinned_runtime_bundles',
                    return_value={'verified_bundles': 7, 'downloaded_bundles': 0}), \
              patch('wlre.services.world.auto_catalog.run_auto_catalog',
-                   return_value=candidate), \
-             patch('wlre.services.world.formal_candidate_bridge.promote_reviewed_archives',
-                   side_effect=ValueError('old archive corrupt')) as promotion, \
+                   return_value=source), \
              patch('wlre.services.world.resource_gap_diagnostics.diagnose_resources',
                    return_value={}), \
              patch('wlre.services.world.resource_gap_diagnostics.save_report'):
             report = prepare_on_launch(
                 environ={}, progress=lambda phase, info: events.append((phase, info)))
-        promotion.assert_called_once_with('c' * 64)
-        self.assertEqual(report['status'], 'review_required')
-        self.assertEqual(report['data_compatibility'], 'compatible')
         self.assertFalse(report['assets_ready'])
         self.assertFalse(report['can_send_packets'])
-        self.assertEqual(report,
-                         read_launcher_status(root=self.root / 'official_sync'))
-        self.assertIn(('formal_checked', {'status': 'optional_failed'}), events)
-        self.assertNotIn('old archive corrupt',
-                         status_path(self.root / 'official_sync').read_text())
+        self.assertFalse(any(phase == 'formal_check' for phase, _ in events))
 
     def test_injected_runner_never_triggers_hidden_fallback(self):
         runner = Mock(side_effect=ValueError('source damaged'))
@@ -195,7 +183,7 @@ class LauncherCatalogTests(unittest.TestCase):
         for content in (
             b'not json',
             b'X' * 5000,
-            json.dumps({'schema_version': 1, 'status': 'review_required',
+            json.dumps({'schema_version': 1, 'status': 'verified_official',
                         'checked_at_utc': '2026-10-24',
                         'catalog_key': 'f' * 64,
                         'assets_ready': True,
@@ -229,7 +217,7 @@ class LauncherCatalogTests(unittest.TestCase):
         def fake_runner(**kwargs):
             kwargs['progress']('official_version', {})
             kwargs['progress']('bundle_sync', {'count': 2, 'bytes': 1024})
-            return {'status': 'review_required', 'catalog_key': 'a'*64}
+            return {'status': 'verified_official', 'catalog_key': 'a'*64}
         result = prepare_on_launch(
             root=self.root, runner=fake_runner, environ={},
             progress=lambda phase, details: events.append((phase, details)))

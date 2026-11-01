@@ -11,8 +11,7 @@ def skill_name(skill_id):return CAT['skills'].get(str(skill_id),{}).get('name',f
 def item_display_name(item_id):
     """UI 名稱統一優先使用經獨立驗證的 1275 Runtime。
 
-    SQLite 與自動候選資料不覆蓋正式版本名稱；缺正式來源時，
-    僅可使用自動候選的唯讀名稱作顯示回退，且絕不授權物品操作。
+    未驗證的自動下載資料不得作為顯示或操作來源。
     """
     if type(item_id) is int and item_id > 0:
         from wlre.services.world.runtime_1275 import (
@@ -26,11 +25,6 @@ def item_display_name(item_id):
                     return item['name']
         except (Runtime1275Unavailable, OSError, ValueError, KeyError):
             pass
-    if type(item_id) is int and 1 <= item_id <= 65535:
-        from wlre.services.world.auto_candidate_reader import candidate_item_name
-        preview_name = candidate_item_name(item_id)
-        if isinstance(preview_name, str) and preview_name.strip():
-            return preview_name
     return item_name(item_id)
 
 
