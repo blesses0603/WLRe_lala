@@ -5,6 +5,7 @@ Only normal formKind=1 and text-backed kind=3 buttons can be selected.
 Never infer an option from names, map positions or generic TextData IDs.
 """
 import gzip
+import io
 import hashlib
 import json
 from pathlib import Path
@@ -29,14 +30,17 @@ class NPCInteractIndex:
         self.scenes = {}
         if not self.path.is_file():
             if path is None:
-                return  # Missing optional bundle means choices stay disabled.
-            raise FileNotFoundError(self.path)
-        raw = self.path.read_bytes()
+                from wlre.storage.bundled_database import read_pinned_legacy_bytes
+                raw = read_pinned_legacy_bytes(NAME)
+            else:
+                raise FileNotFoundError(self.path)
+        else:
+            raw = self.path.read_bytes()
         if len(raw) > 128 * 1024:
             raise ValueError('Eve NPC 選項索引壓縮檔異常過大')
         if path is None and hashlib.sha256(raw).hexdigest() != EXPECTED_SHA256:
             raise ValueError('Eve NPC 選項索引 SHA-256 不符')
-        with gzip.open(self.path, 'rb') as stream:
+        with gzip.GzipFile(fileobj=io.BytesIO(raw)) as stream:
             content = stream.read(MAX_SIZE + 1)
         if len(content) > MAX_SIZE:
             raise ValueError('Eve NPC 選項索引解壓縮超出限制')
