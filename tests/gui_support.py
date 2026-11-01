@@ -13,6 +13,8 @@ def isolate_gui_background_checks(case):
     and release destroyed fixture graphs on the creating thread.
     """
     ui_thread = threading.get_ident()
+    original_attributes = set(vars(case))
+    register = case.addClassCleanup if isinstance(case, type) else case.addCleanup
 
     def release():
         if threading.get_ident() != ui_thread:
@@ -21,7 +23,7 @@ def isolate_gui_background_checks(case):
             if worker.name in ('official-version-check', 'lala-release-check'):
                 worker.join(timeout=1)
         for key in list(vars(case)):
-            if not key.startswith('_'):
+            if not key.startswith('_') and key not in original_attributes:
                 setattr(case, key, None)
         gc.collect()
 
@@ -33,7 +35,7 @@ def isolate_gui_background_checks(case):
                           side_effect=OSError('offline GUI fixture'))
     official.start()
     release_check.start()
-    case.addCleanup(official.stop)
-    case.addCleanup(release_check.stop)
+    register(official.stop)
+    register(release_check.stop)
     # Join workers while their offline patches are still active.
-    case.addCleanup(release)
+    register(release)

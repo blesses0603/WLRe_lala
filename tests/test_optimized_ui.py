@@ -1,3 +1,5 @@
+
+from gui_support import isolate_gui_background_checks
 import os,queue,tempfile,tkinter as tk,unittest
 from collections import deque
 from pathlib import Path
@@ -26,6 +28,7 @@ class BackgroundUpdates(unittest.TestCase):
 class OptimizedWindow(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        isolate_gui_background_checks(cls)
         # GUI layout tests must not start real release/version HTTP workers.
         # Those workers can trigger cyclic GC of a retired Tcl interpreter
         # from a non-UI thread while later test cases create new Tk roots.
