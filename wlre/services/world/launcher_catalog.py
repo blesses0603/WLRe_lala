@@ -224,6 +224,9 @@ def main(argv=None):
     else:
         result = prepare_on_launch()
     status = result['status']
+    # Show the real per-user cache location, not the GitHub checkout folder.
+    # Never print credentials or private account settings.
+    print('LaLa 官方資源資料夾：' + str(data_root() / 'official_sync'), flush=True)
     print('LaLa Launcher 官方資源檢查：' +
           ('資料格式檢查通過，協定仍待審核'
            if status == 'verified_official' and
