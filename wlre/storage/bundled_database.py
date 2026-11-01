@@ -14,32 +14,55 @@ from wlre.storage.paths import data_root
 
 
 def load_bundled_bytes(name, *, root=None, database=None):
-    if not isinstance(name, str) or Path(name).name != name or not name.endswith(('.json', '.zip', '.gz')):
+    """Prefer verified SQLite BLOBs; import bundled files only when needed.
+
+    An existing active row must pass its SHA-256 check before it can be used
+    or replaced. A changed bundled file is an explicit new bundled revision,
+    not evidence that a 1262 catalog is valid for 1275 gameplay.
+    """
+    if (not isinstance(name, str) or Path(name).name != name
+            or not name.endswith(('.json', '.zip', '.gz'))):
         raise ValueError('Invalid bundled resource name')
     if root is None:
         from wlre.paths import RESOURCE_ROOT
         root = RESOURCE_ROOT
     source = Path(root) / name
-    path = Path(database) if database is not None else data_root() / 'official_sync' / 'derived_catalogs' / 'resource_inventory.sqlite3'
+    path = (Path(database) if database is not None else data_root() /
+            'official_sync' / 'derived_catalogs' / 'resource_inventory.sqlite3')
+    # A missing DB and missing file must not create an empty user database.
+    if not path.is_file() and not source.is_file():
+        raise FileNotFoundError('Bundled resource missing: ' + name)
     path.parent.mkdir(parents=True, exist_ok=True)
     with closing(sqlite3.connect(path, timeout=15)) as db, db:
         db.execute('CREATE TABLE IF NOT EXISTS bundled_resources (name TEXT NOT NULL, sha256 TEXT NOT NULL, data BLOB NOT NULL, PRIMARY KEY(name,sha256))')
         db.execute('CREATE TABLE IF NOT EXISTS bundled_active (name TEXT PRIMARY KEY, sha256 TEXT NOT NULL)')
+        active = db.execute('SELECT sha256 FROM bundled_active WHERE name=?',
+                            (name,)).fetchone()
+        stored = None
+        if active:
+            stored = db.execute(
+                'SELECT data FROM bundled_resources WHERE name=? AND sha256=?',
+                (name, active[0])).fetchone()
+            if (stored is None or not isinstance(stored[0], bytes)
+                    or hashlib.sha256(stored[0]).hexdigest() != active[0]):
+                raise ValueError('Bundled database resource failed integrity check')
         if source.is_file():
+            # Preserve support for a new source revision without rewriting
+            # SQLite when the source and the active verified BLOB are identical.
             raw = source.read_bytes()
             if len(raw) > 64 * 1024 * 1024:
                 raise ValueError('Bundled resource is too large')
             digest = hashlib.sha256(raw).hexdigest()
-            db.execute('INSERT OR IGNORE INTO bundled_resources VALUES (?, ?, ?)', (name, digest, raw))
-            db.execute('INSERT INTO bundled_active VALUES (?, ?) ON CONFLICT(name) DO UPDATE SET sha256=excluded.sha256', (name, digest))
-        else:
-            active = db.execute('SELECT sha256 FROM bundled_active WHERE name=?', (name,)).fetchone()
-            if not active:
-                raise FileNotFoundError('Bundled resource missing from database: ' + name)
-            digest = active[0]
-        stored = db.execute('SELECT data FROM bundled_resources WHERE name=? AND sha256=?', (name, digest)).fetchone()
-        if not stored or hashlib.sha256(stored[0]).hexdigest() != digest:
-            raise ValueError('Bundled database resource failed integrity check')
+            if active and active[0] == digest:
+                return bytes(stored[0])
+            db.execute('INSERT OR IGNORE INTO bundled_resources VALUES (?, ?, ?)',
+                       (name, digest, raw))
+            db.execute('INSERT INTO bundled_active VALUES (?, ?) '
+                       'ON CONFLICT(name) DO UPDATE SET sha256=excluded.sha256',
+                       (name, digest))
+            return raw
+        if not active:
+            raise FileNotFoundError('Bundled resource missing from database: ' + name)
         return bytes(stored[0])
 
 
