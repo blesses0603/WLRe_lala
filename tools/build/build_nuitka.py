@@ -48,6 +48,9 @@ def make_command(python,mode='standalone',root=ROOT,compiler='auto',diagnose_com
         # Bypass clcache only on this diagnostic run, leaving defaults intact.
         command.extend(['--disable-cache=ccache', '--show-scons'])
     command.extend('--include-data-files='+str(p)+'='+p.relative_to(root).as_posix() for p in data_files(root))
+    seed = root/'wlre/resources/legacy_catalog_seed.sqlite3'
+    if seed.is_file():
+        command.append('--include-data-files='+str(seed)+'=wlre/resources/legacy_catalog_seed.sqlite3')
     command.append(str(root/'WLRE_Client.py'))
     return command
 
@@ -187,6 +190,9 @@ def main(argv=None):
         with log.open('a',encoding='utf8') as stream:
             stream.write('Import library: '+str(library)+'\nStaged library: '+str(staged)+'\nHeader: '+str(header)+'\n')
         prepare_dependencies(python,environment,log,args.upgrade_deps)
+        from wlre.services.world.npc_asset_install import ASSETS
+        from wlre.storage.initial_catalog import build_seed
+        build_seed(ROOT/'wlre/resources', ROOT/'wlre/resources/legacy_catalog_seed.sqlite3')
         if args.diagnose_compiler:
             print('編譯診斷模式：本次停用 C 編譯快取，啟用 SCons 詳細指令與錯誤堆疊。',flush=True)
         run_logged(make_command(python,args.mode,compiler=compiler,
