@@ -6,6 +6,7 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 
+from wlre.paths import RESOURCE_ROOT
 from wlre.storage.bundled_database import read_pinned_legacy_bytes, load_legacy_resource
 
 
