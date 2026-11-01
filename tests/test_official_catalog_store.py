@@ -1,4 +1,5 @@
 """Atomic official catalog metadata persistence tests."""
+from contextlib import closing
 import tempfile
 from pathlib import Path
 import unittest
@@ -45,7 +46,7 @@ class OfficialCatalogStoreTests(unittest.TestCase):
     def test_corrupt_active_metadata_is_not_loaded(self):
         import sqlite3
         store_official_catalog(self.path, self.records())
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             db.execute('UPDATE official_catalog_sources SET sha256=? WHERE feature=?',
                        ('invalid', 'npc'))
         self.assertIsNone(active_official_catalog(self.path))
@@ -53,7 +54,7 @@ class OfficialCatalogStoreTests(unittest.TestCase):
     def test_incomplete_active_metadata_is_not_loaded(self):
         import sqlite3
         store_official_catalog(self.path, self.records())
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             db.execute('DELETE FROM official_catalog_sources WHERE feature=?', ('shops',))
         self.assertIsNone(active_official_catalog(self.path))
 

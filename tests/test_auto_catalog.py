@@ -3,6 +3,7 @@ import hashlib
 import json
 from pathlib import Path
 import struct
+from contextlib import closing
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -254,7 +255,7 @@ class AutoCatalogTests(unittest.TestCase):
         import sqlite3
         first = run_auto_catalog(**self.kwargs())
         db_path = self.candidates / 'official_catalog.sqlite3'
-        with sqlite3.connect(db_path) as db:
+        with closing(sqlite3.connect(db_path)) as db, db:
             db.execute('UPDATE official_catalog_sources SET sha256=? '
                        'WHERE catalog_key=? AND feature=?',
                        ('c' * 64, first['catalog_key'], 'npc'))

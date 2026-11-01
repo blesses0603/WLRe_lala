@@ -174,7 +174,7 @@ class ResourceDatabaseTests(unittest.TestCase):
                 'candidate_indexes/smith_recipes_1286.json': b'invalid legacy payload',
             })
             self.assertIsNone(result['smith_rows'])
-            with sqlite3.connect(path) as db:
+            with closing(sqlite3.connect(path)) as db, db:
                 self.assertIsNone(db.execute("SELECT name FROM sqlite_master WHERE name='candidate_rows'").fetchone())
 
     def test_records_versions_and_compares_table_contents(self):
