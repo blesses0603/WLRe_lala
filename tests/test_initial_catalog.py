@@ -1,4 +1,5 @@
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
@@ -16,7 +17,7 @@ class InitialCatalogTests(unittest.TestCase):
             user = root / 'user.sqlite3'
             provision_seed(seed, user)
             provision_seed(seed, user)
-            with sqlite3.connect(user) as db:
+            with closing(sqlite3.connect(user)) as db:
                 self.assertEqual(db.execute('SELECT COUNT(*) FROM bundled_active').fetchone()[0], len(NAMES))
                 self.assertEqual(db.execute('SELECT COUNT(*) FROM bundled_resources').fetchone()[0], len(NAMES))
 
@@ -24,7 +25,7 @@ class InitialCatalogTests(unittest.TestCase):
         with TemporaryDirectory() as temp:
             root = Path(temp)
             seed = build_seed(RESOURCE_ROOT, root / 'seed.sqlite3')
-            with sqlite3.connect(seed) as db:
+            with closing(sqlite3.connect(seed)) as db:
                 db.execute('UPDATE bundled_resources SET data=? WHERE name=?', (b'corrupt', NAMES[0]))
             with self.assertRaises(ValueError):
                 verify_seed(seed)
