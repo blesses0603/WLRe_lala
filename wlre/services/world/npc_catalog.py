@@ -38,7 +38,8 @@ class NPCIndex:
         if path is None:
             from wlre.services.world.runtime_1275 import baseline_revision, active_runtime
             if baseline_revision() == '1275':
-                active = active_runtime()
+                from wlre.services.world.catalog_source_policy import official_runtime
+                active = official_runtime('npc')
                 self.path = None
                 self.scenes = active.npc_index.scenes
                 return
