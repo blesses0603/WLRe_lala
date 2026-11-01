@@ -41,3 +41,16 @@ class SeedOnlyRuntimeTests(unittest.TestCase):
             for args in (['WLRE_Client.py','--self-test'],['-c','from wlre.ui.gui import App;from wlre.storage.defaults import load_default_profile;from wlre.storage.server_lines import load;assert load();assert load_default_profile()']):
                 result=subprocess.run([sys.executable,*args],cwd=base,env=env,capture_output=True,text=True,timeout=60)
                 self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+
+    def test_policy_row_rejects_self_rehashed_modified_settings(self):
+        import hashlib,sqlite3
+        from contextlib import closing
+        from wlre.storage.full_resource_seed import read_config
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);seed=build_seed(RESOURCE_ROOT,root/SEED_NAME)
+            name='lala_supported_resources.json';raw=b'{"schema_version":999}'
+            digest=hashlib.sha256(raw).hexdigest()
+            with closing(sqlite3.connect(seed)) as db,db:
+                db.execute('INSERT INTO bundled_resources VALUES (?,?,?)',(name,digest,raw))
+                db.execute('UPDATE bundled_active SET sha256=? WHERE name=?',(digest,name))
+            with self.assertRaises(ValueError):read_config(name,root=root)

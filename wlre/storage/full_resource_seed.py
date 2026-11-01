@@ -83,13 +83,17 @@ def read_config(name, *, root):
     root=Path(root);seed=root/SEED_NAME
     if not seed.is_file():
         return (root/name).read_bytes()
-    verify_seed(seed)
+    # Each policy row has an independent reviewed digest; validate only the
+    # requested bytes here. Full verification belongs to installation/selftest.
     if name not in SOURCE_MANIFEST:
         raise ValueError('未知的隨附設定')
     with closing(sqlite3.connect(seed.resolve().as_uri()+'?mode=ro',uri=True)) as db:
         digest=SOURCE_MANIFEST[name][1]
-        raw=db.execute('SELECT data FROM bundled_resources WHERE name=? AND sha256=?',(name,digest)).fetchone()[0]
-    if hashlib.sha256(raw).hexdigest()!=digest:
+        row=db.execute('SELECT a.sha256,b.data FROM bundled_active a LEFT JOIN bundled_resources b ON a.name=b.name AND a.sha256=b.sha256 WHERE a.name=?',(name,)).fetchone()
+    if row is None or row[0]!=digest or not isinstance(row[1],bytes):
+        raise ValueError('隨附設定來源不存在或不符')
+    raw=row[1]
+    if len(raw)!=SOURCE_MANIFEST[name][0] or hashlib.sha256(raw).hexdigest()!=digest:
         raise ValueError('隨附設定來源在讀取期間變更')
     return raw
 
