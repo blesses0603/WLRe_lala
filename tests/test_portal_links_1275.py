@@ -79,7 +79,7 @@ class PortalLinks1275Test(unittest.TestCase):
         self.assertEqual(binding[(12170, 1)]['destination'], 12171)
         self.assertEqual(binding[(12170, 1)]['event_x'], 5701)
         self.assertEqual(binding[(12170, 1)]['x'], 200)
-        runtime = SimpleNamespace(
+        runtime = SimpleNamespace(revision=1275, 
             doors=doors, portal_display_destinations=display,
             portal_destinations={},
             scene_names={12170: '瑪雅野豬叢林二',
@@ -114,7 +114,7 @@ class PortalLinks1275Test(unittest.TestCase):
 
     def test_ui_uses_verified_destination_name_but_never_sends(self):
         mapping = verified_mapping()
-        runtime = SimpleNamespace(
+        runtime = SimpleNamespace(revision=1275, 
             doors={12170: [{'index': 1, 'x': 5701, 'y': 3230, 'event_ids': []}]},
             portal_destinations=mapping,
             portal_positions=position_map(),
@@ -140,7 +140,7 @@ class PortalLinks1275Test(unittest.TestCase):
 
     def test_validated_route_click_sends_once_without_confirmation_popup(self):
         mapping = verified_mapping()
-        runtime = SimpleNamespace(
+        runtime = SimpleNamespace(revision=1275, 
             doors={12170: [{'index': 1, 'x': 5701, 'y': 3230}]},
             portal_destinations=mapping,
             portal_positions=position_map(),
@@ -174,7 +174,7 @@ class PortalLinks1275Test(unittest.TestCase):
             page.on_portal.assert_not_called()
 
     def test_confirmed_manual_try_sends_once_then_waits_for_server_scene(self):
-        runtime = SimpleNamespace(
+        runtime = SimpleNamespace(revision=1275, 
             doors={12170: [{'index': 1, 'x': 5701, 'y': 3230}]},
             portal_destinations=verified_mapping(),
             portal_positions=position_map(),
