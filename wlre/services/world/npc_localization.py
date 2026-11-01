@@ -16,9 +16,9 @@ from wlre.services.world.npc_asset_install import ASSETS, MAX_UNCOMPRESSED
 def _catalog(filename, expected_source, path=None):
     target=Path(path) if path is not None else RESOURCE_ROOT/filename
     cached = None
-    if path is None and not target.is_file():
-        from wlre.storage.bundled_database import read_pinned_legacy_bytes
-        cached = read_pinned_legacy_bytes(filename)
+    if path is None:
+        from wlre.storage.bundled_database import load_legacy_resource
+        cached = load_legacy_resource(filename)
     elif not target.is_file():
         return {}
     if path is None:
