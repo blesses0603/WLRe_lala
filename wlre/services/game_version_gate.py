@@ -11,7 +11,7 @@ from wlre.services.resource_compatibility import baseline_label
 def compare_database_identity(remote, identity):
     """Compare current official identifiers with the active stored catalog.
 
-    A match identifies data; it does not establish runtime or protocol support.
+    A match identifies versions; actual source bytes are checked separately.
     """
     if type(remote) is not dict or type(identity) is not dict:
         return 'unverified'
@@ -30,8 +30,7 @@ def compare_database_identity(remote, identity):
             type(remote.get('resource_path')) is not str or
             type(remote.get('official_exe_version')) is not str):
         return 'unverified'
-    if (remote.get('newer_official_client') is not False or
-            identity.get('data_ver') != remote['resource_path'] or
+    if (identity.get('data_ver') != remote['resource_path'] or
             identity.get('exe_version') != remote['official_exe_version'] or
             observed != expected):
         return 'different'
@@ -44,7 +43,7 @@ def configured_sources(environ=None):
 
 
 def _run_dynamic_check(remote):
-    """Judge current resource identity separately from protocol acceptance."""
+    """Permit login when current official runtime and database content agree."""
     from wlre.services.world.catalog_runtime import official_package_versions
     from wlre.services.world.dynamic_bundle_runtime import activate_for_official, invalidate_runtime
     result={"status":"unverified","blocked":True,"remote":remote,
@@ -52,6 +51,7 @@ def _run_dynamic_check(remote):
             "baseline":{},"baseline_label":"官方動態 Runtime",
             "database_comparison":"unverified","data_compatibility":"unverified",
             "protocol_compatibility":"unverified","can_send_packets":False,
+            "login_allowed":False,"database_verified":False,
             "block_reason":"official_identity_unverified",
             "message":"官方版本無法完整驗證；禁止登入，請重新查詢。"}
     if not isinstance(remote,dict):
@@ -65,9 +65,6 @@ def _run_dynamic_check(remote):
             raise ValueError('Incomplete official observation')
     except (ValueError,TypeError,KeyError):
         invalidate_runtime()
-        if remote.get('newer_official_client'):
-            result.update(status="client_unsupported",block_reason="client_protocol_unverified",
-                          message="官方遊戲客戶端已有新版；客戶端協定尚未驗收，禁止登入。")
         return result
     support='／'.join(p+' '+versions[p].split('_',1)[0] for p in ('DataPackage','MainPackage'))
     result.update(baseline=versions,baseline_label=support,block_reason="runtime_unavailable",
@@ -82,18 +79,24 @@ def _run_dynamic_check(remote):
         # Activation clears its own previous generation before loading.
         # A failed older worker must not invalidate a newer successful one.
         return result
-    # Source-format verification is not evidence of compatible live packets.
-    # Neither a local receipt nor remote self-declared approval can grant it.
-    result.update(status="protocol_pending",dynamic_runtime="verified",
+    result.update(status="database_mismatch",dynamic_runtime="verified",
                   data_compatibility="compatible",runtime_identity=identity,
                   record_counts=dict(runtime.record_counts),
-                  block_reason="protocol_unverified",
-                  message="官方最新資源與完整 Runtime 已驗證（"+support+"）；遊戲協定尚未完成正式服驗收，禁止登入。")
+                  block_reason="database_mismatch",
+                  message="官方 Runtime 已驗證，但 LaLa 資料庫尚未與官方資料一致；請先完成資料同步。")
     from wlre.storage.paths import data_root
-    from wlre.services.world.resource_database import read_active_database_identity
+    from wlre.services.world.resource_database import read_active_database_identity, database_matches_runtime
+    database=data_root()/'official_sync'/'derived_catalogs'/'resource_inventory.sqlite3'
     try:
-        stored=read_active_database_identity(data_root()/'official_sync'/'derived_catalogs'/'resource_inventory.sqlite3')
+        stored=read_active_database_identity(database)
         result['database_comparison']=compare_database_identity(remote,stored)
+        if database_matches_runtime(database,runtime):
+            result.update(status="database_matches_official",blocked=False,
+                          login_allowed=True,database_verified=True,can_send_packets=True,
+                          database_comparison="same",block_reason=None,
+                          message="LaLa 資料庫、官方最新資源與 Runtime 已核對一致（"+support+"），可進入登入。")
+        elif result['database_comparison']=='same':
+            result['database_comparison']='different'
     except (OSError,ValueError,RuntimeError):
         pass
     return result

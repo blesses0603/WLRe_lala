@@ -28,7 +28,7 @@ class CatalogRuntimeDecision:
 
 def official_package_versions(remote: dict) -> dict[str, str]:
     """Extract an exact official two-package version pair; fail closed."""
-    if type(remote) is not dict or remote.get('newer_official_client') is not False:
+    if type(remote) is not dict or type(remote.get('newer_official_client')) is not bool:
         raise CatalogAdapterError('Official client identity is not verified')
     packages = remote.get('packages')
     if type(packages) is not dict or set(packages) != PACKAGES:

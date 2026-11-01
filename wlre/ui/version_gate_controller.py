@@ -18,11 +18,18 @@ from wlre.ui.window_layout import configure_dialog
 
 def _is_verified_login_result(result):
     """Only a complete, positively verified official response can grant entry."""
-    if (not isinstance(result, dict) or result.get("blocked") is not False
-            or result.get("status") != "version_identifiers_match"):
+    if not isinstance(result,dict) or result.get("blocked") is not False:
         return False
-    if result.get("dynamic_runtime") in ("verified", "unavailable"):
-        # Data verification alone never authorizes login packets.
+    if result.get("dynamic_runtime") in ("verified","unavailable"):
+        from wlre.services.game_version_gate import compare_database_identity
+        return (result.get("status")=="database_matches_official"
+                and result.get("dynamic_runtime")=="verified"
+                and result.get("login_allowed") is True
+                and result.get("database_verified") is True
+                and result.get("database_comparison")=="same"
+                and result.get("data_compatibility")=="compatible"
+                and compare_database_identity(result.get("remote"),result.get("runtime_identity"))=="same")
+    if result.get("status")!="version_identifiers_match":
         return False
     remote = result.get("remote")
     if not isinstance(remote, dict) or remote.get("status") != "same_resources":
@@ -62,7 +69,7 @@ class VersionGateController:
         receipt = read_launcher_status()
         code = None if receipt is None else receipt['status']
         self._launcher_catalog_status = {
-            'verified_official': 'Launcher 官方來源已驗證；遊戲協定仍須獨立驗收',
+            'verified_official': 'Launcher 官方來源已驗證',
             'downloaded_unparsed': 'Launcher 已下載資料，尚未驗證解析',
             'error': 'Launcher 官方資源準備未完成；正式 Bundle 仍獨立校驗',
             'preview': 'Launcher 僅預覽下載計畫',
@@ -377,8 +384,8 @@ class VersionGateController:
         if self.version_gate_state == "blocked":
             # Official versions may MATCH while mandatory, release-pinned
             # full data is still absent. Don't mislabel that as a CDN update.
-            if result.get("status") == "protocol_pending":
-                self._version_heading.set("官方資源已驗證 · 遊戲協定待驗收")
+            if result.get("status") == "database_mismatch":
+                self._version_heading.set("LaLa 資料庫與官方尚未一致 · 請先同步")
             elif result.get("status") == "runtime_unavailable":
                 self._version_heading.set("目前官方 Runtime 尚未就緒 · 請查看資源驗證結果")
             elif result.get("status") == "client_unsupported":
@@ -394,6 +401,7 @@ class VersionGateController:
             self._version_continue_button.configure(text="禁止登入", state="disabled")
         elif _is_verified_login_result(result):
             self._version_heading.set(
+                "LaLa 資料庫與官方一致 · 可以登入" if dynamic_mode else
                 f"官方版本識別值符合 LaLa 支援基準 {baseline_label(BASELINE)}")
             self._version_continue_button.configure(text="進入登入畫面", state="normal")
         else:

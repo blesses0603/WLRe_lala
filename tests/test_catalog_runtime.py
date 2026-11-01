@@ -45,6 +45,8 @@ class CatalogRuntimeTests(unittest.TestCase):
 
     def test_unverified_client_and_pair_mismatch_block(self):
         self.remote['newer_official_client'] = True
+        self.assertEqual(select_catalog_runtime(self.remote).status, 'verification_required')
+        self.remote['newer_official_client'] = None
         self.assertEqual(select_catalog_runtime(self.remote).status, 'blocked')
         self.remote['newer_official_client'] = False
         self.assertEqual(select_catalog_runtime(self.remote, package_versions={}).status, 'blocked')

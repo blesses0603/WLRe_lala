@@ -49,8 +49,10 @@ class OfficialRuntimeBridgeTests(unittest.TestCase):
         saved = dict(RECIPES)
         self.addCleanup(lambda: (RECIPES.clear(), RECIPES.update(saved)))
         self.remote['newer_official_client'] = True
-        with self.assertRaises(ValueError):
-            verified_runtime_for_official('npc', self.remote)
+        expected=SimpleNamespace(revision=1286)
+        self.remote['official_exe_version']='1.4.0'
+        with patch('wlre.services.world.dynamic_bundle_runtime.activate_for_official',return_value=expected):
+            self.assertIs(verified_runtime_for_official('npc',self.remote),expected)
 
 
 if __name__ == '__main__':

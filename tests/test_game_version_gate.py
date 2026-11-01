@@ -31,6 +31,7 @@ class RemoteGameVersionTests(unittest.TestCase):
         self.check=self.start_patch('wlre.services.game_version_gate.check_official_game_resources',return_value=self.remote)
         self.activate=self.start_patch('wlre.services.world.dynamic_bundle_runtime.activate_for_official',return_value=self.runtime)
         self.invalidate=self.start_patch('wlre.services.world.dynamic_bundle_runtime.invalidate_runtime')
+        self.matches=self.start_patch('wlre.services.world.resource_database.database_matches_runtime',return_value=True)
         self.read=self.start_patch('wlre.services.world.resource_database.read_active_database_identity',side_effect=lambda _:identity(self.remote))
     def start_patch(self,*args,**kwargs):
         item=patch(*args,**kwargs)
@@ -46,7 +47,7 @@ class RemoteGameVersionTests(unittest.TestCase):
             result=run_prelogin_check()
         self.activate.assert_called_once_with(self.remote)
         legacy.assert_not_called()
-        self.assertEqual(result['status'],'protocol_pending')
+        self.assertEqual(result['status'],'database_matches_official')
         self.assertEqual(result['dynamic_runtime'],'verified')
         self.assertEqual(result['data_compatibility'],'compatible')
         self.assertEqual(result['database_comparison'],'same')
@@ -55,32 +56,42 @@ class RemoteGameVersionTests(unittest.TestCase):
         self.assertNotIn('等待 LaLa 更新',result['message'])
         self.assertEqual(result['record_counts']['crafting'],1026)
 
-    def test_sources_do_not_self_authorize_protocol(self):
+    def test_protocol_label_does_not_block_matching_data(self):
         self.remote['protocol_compatibility']='verified'
         self.remote['can_send_packets']=True
         result=run_prelogin_check()
-        self.assertTrue(result['blocked'])
-        self.assertFalse(result['can_send_packets'])
+        self.assertFalse(result['blocked'])
+        self.assertTrue(result['login_allowed'])
         self.assertEqual(result['protocol_compatibility'],'unverified')
-        self.assertEqual(result['block_reason'],'protocol_unverified')
+        self.assertIsNone(result['block_reason'])
 
     def test_current_data_and_old_database_are_independent(self):
         old=identity(self.remote)
         old['packages'][0]['full_version']='old'
         self.read.side_effect=None
         self.read.return_value=old
+        self.matches.return_value=False
         result=run_prelogin_check()
         self.assertEqual(result['database_comparison'],'different')
         self.assertEqual(result['dynamic_runtime'],'verified')
-        self.assertEqual(result['status'],'protocol_pending')
-
-    def test_newly_unsupported_executable_clears_stale_runtime(self):
-        self.remote['newer_official_client']=True
-        result=run_prelogin_check()
-        self.assertEqual(result['status'],'client_unsupported')
+        self.assertEqual(result['status'],'database_mismatch')
         self.assertTrue(result['blocked'])
-        self.activate.assert_not_called()
-        self.invalidate.assert_called_once()
+
+    def test_new_official_executable_is_allowed_when_runtime_and_database_match(self):
+        self.remote['newer_official_client']=True
+        self.remote['official_exe_version']='1.4.0'
+        result=run_prelogin_check()
+        self.assertEqual(result['status'],'database_matches_official')
+        self.assertFalse(result['blocked'])
+        self.activate.assert_called_once_with(self.remote)
+
+    def test_matching_metadata_does_not_hide_missing_or_corrupt_database_bytes(self):
+        self.matches.return_value=False
+        result=run_prelogin_check()
+        self.assertEqual(result['database_comparison'],'different')
+        self.assertEqual(result['status'],'database_mismatch')
+        self.assertFalse(result['login_allowed'])
+        self.assertTrue(result['blocked'])
 
     def test_offline_or_partial_identity_does_not_reuse_stale_runtime(self):
         for remote in ({'status':'unverified','packages':{}},

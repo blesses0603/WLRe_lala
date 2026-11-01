@@ -53,17 +53,13 @@ def official_runtime(feature):
 def verified_runtime_for_official(feature, remote):
     """Bridge official version-pair identity to a verified gameplay runtime.
 
-    An independently validated, release-pinned runtime is required. A newer
-    official resource download alone is NOT an executable gameplay runtime.
+    The current official manifests and parsed runtime are verified directly.
+    Historical executable-version policy does not override matching data.
     """
     if feature not in FEATURES:
         raise ValueError('不支援的靜態資料功能')
     from wlre.services.world.catalog_runtime import official_package_versions
-    from wlre.services.resource_compatibility import load_supported_resources
     official_package_versions(remote)
-    pinned = load_supported_resources()
-    if remote['official_exe_version'] != pinned['official_game_exe_version']:
-        raise ValueError('官方客戶端版本尚未完成協定驗證')
     from wlre.services.world.dynamic_bundle_runtime import activate_for_official
     return activate_for_official(remote)
 

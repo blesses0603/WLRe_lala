@@ -120,13 +120,19 @@ class Var:
 
 class RuntimeGateDisplayTests(unittest.TestCase):
     def render(self,status):
-        result={'status':status,'blocked':True,'dynamic_runtime':'verified' if status=='protocol_pending' else 'unavailable',
+        result={'status':status,'blocked':status!='database_matches_official','dynamic_runtime':'verified' if status=='database_matches_official' else 'unavailable',
                 'baseline_label':'DataPackage 1286／MainPackage 1284','database_comparison':'same',
                 'remote':{'status':'resources_changed','resource_path':'1.3.22.1','packages':{
                     'DataPackage':{'remote':'1286_full','comparison':'newer'},
                     'MainPackage':{'remote':'1284_full','comparison':'newer'}}}}
+        if status=='database_matches_official':
+            result.update(login_allowed=True,database_verified=True,data_compatibility='compatible',
+                          protocol_compatibility='unverified')
+            result['remote'].update(official_exe_version='1.3.0',newer_official_client=False)
+            result['runtime_identity']={'data_ver':'1.3.22.1','exe_version':'1.3.0',
+                'packages':[{'name':p,'full_version':v['remote']} for p,v in result['remote']['packages'].items()]}
         fake=SimpleNamespace(version_window=Mock(),_version_gate_result=result,
-                             version_gate_state='blocked',_launcher_catalog_status='',
+                             version_gate_state='ready' if status=='database_matches_official' else 'blocked',_launcher_catalog_status='',
                              _version_progress=Mock(),_version_continue_button=Mock())
         for name in ('baseline','main','data','path','remote','heading'):
             setattr(fake,'_version_'+name,Var())
@@ -134,14 +140,14 @@ class RuntimeGateDisplayTests(unittest.TestCase):
         return fake
 
     def test_verified_runtime_does_not_display_old_baseline_or_zip_error(self):
-        fake=self.render('protocol_pending')
-        self.assertIn('遊戲協定待驗收',fake._version_heading.get())
+        fake=self.render('database_matches_official')
+        self.assertIn('可以登入',fake._version_heading.get())
         self.assertNotIn('版本異動',fake._version_heading.get())
         self.assertNotIn('1275',fake._version_baseline.get())
         self.assertIn('1284',fake._version_main.get())
         self.assertIn('Runtime 核對',fake._version_data.get())
         self.assertNotIn('ZIP',fake._version_remote.get())
-        fake._version_continue_button.configure.assert_called_with(text='禁止登入',state='disabled')
+        fake._version_continue_button.configure.assert_called_with(text='進入登入畫面',state='normal')
 
     def test_runtime_failure_is_actionable_and_distinct_from_protocol_pending(self):
         fake=self.render('runtime_unavailable')

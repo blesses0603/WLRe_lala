@@ -295,3 +295,36 @@ def read_catalog_tables(path, catalog_key, sources):
         raise ValueError('Catalog database cannot be read') from exc
 
 
+
+
+def database_matches_runtime(path, runtime):
+    """Compare active identity and actual bytes to independently verified runtime."""
+    from pathlib import Path
+    from wlre.services.world.bundle_runtime_1275 import _REQUIRED_TABLES
+    path=Path(path)
+    if path.is_symlink() or not path.is_file():
+        return False
+    try:
+        identity=runtime.catalog_identity
+        digests=runtime.source_sha256
+        if not isinstance(digests,dict) or set(digests)!=set(_REQUIRED_TABLES):
+            return False
+        with closing(sqlite3.connect(path.resolve().as_uri()+'?mode=ro',uri=True)) as db:
+            db.execute('BEGIN')
+            active=db.execute('SELECT s.active_id,v.catalog_key,i.identity FROM sync_state s '
+                              'JOIN versions v ON v.id=s.active_id '
+                              'JOIN version_identities i ON i.version_id=v.id WHERE s.singleton=1').fetchone()
+            if (active is None or active[1]!=identity.key or len(active[2])>4096
+                    or hashlib.sha256(active[2].encode('ascii')).hexdigest()!=identity.key
+                    or json.loads(active[2])!=identity.as_dict()):
+                return False
+            for name,digest in digests.items():
+                row=db.execute('SELECT sha256,data FROM resources WHERE version_id=? AND name=?',
+                               (active[0],name+'.bytes')).fetchone()
+                if (row is None or row[0]!=digest or type(row[1]) is not bytes
+                        or not 0<len(row[1])<=16*1024*1024
+                        or hashlib.sha256(row[1]).hexdigest()!=digest):
+                    return False
+        return True
+    except (sqlite3.Error,OSError,ValueError,TypeError,AttributeError,UnicodeError):
+        return False

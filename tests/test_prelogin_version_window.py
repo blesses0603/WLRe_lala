@@ -68,6 +68,27 @@ class PreloginVersionWindowTests(unittest.TestCase):
                          [str(x.cget("text")) for x in self.app.version_window.winfo_children()
                           if "text" in x.keys()])
 
+    def test_matching_current_database_allows_login_without_protocol_acceptance(self):
+        remote={'status':'resources_changed','resource_path':'1.3.22.1',
+                'official_exe_version':'1.3.0','newer_official_client':False,
+                'packages':{'DataPackage':{'remote':'1286_full','comparison':'newer'},
+                            'MainPackage':{'remote':'1284_full','comparison':'newer'}}}
+        result={'status':'database_matches_official','blocked':False,
+                'login_allowed':True,'database_verified':True,'database_comparison':'same',
+                'dynamic_runtime':'verified','data_compatibility':'compatible',
+                'protocol_compatibility':'unverified','remote':remote,
+                'baseline_label':'DataPackage 1286／MainPackage 1284',
+                'runtime_identity':{'data_ver':'1.3.22.1','exe_version':'1.3.0',
+                    'packages':[{'name':p,'full_version':v['remote']} for p,v in remote['packages'].items()]}}
+        self.deliver(result)
+        self.assertEqual(self.app.version_gate_state,'ready')
+        self.assertFalse(self.app._version_continue_button.instate(['disabled']))
+        self.assertIn('可以登入',self.app._version_heading.get())
+        self.app.continue_to_login()
+        self.assertTrue(self.app._version_gate_entry_approved)
+        self.assertEqual(self.app.version_window.state(),'withdrawn')
+        self.assertTrue(self.app.can_login_after_version_check())
+
     def test_confirmed_remote_change_blocks(self):
         self.deliver(official_result("1275", "1262", "blocked"))
         self.assertTrue(self.app._version_continue_button.instate(["disabled"]))
