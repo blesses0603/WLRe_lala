@@ -126,19 +126,13 @@ def parse_runtime_recipes(raw, items):
     Dynamic recipes stay read-only pending separate protocol validation.
     """
     import struct
-    from wlre.services.world.preview_1275 import parse_smith_1275
-    from wlre.services.world.smith_candidate import parse_smith_candidate
+    from wlre.services.world.smith_candidate import parse_smith_records
     if type(raw) is not bytes or len(raw) < 4:
         raise DynamicRuntimeUnavailable('Missing Smith table')
     count = struct.unpack_from('<i', raw)[0]
     if not 1 <= count <= 20000:
         raise DynamicRuntimeUnavailable('Invalid Smith record count')
-    if len(raw) == 4 + 33 * count:
-        rows = list(parse_smith_1275(raw).values())
-    elif len(raw) == 4 + 35 * count:
-        rows = parse_smith_candidate(raw)
-    else:
-        raise DynamicRuntimeUnavailable('Unknown Smith schema')
+    rows = parse_smith_records(raw)
     from collections import Counter
     counts = Counter(r['item_id'] for r in rows)
     checked = []

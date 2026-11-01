@@ -21,6 +21,9 @@ def _is_verified_login_result(result):
     if (not isinstance(result, dict) or result.get("blocked") is not False
             or result.get("status") != "version_identifiers_match"):
         return False
+    if result.get("dynamic_runtime") in ("verified", "unavailable"):
+        # Data verification alone never authorizes login packets.
+        return False
     remote = result.get("remote")
     if not isinstance(remote, dict) or remote.get("status") != "same_resources":
         return False
@@ -35,7 +38,7 @@ class VersionGateController:
     def initialize_version_gate(self):
         self.version_gate_state = "checking"
         self.version_gate_text = tk.StringVar(
-            value=f"準備查詢官方遊戲資源版本（LaLa 基準 {baseline_label(BASELINE)}）…")
+            value="準備查詢官方遊戲版本與完整 Runtime…")
         self._version_gate_result = None
         self._version_gate_checked = 0.0
         self._version_gate_generation = 0
@@ -43,7 +46,7 @@ class VersionGateController:
         self._version_gate_entry_approved = False
         self.version_window = None
         self._version_heading = tk.StringVar(value="正在檢測版本…")
-        self._version_baseline = tk.StringVar(value=baseline_label(BASELINE))
+        self._version_baseline = tk.StringVar(value="等待官方版本確認")
         self._version_main = tk.StringVar(value="等待官方查詢")
         self._version_data = tk.StringVar(value="等待官方查詢")
         self._version_remote = tk.StringVar(value="尚未驗證")
@@ -66,28 +69,11 @@ class VersionGateController:
         }.get(code, '尚無 Launcher 官方資源同步紀錄')
         if receipt and receipt.get('failure_feature') and receipt.get('failure_stage'):
             feature = {'npc': 'NPC', 'shops': '商店', 'crafting': '製作',
-                       'scenes': '場景'}[receipt['failure_feature']]
+                       'scenes': '場景', 'items': '物品'}[receipt['failure_feature']]
             self._launcher_catalog_status += (
                 f"｜{feature}資料失敗：{receipt['failure_stage']}")
-        # Display the actual missing full-runtime inputs instead of telling
-        # users to guess which two ZIPs or internal tables are absent.
-        # Local report is untrusted and must never affect login eligibility.
-        from wlre.services.world.resource_gap_diagnostics import read_report, summarize
-        gaps = (read_report(expected_checked_at_utc=receipt['checked_at_utc'])
-                if receipt is not None else None)
-        if gaps is not None:
-            if gaps['formal_ready']:
-                self._launcher_catalog_status += '｜舊式雙 ZIP 亦已通過校驗'
-            elif (receipt is not None and code == 'verified_official'
-                    and receipt.get('data_compatibility') == 'compatible'):
-                # The former ZIP-only diagnostic is not the authoritative
-                # verdict for independently validated official Bundles.
-                self._launcher_catalog_status += (
-                    '｜舊式 ZIP 未通過校驗；官方 Bundle 由正式 Runtime 另外核對')
-            else:
-                # Old ZIPs are optional when a separately pinned full Bundle
-                # runtime is used. Keep this clearly supplemental.
-                self._launcher_catalog_status += '｜舊式 ZIP（非唯一來源）：' + summarize(gaps)
+        # Current runtime verdict is rendered from the live prelogin result.
+        # Historical ZIP diagnostics remain available in their own report.
         if receipt is not None and receipt.get('status') in ('verified_official', 'downloaded_unparsed'):
             from wlre.services.world.resource_rebuilder import read_inventory_summary, read_processing_summary
             raw_inventory = read_inventory_summary(receipt['catalog_key'])
@@ -98,9 +84,9 @@ class VersionGateController:
                     f"重用 {raw_inventory['existing_or_cached_reused']}")
             processing = read_processing_summary(receipt['catalog_key'])
             if processing:
-                done = sum(state in ('已解析', '已解析') for state in processing.values())
+                done = sum(state == '已解析' for state in processing.values())
                 pending = [name for name, state in processing.items()
-                           if state not in ('已解析', '已解析')]
+                           if state != '已解析']
                 self._launcher_catalog_status += f'｜資料解析 {done}/{len(processing)}'
                 if pending:
                     self._launcher_catalog_status += '；待處理：' + '、'.join(pending)
@@ -223,7 +209,7 @@ class VersionGateController:
                 ("資源路徑 DataVer", self._version_path),
                 ("DataPackage", self._version_data),
                 ("MainPackage", self._version_main),
-                ("LaLa 支援基準", self._version_baseline),
+                ("目前 Runtime 資源版本", self._version_baseline),
                 ("檢查結果", self._version_remote))):
             ttk.Label(details, text=label, width=17,
                       anchor="w").grid(row=index, column=0,
@@ -330,6 +316,11 @@ class VersionGateController:
         remote = remote if isinstance(remote, dict) else {}
         packages = remote.get("packages")
         packages = packages if isinstance(packages, dict) else {}
+        dynamic_mode = result.get("dynamic_runtime") in ("verified", "unavailable")
+        if dynamic_mode:
+            self._version_baseline.set(result.get("baseline_label", "官方動態 Runtime"))
+        elif result:
+            self._version_baseline.set(result.get("baseline_label", baseline_label(BASELINE)))
         for package, variable in (("MainPackage", self._version_main),
                                   ("DataPackage", self._version_data)):
             record = packages.get(package, {})
@@ -339,6 +330,10 @@ class VersionGateController:
             if value is None:
                 reason = record.get("reason")
                 variable.set("無法驗證：" + reason if reason else "無法驗證：尚無官方版本回應")
+            elif dynamic_mode:
+                suffix = ("已由官方 Manifest／Runtime 核對" if result.get("dynamic_runtime") == "verified"
+                          else "官方版本已取得；Runtime 尚未驗證")
+                variable.set(f"{value} · {suffix}")
             elif comparison == "same":
                 variable.set(f"{value} · 與 {supported} 相同")
             else:
@@ -353,6 +348,9 @@ class VersionGateController:
             "same_resources": f"兩個官方資源版本識別值均符合 {baseline_label(BASELINE)}",
             "resources_changed": "官方資源版本已異動",
         }.get(source_status)
+        if dynamic_mode and remote.get("status") in ("same_resources", "resources_changed"):
+            status_text = ("官方資源與 Runtime 版本一致" if result.get("dynamic_runtime") == "verified"
+                           else "官方版本已確認，完整 Runtime 尚未就緒")
         if not status_text:
             stage = remote.get("failed_stage")
             reason = remote.get("reason")
@@ -379,7 +377,13 @@ class VersionGateController:
         if self.version_gate_state == "blocked":
             # Official versions may MATCH while mandatory, release-pinned
             # full data is still absent. Don't mislabel that as a CDN update.
-            if ('LaLa 1275 缺少已校驗' in result.get('message', '')
+            if result.get("status") == "protocol_pending":
+                self._version_heading.set("官方資源已驗證 · 遊戲協定待驗收")
+            elif result.get("status") == "runtime_unavailable":
+                self._version_heading.set("目前官方 Runtime 尚未就緒 · 請查看資源驗證結果")
+            elif result.get("status") == "client_unsupported":
+                self._version_heading.set("官方客戶端已更新 · 協定相容性待驗收")
+            elif ('LaLa 1275 缺少已校驗' in result.get('message', '')
                     or ('1275 資料驗證未通過' in result.get('message', '')
                         and source_status == 'same_resources')):
                 self._version_heading.set("1275 正式資源尚未就緒 · 請先完成驗證")
@@ -441,7 +445,7 @@ class VersionGateController:
         self.version_gate_state = "checking"
         self._version_gate_result = None
         self.version_gate_text.set(
-            f"向官方更新來源查詢資源版本；LaLa 支援基準 {baseline_label(BASELINE)}…")
+            "正在向官方來源確認資源版本與完整 Runtime…")
         self._set_login_gate_button()
         self._render_version_window()
         # Both channels are independent; a GitHub outage never changes the

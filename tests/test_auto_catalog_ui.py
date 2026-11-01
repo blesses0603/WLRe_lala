@@ -36,9 +36,8 @@ class LauncherResourceUiTests(unittest.TestCase):
              patch('wlre.services.world.resource_rebuilder.read_inventory_summary',
                    return_value=None):
             VersionGateController.initialize_version_gate(c)
-        self.assertIn('舊式 ZIP 未通過校驗', c._launcher_catalog_status)
-        self.assertIn('官方 Bundle 由正式 Runtime 另外核對',
-                      c._launcher_catalog_status)
+        self.assertNotIn('舊式 ZIP', c._launcher_catalog_status)
+        self.assertIn('Launcher 官方來源已驗證', c._launcher_catalog_status)
         self.assertNotIn('1275_DataCatalog', c._launcher_catalog_status)
 
     def test_version_ui_does_not_download_or_extract(self):

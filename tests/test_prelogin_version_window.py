@@ -63,7 +63,7 @@ class PreloginVersionWindowTests(unittest.TestCase):
         self.assertTrue(self.app.version_window.winfo_ismapped())
         self.assertEqual(self.app.login_window.state(), "withdrawn")
         self.assertEqual(str(self.app.connect_button.cget("state")), "disabled")
-        self.assertEqual(self.app._version_baseline.get(), "1275")
+        self.assertEqual(self.app._version_baseline.get(), "等待官方版本確認")
         self.assertNotIn("選擇遊戲目錄",
                          [str(x.cget("text")) for x in self.app.version_window.winfo_children()
                           if "text" in x.keys()])
@@ -103,8 +103,8 @@ class PreloginVersionWindowTests(unittest.TestCase):
                         supported, clear=True):
             fake = SimpleNamespace()
             VersionGateController.initialize_version_gate(fake)
-            self.assertEqual(fake._version_baseline.get(), "1275")
-            self.assertIn("1275", fake.version_gate_text.get())
+            self.assertEqual(fake._version_baseline.get(), "等待官方版本確認")
+            self.assertIn("官方", fake.version_gate_text.get())
             # An actual redraw uses the current package baselines instead of
             # keeping a hard-coded 1262 in its comparison text.
             self.deliver(official_result("1280", "1280", "blocked"))

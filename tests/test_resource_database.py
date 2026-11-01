@@ -48,12 +48,12 @@ class ResourceDatabaseTests(unittest.TestCase):
             key = 'a' * 64
             rows = [{'item_id': 7, 'candidate_row_key': 1, 'time_id': 0, 'materials': [{'item_id': 8}]},
                     {'item_id': 7, 'candidate_row_key': 2, 'time_id': 0, 'materials': [{'item_id': 8}]}]
-            with patch('wlre.services.world.smith_candidate.parse_smith_candidate', return_value=rows), \
+            with patch('wlre.services.world.smith_candidate.parse_smith_records', return_value=rows), \
                  patch('wlre.services.world.itemdata_v1.parse_itemdata', return_value={7: {'name': 'a'}, 8: {'name': 'b'}}):
                 record_inventory(path, key, {'tables/a/SmithData_C.bytes': b'smith',
                                              'tables/a/ItemData_C.bytes': b'items'})
                 self.assertEqual(len(read_catalog_tables(path, key, ['recipes'])['recipes']), 2)
-            with patch('wlre.services.world.smith_candidate.parse_smith_candidate', return_value=rows), \
+            with patch('wlre.services.world.smith_candidate.parse_smith_records', return_value=rows), \
                  patch('wlre.services.world.itemdata_v1.parse_itemdata', return_value={7: {'name': 'a'}}):
                 with self.assertRaises(ValueError):
                     read_catalog_tables(path, key, ['recipes'])
@@ -173,7 +173,7 @@ class ResourceDatabaseTests(unittest.TestCase):
                 'tables/a/SmithData_C.bytes': b'table',
                 'candidate_indexes/smith_recipes_1286.json': b'invalid legacy payload',
             })
-            self.assertIsNone(result['smith_rows'])
+            self.assertEqual(result['smith_rows'], {'status': 'parse_failed'})
             with closing(sqlite3.connect(path)) as db, db:
                 self.assertIsNone(db.execute("SELECT name FROM sqlite_master WHERE name='candidate_rows'").fetchone())
 

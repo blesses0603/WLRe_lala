@@ -103,6 +103,42 @@ def record_inventory(path, catalog_key, payloads, *, identity=None):
                                 'removed': sorted(old_items.keys() - new_items.keys())}
             except ValueError:
                 item_changes = {'status': 'parse_failed'}
+        smith_raw=tables.get('SmithData_C.bytes')
+        if smith_raw is not None:
+            from wlre.services.world.smith_candidate import parse_smith_records
+            def smith_rows(raw):
+                rows=parse_smith_records(raw)
+                return {str(row.get('recipe_id',row.get('candidate_row_key',row['item_id']))):
+                        json.dumps(row,ensure_ascii=True,sort_keys=True,separators=(',',':'))
+                        for row in rows}
+            try:
+                new_rows=smith_rows(smith_raw)
+            except (ValueError,TypeError,KeyError,OverflowError):
+                row_changes={'status':'parse_failed'}
+            else:
+                prior_raw=(db.execute('SELECT data FROM resources WHERE version_id=? AND name=?',
+                                     (previous[0],'SmithData_C.bytes')).fetchone() if previous else None)
+                old_rows={}
+                previous_status='unavailable'
+                if prior_raw:
+                    try:
+                        old_rows=smith_rows(prior_raw[0])
+                        previous_status='parsed'
+                    except (ValueError,TypeError,KeyError,OverflowError):
+                        previous_status='parse_failed'
+                saved=dict(db.execute('SELECT row_key,data FROM parsed_resource_rows WHERE version_id=? AND source=?',
+                                      (current,'smith_v1')))
+                if saved and saved!=new_rows:
+                    raise ValueError('Smith rows changed for the same catalog identity')
+                if not saved:
+                    db.executemany('INSERT INTO parsed_resource_rows VALUES (?,?,?,?)',
+                                   ((current,'smith_v1',key,value) for key,value in new_rows.items()))
+                row_changes={'status':'parsed','count':len(new_rows),
+                             'previous_available':previous_status=='parsed',
+                             'previous_status':previous_status,
+                             'added':sorted(new_rows.keys()-old_rows.keys()) if previous_status=='parsed' else [],
+                             'changed':sorted(key for key in new_rows.keys() & old_rows.keys() if new_rows[key]!=old_rows[key]),
+                             'removed':sorted(old_rows.keys()-new_rows.keys())}
         from wlre.services.world.npc_talk import parse_talk_data
         from wlre.services.expedition.data import parse_text_data
         from wlre.services.instance_catalog import parse_stages
@@ -204,7 +240,7 @@ def read_catalog_tables(path, catalog_key, sources):
     from wlre.services.instance_catalog import parse_stages
     from wlre.services.world.eve_v115 import derive_eve_index
     from wlre.services.expedition.data import parse_catalog, attach_names, parse_npcs
-    from wlre.services.world.smith_candidate import parse_smith_candidate, mark_timed_recipes
+    from wlre.services.world.smith_candidate import parse_smith_records
     parsers = {'items': ('ItemData_C.bytes', parse_itemdata),
                'talks': ('TalkData_C.bytes', parse_talk_data),
                'texts': ('TextData_C.bytes', parse_text_data),
@@ -248,7 +284,7 @@ def read_catalog_tables(path, catalog_key, sources):
             result['expedition'] = {**quests, 'npcs': parse_npcs(
                 blobs['NpcData_C.bytes'], blobs['NpcCareerData_C.bytes'])}
         if 'recipes' in sources:
-            recipes = mark_timed_recipes(parse_smith_candidate(blobs['SmithData_C.bytes']))
+            recipes = parse_smith_records(blobs['SmithData_C.bytes'])
             items = parse_itemdata(blobs['ItemData_C.bytes'])
             if any(row['item_id'] not in items or any(material['item_id'] not in items
                    for material in row['materials']) for row in recipes):

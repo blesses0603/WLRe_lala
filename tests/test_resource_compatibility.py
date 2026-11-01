@@ -70,7 +70,7 @@ class BundledResourceCompatibilityTests(unittest.TestCase):
                        return_value=checked), patch(
                            "wlre.services.world.runtime_1275.ready",
                            return_value=(True, "1275 fixture verified")):
-                matched = game_version_gate.run_prelogin_check()
+                matched = game_version_gate.run_prelogin_check({}, checker=lambda _: checked)
             self.assertFalse(matched["blocked"])
             self.assertIn("1275", matched["message"])
             self.assertNotIn("1262", matched["message"])
@@ -81,7 +81,7 @@ class BundledResourceCompatibilityTests(unittest.TestCase):
             self.assertEqual(changed["status"], "resources_changed")
             with patch("wlre.services.game_version_gate.check_official_game_resources",
                        return_value=changed):
-                blocked = game_version_gate.run_prelogin_check()
+                blocked = game_version_gate.run_prelogin_check({}, checker=lambda _: changed)
             self.assertTrue(blocked["blocked"])
             self.assertIn("1275", blocked["message"])
             self.assertNotIn("1262", blocked["message"])
@@ -103,7 +103,7 @@ class BundledResourceCompatibilityTests(unittest.TestCase):
             self.assertEqual(result["status"], "same_resources")
             with patch("wlre.services.game_version_gate.check_official_game_resources",
                        return_value=result):
-                checked = game_version_gate.run_prelogin_check()
+                checked = game_version_gate.run_prelogin_check({}, checker=lambda _: result)
             self.assertEqual(checked["baseline_label"], label)
             self.assertIn("DataPackage 1275", checked["message"])
 
