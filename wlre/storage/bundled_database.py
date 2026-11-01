@@ -47,3 +47,40 @@ def load_bundled_json(name, *, root=None, database=None):
     if not isinstance(name, str) or not name.endswith('.json'):
         raise ValueError('Invalid bundled JSON name')
     return json.loads(load_bundled_bytes(name, root=root, database=database).decode('utf-8-sig'))
+
+
+def read_pinned_legacy_bytes(name, *, root=None, database=None):
+    """Read a pinned 1262 resource from SQLite without recreating or modifying it.
+
+    This is a historical display-only source, never a 1275 gameplay authority.
+    The DB must already exist and the stored BLOB must match the independent
+    SHA-256 pinned in the repository. A missing or mismatched row fails closed.
+    """
+    import re
+    if name not in (
+        'instance_catalog_1262.json', 'npc_battle_talk_1262.json.gz',
+        'npc_event_index_1262.json.gz', 'npc_interact_1262.json.gz',
+        'npc_talk_1262.json.gz', 'npc_text_1262.json.gz',
+    ):
+        raise ValueError('非核准的 1262 歷史資源')
+    from wlre.storage.paths import data_root
+    db_path = (Path(database) if database is not None else
+               data_root() / 'official_sync' / 'derived_catalogs' /
+               'resource_inventory.sqlite3')
+    if not db_path.is_file():
+        raise FileNotFoundError('1262 歷史資料庫不存在')
+    # The original bundled source is not consulted. This function is read-only.
+    with closing(sqlite3.connect(db_path.resolve().as_uri() + '?mode=ro', uri=True)) as db:
+        row = db.execute(
+            'SELECT a.sha256, b.data FROM bundled_active a '
+            'JOIN bundled_resources b ON a.name=b.name AND a.sha256=b.sha256 '
+            'WHERE a.name=?', (name,)
+        ).fetchone()
+    if row is None:
+        raise FileNotFoundError('1262 歷史資源尚未匯入 SQLite: ' + name)
+    digest, data = row
+    if (not isinstance(digest, str) or not re.fullmatch('[0-9a-f]{64}', digest)
+            or not isinstance(data, bytes) or len(data) > 16 * 1024 * 1024
+            or hashlib.sha256(data).hexdigest() != digest):
+        raise ValueError('1262 歷史資源 SQLite 完整性驗證失敗')
+    return data
