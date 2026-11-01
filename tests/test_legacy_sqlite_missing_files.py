@@ -1,5 +1,6 @@
 """1262 SQLite 歷史資料缺檔測試；不使用正式伺服器。"""
 import hashlib
+from contextlib import closing
 import sqlite3
 import tempfile
 import unittest
@@ -16,7 +17,7 @@ class LegacySQLiteMissingFilesTests(unittest.TestCase):
             name = 'instance_catalog_1262.json'
             data = b'{"version":1262}'
             digest = hashlib.sha256(data).hexdigest()
-            with sqlite3.connect(db) as con:
+            with closing(sqlite3.connect(db)) as con, con:
                 con.execute('CREATE TABLE bundled_resources (name TEXT, sha256 TEXT, data BLOB)')
                 con.execute('CREATE TABLE bundled_active (name TEXT, sha256 TEXT)')
                 con.execute('INSERT INTO bundled_resources VALUES (?, ?, ?)', (name, digest, data))
@@ -29,7 +30,7 @@ class LegacySQLiteMissingFilesTests(unittest.TestCase):
             db = Path(tmp) / 'legacy.sqlite3'
             with self.assertRaises(FileNotFoundError):
                 read_pinned_legacy_bytes('instance_catalog_1262.json', database=db)
-            with sqlite3.connect(db) as con:
+            with closing(sqlite3.connect(db)) as con, con:
                 con.execute('CREATE TABLE bundled_resources (name TEXT, sha256 TEXT, data BLOB)')
                 con.execute('CREATE TABLE bundled_active (name TEXT, sha256 TEXT)')
                 con.execute('INSERT INTO bundled_resources VALUES (?, ?, ?)',
