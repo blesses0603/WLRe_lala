@@ -35,6 +35,21 @@ def fake_fetcher():
 
 
 class OfficialResourceSyncTests(unittest.TestCase):
+    def test_four_component_data_version_flows_to_manifest_and_bundle(self):
+        from wlre.services.official_manifest_sync import spec_from_snapshot
+        from wlre.services.official_bundle_download import _DATA_VER as bundle_version
+        from wlre.services.official_lua_index import _DATA_VER as lua_version
+        urls = official_version.official_package_urls('1.3.22.1')
+        responses = {official_version.RESOURCE_MAP_URL: RESOURCE_MAP.replace(b'1.3.21', b'1.3.22.1'),
+                     urls['DataPackage']: DATA, urls['MainPackage']: MAIN}
+        snapshot = observe_official_versions(fetcher=responses.__getitem__)
+        self.assertEqual(snapshot['data_ver'], '1.3.22.1')
+        self.assertIn('/1.3.22.1/', spec_from_snapshot(snapshot, 'DataPackage').url('bytes'))
+        self.assertIsNotNone(bundle_version.fullmatch(snapshot['data_ver']))
+        self.assertIsNotNone(lua_version.fullmatch(snapshot['data_ver']))
+        with self.assertRaises(OfficialSyncError):
+            validate_snapshot(dict(snapshot, exe_version='1.3.0.1'))
+
     def test_three_step_bootstrap_no_game_install(self):
         fetch, seen, urls = fake_fetcher()
         value = observe_official_versions(fetcher=fetch, checked_at='2026-10-24T00:00:00+00:00')

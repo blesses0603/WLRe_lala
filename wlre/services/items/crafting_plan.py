@@ -13,6 +13,7 @@ def validate_rows(rows):
         sid=row.get('item_id');count=row.get('count')
         if type(sid) is not int or str(sid) not in RECIPES:raise ProtocolError('清單包含未知配方')
         r=RECIPES[str(sid)]
+        if r.get('read_only') is True:raise ProtocolError('此配方僅供查看，不能加入製作清單')
         if r.get('open_used',0) or r['design_id'] or r['time_id'] or r['limit_kind']:raise ProtocolError('此配方尚未開放或解鎖條件未同步')
         if type(count) is not int or count<1:raise ProtocolError('每項批數必須為正整數')
         result.append({'item_id':sid,'count':count})

@@ -37,7 +37,7 @@ def build_catalog_grid(self, middle, w, embedded):
 def render_catalog_grid(self, force=False, *, recipes, confirmed_unlocked,
                         room_known, tool_status, item_name, availability):
     q=self.search.get().strip().casefold();favs=set(self.favorite_store.ids)
-    rows=[r for r in recipes.values() if confirmed_unlocked(r) and (self.filter_key=='all' or self.filter_key=='favorites' and r['item_id'] in favs or str(r['tool_id'])==self.filter_key) and q in (item_name(r['item_id'])+' '+str(r['item_id'])+' '+item_name(r['tool_id'])).casefold()]
+    rows=[r for r in list(recipes.values()) if confirmed_unlocked(r) and (self.filter_key=='all' or self.filter_key=='favorites' and r['item_id'] in favs or str(r['tool_id'])==self.filter_key) and q in (item_name(r['item_id'])+' '+str(r['item_id'])+' '+item_name(r['tool_id'])).casefold()]
     if self.only_tools.get() and room_known(self.state) and self.filter_key!='favorites':rows=[r for r in rows if tool_status(self.state,r['tool_id'])=='已擺放']
     self.rows=rows;pages=max(1,math.ceil(len(rows)/self.page_size));self.page=min(self.page,pages-1)
     self.page_label.set(f'{self.page+1}/{pages} · 已解鎖 {len(rows)} 項')

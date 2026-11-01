@@ -147,6 +147,17 @@ def candidate_expedition_catalog(*, root=None):
     if located is None:
         return None
     path, key = located
+    # Prefer the version-bound database. It reparses the five raw tables in
+    # one read-only snapshot and checks each stored source digest.
+    from wlre.services.world.resource_database import read_catalog_tables
+    try:
+        rows = read_catalog_tables(base / 'derived_catalogs' / 'resource_inventory.sqlite3',
+                                   key, ['expedition'])['expedition']
+    except (OSError, ValueError, TypeError, KeyError):
+        rows = None
+    if rows is not None:
+        return {**rows, 'source_kind': 'automatic_1275_unapproved_preview',
+                'display_only': True, 'can_send_packets': False}
     try:
         if not path.is_file():
             return None

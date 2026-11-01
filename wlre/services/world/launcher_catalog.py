@@ -14,11 +14,15 @@ import tempfile
 
 from wlre.storage.paths import data_root
 
-STATUS_SCHEMA = 2
+STATUS_SCHEMA = 3
 STATUS_FILENAME = 'launcher_catalog_status.json'
 MAX_STATUS_BYTES = 4096
 STATES = frozenset(('review_required', 'downloaded_unparsed',
                    'preview', 'error'))
+FAILURE_FEATURES = frozenset(('npc', 'shops', 'crafting', 'scenes'))
+FAILURE_STAGES = frozenset(('UnityFS／TextAsset', 'Eve 二進位事件',
+                            'ItemData 二進位表', '資料 Schema',
+                            '未分類解包例外', '未分類 Schema 例外'))
 
 
 def status_path(root=None):
@@ -38,14 +42,21 @@ def read_launcher_status(*, root=None):
         legacy = {'schema_version', 'status', 'checked_at_utc',
                   'catalog_key', 'assets_ready', 'can_send_packets'}
         current = legacy | {'data_compatibility', 'protocol_compatibility'}
+        diagnostic = current | {'failure_feature', 'failure_stage'}
         if (type(report) is not dict
                 or ((report.get('schema_version') == 1 and set(report) != legacy)
-                    or (report.get('schema_version') == STATUS_SCHEMA
+                    or (report.get('schema_version') == 2
                         and set(report) != current)
-                    or report.get('schema_version') not in (1, STATUS_SCHEMA))
-                or (report['schema_version'] == STATUS_SCHEMA and
+                    or (report.get('schema_version') == 3
+                        and set(report) != diagnostic)
+                    or report.get('schema_version') not in (1, 2, 3))
+                or (report['schema_version'] in (2, 3) and
                     (report['data_compatibility'] not in ('compatible', 'unverified')
                      or report['protocol_compatibility'] != 'unverified'))
+                or (report['schema_version'] == 3 and
+                    not ((report['failure_feature'] is None and report['failure_stage'] is None)
+                         or (report['failure_feature'] in FAILURE_FEATURES and
+                             report['failure_stage'] in FAILURE_STAGES)))
                 or report['status'] not in STATES
                 or report['assets_ready'] is not False
                 or report['can_send_packets'] is not False
@@ -101,6 +112,15 @@ def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
         runner = run_auto_catalog
     key = None
     data_compatibility = 'unverified'
+    failure_feature = failure_stage = None
+    def track_progress(phase, details):
+        nonlocal failure_feature, failure_stage
+        if (phase == 'extract_failed' and isinstance(details, dict)
+                and details.get('feature') in FAILURE_FEATURES
+                and details.get('stage') in FAILURE_STAGES):
+            failure_feature, failure_stage = details['feature'], details['stage']
+        if progress is not None:
+            progress(phase, details)
     if real_launcher_run:
         # The four-feature candidate may fail before the full 1275 runtime
         # files are prepared (e.g. a separately audited Eve decoder). Give
@@ -121,8 +141,8 @@ def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
                 progress('runtime_bundle_unavailable', {})
     try:
         kwargs = {'download': True, 'parse': True}
-        if progress is not None:
-            kwargs['progress'] = progress
+        if progress is not None or real_launcher_run:
+            kwargs['progress'] = track_progress
         try:
             result = runner(**kwargs)
         except Exception:
@@ -187,6 +207,8 @@ def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
         'catalog_key': key,
         'data_compatibility': data_compatibility,
         'protocol_compatibility': 'unverified',
+        'failure_feature': failure_feature,
+        'failure_stage': failure_stage,
         'assets_ready': False,
         'can_send_packets': False,
     }

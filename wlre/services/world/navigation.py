@@ -6,6 +6,7 @@ applied. This module never sends movement commands.
 """
 from wlre.paths import RESOURCE_ROOT
 import heapq
+import io
 import json
 import math
 from pathlib import Path
@@ -25,7 +26,11 @@ def finite(*values):
 class Repository:
     def __init__(self, path=None):
         self.path = Path(path) if path else RESOURCE_ROOT.joinpath('navigation_data.zip')
-        with zipfile.ZipFile(self.path) as z:
+        self._database_archive = None
+        if path is None:
+            from wlre.storage.bundled_database import load_bundled_bytes
+            self._database_archive = load_bundled_bytes('navigation_data.zip', root=RESOURCE_ROOT)
+        with self._open_archive() as z:
             self.catalog = json.loads(z.read('catalog.json'))
         for row in self.catalog:row['display_name']=model_label(row['id'])
         self.scenes = {r['id']: r for r in self.catalog}
@@ -43,10 +48,13 @@ class Repository:
             raise NavigationError('找不到場景資源：' + sid)
         if not row['entry']:
             raise NavigationError(sid + ' 尚未識別到同類 A* 導航圖。')
-        with zipfile.ZipFile(self.path) as z:
+        with self._open_archive() as z:
             mesh = Mesh(json.loads(z.read(row['entry'])))
         mesh.scene_id = sid
         return mesh
+
+    def _open_archive(self):
+        return zipfile.ZipFile(io.BytesIO(self._database_archive) if self._database_archive is not None else self.path)
 
 
 class Mesh:

@@ -68,6 +68,11 @@ class VersionGateController:
             'error': 'Launcher 四類候選準備未完成；1275 正式 Bundle 仍由獨立校驗器檢查',
             'preview': 'Launcher 僅預覽下載計畫',
         }.get(code, '尚無 Launcher 自動資源準備紀錄')
+        if receipt and receipt.get('failure_feature') and receipt.get('failure_stage'):
+            feature = {'npc': 'NPC', 'shops': '商店', 'crafting': '製作',
+                       'scenes': '場景'}[receipt['failure_feature']]
+            self._launcher_catalog_status += (
+                f"｜{feature}資料失敗：{receipt['failure_stage']}")
         # Display the actual missing full-runtime inputs instead of telling
         # users to guess which two ZIPs or internal tables are absent.
         # Local report is untrusted and must never affect login eligibility.
@@ -87,14 +92,22 @@ class VersionGateController:
                 # Old ZIPs are optional when a separately pinned full Bundle
                 # runtime is used. Keep this clearly supplemental.
                 self._launcher_catalog_status += '｜舊式 ZIP（非唯一來源）：' + summarize(gaps)
-        if receipt is not None and receipt.get('status') == 'review_required':
-            from wlre.services.world.resource_rebuilder import read_inventory_summary
+        if receipt is not None and receipt.get('status') in ('review_required', 'downloaded_unparsed'):
+            from wlre.services.world.resource_rebuilder import read_inventory_summary, read_processing_summary
             raw_inventory = read_inventory_summary(receipt['catalog_key'])
             if raw_inventory is not None:
                 self._launcher_catalog_status += (
                     f"｜原始資源 {raw_inventory['asset_collected']}/"
                     f"{raw_inventory['asset_total']}，"
                     f"重用 {raw_inventory['existing_or_cached_reused']}")
+            processing = read_processing_summary(receipt['catalog_key'])
+            if processing:
+                done = sum(state in ('已解析', '候選已解析') for state in processing.values())
+                pending = [name for name, state in processing.items()
+                           if state not in ('已解析', '候選已解析')]
+                self._launcher_catalog_status += f'｜資料解析 {done}/{len(processing)}'
+                if pending:
+                    self._launcher_catalog_status += '；待處理：' + '、'.join(pending)
             # This number is a display-only derived candidate, NOT evidence
             # that the missing pinned formal indexes are available.
 
@@ -354,7 +367,9 @@ class VersionGateController:
                 status_text = f"{stage}：{reason}"
             else:
                 status_text = "無法完整驗證；請檢查各資源包的錯誤原因"
-        self._version_remote.set(status_text + "｜" + self._launcher_catalog_status)
+        db_status = {'same': '資料庫版本符合官方', 'different': '資料庫版本與官方不同',
+                     'unverified': '資料庫版本未確認'}.get(result.get('database_comparison'))
+        self._version_remote.set(status_text + (('｜' + db_status) if db_status else '') + "｜" + self._launcher_catalog_status)
         if self.version_gate_state == "checking":
             self._version_heading.set("正在向官方來源查詢版本…")
             self._version_main.set("查詢中…")

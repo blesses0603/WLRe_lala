@@ -1,0 +1,29 @@
+{
+  "root": "D:\\Program Files\\WL_Re\\飄流幻境Re_星之方舟_Data",
+  "file_count": 3572,
+  "bytes": 2756477856,
+  "packages": {
+    "DataPackage": {
+      "assets": 190,
+      "bundles": 22,
+      "verified": 22,
+      "missing": []
+    },
+    "MainPackage": {
+      "assets": 21577,
+      "bundles": 1732,
+      "verified": 1732,
+      "missing": []
+    }
+  },
+  "raw_pattern_hits": [
+    {
+      "path": "yoo/MainPackage/BundleFiles/aa/aa666035f641745678269b68b2f30c0d/__data",
+      "patterns": [
+        "ascii_63520"
+      ]
+    }
+  ],
+  "errors": [],
+  "elapsed_seconds": 44.3
+}

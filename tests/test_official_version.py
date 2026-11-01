@@ -103,6 +103,20 @@ class OfficialResourceVersionTests(unittest.TestCase):
         self.assertEqual(got["resource_path"], "1.3.22")
         self.assertEqual(got["packages"]["MainPackage"]["remote"].split("_")[0], "1276")
 
+    def test_four_component_official_path_is_checked_without_bypassing_baseline(self):
+        updated = RESOURCE_MAP.replace(b"1.3.21", b"1.3.22.1")
+        urls = official_package_urls("1.3.22.1")
+        for url in urls.values():
+            self.assertEqual(validate_source(url), url)
+        observed = {RESOURCE_MAP_URL: updated,
+                    urls["MainPackage"]: b"1276_2026_10_22_10_00_00_01",
+                    urls["DataPackage"]: b"1276_2026_10_22_10_00_00_02"}
+        got = check_official_game_resources(fetcher=lambda url: observed[url])
+        self.assertEqual(got["resource_path"], "1.3.22.1")
+        self.assertEqual(got["status"], "resources_changed")
+        with self.assertRaises(VersionSourceError):
+            official_package_urls("1.3.22.1.2")
+
     def test_resource_path_fetch_fails_without_using_stale_path(self):
         def broken(url):
             raise VersionSourceError("offline")

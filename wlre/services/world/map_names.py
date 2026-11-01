@@ -7,7 +7,8 @@ from functools import lru_cache
 
 @lru_cache(maxsize=1)
 def data():
-    return json.loads(RESOURCE_ROOT.joinpath('map_names.json').read_text(encoding='utf8'))
+    from wlre.storage.bundled_database import load_bundled_json
+    return load_bundled_json('map_names.json', root=RESOURCE_ROOT)
 
 
 def parse_map_id(value):

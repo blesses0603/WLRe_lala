@@ -49,8 +49,12 @@ class SmallMaps:
         self.source_revision = str(source_revision or '1262')
         self.supports_navigation = self.source_revision != '1275'
         self.path=Path(path) if path else RESOURCE_ROOT.joinpath('smallmaps.zip')
+        self._database_archive = None
+        if path is None:
+            from wlre.storage.bundled_database import load_bundled_bytes
+            self._database_archive = load_bundled_bytes('smallmaps.zip', root=RESOURCE_ROOT)
         self.coordinates=Coordinates() if self.supports_navigation else None
-        with zipfile.ZipFile(self.path) as z:
+        with self._open_archive() as z:
             self.images=json.loads(z.read('image_index.json'))
             self.archive_entries=set(z.namelist())
         self.entries={int(x['name'].rsplit('_',1)[1]):x.get('entry',x['name']+'.png') for x in self.images}
@@ -95,9 +99,12 @@ class SmallMaps:
         from PIL import Image
         model=parse_map_id(model)
         if model not in self.entries:return None
-        with zipfile.ZipFile(self.path) as z:
+        with self._open_archive() as z:
             blob=z.read(self.entries[model])
         with Image.open(io.BytesIO(blob)) as im:return im.convert('RGBA')
+
+    def _open_archive(self):
+        return zipfile.ZipFile(io.BytesIO(self._database_archive) if self._database_archive is not None else self.path)
 
     def projection(self,logical_map):
         if self.source_revision == '1275':

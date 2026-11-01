@@ -25,6 +25,18 @@ def contract(feature, schema, raw, version=REV, name='Eve'):
 
 
 class AdapterTests(unittest.TestCase):
+    def test_official_35_byte_recipes_keep_duplicate_outputs_and_timed_read_only(self):
+        record = bytearray(33)
+        struct.pack_into('<H', record, 0, 123)
+        timed = bytearray(record)
+        struct.pack_into('<H', timed, 28, 1078)
+        raw = struct.pack('<iH', 2, 10) + record + struct.pack('<H', 11) + timed
+        result = parse_feature(catalog_key=KEY, package_versions={'DataPackage': REV},
+                               contract=contract('crafting', 'smith-new-35-v1', raw, name='SmithData_C'), raw=raw)
+        self.assertEqual([r['recipe_id'] for r in result.records], [10, 11])
+        self.assertEqual([r['read_only'] for r in result.records], [False, True])
+        self.assertFalse(result.can_send_packets)
+
     def test_npc_read_only_and_no_fixed_1275_runtime_assumption(self):
         raw = blob('EventData.NewNpc', {'100': [
             {'index': 3, 'npc_id': 42, 'x': 150, 'y': 200}]})

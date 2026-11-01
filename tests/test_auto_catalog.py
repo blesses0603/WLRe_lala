@@ -29,6 +29,16 @@ def crc(raw):
 
 
 class AutoCatalogTests(unittest.TestCase):
+    def test_new_smith_schema_only_for_reviewed_official_manifest(self):
+        from wlre.services.world.auto_catalog import _bindings_for_snapshot
+        current = {'packages': {'DataPackage': '1286_2026_10_29_13_42_37_94'}}
+        newer = {'packages': {'DataPackage': '1287_2026_11_01_12_00_00_00'}}
+        def crafting(snapshot):
+            return next(b.contract.schema_id for b in _bindings_for_snapshot(snapshot)
+                        if b.contract.feature == 'crafting')
+        self.assertEqual(crafting(current), 'smith-new-35-v1')
+        self.assertEqual(crafting(newer), 'smith-new-33-v1')
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)

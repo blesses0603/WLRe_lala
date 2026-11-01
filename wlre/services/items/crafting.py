@@ -7,7 +7,8 @@ import json,time
 from wlre.network.wire import Packet, Reader, Writer, ProtocolError
 from wlre.services.items.combat_resources import item_name, available
 
-RECIPES=json.loads(RESOURCE_ROOT.joinpath('crafting_catalog.json').read_text(encoding='utf-8'))['recipes']
+from wlre.storage.bundled_database import load_bundled_json
+RECIPES=load_bundled_json('crafting_catalog.json', root=RESOURCE_ROOT)['recipes']
 
 
 def activate_1275_recipes(runtime):
@@ -161,6 +162,7 @@ def tool_for(state,item_id):
 def recipe_plan(state,item_id,count):
     r=RECIPES.get(str(item_id))
     if not r:raise ProtocolError('找不到這個製作配方')
+    if r.get('read_only') is True:raise ProtocolError('此配方僅供查看，不能加入製作排程')
     if r.get('open_used',0)!=0:raise ProtocolError('此製作物在目前版本尚未開放')
     if not isinstance(count,int) or isinstance(count,bool) or not 1<=count<=255:raise ProtocolError('製作批數必須為 1～255')
     if r['design_id']:raise ProtocolError('此配方需要圖紙解鎖；圖鑑狀態尚未同步，未送出')

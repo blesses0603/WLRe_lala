@@ -21,7 +21,7 @@ _HEX64 = re.compile(r'[a-f0-9]{64}\Z')
 _SCHEMAS = {
     'npc': ('eve-npc-json-v1',),
     'shops': ('eve-interact-json-v1',),
-    'crafting': ('smith-new-33-v1',),
+    'crafting': ('smith-new-33-v1', 'smith-new-35-v1'),
     'scenes': ('stage-new-76-v1',),
 }
 
@@ -137,6 +137,13 @@ def _decode(contract: SourceContract, raw: bytes):
         from wlre.services.world.preview_1275 import parse_smith_1275
         result = parse_smith_1275(raw)
         if type(result) is not dict or len(result) != count:
+            raise CatalogAdapterError('Smith parser count mismatch')
+        return result, count
+    if schema == 'smith-new-35-v1':
+        count = _binary_table(raw, 35)
+        from wlre.services.world.smith_candidate import parse_smith_candidate, mark_timed_recipes
+        result = mark_timed_recipes(parse_smith_candidate(raw))
+        if len(result) != count:
             raise CatalogAdapterError('Smith parser count mismatch')
         return result, count
     if schema == 'stage-new-76-v1':

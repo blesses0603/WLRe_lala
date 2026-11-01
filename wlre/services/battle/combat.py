@@ -6,7 +6,8 @@ from wlre.paths import RESOURCE_ROOT
 import json
 from wlre.network.wire import ProtocolError
 
-DATA=json.loads(RESOURCE_ROOT.joinpath('normal_attack_data.json').read_text(encoding='utf8'))
+from wlre.storage.bundled_database import load_bundled_json
+DATA=load_bundled_json('normal_attack_data.json', root=RESOURCE_ROOT)
 NORMALS={10001:'空手普攻',10002:'刃技普攻',10003:'棒技普攻',10004:'魔杖／法器普攻',10005:'槍技普攻',
          10007:'銃普攻',10018:'人型夥伴銃普攻',10019:'弓普攻',10020:'人型夥伴弓普攻',
          10026:'火箭筒普攻',10027:'人型夥伴火箭筒普攻',10010:'怪物貼地普攻',10023:'怪物跳躍普攻',10029:'怪物貼地魔法普攻',10030:'怪物跳躍魔法普攻'}

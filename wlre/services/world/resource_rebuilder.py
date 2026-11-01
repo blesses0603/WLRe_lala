@@ -175,6 +175,35 @@ def _derive_candidate_indexes(payloads, *, revision):
     Future/unknown revisions keep their downloaded raw resources, but cannot
     silently inherit 1275 field layouts or obtain login/packet approval.
     """
+    if revision != '1275' and isinstance(revision, str) and revision.isdecimal() and 0 < int(revision) <= 999999:
+        # This is a read-only candidate, not a runtime recipe catalogue.
+        # Preserve the distinct row key: several rows share one output item.
+        from wlre.services.world.smith_candidate import parse_smith_candidate, mark_timed_recipes
+        from wlre.services.world.itemdata_v1 import parse_itemdata
+        def find(name):
+            found = [body for key, body in payloads.items()
+                     if key.startswith('tables/') and key.endswith('/' + name + '.bytes')]
+            return found[0] if len(found) == 1 else None
+        smith, item = find('SmithData_C'), find('ItemData_C')
+        if smith is None or item is None:
+            return {}
+        try:
+            rows = mark_timed_recipes(parse_smith_candidate(smith))
+            items = parse_itemdata(item)
+            if any(row['item_id'] not in items or any(
+                    material['item_id'] not in items for material in row['materials'])
+                   for row in rows):
+                return {}
+            body = json.dumps({
+                'schema_version': 1, 'revision': int(revision),
+                'sources': {'SmithData_C': hashlib.sha256(smith).hexdigest(),
+                            'ItemData_C': hashlib.sha256(item).hexdigest()},
+                'approved': False, 'assets_ready': False, 'can_send_packets': False,
+                'records': rows,
+            }, ensure_ascii=True, sort_keys=True, separators=(',', ':')).encode('utf-8')
+            return {'candidate_indexes/smith_recipes_35.json': body} if len(body) <= MAX_SOURCE_BYTES else {}
+        except (ValueError, TypeError, KeyError):
+            return {}
     if revision != '1275':
         return {}
     from wlre.services.world.eve_v115 import derive_eve_index
@@ -510,6 +539,8 @@ def rebuild_raw_resources(identity, data_manifest, *,
     payloads, entries = {}, {}
     missing, reused, extracted, downloaded = [], 0, 0, 0
     spent = 0
+    attempts = 0
+    attempted_bytes = 0
     attempted = set()
     total_bytes = 0
     for asset_path, name in sorted(selected.items(),
@@ -530,17 +561,21 @@ def rebuild_raw_resources(identity, data_manifest, *,
                 required = specs[dependency_name]
                 path = required.cache_path(bundle_root)
                 if not _verified_file(path, required):
-                    if (dependency_name not in attempted and
-                            downloaded < max_downloads and
-                            spent + required.file_size <= max_download_bytes):
+                    if dependency_name not in attempted:
                         attempted.add(dependency_name)
-                        try:
-                            fetcher(required, cache_root=bundle_root)
-                            if _verified_file(path, required):
-                                downloaded += 1
-                                spent += required.file_size
-                        except (OSError, ValueError, RuntimeError):
-                            pass
+                        for _ in range(2):
+                            if attempts >= max_downloads or attempted_bytes + required.file_size > max_download_bytes:
+                                break
+                            attempts += 1
+                            attempted_bytes += required.file_size
+                            try:
+                                fetcher(required, cache_root=bundle_root)
+                                if _verified_file(path, required):
+                                    downloaded += 1
+                                    spent += required.file_size
+                                    break
+                            except (OSError, ValueError, RuntimeError):
+                                pass
                 if not _verified_file(path, required):
                     complete = False
                 paths.append(path)
@@ -616,6 +651,18 @@ def rebuild_raw_resources(identity, data_manifest, *,
             'size': len(body), 'sha256': hashlib.sha256(body).hexdigest(),
             'source': 'derived_unapproved', 'bundle_md5': None,
         }
+    if not missing:
+        # Only complete inventories can establish absence in a newer version.
+        from wlre.services.world.resource_database import record_inventory
+        staging.mkdir(parents=True, exist_ok=True)
+        comparison = record_inventory(candidate_root / 'resource_inventory.sqlite3',
+                                      identity.key, payloads, identity=identity)
+        body = json.dumps(comparison, ensure_ascii=True, sort_keys=True,
+                          separators=(',', ':')).encode('utf-8')
+        member = 'candidate_indexes/table_changes.json'
+        payloads[member] = body
+        entries[member] = {'size': len(body), 'sha256': hashlib.sha256(body).hexdigest(),
+                           'source': 'derived_unapproved', 'bundle_md5': None}
     missing_formal = (
         sorted(set(pinned_files) - set(entries)) if pinned_files else
         ['尚無固定 SHA 的完整 1275 DataCatalog manifest；不能正式封裝']
@@ -663,6 +710,8 @@ def rebuild_raw_resources(identity, data_manifest, *,
         'existing_or_cached_reused': reused, 'newly_extracted': extracted,
         'new_bundle_downloads': downloaded,
         'new_bundle_download_bytes': spent,
+        'download_attempts': attempts,
+        'attempted_download_bytes': attempted_bytes,
         'derived_index_candidates': len(derived_candidates),
         'missing_asset_paths': missing,
         'missing_formal_members': sorted(set(missing_formal)),
@@ -704,10 +753,52 @@ def rebuild_raw_resources(identity, data_manifest, *,
     return {key: report[key] for key in (
         'asset_total', 'asset_collected', 'existing_or_cached_reused',
         'newly_extracted', 'new_bundle_downloads',
-        'new_bundle_download_bytes', 'derived_index_candidates', 'missing_asset_paths',
+        'new_bundle_download_bytes', 'download_attempts', 'attempted_download_bytes', 'derived_index_candidates', 'missing_asset_paths',
         'missing_formal_members', 'formal_blockers', 'formal_construction',
         'complete_raw_assets', 'formal_approved',
         'assets_ready', 'can_send_packets', 'protocol_compatibility')}
+
+
+def read_processing_summary(catalog_key, *, candidate_root=None):
+    """Read bounded display-only parser statuses from the matching inventory."""
+    if type(catalog_key) is not str or len(catalog_key) != 64 or any(c not in '0123456789abcdef' for c in catalog_key):
+        return None
+    root = Path(candidate_root) if candidate_root is not None else data_root() / 'official_sync' / 'derived_catalogs'
+    path = root / catalog_key / _FILE
+    member = 'candidate_indexes/table_changes.json'
+    try:
+        if path.is_symlink() or not path.is_file() or path.stat().st_size > MAX_RESULT_BYTES:
+            return None
+        with ZipFile(path) as z:
+            names = z.namelist()
+            if len(names) != len(set(names)) or z.getinfo('inventory.json').file_size > 128 * 1024:
+                return None
+            meta = json.loads(z.read('inventory.json'))
+            entry = meta['entries'][member]
+            size = z.getinfo(member).file_size
+            if (meta.get('catalog_key') != catalog_key or meta.get('formal_approved') is not False
+                    or entry.get('source') != 'derived_unapproved' or size != entry.get('size')
+                    or not 0 < size <= MAX_SOURCE_BYTES):
+                return None
+            raw = z.read(member)
+            if hashlib.sha256(raw).hexdigest() != entry.get('sha256'):
+                return None
+            doc = json.loads(raw)
+        other = doc.get('other_rows')
+        if type(other) is not dict:
+            return None
+        specs = {'物品': doc.get('item_rows'), 'NPC': other.get('eve_npc_v1'),
+                 '互動': other.get('eve_interact_v1'), '對話': other.get('talk_v1'),
+                 '文字': other.get('text_v1'), '場景': other.get('scenes_v1')}
+        result = {}
+        for label, status in specs.items():
+            result[label] = ('已解析' if type(status) is dict and status.get('status') == 'parsed'
+                             else '格式待處理' if type(status) is dict and status.get('status') == 'parse_failed'
+                             else '尚未解析')
+        result['製作'] = '候選已解析' if type(doc.get('smith_rows')) is dict else '格式待處理或未提供'
+        return result
+    except (OSError, BadZipFile, KeyError, ValueError, TypeError, RuntimeError):
+        return None
 
 
 def read_inventory_summary(catalog_key, *, candidate_root=None):

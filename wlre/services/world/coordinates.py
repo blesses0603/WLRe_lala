@@ -14,8 +14,9 @@ from wlre.services.world.map_names import parse_map_id, map_label
 class Coordinates:
     def __init__(self):
         base = RESOURCE_ROOT
-        self.stages = json.loads((base/'stage_coordinates.json').read_text(encoding='utf8'))['stages']
-        self.origins = json.loads((base/'graph_origins.json').read_text(encoding='utf8'))
+        from wlre.storage.bundled_database import load_bundled_json
+        self.stages = load_bundled_json('stage_coordinates.json', root=base)['stages']
+        self.origins = load_bundled_json('graph_origins.json', root=base)
 
     def mapping(self, logical_map):
         try:

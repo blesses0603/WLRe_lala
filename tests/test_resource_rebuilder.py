@@ -1,6 +1,8 @@
 """Offline tests of incremental raw asset rebuilding, retaining existing files."""
 import hashlib
 import json
+import sqlite3
+from contextlib import closing
 from pathlib import Path
 import tempfile
 import unittest
@@ -113,6 +115,42 @@ class RawRebuilderTests(unittest.TestCase):
         self.assertTrue(two['complete_raw_assets'])
         self.assertEqual(len(self.requests), 2)
         self.assertFalse(two['can_send_packets'])
+
+    def test_missing_database_record_is_rebuilt_from_verified_official_cache(self):
+        self.rebuild()
+        database = self.candidates / 'resource_inventory.sqlite3'
+        with closing(sqlite3.connect(database)) as db, db:
+            db.execute("DELETE FROM resources WHERE name='AlphaData_C.bytes'")
+        report = self.rebuild()
+        self.assertTrue(report['complete_raw_assets'])
+        self.assertEqual(len(self.requests), 2)
+        with closing(sqlite3.connect(database)) as db:
+            row = db.execute("SELECT data FROM resources WHERE name='AlphaData_C.bytes'").fetchone()
+        self.assertEqual(row[0], b'raw:Assets/ResourcesBuild/Data/AlphaData_C.bytes')
+
+    def test_missing_bundle_is_downloaded_again_before_rebuilding(self):
+        self.rebuild()
+        spec = spec_from_manifest(data_ver='1.3.21', package='DataPackage',
+                                  index=self.index, name='datapackage_data_a.bundle')
+        spec.cache_path(self.bundles).unlink()
+        report = self.rebuild()
+        self.assertTrue(report['complete_raw_assets'])
+        self.assertEqual(self.requests.count('datapackage_data_a.bundle'), 2)
+
+    def test_transient_download_failure_is_retried_within_budget(self):
+        failures = []
+        def fetch(spec, *, cache_root):
+            if not failures:
+                failures.append(spec.name)
+                raise OSError('temporary failure')
+            return self.fetch(spec, cache_root=cache_root)
+        report = rebuild_raw_resources(
+            self.identity, self.manifest, bundle_root=self.bundles,
+            candidate_root=self.candidates, formal_base=self.home,
+            fetcher=fetch, extractor=self.extract, max_downloads=4)
+        self.assertTrue(report['complete_raw_assets'])
+        self.assertEqual(report['download_attempts'], 3)
+        self.assertEqual(report['new_bundle_downloads'], 2)
 
     def test_existing_pinned_table_is_reused_without_re_download(self):
         member = 'tables/datapackage_data_a.bundle/AlphaData_C.bytes'
@@ -280,7 +318,7 @@ class RawRebuilderTests(unittest.TestCase):
         self.assertFalse((target / DATA_FILE).exists())
         self.assertFalse((target / EVE_FILE).exists())
 
-    def test_failed_bundle_download_attempts_once_per_bundle(self):
+    def test_failed_bundle_download_retries_are_bounded_per_bundle(self):
         self.index['assets'].append({
             'path':'Assets/ResourcesBuild/Data/ExtraData_C.bytes',
             'bundle_name':'datapackage_data_a.bundle'})
@@ -293,7 +331,8 @@ class RawRebuilderTests(unittest.TestCase):
                 self.identity,self.manifest,bundle_root=self.bundles,
                 candidate_root=self.candidates,formal_base=self.home,
                 fetcher=fail,extractor=self.extract)
-        self.assertEqual(self.requests.count('datapackage_data_a.bundle'), 1)
+        self.assertEqual(self.requests.count('datapackage_data_a.bundle'), 2)
+        self.assertLessEqual(len(self.requests), 4)
         self.assertGreater(len(result['missing_asset_paths']), 0)
 
 

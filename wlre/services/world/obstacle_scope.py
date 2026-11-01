@@ -8,7 +8,8 @@ HOUSE_SCENES=frozenset((10299,10298,10000))
 
 @lru_cache(maxsize=1)
 def known_scenes():
-    data=json.loads(RESOURCE_ROOT.joinpath('stage_coordinates.json').read_text(encoding='utf-8'))
+    from wlre.storage.bundled_database import load_bundled_json
+    data=load_bundled_json('stage_coordinates.json', root=RESOURCE_ROOT)
     return frozenset(int(x) for x in data['stages'])
 
 

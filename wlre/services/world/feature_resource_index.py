@@ -51,7 +51,7 @@ def _current_index(root):
     """Only select a catalog explicitly named by the current Launcher receipt."""
     from wlre.services.world.launcher_catalog import read_launcher_status
     receipt = read_launcher_status(root=root)
-    if not receipt or receipt.get('schema_version') != 2:
+    if not receipt or receipt.get('schema_version') not in (2, 3):
         return None
     key = receipt.get('catalog_key')
     if type(key) is not str or len(key) != 64 or any(c not in '0123456789abcdef' for c in key):

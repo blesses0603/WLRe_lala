@@ -54,10 +54,12 @@ MAX_CANDIDATE_BYTES = 4 * MAX_SOURCE_BYTES + 1024 * 1024
 def _bindings_for_snapshot(snapshot):
     package = 'DataPackage'
     revision = snapshot['packages'][package]
+    schema_override = ('smith-new-35-v1' if revision == '1286_2026_10_29_13_42_37_94' else None)
     return tuple(
         AssetBinding(_ASSET_ROOT + _SOURCE_MAP[feature][0],
                      SourceContract(feature, _SOURCE_MAP[feature][1],
-                                    _SOURCE_MAP[feature][2], _PENDING_DIGEST,
+                                    (schema_override if feature == 'crafting' and schema_override
+                                     else _SOURCE_MAP[feature][2]), _PENDING_DIGEST,
                                     package, revision),
                      tuple(_ASSET_ROOT + name for name in _SOURCE_MAP[feature][3]))
         for feature in FEATURES
@@ -236,10 +238,14 @@ def _rebuild_known_resources(result, *, identity, manifests, bundle_root,
                     or changed > batch_files):
                 raise AutoCatalogError('Invalid raw resource download accounting')
             total_downloaded += changed
-            remaining_files -= changed
+            attempts = current.get('download_attempts', changed)
+            if type(attempts) is not int or not changed <= attempts <= batch_files:
+                raise AutoCatalogError('Invalid raw resource attempt accounting')
+            remaining_files -= attempts
             # Use the actual independently verified downloaded bytes.
-            charged = current.get('new_bundle_download_bytes',
-                                  batch_bytes if changed else 0)
+            charged = current.get('attempted_download_bytes',
+                                  current.get('new_bundle_download_bytes',
+                                              batch_bytes if changed else 0))
             if (type(charged) is not int or charged < 0
                     or charged > batch_bytes or (changed and not charged)):
                 raise AutoCatalogError('Invalid raw resource byte accounting')

@@ -64,7 +64,7 @@ def extract_catalog_source(binding: AssetBinding, bundle_paths):
         if name != 'Eve.bytes' or binding.contract.source_name != 'EventData.NewInteract':
             raise UnityTextAssetError('Shop index is not bound to official Eve TextAsset')
         return _shop_index(binding, bundle_paths, raw)
-    if schema == 'smith-new-33-v1' and name == 'SmithData_C.bytes':
+    if schema in ('smith-new-33-v1', 'smith-new-35-v1') and name == 'SmithData_C.bytes':
         return raw
     if schema == 'stage-new-76-v1' and name == 'ScenesData_C.bytes':
         return raw

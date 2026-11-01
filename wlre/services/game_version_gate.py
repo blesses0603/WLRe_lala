@@ -8,6 +8,36 @@ from wlre.services.official_version import (
 from wlre.services.resource_compatibility import baseline_label
 
 
+def compare_database_identity(remote, identity):
+    """Compare current official identifiers with the active stored catalog.
+
+    A match identifies data; it does not establish runtime or protocol support.
+    """
+    if type(remote) is not dict or type(identity) is not dict:
+        return 'unverified'
+    packages = remote.get('packages')
+    entries = identity.get('packages')
+    if type(packages) is not dict or type(entries) is not list or len(entries) != 2:
+        return 'unverified'
+    if any(type(row) is not dict for row in entries):
+        return 'unverified'
+    expected = {row.get('name'): row.get('full_version') for row in entries}
+    if set(expected) != {'DataPackage', 'MainPackage'} or any(type(v) is not str for v in expected.values()):
+        return 'unverified'
+    observed = {name: packages.get(name, {}).get('remote') if type(packages.get(name)) is dict else None
+                for name in expected}
+    if (any(type(v) is not str for v in observed.values()) or
+            type(remote.get('resource_path')) is not str or
+            type(remote.get('official_exe_version')) is not str):
+        return 'unverified'
+    if (remote.get('newer_official_client') is not False or
+            identity.get('data_ver') != remote['resource_path'] or
+            identity.get('exe_version') != remote['official_exe_version'] or
+            observed != expected):
+        return 'different'
+    return 'same'
+
+
 def configured_sources(environ=None):
     """The public verified root; per-package paths are resolved dynamically."""
     return {"ResourcePath_PC.dat": RESOURCE_MAP_URL}
@@ -81,6 +111,16 @@ def run_prelogin_check(sources=None, *, checker=None):
             message += ' 已有本機資源也不能替代本次官方版本確認；請恢復版本查詢後重試。'
         elif all_same and not blocked:
             message += ' 已確認本機 1275 資源包完整；尚未等同正式伺服器協定驗收。'
+    database_comparison = 'unverified'
+    if checker is None and sources is None:
+        from wlre.storage.paths import data_root
+        from wlre.services.world.resource_database import read_active_database_identity
+        try:
+            identity = read_active_database_identity(data_root() / 'official_sync' / 'derived_catalogs' / 'resource_inventory.sqlite3')
+            database_comparison = compare_database_identity(remote, identity)
+        except (OSError, RuntimeError, ValueError):
+            pass  # Missing local data must not replace the online verdict.
     return {"status": status, "blocked": blocked, "message": message,
             "remote": remote, "baseline": dict(BASELINE),
-            "baseline_label": support, "source": "official_remote_only"}
+            "baseline_label": support, "database_comparison": database_comparison,
+            "source": "official_remote_only"}

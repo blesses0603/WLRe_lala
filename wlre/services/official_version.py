@@ -31,10 +31,10 @@ ROOT = "https://wlreftp.chinesegamer.net/WLN/TW"
 RESOURCE_MAP_URL = ROOT + "/ResourcePath_PC.dat"
 MAX_RESPONSE_BYTES = 16 * 1024
 _VERSION = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,63}\Z")
-_DATA_VER = re.compile(r"[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}\Z")
+_DATA_VER = re.compile(r"[0-9]{1,4}(?:\.[0-9]{1,4}){2,3}\Z")
 _SEMVER = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+\Z")
 _RESOURCE_FILE = re.compile(
-    r"/WLN/TW/[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}/ResourcesPC/AssetBundle/"
+    r"/WLN/TW/[0-9]{1,4}(?:\.[0-9]{1,4}){2,3}/ResourcesPC/AssetBundle/"
     r"(?:MainPackage|DataPackage)\.version\Z"
 )
 

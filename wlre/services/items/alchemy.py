@@ -6,7 +6,8 @@ from wlre.paths import RESOURCE_ROOT
 import json,time,copy
 from wlre.network.wire import Packet, Writer, ProtocolError
 from wlre.services.items.combat_resources import CAT, item_name, available
-META=json.loads(RESOURCE_ROOT.joinpath('alchemy_catalog.json').read_text(encoding='utf8'))['items']
+from wlre.storage.bundled_database import load_bundled_json
+META=load_bundled_json('alchemy_catalog.json', root=RESOURCE_ROOT)['items']
 MODES={'無技能':(150,None),'一般':(14,15997),'中階':(87,15998),'高階':(101,15999)}
 
 

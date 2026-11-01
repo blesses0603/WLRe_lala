@@ -16,7 +16,8 @@ SCHEMA = 1
 PACKAGES = ('DataPackage', 'MainPackage')
 SNAPSHOT_NAME = 'pc_versions.json'
 MAX_SNAPSHOT_BYTES = 4096
-_DATA_VERSION = re.compile(r'[0-9]{1,4}(?:\.[0-9]{1,4}){2}\Z')
+_DATA_VERSION = re.compile(r'[0-9]{1,4}(?:\.[0-9]{1,4}){2,3}\Z')
+_EXE_VERSION = re.compile(r'[0-9]{1,4}(?:\.[0-9]{1,4}){2}\Z')
 _PACKAGE_VERSION = re.compile(r'[1-9][0-9]{0,5}_20[0-9]{2}(?:_[0-9]{2}){6}\Z')
 
 
@@ -39,7 +40,7 @@ def validate_snapshot(value):
             not isinstance(value['data_ver'], str) or
             not _DATA_VERSION.fullmatch(value['data_ver']) or
             not isinstance(value['exe_version'], str) or
-            not _DATA_VERSION.fullmatch(value['exe_version']) or
+            not _EXE_VERSION.fullmatch(value['exe_version']) or
             not isinstance(value['packages'], dict) or
             set(value['packages']) != set(PACKAGES) or
             type(value['assets_ready']) is not bool or value['assets_ready'] is not False or

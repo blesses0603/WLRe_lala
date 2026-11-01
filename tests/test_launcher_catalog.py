@@ -52,7 +52,7 @@ class LauncherCatalogTests(unittest.TestCase):
             'approved': False,
         })
         result = prepare_on_launch(root=self.root, runner=runner, environ={})
-        self.assertEqual(result['schema_version'], 2)
+        self.assertEqual(result['schema_version'], 3)
         self.assertEqual(result['data_compatibility'], 'compatible')
         self.assertEqual(result['protocol_compatibility'], 'unverified')
         self.assertFalse(result['assets_ready'])
@@ -160,6 +160,25 @@ class LauncherCatalogTests(unittest.TestCase):
         runner.assert_called_once_with(download=True, parse=True)
         self.assertEqual(receipt['status'], 'error')
         self.assertIsNone(receipt['catalog_key'])
+
+    def test_parse_failure_stage_survives_raw_download_fallback(self):
+        def run(**kwargs):
+            if kwargs['parse']:
+                kwargs['progress']('extract_failed', {'feature': 'crafting',
+                                                     'stage': '資料 Schema'})
+                raise ValueError('private details')
+            return {'status': 'downloaded_unparsed', 'catalog_key': 'a' * 64}
+        with patch('wlre.services.world.launcher_catalog.data_root', return_value=self.root), \
+             patch('wlre.services.world.auto_catalog.run_auto_catalog', side_effect=run), \
+             patch('wlre.services.world.bundle_runtime_1275.sync_pinned_runtime_bundles',
+                   side_effect=ValueError('unavailable')), \
+             patch('wlre.services.world.resource_gap_diagnostics.diagnose_resources', return_value={}), \
+             patch('wlre.services.world.resource_gap_diagnostics.save_report'):
+            receipt = prepare_on_launch(environ={})
+        self.assertEqual((receipt['failure_feature'], receipt['failure_stage']),
+                         ('crafting', '資料 Schema'))
+        self.assertEqual(read_launcher_status(root=self.root / 'official_sync'), receipt)
+        self.assertNotIn('private details', status_path(self.root / 'official_sync').read_text())
 
     def test_skip_prevents_network_and_writes(self):
         runner = Mock()

@@ -26,6 +26,19 @@ def response(main="1275", data="1275", *, state="same_resources",
 
 
 class RemoteGameVersionTests(unittest.TestCase):
+    def test_database_identity_requires_both_exact_package_versions(self):
+        from wlre.services.game_version_gate import compare_database_identity
+        identity = {'data_ver': '1.3.22.1', 'exe_version': '1.3.0', 'packages': [
+            {'name': 'DataPackage', 'full_version': '1286_2026_10_29_13_42_37_94'},
+            {'name': 'MainPackage', 'full_version': '1284_2026_10_28_19_50_04_11'}]}
+        remote = {'resource_path': '1.3.22.1', 'official_exe_version': '1.3.0',
+                  'newer_official_client': False, 'packages': {
+                      p['name']: {'remote': p['full_version']} for p in identity['packages']}}
+        self.assertEqual(compare_database_identity(remote, identity), 'same')
+        remote['packages']['MainPackage']['remote'] = '1284_2026_10_28_19_50_04_12'
+        self.assertEqual(compare_database_identity(remote, identity), 'different')
+        remote['packages']['DataPackage']['remote'] = None
+        self.assertEqual(compare_database_identity(remote, identity), 'unverified')
     def test_source_is_official_dynamic_resource_map(self):
         self.assertEqual(configured_sources(), {"ResourcePath_PC.dat": RESOURCE_MAP_URL})
 

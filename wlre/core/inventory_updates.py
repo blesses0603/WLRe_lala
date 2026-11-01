@@ -1,7 +1,8 @@
 """1262 ItemBox.AddItemByItemSave: preferred slot, stack cap and nonstacked objects."""
 from wlre.paths import RESOURCE_ROOT
 import json,copy
-STACKABLE=json.loads(RESOURCE_ROOT.joinpath('item_stackable.json').read_text(encoding='utf-8'))['items']
+from wlre.storage.bundled_database import load_bundled_json
+STACKABLE=load_bundled_json('item_stackable.json', root=RESOURCE_ROOT)['items']
 
 def add_item(inventory,value):
     items=copy.deepcopy(inventory['items']);sid=value['item_id'];count=value['count'];preferred=value['index']

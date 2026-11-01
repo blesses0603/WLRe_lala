@@ -1,7 +1,8 @@
 """Read-only official combat item and skill catalog."""
 import json
 from wlre.paths import RESOURCE_ROOT
-CAT=json.loads(RESOURCE_ROOT.joinpath('combat_catalog.json').read_text(encoding='utf8'))
+from wlre.storage.bundled_database import load_bundled_json
+CAT=load_bundled_json('combat_catalog.json', root=RESOURCE_ROOT)
 
 def item_name(item_id):return CAT['items'].get(str(item_id),{}).get('name',f'物品{item_id}')
 def skill_name(skill_id):return CAT['skills'].get(str(skill_id),{}).get('name',f'技能{skill_id}')
@@ -15,6 +16,10 @@ def item_display_name(item_id):
     name; screens separately report the classification/candidate status.
     """
     if type(item_id) is int and item_id > 0:
+        from wlre.services.world.resource_database import candidate_database_item_name
+        candidate = candidate_database_item_name(item_id)
+        if candidate:
+            return candidate
         from wlre.services.world.runtime_1275 import (
             Runtime1275Unavailable, active_runtime, baseline_revision)
         try:

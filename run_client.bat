@@ -1,7 +1,7 @@
 @echo off
 chcp 65001 >nul
 cd /d "%~dp0"
-where py >nul 2>nul
+py -3 -c "import sys" >nul 2>nul
 if errorlevel 1 (
   python -m wlre.launcher 
 ) else (

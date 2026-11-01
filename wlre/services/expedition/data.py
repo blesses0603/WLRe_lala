@@ -56,7 +56,8 @@ def load_catalog():
     path = RESOURCE_ROOT / 'expedition_catalog.json'
     if not path.is_file():
         return {'tasks': {}, 'levels': {}}
-    return json.loads(path.read_text(encoding='utf8'))
+    from wlre.storage.bundled_database import load_bundled_json
+    return load_bundled_json(path.name, root=path.parent)
 
 
 def parse_text_data(text_data):

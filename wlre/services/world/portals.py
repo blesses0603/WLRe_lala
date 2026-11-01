@@ -410,7 +410,11 @@ class Portals:
                 }
                 self.audit = {}
                 return
-        self.data=json.loads((Path(path) if path else RESOURCE_ROOT.joinpath('portals.json')).read_text(encoding='utf8'))
+        if path:
+            self.data=json.loads(Path(path).read_text(encoding='utf8'))
+        else:
+            from wlre.storage.bundled_database import load_bundled_json
+            self.data=load_bundled_json('portals.json', root=RESOURCE_ROOT)
         self.audit={r['scene']:r for r in self.data['audit']}
 
     def for_scene(self,scene):

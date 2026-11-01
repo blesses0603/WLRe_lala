@@ -21,7 +21,7 @@ from wlre.storage.paths import data_root
 MAX_LIST_BYTES = 512 * 1024
 MAX_ENTRIES = 20000
 OFFICIAL_LUA_BASE = 'https://wlreftp.chinesegamer.net/WLN/TW'
-_DATA_VER = re.compile(r'[0-9]{1,4}(?:\.[0-9]{1,4}){2}\Z')
+_DATA_VER = re.compile(r'[0-9]{1,4}(?:\.[0-9]{1,4}){2,3}\Z')
 _PART = re.compile(r'[A-Za-z0-9_.-]{1,100}\Z')
 _MD5 = re.compile(r'[A-Fa-f0-9]{32}\Z')
 
