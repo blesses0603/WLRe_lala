@@ -5,7 +5,8 @@ from wlre.network.wire import ProtocolError
 
 
 def load_default_profile():
-    profile = json.loads(RESOURCE_ROOT.joinpath('default_profile.json').read_text(encoding='utf-8'))
+    from wlre.storage.full_resource_seed import read_config
+    profile = json.loads(read_config('default_profile.json', root=RESOURCE_ROOT).decode('utf-8'))
     allowed = {'rx_xor','tx_xor','platform','language','verification_endpoint','game_endpoint',
                'capture_sha256','observed_packets','evidence'}
     if set(profile) - allowed:

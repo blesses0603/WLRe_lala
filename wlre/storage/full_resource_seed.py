@@ -78,5 +78,21 @@ def main(argv=None):
     return 0
 
 
+def read_config(name, *, root):
+    """Read shipped policy/config from the pinned seed, never user SQLite."""
+    root=Path(root);seed=root/SEED_NAME
+    if not seed.is_file():
+        return (root/name).read_bytes()
+    verify_seed(seed)
+    if name not in SOURCE_MANIFEST:
+        raise ValueError('未知的隨附設定')
+    with closing(sqlite3.connect(seed.resolve().as_uri()+'?mode=ro',uri=True)) as db:
+        digest=SOURCE_MANIFEST[name][1]
+        raw=db.execute('SELECT data FROM bundled_resources WHERE name=? AND sha256=?',(name,digest)).fetchone()[0]
+    if hashlib.sha256(raw).hexdigest()!=digest:
+        raise ValueError('隨附設定來源在讀取期間變更')
+    return raw
+
+
 if __name__=='__main__':
     raise SystemExit(main())

@@ -29,7 +29,8 @@ def parse(data):
 
 def load():
     """Use the bundled official snapshot, including inside a Nuitka EXE."""
-    with path().open(encoding='utf-8-sig') as stream:return parse(json.load(stream))
+    from wlre.storage.full_resource_seed import read_config
+    return parse(json.loads(read_config('server_list.json', root=RESOURCE_ROOT).decode('utf-8-sig')))
 
 
 def for_endpoint(lines,host,port):

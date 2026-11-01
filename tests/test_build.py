@@ -15,9 +15,11 @@ class BuildPlan(unittest.TestCase):
     def test_resource_list_is_complete_and_contains_no_code(self):
         files=build_nuitka.data_files()
         expected={p for p in (build_nuitka.ROOT/'wlre').rglob('*') if p.is_file() and p.suffix in build_nuitka.DATA_SUFFIXES and not p.name.startswith('.')}
+        from wlre.storage.resource_seed_manifest import SOURCE_MANIFEST
+        expected={p for p in expected if not (p.parent.name=='resources' and p.name in SOURCE_MANIFEST)}
         self.assertEqual(set(files),expected)
-        self.assertTrue(any(p.name=='emoji_images.zip' for p in files))
-        self.assertTrue(any(p.name=='navigation_data.zip' for p in files))
+        self.assertTrue(any(p.name=='resource_catalog_seed.sqlite3' for p in files))
+        self.assertFalse(any(p.name in SOURCE_MANIFEST for p in files))
         self.assertFalse(any(p.suffix in ('.py','.pyc') for p in files))
     def test_direct_entry_and_shared_icon(self):
         command=build_nuitka.make_command('python.exe')
