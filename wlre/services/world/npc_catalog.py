@@ -47,9 +47,9 @@ class NPCIndex:
         self.path = Path(path) if path is not None else RESOURCE_ROOT/'npc_event_index_1262.json.gz'
         self.scenes = {}
         cached = None
-        if path is None and not self.path.is_file():
-            from wlre.storage.bundled_database import read_pinned_legacy_bytes
-            cached = read_pinned_legacy_bytes('npc_event_index_1262.json.gz')
+        if path is None:
+            from wlre.storage.bundled_database import load_legacy_resource
+            cached = load_legacy_resource('npc_event_index_1262.json.gz')
         if path is not None and not self.path.is_file():
             return
         if self.path.suffix == '.gz':
