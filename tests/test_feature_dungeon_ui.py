@@ -55,11 +55,7 @@ class DungeonFeatureUI(unittest.TestCase):
         self.assertTrue(self.page.enter_button.instate(['disabled']))
         with patch.object(self.app, 'send') as send:
             with patch('wlre.ui.instance_ui.messagebox.askyesno',
-                       return_value=False):
-                self.page.start_button.invoke()
-                send.assert_not_called()
-            with patch('wlre.ui.instance_ui.messagebox.askyesno',
-                       return_value=True):
+                       side_effect=AssertionError('不應跳出二次確認')):
                 self.page.start_button.invoke()
             send.assert_called_once_with({
                 'type': 'instance_start', 'mode': 'main'})
@@ -72,7 +68,7 @@ class DungeonFeatureUI(unittest.TestCase):
         self.assertTrue(self.page.enter_button.instate(['!disabled']))
         with patch.object(self.app, 'send') as send:
             with patch('wlre.ui.instance_ui.messagebox.askyesno',
-                       return_value=True):
+                       side_effect=AssertionError('不應跳出二次確認')):
                 self.page.enter_button.invoke()
             send.assert_called_once_with({
                 'type': 'instance_enter', 'mode': 'main'})

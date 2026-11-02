@@ -168,7 +168,7 @@ class StandbyUI(unittest.TestCase):
         )
         return state
 
-    def test_ready_button_requires_host_full_room_and_confirms(self):
+    def test_ready_button_requires_host_full_room_without_second_prompt(self):
         data = self.data()
         self.app.instance_panel.render(data, live=True)
         self.assertIn('NPC ID 1555', self.page.companion_note.get())
@@ -176,10 +176,7 @@ class StandbyUI(unittest.TestCase):
         self.assertIn('2/2 人，已滿員', self.page.headcount_note.get())
         self.assertIn('房主可以準備', self.page.headcount_note.get())
         with patch.object(self.app, 'send') as send:
-            with patch('wlre.ui.instance_ui.messagebox.askyesno', return_value=False):
-                self.page.standby_button.invoke()
-                send.assert_not_called()
-            with patch('wlre.ui.instance_ui.messagebox.askyesno', return_value=True):
+            with patch('wlre.ui.instance_ui.messagebox.askyesno', side_effect=AssertionError('不應跳出二次確認')):
                 self.page.standby_button.invoke()
                 send.assert_called_once_with(
                     {'type': 'instance_coop_standby', 'mode': 'coop', 'standby': True})
@@ -191,7 +188,7 @@ class StandbyUI(unittest.TestCase):
         self.app.instance_panel.render(data, live=True)
         self.assertEqual(self.page.standby_button.cget('text'), '取消準備')
         with patch.object(self.app, 'send') as send:
-            with patch('wlre.ui.instance_ui.messagebox.askyesno', return_value=True):
+            with patch('wlre.ui.instance_ui.messagebox.askyesno', side_effect=AssertionError('不應跳出二次確認')):
                 self.page.standby_button.invoke()
                 send.assert_called_once_with(
                     {'type':'instance_coop_standby', 'mode':'coop', 'standby':False})

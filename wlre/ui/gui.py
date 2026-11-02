@@ -196,7 +196,7 @@ class App(LoginController, AccountController,
 
     def save_profile(self):
         if not self.profile:return
-        path=filedialog.asksaveasfilename(parent=self.dialog_parent(),defaultextension='.json',initialfile='connection_profile.json',filetypes=[('連線設定','*.json')])
+        path=filedialog.asksaveasfilename(confirmoverwrite=False,parent=self.dialog_parent(),defaultextension='.json',initialfile='connection_profile.json',filetypes=[('連線設定','*.json')])
         if path:
             # Explicit allowlist: account/password can never enter settings.
             fields=('rx_xor','tx_xor','platform','language','verification_endpoint','game_endpoint','capture_sha256','observed_packets','evidence')

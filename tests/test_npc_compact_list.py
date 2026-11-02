@@ -120,7 +120,7 @@ class CompactNPCListTests(unittest.TestCase):
         self.page.select_npc(self.npcs[0]);self.root.update()
         self.assertEqual(str(self.page.npc_talk_button.cget('state')),'normal')
         self.send.assert_not_called()
-        with patch('wlre.features.npc.panel.messagebox.askyesno',return_value=True):
+        with patch('wlre.features.npc.panel.messagebox.askyesno',side_effect=AssertionError('不應跳出二次確認')):
             self.page.npc_talk_button.invoke()
         self.assertEqual(self.send.call_args.args[0]['type'],'npc_start')
         self.assertFalse(self.page.state['location']['confirmed_is_current'])

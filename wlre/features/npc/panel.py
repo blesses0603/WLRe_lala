@@ -133,10 +133,6 @@ class NPCInteractionMixin:
         npc=self.selected_npc
         if npc is None or str(self.npc_talk_button.cget('state'))!='normal':
             return
-        if not messagebox.askyesno('確認 NPC 互動',
-                '只送出一次官方 C20-1。NPC 事件可能啟動戰鬥、任務或未支援的選項。'
-                '\n不會自動靠近、購物或重送封包。確定要互動嗎？',parent=self):
-            return
         self.on_npc({'type':'npc_start','confirmed':True,'scene':npc['scene'],
                      'npc_index':npc['npc_index'],'npc_id':npc['npc_id'],
                      'x':npc['x'],'y':npc['y']})
@@ -258,11 +254,6 @@ class NPCInteractionMixin:
                              index=self.npc_interacts)
         if current!=catalog:
             return
-        if not messagebox.askyesno('確認關閉商店',
-                '官方 C20-9 空內容關閉商店，不會購買／出售任何物品。'
-                '\n只送出一次，需等待伺服器 S20-8；確認關閉嗎？',
-                parent=self.npc_shop_window or self):
-            return
         if self.npc_shop_window is not None and self.npc_shop_window.winfo_exists():
             self.npc_shop_window.destroy()
             self.npc_shop_window=None
@@ -306,7 +297,7 @@ class NPCInteractionMixin:
             btn=ttk.Button(contents,text=label,command=lambda item=choice:
                            self.choose_npc_reply(options,item),width=48)
             btn.pack(fill='x',pady=3)
-        ttk.Label(panel,text='僅手動確認後送出一次；任務效果由伺服器決定。',
+        ttk.Label(panel,text='點選選項後送出一次；任務效果由伺服器決定。',
                   wraplength=470).pack(fill='x',pady=(8,0))
 
     def choose_npc_reply(self, options, item):
@@ -319,11 +310,6 @@ class NPCInteractionMixin:
         fresh=self.npc_interacts.choices(options['scene'],options['index'],self.npc_talks)
         if fresh!=options or item not in options['options']:
             return
-        if not messagebox.askyesno('確認 NPC 選項',
-                f"你選擇：「{item['text']}」\n此操作可能觸發任務、物品或戰鬥效果。"
-                "\n只會發送一次，不會自動重試。確定送出嗎？",
-                parent=self.npc_choice_window or self):
-            return
         if self.npc_choice_window is not None and self.npc_choice_window.winfo_exists():
             self.npc_choice_window.destroy()
             self.npc_choice_window=None
@@ -333,10 +319,6 @@ class NPCInteractionMixin:
 
     def close_npc_option(self):
         if str(self.npc_close_button.cget('state'))!='normal':
-            return
-        if not messagebox.askyesno('確認關閉 NPC 選項',
-                '使用官方 C20-9 40 關閉這個選項清單，不選擇任何選項。'
-                '\n需等待伺服器 S20-8；逾時不會重送。確定嗎？',parent=self):
             return
         self.on_npc_next({'type':'npc_close_choice','confirmed':True})
 

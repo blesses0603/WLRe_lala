@@ -123,17 +123,14 @@ class StartChallengeUI(unittest.TestCase):
             members=[{'role_id': rid} for rid in ([678, 889, 1000][:roster])])
         return state
 
-    def test_start_button_host_only_and_confirmation(self):
+    def test_start_button_host_only_without_second_prompt(self):
         data = self.snapshot()
         self.app.instance_panel.render(data, live=True)
         self.assertTrue(self.page.start_button.instate(['!disabled']))
         self.assertIn('已達最低人數', self.page.headcount_note.get())
         self.assertIn('房主可以開始挑戰', self.page.headcount_note.get())
         with patch.object(self.app, 'send') as send:
-            with patch('wlre.ui.instance_ui.messagebox.askyesno', return_value=False):
-                self.page.start_button.invoke()
-                send.assert_not_called()
-            with patch('wlre.ui.instance_ui.messagebox.askyesno', return_value=True):
+            with patch('wlre.ui.instance_ui.messagebox.askyesno', side_effect=AssertionError('不應跳出二次確認')):
                 self.page.start_button.invoke()
                 send.assert_called_once_with({'type': 'instance_start', 'mode': 'main'})
         self.assertTrue(self.page.start_button.instate(['disabled']))

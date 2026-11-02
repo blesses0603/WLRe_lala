@@ -530,12 +530,6 @@ class VersionGateController:
         if (self._closing or self._lala_update_busy or not info
                 or info.get("status") != "update_available"):
             return
-        if not messagebox.askyesno(
-                "確認下載 LaLa 更新",
-                f"下載 {info['published']} 並驗證 ZIP SHA-256？\n"
-                "更新包將存入使用者資料夾，不會覆蓋執行中的 LaLa。",
-                parent=self.dialog_parent()):
-            return
         self._lala_update_busy = True
         generation = self._lala_update_generation
         self._lala_release_text.set("下載中，完成後會驗證官方 SHA-256 與 ZIP 完整性…")

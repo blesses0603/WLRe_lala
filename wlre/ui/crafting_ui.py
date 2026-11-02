@@ -1,7 +1,6 @@
 """Embedded icon crafting page and commands shared with queue/plan windows."""
-from tkinter import ttk,messagebox
+from tkinter import ttk
 from wlre.services.items.crafting import recipe_plan
-from wlre.services.items.combat_resources import item_name
 from wlre.network.wire import ProtocolError
 from wlre.ui.crafting_browser import CraftingBrowser
 
@@ -41,7 +40,6 @@ class CraftingPanel(ttk.Frame):
         if action in ('up','down','delete'):
             if index is None:self.status.set('請先選取製作排程');return
             cmd.update(index=int(index),revision=self.state.get('crafting',{}).get('revision'))
-            if action=='delete' and not messagebox.askyesno('移除製作排程','確定放棄此製作項目？材料是否退還依伺服器規則。',parent=self.app.root):return
         self.app.send(cmd)
 
     def add(self,item_id,count):
@@ -52,13 +50,8 @@ class CraftingPanel(ttk.Frame):
             state=SimpleNamespace(player=data.get('player',{}),furniture=data.get('furniture',{}),crafting=data.get('crafting',{}),inventory=data.get('inventory',{}),room_storage=data.get('room_storage',{}))
             if not item_id:raise ProtocolError('請選擇配方')
             if not data.get('player'):raise ProtocolError('請先登入角色')
-            recipe,allocations,_=recipe_plan(state,item_id,count)
+            recipe_plan(state,item_id,count)
         except (ValueError,KeyError,ProtocolError,AttributeError) as exc:self.status.set(str(exc));return
-        text=f"製作：{item_name(item_id)} ×{recipe['output']*count}\n設備：{item_name(recipe['tool_id'])}"
-        for source,label in (('bag','背包消耗'),('materials','雜物櫃消耗')):
-            rows=[a for a in allocations if a.get('source','bag')==source]
-            if rows:text+='\n'+label+'：'+'、'.join(f"{item_name(a['item_id'])} ×{a['count']}" for a in rows)
-        if not messagebox.askyesno('加入製作排程',text+'\n\n確認送出？',parent=self.app.root):return
         self.app.send({'type':'craft','action':'add','item_id':item_id,'count':count})
 
     def render(self,state):
