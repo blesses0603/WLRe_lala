@@ -143,3 +143,16 @@ def apply_storage(state, event):
     elif kind == 'storage_error':
         storage['last_error'] = event['error_code']
     storage['revision'] += 1
+
+
+def confirmed_material_count(storage,item_id):
+    """Read cupboard quantities only after a complete, reliable S62 baseline."""
+    bucket=storage.get('materials',{})
+    if not bucket.get('ready') or not bucket.get('reliable',True):return None
+    count=0
+    for row in bucket.get('items',{}).values():
+        if row.get('item_id')!=item_id:continue
+        value=row.get('count')
+        if type(value) is not int or not 0<value<=65535:return None
+        count+=value
+    return count

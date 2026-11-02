@@ -26,21 +26,23 @@ class BagGridModelTests(unittest.TestCase):
         self.assertEqual(ICON_SIZE, 64)
 
     def test_hyperspace_storage_48_entries_fit_without_clipping(self):
-        self.assertEqual(grid_profile(compact=True), (6, 2, 60))
-        self.assertEqual(STORAGE_ROWS, 2)
+        self.assertEqual(grid_profile(compact=True), (6, 4, 60))
+        self.assertEqual(STORAGE_ROWS, 4)
         self.assertEqual(STORAGE_ICON_SIZE, 60)
-        self.assertEqual(page_count(48, compact=True), 4)
-        self.assertEqual(page_count(50, compact=True), 5)
+        self.assertEqual(page_count(48, compact=True), 2)
+        self.assertEqual(page_count(50, compact=True), 3)
         self.assertEqual(page_count(0, compact=True), 1)
         self.assertEqual(page_count(48), 2)
+        self.assertEqual(page_count(371, compact=True), 16)
+        self.assertEqual(page_count(147, compact=True), 7)
         self.assertEqual(grid_profile(), (6, 4, 64))
 
     def test_responsive_grid_keeps_icon_sizes_and_avoids_cropped_columns(self):
         self.assertEqual(responsive_profile(980, 470), (6, 4, 64))
         self.assertEqual(responsive_profile(515, 280), (5, 3, 64))
         self.assertEqual(responsive_profile(195, 190), (2, 2, 64))
-        self.assertEqual(responsive_profile(950, 180, compact=True), (6, 2, 60))
-        self.assertEqual(responsive_profile(380, 96, compact=True), (4, 1, 60))
+        self.assertEqual(responsive_profile(950, 180, compact=True), (6, 4, 25))
+        self.assertEqual(responsive_profile(380, 96, compact=True), (6, 4, 16))
         self.assertEqual(page_count(48, compact=True, columns=4, rows=1), 12)
 
     def test_reflow_keeps_selected_or_first_visible_item(self):

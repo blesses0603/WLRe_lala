@@ -16,9 +16,8 @@ COLUMNS = 6
 ROWS = 4
 PAGE_SIZE = COLUMNS * ROWS
 ICON_SIZE = 64
-# The nested hyperspace storage tab has a shorter drawable area than the main
-# inventory. Never squeeze four rows of 64px icons into that small space.
-STORAGE_ROWS = 2
+# Storage stays 6 x 4; artwork adapts to the shorter nested page.
+STORAGE_ROWS = 4
 STORAGE_ICON_SIZE = 60
 SLOT_HEIGHT = 88
 SLOT_BG = '#132d40'
@@ -34,10 +33,13 @@ def grid_profile(compact=False):
 def responsive_profile(width, height, compact=False):
     """Fit whole inventory tiles into the drawable board, without overlap.
 
-    The published default 6x4 (storage 6x2) geometry stays unchanged on
-    ordinary desktops. Smaller dialogs use fewer columns and/or rows, keeping
-    the icon size and click targets intact rather than squeezing artwork.
+    Storage always shows 24 cells, scaling icons to fit its nested board.
+    The ordinary bag retains its existing responsive row/column behavior.
     """
+    if compact:
+        size=max(16,min(STORAGE_ICON_SIZE,int(width)//COLUMNS-16,
+                        int(height)//STORAGE_ROWS-20))
+        return COLUMNS, STORAGE_ROWS, size
     _columns, maximum_rows, size = grid_profile(compact)
     columns = min(COLUMNS, max(2, int(width) // (size + 32)))
     rows = min(maximum_rows, max(1, int(height) // SLOT_HEIGHT))
@@ -222,15 +224,15 @@ class BagGrid(ttk.Frame):
     def _board_resized(self, event):
         if event.widget is not self.board or event.width < 80 or event.height < 50:
             return
-        columns, rows, _size = responsive_profile(event.width, event.height, self.compact)
-        if (columns, rows) == (self.columns, self.row_count):
+        columns, rows, size = responsive_profile(event.width, event.height, self.compact)
+        if (columns, rows, size) == (self.columns, self.row_count, self.icon_size):
             return
         old_size = self.page_size
         selected_position = next(
             (i for i, row in enumerate(self.rows) if row[0] == self.index_selected),
             None,
         )
-        self.columns, self.row_count = columns, rows
+        self.columns, self.row_count, self.icon_size = columns, rows, size
         self.page_size = columns * rows
         self.page = reflow_page(self.page, old_size, self.page_size,
                                 len(self.rows), selected_position)

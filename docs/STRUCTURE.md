@@ -190,7 +190,7 @@
 | [post_battle_maintenance.py](../wlre/services/items/post_battle_maintenance.py) | 逐筆修理、販售、丟棄與格位／裝備確認。 |
 | [recovery.py](../wlre/services/items/recovery.py) | HP／SP 補給偏好、藥水儲存槽與補給選擇規則。 |
 | [reservations.py](../wlre/services/items/reservations.py) | 跨戰鬥、補給、煉金、製作、遠征與維護的背包保留登記。 |
-| [room_storage.py](../wlre/services/items/room_storage.py) | S62 儲藏室／雜物櫃的唯讀解碼與權威狀態。 |
+| [room_storage.py](../wlre/services/items/room_storage.py) | S62 儲藏室／雜物櫃的唯讀解碼、權威狀態及製作庫存讀取。 |
 
 ## wlre/services/social：聊天與公會
 
