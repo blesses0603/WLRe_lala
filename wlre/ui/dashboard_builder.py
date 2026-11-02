@@ -15,6 +15,7 @@ from wlre.ui.feature_windows import make_feature
 from wlre.ui.party_guard_ui import PartyGuardPanel
 from wlre.ui.crafting_ui import CraftingPanel
 from wlre.ui.efficiency_ui import EfficiencyPanel
+from wlre.ui.benefits_ui import BenefitsPanel
 from wlre.ui.home_map import HomeMap
 from wlre.ui.battle_view import BattleView
 
@@ -55,6 +56,8 @@ def build_dashboard(app):
         app,'expedition','遠征',ExpeditionPanel)
     app.instance_launcher,app.instance_panel=make_feature(
         app,'instance','副本',InstancePanel)
+    app.benefits_launcher,app.benefits_panel=make_feature(
+        app,'benefits','福利',BenefitsPanel)
     app.instance_window=app.feature_windows['instance']
     app.open_instance_button=next(
         widget for widget in app.instance_launcher.winfo_children()

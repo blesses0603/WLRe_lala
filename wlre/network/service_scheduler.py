@@ -140,3 +140,9 @@ def advance_services(logic,state,send_command,send_raw,emit,on_state):
     for packet in flow_packets:
         send_command(packet)
     if (flow_packets or state.automation!=before_flow) and on_state:notify_state(on_state,state)
+
+    from wlre.services.time_cube import tick as tick_cube
+    before_cube=dict(state.time_cube)
+    cube_packets=tick_cube(state,logic.world_acknowledged,time.monotonic())
+    for packet in cube_packets:send_command(packet)
+    if (cube_packets or state.time_cube!=before_cube) and on_state:notify_state(on_state,state)

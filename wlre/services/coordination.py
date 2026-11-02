@@ -18,6 +18,9 @@ def command_reason(state,command,*,maintenance_pending=False,maintenance_uncerta
     kind=command.get('type')
     # Stopping continuation cannot cancel an outstanding request or its holds.
     if kind in STOP_COMMANDS or kind=='craft' and command.get('action') in ('stop_auto','plan_pause'):return ''
+    if active(state.time_cube) and kind in ('room_storage','craft','companion','field_item','field_storage',
+                                           'battle_item','start_alchemy','start_expedition'):
+        return '等待魔方開啟確認；結果不明時請重新登入同步'
     if active(state.room_storage) and kind in ('room_storage','craft','companion','field_item','field_storage',
                                               'battle_item','start_alchemy','start_expedition'):
         return '等待儲藏存取確認；結果不明時請重新登入同步'
@@ -35,6 +38,7 @@ def command_reason(state,command,*,maintenance_pending=False,maintenance_uncerta
 
 def reason(state,service):
     """Return a temporary pause reason, without disabling any service."""
+    if service!='time_cube' and active(state.time_cube):return '等待魔方開啟確認'
     if active(state.room_storage) and service in ('auto_battle','expedition','alchemy','crafting','maintenance'):
         return '等待儲藏存取確認'
     if service in ('auto_battle','roaming','expedition','alchemy','crafting','room_storage') and active(state.maintenance):

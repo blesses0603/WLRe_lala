@@ -39,6 +39,11 @@ def dispatch(logic,command,state):
         logic.selected = True
         state.phase = 'role_selected_awaiting_world'
         return [packet]
+    if kind=='time_cube':
+        from wlre.services.time_cube import command as cube_command
+        if command.get('action')=='open' and not logic.world_acknowledged:
+            raise ProtocolError('等待世界初始化確認')
+        return cube_command(state,command)
     if kind=='automatic_flows':return logic.flows.set_enabled(state,command.get('enabled'))
     if not logic.world_acknowledged: raise ProtocolError('world initialization has not completed')
     reason=command_reason(state,command,maintenance_pending=bool(logic.maintenance.pending),

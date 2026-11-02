@@ -63,6 +63,8 @@ class SessionEventCoordinator:
                         if view.window.winfo_exists():view.storage_rejected(event['error'])
                 if event_kind=='command_rejected' and event.get('command_type') in ('start_expedition','stop_expedition'):
                     self.expedition_panel.status.set(event['error'])
+                if event_kind=='command_rejected' and event.get('command_type')=='time_cube':
+                    self.benefits_panel.status.set(event['error'])
                 if event_kind.startswith('chat_'):continue
                 if event_kind=='connection_closed':status_override='連線已關閉'
                 for line in local_event_lines(event,context):self.write(line)
