@@ -144,6 +144,15 @@ def apply_crafting(state,event):
     c=state.crafting;room=state.furniture;k=event['type'];now=time.monotonic()
     if k=='initial_data_complete' and room.get('personal_batch') and room.get('owner')==state.player.get('role_id'):
         room['ready']=True;room['revision']+=1
+    if k=='initial_data_complete' and not c['ready'] and not c.get('pending') and not c['uncertain']:
+        # S1-11 closes the saved-data batch. An empty queue need not produce
+        # S64-1; retain any incrementally received rows instead of clearing them.
+        # A failed packet aborts the receive loop before this barrier.
+        if c.get('active') and str(c['active']) not in c['queue']:
+            c.update(uncertain=True,status='製作索引缺資料，請重新同步')
+        else:
+            c.update(ready=True,sync_source='S1-11',status='登入資料接收完成，製作排程已就緒')
+        c['revision']+=1
     action=event.get('room_action')
     if action:
         if action=='snapshot':
@@ -162,7 +171,7 @@ def apply_crafting(state,event):
     if not k.startswith('craft_'):return
     c['revision']+=1
     if k=='craft_snapshot':
-        c.update(ready=True,queue={str(r['index']):r for r in event['rows']},active=event['active'],running=bool(event['active']),started_at=now,completion_requested=False)
+        c.update(ready=True,sync_source='S64-1',queue={str(r['index']):r for r in event['rows']},active=event['active'],running=bool(event['active']),started_at=now,completion_requested=False)
         if event['active'] and str(event['active']) not in c['queue']:c.update(running=False,uncertain=True,status='製作索引缺資料，請重新同步')
         else:c.update(uncertain=False,status='伺服器製作排程已同步')
     elif k=='craft_added':c['queue'][str(event['row']['index'])]=event['row'];c['status']='已加入伺服器製作排程'

@@ -38,7 +38,8 @@ class DynamicCraftingScheduleTests(unittest.TestCase):
             items={'7':{'index':7,'item_id':39001,'status':0}})
         self.state.inventory.update(ready=True,reliable=True,capacity=24,
             items={'3':{'index':3,'item_id':3874,'count':20,'serial':123}})
-        self.state.crafting.update(ready=True)
+        from wlre.network.protocol import decode
+        self.state.apply(decode(Packet(1,11)))
         self.service=crafting.Crafting()
 
     def row_packet(self,sub=16,recipe_id=99):
@@ -162,3 +163,78 @@ class DynamicCraftingScheduleTests(unittest.TestCase):
         page=self.detail()
         self.assertEqual(page.add_button.configure.call_args.kwargs,{'state':'disabled'})
         self.assertIn('排程尚未同步',page.reason.get())
+
+    def reset_crafting_sync(self):
+        self.state.crafting=crafting.defaults()
+        self.state.initial_data_complete=False
+        self.state.phase='authenticated'
+        self.service=crafting.Crafting()
+
+    def test_empty_login_batch_enables_add_without_an_s64_snapshot(self):
+        from wlre.network.client import SessionLogic
+        from wlre.network.protocol import decode
+        self.reset_crafting_sync()
+        self.assertEqual(self.detail().add_button.configure.call_args.kwargs,{'state':'disabled'})
+        logic=SessionLogic()
+        logic.crafting=self.service
+        event=decode(Packet(1,11))
+        self.state.apply(event)
+        packets=logic.receive(event,self.state)
+        self.assertTrue(logic.world_acknowledged)
+        self.assertEqual(self.state.phase,'world_ready')
+        self.assertEqual(self.state.crafting['sync_source'],'S1-11')
+        self.assertEqual(self.state.crafting['queue'],{})
+        self.assertFalse(any(packet.main==64 for packet in packets))
+        self.assertEqual(self.detail().add_button.configure.call_args.kwargs,{'state':'normal'})
+        packet,=logic.command({'type':'craft','action':'add','item_id':3874,'count':2},self.state)
+        self.assertEqual(packet.payload[:6],Writer().u16(7).u16(99).u16(3874).build())
+
+    def test_incremental_login_rows_are_preserved_at_batch_end(self):
+        from wlre.network.protocol import decode
+        self.reset_crafting_sync()
+        self.state.apply(crafting.decode_crafting(self.row_packet()))
+        row=deepcopy(self.state.crafting['queue']['1'])
+        self.assertFalse(self.state.crafting['ready'])
+        self.state.apply(decode(Packet(1,11)))
+        self.assertTrue(self.state.crafting['ready'])
+        self.assertEqual(self.state.crafting['queue']['1'],row)
+        self.assertFalse(self.state.crafting['running'])
+
+    def test_explicit_snapshot_and_active_work_are_not_reset_at_batch_end(self):
+        from wlre.network.protocol import decode
+        self.reset_crafting_sync()
+        packet=self.row_packet(1)
+        with patch('wlre.services.items.crafting.time.monotonic',return_value=20):
+            self.state.apply(crafting.decode_crafting(Packet(64,1,packet.payload[:-1]+b'\x01')))
+        before=deepcopy(self.state.crafting)
+        self.state.apply(decode(Packet(1,11)))
+        self.assertEqual(self.state.crafting,before)
+        self.assertTrue(self.state.crafting['running'])
+        self.assertEqual(self.state.crafting['sync_source'],'S64-1')
+
+    def test_batch_end_does_not_clear_unknown_active_work_or_uncertainty(self):
+        from wlre.network.protocol import decode
+        self.reset_crafting_sync()
+        self.state.crafting.update(uncertain=True,status='製作回覆逾時')
+        self.state.apply(decode(Packet(1,11)))
+        self.assertFalse(self.state.crafting['ready'])
+        self.assertTrue(self.state.crafting['uncertain'])
+        self.assertEqual(self.state.crafting['status'],'製作回覆逾時')
+        self.state.crafting.update(uncertain=False,active=2)
+        self.state.apply(decode(Packet(1,11)))
+        self.assertFalse(self.state.crafting['ready'])
+        self.assertTrue(self.state.crafting['uncertain'])
+
+    def test_unrelated_events_do_not_initialize_an_empty_queue(self):
+        self.reset_crafting_sync()
+        self.state.apply({'type':'craft_human','index':0,'npc_id':0})
+        self.assertFalse(self.state.crafting['ready'])
+        self.assertEqual(self.detail().add_button.configure.call_args.kwargs,{'state':'disabled'})
+
+    def test_repeated_batch_end_does_not_touch_a_pending_submission(self):
+        from wlre.network.protocol import decode
+        self.service.command(self.state,{'action':'add','item_id':3874,'count':2},0)
+        before=deepcopy(self.state.crafting)
+        self.state.apply(decode(Packet(1,11)))
+        self.assertEqual(self.state.crafting,before)
+        self.assertIsNotNone(self.service.pending)
