@@ -74,6 +74,19 @@ def portal_inspection_text(portal):
     arrival = portal.get('reference_arrival_xy')
     arrival_grid = portal.get('reference_arrival_grid')
     parts = ['官方唯讀連線：' + target]
+    if portal.get('destination_verified') is True:
+        parts[0] = '已配對目的地：' + str(portal.get('destination_label') or target)
+    marker_name = portal.get('official_name')
+    door_name = portal.get('door_event_name')
+    if marker_name:parts.append('原地圖標籤：' + marker_name)
+    if door_name:parts.append('門容器原名：' + door_name)
+    index, link_index = portal.get('direct_door_index'), portal.get('link_index')
+    if type(index) is int:parts.append(f'實際門編號 {index}')
+    if type(link_index) is int:parts.append(f'連線序號 {link_index}')
+    events = portal.get('touch_event_ids')
+    if events:parts.append('觸碰事件 ' + ', '.join(str(i) for i in events))
+    if portal.get('touch_event_records'):
+        parts.append('事件條件與效果明細已保留；換圖效果語意尚未獨立核對')
     if source is not None:
         parts.append(f'來源座標 {source}')
     elif source_grid is not None:

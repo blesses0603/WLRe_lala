@@ -213,6 +213,9 @@ class Portals:
                                       if display_label else
                                       '傳點 #' + str(index) +
                                       '（官方名稱未取得）'))
+                            if (verified_target and type(scene_names.get(destination)) is str
+                                    and scene_names[destination].strip()):
+                                label = '前往 ' + target_label
                             visible.append({
                                 'id': f'{revision}:{scene_id}:{index}',
                                 'scene': scene_id, 'index': index,
@@ -243,6 +246,9 @@ class Portals:
                                 'event_grid_x': x,
                                 'event_grid_y': y,
                                 'event_ids': tuple(row.get('event_ids') or ()),
+                                'door_event_name': row.get('name'),
+                                'touch_event_ids': tuple(row.get('touch_event_ids') or ()),
+                                'touch_event_records': tuple(row.get('touch_event_records') or ()),
                                 'destination': destination,
                                 'destination_verified': verified_target,
                                 'direct_eligible': bool(verified_target and strict_valid_xy and 1 <= index <= 65535),
