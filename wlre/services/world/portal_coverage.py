@@ -51,6 +51,10 @@ def audit_portal_coverage(doors, stages, stage_raw=None, link_raw=None,
         details, gaps, ordinary = [], 0, 0
         for index in sorted(indices):
             marker = stage_markers.get(index)
+            binding = destinations.get((scene,index),{})
+            boundary = (binding.get('matched_touch_region') is True
+                        and binding.get('binding_kind') == 'unique_boundary_touch_region'
+                        and (scene,index) in positions and marker_counts[scene,index] == 0)
             reasons = []
             if marker_counts[scene, index] > 1: reasons.append('duplicate_stage_marker')
             # Hidden portals have different semantics, not ordinal links.
@@ -60,9 +64,9 @@ def audit_portal_coverage(doors, stages, stage_raw=None, link_raw=None,
             elif marker_counts[scene, index] == 0 and index not in scene_links:
                 category = 'event_container_only' if statuses['StageMapData_C'] == 'parsed' else 'source_incomplete'
             else:
-                category = 'ordinary_portal'
+                category = 'boundary_portal' if boundary else 'ordinary_portal'
                 ordinary += 1
-                if marker_counts[scene, index] == 0: reasons.append('missing_stage_marker')
+                if marker_counts[scene, index] == 0 and not boundary: reasons.append('missing_stage_marker')
                 if counts[index] == 0: reasons.append('missing_eve_door')
                 elif counts[index] != 1: reasons.append('duplicate_eve_door')
                 link = scene_links.get(index)

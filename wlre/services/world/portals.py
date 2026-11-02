@@ -168,7 +168,8 @@ class Portals:
                                 link = {}
                             destination = link.get('destination')
                             verified_target = (
-                                link.get('matched_stage_map') is True
+                                (link.get('matched_stage_map') is True
+                                 or link.get('matched_touch_region') is True)
                                 and link.get('destination_verified') is True
                                 and link.get('trigger_verified') is False
                                 and type(destination) is int
@@ -244,8 +245,13 @@ class Portals:
                                 'direct_eligible': bool(verified_target and strict_valid_xy and 1 <= index <= 65535),
                                 'direct_door_index': index if verified_target and strict_valid_xy and 1 <= index <= 65535 else None,
                                 'door_index': index if verified_target and strict_valid_xy and 1 <= index <= 65535 else None,
+                                'binding_kind': link.get('binding_kind'),
+                                'trigger_bounds': position.get('trigger_bounds'),
                                 'navigation_status': 'unverified',
                                 'direct_note': (
+                                    '官方海岸觸碰區域／門編號／目的地已核對；可手動單次試傳，'
+                                    '載具與進入條件由伺服器判定'
+                                    if verified_target and link.get('matched_touch_region') else
                                     '1275 門編號／位置／目的地已交叉核對；可在手動確認後單次試傳，'
                                     '成功與否完全以伺服器回覆為準'
                                     if verified_target else

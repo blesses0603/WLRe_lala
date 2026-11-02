@@ -201,3 +201,13 @@ Packet capture import/replay/profile extraction and standalone packet inspection
 - 原版家具場景 `FurSysSceneNum` 為 10299／10298／10000；只有進入指令之後的家具場景與自家 S62-4 家具資料兩者均確認，才顯示「已進入」。
 - 本機未知其他場景帳篷實際狀態；缺少伺服器確認時不自行改變已展開／收起或製作排程。操作逾時不盲目重送，重新登入以取得新資料。
 - 未取得正式伺服器 E2E 證據；不宣稱場景搭帳篷限制、任務標記或帳篷跨圖狀態已完整驗證。
+
+## 海岸／航海大地圖出口
+
+StageMapData_C 不一定有每個海岸出口的一般 Kind=2 標記。以前只有 EveDoorLinks 名稱／座標可顯示，但因缺少一般標記而全部停用。現在另以同版 Eve 的 NewDoor 矩形碰撞範圍和 PlayerTouch 事件核對無標記出口；僅唯一區域包含連線點，且實際門 index 與該場景連線 index 相符時建立對應。一般標記若存在或重複，不透過此路徑繞過原有檢查。
+
+來源：使用者提供的 1262 Lua `EventData.NewDoor/NewEvent`、`Data.LoadEve`、`EventManager._NewPortal`、`Stage.TransferGridPosition`、`StageObjectData.New`、`PlayerController.OnTriggerEnter` 和 `Role.SendMeetDoor`。矩形只支援 signType 1／4；已確認 PlayerTouch 發生種類旗標為 2。原始門格座標轉封包座標為 `(grid-1)*20*sceneRatio + signOffset*sceneRatio`，不可和 EveDoorLinks 的 `point*sceneRatio` 混用。
+
+小地圖仍透過既有 C20-8 + u16 實際門編號單次嘗試，等待伺服器位置／換圖通知；58001 是 Lua 的航海場景，不會拿來當門編號。載具、距離、任務等條件由伺服器判定；錯誤或逾時不重送。隱藏 Kind=3 標記、獨立路線序號和不明／重疊範圍維持不可直接傳送。
+
+`tests/test_boundary_portals.py` 包含完整合成 v115 門／事件解析、60000→58001 出口、倍率與偏移、缺少一般標記、錯誤或重複事件、範圍歧義、動態 Runtime 清單／按鈕／C20-8 請求，以及拒絕／逾時回歸；正式服航海換圖仍需實際連線驗收。

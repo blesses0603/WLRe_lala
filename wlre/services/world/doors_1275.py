@@ -61,6 +61,29 @@ def _npc(reader):
     reader.skip(2 + 2 + 4 + 1 + 4 + 2 + 2 + 1 + 5*4)
 
 
+def _touch_events(reader):
+    # EventData.NewMine/NewGoods precede NewEvent. Keep each variable common
+    # record aligned; a door's event_ids alone do not prove PlayerTouch.
+    for tail in (10, 11):
+        count = reader.u16()
+        if count > 4096:raise DoorSourceError('Eve 事件物件數量不合理')
+        for _ in range(count):
+            reader.u16();_common(reader);reader.skip(tail)
+    count = reader.u16()
+    if count > 4096:raise DoorSourceError('Eve 事件數量不合理')
+    touch, seen = set(), set()
+    for _ in range(count):
+        index, occur = reader.u16(), reader.u8()
+        if index in seen:raise DoorSourceError('Eve 場景內重複的事件 index')
+        seen.add(index)
+        reader.skip(20)
+        for _ in range(reader.u8()):
+            reader.skip(22)
+            reader.skip(22 * reader.u8())
+        if occur & 2:touch.add(index)  # Define.lua EEventOccurType.PlayerTouch
+    return touch
+
+
 def parse_doors_1275(raw):
     """Read 1262 scene headers and 1275 NewDoor entries with exact source pin."""
     if type(raw) is not bytes or hashlib.sha256(raw).hexdigest() != SOURCE_SHA256:
@@ -100,10 +123,17 @@ def parse_verified_doors(raw, *, expected_scene_count=None):
         for _ in range(door_count):
             index = reader.u16()
             row = _common(reader)
-            reader.skip(4*2 + 1 + 4*2 + 4*3)
+            right, bottom, sign_type = reader.u32(), reader.u32(), reader.u8()
+            sign_x, sign_y = reader.u32(), reader.u32()
+            col_x, col_y, col_z = reader.u32(), reader.u32(), reader.u32()
             if index in seen:
                 raise DoorSourceError('1275 場景內重複的門事件 index')
             seen.add(index)
-            entries.append({'index': index, **row})
+            entries.append({'index': index, **row, 'right': right, 'bottom': bottom,
+                            'sign_type': sign_type, 'sign_x': sign_x, 'sign_y': sign_y,
+                            'col_x': col_x, 'col_y': col_y, 'col_z': col_z})
+        touch = _touch_events(reader)
+        for row in entries:
+            row['touch_event_ids'] = [i for i in row['event_ids'] if i in touch]
         scenes[scene] = entries
     return scenes

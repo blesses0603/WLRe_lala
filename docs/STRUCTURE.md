@@ -202,6 +202,8 @@
 | [chat_names.py](../wlre/services/social/chat_names.py) | 聊天角色／群組名稱解析。 |
 | [guild.py](../wlre/services/social/guild.py) | 公會資料與相關回覆狀態。 |
 
+海岸／航海出口核對： [boundary_portals.py](../wlre/services/world/boundary_portals.py)，不使用舊版儲存的門索引。
+
 ## tools/build：編譯與發佈工具
 
 | 模組 | 責任 |

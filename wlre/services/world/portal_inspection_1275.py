@@ -60,6 +60,9 @@ def portal_inspection_text(portal):
     if not isinstance(portal, dict) or not is_official_revision(portal.get('source_revision')):
         return ''
     target = portal.get('reference_destination_label')
+    if (not target and portal.get('destination_verified') is True
+            and portal.get('binding_kind') == 'unique_boundary_touch_region'):
+        target = portal.get('destination_label')
     if target is None and type(portal.get('hidden_destination_scene_id')) is int:
         hidden = portal['hidden_destination_scene_id']
         target = portal.get('display_destination_label') or (
@@ -97,5 +100,7 @@ def portal_inspection_text(portal):
                 parts.append('待核對：' + '、'.join(labels[:4]))
         parts.append('僅供查看，未核准換圖')
     else:
+        if portal.get('binding_kind') == 'unique_boundary_touch_region':
+            parts.append('海岸碰撞範圍與實際觸碰門編號已核對')
         parts.append('門索引交叉核對完成，伺服器傳送尚待驗收')
     return '｜'.join(parts)

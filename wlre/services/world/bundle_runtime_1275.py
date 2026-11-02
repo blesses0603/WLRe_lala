@@ -400,6 +400,11 @@ def load_verified_bundle_runtime(*, sync_root=None, _verified_context=None):
                         portal_destinations = verified_portal_destinations(
                             optional['StageMapData_C'], optional['EveDoorLinks'],
                             doors, scene_rows)
+                        from wlre.services.world.boundary_portals import boundary_portal_bindings
+                        boundary_positions, boundary_targets = boundary_portal_bindings(
+                            optional['StageMapData_C'], optional['EveDoorLinks'], doors, scene_rows)
+                        portal_positions.update(boundary_positions)
+                        portal_destinations.update(boundary_targets)
                         portal_metadata_status = 'destination_links_loaded'
                     except (ValueError, KeyError, TypeError):
                         portal_metadata_status = 'destination_links_missing_or_invalid'
