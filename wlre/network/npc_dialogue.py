@@ -132,12 +132,34 @@ def choose_npc_option(state, command):
     if not 0 <= value <= 255:
         raise ProtocolError('NPC 選項回覆超出封包範圍')
     state.npc_dialogue = {**info, 'phase': 'awaiting_choice',
-                          'selected_choice': command['choice']}
+                          'selected_choice': command['choice'],
+                          'choice_continuation_pending': True}
     state.event_flow = {**state.event_flow, 'blocked': True,
                         'awaiting_response': True,
                         'last_source': 'C20-9 已確認一般 NPC 選項'}
     return [Packet(20, 9, bytes([value]))]
 
+
+
+def flush_npc_choice(state):
+    """Consume Lua SendInteractListResult's one SetCanAskServerEvent grant.
+
+    A manual selection sends C20-9 first, then UpdateEvent sends C20-6 once.
+    New effects invalidate this grant so it cannot skip new dialogue or shops.
+    """
+    info=state.npc_dialogue
+    if not info.get('choice_continuation_pending'):return []
+    state.npc_dialogue={**info,'choice_continuation_pending':False}
+    if (state.phase!='world_ready' or not info.get('active')
+            or info.get('phase') not in ('awaiting_choice','continue')
+            or info.get('scene')!=state.player.get('scene')
+            or state.battle.get('active')
+            or (state.battle.get('post_event') or {}).get('status') not in (None,'completed')):
+        return []
+    state.npc_dialogue={**state.npc_dialogue,'phase':'continue'}
+    packets=advance_npc(state)
+    state.event_flow={**state.event_flow,'last_source':'C20-6 NPC 選項接續（單次）'}
+    return packets
 
 
 def close_npc_shop(state, command):

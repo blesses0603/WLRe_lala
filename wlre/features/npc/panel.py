@@ -409,7 +409,7 @@ class NPCInteractionMixin:
                     f"選項索引 {dialogue.get('option_index')} 尚無可信資料；"
                     "不會自行選擇；可手動按「關閉選項」，或重新登入同步。")
             elif phase=='awaiting_choice':
-                self.npc_message.set('已送出一般 NPC 選項；等待伺服器回覆，不會重送。')
+                self.npc_message.set('已送出 NPC 選項，將接續一次以取得後續內容；不會重送。')
             elif phase=='closing':
                 self.npc_message.set('已要求關閉選項，等待伺服器 S20-8；不自動重送。')
             elif phase=='effect_unavailable':

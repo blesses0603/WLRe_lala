@@ -33,6 +33,7 @@ from wlre.services.battle.auto_battle import AutoBattle
 
 
 from wlre.network.commands import dispatch
+from wlre.network.npc_dialogue import flush_npc_choice
 from wlre.services.items import reservations
 
 
@@ -277,6 +278,13 @@ class SessionLogic:
 
     def flush_events(self,state):
         state.assert_writer()
+        # Manual choice is itself a Lua continuation grant; it does not wait
+        # for S20-10. Consume only this one grant, keeping other NPC steps manual.
+        if self.world_acknowledged:
+            choice_packets=flush_npc_choice(state)
+            if choice_packets:
+                self.pending_event=False
+                return choice_packets
         # Lua grants set one boolean; its Update sends once after the packet batch.
         if self.post_battle_due is not None:
             if time.monotonic()<self.post_battle_due:return []
