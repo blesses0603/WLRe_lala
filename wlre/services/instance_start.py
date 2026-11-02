@@ -58,7 +58,7 @@ def start(state, command, now=None):
         raise ProtocolError('副本人數未達最低要求（至少 %d 人）' % row['min_members'])
     if len(members) > row['max_members']:
         raise ProtocolError('房間人數超出官方副本上限，請先同步成員')
-    # Use an explicit user click. No autonomous trigger in a worker/timer.
+    # A selected room workflow may request this after the same strict guards.
     now = time.monotonic() if now is None else now
     data['start_pending'] = {'room_id': room_id, 'started': now}
     data['start_result'] = None

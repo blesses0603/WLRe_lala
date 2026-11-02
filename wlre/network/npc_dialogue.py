@@ -191,7 +191,7 @@ def close_npc_shop(state, command):
 
 
 def advance_npc(state):
-    """Manual one-step C20-6 00. Unknown choices never produce C20-9."""
+    """One-step C20-6 00 for a click or selected-NPC automatic continuation."""
     info = state.npc_dialogue
     if (not info.get('active') or info.get('phase') not in ('talk', 'continue')
             or state.player.get('scene') != info.get('scene')

@@ -129,6 +129,21 @@ class NPCInteractionMixin:
         self.npc_options_button.configure(
             state='normal' if choices is not None and self.on_npc_next is not None else 'disabled')
 
+    def present_automatic_npc(self):
+        info=self.state.get('npc_dialogue',{})
+        if not self.state.get('automation',{}).get('enabled') or not info.get('active'):
+            self._automatic_npc_view=None
+            return
+        if info.get('phase')!='choice_unavailable' or info.get('scene')!=self.state.get('player',{}).get('scene'):
+            self._automatic_npc_view=None
+            return
+        key=(info.get('scene'),info.get('npc_index'),info.get('option_index'),info.get('effect_packet'))
+        if getattr(self,'_automatic_npc_view',None)==key:return
+        if str(self.npc_shop_button.cget('state'))=='normal':
+            self._automatic_npc_view=key;self.show_npc_shop()
+        elif str(self.npc_options_button.cget('state'))=='normal':
+            self._automatic_npc_view=key;self.show_npc_choices()
+
     def interact_npc(self):
         npc=self.selected_npc
         if npc is None or str(self.npc_talk_button.cget('state'))!='normal':
@@ -364,6 +379,7 @@ class NPCInteractionMixin:
         win.transient(self.winfo_toplevel())
 
     def show_dialogue_status(self):
+        self.present_automatic_npc()
         dialogue=self.state.get('npc_dialogue',{})
         if dialogue.get('active'):
             phase=dialogue.get('phase')
@@ -376,14 +392,16 @@ class NPCInteractionMixin:
                         + ('…（可查看全文）' if len(content)>85 else ''))
                 else:
                     self.npc_message.set(
-                        f"對話文字 ID {text_id}；尚無已驗證的文字表，請手動接續。")
+                        f"對話文字 ID {text_id}；尚無已驗證的文字表。")
             elif phase=='continue':
-                self.npc_message.set('伺服器允許繼續，請按下一段對話。')
+                self.npc_message.set('伺服器允許繼續，將自動接續。' if dialogue.get('auto_continue') else '伺服器允許繼續，請按下一段對話。')
             elif phase=='choice_unavailable' and (
                     (shop_catalog(dialogue.get('scene'),dialogue.get('option_index'),
                      index=self.npc_interacts) is not None)):
                 self.npc_message.set('NPC 商店已開啟：可查看官方商品基礎價與不可販售標記；'
                                      '折扣與金幣同步未確認，不會購買或販售。')
+            elif phase=='choice_unavailable' and str(self.npc_options_button.cget('state'))=='normal':
+                self.npc_message.set('NPC 選項已就緒；選定目標後自動接續。')
             elif phase=='closing_shop':
                 self.npc_message.set('已要求關閉 NPC 商店，等待伺服器確認；不會重送。')
             elif phase=='choice_unavailable':

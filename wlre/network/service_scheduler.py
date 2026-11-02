@@ -134,3 +134,9 @@ def advance_services(logic,state,send_command,send_raw,emit,on_state):
     for packet in logic.portal_travel.tick(state,logic.movement,time.monotonic()):
         send_raw(packet)
     if on_state and (state.local_movement is not before_tick or state.portal_travel is not before_portal):notify_state(on_state,state)
+
+    before_flow=dict(state.automation)
+    flow_packets=logic.flows.tick(logic,state,time.monotonic())
+    for packet in flow_packets:
+        send_command(packet)
+    if (flow_packets or state.automation!=before_flow) and on_state:notify_state(on_state,state)

@@ -26,6 +26,7 @@ POSITION_CACHE_LIMIT = 2048
 
 @dataclass
 class State:
+    automation: dict = field(default_factory=lambda:{'enabled':True,'status':'依指定目標自動接續'})
     maintenance: dict = field(default_factory=lambda:{'pending':None,'uncertain':False,'checking':False,'status':'尚未執行戰後修理／整理','completed':0})
     potion_storage: dict = field(default_factory=dict)
     room_storage: dict = field(default_factory=storage_defaults)

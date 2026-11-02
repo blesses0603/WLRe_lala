@@ -42,6 +42,7 @@ def approach(state, movement, command, now):
     if current_catalog_token()!=token:raise ProtocolError('官方資料已更新，請重新選取 NPC')
     dx,dy=position['x']-x,position['y']-y
     if math.hypot(dx,dy)<=NEAR_DISTANCE:
+        if not movement.active and (state.local_movement or {}).get('status')=='finished':return
         movement.stop(state,'已在 NPC 附近')
         return
     angle=math.atan2(dy,dx)

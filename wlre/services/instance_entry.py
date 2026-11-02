@@ -1,4 +1,4 @@
-"""Manual C85-9 dungeon entry and authoritative battle state observations.
+"""Guarded C85-9 dungeon entry and authoritative battle state observations.
 
 The client never infers entry success from sending C85-9. Official Lua 1262
 has no separate S85-9 success acknowledgement, so own S7-1/S12-1 location

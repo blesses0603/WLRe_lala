@@ -39,6 +39,7 @@ def dispatch(logic,command,state):
         logic.selected = True
         state.phase = 'role_selected_awaiting_world'
         return [packet]
+    if kind=='automatic_flows':return logic.flows.set_enabled(state,command.get('enabled'))
     if not logic.world_acknowledged: raise ProtocolError('world initialization has not completed')
     reason=command_reason(state,command,maintenance_pending=bool(logic.maintenance.pending),
                           maintenance_uncertain=logic.maintenance.uncertain)

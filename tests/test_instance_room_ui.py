@@ -87,6 +87,18 @@ class RoomUI(unittest.TestCase):
         self.app.instance_panel.render(state, live=True)
         self.assertTrue(self.page.join_button.instate(['disabled']))
 
+    def test_visible_page_refreshes_automatically_with_a_live_connection_thread(self):
+        from types import SimpleNamespace
+        self.app.feature_windows['instance'].deiconify()
+        self.root.update()
+        self.app.worker=SimpleNamespace(is_alive=lambda:True)
+        self.page._automatic_refresh_due=0
+        data=self._data();data['phase']='world_ready'
+        with patch.object(self.app,'send',return_value=True) as send:
+            self.app.instance_panel.render(data,live=True)
+            self.app.instance_panel.render(data,live=True)
+            send.assert_called_once_with({'type':'instance_refresh','mode':'main'})
+
     def test_private_join_accepts_password_without_second_prompt(self):
         self.app.instance_panel.render(self._data(public=False),live=True)
         self.page.entries.selection_set('room_0');self.page.on_room_selected()

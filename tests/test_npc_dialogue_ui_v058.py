@@ -96,6 +96,26 @@ class NPCDialogueUITests(unittest.TestCase):
             'type':'npc_choose','confirmed':True,
             'scene':12903,'interact_index':1,'choice':1,'text_id':10002})
 
+    def test_automatic_mode_opens_known_choices_once_without_selecting(self):
+        self.map.npc_talks={50063:'要做什麼？',10001:'選項一',10002:'選項二'}
+        self.map.npc_interacts.scenes={12903:{1:{'index':1,'form_kind':1,'link_number':1,'items':[
+            {'id':1,'text_id':50063,'database_kind':1,'kind':1},
+            {'id':2,'text_id':10001,'database_kind':1,'kind':3},
+            {'id':3,'text_id':10002,'database_kind':1,'kind':3}]}}}
+        state={**self.ready_state,'automation':{'enabled':True},
+               'npc_dialogue':{'active':True,'phase':'choice_unavailable','scene':12903,
+                   'npc_index':7,'effect_type':6,'option_index':1,'effect_packet':10}}
+        self.map.set_state(state)
+        first=self.map.npc_choice_window
+        self.assertTrue(first.winfo_exists())
+        self.map.set_state(state)
+        self.assertIs(first,self.map.npc_choice_window)
+        self.send.assert_not_called()
+        state['npc_dialogue']={**state['npc_dialogue'],'effect_packet':11}
+        self.map.set_state(state)
+        self.assertIsNot(first,self.map.npc_choice_window)
+        self.send.assert_not_called()
+
     def test_shop_option_does_not_enable_choose_button(self):
         self.map.npc_interacts.scenes={12903:{1:{
             'index':1,'form_kind':3,'link_number':0,'items':[]}}}

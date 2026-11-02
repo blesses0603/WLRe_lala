@@ -48,7 +48,7 @@ def apply_session_event(state, event):
                     talk_history.append(effect['mean_number'])
                     talk_history=talk_history[-50:]
                 state.npc_dialogue={**state.npc_dialogue,
-                    'history':talk_history,
+                    'history':talk_history,'effect_packet':state.packet_count,
                     'phase': ('talk' if effect_type==1 else
                               'choice_unavailable' if effect_type==6 else 'effect_unavailable'),
                     'effect_type':effect_type,
