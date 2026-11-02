@@ -51,13 +51,19 @@ class PortalDisplayTests(unittest.TestCase):
                 self.assertEqual(marked_portals([portal(**change)],self.projection),[])
         self.assertEqual(marked_portals([portal()],None),[])
 
-    def test_named_reference_requires_known_destination_and_keeps_original_privileges(self):
+    def test_named_reference_is_hidden_even_when_destination_and_position_are_known(self):
         row=portal(destination=None,destination_verified=False,direct_eligible=False,
                    reference_destination_scene_id=60000,reference_destination_defined=True)
-        self.assertEqual(marked_portals([row],self.projection),[row])
-        self.assertFalse(collapse_portal_destinations([row])[0]['direct_eligible'])
+        self.assertEqual(marked_portals([row],self.projection),[])
+        self.assertFalse(row['direct_eligible'])
         row['reference_destination_defined']=False
         self.assertEqual(marked_portals([row],self.projection),[])
+
+    def test_unbound_or_invalid_door_id_is_hidden_even_with_eligibility_flag(self):
+        self.assertEqual(marked_portals([portal(direct_eligible=False)],self.projection),[])
+        for index in (None,0,65536,True,'3'):
+            with self.subTest(index=index):
+                self.assertEqual(marked_portals([portal(direct_door_index=index)],self.projection),[])
 
     def test_hidden_marker_needs_defined_destination_and_never_becomes_a_door(self):
         row=portal(index='H1',kind='link',destination=None,destination_verified=False,

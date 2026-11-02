@@ -294,7 +294,7 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
                 else:
                     notes=[]
                     if merged_count:notes.append(f'{merged_count} 個同目的入口已合併顯示')
-                    if hidden_count:notes.append(f'{hidden_count} 個未知或未標示傳點已隱藏')
+                    if hidden_count:notes.append(f'{hidden_count} 個未確認／未標示點已隱藏')
                     self.portal_info.set('；'.join(notes))
         if is_official_revision(self.portals.data.get('source_revision')):
             count = len(self.portal_rows)

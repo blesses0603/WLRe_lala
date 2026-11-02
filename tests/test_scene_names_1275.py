@@ -96,6 +96,9 @@ class SceneNames1275Tests(unittest.TestCase):
             portal_positions={(12170, 7): {
                 'scene': 12170, 'index': 7, 'x': 200, 'y': 300,
                 'position_verified': True, 'source_kind': '1275_eve_door_links_grid_scaled'}},
+            portal_destinations={(12170,7):{'matched_stage_map':True,
+                'destination':12171,'destination_verified':True,'trigger_verified':False,
+                'event_x':5701,'event_y':3230}},
             portal_link_evidence={(12170,7):{'scene':12170,'index':7,
                 'destination':12171,'destination_defined':True,
                 'source_kind':'1275_eve_door_links_reference'}},

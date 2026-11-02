@@ -48,7 +48,8 @@ class PortalPosition1275Tests(unittest.TestCase):
         offscreen = dict(ready, x=2000)
         missing = dict(ready, coordinate_valid=False)
         rows = [ready, reference, unnamed, offscreen, missing]
-        self.assertEqual(marked_portals(rows, IdentityProjection()), [ready, reference])
+        ready['direct_eligible']=True;ready['direct_door_index']=1
+        self.assertEqual(marked_portals(rows, IdentityProjection()), [ready])
         self.assertEqual(len(rows), 5)
         self.assertEqual(marked_portals(rows, None), [])
 

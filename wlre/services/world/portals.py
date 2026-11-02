@@ -494,7 +494,7 @@ def portal_map_pixel(portal, projection):
 
 
 def marked_portals(rows, projection):
-    """Only known, labeled, visible official points reach the minimap UI."""
+    """Only bound, labeled official doors reach the main map; audit keeps all."""
     from wlre.services.world.catalog_source_policy import is_official_revision
     from wlre.services.world.portal_dedup_1275 import display_destination
     def labeled(row):
@@ -503,8 +503,13 @@ def marked_portals(rows, projection):
         return (type(official) is str and bool(official.strip()) or
                 type(label) is str and bool(label.strip())
                 and row.get('display_destination_name_known') is not False)
+    def bound_door(row):
+        index = row.get('direct_door_index')
+        return (row.get('destination_verified') is True
+                and row.get('direct_eligible') is True
+                and type(index) is int and 1 <= index <= 65535)
     return [row for row in rows if not is_official_revision(row.get('source_revision')) or (
-        display_destination(row) is not None and labeled(row)
+        bound_door(row) and display_destination(row) is not None and labeled(row)
         and portal_map_pixel(row, projection) is not None)]
 
 

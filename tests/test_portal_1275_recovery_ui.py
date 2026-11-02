@@ -116,7 +116,9 @@ class Portal1275UI(unittest.TestCase):
         from test_portal_display import portal
         rows=[portal(9),portal(3,x=600),
               portal(4,destination=None,destination_verified=False),
-              portal(5,official_name=None,display_destination_label=None),portal(6,x=2000)]
+              portal(5,official_name=None,display_destination_label=None),portal(6,x=2000),
+              portal(8,destination=None,destination_verified=False,direct_eligible=False,
+                     reference_destination_defined=True,reference_destination_scene_id=60001)]
         self.map.portals.data.update(source_revision=1286,source_ready=True,
             portals={'58001':rows},scene_names={58001:'航海大地圖'},
             portal_metadata_status='destination_links_loaded')
@@ -128,7 +130,7 @@ class Portal1275UI(unittest.TestCase):
         self.assertEqual(self.map.portal_rows[0]['id'],rows[1]['id'])
         self.assertEqual(self.map.portal_list.size(),1)
         self.assertEqual(len([i for i in self.map.canvas.find_all() if self.map.canvas.type(i)=='oval']),1)
-        self.assertEqual(len(self.map.portals.for_scene(58001)),5)
+        self.assertEqual(len(self.map.portals.for_scene(58001)),6)
         self.assertIn('合併',self.map.portal_info.get());self.assertIn('已隱藏',self.map.portal_info.get())
         self.map.portal_list.selection_set(0);self.map.choose_portal()
         with patch.object(self.map.maps,'has_image',return_value=True):self.assertTrue(self.map.go_portal())
