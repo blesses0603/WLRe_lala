@@ -35,6 +35,7 @@ def make_command(python,mode='standalone',root=ROOT,compiler='auto',diagnose_com
     command=[str(python),'-m','nuitka','--mode='+mode,'--enable-plugin=tk-inter',
              '--include-package=wlre','--include-package=UnityPy',
              '--include-package-data=UnityPy','--windows-console-mode=disable',
+             '--user-plugin='+str(root/'tools/build/unitypy_nuitka_plugin.py'),
              '--windows-icon-from-ico='+str(root/'wlre/resources/assets/app.ico'),
              '--output-folder-name=WLRe_LaLa','--output-filename=WLRe_LaLa.exe','--output-dir='+str(output),
              '--report='+str(output/'compilation-report.xml'),'--assume-yes-for-downloads',

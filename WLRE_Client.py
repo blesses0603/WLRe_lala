@@ -27,6 +27,9 @@ def self_test_unityfs():
     import UnityPy
     import brotli
     import lz4.block
+    from UnityPy.classes import TextAsset
+    from UnityPy.classes.ClassIDTypeToClassMap import ClassIDTypeToClassMap
+    from UnityPy.enums import ClassIDType
     from wlre.services.world.unity_textasset import extract_textasset
     from wlre.services.world.catalog_source_extractor import extract_catalog_source
     from wlre.services.world.eve_v115 import derive_eve_index
@@ -36,6 +39,13 @@ def self_test_unityfs():
                                      extract_catalog_source, derive_eve_index,
                                      parse_itemdata, parse_feature)):
         raise RuntimeError('UnityFS/TextAsset 解包器在打包後缺少必要入口')
+    # Exercise the generated table too: an empty Bundle never instantiates
+    # asset classes, so merely importing UnityPy could miss a packaging defect.
+    asset = TextAsset(m_Name='LaLa offline fixture', m_Script='bundled class check')
+    if (asset.m_Name != 'LaLa offline fixture'
+            or asset.m_Script != 'bundled class check'
+            or ClassIDTypeToClassMap[ClassIDType.TextAsset] is not TextAsset):
+        raise RuntimeError('Bundled UnityPy generated TextAsset class failed')
     expected = b'LaLa native UnityFS codec check: offline only'
     lz4_packed = lz4.block.compress(expected)
     if lz4.block.decompress(lz4_packed) != expected:

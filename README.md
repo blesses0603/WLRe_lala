@@ -1,8 +1,8 @@
-# WLRe:LaLa | v0.7.0 開發版（非正式發布）
+# WLRe:LaLa | v7.0.1 開發版（非正式發布）
 
-> **程式版本（2026-11-02）**：程式已更新為 `0.7.0`，包含 PR #63 的動態資料及功能修正。視窗版本、自檢與 Windows／macOS 建置版本共用 `wlre.__version__`；版本提升不代表全部正式服功能已驗收。小地圖操作、遠征、製作排程與帳篷進出已提交修正，逐項結果以 CI 與正式服操作驗收為準；版本 Tag 由 CI 建立，EXE 產物與逐功能驗收結果需分別確認，尚未正式發布 Release。
+> **程式版本（2026-11-02）**：程式已更新為 `7.0.1`，包含 PR #63 的動態資料及功能修正、儲藏存取／製作雜物櫃整合，以及 UnityPy 打包記憶體修正。視窗版本、自檢與 Windows／macOS 建置版本共用 `wlre.__version__`；版本提升不代表全部正式服功能已驗收。小地圖操作、遠征、製作排程與帳篷進出已提交修正，逐項結果以 CI 與正式服操作驗收為準；本次依使用者指定將版本編號由 0.7.0 調整為 7.0.1；版本 Tag 由 CI 建立，EXE 產物與逐功能驗收結果需分別確認，尚未正式發布 Release。
 
-> **Windows EXE 建置**：版本更新合併 main 後，Actions 的 **Version tag and Windows EXE build** 會建立指向該 main 提交的版本 Tag（例如 `v0.7.0`），再測試、編譯並上傳完整 EXE 資料夾 ZIP 與 SHA-256（保留 14 天）。解壓後執行 `WLRe_LaLa/WLRe_LaLa.exe`，請保留整個資料夾。同名 Tag 不會被覆寫；此流程不建立 GitHub Release。詳見 [Nuitka 打包](docs/NUITKA_BUILD.md)。
+> **Windows EXE 建置**：版本更新合併 main 後，Actions 的 **Version tag and Windows EXE build** 會建立指向該 main 提交的版本 Tag（例如 `v7.0.1`），再測試、編譯並上傳完整 EXE 資料夾 ZIP 與 SHA-256（保留 14 天）。解壓後執行 `WLRe_LaLa/WLRe_LaLa.exe`，請保留整個資料夾。同名 Tag 不會被覆寫；此流程不建立 GitHub Release。詳見 [Nuitka 打包](docs/NUITKA_BUILD.md)。
 
 > **PR #63 資料庫替代完成**：27 項舊 JSON／ZIP／GZ 已從目前分支移除，改為隨附完整初始 SQLite；乾淨下載可直接啟動與打包。舊版本說明中的原始檔安裝方式屬歷史紀錄。詳見 [資料庫替代說明](docs/RESOURCE_DATABASE_REPLACEMENT.md)。
 

@@ -208,6 +208,7 @@
 |---|---|
 | [build_macos.py](../tools/build/build_macos.py) | macOS arm64／x64 原生 Nuitka app 建置及簽章驗證。 |
 | [build_nuitka.py](../tools/build/build_nuitka.py) | Windows standalone 建置、依賴環境與共用資源列舉。 |
+| [unitypy_nuitka_plugin.py](../tools/build/unitypy_nuitka_plugin.py) | Windows 將 UnityPy 生成類別表以內建 bytecode 納入，避免 MSVC C1002。 |
 | [python_build_support.py](../tools/build/python_build_support.py) | Python 開發檔、函式庫與建置環境支援。 |
 | [release_macos.py](../tools/build/release_macos.py) | macOS app ZIP 封裝與版本／內容驗證。 |
 | [release_nuitka.py](../tools/build/release_nuitka.py) | Windows 發版標籤驗證、ZIP 封裝與校驗檔。 |

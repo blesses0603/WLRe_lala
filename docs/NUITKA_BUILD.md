@@ -112,3 +112,13 @@ Windows x64 工作會安裝測試依賴，執行語法／資源稽核、完整�
 成功後在 Actions → Version tag and Windows EXE build → 對應工作 → Artifacts 下載 windows-exe-<commit SHA>。內含 WLRe_LaLa_v0.7.0_windows_x64.zip 與 SHA256SUMS.txt；解壓後執行 WLRe_LaLa/WLRe_LaLa.exe，不能只搬走 EXE。產物與編譯診斷保留 14 天。
 
 只有前置建立 Tag 的工作使用 contents: write，編譯工作維持 contents: read，不發布 Release；版本提升與編譯成功也不代表所有正式服功能完成驗收。既有手動跨平台原生打包與正式 Tag 發布流程保留。
+
+## v7.0.1：Windows UnityPy C1002 修正
+
+先前 v0.7.0 的 Windows EXE 工作 [41369988964](https://github.com/blesses0603/WLRe_lala/actions/runs/41369988964) 已通過回歸，但 MSVC 編譯 `module.UnityPy.classes.generated.c` 時出現 `fatal error C1002: compiler is out of heap space in pass 2`，沒有產出可下載 EXE。這不是 setup-python@v7.0.0 步驟失敗。
+
+Windows standalone／onefile 共用 `tools/build/unitypy_nuitka_plugin.py`，使用 Nuitka 的 `decideCompilation` 介面，只將 `UnityPy.classes.generated` 以 bytecode 納入內建模組。保留完整 UnityPy 套件、類別對照表、資料與原生解壓元件，其他模組維持原有編譯方式；不需要玩家安裝 Python。介面定義可參考 [Nuitka 4.3.4 PluginBase](https://github.com/Nuitka/Nuitka/blob/4.3.4/nuitka/plugins/PluginBase.py)。
+
+編譯後 `--self-test-unityfs` 除既有容器／壓縮測試，也會建立生成的 TextAsset 並核對 ClassIDType 對照。此檢查失敗時不封裝 ZIP。不可將 Linux 的編譯探針或 dry-run 視為 Windows MSVC 原生打包成功。
+
+本次使用者明確指定新標籤為 `v7.0.1`，所以 `wlre.__version__`、視窗與封裝版本也統一為 `7.0.1`，保留原 `v0.7.0`。合併 main 後由既有版本工作建立精確提交的 Tag 並重新編譯 Windows EXE，不建立 GitHub Release；Windows 原生編譯與 ZIP 產物以新 Actions 結果為準。
