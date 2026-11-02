@@ -92,6 +92,45 @@ class DynamicTentExitTests(unittest.TestCase):
         self.assertIsNone(self.state.tent['interior_scene'])
         self.assertEqual(self.state.tent['deployed_scene'],12170)
 
+    def test_new_physical_binding_exits_without_old_stage_marker_flag(self):
+        self.enter()
+        link=self.runtime.portal_destinations[10299,7]
+        link.update(matched_stage_map=False,matched_touch_region=True)
+        packet,=command(self.state,{'action':'leave'},now=2)
+        self.assertEqual(packet,Packet(20,8,Writer().u16(7).build()))
+        self.assertTrue(self.state.tent['inside'])
+        self.position(scene=12170)
+        self.assertFalse(self.state.tent['inside'])
+
+    def test_named_stage_only_exit_uses_current_door_and_waits_for_return_scene(self):
+        self.enter()
+        self.runtime.doors[10299][0]['touch_event_ids']=[9]
+        self.runtime.portal_destinations[10299,7].update(
+            index=7,destination=None,destination_verified=False,stage_marker_only=True,
+            door_binding_verified=True,stage_marker_kind=2,stage_marker_name_id=10,
+            stage_marker_event_id=99)
+        self.runtime.texts={10:'離開小屋'}
+        packet,=command(self.state,{'action':'leave'},now=2)
+        self.assertEqual(packet.payload,Writer().u16(7).build())
+        self.assertEqual(self.state.player['scene'],63503)
+        self.assertTrue(self.state.tent['inside'])
+        self.position(scene=12170)
+        self.assertFalse(self.state.tent['inside'])
+
+    def test_stage_only_exit_needs_entry_context_touch_proof_and_valid_marker(self):
+        link=self.runtime.portal_destinations[10299,7]
+        link.update(index=7,destination=None,destination_verified=False,stage_marker_only=True,
+                    door_binding_verified=True,stage_marker_kind=2,stage_marker_name_id=10)
+        self.runtime.texts={10:'離開小屋'}
+        self.runtime.doors[10299][0]['touch_event_ids']=[9]
+        with self.assertRaises(ProtocolError):exit_door_index()
+        self.assertEqual(exit_door_index(return_scene=12170),7)
+        self.runtime.doors[10299][0]['touch_event_ids']=[]
+        with self.assertRaises(ProtocolError):exit_door_index(return_scene=12170)
+        self.runtime.doors[10299][0]['touch_event_ids']=[9]
+        self.runtime.texts.clear()
+        with self.assertRaises(ProtocolError):exit_door_index(return_scene=12170)
+
     def test_missing_or_conflicting_official_exit_data_does_not_guess_index(self):
         self.enter()
         self.runtime.portal_destinations.clear()
