@@ -107,8 +107,8 @@ class DynamicTentExitTests(unittest.TestCase):
         self.runtime.doors[10299][0]['touch_event_ids']=[9]
         self.runtime.portal_destinations[10299,7].update(
             index=7,destination=None,destination_verified=False,stage_marker_only=True,
-            door_binding_verified=True,stage_marker_kind=2,stage_marker_name_id=10,
-            stage_marker_event_id=99)
+            door_binding_verified=True,stage_marker_kind=3,stage_marker_name_id=10,
+            stage_marker_event_id=0)
         self.runtime.texts={10:'離開小屋'}
         packet,=command(self.state,{'action':'leave'},now=2)
         self.assertEqual(packet.payload,Writer().u16(7).build())

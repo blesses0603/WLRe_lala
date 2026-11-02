@@ -226,7 +226,8 @@ class Portals:
                                       if display_label else
                                       '傳點 #' + str(index) +
                                       '（官方名稱未取得）'))
-                            server_decided = bool(verified_stage_door and link.get('stage_marker_kind') == 2
+                            from wlre.services.world.portal_policy import stage_marker_has_no_target
+                            server_decided = bool(verified_stage_door and stage_marker_has_no_target(link)
                                                   and destination is None and official_name)
                             if (verified_target and type(scene_names.get(destination)) is str
                                     and scene_names[destination].strip()):

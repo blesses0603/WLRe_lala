@@ -8,13 +8,21 @@ from wlre.services.world.smallmaps import SmallMaps
 def smallmaps():
     return SmallMaps()
 
+def stage_marker_has_no_target(portal):
+    """Kind 2 has no target; Kind 3 EvtID=0 explicitly leaves it undeclared."""
+    return (portal.get('stage_marker_kind')==2 or
+            portal.get('stage_marker_kind')==3
+            and type(portal.get('stage_marker_event_id')) is int
+            and portal['stage_marker_event_id']==0)
+
+
 def stage_marker_trigger(portal):
     """Explicit verified-door mode for a labeled marker with no declared target."""
     return (is_official_revision(portal.get('source_revision'))
             and portal.get('stage_marker_only') is True
             and portal.get('door_binding_verified') is True
             and portal.get('direct_eligible') is True
-            and portal.get('stage_marker_kind') == 2
+            and stage_marker_has_no_target(portal)
             and portal.get('destination') is None
             and type(portal.get('direct_door_index')) is int
             and 1<=portal['direct_door_index']<=65535

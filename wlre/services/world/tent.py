@@ -115,6 +115,7 @@ def exit_door_index(*, return_scene=None):
     from wlre.services.world.dynamic_bundle_runtime import current_runtime
     runtime=current_runtime()
     if runtime is None:raise ProtocolError('目前官方帳篷出口資料尚未就緒')
+    from wlre.services.world.portal_policy import stage_marker_has_no_target
     candidates, server_decided=set(),set()
     for template in HOUSE_SCENES:
         rows=getattr(runtime,'doors',{}).get(template,())
@@ -134,7 +135,7 @@ def exit_door_index(*, return_scene=None):
                 candidates.add(index)
             elif (destination is None and link.get('stage_marker_only') is True
                     and link.get('door_binding_verified') is True
-                    and link.get('stage_marker_kind')==2
+                    and stage_marker_has_no_target(link)
                     and link.get('index')==index and door.get('touch_event_ids')
                     and type(return_scene) is int and 1<=return_scene<=65535
                     and return_scene not in HOUSE_SCENES):

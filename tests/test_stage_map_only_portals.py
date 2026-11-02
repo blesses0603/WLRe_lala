@@ -75,6 +75,24 @@ class StageMapOnlyPortalTests(unittest.TestCase):
         self.assertEqual(state.portal_travel['status'],'completed')
         self.assertEqual(state.portal_travel['arrival']['scene'],58001)
 
+    def test_hidden_marker_with_zero_event_id_keeps_named_exit_and_real_door(self):
+        f=fixture(rows=[(12500,3,0,0,3177,1920,10,0)])
+        binding=f.targets[12500,1]
+        self.assertIsNone(binding['destination'])
+        self.assertEqual(binding['stage_marker_event_id'],0)
+        row=next(r for r in f.catalog.for_scene(12500) if r['index']==1)
+        self.assertEqual(row['name'],'往航海大地圖')
+        self.assertEqual(row['stage_marker_kind'],3)
+        self.assertEqual(row['direct_door_index'],1)
+        self.assertIsNone(row['destination'])
+        self.assertFalse(row['destination_verified'])
+        self.assertEqual(row['destination_status'],'server_decided')
+        self.assertEqual(marked_portals(f.catalog.for_scene(12500),projection(row)),[row])
+        self.assertIsNone(destination_problem(row,SimpleNamespace(has_image=lambda _:False)))
+        state=State();state.player.update(role_id=42,scene=12500)
+        packet,=PortalTravel(f.catalog).start_direct(state,Mock(),row['id'],10)
+        self.assertEqual(packet.payload,struct.pack('<H',1))
+
     def test_cairo_door_one_does_not_borrow_egypt_destination_from_link_one(self):
         links=('事件ID=12500\n原場景位置[X:92,Y:1990][60014][X:5624,Y:166]\n').encode('utf-16-le')
         f=fixture(links=links);rows={r['index']:r for r in f.catalog.for_scene(12500)}
@@ -84,6 +102,28 @@ class StageMapOnlyPortalTests(unittest.TestCase):
         self.assertIsNone(rows[2]['official_name'])
         self.assertEqual(rows[2]['name'],'前往 埃及野外(60014)')
         self.assertEqual(rows[2]['direct_door_index'],2)
+
+    def test_zero_target_hidden_marker_does_not_borrow_cairo_link_one(self):
+        links=('事件ID=12500\n原場景位置[X:92,Y:1990][60014][X:5624,Y:166]\n').encode('utf-16-le')
+        f=fixture(rows=[(12500,3,0,0,3177,1920,10,0)],links=links)
+        rows={r['index']:r for r in f.catalog.for_scene(12500) if type(r['index']) is int}
+        self.assertEqual(rows[1]['stage_marker_event_id'],0)
+        self.assertTrue(rows[1]['direct_eligible'])
+        self.assertIsNone(rows[1]['destination'])
+        self.assertEqual(rows[2]['destination'],60014)
+        self.assertEqual(rows[2]['direct_door_index'],2)
+        self.assertEqual(len(marked_portals(f.catalog.for_scene(12500),projection(rows[1]))),2)
+
+    def test_unknown_nonzero_target_is_not_treated_as_unassigned_or_revived_by_zero(self):
+        for rows in ([(12500,3,0,65000,3177,1920,10,0)],
+                     [(12500,3,0,65000,3177,1920,10,0),(12500,3,0,0,3177,1920,10,0)]):
+            with self.subTest(rows=rows):
+                f=fixture(rows=rows)
+                self.assertNotIn((12500,1),f.targets)
+        f=fixture(rows=[(12500,3,0,0,3177,1920,0,0)])
+        row=next(r for r in f.catalog.for_scene(12500) if r['index']==1)
+        self.assertFalse(row['direct_eligible'])
+        self.assertEqual(marked_portals(f.catalog.for_scene(12500),projection(row)),[])
 
     def test_hidden_marker_target_is_a_scene_not_a_door_index(self):
         f=fixture(3);row=next(r for r in f.catalog.for_scene(12500) if r['index']==1)
@@ -181,9 +221,15 @@ class StageMapOnlyPortalTests(unittest.TestCase):
 @unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt','Requires desktop')
 class StageOnlyMapUI(unittest.TestCase):
     def test_actual_list_and_button_accept_stage_only_exit_with_no_target_image(self):
+        self.check_fixture(fixture())
+
+    def test_zero_target_hidden_marker_is_visible_and_clickable_in_actual_list(self):
+        self.check_fixture(fixture(rows=[(12500,3,0,0,3177,1920,10,0)]))
+
+    def check_fixture(self,f):
         import tkinter as tk
         from wlre.ui.home_map import HomeMap
-        root=tk.Tk();sent=Mock();f=fixture()
+        root=tk.Tk();sent=Mock()
         try:
             with patch('wlre.ui.home_map.Portals',return_value=f.catalog):
                 page=HomeMap(root,Mock(),Mock(),on_portal=sent,compact=True)

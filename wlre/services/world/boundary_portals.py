@@ -116,7 +116,7 @@ def boundary_portal_bindings(stage_raw, link_raw, doors, stages):
                 or not door.get('touch_event_ids')):continue
         candidates.setdefault((scene,index),[]).append((marker,door,bounds))
     for key,rows in candidates.items():
-        targets = {m['destination'] for m,_,_ in rows if m['kind']==3}
+        targets = {m['destination'] for m,_,_ in rows if m['kind']==3 and m['event_id']>0}
         if None in targets or any(t not in stages for t in targets):
             positions.pop(key,None);destinations[key]=None;continue
         previous = destinations.get(key)
@@ -133,7 +133,7 @@ def boundary_portal_bindings(stage_raw, link_raw, doors, stages):
         if len(targets)>1:continue
         # Prefer a declared target. Otherwise retain a labeled marker as a
         # server-decided trigger, without guessing a target from its text.
-        rows.sort(key=lambda r:(r[0]['kind']!=3, r[0]['name_id']==0,
+        rows.sort(key=lambda r:(r[0]['destination'] is None, r[0]['name_id']==0, r[0]['kind']!=3,
                                r[0]['x'],r[0]['y'],r[0]['event_id'],r[0]['name_id']))
         marker,door,bounds = rows[0]
         scene,index = key
