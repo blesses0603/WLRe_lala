@@ -95,3 +95,36 @@ class NPCApproachTests(unittest.TestCase):
         self.assertTrue(all((p.main,p.sub)==(6,1) for p in packets))
         self.assertFalse(self.state.npc_dialogue.get('active'))
         self.assertEqual(self.state.player['x'],0)
+
+    def test_finished_reported_path_can_start_manual_dialogue_without_faking_server_fix(self):
+        from wlre.network.npc_dialogue import request_npc
+        self.test_command_dispatch_uses_real_navigation_and_emits_only_walk_packets()
+        self.row['event_count']=1
+        self.state.apply(dict(type='movement_request',x=100,y=800))
+        self.assertEqual(self.state.local_movement['status'],'finished')
+        self.assertFalse(self.state.location['confirmed_is_current'])
+        with patch('wlre.network.npc_dialogue.NPCIndex',return_value=self.runtime.npc_index):
+            packet,=request_npc(self.state,dict(self.command,confirmed=True,x=100,y=200))
+        self.assertEqual((packet.main,packet.sub),(20,1))
+        self.assertEqual(packet.payload,b'\x07\x00')
+        self.assertFalse(self.state.location['confirmed_is_current'])
+        self.assertEqual(self.state.location['confirmed']['x'],0)
+        self.assertEqual(self.state.player['x'],0)
+
+    def test_unfinished_stale_or_wrong_lineage_cannot_use_local_completion(self):
+        from copy import deepcopy
+        from wlre.services.world.npc_position import interaction_position_problem
+        self.test_command_dispatch_uses_real_navigation_and_emits_only_walk_packets()
+        self.state.apply(dict(type='movement_request',x=100,y=800))
+        snapshot=self.state.snapshot()
+        self.assertIsNone(interaction_position_problem(snapshot))
+        for change in ({'status':'running'},{'status':'stopped'},{'role_id':2},
+                       {'base_fix_packet':99},{'steps_sent':0},
+                       {'catalog_token':('other','stale')},{'navigation_revision':99},
+                       {'x':float('nan')},{'x':500}):
+            bad=deepcopy(snapshot);bad['local_movement'].update(change)
+            with self.subTest(change=change):self.assertIsNotNone(interaction_position_problem(bad))
+        bad=deepcopy(snapshot);bad['navigation']['stale']=True
+        self.assertIsNotNone(interaction_position_problem(bad))
+        bad=deepcopy(snapshot);bad['local_movement']['catalog_token']=list(snapshot['local_movement']['catalog_token'])
+        self.assertIsNone(interaction_position_problem(bad))

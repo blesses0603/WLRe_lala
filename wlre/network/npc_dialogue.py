@@ -1,6 +1,7 @@
 """NPC 1262 protocol helpers. Manual, single-shot and fail closed."""
 from wlre.network.wire import Packet, Reader, Writer, ProtocolError
 from wlre.services.world.npc_catalog import NPCIndex
+from wlre.services.world.npc_position import interaction_position_problem
 
 
 def decode_effect(payload):
@@ -27,14 +28,13 @@ def request_npc(state, command):
     scene = state.player.get('scene')
     if type(scene) is not int or type(command.get('scene')) is not int or command['scene'] != scene:
         raise ProtocolError('目前場景已改變，請重新選擇 NPC')
-    location = state.location
-    if not location.get('confirmed_is_current') or (location.get('confirmed') or {}).get('scene') != scene:
-        raise ProtocolError('目前位置尚未經伺服器確認')
+    position_problem=interaction_position_problem(state.snapshot())
+    if position_problem:raise ProtocolError(position_problem)
     if (state.battle.get('active') or state.event_flow.get('blocked')
             or state.npc_dialogue.get('active')
             or (state.battle.get('post_event') or {}).get('status') not in (None, 'completed')):
         raise ProtocolError('戰鬥／事件尚未結束，禁止觸發新 NPC')
-    if state.roaming.get('enabled') or (state.local_movement or {}).get('status') in ('running', 'finished'):
+    if state.roaming.get('enabled'):
         raise ProtocolError('請先停止移動並等待伺服器座標同步')
     from wlre.services.battle.party import own_team
     team = own_team(state)
@@ -53,8 +53,8 @@ def request_npc(state, command):
     if (type(command.get('x')) is not int or type(command.get('y')) is not int
             or (npc['x'], npc['y']) != (command['x'], command['y'])):
         raise ProtocolError('NPC 座標已改變，請重新選取')
-    # Unity distance 1.6 has no verified map-grid conversion in LaLa.
-    # Never auto-walk: the server's S20-74 checks real interaction distance.
+    # A completed local path permits a manual request, not an arrival claim.
+    # The server's S20-74 still checks the actual interaction distance.
     state.npc_dialogue = {
         'active': True, 'phase': 'requesting', 'scene': scene,
         'npc_id': npc_id, 'npc_index': index, 'history': [],

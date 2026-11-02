@@ -77,6 +77,7 @@ class Movement:
         state.local_movement={'status':'running' if self.active else 'finished',
             'scene':scene,'role_id':self.role_id,'x':start[0],'y':start[1],
             'nav_height':points[0][1],'base_fix_packet':fix['packet_number'],
+            'catalog_token':token,'navigation_revision':self.revision,
             'target':{'scene':scene,'x':x,'y':y,'source':'local_goal','packet_number':state.packet_count},
             'speed_world':3.5,'interval':self.interval,'steps_sent':0,
             'reason':'沿導航路徑推算；伺服器尚未確認抵達','path_points':len(points)}

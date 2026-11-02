@@ -6,6 +6,7 @@ purchase, or server authority is implemented in this UI mixin.
 import tkinter as tk
 from tkinter import ttk, messagebox
 from wlre.services.world.npc_catalog import npc_detail
+from wlre.services.world.npc_position import interaction_position_problem
 from wlre.services.world.npc_talk import dialogue_text
 from wlre.services.world.npc_shop import shop_catalog
 from wlre.services.world.npc_item_data import item_catalog, sellable
@@ -84,16 +85,14 @@ class NPCInteractionMixin:
         npc=self.selected_npc
         current=self.state or {}
         player=current.get('player',{})
-        loc=current.get('location',{})
-        confirmed=loc.get('confirmed') or {}
         battle=current.get('battle',{})
         dialogue=current.get('npc_dialogue',{})
         post=(battle.get('post_event') or {}).get('status')
-        moving=(current.get('local_movement') or {}).get('status') in ('running','finished')
+        position_ready=interaction_position_problem(current) is None
         can_start=(self.on_npc is not None and npc is not None and npc.get('verified')
                    and npc.get('event_count',0)>0 and current.get('phase')=='world_ready'
-                   and npc.get('scene')==player.get('scene')==confirmed.get('scene')
-                   and loc.get('confirmed_is_current') and not moving
+                   and npc.get('scene')==player.get('scene') and position_ready
+                   and not dialogue.get('active')
                    and not current.get('roaming',{}).get('enabled')
                    and not battle.get('active') and post in (None,'completed')
                    and not current.get('event_flow',{}).get('blocked'))

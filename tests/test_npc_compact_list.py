@@ -107,3 +107,25 @@ class CompactNPCListTests(unittest.TestCase):
         self.page.approach_npc(SimpleNamespace(y=bounds[1]+2))
         self.page.approach_npc(SimpleNamespace(y=self.page.npc_list.winfo_height()-1))
         self.send.assert_not_called()
+
+    def test_finished_local_path_enables_interaction_until_manual_click(self):
+        from wlre.services.world.dynamic_bundle_runtime import current_catalog_token
+        self.page.state['location']={'confirmed_is_current':False,
+            'confirmed':{'scene':12500,'x':0,'y':200,'packet_number':12}}
+        self.page.state['navigation']={'scene':12500,'revision':3,'stale':False}
+        self.page.state['local_movement']={
+            'status':'finished','role_id':33,'scene':12500,'x':100,'y':200,
+            'base_fix_packet':12,'steps_sent':2,'catalog_token':current_catalog_token(),
+            'navigation_revision':3,'target':{'scene':12500,'x':100,'y':200,'source':'local_goal'}}
+        self.page.select_npc(self.npcs[0]);self.root.update()
+        self.assertEqual(str(self.page.npc_talk_button.cget('state')),'normal')
+        self.send.assert_not_called()
+        with patch('wlre.features.npc.panel.messagebox.askyesno',return_value=True):
+            self.page.npc_talk_button.invoke()
+        self.assertEqual(self.send.call_args.args[0]['type'],'npc_start')
+        self.assertFalse(self.page.state['location']['confirmed_is_current'])
+        self.send.reset_mock()
+        self.page.state['local_movement']['status']='running'
+        self.page.update_npc_buttons()
+        self.assertEqual(str(self.page.npc_talk_button.cget('state')),'disabled')
+        self.page.npc_talk_button.invoke();self.send.assert_not_called()
