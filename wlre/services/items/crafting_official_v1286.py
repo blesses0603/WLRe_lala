@@ -97,7 +97,21 @@ def decode_schedule(packet, catalog):
     return {'type': 'craft_snapshot', 'rows': rows, 'active': active}
 
 
-def build_add_packet(catalog, recipe_id, tool_index, count, allocations):
+def write_cupboard(writer,allocations=None):
+    """Room.SmithProduct: u16 count, then u16 index + u16 amount per row."""
+    rows=[] if allocations is None else allocations
+    if not isinstance(rows,(list,tuple)) or len(rows)>65535:
+        raise ProtocolError('雜物櫃材料列數無效')
+    writer.u16(len(rows))
+    for row in rows:
+        if (type(row.get('index')) is not int or not 1<=row['index']<=65535
+                or type(row.get('count')) is not int or not 1<=row['count']<=65535):
+            raise ProtocolError('雜物櫃材料格位或數量無效')
+        writer.u16(row['index']).u16(row['count'])
+    return writer
+
+
+def build_add_packet(catalog, recipe_id, tool_index, count, allocations, material_allocations=None):
     """Build the observed 1286 wire payload without submitting it."""
     recipe = catalog.get(recipe_id)
     if recipe is None:
@@ -117,4 +131,4 @@ def build_add_packet(catalog, recipe_id, tool_index, count, allocations):
                 or not 1 <= allocation['count'] <= 255):
             raise ProtocolError('材料資料無效')
         writer.u8(allocation['index']).u8(allocation['count'])
-    return Packet(64, 1, writer.u16(0).u8(0).build())
+    return Packet(64, 1, write_cupboard(writer,material_allocations).u8(0).build())

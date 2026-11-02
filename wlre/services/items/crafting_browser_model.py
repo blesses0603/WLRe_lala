@@ -5,6 +5,7 @@ from pathlib import Path
 from wlre.services.items.crafting import RECIPES
 from wlre.services.items.catalog import item_display_name as item_name
 from wlre.services.items.combat_resources import available
+from wlre.services.items.room_storage import confirmed_material_count
 
 
 def room_known(state):return bool(state.get('player',{}).get('role_id') and state.get('furniture',{}).get('ready') and state.get('furniture',{}).get('owner')==state.get('player',{}).get('role_id'))
@@ -35,7 +36,8 @@ def material_rows(state,recipe,count):
         sid=material['item_id'];owned=owned_counts(state,sid)
         usable=sum(available(inventory,index) for index,item in inventory.get('items',{}).items() if item['item_id']==sid and not item.get('locked') and not item.get('enhance_level') and not item.get('magic_spar') and not item.get('beat_level')) if ready else None
         required=material['count']*count
-        rows.append({'item_id':sid,'name':item_name(sid),'required':required,'usable':usable,**owned})
+        rows.append({'item_id':sid,'name':item_name(sid),'required':required,'usable':usable,
+                     'cupboard':confirmed_material_count(state.get('room_storage',{}),sid),**owned})
     return rows
 
 def availability(state,recipe,count=1):
@@ -48,7 +50,12 @@ def availability(state,recipe,count=1):
     if status!='已擺放':return '設備不足',item_name(recipe['tool_id'])+'：'+status
     materials=material_rows(state,recipe,count)
     if any(v['usable'] is None for v in materials):return '待同步','背包材料尚未同步'
-    if any(v['usable']<v['required'] for v in materials):return '缺材料','背包可用材料不足'
+    missing=[v for v in materials if v['usable']<v['required']]
+    if any(v['cupboard'] is None for v in missing):
+        return '待同步','背包不足，等待可靠的雜物櫃材料資料'
+    if any(v['usable']+v['cupboard']<v['required'] for v in missing):
+        return '缺材料','背包與雜物櫃可用材料不足'
+    if missing:return '可製作','將先使用背包材料，不足部分由雜物櫃取用'
     return '可製作','設備與背包材料已確認；仍需伺服器接受'
 
 class Favorites:

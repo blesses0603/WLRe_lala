@@ -94,7 +94,7 @@ class CraftingBrowser(CraftingQueueMixin):
     def update_state(self,state):
         self.refresh_runtime_catalog()
         self.state=state;c=state.get('crafting',{});inv=state.get('inventory',{});room=state.get('furniture',{})
-        key=(state.get('tent',{}).get('inside'),state.get('tent',{}).get('status'),state.get('player',{}).get('role_id'),self.app.live_active,inv.get('revision'),inv.get('ready'),inv.get('reliable'),room.get('revision'),room.get('owner'),room.get('ready'),c.get('revision'),c.get('pending'),c.get('uncertain'),c.get('status'))
+        key=(state.get('room_storage',{}).get('revision'),state.get('tent',{}).get('inside'),state.get('tent',{}).get('status'),state.get('player',{}).get('role_id'),self.app.live_active,inv.get('revision'),inv.get('ready'),inv.get('reliable'),room.get('revision'),room.get('owner'),room.get('ready'),c.get('revision'),c.get('pending'),c.get('uncertain'),c.get('status'))
         if key!=self.state_key:
             self.state_key=key
             if self.embedded and not self.window.winfo_ismapped():return

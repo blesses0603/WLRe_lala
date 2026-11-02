@@ -38,7 +38,7 @@
 | [auto_battle/model.py](../wlre/ui/auto_battle/model.py) | AI 規則草稿驗證、已確認特技及可用行動清單。 |
 | [auto_battle/action_editor.py](../wlre/ui/auto_battle/action_editor.py) | 行動編輯、技能與物品選取、目標與條件。 |
 | [auto_battle/rule_card.py](../wlre/ui/auto_battle/rule_card.py) | 各類 AI 規則卡片與操作控制項。 |
-| [bag_grid.py](../wlre/ui/bag_grid.py) | 背包與唯讀儲物格狀介面、分頁規格與物品詳情模型。 |
+| [bag_grid.py](../wlre/ui/bag_grid.py) | 背包與伺服器儲物格狀介面、分頁規格與物品詳情模型。 |
 | [battle_view.py](../wlre/ui/battle_view.py) | 戰場陣形、單位卡片、目標選擇與檢視。 |
 | [button_art.py](../wlre/ui/button_art.py) | 原版按鈕切片縮放、視窗控制與設定／包包／回復圖示按鈕。 |
 | [chat_emoji.py](../wlre/ui/chat_emoji.py) | 聊天表情圖像資源與解析。 |
@@ -78,6 +78,7 @@
 | [overview_ui.py](../wlre/ui/overview_ui.py) | 主頁卡片、狀態摘要與功能快捷操作。 |
 | [party_guard_ui.py](../wlre/ui/party_guard_ui.py) | 必要隊員名單設定。 |
 | [recovery_ui.py](../wlre/ui/recovery_ui.py) | HP／SP 補給順序、門檻、背包補品選擇。 |
+| [storage_transfer_form.py](../wlre/ui/storage_transfer_form.py) | 內嵌儲藏存取表單、數量確認與最新快照檢查，避免模態輸入鎖定。 |
 | [resource_view.py](../wlre/ui/resource_view.py) | 實際背包、超空間袋與已確認特技對話框。 |
 | [rounded_notebook.py](../wlre/ui/rounded_notebook.py) | 以實際按鈕組成的分頁列、選取狀態與鍵盤切換。 |
 | [services_ui.py](../wlre/ui/services_ui.py) | 組隊與煉金操作面板。 |
@@ -190,7 +191,8 @@
 | [post_battle_maintenance.py](../wlre/services/items/post_battle_maintenance.py) | 逐筆修理、販售、丟棄與格位／裝備確認。 |
 | [recovery.py](../wlre/services/items/recovery.py) | HP／SP 補給偏好、藥水儲存槽與補給選擇規則。 |
 | [reservations.py](../wlre/services/items/reservations.py) | 跨戰鬥、補給、煉金、製作、遠征與維護的背包保留登記。 |
-| [room_storage.py](../wlre/services/items/room_storage.py) | S62 儲藏室／雜物櫃的唯讀解碼與權威狀態。 |
+| [room_storage_transfer.py](../wlre/services/items/room_storage_transfer.py) | 儲藏室／雜物櫃存取規劃、來源保留與雙邊庫存確認。 |
+| [room_storage.py](../wlre/services/items/room_storage.py) | S62 儲藏室／雜物櫃解碼、權威狀態及製作可用庫存。 |
 
 ## wlre/services/social：聊天與公會
 
@@ -206,6 +208,7 @@
 |---|---|
 | [build_macos.py](../tools/build/build_macos.py) | macOS arm64／x64 原生 Nuitka app 建置及簽章驗證。 |
 | [build_nuitka.py](../tools/build/build_nuitka.py) | Windows standalone 建置、依賴環境與共用資源列舉。 |
+| [unitypy_nuitka_plugin.py](../tools/build/unitypy_nuitka_plugin.py) | Windows 將 UnityPy 生成類別表以內建 bytecode 納入，避免 MSVC C1002。 |
 | [python_build_support.py](../tools/build/python_build_support.py) | Python 開發檔、函式庫與建置環境支援。 |
 | [release_macos.py](../tools/build/release_macos.py) | macOS app ZIP 封裝與版本／內容驗證。 |
 | [release_nuitka.py](../tools/build/release_nuitka.py) | Windows 發版標籤驗證、ZIP 封裝與校驗檔。 |
@@ -261,7 +264,7 @@
 | [EXPEDITION.md](EXPEDITION.md) | 遠征資料、組隊與自動化流程。 |
 | [MAINTENANCE.md](MAINTENANCE.md) | 戰後修理／整理流程與原始協定。 |
 | [attribute_points_1262.md](attribute_points_1262.md) | 角色配點協定與限制。 |
-| [room_storage_1262.md](room_storage_1262.md) | 小屋倉庫唯讀資料同步。 |
+| [room_storage_1262.md](room_storage_1262.md) | 小屋倉庫同步、存取封包與製作取料。 |
 | [CONNECTION_DIAGNOSTICS.md](CONNECTION_DIAGNOSTICS.md) | 連線與介面診斷。 |
 | [CLEANUP.md](CLEANUP.md) | 週期清理。 |
 | [NUITKA_BUILD.md](NUITKA_BUILD.md) | 原生打包與發版操作。 |

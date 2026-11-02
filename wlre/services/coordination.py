@@ -18,6 +18,9 @@ def command_reason(state,command,*,maintenance_pending=False,maintenance_uncerta
     kind=command.get('type')
     # Stopping continuation cannot cancel an outstanding request or its holds.
     if kind in STOP_COMMANDS or kind=='craft' and command.get('action') in ('stop_auto','plan_pause'):return ''
+    if active(state.room_storage) and kind in ('room_storage','craft','companion','field_item','field_storage',
+                                              'battle_item','start_alchemy','start_expedition'):
+        return '等待儲藏存取確認；結果不明時請重新登入同步'
     if maintenance_pending or maintenance_uncertain or active(state.maintenance):
         return '請先等待戰後修理／整理確認；結果未確認時需重新登入同步'
     if expedition_busy(state) and kind in ('start_alchemy','craft','companion'):
@@ -32,7 +35,9 @@ def command_reason(state,command,*,maintenance_pending=False,maintenance_uncerta
 
 def reason(state,service):
     """Return a temporary pause reason, without disabling any service."""
-    if service in ('auto_battle','roaming','expedition','alchemy','crafting') and active(state.maintenance):
+    if active(state.room_storage) and service in ('auto_battle','expedition','alchemy','crafting','maintenance'):
+        return '等待儲藏存取確認'
+    if service in ('auto_battle','roaming','expedition','alchemy','crafting','room_storage') and active(state.maintenance):
         return '等待戰後修理／整理確認'
     if service=='auto_battle':return ''
     if service=='roaming':
@@ -53,6 +58,9 @@ def reason(state,service):
         if service=='expedition' and (state.alchemy.get('enabled') or active(state.alchemy)):
             return '請先停止煉金並等待回覆'
         if service=='alchemy' and active(state.expedition):return '等待遠征操作確認'
+    elif service=='room_storage':
+        if craft_busy(state) or expedition_busy(state) or state.alchemy.get('enabled') or active(state.alchemy):
+            return '請先停止製作、遠征或煉金並等待目前操作確認'
     elif service=='crafting':
         if expedition_busy(state):return '請先停止遠征自動派遣，並等待目前遠征操作確認'
         if state.alchemy.get('enabled') or active(state.alchemy) or state.roaming.get('enabled'):

@@ -58,6 +58,9 @@ class SessionEventCoordinator:
                         and self.attribute_window is not None and self.attribute_window.window.winfo_exists()):
                     self.attribute_window.rejected(event.get('error', '伺服器要求失敗'))
                 if event_kind=='command_rejected' and event.get('command_type')=='craft':self.crafting_panel.status.set(event['error'])
+                if event_kind=='command_rejected' and event.get('command_type')=='room_storage':
+                    for view in self.resource_windows:
+                        if view.window.winfo_exists():view.storage_rejected(event['error'])
                 if event_kind=='command_rejected' and event.get('command_type') in ('start_expedition','stop_expedition'):
                     self.expedition_panel.status.set(event['error'])
                 if event_kind.startswith('chat_'):continue

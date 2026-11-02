@@ -18,7 +18,9 @@ def add_item(inventory,value):
     # stackability table. Accept only an explicit free server slot with
     # a single unit; all other cases require validated stack metadata or
     # a fresh authoritative S23-5 snapshot.
-    if str(sid) not in STACKABLE:
+    # S62 compact cupboard rows independently prove per-session stackability.
+    stackable=inventory.get('server_stackable',{}).get(str(sid),STACKABLE.get(str(sid)))
+    if stackable is None:
         if (type(capacity) is int and 1 <= preferred <= capacity
                 and str(preferred) not in items and count == 1):
             items[str(preferred)] = {**value, 'index': preferred, 'count': 1}
@@ -28,7 +30,7 @@ def add_item(inventory,value):
     def empty():
         if preferred and str(preferred) not in items:return preferred
         return next((i for i in range(1,capacity+1) if str(i) not in items),None)
-    if STACKABLE[str(sid)]:
+    if stackable:
         target=items.get(str(preferred)) if preferred else next((v for v in items.values() if v['item_id']==sid and v['count']<200),None)
         if target:
             if target['item_id']!=sid:return fail('堆疊物品格位不符')

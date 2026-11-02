@@ -72,6 +72,22 @@ class SessionEventCoordinatorTests(unittest.TestCase):
         app.render.assert_not_called()
         self.assertEqual(app.snapshot['player']['scene'], 10000)
 
+    def test_storage_rejection_is_returned_to_open_form_without_resending(self):
+        events=queue.Queue()
+        events.put(('event',{'type':'command_rejected','command_type':'room_storage',
+                             'error':'等待事件結束'}))
+        view=SimpleNamespace(window=Mock(),storage_rejected=Mock())
+        view.window.winfo_exists.return_value=True
+        closed=SimpleNamespace(window=Mock(),storage_rejected=Mock())
+        closed.window.winfo_exists.return_value=False
+        app=SimpleNamespace(events=events,snapshot={},chat_panel=Mock(),
+                            resource_windows=[view,closed],write=Mock(),status=Mock(),
+                            render=Mock(),live_active=True,send=Mock())
+        App._poll_once(app)
+        view.storage_rejected.assert_called_once_with('等待事件結束')
+        closed.storage_rejected.assert_not_called()
+        app.send.assert_not_called()
+
 
 if __name__ == '__main__':
     unittest.main()

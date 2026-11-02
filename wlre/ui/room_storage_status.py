@@ -28,8 +28,12 @@ def storage_sync_message(storage):
             amount = len(bucket.get('items', {}))
             capacity = bucket.get('capacity')
             limit = f' / {capacity}' if capacity is not None else ''
-            state = f'已同步 {amount}{limit} 格（唯讀）'
+            state = f'已同步 {amount}{limit} 格'
         result.append(f'{name}：{state}')
+    if storage.get('pending') or storage.get('uncertain'):
+        result.append(storage.get('status','等待存取確認'))
+    elif storage.get('status') and storage.get('status')!='等待儲藏空間同步':
+        result.append(storage['status'])
     return '｜'.join(result)
 
 

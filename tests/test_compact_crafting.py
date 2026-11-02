@@ -75,10 +75,10 @@ class CompactCrafting(unittest.TestCase):
         self.assertTrue(self.browser.detail_panel.winfo_ismapped())
         self.browser.count.set('1');self.browser.refresh_detail(force=True)
         table=self.browser.material_table
-        original=[int(table.item(i,'values')[2]) for i in table.get_children()]
+        original=[int(table.set(i,'required')) for i in table.get_children()]
         self.assertTrue(original)
         self.browser.count.set('2');self.browser.refresh_detail(force=True);self.root.update()
-        self.assertEqual([int(table.item(i,'values')[2]) for i in table.get_children()],[n*2 for n in original])
+        self.assertEqual([int(table.set(i,'required')) for i in table.get_children()],[n*2 for n in original])
         self.assertTrue(self.browser.add_button.winfo_ismapped())
         edge=self.browser.detail_panel.winfo_rootx()
         for card in self.browser.cards:
@@ -100,12 +100,15 @@ class CompactCrafting(unittest.TestCase):
         self.browser.selected=recipe['item_id'];self.browser.refresh_detail(force=True);self.root.update()
         table=self.browser.material_table
         self.assertEqual(len(table.get_children()),5)
-        self.assertEqual(table.column('name','width'),76)
-        self.assertFalse(table.column('name','stretch'))
+        self.assertEqual(tuple(table['columns']),('name','usable','cupboard','required'))
+        self.assertGreaterEqual(table.column('name','width'),64)
         for iid in table.get_children():
             bounds=table.bbox(iid)
             self.assertTrue(bounds)
             self.assertLessEqual(bounds[1]+bounds[3],table.winfo_height())
+            required=table.bbox(iid,'required')
+            self.assertTrue(required)
+            self.assertLessEqual(required[0]+required[2],table.winfo_width())
         self.assertTrue(self.browser.add_button.winfo_ismapped())
         self.assertTrue(self.app.home_map.winfo_ismapped())
         self.assertTrue(self.app.chat_panel.winfo_ismapped())
@@ -122,7 +125,7 @@ class CompactCrafting(unittest.TestCase):
         self.assertIsNotNone(body_top)
         self.assertLessEqual(bounds[1],body_top+2)
         self.assertIn('image',table.identify_element(3,bounds[1]+bounds[3]//2))
-        columns=('#0','name','usable','required')
+        columns=('#0','name','usable','cupboard','required')
         before=[table.column(c,'width') for c in columns]
         separator=next(x for x in range(1,table.winfo_width()) if table.identify_region(x,8)=='separator')
         table.event_generate('<ButtonPress-1>',x=separator,y=8)

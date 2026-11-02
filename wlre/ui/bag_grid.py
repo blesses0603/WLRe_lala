@@ -16,9 +16,8 @@ COLUMNS = 6
 ROWS = 4
 PAGE_SIZE = COLUMNS * ROWS
 ICON_SIZE = 64
-# The nested hyperspace storage tab has a shorter drawable area than the main
-# inventory. Never squeeze four rows of 64px icons into that small space.
-STORAGE_ROWS = 2
+# Storage stays 6 x 4; artwork adapts to the shorter nested page.
+STORAGE_ROWS = 4
 STORAGE_ICON_SIZE = 60
 SLOT_HEIGHT = 88
 SLOT_BG = '#132d40'
@@ -34,10 +33,13 @@ def grid_profile(compact=False):
 def responsive_profile(width, height, compact=False):
     """Fit whole inventory tiles into the drawable board, without overlap.
 
-    The published default 6x4 (storage 6x2) geometry stays unchanged on
-    ordinary desktops. Smaller dialogs use fewer columns and/or rows, keeping
-    the icon size and click targets intact rather than squeezing artwork.
+    Storage always shows 24 cells, scaling icons to fit its nested board.
+    The ordinary bag retains its existing responsive row/column behavior.
     """
+    if compact:
+        size=max(16,min(STORAGE_ICON_SIZE,int(width)//COLUMNS-16,
+                        int(height)//STORAGE_ROWS-20))
+        return COLUMNS, STORAGE_ROWS, size
     _columns, maximum_rows, size = grid_profile(compact)
     columns = min(COLUMNS, max(2, int(width) // (size + 32)))
     rows = min(maximum_rows, max(1, int(height) // SLOT_HEIGHT))
@@ -118,9 +120,10 @@ def item_details(inventory, index, record):
 class BagGrid(ttk.Frame):
     """Roomy icon pages with a compact bottom details strip."""
 
-    def __init__(self, parent, icons, use_item, read_only=False, title='背包格位', compact=False):
+    def __init__(self, parent, icons, use_item, read_only=False, title='背包格位', compact=False, storage_actions=False):
         super().__init__(parent)
         self.read_only = read_only
+        self.storage_actions = storage_actions
         self.compact = compact
         self.columns, self.row_count, self.icon_size = grid_profile(compact)
         self.page_size = self.columns * self.row_count
@@ -222,15 +225,15 @@ class BagGrid(ttk.Frame):
     def _board_resized(self, event):
         if event.widget is not self.board or event.width < 80 or event.height < 50:
             return
-        columns, rows, _size = responsive_profile(event.width, event.height, self.compact)
-        if (columns, rows) == (self.columns, self.row_count):
+        columns, rows, size = responsive_profile(event.width, event.height, self.compact)
+        if (columns, rows, size) == (self.columns, self.row_count, self.icon_size):
             return
         old_size = self.page_size
         selected_position = next(
             (i for i, row in enumerate(self.rows) if row[0] == self.index_selected),
             None,
         )
-        self.columns, self.row_count = columns, rows
+        self.columns, self.row_count, self.icon_size = columns, rows, size
         self.page_size = columns * rows
         self.page = reflow_page(self.page, old_size, self.page_size,
                                 len(self.rows), selected_position)
@@ -297,6 +300,9 @@ class BagGrid(ttk.Frame):
         self._paint()
 
     def _paint(self):
+        # Keep old PhotoImages alive until every label has its replacement.
+        # Tk also resolves its current image when configuring the background.
+        previous_images = self._images
         self._images = []
         page_rows = self.rows[self.page * self.page_size: (self.page + 1) * self.page_size]
         for position, cell in enumerate(self.cells[:self.page_size]):
@@ -318,6 +324,7 @@ class BagGrid(ttk.Frame):
                 cell['icon'].configure(image='')
                 cell['count'].configure(text='')
         self._show_card()
+        del previous_images
 
     def pick(self, position):
         index = self.cells[position]['index']
@@ -362,7 +369,8 @@ class BagGrid(ttk.Frame):
         self._detail_image = self.icons.get(details['id'], 56)
         self.large_icon.configure(image=self._detail_image)
         if self.read_only:
-            self.meta.set(f"ID {details['id']}　格位 {details['index']}　數量 {details['count']}（唯讀）")
+            suffix='（伺服器庫存）' if getattr(self,'storage_actions',False) else '（唯讀）'
+            self.meta.set(f"ID {details['id']}　格位 {details['index']}　數量 {details['count']}"+suffix)
         else:
             self.meta.set(
                 f"ID {details['id']}　格位 {details['index']}　"
