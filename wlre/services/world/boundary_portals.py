@@ -1,4 +1,4 @@
-"""Bind unmarked coastal exits using current Eve touch regions and links.
+"""Bind maritime exits using current Eve touch regions and independent link IDs.
 
 StageMap EvtID is not a door index for hidden markers. Never invent one from
 their target scene. EventManager._NewPortal and StageObjectData instead define
@@ -9,6 +9,9 @@ import struct
 
 from wlre.services.world.portal_links_1275 import parse_stage_map_portals, parse_eve_door_links
 from wlre.services.world.portal_evidence_1275 import _packet_position, _projection_guard
+
+# Define.lua WorldMapId; a scene identity, never a C20-8 door ID.
+WORLD_MAP_SCENE = 58001
 
 
 def touch_bounds(door, stage):
@@ -28,11 +31,12 @@ def touch_bounds(door, stage):
 
 
 def boundary_portal_bindings(stage_raw, link_raw, doors, stages):
-    """Return independent (positions, destinations); do not override markers.
+    """Return (positions, destinations) keyed by actual Eve door identity.
 
-    Only a unique PlayerTouch rectangle containing the verified link point,
-    whose real door ID equals that scene-local link ID, can supply a binding.
-    A missing ordinary marker is allowed; conflicting/duplicate ones are not.
+    Only a unique PlayerTouch rectangle containing the verified link point can
+    supply a binding. Results are keyed by actual Eve door ID, while link_index
+    retains the independent EveDoorLinks ordinal. Maritime markers are display
+    references and cannot substitute for this geometric proof.
     """
     parse_stage_map_portals(stage_raw)  # strict length/schema validation
     referenced = set()
@@ -50,7 +54,8 @@ def boundary_portal_bindings(stage_raw, link_raw, doors, stages):
         regions = [(d,touch_bounds(d,stage)) for d in entries if isinstance(d,dict)]
         for link in links.get(scene,()):
             key = (scene,link['index'])
-            if key in referenced:continue
+            maritime = scene == WORLD_MAP_SCENE or link['destination'] == WORLD_MAP_SCENE
+            if key in referenced and not maritime:continue
             target = link['destination']
             if target not in stages:continue
             point = _packet_position(stage,link['x'],link['y'])
@@ -60,13 +65,38 @@ def boundary_portal_bindings(stage_raw, link_raw, doors, stages):
             if len(matches)!=1:continue
             door,bounds = matches[0]
             index = door.get('index')
-            if type(index) is not int or not 1<=index<=65535 or counts[index]!=1 or index!=link['index']:continue
+            if type(index) is not int or not 1<=index<=65535 or counts[index]!=1:continue
             if not door.get('touch_event_ids'):continue
+            key = (scene,index)
+            if not maritime and key in referenced:continue
+            # Two links claiming one container cannot prove a unique route.
+            if key in destinations:
+                destinations[key] = None
+                positions.pop(key,None)
+                continue
             positions[key] = {'scene':scene,'index':index,'x':point[0],'y':point[1],
                 'projection_guard':guard,'position_verified':True,
                 'source_kind':'1275_eve_door_links_grid_scaled','trigger_bounds':bounds,
-                'binding_kind':'unique_boundary_touch_region'}
-            destinations[key] = dict(link,matched_stage_map=False,matched_touch_region=True,
+                'binding_kind':'unique_boundary_touch_region','link_index':link['index']}
+            destinations[key] = dict(link,index=index,link_index=link['index'],matched_stage_map=False,matched_touch_region=True,
                 event_x=door['x'],event_y=door['y'],destination_verified=True,
                 trigger_verified=False,binding_kind='unique_boundary_touch_region')
-    return positions,destinations
+    return positions,{key:value for key,value in destinations.items() if value is not None}
+
+
+def reconcile_touch_bindings(stage_raw, link_raw, doors, stages, positions, destinations):
+    """Replace maritime ordinal assumptions with current actual-door evidence.
+
+    A maritime marker with the same number as a container does not prove their
+    identity. Revoke those old joins even if no unique touch region is found.
+    Other ordinary marker bindings retain their existing policy.
+    """
+    links = parse_eve_door_links(link_raw)
+    for scene, rows in links.items():
+        for link in rows:
+            if scene == WORLD_MAP_SCENE or link['destination'] == WORLD_MAP_SCENE:
+                positions.pop((scene,link['index']),None)
+                destinations.pop((scene,link['index']),None)
+    bound_positions, bound_targets = boundary_portal_bindings(stage_raw,link_raw,doors,stages)
+    positions.update(bound_positions)
+    destinations.update(bound_targets)

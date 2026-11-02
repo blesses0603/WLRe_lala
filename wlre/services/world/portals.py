@@ -146,16 +146,19 @@ class Portals:
                                 and type(map_x) is int and type(map_y) is int
                                 and 0 <= map_x <= 65535 and 0 <= map_y <= 65535)
                             strict_valid_xy = valid_xy
-                            reference = portal_evidence.get((scene_id, index), {})
+                            link = linked.get((scene_id, index), {})
+                            if not isinstance(link, dict):link = {}
+                            link_index = link.get('link_index', index)
+                            reference = portal_evidence.get((scene_id, link_index), {})
                             if not isinstance(reference, dict):
                                 reference = {}
                             inspection = link_inspection_fields(
-                                reference, scene_id, index, scene_names)
+                                reference, scene_id, link_index, scene_names)
                             reference_xy = (
                                 reference.get('source_kind') ==
                                 '1275_eve_door_links_reference'
                                 and reference.get('scene') == scene_id
-                                and reference.get('index') == index
+                                and reference.get('index') == link_index
                                 and reference.get('position_verified') is True
                                 and isinstance(reference.get('projection_guard'), dict)
                                 and type(reference.get('x')) is int
@@ -163,9 +166,6 @@ class Portals:
                             if not valid_xy and reference_xy:
                                 map_x, map_y = reference['x'], reference['y']
                                 valid_xy = True
-                            link = linked.get((scene_id, index), {})
-                            if not isinstance(link, dict):
-                                link = {}
                             destination = link.get('destination')
                             verified_target = (
                                 (link.get('matched_stage_map') is True
@@ -185,11 +185,11 @@ class Portals:
                             # only falls back to the destination stage's name.
                             # A verified marker label is useful even when the
                             # separate EveDoorLinks route cannot be resolved.
-                            official_name = portal_names.get((scene_id, index))
+                            official_name = portal_names.get((scene_id, link_index))
                             if (type(official_name) is not str
                                     or not official_name.strip()):
                                 official_name = None
-                            display_scene = display_targets.get((scene_id, index))
+                            display_scene = (destination if verified_target else display_targets.get((scene_id, link_index)))
                             if (type(display_scene) is not int
                                     or not 0 < display_scene <= 65535):
                                 display_scene = None
@@ -197,7 +197,7 @@ class Portals:
                                     and reference.get('source_kind') ==
                                     '1275_eve_door_links_reference'
                                     and reference.get('scene') == scene_id
-                                    and reference.get('index') == index
+                                    and reference.get('index') == link_index
                                     and type(reference.get('destination')) is int
                                     and reference.get('destination_defined') is True):
                                 display_scene = reference['destination']
@@ -249,6 +249,7 @@ class Portals:
                                 'direct_door_index': index if verified_target and strict_valid_xy and 1 <= index <= 65535 else None,
                                 'door_index': index if verified_target and strict_valid_xy and 1 <= index <= 65535 else None,
                                 'binding_kind': link.get('binding_kind'),
+                                'link_index': link_index,
                                 'trigger_bounds': position.get('trigger_bounds'),
                                 'navigation_status': 'unverified',
                                 'direct_note': (

@@ -97,7 +97,7 @@ class BoundaryPortalTests(unittest.TestCase):
             with self.subTest(mutation=mutation):self.assertEqual(self.bind(),({},{}))
 
     def test_uncertain_or_conflicting_touch_regions_remain_disabled(self):
-        for change in ({'touch_event_ids':[]},{'sign_type':5},{'right':1},{'index':9},
+        for change in ({'touch_event_ids':[]},{'sign_type':5},{'right':1},
                        {'x':-1},{'sign_x':65535}):
             self.doors={60000:[{**door(),**change}]}
             with self.subTest(change=change):self.assertEqual(self.bind(),({},{}))
@@ -106,11 +106,13 @@ class BoundaryPortalTests(unittest.TestCase):
         self.doors={60000:[door(),door()]}
         self.assertEqual(self.bind(),({},{}))
 
-    def test_existing_or_duplicate_marker_cannot_be_bypassed(self):
+    def test_maritime_marker_does_not_override_actual_touch_identity(self):
         row=(60000,2,0,3,60,1100,0,0)
         for raw in (marker(row),marker(row,row)):
             self.raw=raw
-            self.assertEqual(self.bind(),({},{}))
+            positions,targets=self.bind()
+            self.assertEqual(set(targets),{(60000,3)})
+            self.assertTrue(targets[60000,3]['matched_touch_region'])
 
     def test_audit_recognizes_boundary_proof_without_fabricating_normal_marker(self):
         from wlre.services.world.portal_coverage import audit_portal_coverage
@@ -126,6 +128,27 @@ class BoundaryPortalTests(unittest.TestCase):
         positions,targets=self.bind()
         self.assertEqual(set(targets),{(60000,3)})
         self.assertNotIn((60000,58001),positions)
+
+    def test_link_three_binds_door_nine_through_catalog_and_packet(self):
+        self.doors={60000:[{**door(),'index':9}]}
+        positions,targets=self.bind()
+        self.assertEqual(set(targets),{(60000,9)})
+        self.assertEqual(targets[60000,9]['link_index'],3)
+        catalog=self.catalog();row,=catalog.for_scene(60000)
+        self.assertEqual((row['index'],row['link_index'],row['direct_door_index']),(9,3,9))
+        self.assertIn('航海大地圖',row['name'])
+        state=State();state.player.update(role_id=42,scene=60000,x=120,y=4400)
+        with patch('wlre.services.world.portal_policy.smallmaps',
+                   return_value=SimpleNamespace(has_image=lambda sid:True)):
+            packet,=PortalTravel(catalog).start_direct(state,Mock(),row['id'],10)
+        self.assertEqual(packet.payload,Writer().u16(9).build())
+        self.assertEqual(state.player['scene'],60000)
+        from wlre.services.world.portal_coverage import audit_portal_coverage
+        audit=audit_portal_coverage(self.doors,self.stages,self.raw,links(),positions,targets)
+        scene=next(r for r in audit['scenes'] if r['scene']==60000)
+        detail=next(r for r in scene['details'] if r['index']==9)
+        self.assertEqual((detail['link_index'],detail['issues']),(3,[]))
+        self.assertFalse(any(r['index']==3 for r in scene['details']))
 
     def catalog(self):
         positions,targets=self.bind()

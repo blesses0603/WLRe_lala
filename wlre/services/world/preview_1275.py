@@ -242,11 +242,9 @@ def load_preview(data_archive, eve_archive):
                 stage_map, link_table, doors, stages)
             portal_destinations = verified_portal_destinations(
                 stage_map, link_table, doors, stages)
-            from wlre.services.world.boundary_portals import boundary_portal_bindings
-            boundary_positions, boundary_targets = boundary_portal_bindings(
-                stage_map, link_table, doors, stages)
-            portal_positions.update(boundary_positions)
-            portal_destinations.update(boundary_targets)
+            from wlre.services.world.boundary_portals import reconcile_touch_bindings
+            reconcile_touch_bindings(
+                stage_map, link_table, doors, stages, portal_positions, portal_destinations)
             portal_metadata_status = 'destination_links_loaded'
         except (ValueError, KeyError, TypeError, PortalLinkSourceError):
             portal_metadata_status = 'destination_links_missing_or_invalid'

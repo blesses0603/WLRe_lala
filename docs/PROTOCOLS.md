@@ -204,7 +204,7 @@ Packet capture import/replay/profile extraction and standalone packet inspection
 
 ## 海岸／航海大地圖出口
 
-StageMapData_C 不一定有每個海岸出口的一般 Kind=2 標記。以前只有 EveDoorLinks 名稱／座標可顯示，但因缺少一般標記而全部停用。現在另以同版 Eve 的 NewDoor 矩形碰撞範圍和 PlayerTouch 事件核對無標記出口；僅唯一區域包含連線點，且實際門 index 與該場景連線 index 相符時建立對應。一般標記若存在或重複，不透過此路徑繞過原有檢查。
+StageMapData_C 不一定有每個海岸出口的一般 Kind=2 標記，而且 EveDoorLinks 連線序號也不一定是 Eve 實際門編號。航海大地圖（Define.lua WorldMapId=58001）及通往海圖的入口，先撤銷以相同序號直接推定的綁定，再用同版 Eve NewDoor 的唯一矩形碰撞範圍與 PlayerTouch 事件，核對 EveDoorLinks 的來源點。綁定以實際門 index 為鍵，另存獨立 `link_index`；名稱與連線稽核按連線序號查找，畫點和 C20-8 使用配對後的實際門資料。同一門被多條連線認領或多個範圍重疊時不任意選取。其他一般標記仍沿用原有檢查。
 
 來源：使用者提供的 1262 Lua `EventData.NewDoor/NewEvent`、`Data.LoadEve`、`EventManager._NewPortal`、`Stage.TransferGridPosition`、`StageObjectData.New`、`PlayerController.OnTriggerEnter` 和 `Role.SendMeetDoor`。矩形只支援 signType 1／4；已確認 PlayerTouch 發生種類旗標為 2。原始門格座標轉封包座標為 `(grid-1)*20*sceneRatio + signOffset*sceneRatio`，不可和 EveDoorLinks 的 `point*sceneRatio` 混用。
 
@@ -215,3 +215,5 @@ StageMapData_C 不一定有每個海岸出口的一般 Kind=2 標記。以前只
 小地圖顯示另按來源／已知目的場景合併成一個入口，並隱藏未知、無有效名稱與無標記點。代表點優先使用可操作入口，清單和圖示共用同一筆原始記錄；原始路線與事件 ID 不刪除，送出仍由 PortalTravel 重新核對。
 
 只有門事件可對應、`destination_verified` 與 `direct_eligible` 為真，且實際門編號有效的標記才進入主小地圖。已知名稱／位置但尚不能傳送的灰色參考點改為僅留核對報告，不在主清單或圖示中顯示。
+
+歷史 1262 的完整航海入口對照見 [航海入口門編號核對](SAILING_DOOR_IDENTITIES.md)。這份歷史表不參與目前 Runtime 綁定。
