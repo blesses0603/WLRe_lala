@@ -32,7 +32,8 @@ class CraftingBrowser(CraftingQueueMixin):
         ttk.Label(header,text='製作',style='Heading.TLabel').pack(side='left')
         self.toolbar=header
         ttk.Button(header,text='自訂清單',command=panel.open_plan,padding=(5,3)).pack(side='left',padx=(12,3))
-        ttk.Button(header,text='進入自家帳篷',command=lambda:panel.app.send({'type':'tent','action':'enter'}),padding=(5,3)).pack(side='left',padx=3)
+        self.tent_button=ttk.Button(header,text='進入自家帳篷',command=self.toggle_tent,padding=(5,3))
+        self.tent_button.pack(side='left',padx=3)
         self.queue_label=tk.StringVar();ttk.Button(header,textvariable=self.queue_label,command=self.show_queue,padding=(5,3)).pack(side='left',padx=3)
         self.source_label=tk.StringVar(value=feature_note('crafting'))
         ttk.Label(header,textvariable=self.source_label,style='Muted.TLabel').pack(side='right',padx=4)
@@ -76,6 +77,10 @@ class CraftingBrowser(CraftingQueueMixin):
         self.tick_job=self.window.after(1000,self.tick)
         if embedded:self.window.bind('<Map>',lambda e:self.refresh() if e.widget is self.window else None)
 
+    def toggle_tent(self):
+        inside=self.state.get('tent',{}).get('inside',False)
+        self.app.send({'type':'tent','action':'leave' if inside else 'enter'})
+
     def refresh_runtime_catalog(self):
         token=current_catalog_token()
         if token==getattr(self,'_catalog_token',None):
@@ -89,7 +94,7 @@ class CraftingBrowser(CraftingQueueMixin):
     def update_state(self,state):
         self.refresh_runtime_catalog()
         self.state=state;c=state.get('crafting',{});inv=state.get('inventory',{});room=state.get('furniture',{})
-        key=(state.get('player',{}).get('role_id'),self.app.live_active,inv.get('revision'),inv.get('ready'),inv.get('reliable'),room.get('revision'),room.get('owner'),room.get('ready'),c.get('revision'),c.get('pending'),c.get('uncertain'),c.get('status'))
+        key=(state.get('tent',{}).get('inside'),state.get('tent',{}).get('status'),state.get('player',{}).get('role_id'),self.app.live_active,inv.get('revision'),inv.get('ready'),inv.get('reliable'),room.get('revision'),room.get('owner'),room.get('ready'),c.get('revision'),c.get('pending'),c.get('uncertain'),c.get('status'))
         if key!=self.state_key:
             self.state_key=key
             if self.embedded and not self.window.winfo_ismapped():return
@@ -116,6 +121,7 @@ class CraftingBrowser(CraftingQueueMixin):
         if self.closed:return
         force=self.refresh_runtime_catalog() or force
         self.state=self.panel.state;c=self.state.get('crafting',{})
+        self.tent_button.configure(text='離開自家帳篷' if self.state.get('tent',{}).get('inside') else '進入自家帳篷')
         capacity=5 if any(v['item_id']==39050 and v.get('status')==0 for v in self.state.get('furniture',{}).get('items',{}).values()) else 3
         self.queue_label.set(f"製作排程：{len(c.get('queue',{}))}/{capacity}")
         self.source_label.set(feature_note('crafting'))
