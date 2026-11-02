@@ -153,7 +153,8 @@ def read_only_stage_portal_markers(raw, stages):
     Official 1262 Lua's HiddenPortalNew uses Kind=3 PositionX/Y and EvtID as
     the destination scene, but only when EvtID is nonzero. Kind=4 is a
     cross-scene *reference*, not a confirmed destination or C20-8 trigger.
-    Ordinary Kind=2 map position comes from EveDoorLinks instead.
+    Ordinary Kind=2 prefers EveDoorLinks for display. Its own point is
+    retained for StageMap-only physical door matching, never an ordinal join.
     """
     import struct
     from wlre.services.world.portal_schema import inspect_stage_map
@@ -167,7 +168,7 @@ def read_only_stage_portal_markers(raw, stages):
         if kind not in (2, 3, 4):
             continue
         hidden = kind == 3
-        point = _packet_position(stages.get(scene), x, y) if hidden else None
+        point = _packet_position(stages.get(scene), x, y) if kind in (2,3) else None
         destination = event_id if hidden and event_id > 0 else None
         answer.append({
             'scene': scene, 'kind': kind, 'event_id': event_id,
@@ -180,7 +181,7 @@ def read_only_stage_portal_markers(raw, stages):
             'name_id': name_id, 'sorting': sorting,
             'position_verified': point is not None,
             'projection_guard': _projection_guard(stages.get(scene))
-                                if hidden else None,
+                                if kind in (2,3) else None,
             'source_kind': ('1275_hidden_stage_marker' if hidden
                             else '1275_other_scene_marker' if kind == 4
                             else '1275_normal_stage_marker'),

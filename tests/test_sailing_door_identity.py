@@ -21,7 +21,7 @@ class SailingDoorIdentityTests(unittest.TestCase):
             '原場景位置[X:1000,Y:1000][60012][X:100,Y:200]\n'
             '原場景位置[X:2000,Y:2000][12601][X:300,Y:400]\n'
             '原場景位置[X:3000,Y:3000][60012][X:500,Y:600]\n').encode('utf-16-le')
-        self.raw=struct.pack('<i',3)+b''.join(struct.pack('<HBHIHHIB',58001,2,0,i,1,1,i,0)
+        self.raw=struct.pack('<i',3)+b''.join(struct.pack('<HBHIHHIB',58001,2,0,i,i*1000,i*1000,i,0)
                                               for i in (1,2,3))
         def door(index,p):
             return dict(index=index,x=p//20,y=p//20,right=p//20+2,bottom=p//20+2,
@@ -71,7 +71,10 @@ class SailingDoorIdentityTests(unittest.TestCase):
     def test_two_links_claiming_one_actual_door_are_not_silently_overwritten(self):
         self.links=self.links.decode('utf-16-le').replace('X:3000,Y:3000','X:1000,Y:1000').encode('utf-16-le')
         positions,targets=self.bind()
-        self.assertEqual(set(targets),{(58001,77)})
+        self.assertEqual(set(targets),{(58001,77),(58001,45)})
+        self.assertTrue(targets[58001,45]['stage_marker_only'])
+        self.assertIsNone(targets[58001,45]['destination'])
+        self.assertNotIn((58001,44),targets)
         self.assertEqual(set(positions),set(targets))
 
     def test_actual_door_ids_can_overlap_other_link_ordinals(self):

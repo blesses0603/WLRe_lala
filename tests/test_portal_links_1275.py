@@ -71,7 +71,11 @@ class PortalLinks1275Test(unittest.TestCase):
         self.assertFalse(mapping[(12170, 1)]['trigger_verified'])
         self.assertEqual(verified_mapping(marker_x=5702)[(12170, 1)]['destination'], 12171)
         self.assertEqual(verified_mapping(marker_index=2)[12170,1]['destination'],12171)
-        self.assertEqual(verified_mapping(link_scene=12172), {})
+        stage_only = verified_mapping(link_scene=12172)[12170,1]
+        self.assertTrue(stage_only['stage_marker_only'])
+        self.assertTrue(stage_only['door_binding_verified'])
+        self.assertIsNone(stage_only['destination'])
+        self.assertFalse(stage_only['destination_verified'])
         self.assertEqual(verified_mapping(link_destination=12000), {})
 
     def test_destination_label_never_requires_eve_grid_and_link_grid_to_match(self):
@@ -141,7 +145,7 @@ class PortalLinks1275Test(unittest.TestCase):
         self.assertEqual(row['direct_door_index'], 1)
         self.assertIsNone(destination_problem(row, SimpleNamespace(
             has_image=lambda scene: scene == 12171)))
-        self.assertIsNotNone(destination_problem(row, SimpleNamespace(
+        self.assertIsNone(destination_problem(row, SimpleNamespace(
             has_image=lambda scene: False)))
         self.assertEqual(Portals.direct_target(row, 12170), 1)
         with self.assertRaises(ValueError):

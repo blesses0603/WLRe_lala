@@ -140,7 +140,7 @@ class Portals:
                             valid_xy = (
                                 position.get('position_verified') is True
                                 and position.get('source_kind')
-                                == '1275_eve_door_links_grid_scaled'
+                                in ('1275_eve_door_links_grid_scaled','1275_stage_map_grid_scaled')
                                 and position.get('scene') == scene_id
                                 and position.get('index') == index
                                 and type(map_x) is int and type(map_y) is int
@@ -175,6 +175,15 @@ class Portals:
                                 and type(destination) is int
                                 and 0 < destination <= 65535
                                 and link.get('event_x') == x and link.get('event_y') == y)
+                            verified_stage_door = (
+                                link.get('stage_marker_only') is True
+                                and link.get('door_binding_verified') is True
+                                and link.get('matched_stage_map') is True
+                                and link.get('trigger_verified') is False
+                                and link.get('stage_marker_kind') in (2,3)
+                                and link.get('index') == index
+                                and link.get('event_x') == x and link.get('event_y') == y
+                                and strict_valid_xy)
                             destination = destination if verified_target else None
                             target_label = (source_scene_label(destination, scene_names)
                                             if verified_target else '目的地未確認')
@@ -185,9 +194,13 @@ class Portals:
                             # only falls back to the destination stage's name.
                             # A verified marker label is useful even when the
                             # separate EveDoorLinks route cannot be resolved.
-                            official_name = portal_names.get((scene_id, link_index))
+                            official_name = (portal_texts.get(link.get('stage_marker_name_id'))
+                                or portal_names.get((scene_id,link.get('stage_marker_event_id')))
+                                if verified_stage_door or link.get('matched_touch_region') is True
+                                else portal_names.get((scene_id,link_index)))
                             if (type(official_name) is not str
-                                    or not official_name.strip()):
+                                    or not official_name.strip() or len(official_name)>160
+                                    or any(ord(ch)<32 for ch in official_name)):
                                 official_name = None
                             display_scene = (destination if verified_target else display_targets.get((scene_id, link_index)))
                             if (type(display_scene) is not int
@@ -213,6 +226,8 @@ class Portals:
                                       if display_label else
                                       '傳點 #' + str(index) +
                                       '（官方名稱未取得）'))
+                            server_decided = bool(verified_stage_door and link.get('stage_marker_kind') == 2
+                                                  and destination is None and official_name)
                             if (verified_target and type(scene_names.get(destination)) is str
                                     and scene_names[destination].strip()):
                                 label = '前往 ' + target_label
@@ -232,6 +247,7 @@ class Portals:
                                 'source_revision': int(revision),
                                 'coordinate_valid': valid_xy,
                                 'coordinate_source': (
+                                    'verified_stage_map_scaled' if strict_valid_xy and verified_stage_door else
                                     'verified_eve_door_links_scaled' if strict_valid_xy
                                     else 'official_link_reference_scaled' if reference_xy
                                     else 'unverified_event_grid'),
@@ -251,14 +267,22 @@ class Portals:
                                 'touch_event_records': tuple(row.get('touch_event_records') or ()),
                                 'destination': destination,
                                 'destination_verified': verified_target,
-                                'direct_eligible': bool(verified_target and strict_valid_xy and 1 <= index <= 65535),
-                                'direct_door_index': index if verified_target and strict_valid_xy and 1 <= index <= 65535 else None,
-                                'door_index': index if verified_target and strict_valid_xy and 1 <= index <= 65535 else None,
+                                'direct_eligible': bool((verified_target and strict_valid_xy or server_decided) and 1 <= index <= 65535),
+                                'direct_door_index': index if (verified_target and strict_valid_xy or server_decided) and 1 <= index <= 65535 else None,
+                                'door_index': index if (verified_target and strict_valid_xy or server_decided) and 1 <= index <= 65535 else None,
+                                'stage_marker_only': verified_stage_door,
+                                'door_binding_verified': verified_stage_door,
+                                'stage_marker_kind': link.get('stage_marker_kind'),
+                                'stage_marker_event_id': link.get('stage_marker_event_id'),
+                                'destination_status': 'server_decided' if server_decided else
+                                    'verified' if verified_target else 'unverified',
                                 'binding_kind': link.get('binding_kind'),
                                 'link_index': link_index,
                                 'trigger_bounds': position.get('trigger_bounds'),
                                 'navigation_status': 'unverified',
                                 'direct_note': (
+                                    'StageMap 標籤／位置與實際門事件已核對；目的地由伺服器確認，僅單次手動觸發'
+                                    if server_decided else
                                     '官方門觸碰範圍／精確位置、門編號與連線目的地已配對；可手動單次試傳，'
                                     '載具與進入條件由伺服器判定'
                                     if verified_target and link.get('matched_touch_region') else
@@ -500,10 +524,11 @@ def portal_map_pixel(portal, projection):
     return (u, v)
 
 
-def marked_portals(rows, projection):
+def marked_portals(rows, projection, *, allow_unprojected=False):
     """Only bound, labeled official doors reach the main map; audit keeps all."""
     from wlre.services.world.catalog_source_policy import is_official_revision
     from wlre.services.world.portal_dedup_1275 import display_destination
+    from wlre.services.world.portal_policy import stage_marker_trigger
     def labeled(row):
         official = row.get('official_name')
         label = row.get('display_destination_label')
@@ -512,12 +537,13 @@ def marked_portals(rows, projection):
                 and row.get('display_destination_name_known') is not False)
     def bound_door(row):
         index = row.get('direct_door_index')
-        return (row.get('destination_verified') is True
+        return (stage_marker_trigger(row) or row.get('destination_verified') is True
                 and row.get('direct_eligible') is True
                 and type(index) is int and 1 <= index <= 65535)
     return [row for row in rows if not is_official_revision(row.get('source_revision')) or (
-        bound_door(row) and display_destination(row) is not None and labeled(row)
-        and portal_map_pixel(row, projection) is not None)]
+        bound_door(row) and (display_destination(row) is not None or stage_marker_trigger(row)) and labeled(row)
+        and (portal_map_pixel(row, projection) is not None
+             or allow_unprojected and row.get('coordinate_valid') is True))]
 
 
 def nearest_marker(rows,projection,screen,event_x,event_y,radius=12):

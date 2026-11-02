@@ -234,7 +234,8 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
         revision_label = str(self.portals.data.get('source_revision') or '官方新版')
         recovery=self.image is None
         candidates=allowed_rows(self.portals,self.selected_id,self.maps,recovery=recovery)
-        marked=marked_portals(candidates, getattr(self, 'projection', None))
+        marked=marked_portals(candidates, getattr(self, 'projection', None),
+                              allow_unprojected=recovery)
         self.portal_rows=collapse_portal_destinations(marked)
         hidden_count=len(candidates)-len(marked)
         merged_count=len(marked)-len(self.portal_rows)
@@ -323,10 +324,10 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
                 text = (f'{revision_label} 官方門事件索引尚未完成校驗／安裝；'
                         '下次切換地圖會重新讀取，不使用 1262 舊傳點。')
         elif recovery:
-            text=(f'此圖沒有小地圖；左側保留 {ready} 個返回有圖地圖的出口。' if ready
+            text=(f'此圖沒有小地圖；左側保留 {ready} 個已核對的出口，可由清單手動觸發。' if ready
                   else '此圖沒有小地圖，來源未列可確認的返回出口；請使用官方客戶端離開。')
         else:
-            text=f'可見 {len(self.portal_rows)} 個傳點；{ready} 個可直接嘗試；已隱藏缺圖及目的地未確認的入口。'
+            text=f'可見 {len(self.portal_rows)} 個傳點；{ready} 個可直接嘗試；已隱藏尚未核對的入口。'
         if is_official_revision(self.portals.data.get('source_revision')):
             duplicate = self.portals.data.get('portal_duplicate_report', {})
             if isinstance(duplicate, dict):

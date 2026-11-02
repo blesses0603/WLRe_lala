@@ -93,7 +93,8 @@ class PortalPosition1275Tests(unittest.TestCase):
                          {'state': 'normal', 'text': '手動確認換圖'})
         page.maps = SimpleNamespace(has_image=lambda scene: False)
         page.update_portal_button()
-        self.assertEqual(page.portal_go.configure.call_args.kwargs['text'], '目的地無地圖')
+        self.assertEqual(page.portal_go.configure.call_args.kwargs,
+                         {'state':'normal','text':'手動確認換圖'})
     def test_official_uimain_ratio_not_eve_common_grid_xy(self):
         points = position_fixture()
         self.assertEqual(points[(11016, 1)]['x'], 600)

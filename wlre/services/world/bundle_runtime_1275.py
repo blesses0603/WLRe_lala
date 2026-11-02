@@ -385,6 +385,9 @@ def load_verified_bundle_runtime(*, sync_root=None, _verified_context=None):
                 portal_stage_markers = read_only_stage_portal_markers(
                     optional['StageMapData_C'], scene_rows)
                 portal_metadata_status = 'stage_map_ready'
+                from wlre.services.world.boundary_portals import reconcile_touch_bindings
+                reconcile_touch_bindings(optional['StageMapData_C'],None,doors,scene_rows,
+                    portal_positions,portal_destinations)
                 if 'EveDoorLinks' in optional:
                     try:
                         from wlre.services.world.portal_evidence_1275 import (read_only_portal_evidence)
@@ -421,6 +424,8 @@ def load_verified_bundle_runtime(*, sync_root=None, _verified_context=None):
                     optional['EveDoorLinks'], doors, scene_rows)
             except (ValueError, TypeError, KeyError):
                 pass
+        if portal_destinations and not portal_link_evidence:
+            portal_metadata_status = 'stage_map_ready'
         # DoorLinkData has coordinates and destination IDs, but no C20-8
         # event index. Keep its route network separate from ordinary doors.
         if 'DoorLinkData_C' in optional:

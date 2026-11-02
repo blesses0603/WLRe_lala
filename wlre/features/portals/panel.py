@@ -19,16 +19,14 @@ class PortalInteractionMixin:
         p=self.selected_portal
         enabled=bool(p and destination_problem(p,self.maps) is None and p.get('direct_eligible') and self.state.get('player',{}).get('scene')==self.selected_id and not self.state.get('battle',{}).get('active') and not self.state.get('event_flow',{}).get('blocked'))
         if p and is_official_revision(p.get('source_revision')):
-            enabled = enabled and portal_map_pixel(
-                p, getattr(self, 'projection', None)) is not None
+            enabled = enabled and (getattr(self,'image',False) is None or portal_map_pixel(
+                p, getattr(self, 'projection', None)) is not None)
         label = ('手動確認換圖' if enabled and is_official_revision(p.get('source_revision'))
                  else '目的地待核對' if p and is_official_revision(p.get('source_revision'))
-                 else '返回有圖地圖' if self.image is None else '直接嘗試換圖')
+                 else '觸發出口' if self.image is None else '直接嘗試換圖')
         if p and is_official_revision(p.get('source_revision')) and not enabled and p.get('destination_verified'):
             if not p.get('coordinate_valid') or portal_map_pixel(p, getattr(self, 'projection', None)) is None:
                 label = '點位待核對'
-            elif not self.maps.has_image(p['destination']):
-                label = '目的地無地圖'
             elif self.state.get('player',{}).get('scene') != self.selected_id:
                 label = '非目前地圖'
             else:
@@ -63,6 +61,8 @@ class PortalInteractionMixin:
             point = portal_map_pixel(p, getattr(self, 'projection', None))
             if point is not None:
                 self.on_pick(self.selected_id, p['x'], p['y'])
+            elif getattr(self,'image',False) is None:
+                self.portal_status.set(status + '｜目前場景無小地圖；可由清單手動觸發已核對出口')
             elif not p.get('coordinate_valid'):
                 self.portal_status.set(
                     status + '｜傳點位置尚未通過官方座標換算，'
@@ -85,6 +85,7 @@ class PortalInteractionMixin:
             self.portals.direct_target(self.selected_portal,self.state.get('player',{}).get('scene'))
             if (is_official_revision(self.selected_portal.get('source_revision'))
                     and hasattr(self, 'projection')
+                    and getattr(self,'image',False) is not None
                     and portal_map_pixel(
                         self.selected_portal, self.projection) is None):
                 raise ValueError('傳點座標未通過目前地圖投影校驗，禁止換圖。')

@@ -50,7 +50,8 @@ class PortalEventEvidenceTests(unittest.TestCase):
     def test_conflicting_text_kept_for_inspection_never_changes_packet_or_destination(self):
         doors=parse_verified_doors(eve_fixture())
         doors[60000][0]['name']='往獅子島'
-        positions,targets=boundary_portal_bindings(marker(),links(),doors,stages())
+        positions,targets=boundary_portal_bindings(
+            marker((60000,2,0,3,60,1100,13,0)),links(),doors,stages())
         runtime=SimpleNamespace(revision=1286,doors=doors,portal_positions=positions,
             portal_destinations=targets,scene_names={60000:'北島－北',58001:'航海大地圖'},
             portal_names={(60000,3):'甲蟲島'})

@@ -67,6 +67,8 @@ def portal_inspection_text(portal):
         hidden = portal['hidden_destination_scene_id']
         target = portal.get('display_destination_label') or (
             f'場景 {hidden}（官方隱藏傳點參考）')
+    if not target and portal.get('stage_marker_only') and portal.get('door_binding_verified'):
+        target = portal.get('destination_label') if portal.get('destination_verified') else '目的地由伺服器確認'
     if not target:
         return '官方傳點目的地尚無可辨識的連線資料；不可直接傳送'
     source = portal.get('reference_source_xy')
@@ -95,7 +97,10 @@ def portal_inspection_text(portal):
         parts.append(f'落點座標 {arrival}')
     elif arrival_grid is not None:
         parts.append(f'落點原始格點 {arrival_grid}（倍率待核對）')
-    if portal.get('destination_verified') is not True:
+    from wlre.services.world.portal_policy import stage_marker_trigger
+    if stage_marker_trigger(portal):
+        parts.append('StageMap 已配對實際門；可手動單次觸發，等待伺服器抵達場景')
+    elif portal.get('destination_verified') is not True:
         reason_labels = {
             'missing_eve_door': '缺少門事件',
             'conflicting_official_destinations': '同一位置有多個官方目的地，可能含條件分支',

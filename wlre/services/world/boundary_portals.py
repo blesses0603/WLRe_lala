@@ -7,7 +7,8 @@ rectangular signType 1/4 touch regions; Role.SendMeetDoor uses their real index.
 from collections import Counter
 
 from wlre.services.world.portal_links_1275 import parse_stage_map_portals, parse_eve_door_links
-from wlre.services.world.portal_evidence_1275 import _packet_position, _projection_guard
+from wlre.services.world.portal_evidence_1275 import (
+    _packet_position, _projection_guard, read_only_stage_portal_markers)
 
 
 def touch_bounds(door, stage):
@@ -37,6 +38,19 @@ def door_anchor(door, stage):
     return (x,y) if 0<=x<=65535 and 0<=y<=65535 else None
 
 
+def matching_doors(entries,stage,point):
+    matches=[]
+    for door in entries:
+        if not isinstance(door,dict):continue
+        bounds=touch_bounds(door,stage)
+        if bounds is not None:
+            if bounds[0]<=point[0]<=bounds[2] and bounds[1]<=point[1]<=bounds[3]:
+                matches.append((door,bounds))
+        elif door.get('sign_type') in (2,3,5) and door_anchor(door,stage)==point:
+            matches.append((door,None))
+    return matches
+
+
 def boundary_portal_bindings(stage_raw, link_raw, doors, stages):
     """Return (positions, destinations) keyed by actual Eve door identity.
 
@@ -46,7 +60,7 @@ def boundary_portal_bindings(stage_raw, link_raw, doors, stages):
     references and cannot substitute for this geometric proof.
     """
     parse_stage_map_portals(stage_raw)  # validate display metadata, not door identity
-    links = parse_eve_door_links(link_raw)
+    links = parse_eve_door_links(link_raw) if link_raw is not None else {}
     positions, destinations = {}, {}
     for scene, entries in doors.items():
         stage = stages.get(scene)
@@ -54,19 +68,12 @@ def boundary_portal_bindings(stage_raw, link_raw, doors, stages):
         guard = _projection_guard(stage)
         if guard is None:continue
         counts = Counter(d.get('index') for d in entries if isinstance(d,dict))
-        regions = [(d,touch_bounds(d,stage)) for d in entries if isinstance(d,dict)]
         for link in links.get(scene,()):
             key = (scene,link['index'])
             target = link['destination']
             point = _packet_position(stage,link['x'],link['y'])
             if point is None:continue
-            matches = [(d,b) for d,b in regions if b is not None
-                       and b[0]<=point[0]<=b[2] and b[1]<=point[1]<=b[3]]
-            # Sign types 2/3/5 have prefab-defined collider shapes. Only an
-            # exact unique NewPortal anchor is accepted; never guess a radius.
-            matches += [(d,None) for d,b in regions if b is None
-                        and d.get('sign_type') in (2,3,5)
-                        and door_anchor(d,stage) == point]
+            matches = matching_doors(entries,stage,point)
             if len(matches)!=1:continue
             door,bounds = matches[0]
             index = door.get('index')
@@ -91,6 +98,57 @@ def boundary_portal_bindings(stage_raw, link_raw, doors, stages):
             destinations[key] = dict(link,index=index,link_index=link['index'],matched_stage_map=False,matched_touch_region=True,
                 event_x=door['x'],event_y=door['y'],destination_verified=True,
                 trigger_verified=False,binding_kind=binding)
+    # StageMap has real exits absent from EveDoorLinks (e.g. Cairo's sea exit).
+    # Kind 2 has no destination identity; Kind 3 EvtID is a destination scene,
+    # never a door ID. Both must independently match a unique PlayerTouch door.
+    candidates = {}
+    for marker in read_only_stage_portal_markers(stage_raw,stages):
+        if marker['kind'] not in (2,3) or not marker['position_verified']:continue
+        scene = marker['scene']
+        stage = stages.get(scene,{})
+        if _projection_guard(stage) is None:continue
+        matches = matching_doors(doors.get(scene,()),stage,(marker['x'],marker['y']))
+        if len(matches)!=1:continue
+        door,bounds = matches[0]
+        index = door.get('index')
+        if (type(index) is not int or not 1<=index<=65535
+                or sum(isinstance(d,dict) and d.get('index')==index for d in doors.get(scene,()))!=1
+                or not door.get('touch_event_ids')):continue
+        candidates.setdefault((scene,index),[]).append((marker,door,bounds))
+    for key,rows in candidates.items():
+        targets = {m['destination'] for m,_,_ in rows if m['kind']==3}
+        if None in targets or any(t not in stages for t in targets):
+            positions.pop(key,None);destinations[key]=None;continue
+        previous = destinations.get(key)
+        if key in destinations:
+            # An ambiguous primary link must never be resurrected by a label.
+            if previous is None:continue
+            if targets - {previous['destination']}:
+                positions.pop(key,None);destinations[key]=None
+            else:
+                marker = sorted((m for m,_,_ in rows),key=lambda m:(m['name_id']==0,m['x'],m['y'],m['event_id']))[0]
+                previous.update(stage_marker_name_id=marker['name_id'],
+                                stage_marker_event_id=marker['event_id'])
+            continue
+        if len(targets)>1:continue
+        # Prefer a declared target. Otherwise retain a labeled marker as a
+        # server-decided trigger, without guessing a target from its text.
+        rows.sort(key=lambda r:(r[0]['kind']!=3, r[0]['name_id']==0,
+                               r[0]['x'],r[0]['y'],r[0]['event_id'],r[0]['name_id']))
+        marker,door,bounds = rows[0]
+        scene,index = key
+        target = next(iter(targets)) if targets else None
+        binding = 'unique_boundary_touch_region' if bounds else 'unique_door_anchor'
+        positions[key] = dict(scene=scene,index=index,x=marker['x'],y=marker['y'],
+            projection_guard=_projection_guard(stages[scene]),position_verified=True,
+            source_kind='1275_stage_map_grid_scaled',trigger_bounds=bounds,
+            binding_kind=binding,link_index=None)
+        destinations[key] = dict(scene=scene,index=index,link_index=None,destination=target,
+            stage_marker_only=True,stage_marker_kind=marker['kind'],
+            stage_marker_event_id=marker['event_id'],stage_marker_name_id=marker['name_id'],
+            door_binding_verified=True,matched_stage_map=True,matched_touch_region=True,
+            event_x=door['x'],event_y=door['y'],destination_verified=target is not None,
+            trigger_verified=False,binding_kind=binding)
     return positions,{key:value for key,value in destinations.items() if value is not None}
 
 
@@ -122,12 +180,13 @@ def reconcile_route_conflicts(positions, destinations, routes, evidence=None):
     for key,row in list(destinations.items()):
         point = positions.get(key,{})
         alternatives = targets.get((key[0],point.get('x'),point.get('y')),set())
-        if alternatives - {row.get('destination')}:
+        if (len(alternatives)>1 if row.get('destination') is None
+                else bool(alternatives - {row['destination']})):
             if isinstance(evidence,dict):
                 reference = evidence.get((key[0],row.get('link_index',key[1])))
                 if isinstance(reference,dict):
                     reference['issues'] = tuple(dict.fromkeys(
                         tuple(reference.get('issues') or ()) + ('conflicting_official_destinations',)))
-                    reference['destination_candidates'] = tuple(sorted(alternatives | {row['destination']}))
+                    reference['destination_candidates'] = tuple(sorted(alternatives | ({row['destination']} if row['destination'] is not None else set())))
             destinations.pop(key,None)
             positions.pop(key,None)
