@@ -26,7 +26,7 @@ def _no_unresolved_room_actions(state):
 
 
 def set_standby(state, command, now=None):
-    """Return one C186-7 for an owner action or a selected-room workflow."""
+    """Return one C186-7 only for an explicit owner ready/cancel action."""
     now = time.monotonic() if now is None else now
     if command.get('mode') != 'coop':
         raise ProtocolError('此準備操作僅支援協力房間')

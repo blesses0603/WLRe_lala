@@ -95,17 +95,19 @@ class AutomaticFlowTests(unittest.TestCase):
         self.logic.flows.remember({'type':'instance_join','mode':mode,'room_id':30012},self.state,0)
         return data
 
-    def test_normal_room_waits_for_roster_then_starts_and_enters_once(self):
+    def test_normal_room_requires_manual_start_then_automatically_enters_once(self):
         data=self.room();data['members']=[]
         row=dict(kind=1,map_id=30012,min_members=2,max_members=4)
         with patch('wlre.services.instance_start.entries_for',return_value=[row]),patch('wlre.services.instance_entry.entries_for',return_value=[row]):
             self.assertEqual(self.logic.flows.tick(self.logic,self.state,0),[])
             data['members']=[{'role_id':1},{'role_id':2}]
-            self.assertEqual(self.logic.flows.tick(self.logic,self.state,1),[Packet(85,7)])
-            self.assertEqual(self.logic.flows.tick(self.logic,self.state,2),[])
+            for now in (1,2,61):
+                self.assertEqual(self.logic.flows.tick(self.logic,self.state,now),[])
+            self.assertEqual(self.logic.command({'type':'instance_start','mode':'main'},self.state),[Packet(85,7)])
+            self.assertEqual(self.logic.flows.tick(self.logic,self.state,61.5),[])
             event=decode(Packet(85,5,b'\x03'));self.state.apply(event);self.logic.receive(event,self.state)
-            self.assertEqual(self.logic.flows.tick(self.logic,self.state,3),[Packet(85,9)])
-            self.assertEqual(self.logic.flows.tick(self.logic,self.state,4),[])
+            self.assertEqual(self.logic.flows.tick(self.logic,self.state,62),[Packet(85,9)])
+            self.assertEqual(self.logic.flows.tick(self.logic,self.state,63),[])
 
     def test_guest_never_starts_room_and_uncertain_room_never_resends(self):
         data=self.room(host=2)
@@ -114,11 +116,14 @@ class AutomaticFlowTests(unittest.TestCase):
         self.assertEqual(self.logic.flows.tick(self.logic,self.state,1),[])
         self.assertNotIn('room',self.logic.flows.goals)
 
-    def test_coop_ready_and_free_reward_enable_use_existing_guards(self):
+    def test_coop_never_auto_readies_but_retains_free_reward_and_manual_ready(self):
         data=self.room(mode='coop')
-        self.assertEqual(self.logic.flows.tick(self.logic,self.state,0),[Packet(186,7,b'\x3c\x75\x01')])
+        for now in (0,1,61):
+            self.assertEqual(self.logic.flows.tick(self.logic,self.state,now),[])
+        self.assertIsNone(data['standby_pending'])
+        self.assertEqual(self.logic.command({'type':'instance_coop_standby','mode':'coop','standby':True},self.state),[Packet(186,7,b'\x3c\x75\x01')])
         self.assertTrue(data['auto_claim_enabled'])
-        self.assertEqual(self.logic.flows.tick(self.logic,self.state,1),[])
+        self.assertEqual(self.logic.flows.tick(self.logic,self.state,62),[])
         # A deliberate cancel prevents the coordinator from enabling ready again.
         self.logic.flows.remember({'type':'instance_coop_standby','standby':False},self.state,2)
         self.assertNotIn('room',self.logic.flows.goals)

@@ -182,13 +182,10 @@ class AutomaticFlows:
                 kind=None
                 if not pending:
                     if mode=='main' and data.get('phase')=='started':kind='instance_enter'
-                    elif data.get('phase')=='waiting' and current.get('host_id',
-                            (data.get('members') or [{}])[0].get('role_id'))==state.player.get('role_id'):
-                        if mode=='main':kind='instance_start'
-                        elif current.get('standby') is False:kind='instance_coop_standby'
+                    elif data.get('phase')=='waiting':
+                        self.note(state,'room','等待房主手動開始副本' if mode=='main' else '等待房主手動準備／開始協力配對')
                 if kind and kind not in self.attempted:
                     cmd={'type':kind,'mode':mode}
-                    if mode=='coop':cmd['standby']=True
                     try:
                         packets=dispatch(logic,cmd,state)
                         self.attempted.add(kind)
