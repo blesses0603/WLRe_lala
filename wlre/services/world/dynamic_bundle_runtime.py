@@ -131,7 +131,7 @@ def parse_runtime_recipes(raw, items):
 
     The legacy product-keyed UI cannot choose between several recipe IDs.
     Ambiguous products remain in recipe_catalog and are excluded from that UI.
-    Dynamic recipes stay read-only pending separate protocol validation.
+    Keep conditional read-only flags; unconditional records use the matching wire layout.
     """
     import struct
     from wlre.services.world.smith_candidate import parse_smith_records
@@ -150,7 +150,7 @@ def parse_runtime_recipes(raw, items):
                 or any(m['item_id'] not in items or not m['count']
                        for m in row['materials'])):
             raise DynamicRuntimeUnavailable('Recipe references missing ItemData')
-        checked.append({**row, 'open_used': item['open_used'], 'read_only': True})
+        checked.append({**row, 'open_used': item['open_used']})
     return {r['item_id']: r for r in checked if counts[r['item_id']] == 1}, checked
 
 

@@ -37,7 +37,7 @@ def activate_1275_recipes(runtime):
 
 
 def activate_dynamic_recipes(runtime):
-    """Publish the full current catalog in place; packets remain unapproved."""
+    """Publish current recipes without turning unconditional rows into references."""
     if runtime.catalog_identity is None or runtime.can_send_packets is not False:
         raise ValueError('缺少官方完整 Runtime 來源')
     checked = {}
@@ -45,7 +45,7 @@ def activate_dynamic_recipes(runtime):
         item = runtime.items.get(item_id)
         if not isinstance(item, dict) or type(item.get('open_used')) is not int:
             raise ValueError('配方物品來源缺失')
-        checked[str(item_id)] = {**row, 'open_used': item['open_used'], 'read_only': True}
+        checked[str(item_id)] = {**row, 'open_used': item['open_used']}
     RECIPES.clear()
     RECIPES.update(checked)
     return len(checked)
@@ -59,6 +59,20 @@ def confirmed_unlocked(recipe):
 def defaults():return {'ready':False,'queue':{},'active':0,'started_at':None,'running':False,'auto_continue':False,'pending':None,'completion_requested':False,'completed':0,'status':'等待製作排程同步','revision':0,'human_index':0,'human_id':0,'uncertain':False}
 def room_defaults():return {'owner':None,'current_owner':None,'ready':False,'items':{},'revision':0}
 
+def active_recipe_catalog():
+    """Select recipe-ID wire records from the parsed layout, not a fixed revision."""
+    from wlre.services.world.dynamic_bundle_runtime import current_runtime
+    from wlre.services.items.crafting_official_v1286 import RecipeCatalog
+    runtime=current_runtime()
+    if runtime is None:return None
+    rows=getattr(runtime,'recipe_catalog',None)
+    if not rows:return None
+    keyed=[row.get('recipe_id') is not None for row in rows]
+    if any(keyed):
+        if not all(keyed):raise ProtocolError('目前配方識別欄位不一致，請重新同步資源')
+        return RecipeCatalog(rows)
+    return None
+
 def schedule_record(r):
     row={'index':r.u8(),'item_id':r.u16(),'elapsed':r.u32()/1000,'count':r.u8(),'base_time':r.u32()}
     if not 1<=row['index']<=255 or not row['item_id'] or not row['count']:raise ProtocolError('製作排程欄位無效')
@@ -70,6 +84,11 @@ def furniture_record(r,index):
 
 def decode_crafting(packet):
     main,sub=packet.main,packet.sub;r=Reader(packet.payload);e={'main':main,'sub':sub}
+    if main==64 and sub in (1,16):
+        catalog=active_recipe_catalog()
+        if catalog is not None:
+            from wlre.services.items.crafting_official_v1286 import decode_schedule
+            return {**e,**decode_schedule(packet,catalog)}
     if main==64:
         if sub==1:
             if len(packet.payload)<1 or (len(packet.payload)-1)%12:raise ProtocolError('製作排程長度不符')
@@ -205,10 +224,21 @@ def recipe_plan(state,item_id,count):
             if not number:break
         if number:raise ProtocolError(item_name(mid)+'材料不足；目前只使用背包材料，不拆用已擺家具或雜物櫃')
     if len(allocations)>255:raise ProtocolError('使用的背包格數過多')
-    w=Writer().u16(tool).u16(item_id).u8(count).u8(len(allocations))
-    for a in allocations:w.u8(a['index']).u8(a['count'])
-    w.u16(0).u8(0) # no cabinet or placed furniture ingredients
-    return r,allocations,Packet(64,1,w.build())
+    catalog=active_recipe_catalog()
+    if catalog is not None:
+        from wlre.services.items.crafting_official_v1286 import build_add_packet
+        current=catalog.get(r.get('recipe_id'))
+        if current is None or current['item_id']!=item_id:
+            raise ProtocolError('目前配方來源已變更，請重新選取')
+        packet=build_add_packet(catalog,r['recipe_id'],tool,count,allocations)
+    else:
+        if r.get('recipe_id') is not None:
+            raise ProtocolError('目前官方配方來源尚未就緒，請重新同步')
+        w=Writer().u16(tool).u16(item_id).u8(count).u8(len(allocations))
+        for a in allocations:w.u8(a['index']).u8(a['count'])
+        w.u16(0).u8(0) # no cabinet or placed furniture ingredients
+        packet=Packet(64,1,w.build())
+    return r,allocations,packet
 
 from wlre.services.items.crafting_plan import PlanMixin
 

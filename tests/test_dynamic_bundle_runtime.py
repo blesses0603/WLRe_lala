@@ -128,8 +128,8 @@ class DynamicBundleRuntimeTests(unittest.TestCase):
         self.assertEqual(item_name(3874), '蘋果')
         self.assertEqual(verified_item_metadata(3874)['source_revision'], 1286)
         self.assertEqual(load_active_catalog()['tasks']['1']['name'], '新版任務')
-        self.assertFalse(confirmed_unlocked(RECIPES['3874']))
-        with self.assertRaisesRegex(ValueError, '僅供查看'):
+        self.assertTrue(confirmed_unlocked(RECIPES['3874']))
+        with self.assertRaisesRegex(ValueError, '帳篷'):
             recipe_plan(State(), 3874, 1)
         self.assertFalse(runtime.can_send_packets)
 
