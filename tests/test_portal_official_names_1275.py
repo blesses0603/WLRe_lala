@@ -66,6 +66,9 @@ class OfficialPortalNames1275(unittest.TestCase):
                 'position_verified': True,
                 'source_kind': '1275_eve_door_links_grid_scaled'}},
             portal_destinations={},
+            portal_link_evidence={(11016,1):{'scene':11016,'index':1,
+                'destination':60000,'destination_defined':True,
+                'source_kind':'1275_eve_door_links_reference'}},
             portal_metadata_status='stage_map_ready')
         with patch('wlre.services.world.runtime_1275.baseline_revision',
                    return_value='1275'), patch(

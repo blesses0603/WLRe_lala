@@ -219,6 +219,9 @@ class Portals:
                                 'name': label,
                                 'official_name': official_name,
                                 'display_destination_label': display_label,
+                                'display_destination_name_known': bool(
+                                    type(scene_names.get(display_scene if display_scene is not None else destination)) is str
+                                    and scene_names[display_scene if display_scene is not None else destination].strip()),
                                 'source_scene_label': scene_label,
                                 'source_scene_name_known': scene_id in scene_names,
                                 'destination_label': target_label,
@@ -301,6 +304,8 @@ class Portals:
                             'scene': scene_id, 'index': index,
                             'name': label, 'official_name': official_name,
                             'display_destination_label': target_label,
+                            'display_destination_name_known': bool(
+                                type(scene_names.get(target)) is str and scene_names[target].strip()),
                             'source_scene_label': source_scene_label(
                                 scene_id, scene_names),
                             'source_scene_name_known': scene_id in scene_names,
@@ -360,6 +365,8 @@ class Portals:
                                       if dest_label else '隱藏傳點（目的地未確認）')),
                             'official_name': name,
                             'display_destination_label': dest_label,
+                            'display_destination_name_known': bool(
+                                type(scene_names.get(target)) is str and scene_names[target].strip()),
                             'source_scene_label': source_scene_label(
                                 scene_id, scene_names),
                             'source_scene_name_known': scene_id in scene_names,
@@ -378,6 +385,7 @@ class Portals:
                             'door_index': None, 'navigation_status': 'unverified',
                             'link_reference_only': True,
                             'hidden_destination_scene_id': target,
+                            'hidden_destination_defined': target_known,
                             'source_grid_x': marker.get('source_grid_x'),
                             'source_grid_y': marker.get('source_grid_y'),
                             'name_id': marker.get('name_id'),
@@ -486,9 +494,17 @@ def portal_map_pixel(portal, projection):
 
 
 def marked_portals(rows, projection):
-    """Minimap list mirrors labeled markers; the full catalog stays auditable."""
-    return [row for row in rows if row.get('source_revision') != 1275 or (
-        bool(row.get('official_name') or row.get('display_destination_label'))
+    """Only known, labeled, visible official points reach the minimap UI."""
+    from wlre.services.world.catalog_source_policy import is_official_revision
+    from wlre.services.world.portal_dedup_1275 import display_destination
+    def labeled(row):
+        official = row.get('official_name')
+        label = row.get('display_destination_label')
+        return (type(official) is str and bool(official.strip()) or
+                type(label) is str and bool(label.strip())
+                and row.get('display_destination_name_known') is not False)
+    return [row for row in rows if not is_official_revision(row.get('source_revision')) or (
+        display_destination(row) is not None and labeled(row)
         and portal_map_pixel(row, projection) is not None)]
 
 

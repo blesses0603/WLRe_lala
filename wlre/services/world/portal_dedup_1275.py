@@ -10,6 +10,50 @@ from wlre.services.world.catalog_source_policy import is_official_revision
 from collections import Counter
 
 
+def display_destination(portal):
+    """Known destination identity for display grouping, never a packet index."""
+    if portal.get('destination_verified') is True:
+        target = portal.get('destination')
+    elif portal.get('reference_destination_defined') is True:
+        target = portal.get('reference_destination_scene_id')
+    elif portal.get('kind') == 'link' and portal.get('hidden_destination_defined') is True:
+        target = portal.get('hidden_destination_scene_id')
+    elif not is_official_revision(portal.get('source_revision')):
+        target = portal.get('destination')
+    else:
+        return None
+    return target if type(target) is int and 0 < target <= 65535 else None
+
+
+def collapse_portal_destinations(rows):
+    """One visible point per source/destination; retain the actual chosen row.
+
+    Prefer a usable door, then a verified target and official label. Remaining
+    ties use the real source ID for stable selection. The catalog and its
+    alternative positions are not changed or converted into synthetic IDs.
+    """
+    result, groups = [], {}
+    def rank(row):
+        index = row.get('index')
+        return (not bool(row.get('direct_eligible')),
+                row.get('destination_verified') is not True,
+                not bool(row.get('official_name')),
+                index if type(index) is int else 65536,
+                str(row.get('id','')))
+    for row in rows:
+        target = display_destination(row)
+        if target is None:
+            result.append(row)
+            continue
+        key = (row.get('scene'), target)
+        if key not in groups:
+            groups[key] = len(result)
+            result.append(row)
+        elif rank(row) < rank(result[groups[key]]):
+            result[groups[key]] = row
+    return result
+
+
 def deduplicate_1275_portals(scene_rows):
     """Return (display rows, audit) with ambiguous repeated IDs disabled.
 

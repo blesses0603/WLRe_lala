@@ -15,6 +15,7 @@ from wlre.services.world.map_names import map_label, parse_map_id
 from wlre.services.world.portals import (Portals, nearest_marker,
                                          portal_map_pixel, portal_source_diagnostic, marked_portals)
 from wlre.services.world.portal_policy import allowed_rows, destination_problem
+from wlre.services.world.portal_dedup_1275 import collapse_portal_destinations
 from wlre.services.world.npc_catalog import NPCIndex, scene_npcs, npc_detail
 from wlre.services.world.npc_talk import load_catalog as load_npc_talks, dialogue_text
 from wlre.services.world.npc_interact import NPCInteractIndex
@@ -233,8 +234,10 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
         revision_label = str(self.portals.data.get('source_revision') or '官方新版')
         recovery=self.image is None
         candidates=allowed_rows(self.portals,self.selected_id,self.maps,recovery=recovery)
-        self.portal_rows=marked_portals(candidates, getattr(self, 'projection', None))
-        hidden_count=len(candidates)-len(self.portal_rows)
+        marked=marked_portals(candidates, getattr(self, 'projection', None))
+        self.portal_rows=collapse_portal_destinations(marked)
+        hidden_count=len(candidates)-len(marked)
+        merged_count=len(marked)-len(self.portal_rows)
         # A scene title is never derived from portal selection or door IDs.
         # Update it even before 1275 names become available, so old labels
         # cannot survive a scene change or an asynchronous source reload.
@@ -288,9 +291,11 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
                         not isinstance(source, str)
                         or not source.startswith('destination_links_')):
                     self.portal_info.set(portal_source_diagnostic(source))
-                elif hidden_count:
-                    self.portal_info.set(
-                        f'{hidden_count} 個未標記項目僅列於逐圖核對')
+                else:
+                    notes=[]
+                    if merged_count:notes.append(f'{merged_count} 個同目的入口已合併顯示')
+                    if hidden_count:notes.append(f'{hidden_count} 個未知或未標示傳點已隱藏')
+                    self.portal_info.set('；'.join(notes))
         if is_official_revision(self.portals.data.get('source_revision')):
             count = len(self.portal_rows)
             if self.portals.data.get('source_ready'):

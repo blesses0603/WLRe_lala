@@ -39,8 +39,11 @@ class OffscreenProjection:
 class PortalPosition1275Tests(unittest.TestCase):
     def test_list_contains_only_named_visible_markers_without_changing_catalog(self):
         ready = {'source_revision': 1275, 'coordinate_valid': True,
-                 'official_name': '海灘出口', 'x': 200, 'y': 300}
-        reference = dict(ready, official_name=None, display_destination_label='北島-北(60000)')
+                 'official_name': '海灘出口', 'x': 200, 'y': 300,
+                 'destination_verified':True,'destination':11017}
+        reference = dict(ready, official_name=None, display_destination_label='北島-北(60000)',
+                         destination=None,destination_verified=False,
+                         reference_destination_scene_id=60000,reference_destination_defined=True)
         unnamed = dict(ready, official_name=None)
         offscreen = dict(ready, x=2000)
         missing = dict(ready, coordinate_valid=False)
