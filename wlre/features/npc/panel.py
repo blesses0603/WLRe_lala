@@ -12,6 +12,27 @@ from wlre.services.world.npc_item_data import item_catalog, sellable
 
 
 class NPCInteractionMixin:
+    def sync_npc_action_menu(self):
+        """Mirror the original guarded action states immediately before opening."""
+        for position,(_,button) in enumerate(self._npc_menu_buttons):
+            self.npc_action_menu.entryconfigure(position,state=str(button.cget('state')))
+
+    def show_npc_details(self):
+        """Show complete status text without growing the compact sidebar."""
+        from tkinter.scrolledtext import ScrolledText
+        from wlre.ui.window_layout import configure_dialog
+        previous=getattr(self,'npc_detail_window',None)
+        if previous is not None and previous.winfo_exists():previous.destroy()
+        window=tk.Toplevel(self)
+        window.title('NPC 資訊')
+        configure_dialog(window,560,320)
+        content=ScrolledText(window,wrap='word',background='#203f53',foreground='#f4e4b5',
+                             borderwidth=0,highlightthickness=0,padx=10,pady=10)
+        content.pack(fill='both',expand=True)
+        content.insert('1.0',self.npc_message.get())
+        content.configure(state='disabled')
+        self.npc_detail_window=window
+
     def choose_npc(self,event=None):
         selected=self.npc_list.curselection()
         if not selected or selected[0]>=len(self.npc_rows):return

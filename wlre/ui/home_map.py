@@ -114,37 +114,53 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
         self.portal_list.pack(fill='both',expand=True)
         self.portal_list.bind('<<ListboxSelect>>',self.choose_portal)
         self.portal_list.bind('<Double-Button-1>',lambda event:self.go_portal())
-        self.npc_message=tk.StringVar(value='選取 NPC 查看資料；目前不會觸發遊戲事件。')
+        # Reserve the NPC list row. Actions must not compete with the list's
+        # remaining pack space in the compact dashboard.
+        self.npc_tab.rowconfigure(0,weight=1,minsize=48)
+        self.npc_tab.columnconfigure(0,weight=1)
+        self.npc_message=tk.StringVar(value='選取 NPC 查看資料')
         ttk.Label(self.npc_tab,textvariable=self.npc_message,style='Muted.TLabel',
-                  wraplength=120).pack(side='bottom',fill='x',padx=2,pady=3)
+                  width=1,anchor='w').grid(row=2,column=0,columnspan=2,sticky='ew',pady=(2,0))
         npc_bar=ttk.Scrollbar(self.npc_tab,orient='vertical')
-        npc_bar.pack(side='right',fill='y')
-        self.npc_shop_button=ttk.Button(self.npc_tab,text='查看 NPC 商店',
-                                  command=self.show_npc_shop,state='disabled')
-        self.npc_shop_button.pack(side='bottom',fill='x',pady=2)
-        self.npc_options_button=ttk.Button(self.npc_tab,text='查看／選擇選項',
-                                   command=self.show_npc_choices,state='disabled')
-        self.npc_options_button.pack(side='bottom',fill='x',pady=2)
-        self.npc_history_button=ttk.Button(self.npc_tab,text='本輪對話紀錄',
-                                  command=self.view_npc_history,state='disabled')
-        self.npc_history_button.pack(side='bottom',fill='x',pady=2)
-        self.npc_text_button=ttk.Button(self.npc_tab,text='查看對話全文',
-                                      command=self.view_npc_text,state='disabled')
-        self.npc_text_button.pack(side='bottom',fill='x',pady=2)
-        self.npc_close_button=ttk.Button(self.npc_tab,text='關閉選項',
-                                       command=self.close_npc_option,state='disabled')
-        self.npc_close_button.pack(side='bottom',fill='x',pady=2)
-        self.npc_next_button=ttk.Button(self.npc_tab,text='下一段對話',command=self.next_npc,state='disabled')
-        self.npc_next_button.pack(side='bottom',fill='x',pady=2)
-        self.npc_talk_button=ttk.Button(self.npc_tab,text='手動互動 NPC',command=self.interact_npc,state='disabled')
-        self.npc_talk_button.pack(side='bottom',fill='x',pady=2)
-        self.npc_list=tk.Listbox(self.npc_tab,exportselection=False,background='#203f53',
+        npc_bar.grid(row=0,column=1,sticky='ns')
+        npc_controls=ttk.Frame(self.npc_tab)
+        npc_controls.grid(row=1,column=0,columnspan=2,sticky='ew',pady=(3,0))
+        npc_controls.columnconfigure((0,1),weight=1)
+        self.npc_talk_button=ttk.Button(npc_controls,text='互動',width=4,padding=(2,2),
+                                       command=self.interact_npc,state='disabled')
+        self.npc_talk_button.grid(row=0,column=0,sticky='ew',padx=(0,2))
+        self.npc_next_button=ttk.Button(npc_controls,text='接續',width=4,padding=(2,2),
+                                       command=self.next_npc,state='disabled')
+        self.npc_next_button.grid(row=0,column=1,sticky='ew')
+        # Keep the original action widgets/state guards; the menu invokes
+        # those same commands instead of creating a second interaction path.
+        self.npc_shop_button=ttk.Button(npc_controls,command=self.show_npc_shop,state='disabled')
+        self.npc_options_button=ttk.Button(npc_controls,command=self.show_npc_choices,state='disabled')
+        self.npc_history_button=ttk.Button(npc_controls,command=self.view_npc_history,state='disabled')
+        self.npc_text_button=ttk.Button(npc_controls,command=self.view_npc_text,state='disabled')
+        self.npc_close_button=ttk.Button(npc_controls,command=self.close_npc_option,state='disabled')
+        self.npc_action_menu=tk.Menu(npc_controls,tearoff=False,
+            background='#203f53',foreground='#f4e4b5',activebackground='#e5d9ad',
+            activeforeground='#243b4d',postcommand=self.sync_npc_action_menu)
+        self._npc_menu_buttons=[
+            ('查看／選擇選項',self.npc_options_button),
+            ('查看 NPC 商店',self.npc_shop_button),
+            ('查看對話全文',self.npc_text_button),
+            ('本輪對話紀錄',self.npc_history_button),
+            ('關閉選項',self.npc_close_button)]
+        for label,button in self._npc_menu_buttons:
+            self.npc_action_menu.add_command(label=label,command=button.invoke,state='disabled')
+        self.npc_action_menu.add_separator()
+        self.npc_action_menu.add_command(label='NPC 資訊',command=self.show_npc_details)
+        self.npc_more_button=ttk.Menubutton(npc_controls,text='更多操作',menu=self.npc_action_menu)
+        self.npc_more_button.grid(row=1,column=0,columnspan=2,sticky='ew',pady=(2,0))
+        self.npc_list=tk.Listbox(self.npc_tab,exportselection=False,height=3,background='#203f53',
                                  foreground='#f4e4b5',selectbackground='#e5d9ad',
                                  selectforeground='#243b4d',borderwidth=0,
                                  highlightthickness=0,font=('Microsoft JhengHei UI',-14))
         self.npc_list.configure(yscrollcommand=npc_bar.set)
         npc_bar.configure(command=self.npc_list.yview)
-        self.npc_list.pack(fill='both',expand=True)
+        self.npc_list.grid(row=0,column=0,sticky='nsew')
         self.npc_list.bind('<<ListboxSelect>>',self.choose_npc)
         self.monster_list=tk.Listbox(self.monster_tab,exportselection=False,background='#203f53',foreground='#e5eff4',borderwidth=0,highlightthickness=0,font=('Microsoft JhengHei UI',-14))
         mbar=ttk.Scrollbar(self.monster_tab,orient='vertical',command=self.monster_list.yview)
