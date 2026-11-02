@@ -118,7 +118,7 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
         # remaining pack space in the compact dashboard.
         self.npc_tab.rowconfigure(0,weight=1,minsize=48)
         self.npc_tab.columnconfigure(0,weight=1)
-        self.npc_message=tk.StringVar(value='選取 NPC 查看資料')
+        self.npc_message=tk.StringVar(value='單擊選取，雙擊移動')
         ttk.Label(self.npc_tab,textvariable=self.npc_message,style='Muted.TLabel',
                   width=1,anchor='w').grid(row=2,column=0,columnspan=2,sticky='ew',pady=(2,0))
         npc_bar=ttk.Scrollbar(self.npc_tab,orient='vertical')
@@ -162,6 +162,7 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
         npc_bar.configure(command=self.npc_list.yview)
         self.npc_list.grid(row=0,column=0,sticky='nsew')
         self.npc_list.bind('<<ListboxSelect>>',self.choose_npc)
+        self.npc_list.bind('<Double-Button-1>',self.approach_npc)
         self.monster_list=tk.Listbox(self.monster_tab,exportselection=False,background='#203f53',foreground='#e5eff4',borderwidth=0,highlightthickness=0,font=('Microsoft JhengHei UI',-14))
         mbar=ttk.Scrollbar(self.monster_tab,orient='vertical',command=self.monster_list.yview)
         self.monster_list.configure(yscrollcommand=mbar.set)
@@ -265,7 +266,7 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
         self.portal_list.delete(0,'end')
         self.npc_list.delete(0,'end')
         self.npc_message.set('NPC 索引檔無效：已停用索引資料。' if self.npc_index_error
-                             else '選取 NPC 查看名稱、座標與事件索引核對狀態。')
+                             else '單擊選取，雙擊移動')
         self.list_rows=[]
         for p in self.portal_rows:
             if is_official_revision(p.get('source_revision')):

@@ -41,6 +41,31 @@ class NPCInteractionMixin:
         if npc['x'] is not None and 0<=npc['x']<=65535 and 0<=npc['y']<=65535:
             self.on_pick(self.selected_id,npc['x'],npc['y'])
 
+    def approach_npc(self,event=None):
+        """Double-click requests movement only; interaction remains explicit."""
+        if event is not None:
+            position=self.npc_list.nearest(event.y)
+            bounds=self.npc_list.bbox(position)
+            if bounds is None or not bounds[1]<=event.y<bounds[1]+bounds[3]:return 'break'
+        else:
+            selected=self.npc_list.curselection()
+            if not selected:return 'break'
+            position=selected[0]
+        if not 0<=position<len(self.npc_rows):return 'break'
+        npc=self.npc_rows[position]
+        self.select_npc(npc)
+        if not npc.get('verified'):
+            self.npc_message.set('此 NPC 身分尚未核對，無法自動前往')
+        elif npc.get('scene')!=self.state.get('player',{}).get('scene'):
+            self.npc_message.set('請切回角色目前地圖，再前往 NPC')
+        elif self.on_npc is None:
+            self.npc_message.set('NPC 移動功能尚未接上')
+        else:
+            accepted=self.on_npc({'type':'npc_approach','scene':npc['scene'],
+                                 'npc_index':npc['npc_index'],'npc_id':npc['npc_id']})
+            if accepted is not False:self.npc_message.set('已要求移動至 '+npc['name']+' 附近')
+        return 'break'
+
     def select_npc(self,npc):
         self.selected_npc=npc
         self.selected_portal=None

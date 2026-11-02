@@ -138,7 +138,7 @@ def dispatch(logic,command,state):
     if kind=='stop_alchemy':
         logic.alchemy.stop(state)
         return []
-    if kind in ('start_roaming','walk','portal_walk','portal_direct'):
+    if kind in ('start_roaming','walk','portal_walk','portal_direct','npc_approach'):
         team=own_team(state)
         if team and team['leader_id']!=state.player.get('role_id'):raise ProtocolError('隊員跟隨隊長，請先離隊再自主移動')
     if kind == 'set_party_guard':
@@ -167,6 +167,12 @@ def dispatch(logic,command,state):
     if kind in ('stop_roaming','stop_walk'):
         logic.portal_travel.cancel(state)
         logic.roaming.stop(state,logic.movement)
+        return []
+    if kind == 'npc_approach':
+        from wlre.services.world.npc_approach import approach
+        if logic.roaming.enabled:logic.roaming.stop(state,logic.movement,'改為前往 NPC 附近')
+        approach(state,logic.movement,command,time.monotonic())
+        logic.portal_travel.cancel(state,'改為前往 NPC 附近')
         return []
     if kind == 'walk':
         logic.portal_travel.cancel(state,'改為手動移動')

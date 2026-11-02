@@ -88,3 +88,22 @@ class CompactNPCListTests(unittest.TestCase):
         self.assertEqual(str(content.cget('state')),'disabled')
         self.assertGreaterEqual(self.page.npc_list.winfo_height(),48)
         self.send.assert_not_called()
+
+    def test_double_click_requests_approach_to_clicked_row_without_dialogue(self):
+        self.assertTrue(self.page.npc_list.bind('<Double-Button-1>'))
+        self.page.npc_list.selection_set(0)
+        bounds=self.page.npc_list.bbox(1)
+        self.assertEqual(self.page.approach_npc(SimpleNamespace(y=bounds[1]+2)),'break')
+        self.send.assert_called_once_with({'type':'npc_approach','scene':12500,
+                                          'npc_index':2,'npc_id':902})
+        self.assertIs(self.page.selected_npc,self.npcs[1])
+
+    def test_double_click_blank_area_or_unverified_npc_does_not_send(self):
+        self.page.npc_list.delete(0,'end')
+        self.page.npc_list.insert('end','未核對的 NPC')
+        self.page.npc_rows=[dict(self.npcs[0],verified=False)]
+        self.root.update()
+        bounds=self.page.npc_list.bbox(0)
+        self.page.approach_npc(SimpleNamespace(y=bounds[1]+2))
+        self.page.approach_npc(SimpleNamespace(y=self.page.npc_list.winfo_height()-1))
+        self.send.assert_not_called()
