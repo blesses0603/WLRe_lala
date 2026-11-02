@@ -186,13 +186,10 @@ class StorageTransferTests(unittest.TestCase):
         self.assertNotIn(str(sid),STACKABLE)
 
     def test_ui_selection_sends_real_command_after_quantity_and_confirmation(self):
-        app=SimpleNamespace(snapshot=self.state.snapshot(),live_active=True,send=Mock())
-        page=SimpleNamespace(app=app,window=None)
-        grid=SimpleNamespace(selection=lambda:('bag300',),bag_map={'bag300':self.state.snapshot()['room_storage']['materials']['items']['300']})
-        with patch('wlre.ui.resource_view.simpledialog.askinteger',return_value=4), \
-             patch('wlre.ui.resource_view.messagebox.askyesno',return_value=True):
-            ResourceView.transfer_item(page,grid,'materials','withdraw')
-        sent=app.send.call_args.args[0]
+        from wlre.ui.storage_transfer_form import transfer_command
+        snap=self.state.snapshot()
+        sent=transfer_command(snap,'materials','withdraw',300,
+                              snap['room_storage']['materials']['items']['300'],'4')
         self.assertEqual((sent['type'],sent['target'],sent['action'],sent['index'],sent['count']),
                          ('room_storage','materials','withdraw',300,4))
         self.assertIn('storage_revision',sent)
@@ -209,9 +206,9 @@ class StorageTransferWindowTests(unittest.TestCase):
         labels=[button.cget('text') for button,_ in view.storage_buttons]
         self.assertEqual(labels,['存入儲藏室','存入雜物櫃','取出到背包','取出到背包'])
         view.remote_materials.selection_set('bag300')
-        with patch('wlre.ui.resource_view.simpledialog.askinteger',return_value=4), \
-             patch('wlre.ui.resource_view.messagebox.askyesno',return_value=True):
-            view.storage_buttons[-1][0].invoke()
+        view.storage_buttons[-1][0].invoke();root.update()
+        view.storage_form.count.set('4')
+        view.storage_form.confirm.invoke()
         self.assertEqual(app.send.call_args.args[0]['action'],'withdraw')
         app.snapshot['room_storage'].update(uncertain=True,revision=100)
         view.set_state(app.snapshot);root.update()

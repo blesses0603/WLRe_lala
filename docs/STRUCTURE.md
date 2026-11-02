@@ -78,6 +78,7 @@
 | [overview_ui.py](../wlre/ui/overview_ui.py) | 主頁卡片、狀態摘要與功能快捷操作。 |
 | [party_guard_ui.py](../wlre/ui/party_guard_ui.py) | 必要隊員名單設定。 |
 | [recovery_ui.py](../wlre/ui/recovery_ui.py) | HP／SP 補給順序、門檻、背包補品選擇。 |
+| [storage_transfer_form.py](../wlre/ui/storage_transfer_form.py) | 內嵌儲藏存取表單、數量確認與最新快照檢查，避免模態輸入鎖定。 |
 | [resource_view.py](../wlre/ui/resource_view.py) | 實際背包、超空間袋與已確認特技對話框。 |
 | [rounded_notebook.py](../wlre/ui/rounded_notebook.py) | 以實際按鈕組成的分頁列、選取狀態與鍵盤切換。 |
 | [services_ui.py](../wlre/ui/services_ui.py) | 組隊與煉金操作面板。 |

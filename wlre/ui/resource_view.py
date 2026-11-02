@@ -2,9 +2,8 @@
 import tkinter as tk
 from wlre.ui.window_layout import configure_dialog
 from wlre.ui.rounded_notebook import RoundedNotebook
-from tkinter import ttk,messagebox,simpledialog
-from types import SimpleNamespace
-from wlre.services.items.room_storage_transfer import plan_transfer
+from tkinter import ttk,messagebox
+from wlre.ui.storage_transfer_form import StorageTransferForm
 from wlre.services.items.combat_resources import CAT, skill_rows, food_command, learned_command, field_context
 from wlre.services.battle.battle_commands import owned_units
 from wlre.ui.crafting_browser import ItemIcons
@@ -26,6 +25,9 @@ class ResourceView:
         self.status=tk.StringVar();ttk.Label(self.window,textvariable=self.status,wraplength=970).pack(fill='x',padx=10)
         # Keep a single thematic surface, no extra coloured outer margin.
         tabs=RoundedNotebook(self.window);tabs.pack(fill='both',expand=True,padx=4,pady=(0,4))
+        self.tabs=tabs
+        self.storage_queued_revision=None
+        self.storage_form=StorageTransferForm(self.window,app,self.storage_sent,self.cancel_storage)
         bag=ttk.Frame(tabs);remote=ttk.Frame(tabs);skills=ttk.Frame(tabs)
         tabs.add(bag,text='實際包包')
         tabs.add(remote,text='超空間袋')
@@ -113,6 +115,8 @@ class ResourceView:
     def update_remote_status(self,state):
         inventory = state.get('inventory', {})
         storage = state.get('room_storage', {})
+        if self.storage_queued_revision is not None and storage.get('revision')!=self.storage_queued_revision:
+            self.storage_queued_revision=None
         self.remote_unlock_status.set(unlock_message(inventory))
         self.remote_status.set(storage_sync_message(storage))
         self.remote_garage.render(confirmed_view(storage.get('garage', {})), self.query.get())
@@ -121,8 +125,23 @@ class ResourceView:
             bucket=storage.get(target,{})
             enabled=(self.app.live_active and inventory.get('ready') and inventory.get('reliable')
                      and bucket.get('ready') and bucket.get('reliable')
-                     and not storage.get('pending') and not storage.get('uncertain'))
+                     and not storage.get('pending') and not storage.get('uncertain')
+                     and self.storage_queued_revision is None)
             button.configure(state='normal' if enabled else 'disabled')
+        self.storage_form.render(state)
+
+    def storage_sent(self,command):
+        self.storage_queued_revision=command['storage_revision']
+        for button,_ in self.storage_buttons:button.configure(state='disabled')
+
+    def cancel_storage(self):
+        self.storage_form.pack_forget()
+        for grid in (self.bag,self.remote_garage,self.remote_materials):grid.card.grid()
+
+    def storage_rejected(self,message):
+        self.storage_queued_revision=None
+        self.storage_form.rejected(message)
+        self.update_remote_status(self.app.snapshot)
 
     def add_storage_actions(self,grid,actions):
         bar=ttk.Frame(grid.card)
@@ -134,7 +153,7 @@ class ResourceView:
             self.storage_buttons.append((button,target))
 
     def transfer_item(self,grid,target,action):
-        state=self.app.snapshot
+        if self.storage_queued_revision is not None:return
         if not self.app.live_active:
             messagebox.showinfo('儲藏存取','請先登入角色',parent=self.window);return
         selected=grid.selection()
@@ -142,21 +161,11 @@ class ResourceView:
             messagebox.showinfo('儲藏存取','請先點選來源物品',parent=self.window);return
         item=grid.bag_map.get(selected[0])
         if not item:return
-        count=simpledialog.askinteger('儲藏存取','輸入存入數量' if action=='deposit' else '輸入取出數量',
-            initialvalue=1,minvalue=1,maxvalue=min(item['count'],65535),parent=self.window)
-        if count is None:return
-        command={'type':'room_storage','action':action,'target':target,'index':int(selected[0][3:]),
-                 'item_id':item['item_id'],'count':count,
-                 'bag_revision':state.get('inventory',{}).get('revision'),
-                 'storage_revision':state.get('room_storage',{}).get('revision')}
-        try:plan_transfer(SimpleNamespace(**state),command)
-        except (ValueError,KeyError,AttributeError) as exc:
-            messagebox.showinfo('儲藏存取',str(exc),parent=self.window);return
-        label='存入' if action=='deposit' else '取出'
-        name='儲藏室' if target=='garage' else '雜物櫃'
-        from wlre.services.items.catalog import item_display_name
-        if not messagebox.askyesno('儲藏存取',f"{label} {item_display_name(item['item_id'])} ×{count}\n容器：{name}\n確認送出？",parent=self.window):return
-        self.app.send(command)
+        # The confirmation replaces the details strip so all four item rows
+        # retain usable height instead of competing with another full card.
+        for source in (self.bag,self.remote_garage,self.remote_materials):source.card.grid_remove()
+        self.storage_form.pack(side='bottom',fill='x',before=self.tabs)
+        self.storage_form.present(target,action,int(selected[0][3:]),item)
 
     def use_item(self,resource):
         selected=self.bag.selection()
