@@ -9,6 +9,7 @@ from wlre.network.wire import Packet, ProtocolError, Writer
 from wlre.services.expedition import Expedition, duration, validate, choose_members
 from wlre.services.expedition_data import parse_catalog, attach_names
 from wlre.paths import RESOURCE_ROOT
+from wlre.storage.full_resource_seed import read_config
 from wlre.services.items.combat_resources import available
 import json
 
@@ -89,13 +90,14 @@ class ExpeditionAutomation(ExpeditionFixture, unittest.TestCase):
         with self.assertRaises(ProtocolError): self.service.start(self.state, self.settings)
         self.assertEqual(self.service.tick(self.state, 100), [])
 
-    def test_insufficient_or_locked_items_stop_without_consumption(self):
+    def test_insufficient_or_locked_items_wait_without_consumption(self):
         self.state.expedition['roles']['1']['faith'] = 70
         self.state.inventory.update(ready=True, reliable=True, items={'3': {'item_id': 34014, 'count': 1}})
         before = copy.deepcopy(self.state.inventory)
         self.service.start(self.state, self.settings)
         self.assertEqual(self.service.tick(self.state, 10), [])
-        self.assertFalse(self.state.expedition['enabled'])
+        self.assertTrue(self.state.expedition['enabled'])
+        self.assertIn('等待',self.state.expedition['status'])
         self.assertEqual(before, self.state.inventory)
 
     def test_idle_members_and_supported_conditions_only(self):
@@ -114,7 +116,10 @@ class ExpeditionAutomation(ExpeditionFixture, unittest.TestCase):
         with self.assertRaises(ProtocolError): Expedition({'tasks': {}, 'levels': {}}).start(self.state, self.settings)
         self.state.expedition['enabled'] = False
         self.state.battle['active'] = True
-        with self.assertRaises(ProtocolError): self.service.start(self.state, self.settings)
+        self.service.start(self.state,self.settings)
+        self.assertTrue(self.state.expedition['enabled'])
+        self.assertEqual(self.service.tick(self.state,10),[])
+        self.assertIn('等待戰鬥',self.state.expedition['status'])
 
     def test_ai_roaming_and_expedition_can_start_in_either_order(self):
         from unittest.mock import Mock
@@ -163,12 +168,13 @@ class ExpeditionAutomation(ExpeditionFixture, unittest.TestCase):
         self.assertEqual(packet.payload[5:7], Writer().u16(34014).build())
         self.assertEqual(self.service.pending['target'], 80)
 
-    def test_automatic_selection_does_not_use_locked_stock(self):
+    def test_automatic_selection_waits_without_using_locked_stock(self):
         self.state.expedition['roles']['1']['faith'] = 70
         self.state.inventory.update(ready=True, reliable=True, items={'3': {'item_id': 34014, 'count': 10, 'locked': True}})
         self.service.start(self.state, {**self.settings, 'item_id': 0})
         self.assertEqual(self.service.tick(self.state, 10), [])
-        self.assertFalse(self.state.expedition['enabled'])
+        self.assertTrue(self.state.expedition['enabled'])
+        self.assertIn('等待',self.state.expedition['status'])
 
     def test_online_sync_requests_time_once_without_starting_automation(self):
         logic = SessionLogic()
@@ -183,7 +189,7 @@ class ExpeditionAutomation(ExpeditionFixture, unittest.TestCase):
 
 class ExpeditionWire(unittest.TestCase):
     def test_bundled_official_catalog_uses_minutes_and_level_reduction(self):
-        value = json.loads((RESOURCE_ROOT / 'expedition_catalog.json').read_text(encoding='utf8'))
+        value = json.loads(read_config('expedition_catalog.json', root=RESOURCE_ROOT).decode('utf-8'))
         self.assertEqual(len(value['tasks']), 260)
         self.assertEqual(len(value['levels']), 10)
         self.assertEqual(value['tasks']['1']['name'], '遺跡探索 I')
@@ -400,5 +406,5 @@ class ExpeditionClaiming(ExpeditionFixture, unittest.TestCase):
         w = Writer().u8(1).u8(1).u16(0).u16(0).u8(10).u32(34014).u32(2)
         self.assertEqual(decode(Packet(31, 16, w.build()))['rewards'], [self.award])
         from wlre.services.expedition import claim_space
-        official = json.loads((RESOURCE_ROOT / 'expedition_catalog.json').read_text(encoding='utf8'))
+        official = json.loads(read_config('expedition_catalog.json', root=RESOURCE_ROOT).decode('utf-8'))
         self.assertTrue(all(claim_space(q) is not None for q in official['tasks'].values()))

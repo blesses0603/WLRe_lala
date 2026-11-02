@@ -789,13 +789,13 @@ def read_processing_summary(catalog_key, *, candidate_root=None):
             return None
         specs = {'物品': doc.get('item_rows'), 'NPC': other.get('eve_npc_v1'),
                  '互動': other.get('eve_interact_v1'), '對話': other.get('talk_v1'),
-                 '文字': other.get('text_v1'), '場景': other.get('scenes_v1')}
+                 '文字': other.get('text_v1'), '場景': other.get('scenes_v1'),
+                 '製作': doc.get('smith_rows')}
         result = {}
         for label, status in specs.items():
             result[label] = ('已解析' if type(status) is dict and status.get('status') == 'parsed'
                              else '格式待處理' if type(status) is dict and status.get('status') == 'parse_failed'
                              else '尚未解析')
-        result['製作'] = '候選已解析' if type(doc.get('smith_rows')) is dict else '格式待處理或未提供'
         return result
     except (OSError, BadZipFile, KeyError, ValueError, TypeError, RuntimeError):
         return None

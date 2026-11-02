@@ -1,3 +1,5 @@
+
+from gui_support import isolate_gui_background_checks
 import os
 import tkinter as tk
 import unittest
@@ -11,6 +13,7 @@ from wlre.ui.halo_button import edge_points,edge_overlay
 @unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt','Requires a desktop')
 class OverviewControls(unittest.TestCase):
     def setUp(self):
+        isolate_gui_background_checks(self)
         # These tests verify local Tk controls, not remote update/version checks.
         # Keep all Tk lifecycle work on the test/UI thread with no HTTP workers.
         with patch.object(App, 'start_version_check'):
@@ -161,6 +164,20 @@ class OverviewControls(unittest.TestCase):
             self.assertLessEqual(button.winfo_x()+button.winfo_width(),frame.winfo_width())
             self.assertLessEqual(button.winfo_y()+button.winfo_height(),frame.winfo_height())
 
+    def test_tent_control_changes_to_exit_only_after_confirmed_state(self):
+        self.state['tent'].update(inside=True,interior_scene=63503,return_scene=12170)
+        self.state['player']['scene']=63503
+        self.app.render(self.state);self.root.update()
+        self.assertEqual(self.panel.tent_enter_button.cget('text'),'離開帳篷')
+        with patch.object(self.app,'send') as send:
+            self.panel.tent_enter_button.invoke()
+            send.assert_called_once_with({'type':'tent','action':'leave'})
+        self.state['tent'].update(inside=False,interior_scene=None)
+        self.state['player']['scene']=12170
+        self.app.render(self.state);self.root.update()
+        self.assertEqual(self.panel.tent_enter_button.cget('text'),'進入')
+
+
 
 class EdgeSampling(unittest.TestCase):
     def test_straights_and_corners_have_even_color_spacing(self):
@@ -183,3 +200,4 @@ class StableHaloMask(unittest.TestCase):
         for x,y in ((0,0),(1,1),(50,1),(1,18),(50,18),(26,10)):
             self.assertEqual(alpha.getpixel((x,y)),0)
         self.assertGreater(alpha.getpixel((26,1)),0)
+

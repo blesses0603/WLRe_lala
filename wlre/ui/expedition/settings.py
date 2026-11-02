@@ -78,6 +78,7 @@ class ExpeditionSettingsMixin:
             return False
 
     def start(self):
+        self.refresh_runtime_catalog()
         if self.catalog.get('source_kind') == 'automatic_1275_unapproved_preview':
             self.status.set('官方遠征資料尚未正式核准，僅可預覽，不可自動派遣。')
             return

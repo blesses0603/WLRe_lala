@@ -6,6 +6,7 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from wlre.paths import RESOURCE_ROOT
+from wlre.storage.full_resource_seed import read_config
 from wlre.services.world.npc_asset_install import ASSETS
 from wlre.services.world.npc_talk import load_catalog, dialogue_text
 from wlre.services.world.npc_localization import load_text_data, load_battle_talk, battle_lines
@@ -18,8 +19,8 @@ class BundledNPCResourceTests(unittest.TestCase):
             with self.subTest(filename=filename):
                 path=RESOURCE_ROOT/filename
                 self.assertIn(filename,REQUIRED_RESOURCES)
-                self.assertTrue(path.is_file(),filename)
-                raw=path.read_bytes()
+                self.assertFalse(path.is_file(),filename)
+                raw=read_config(filename, root=RESOURCE_ROOT)
                 self.assertEqual(len(raw),size)
                 self.assertEqual(hashlib.sha256(raw).hexdigest(),digest)
 

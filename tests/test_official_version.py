@@ -327,3 +327,18 @@ class OfficialResourceVersionTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SelectedClientIdentityTests(unittest.TestCase):
+    def test_report_identifies_the_client_selected_from_current_official_mapping(self):
+        observed=[]
+        def fetch(url):
+            observed.append(url)
+            if url==RESOURCE_MAP_URL:
+                return b'[{"ExeVer":"1.3.0","DataVer":"1.3.21"},{"ExeVer":"1.4.0","DataVer":"1.4.1"}]'
+            return b'1300_2026_11_01_00_00_00_01'
+        result=check_official_game_resources(fetcher=fetch)
+        self.assertEqual(result['official_exe_version'],'1.4.0')
+        self.assertEqual(result['resource_path'],'1.4.1')
+        self.assertTrue(result['newer_official_client'])
+        self.assertTrue(all('/1.4.1/' in url for url in observed[1:]))

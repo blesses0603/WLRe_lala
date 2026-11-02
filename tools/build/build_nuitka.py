@@ -17,7 +17,7 @@ ROOT=Path(__file__).resolve().parents[2]
 
 
 def data_files(root=ROOT):
-    return package_data_files(root/'wlre')
+    return package_data_files(root/'wlre', compact=True)
 
 
 def compiler_jobs(requested=None, cpu_count=None):

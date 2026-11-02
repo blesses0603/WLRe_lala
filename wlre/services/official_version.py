@@ -351,7 +351,7 @@ def check_official_game_resources(*, fetcher=fetch_bytes, exe_version=SUPPORTED_
     result["failed_stage"] = next(
         (pkg + ".version" for pkg in ("DataPackage", "MainPackage")
          if result["packages"][pkg]["comparison"] == "unverified"), None)
-    result["official_exe_version"] = exe_version
+    result["official_exe_version"] = path["selected_exe_version"]
     result["newer_official_client"] = bool(path["newer_exe_versions"])
     result["newer_official_exe_versions"] = path["newer_exe_versions"]
     # A newer official executable is a separate compatibility-warning signal,

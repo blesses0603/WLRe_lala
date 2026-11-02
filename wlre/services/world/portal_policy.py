@@ -1,4 +1,6 @@
 """Guard portal destinations; retain known exits when the current map has no image."""
+
+from wlre.services.world.catalog_source_policy import is_official_revision
 from functools import lru_cache
 from wlre.services.world.smallmaps import SmallMaps
 
@@ -7,7 +9,7 @@ def smallmaps():
     return SmallMaps()
 
 def destination_problem(portal, maps=None):
-    if portal.get('source_revision') == 1275:
+    if is_official_revision(portal.get('source_revision')):
         # Same-revision Eve, StageMap and EveDoorLinks must agree on the door,
         # position and destination. A name alone never unlocks C20-8.
         verified = (
@@ -36,9 +38,9 @@ def allowed_rows(catalog, scene, maps, recovery=False):
     # 1275 Eve NewDoor index/positions are authenticated independently of
     # the still-unverified destination and server trigger. Show them as
     # non-actionable markers instead of hiding all doors from the minimap.
-    if (getattr(catalog, 'data', {}).get('source_revision') == 1275):
+    if (is_official_revision(getattr(catalog, 'data', {}).get('source_revision'))):
         return [p for p in catalog.for_scene(scene)
-                if p.get('source_revision') == 1275]
+                if is_official_revision(p.get('source_revision'))]
     return [p for p in catalog.for_scene(scene)
             if destination_problem(p, maps) is None
             and (not recovery or p.get('direct_eligible'))]

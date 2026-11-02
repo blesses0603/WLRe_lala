@@ -78,7 +78,7 @@ class Official1275MinimapTests(unittest.TestCase):
         self.assertEqual(model, 'M15129')
         self.assertEqual((projection.height, projection.offset_x), (11772, 165))
 
-    def test_1275_image_stays_readonly_in_existing_minimap_page(self):
+    def test_1275_image_without_mesh_allows_target_selection_and_move_callback(self):
         page = MinimapNavigationMixin()
         page.maps = SmallMaps(source_revision='1275')
         page.repository = Mock()
@@ -93,6 +93,7 @@ class Official1275MinimapTests(unittest.TestCase):
 
         click = MinimapPickMixin()
         click.maps = page.maps
+        click.selected_id = page.selected_id
         click.projection = page.projection
         click.portal_rows = []
         click.npc_rows = []
@@ -101,9 +102,11 @@ class Official1275MinimapTests(unittest.TestCase):
         click.note, click.update_portal_button = Mock(), Mock()
         click.on_pick, click.on_move = Mock(), Mock()
         click.view = lambda: (0, 0, 1)
-        click.double_pick(SimpleNamespace(x=300, y=300))
-        click.on_pick.assert_not_called()
-        click.on_move.assert_not_called()
+        x, y = (round(value) for value in page.projection.pixel_to_packet(300, 300))
+        self.assertEqual(click.double_pick(SimpleNamespace(x=300, y=300)), 'break')
+        click.on_pick.assert_called_once_with(15138, x, y)
+        click.on_move.assert_called_once_with()
+        self.assertEqual(click.picked_destination, {'scene': 15138, 'x': x, 'y': y})
 
 
 if __name__ == '__main__':

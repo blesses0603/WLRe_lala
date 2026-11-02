@@ -106,6 +106,9 @@ def summarize(state, live, guard, now=None):
             elif min(due)==0: timing='最快完成 0 小時（可領獎）'
             else: timing=f'最快完成 {min(due)/3600:.1f} 小時'
             expedition_text+='\n'+timing
+    reason=expedition.get('status','')
+    if reason and reason not in ('尚未啟動','等待遠征與駐紮所資料同步。'):
+        expedition_text+='\n'+reason
     if expedition.get('uncertain'):
         expedition_text='結果未確認｜請重新登入同步'
     if not live:
@@ -155,7 +158,7 @@ class OverviewPanel(ttk.Frame):
                     command=self.toggle_tent,padding=(3,2))
                 self.tent_toggle_button.pack(side='left',padx=(0,4))
                 self.tent_enter_button=ttk.Button(tools,text='進入',
-                    command=lambda:self.app.send({'type':'tent','action':'enter'}),padding=(3,2))
+                    command=self.enter_or_leave_tent,padding=(3,2))
                 self.tent_enter_button.pack(side='left')
             value=tk.StringVar();self.values[key]=value
             label=ttk.Label(frame,textvariable=value,justify='left',anchor='w')
@@ -197,6 +200,10 @@ class OverviewPanel(ttk.Frame):
             self.actions[key]=button
         self.after(1000,self.tick)
 
+    def enter_or_leave_tent(self):
+        inside=self.app.snapshot.get('tent',{}).get('inside',False)
+        self.app.send({'type':'tent','action':'leave' if inside else 'enter'})
+
     def toggle_tent(self):
         tent=self.app.snapshot.get('tent',{})
         action='close' if tent.get('deployed_scene') is not None else 'open'
@@ -237,6 +244,7 @@ class OverviewPanel(ttk.Frame):
     def refresh(self):
         state=getattr(self,'state',{})
         tent=state.get('tent',{})
+        self.tent_enter_button.configure(text='離開帳篷' if tent.get('inside') else '進入')
         self.tent_toggle_button.configure(text=('收起帳篷' if tent.get('deployed_scene') is not None else '展開帳篷'))
         for key,section in (('ai','auto_battle'),('roaming','roaming'),('expedition','expedition')):
             self.actions[key].set_active(self.app.live_active and state.get(section,{}).get('enabled',False))

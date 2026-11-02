@@ -20,11 +20,8 @@ LEGACY = frozenset((
     'npc_event_index_1262.json.gz', 'npc_interact_1262.json.gz',
     'npc_talk_1262.json.gz', 'npc_text_1262.json.gz',
 ))
-# The audit does not authorize deleting resources or changing packaging.
-KEEP_AS_FILES = frozenset((
-    'default_profile.json', 'server_list.json', 'lala_supported_resources.json',
-    'emoji_images.zip', 'item_icons.zip', 'smallmaps.zip',
-))
+# Complete pinned SQLite now supplies the distributed resource inventory.
+KEEP_AS_FILES = frozenset()
 
 
 def _recommendation(name):
@@ -52,9 +49,11 @@ def audit(database, root=RESOURCE_ROOT):
             if not {'bundled_resources', 'bundled_active'} <= tables:
                 result['error'] = 'bundled_tables_missing'
                 return result
-            for path in paths:
-                name = path.relative_to(root).as_posix()
-                raw = path.read_bytes()
+            from wlre.storage.full_resource_seed import SEED_NAME, SOURCE_MANIFEST, read_config
+            entries = ((path.relative_to(root).as_posix(), path.read_bytes()) for path in paths)
+            if not paths and (root / SEED_NAME).is_file():
+                entries = ((name, read_config(name, root=root)) for name in sorted(SOURCE_MANIFEST))
+            for name, raw in entries:
                 digest = hashlib.sha256(raw).hexdigest()
                 row = {'name': name, 'size': len(raw), 'sha256': digest,
                        'recommendation': _recommendation(name)}

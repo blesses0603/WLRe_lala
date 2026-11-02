@@ -64,7 +64,8 @@ def render_recipe_detail(self, force=False, *, recipes, owned_counts, material_r
                          duration, icon_map, recipe_plan):
     recipe=recipes.get(str(self.selected));c=self.state.get('crafting',{})
     if recipe is None:
-        self.name.set('沒有符合的未鎖定項目');self.hold.set('');self.device.set('');self.time.set('');self.reason.set('調整設備篩選、搜尋，或先同步小屋資料');self.large_image.configure(image='');self.add_button.configure(state='disabled')
+        self.name.set('沒有符合目前篩選的配方');self.hold.set('');self.device.set('');self.time.set('');self.reason.set(getattr(self,'empty_catalog_message','請調整設備篩選或搜尋條件'));self.large_image.configure(image='');self.add_button.configure(state='disabled')
+        if self.embedded:self.message.set(self.reason.get())
         for line,icon,text in self.material_widgets:line.pack_forget()
         if self.material_table is not None:self.material_table.delete(*self.material_table.get_children())
         return

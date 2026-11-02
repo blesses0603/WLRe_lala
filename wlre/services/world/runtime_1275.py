@@ -25,6 +25,10 @@ class Runtime1275Unavailable(ValueError):
 
 
 def baseline_revision():
+    from wlre.services.world.dynamic_bundle_runtime import current_runtime
+    current = current_runtime()
+    if current is not None:
+        return str(current.revision)
     document = load_supported_resources()
     packages = document['packages']
     versions = {packages[key]['revision'] for key in ('DataPackage', 'MainPackage')}
@@ -107,8 +111,14 @@ def _default_runtime():
 
 def active_runtime():
     """Use 1275 only, never silently return a 1262 NPC/item/recipe catalogue."""
+    from wlre.services.world.dynamic_bundle_runtime import current_runtime, dynamic_attempted
+    current = current_runtime()
+    if current is not None:
+        return current
+    if dynamic_attempted():
+        raise Runtime1275Unavailable('當次官方動態 Runtime 未完成驗證，禁止退回歷史資料')
     if baseline_revision() != '1275':
-        raise Runtime1275Unavailable('此 LaLa 版本尚未選定 1275 資料基準')
+        raise Runtime1275Unavailable('此 LaLa 版本尚未選定正式資料基準')
     return _default_runtime()
 
 
@@ -118,18 +128,12 @@ def ready():
         # Bundle bytes can supply runtime data. Candidate ZIP indexes alone
         # NEVER replace these sources.
         source = active_runtime()
-        from wlre.services.world.formal_candidate_bridge import (
-            inspect_launcher_candidate)
-        # A matching candidate is checked AGAIN against the full, release-
-        # pinned source before any shared recipe dict is touched. A mismatch
-        # must never partially change game state.
-        bridge = inspect_launcher_candidate(source)
+        # Independently pinned runtime sources are validated by active_runtime().
+        # Do not consult obsolete Launcher candidate ZIP receipts.
         from wlre.services.items.crafting import activate_1275_recipes
-        activate_1275_recipes(source)
-        if bridge['status'] == 'matches_formal_sources':
-            return True, ('1275 正式資料完整驗證，且 Launcher 四類候選與正式來源一致；'
-                          '遊戲協定仍須獨立驗收')
-        return True, '1275 正式資料通過來源校驗，可供功能模組使用；遊戲協定仍須獨立驗收'
+        if getattr(source, 'catalog_identity', None) is None:
+            activate_1275_recipes(source)
+        return True, f'{source.revision} 正式資料通過來源校驗，可供功能模組使用；遊戲協定仍須獨立驗收'
     except (Runtime1275Unavailable, OSError, ValueError) as exc:
         message = str(exc)
         if isinstance(exc, Runtime1275Unavailable):

@@ -60,13 +60,17 @@ def audit(archive_path, *, pixel_audit=False,
                 assets.add(name)
         if not assets:
             raise ValueError('1275 Manifest 未列出 SmallMap2D')
-        with ZipFile(resources / 'smallmaps.zip') as installed:
+        from wlre.storage.full_resource_seed import read_config
+        archive = resources / 'smallmaps.zip'
+        archive_source = archive if archive.is_file() else io.BytesIO(read_config(archive.name, root=resources))
+        with ZipFile(archive_source) as installed:
             existing = json.loads(installed.read('image_index.json'))
             existing_by_name = {r['name']: r['entry'] for r in existing}
             if len(existing_by_name) != len(existing):
                 raise ValueError('LaLa 小地圖圖片索引重複')
-            legacy = json.loads((resources / 'stage_coordinates.json').read_text(
-                encoding='utf-8'))['stages']
+            stage_path = resources / 'stage_coordinates.json'
+            stage_raw = stage_path.read_bytes() if stage_path.is_file() else read_config(stage_path.name, root=resources)
+            legacy = json.loads(stage_raw)['stages']
             old_scenes = {int(key): value for key, value in legacy.items()}
             only_official = sorted(set(official_scenes) - set(old_scenes))
             only_old = sorted(set(old_scenes) - set(official_scenes))

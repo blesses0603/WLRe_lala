@@ -167,12 +167,15 @@ class OfflineVerifierTests(unittest.TestCase):
                     'record_count': 0,
                     'scenes': {},
                 }).encode()
+            if feature == 'items':
+                from test_itemdata_v1 import sample
+                return struct.pack('<i', 1) + sample()
             return struct.pack('<i', 0)
         report = verify_local(**self.kwargs(bundle_dir=self.bundle_dir,
                                             decode=True, extractor=extractor))
         self.assertTrue(report['decoded'])
         self.assertEqual(set(report['decoded_features']),
-                         {'npc', 'shops', 'crafting', 'scenes'})
+                         {'npc', 'shops', 'crafting', 'scenes', 'items'})
         self.assertFalse(report['approved'])
         self.assertFalse(report['can_send_packets'])
         self.assertFalse(report['assets_ready'])

@@ -65,10 +65,19 @@ def parse_doors_1275(raw):
     """Read 1262 scene headers and 1275 NewDoor entries with exact source pin."""
     if type(raw) is not bytes or hashlib.sha256(raw).hexdigest() != SOURCE_SHA256:
         raise DoorSourceError('1275 Eve.bytes SHA-256 與已確認來源不符')
+    return parse_verified_doors(raw, expected_scene_count=1262)
+
+
+def parse_verified_doors(raw, *, expected_scene_count=None):
+    """Decode v115 doors from an already verified Bundle; no network approval."""
+    if type(raw) is not bytes or not 12 <= len(raw) <= 32 * 1024 * 1024:
+        raise DoorSourceError('Eve 表頭或大小無效')
     if len(raw) < 12:
         raise DoorSourceError('1275 Eve 表頭截斷')
     scene_count = struct.unpack_from('<I', raw, 8)[0]
-    if scene_count != 1262 or 12 + scene_count*12 > len(raw):
+    if (not 1 <= scene_count <= 4096
+            or (expected_scene_count is not None and scene_count != expected_scene_count)
+            or 12 + scene_count*12 > len(raw)):
         raise DoorSourceError('1275 Eve 場景數量或標頭不符')
     scenes = {}
     for i in range(scene_count):

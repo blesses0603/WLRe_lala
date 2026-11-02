@@ -1,5 +1,6 @@
 """Original EmojiData row-index mapping; static game sprites, safe literal fallback."""
 from wlre.paths import RESOURCE_ROOT
+from wlre.storage.bundled_database import load_bundled_json, load_bundled_bytes
 import re,json,zipfile,io
 from PIL import Image,ImageTk
 TOKEN=re.compile(r'\[Emoji([0-9]+)\]')
@@ -15,7 +16,7 @@ class EmojiImages:
     def __init__(self,master):
         self.master=master;self.cache={};base=RESOURCE_ROOT
         try:
-            self.catalog=json.loads((base/'emoji_catalog.json').read_text(encoding='utf-8'))['entries'];self.archive=zipfile.ZipFile(base/'emoji_images.zip')
+            self.catalog=load_bundled_json('emoji_catalog.json', root=base)['entries'];self.archive=zipfile.ZipFile(io.BytesIO(load_bundled_bytes('emoji_images.zip', root=base)))
         except (OSError,ValueError,KeyError,zipfile.BadZipFile):self.catalog={};self.archive=None
     def get(self,token,size=24):
         m=TOKEN.fullmatch(token)

@@ -1,4 +1,6 @@
 """Third batch Tk regression: cooperative room list and reward widgets."""
+
+from gui_support import isolate_gui_background_checks
 import os
 import time
 import tkinter as tk
@@ -14,6 +16,7 @@ from wlre.features.cooperative.panel import CooperativeModePage
                      'Requires desktop/Xvfb')
 class CooperativeRenderUI(unittest.TestCase):
     def setUp(self):
+        isolate_gui_background_checks(self)
         with patch.object(App, 'start_version_check'):
             self.root = tk.Tk()
             self.app = App(self.root)

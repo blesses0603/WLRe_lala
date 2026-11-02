@@ -1,4 +1,6 @@
 """Main-page minimap. Single click selects; double click invokes guarded movement."""
+
+from wlre.services.world.catalog_source_policy import is_official_revision
 from wlre.paths import PROJECT_ROOT
 import math
 import tkinter as tk
@@ -175,14 +177,50 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
             status_parent.bind('<Configure>',wrap_status,add='+')
         self.after_idle(self.draw)
 
-    def refresh_portals(self):
+    def refresh_runtime_sources(self):
         # The UI may be constructed before the 1275 runtime finishes being
         # installed. Do not pin an empty pre-login portal snapshot forever.
         # The current client must never keep a previously loaded 1262
         # portal list after the 1275 runtime has been installed. Replace the
         # whole cached catalogue rather than mixing old/new rows.
+        from wlre.services.world.dynamic_bundle_runtime import current_runtime, dynamic_attempted
+        runtime = current_runtime()
+        key = runtime.catalog_identity.key if runtime is not None else None
+        changed = key != getattr(self, '_runtime_catalog_key', None)
+        if changed:
+            self.selected_npc=self.selected_portal=None
+            for name in ('npc_shop_window','npc_choice_window','npc_history_window'):
+                window=getattr(self,name,None)
+                if window is not None:
+                    try:
+                        if window.winfo_exists():
+                            window.destroy()
+                    except tk.TclError:
+                        pass
+                    setattr(self,name,None)
+            # Rebind all UI snapshots together; old NPC/talk/item IDs cannot
+            # survive a timestamp-only republish with the same numeric version.
+            self.route = self.image = self.photo = self.mesh = self.projection = None
+            self.map_error = '官方資源版本已更新，正在重新載入目前場景'
+            self.maps = SmallMaps()
+            self.portals = Portals()
+            self.npc_index = runtime.npc_index if runtime is not None else None
+            self.npc_interacts = runtime.interact_index if runtime is not None else NPCInteractIndex.__new__(NPCInteractIndex)
+            if runtime is None:
+                self.npc_interacts.scenes = {}
+            self.npc_talks = dict(runtime.talks) if runtime is not None else {}
+            self.npc_index_error = self.npc_interact_error = self.npc_talk_error = runtime is None
+            self._runtime_catalog_key = key
+        if dynamic_attempted() and runtime is None:
+            self.npc_index = None
+            self.npc_interacts.scenes = {}
+            self.npc_talks = {}
+        return changed
+
+    def refresh_portals(self):
+        HomeMap.refresh_runtime_sources(self)
         previous_revision = self.portals.data.get('source_revision')
-        if (previous_revision != 1275
+        if (not is_official_revision(previous_revision)
                 or not self.portals.data.get('source_ready')):
             # Early 1262 portals.json files have no source_revision field.
             # Retire only their *portal rows*. NPC/monster reference records
@@ -192,6 +230,7 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
             if isinstance(old_entities, dict) and old_entities:
                 self._legacy_map_entities = old_entities
             self.portals = Portals()
+        revision_label = str(self.portals.data.get('source_revision') or '官方新版')
         recovery=self.image is None
         candidates=allowed_rows(self.portals,self.selected_id,self.maps,recovery=recovery)
         self.portal_rows=marked_portals(candidates, getattr(self, 'projection', None))
@@ -209,7 +248,7 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
                              else '選取 NPC 查看名稱、座標與事件索引核對狀態。')
         self.list_rows=[]
         for p in self.portal_rows:
-            if p.get('source_revision') == 1275:
+            if is_official_revision(p.get('source_revision')):
                 prefix = '◇ '  # verified door location, unverified destination
             else:
                 prefix='↩ 返回：' if recovery else ('◎ ' if p.get('direct_eligible') else '○ ')
@@ -230,8 +269,8 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
                 self.monster_list.insert('end',f"Lv.{e['level'] if e['level'] is not None else '?'} {e['name']}")
                 self.monster_rows.append(e)
         if not self.list_rows:
-            if self.portals.data.get('source_revision') == 1275:
-                empty = ('（1275 門事件資料尚未就緒）'
+            if is_official_revision(self.portals.data.get('source_revision')):
+                empty = (f'（{revision_label} 門事件資料尚未就緒）'
                          if not self.portals.data.get('source_ready')
                          else '（無已標記傳點）')
             else:
@@ -243,7 +282,7 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
         ready=sum(bool(p.get('direct_eligible')) for p in self.portal_rows)
         if hasattr(self, 'portal_info'):
             self.portal_info.set('')
-            if self.portals.data.get('source_revision') == 1275:
+            if is_official_revision(self.portals.data.get('source_revision')):
                 source = self.portals.data.get('portal_metadata_status')
                 if source not in ('stage_map_ready', 'destination_links_loaded') and (
                         not isinstance(source, str)
@@ -252,7 +291,7 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
                 elif hidden_count:
                     self.portal_info.set(
                         f'{hidden_count} 個未標記項目僅列於逐圖核對')
-        if self.portals.data.get('source_revision') == 1275:
+        if is_official_revision(self.portals.data.get('source_revision')):
             count = len(self.portal_rows)
             if self.portals.data.get('source_ready'):
                 # Use the same validated scene label as the map header,
@@ -272,18 +311,18 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
                                if isinstance(name_status, str)
                                and name_status.startswith('destination_links_')
                                else ''))
-                text = (f'1275 場景 {scene}：{count} 個傳點，'
+                text = (f'{revision_label} 場景 {scene}：{count} 個傳點，'
                         f'{ready} 個可手動確認試傳。{hint}'
                         '實際換圖以伺服器回覆為準。')
             else:
-                text = ('1275 官方門事件索引尚未完成校驗／安裝；'
+                text = (f'{revision_label} 官方門事件索引尚未完成校驗／安裝；'
                         '下次切換地圖會重新讀取，不使用 1262 舊傳點。')
         elif recovery:
             text=(f'此圖沒有小地圖；左側保留 {ready} 個返回有圖地圖的出口。' if ready
                   else '此圖沒有小地圖，來源未列可確認的返回出口；請使用官方客戶端離開。')
         else:
             text=f'可見 {len(self.portal_rows)} 個傳點；{ready} 個可直接嘗試；已隱藏缺圖及目的地未確認的入口。'
-        if self.portals.data.get('source_revision') == 1275:
+        if is_official_revision(self.portals.data.get('source_revision')):
             duplicate = self.portals.data.get('portal_duplicate_report', {})
             if isinstance(duplicate, dict):
                 removed = (duplicate.get('duplicate_event_id_removed', 0)

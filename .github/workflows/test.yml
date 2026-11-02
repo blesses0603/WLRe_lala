@@ -37,6 +37,9 @@ jobs:
       - uses: actions/setup-python@v7.0.0
         with:
           python-version: '3.12'
+      - name: Verify tracked database and removed source files
+        run: |
+          python -c "from pathlib import Path; from wlre.storage.full_resource_seed import verify_seed, SEED_NAME, SOURCE_MANIFEST; root=Path('wlre/resources'); assert not any((root/name).exists() for name in SOURCE_MANIFEST); verify_seed(root/SEED_NAME); print('27 legacy files absent; tracked database verified')"
       - name: Prepare Linux display
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends xvfb xauth python3-tk

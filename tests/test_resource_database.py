@@ -10,6 +10,24 @@ from wlre.services.world.resource_database import record_inventory
 
 
 class ResourceDatabaseTests(unittest.TestCase):
+    def test_historical_candidate_table_is_preserved_but_not_used(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'resources.sqlite3'
+            with closing(sqlite3.connect(path)) as db, db:
+                db.execute('CREATE TABLE candidate_rows (version_id INTEGER, source TEXT, row_key TEXT, data TEXT)')
+                db.execute("INSERT INTO candidate_rows VALUES (1, 'legacy', 'a', 'historical')")
+            record_inventory(path, 'a' * 64, {'tables/ItemData_C.bytes': b'bad'})
+            with closing(sqlite3.connect(path)) as db:
+                self.assertEqual(db.execute('SELECT data FROM candidate_rows').fetchone()[0], 'historical')
+                self.assertIn('parsed_resource_rows', {row[0] for row in db.execute('SELECT name FROM sqlite_master')})
+
+    def test_new_database_never_creates_candidate_rows(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'resources.sqlite3'
+            record_inventory(path, 'b' * 64, {'tables/ItemData_C.bytes': b'bad'})
+            with closing(sqlite3.connect(path)) as db:
+                self.assertNotIn('candidate_rows', {row[0] for row in db.execute('SELECT name FROM sqlite_master')})
+
     def test_active_identity_is_bound_to_database_catalog_key(self):
         from wlre.services.world.catalog_identity import OfficialCatalogIdentity, PackageRevision
         from wlre.services.world.resource_database import read_active_database_identity
@@ -30,12 +48,12 @@ class ResourceDatabaseTests(unittest.TestCase):
             key = 'a' * 64
             rows = [{'item_id': 7, 'candidate_row_key': 1, 'time_id': 0, 'materials': [{'item_id': 8}]},
                     {'item_id': 7, 'candidate_row_key': 2, 'time_id': 0, 'materials': [{'item_id': 8}]}]
-            with patch('wlre.services.world.smith_candidate.parse_smith_candidate', return_value=rows), \
+            with patch('wlre.services.world.smith_candidate.parse_smith_records', return_value=rows), \
                  patch('wlre.services.world.itemdata_v1.parse_itemdata', return_value={7: {'name': 'a'}, 8: {'name': 'b'}}):
                 record_inventory(path, key, {'tables/a/SmithData_C.bytes': b'smith',
                                              'tables/a/ItemData_C.bytes': b'items'})
                 self.assertEqual(len(read_catalog_tables(path, key, ['recipes'])['recipes']), 2)
-            with patch('wlre.services.world.smith_candidate.parse_smith_candidate', return_value=rows), \
+            with patch('wlre.services.world.smith_candidate.parse_smith_records', return_value=rows), \
                  patch('wlre.services.world.itemdata_v1.parse_itemdata', return_value={7: {'name': 'a'}}):
                 with self.assertRaises(ValueError):
                     read_catalog_tables(path, key, ['recipes'])
@@ -88,7 +106,7 @@ class ResourceDatabaseTests(unittest.TestCase):
             self.assertEqual(result['other_rows']['scenes_v1']['status'], 'parsed')
             with closing(sqlite3.connect(path)) as db:
                 self.assertEqual(db.execute('SELECT count(*) FROM resources').fetchone()[0], 2)
-                self.assertEqual(db.execute("SELECT count(*) FROM candidate_rows WHERE source='scenes_v1'").fetchone()[0], 1)
+                self.assertEqual(db.execute("SELECT count(*) FROM parsed_resource_rows WHERE source='scenes_v1'").fetchone()[0], 1)
 
     def test_eve_comparison_uses_scene_and_event_index(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -128,19 +146,13 @@ class ResourceDatabaseTests(unittest.TestCase):
             self.assertEqual(rollback['changed'], ['A.bytes'])
             self.assertEqual(record_inventory(path, 'one', payload(b'one'))['changed'], ['A.bytes'])
 
-    def test_item_display_is_bound_to_launcher_catalog_and_raw_integrity(self):
-        from wlre.services.world.resource_database import candidate_database_item_name
+    def test_raw_item_data_requires_matching_version_identity(self):
+        from wlre.services.world.resource_database import read_catalog_tables
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            (root / 'derived_catalogs').mkdir()
-            path = root / 'derived_catalogs' / 'resource_inventory.sqlite3'
-            receipt = {'status': 'downloaded_unparsed', 'catalog_key': 'a' * 64}
-            with patch('wlre.services.world.itemdata_v1.parse_itemdata', return_value={7: {'name': '新版名稱'}}), \
-                 patch('wlre.services.world.launcher_catalog.read_launcher_status', return_value=receipt):
-                record_inventory(path, 'a' * 64, {'tables/a/ItemData_C.bytes': b'table'})
-                self.assertEqual(candidate_database_item_name(7, root=root), '新版名稱')
-                receipt['catalog_key'] = 'b' * 64
-                self.assertIsNone(candidate_database_item_name(7, root=root))
+            path = Path(directory) / 'resources.sqlite3'
+            record_inventory(path, 'a' * 64, {'tables/a/ItemData_C.bytes': b'table'})
+            with self.assertRaises(ValueError):
+                read_catalog_tables(path, 'b' * 64, ['items'])
 
     def test_item_rows_are_versioned_and_compared(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -154,20 +166,16 @@ class ResourceDatabaseTests(unittest.TestCase):
             self.assertEqual(diff['changed'], ['1'])
             self.assertEqual(diff['removed'], ['2'])
 
-    def test_smith_rows_compare_with_previous_candidate(self):
+    def test_legacy_candidate_indexes_are_ignored(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'resources.sqlite3'
-            def inventory(rows):
-                return {'tables/a/SmithData_C.bytes': b'table',
-                        'candidate_indexes/smith_recipes_1286.json': json.dumps(
-                            {'approved': False, 'revision': 1286, 'records': rows}).encode()}
-            record_inventory(path, 'one', inventory([{'candidate_row_key': 1, 'time_id': 0, 'output': 1},
-                                                     {'candidate_row_key': 2, 'time_id': 0, 'output': 2}]))
-            result = record_inventory(path, 'two', inventory([{'candidate_row_key': 1, 'time_id': 0, 'output': 3},
-                                                             {'candidate_row_key': 3, 'time_id': 0, 'output': 4}]))
-            self.assertEqual(result['smith_rows']['changed'], ['1'])
-            self.assertEqual(result['smith_rows']['added'], ['3'])
-            self.assertEqual(result['smith_rows']['removed'], ['2'])
+            result = record_inventory(path, 'one', {
+                'tables/a/SmithData_C.bytes': b'table',
+                'candidate_indexes/smith_recipes_1286.json': b'invalid legacy payload',
+            })
+            self.assertEqual(result['smith_rows'], {'status': 'parse_failed'})
+            with closing(sqlite3.connect(path)) as db, db:
+                self.assertIsNone(db.execute("SELECT name FROM sqlite_master WHERE name='candidate_rows'").fetchone())
 
     def test_records_versions_and_compares_table_contents(self):
         with tempfile.TemporaryDirectory() as directory:

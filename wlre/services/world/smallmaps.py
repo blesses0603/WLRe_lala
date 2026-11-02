@@ -47,7 +47,7 @@ class SmallMaps:
             from wlre.services.world.runtime_1275 import baseline_revision
             source_revision = baseline_revision()
         self.source_revision = str(source_revision or '1262')
-        self.supports_navigation = self.source_revision != '1275'
+        self.supports_navigation = self.source_revision == '1262'
         self.path=Path(path) if path else RESOURCE_ROOT.joinpath('smallmaps.zip')
         self._database_archive = None
         if path is None:
@@ -65,25 +65,25 @@ class SmallMaps:
         scene = parse_map_id(logical_map)
         runtime = active_runtime()
         stages = getattr(runtime, 'stages', None)
-        if (getattr(runtime, 'revision', None) != 1275
+        if (str(getattr(runtime, 'revision', None)) != self.source_revision
                 or not isinstance(stages, dict)):
-            raise NavigationError('1275 官方場景尺寸尚未經完整校驗。')
+            raise NavigationError('目前官方場景資料與小地圖綁定版本不同，請重新載入。')
         row = stages.get(scene)
         if not isinstance(row, dict) or type(row.get('model_id')) is not int:
-            raise NavigationError('1275 官方場景尚未列出此場景的模型資料。')
+            raise NavigationError('目前官方場景資料沒有此場景的模型對應。')
         model = row['model_id']
         if not 1 <= model <= 65535 or self.entries.get(model) not in self.archive_entries:
-            raise NavigationError('此 1275 場景沒有對應的已核對小地圖圖片。')
+            raise NavigationError('此官方場景的模型沒有對應的小地圖圖片。')
         width, height = row.get('map_width'), row.get('map_height')
         offset_x, offset_y = row.get('small_offset_x'), row.get('small_offset_y')
         if (any(type(v) is not int for v in (width, height, offset_x, offset_y))
                 or not 1 <= width <= 65535 or not 1 <= height <= 65535
                 or not 0 <= offset_x <= 1024 or not 0 <= offset_y <= 1024):
-            raise NavigationError('1275 官方小地圖投影參數無效。')
+            raise NavigationError('目前官方場景的小地圖投影參數無效。')
         return row, 'M' + str(model).zfill(5)
 
     def has_image(self, logical_map):
-        if self.source_revision == '1275':
+        if self.source_revision != '1262':
             try:
                 self._stage_1275(logical_map)
                 return True
@@ -107,16 +107,27 @@ class SmallMaps:
         return zipfile.ZipFile(io.BytesIO(self._database_archive) if self._database_archive is not None else self.path)
 
     def projection(self,logical_map):
-        if self.source_revision == '1275':
+        if self.source_revision != '1262':
             stage, model = self._stage_1275(logical_map)
             height = 6992 if stage['map_height'] == 65535 else stage['map_height']
-            # Verified 1275 stage geometry, no 1262 navigation graph origin.
-            return Projection({**stage, 'offset_y': height}, (0, 0, 0)), model
+            origin=(0,0,0)
+            self.supports_navigation=False
+            from wlre.services.world.dynamic_bundle_runtime import current_runtime
+            if current_runtime() is not None:
+                self.coordinates=self.coordinates or Coordinates()
+                try:
+                    _matched,matched_model,origin=self.coordinates.mapping(logical_map)
+                    if matched_model!=model:
+                        raise NavigationError('導航模型與目前小地圖不同。')
+                    self.supports_navigation=True
+                except NavigationError:
+                    origin=(0,0,0)
+            return Projection({**stage, 'offset_y': height}, origin), model
         stage,scene,origin=self.coordinates.mapping(logical_map)
         return Projection(stage,origin),scene
 
     def for_model(self,model,logical_map=None):
-        if self.source_revision == '1275':
+        if self.source_revision != '1262':
             raise NavigationError('1275 小地圖尚無經新版校驗的導航網格。')
         model=parse_map_id(model)
         if logical_map is not None:

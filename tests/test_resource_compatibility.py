@@ -30,6 +30,12 @@ def fake_config(main_revision="1262", data_revision="1262"):
 
 
 class BundledResourceCompatibilityTests(unittest.TestCase):
+    def setUp(self):
+        activation = patch('wlre.services.world.dynamic_bundle_runtime.activate_for_official',
+                           side_effect=ValueError('offline baseline fixture'))
+        activation.start()
+        self.addCleanup(activation.stop)
+
     def test_real_bundled_file_derives_official_gate_baseline(self):
         data = load_supported_resources()
         numbers, full = baseline_maps(data)
@@ -64,7 +70,7 @@ class BundledResourceCompatibilityTests(unittest.TestCase):
                        return_value=checked), patch(
                            "wlre.services.world.runtime_1275.ready",
                            return_value=(True, "1275 fixture verified")):
-                matched = game_version_gate.run_prelogin_check()
+                matched = game_version_gate.run_prelogin_check({}, checker=lambda _: checked)
             self.assertFalse(matched["blocked"])
             self.assertIn("1275", matched["message"])
             self.assertNotIn("1262", matched["message"])
@@ -75,7 +81,7 @@ class BundledResourceCompatibilityTests(unittest.TestCase):
             self.assertEqual(changed["status"], "resources_changed")
             with patch("wlre.services.game_version_gate.check_official_game_resources",
                        return_value=changed):
-                blocked = game_version_gate.run_prelogin_check()
+                blocked = game_version_gate.run_prelogin_check({}, checker=lambda _: changed)
             self.assertTrue(blocked["blocked"])
             self.assertIn("1275", blocked["message"])
             self.assertNotIn("1262", blocked["message"])
@@ -97,7 +103,7 @@ class BundledResourceCompatibilityTests(unittest.TestCase):
             self.assertEqual(result["status"], "same_resources")
             with patch("wlre.services.game_version_gate.check_official_game_resources",
                        return_value=result):
-                checked = game_version_gate.run_prelogin_check()
+                checked = game_version_gate.run_prelogin_check({}, checker=lambda _: result)
             self.assertEqual(checked["baseline_label"], label)
             self.assertIn("DataPackage 1275", checked["message"])
 
@@ -126,13 +132,13 @@ class BundledResourceCompatibilityTests(unittest.TestCase):
             with self.assertRaises(ResourceBaselineError):
                 load_supported_resources(path)
 
-    def test_packager_requires_compatibility_json(self):
+    def test_packager_requires_database_with_verified_compatibility_config(self):
         from wlre.resource_manifest import REQUIRED_RESOURCES, data_files
         from wlre.paths import PACKAGE_ROOT
         self.assertIn("lala_supported_resources.json", REQUIRED_RESOURCES)
         filenames = [str(p) for p in data_files(PACKAGE_ROOT)]
-        self.assertTrue(any(n.endswith("lala_supported_resources.json")
-                            for n in filenames))
+        self.assertTrue(any(n.endswith("resource_catalog_seed.sqlite3") for n in filenames))
+        self.assertFalse(any(n.endswith("lala_supported_resources.json") for n in filenames))
 
 
 if __name__ == "__main__":

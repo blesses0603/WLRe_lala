@@ -1,4 +1,6 @@
 """Official 1262 C85-7 host start, ACK, safety and existing companion."""
+
+from gui_support import isolate_gui_background_checks
 import os
 import tkinter as tk
 import unittest
@@ -98,6 +100,7 @@ class StartChallenge(unittest.TestCase):
                      'Requires desktop/Xvfb')
 class StartChallengeUI(unittest.TestCase):
     def setUp(self):
+        isolate_gui_background_checks(self)
         from wlre.ui.gui import App
         self.root = tk.Tk()
         self.app = App(self.root)

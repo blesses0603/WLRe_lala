@@ -1,7 +1,7 @@
 """Launcher-owned official resource preparation, never the login view.
 
 Both the source-code bootstrapper and the compiled desktop entry point call
-this service BEFORE starting Tk. Candidate catalogs are read-only and cannot
+this service BEFORE starting Tk. Official catalog reports are informational and cannot
 approve game versions, login, navigation or network packet sending.
 """
 from __future__ import annotations
@@ -17,9 +17,9 @@ from wlre.storage.paths import data_root
 STATUS_SCHEMA = 3
 STATUS_FILENAME = 'launcher_catalog_status.json'
 MAX_STATUS_BYTES = 4096
-STATES = frozenset(('review_required', 'downloaded_unparsed',
+STATES = frozenset(('verified_official', 'downloaded_unparsed',
                    'preview', 'error'))
-FAILURE_FEATURES = frozenset(('npc', 'shops', 'crafting', 'scenes'))
+FAILURE_FEATURES = frozenset(('npc', 'shops', 'crafting', 'scenes', 'items'))
 FAILURE_STAGES = frozenset(('UnityFS／TextAsset', 'Eve 二進位事件',
                             'ItemData 二進位表', '資料 Schema',
                             '未分類解包例外', '未分類 Schema 例外'))
@@ -94,7 +94,7 @@ def _store_status(report, *, root=None):
 
 
 def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
-    """Synchronously prepare a candidate before Tk starts.
+    """Synchronously verify official resources before Tk starts.
 
     Failure is reported without blocking LaLa's own official login check.
     Callers must not treat any return value or the private receipt as approval.
@@ -122,6 +122,36 @@ def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
         if progress is not None:
             progress(phase, details)
     if real_launcher_run:
+        # Discover live independent package revisions and manifest digests.
+        # This metadata cannot approve gameplay assets or network packets.
+        try:
+            from wlre.services.world.runtime_manifest_identity import (
+                discover_runtime_identity)
+            identity = discover_runtime_identity()
+            if progress is not None:
+                progress('runtime_identity_verified', {
+                    'data': identity.packages['DataPackage'].version,
+                    'main': identity.packages['MainPackage'].version,
+                    'data_assets': identity.packages['DataPackage'].asset_count,
+                    'main_assets': identity.packages['MainPackage'].asset_count})
+        except Exception:
+            if progress is not None:
+                progress('runtime_identity_unavailable', {})
+    if real_launcher_run:
+        try:
+            from wlre.services.world.dynamic_bundle_runtime import prepare_dynamic_runtime
+            if progress is not None:
+                progress('runtime_bundle_plan', {})
+            prepare_dynamic_runtime(sync=True)
+            if progress is not None:
+                progress('runtime_bundle_ready', {})
+        except (OSError, ValueError, RuntimeError):
+            if progress is not None:
+                progress('runtime_bundle_unavailable', {})
+    if real_launcher_run and env.get('WLRE_SYNC_LEGACY_1275') == '1':
+        # Legacy 1275 synchronization is opt-in only. The primary launcher
+        # always discovers the live official MainPackage/DataPackage pair via
+        # run_auto_catalog; historical pinned resources must not gate it.
         # The four-feature candidate may fail before the full 1275 runtime
         # files are prepared (e.g. a separately audited Eve decoder). Give
         # the fixed-version runtime its own bounded official Bundle sync.
@@ -156,7 +186,7 @@ def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
             if progress is not None:
                 fallback['progress'] = progress
             result = runner(**fallback)
-        if result['status'] not in ('review_required', 'downloaded_unparsed'):
+        if result['status'] not in ('verified_official', 'downloaded_unparsed'):
             raise ValueError('Launcher official resources are not available')
         key = result['catalog_key']
         if type(key) is not str or len(key) != 64 or any(
@@ -169,32 +199,11 @@ def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
                 result.get('protocol_compatibility') == 'unverified' and
                 result.get('assets_ready') is False and
                 result.get('can_send_packets') is False and
-                result.get('approved') is False):
+                result['status'] == 'verified_official'):
             data_compatibility = 'compatible'
-        # Automatic promotion is only eligible in a real Launcher run after
-        # four independently validated sources and the full pinned archives
-        # are available. Injected test runners/roots never touch live files.
-        if (real_launcher_run and data_compatibility == 'compatible'):
-            from wlre.services.world.formal_candidate_bridge import (
-                promote_reviewed_archives)
-            if progress is not None:
-                progress('formal_check', {})
-            try:
-                bridge = promote_reviewed_archives(key)
-            except Exception:
-                # The legacy two-ZIP installation is OPTIONAL when the
-                # independently pinned official Bundle runtime is present.
-                # Do not turn a successfully verified candidate receipt into
-                # 'error' just because legacy ZIP reconciliation failed.
-                # runtime_1275.ready() separately revalidates the candidate
-                # against its independently verified full runtime and
-                # strictly rejects any actual source mismatch before
-                # activating recipes or permitting login.
-                if progress is not None:
-                    progress('formal_checked', {'status': 'optional_failed'})
-            else:
-                if progress is not None:
-                    progress('formal_checked', {'status': bridge['status']})
+        # The Launcher is never allowed to promote downloaded indexes into
+        # a formal gameplay runtime. Only independently verified runtime
+        # assets can be selected by the gameplay source policy.
         status = result['status']
     except Exception:
         # Keep reason out of local receipts; failures can include file paths,
@@ -245,14 +254,17 @@ def main(argv=None):
     else:
         result = prepare_on_launch()
     status = result['status']
-    print('LaLa Launcher 官方資源候選：' +
+    # Show the real per-user cache location, not the GitHub checkout folder.
+    # Never print credentials or private account settings.
+    print('LaLa 官方資源資料夾：' + str(data_root() / 'official_sync'), flush=True)
+    print('LaLa Launcher 官方資源檢查：' +
           ('資料格式檢查通過，協定仍待審核'
-           if status == 'review_required' and
+           if status == 'verified_official' and
            result.get('data_compatibility') == 'compatible'
-           else '已建立，尚待相容性審核' if status == 'review_required'
+           else '已下載，資料尚未完成驗證' if status == 'downloaded_unparsed'
            else '未完成；仍維持原有登入安全檢查' if status == 'error'
            else '已略過'), flush=True)
-    # Failure to build a *candidate* must not suppress the real login gate.
+    # Source discovery never overrides the independent login safety gate.
     return 0
 
 

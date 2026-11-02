@@ -42,6 +42,8 @@ def availability(state,recipe,count=1):
     if recipe.get('open_used',0)!=0:return '鎖定','此製作物目前尚未開放'
     if recipe['design_id']:return '鎖定','圖紙解鎖狀態尚未同步'
     if recipe['time_id'] or recipe['limit_kind']:return '鎖定','活動／次數條件尚未確認'
+    if recipe.get('read_only') is True:
+        return '參考配方','可查看材料與設備需求；此配方目前不送出製作排程'
     status=tool_status(state,recipe['tool_id'])
     if status!='已擺放':return '設備不足',item_name(recipe['tool_id'])+'：'+status
     materials=material_rows(state,recipe,count)

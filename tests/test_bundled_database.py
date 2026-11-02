@@ -17,7 +17,7 @@ class BundledDatabaseTests(unittest.TestCase):
             source.write_text(json.dumps({'version': 1262}), encoding='utf-8')
             self.assertEqual(load_bundled_json(source.name, root=root, database=database)['version'], 1262)
             source.write_text(json.dumps({'version': 1275}), encoding='utf-8')
-            self.assertEqual(load_bundled_json(source.name, root=root, database=database)['version'], 1275)
+            self.assertEqual(load_bundled_json(source.name, root=root, database=database, refresh=True)['version'], 1275)
             source.unlink()
             self.assertEqual(load_bundled_json(source.name, root=root, database=database)['version'], 1275)
             with closing(sqlite3.connect(database)) as db:

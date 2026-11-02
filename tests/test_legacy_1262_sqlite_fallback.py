@@ -8,13 +8,14 @@ import unittest
 from unittest.mock import patch
 
 from wlre.paths import RESOURCE_ROOT
+from wlre.storage.full_resource_seed import read_config
 from wlre.storage.bundled_database import read_pinned_legacy_bytes, load_legacy_resource
 
 
 class LegacySQLiteFallbackTests(unittest.TestCase):
     def test_verified_npc_catalog_without_source_file(self):
         from wlre.paths import RESOURCE_ROOT
-        original = (RESOURCE_ROOT / 'npc_event_index_1262.json.gz').read_bytes()
+        original = read_config('npc_event_index_1262.json.gz', root=RESOURCE_ROOT)
         digest = hashlib.sha256(original).hexdigest()
         with TemporaryDirectory() as folder:
             db_path = Path(folder) / 'resources.sqlite3'
@@ -27,7 +28,7 @@ class LegacySQLiteFallbackTests(unittest.TestCase):
 
     def test_sqlite_preferred_even_if_source_differs(self):
         name = 'npc_event_index_1262.json.gz'
-        original = (RESOURCE_ROOT / name).read_bytes()
+        original = read_config(name, root=RESOURCE_ROOT)
         digest = hashlib.sha256(original).hexdigest()
         with TemporaryDirectory() as folder:
             root = Path(folder)
@@ -50,7 +51,7 @@ class LegacySQLiteFallbackTests(unittest.TestCase):
             self.assertEqual(
                 load_legacy_resource(name, root=RESOURCE_ROOT,
                                      database=Path(folder) / 'absent.sqlite3'),
-                (RESOURCE_ROOT / name).read_bytes())
+                read_config(name, root=RESOURCE_ROOT))
 
     def test_missing_db_fails_closed(self):
         with TemporaryDirectory() as folder:

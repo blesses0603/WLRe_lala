@@ -101,7 +101,10 @@ def parse_npcs(npc_data, career_data):
     """NpcData.New fixed numeric fields, and NpcCareerData.LoadData mapping."""
     r = Reader(career_data)
     careers = {}
-    for _ in range(r.i32()):
+    career_count = r.i32()
+    if not 0 <= career_count <= 65535:
+        raise ProtocolError('轉職夥伴資料筆數錯誤')
+    for _ in range(career_count):
         record = r.take(17)
         original, career = struct.unpack_from('<HH', record, 2)
         if career in careers: raise ProtocolError('轉職夥伴對照重複')
@@ -118,6 +121,8 @@ def parse_npcs(npc_data, career_data):
             r.take(size).decode('utf-16-le')
         fields = r.take(203)
         sid = struct.unpack_from('<H', fields, 1)[0]
+        if not sid or str(sid) in npcs:
+            raise ProtocolError('夥伴 ID 無效或重複')
         npcs[str(sid)] = {'element': fields[74], 'kind': fields[106], 'original': careers.get(sid, sid)}
     r.end()
     return npcs
@@ -234,6 +239,14 @@ def load_active_catalog():
     fall back to 1262, especially for success probabilities and team choice.
     """
     from wlre.services.world.runtime_1275 import baseline_revision
+    from wlre.services.world.dynamic_bundle_runtime import current_runtime, dynamic_attempted
+    runtime = current_runtime()
+    if runtime is not None:
+        from copy import deepcopy
+        return deepcopy(runtime.expedition)
+    if dynamic_attempted():
+        from wlre.services.world.runtime_1275 import Runtime1275Unavailable
+        raise Runtime1275Unavailable('當次遠征 Runtime 驗證未完成')
     if baseline_revision() == '1275':
         return load_verified_1275_catalog()
     return load_catalog()

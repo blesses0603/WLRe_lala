@@ -41,7 +41,7 @@ class PlanWindow:
         self.row_images={}
         for i,r in enumerate(self.rows):
             image=self.panel.icons.get(r['item_id'],24);self.row_images[str(i)]=image
-            self.table.insert('','end',iid=str(i),image=image,values=(i+1,item_name(r['item_id']),r['count'],RECIPES[str(r['item_id'])]['output']*r['count']))
+            self.table.insert('','end',iid=str(i),image=image,values=(i+1,item_name(r['item_id']),r['count'],RECIPES[str(r['item_id'])]['output']*r['count'] if str(r['item_id']) in RECIPES else '配方待更新'))
         self.window.title(f'自訂家具製作清單 · {len(self.rows)} 項')
 
     def add(self,sid,count):

@@ -1,3 +1,5 @@
+
+from gui_support import isolate_gui_background_checks
 import copy
 import os
 import tempfile
@@ -41,6 +43,7 @@ class MaintenanceTests(unittest.TestCase):
 @unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt','Requires a desktop')
 class MaintenanceUiTests(unittest.TestCase):
     def setUp(self):
+        isolate_gui_background_checks(self)
         from wlre.ui.gui import App
         from wlre.ui.auto_battle_ui import SettingsEditor
         self.folder=tempfile.TemporaryDirectory()

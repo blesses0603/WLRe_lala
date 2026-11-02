@@ -3,20 +3,21 @@ import hashlib
 import json
 from pathlib import Path
 import struct
+from contextlib import closing
 import tempfile
 import unittest
 from unittest.mock import patch
 import zlib
-import zipfile
 
 from wlre.services.official_manifest_sync import ManifestSpec, VerifiedManifest
 from wlre.services.official_bundle_download import spec_from_manifest
 from wlre.services.world.auto_catalog import (
-    AutoCatalogError, _SOURCE_MAP, _ASSET_ROOT, _candidate_path,
+    AutoCatalogError, _SOURCE_MAP, _ASSET_ROOT,
     run_auto_catalog,
 )
 from wlre.services.official_incremental_sync import IncrementalSyncError
 from wlre.services.world.official_catalog_pipeline import OfficialCatalogPipelineError
+from wlre.services.world.official_catalog_store import active_official_catalog
 
 VERSIONS = {
     'DataPackage': '1275_2026_10_21_18_27_33_84',
@@ -29,15 +30,15 @@ def crc(raw):
 
 
 class AutoCatalogTests(unittest.TestCase):
-    def test_new_smith_schema_only_for_reviewed_official_manifest(self):
+    def test_smith_schema_recognizes_reviewed_layouts_for_independent_versions(self):
         from wlre.services.world.auto_catalog import _bindings_for_snapshot
         current = {'packages': {'DataPackage': '1286_2026_10_29_13_42_37_94'}}
         newer = {'packages': {'DataPackage': '1287_2026_11_01_12_00_00_00'}}
         def crafting(snapshot):
             return next(b.contract.schema_id for b in _bindings_for_snapshot(snapshot)
                         if b.contract.feature == 'crafting')
-        self.assertEqual(crafting(current), 'smith-new-35-v1')
-        self.assertEqual(crafting(newer), 'smith-new-33-v1')
+        self.assertEqual(crafting(current), 'smith-reviewed-v1')
+        self.assertEqual(crafting(newer), 'smith-reviewed-v1')
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -52,7 +53,9 @@ class AutoCatalogTests(unittest.TestCase):
             'checked_at_utc': '2026-10-24T00:00:00+00:00',
             'assets_ready': False,
         }
+        from test_itemdata_v1 import sample
         self.bytes = {
+            'items': struct.pack('<I', 1) + sample(),
             'npc': json.dumps({'schema_version': 1, 'source': 'EventData.NewNpc',
                                'scenes': {}, 'record_count': 0}).encode(),
             'shops': json.dumps({'schema_version': 1, 'source': 'EventData.NewInteract',
@@ -101,32 +104,20 @@ class AutoCatalogTests(unittest.TestCase):
         params.update(overrides)
         return params
 
-    def test_no_bindings_needed_and_cache_is_private_unapproved(self):
+    def test_official_sources_stored_without_candidate_zip(self):
         result = run_auto_catalog(**self.kwargs())
-        self.assertEqual(result['status'], 'review_required')
-        self.assertEqual(result['cache'], 'new_private_candidate')
+        self.assertEqual(result['status'], 'verified_official')
         self.assertEqual(set(result['record_counts']), set(_SOURCE_MAP))
         self.assertEqual(result['data_compatibility'], 'compatible')
         self.assertEqual(result['protocol_compatibility'], 'unverified')
-        receipt = self.candidates / result['catalog_key'] / 'compatibility_report.json'
-        self.assertTrue(receipt.is_file())
-        compatibility = json.loads(receipt.read_text(encoding='utf-8'))
-        self.assertEqual(set(compatibility['features']), set(_SOURCE_MAP))
-        self.assertFalse(compatibility['assets_ready'])
-        self.assertFalse(compatibility['can_send_packets'])
         self.assertFalse(result['approved'])
         self.assertFalse(result['assets_ready'])
-        location = self.candidates / result['catalog_key'] / 'candidate.zip'
-        self.assertTrue(location.is_file())
-        with zipfile.ZipFile(location) as z:
-            self.assertEqual(set(z.namelist()),
-                             {'candidate.json', 'npc.source', 'shops.source',
-                              'crafting.source', 'scenes.source'})
-            meta = json.loads(z.read('candidate.json'))
-            self.assertFalse(meta['approved'])
-            self.assertEqual(meta['catalog_key'], result['catalog_key'])
-            self.assertEqual(meta['features']['npc']['sha256'],
-                             hashlib.sha256(self.bytes['npc']).hexdigest())
+        self.assertFalse(result['can_send_packets'])
+        stored = active_official_catalog(self.candidates / 'official_catalog.sqlite3')
+        self.assertEqual(stored['catalog_key'], result['catalog_key'])
+        self.assertEqual(set(stored['sources']), set(_SOURCE_MAP))
+        self.assertFalse(stored['can_send_packets'])
+        self.assertFalse(any(self.candidates.rglob('candidate.zip')))
 
     def test_real_launcher_records_version_change_after_verified_manifests(self):
         # All network, Manifest and disk state are injected, while the public
@@ -147,7 +138,7 @@ class AutoCatalogTests(unittest.TestCase):
                 params, progress=lambda phase, details:
                 stages.append((phase, details))))
         self.assertEqual(result['official_revision_status'], 'changed')
-        self.assertEqual(result['status'], 'review_required')
+        self.assertEqual(result['status'], 'verified_official')
         self.assertFalse(result['approved'])
         self.assertFalse(result['assets_ready'])
         self.assertFalse(result['can_send_packets'])
@@ -184,28 +175,24 @@ class AutoCatalogTests(unittest.TestCase):
         events = []
         result = run_auto_catalog(**self.kwargs(
             progress=lambda phase, details: events.append((phase, details))))
-        self.assertEqual(result['status'], 'review_required')
+        self.assertEqual(result['status'], 'verified_official')
         phases = [stage for stage, _ in events]
         self.assertEqual(phases[:5], [
             'official_version', 'manifest', 'manifest',
             'bundle_plan', 'bundle_sync'])
         self.assertEqual(events[1][1]['package'], 'DataPackage')
         self.assertEqual(events[2][1]['package'], 'MainPackage')
-        self.assertEqual(phases.count('extract'), 4)
+        self.assertEqual(phases.count('extract'), 5)
         completed = [info for stage, info in events if stage == 'bundle_item']
         self.assertEqual(len(completed), 1)
         self.assertEqual(completed[0]['completed'], 1)
         self.assertEqual(completed[0]['total'], 1)
         self.assertEqual(completed[0]['action'], 'cached')
-        self.assertEqual(phases[-3:], [
-            'compatibility_check', 'candidate_ready', 'compatibility_ready'])
-        cached = []
+        self.assertEqual(phases[-1], 'official_catalog_stored')
+        repeated = []
         run_auto_catalog(**self.kwargs(
-            progress=lambda phase, details: cached.append(phase),
-            extractor=lambda *_: self.fail('must use verified cache')))
-        self.assertEqual(cached[-2:], ['cached_candidate', 'compatibility_ready'])
-        self.assertIn('compatibility_check', cached)
-        self.assertNotIn('extract', cached)
+            progress=lambda phase, details: repeated.append(phase)))
+        self.assertIn('official_catalog_stored', repeated)
 
     def test_version_switch_during_two_manifest_downloads_aborts_before_bundles(self):
         # A newly published official .version must not combine old and new
@@ -239,7 +226,7 @@ class AutoCatalogTests(unittest.TestCase):
         observed = iter((self.snapshot, {
             **self.snapshot, 'checked_at_utc': '2026-10-24T12:00:00+00:00'}))
         result = run_auto_catalog(**self.kwargs(observe=lambda: next(observed)))
-        self.assertEqual(result['status'], 'review_required')
+        self.assertEqual(result['status'], 'verified_official')
         self.assertFalse(result['can_send_packets'])
 
     def test_readonly_preview_does_not_repeat_version_requests(self):
@@ -259,42 +246,24 @@ class AutoCatalogTests(unittest.TestCase):
         self.assertNotIn('bundle_sync', events)
         self.assertNotIn('candidate_ready', events)
 
-    def test_cached_candidate_reuses_without_extraction(self):
+    def test_verified_sources_are_rechecked_on_repeated_sync(self):
         first = run_auto_catalog(**self.kwargs())
-        cached = run_auto_catalog(**self.kwargs(
-            extractor=lambda *_: self.fail('extractor should not be called on cache hit')))
-        self.assertEqual(first['catalog_key'], cached['catalog_key'])
-        self.assertEqual(cached['cache'], 'verified_private_candidate')
-
-    def test_tamper_rebuilds_from_verified_sources_not_accepted(self):
-        first = run_auto_catalog(**self.kwargs())
-        path = self.candidates / first['catalog_key'] / 'candidate.zip'
-        with path.open('ab') as stream:
-            stream.write(b'invalid trailing bytes')
-        # Python ZIP readers may permit trailing bytes, so ensure a definite
-        # invalid private ZIP rather than relying on appended garbage alone.
-        path.write_bytes(b'not-a-ZIP')
         second = run_auto_catalog(**self.kwargs())
-        self.assertEqual(second['cache'], 'new_private_candidate')
+        self.assertEqual(first['catalog_key'], second['catalog_key'])
+        self.assertEqual(second['status'], 'verified_official')
+        self.assertFalse(any(self.candidates.rglob('candidate.zip')))
 
-    def test_self_consistent_but_invalid_cached_schema_is_rebuilt(self):
-        """Recomputed local SHA cannot promote a malformed source to compatible."""
-        result = run_auto_catalog(**self.kwargs())
-        target = self.candidates / result['catalog_key'] / 'candidate.zip'
-        with zipfile.ZipFile(target, 'r') as source:
-            contents = {name: source.read(name) for name in source.namelist()}
-        altered = b'not valid schema'
-        meta = json.loads(contents['candidate.json'])
-        meta['features']['npc']['sha256'] = hashlib.sha256(altered).hexdigest()
-        meta['features']['npc']['bytes'] = len(altered)
-        contents['candidate.json'] = json.dumps(meta, ensure_ascii=False).encode()
-        contents['npc.source'] = altered
-        with zipfile.ZipFile(target, 'w') as source:
-            for name, body in contents.items():
-                source.writestr(name, body)
-        refreshed = run_auto_catalog(**self.kwargs())
-        self.assertEqual(refreshed['cache'], 'new_private_candidate')
-        self.assertEqual(refreshed['data_compatibility'], 'compatible')
+    def test_tampered_sqlite_metadata_rejected_without_activation(self):
+        import sqlite3
+        first = run_auto_catalog(**self.kwargs())
+        db_path = self.candidates / 'official_catalog.sqlite3'
+        with closing(sqlite3.connect(db_path)) as db, db:
+            db.execute('UPDATE official_catalog_sources SET sha256=? '
+                       'WHERE catalog_key=? AND feature=?',
+                       ('c' * 64, first['catalog_key'], 'npc'))
+        with self.assertRaises(ValueError):
+            run_auto_catalog(**self.kwargs())
+        self.assertFalse(any(self.candidates.rglob('candidate.zip')))
 
     def test_removed_official_bundle_disallows_false_cache_hit(self):
         result = run_auto_catalog(**self.kwargs())
@@ -306,20 +275,14 @@ class AutoCatalogTests(unittest.TestCase):
         with self.assertRaises(OfficialCatalogPipelineError):
             run_auto_catalog(**self.kwargs(
                 max_download_bytes=0, opener=lambda *_: self.fail('no CDN')))
-        self.assertTrue((self.candidates / result['catalog_key'] /
-                         'candidate.zip').exists())
+        self.assertIsNotNone(active_official_catalog(
+            self.candidates / 'official_catalog.sqlite3'))
 
-    def test_cached_receipt_tampering_does_not_enable_game(self):
-        result = run_auto_catalog(**self.kwargs())
-        report = self.candidates / result['catalog_key'] / 'compatibility_report.json'
-        content = json.loads(report.read_text(encoding='utf-8'))
-        content['approved'] = True
-        report.write_text(json.dumps(content), encoding='utf-8')
-        # Cached source is reverified; its display-only receipt gets refreshed.
-        reused = run_auto_catalog(**self.kwargs())
-        self.assertEqual(reused['cache'], 'verified_private_candidate')
-        self.assertFalse(json.loads(report.read_text())['approved'])
-        self.assertFalse(reused['can_send_packets'])
+    def test_sqlite_metadata_never_approves_packets(self):
+        run_auto_catalog(**self.kwargs())
+        stored = active_official_catalog(self.candidates / 'official_catalog.sqlite3')
+        self.assertFalse(stored['assets_ready'])
+        self.assertFalse(stored['can_send_packets'])
 
     def test_absent_asset_fails_closed_before_any_cache_output(self):
         self.manifests['DataPackage'].index['assets'].pop()
@@ -444,7 +407,7 @@ class AutoCatalogTests(unittest.TestCase):
         with patch.object(__import__('wlre.services.world.auto_catalog',
                                      fromlist=['run_auto_catalog']),
                           'run_auto_catalog',
-                          return_value={'status': 'review_required'}) as run:
+                          return_value={'status': 'verified_official'}) as run:
             self.assertEqual(plan_official_catalog.main(['--download', '--parse']), 0)
             self.assertTrue(run.call_args.kwargs['parse'])
             self.assertEqual(plan_official_catalog.main([]), 0)

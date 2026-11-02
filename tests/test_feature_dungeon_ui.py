@@ -1,4 +1,6 @@
 """P1b real Tk regression for the normal dungeon feature split."""
+
+from gui_support import isolate_gui_background_checks
 import os
 import tkinter as tk
 import unittest
@@ -14,6 +16,7 @@ from wlre.ui.gui import App
                      'Requires desktop/Xvfb')
 class DungeonFeatureUI(unittest.TestCase):
     def setUp(self):
+        isolate_gui_background_checks(self)
         with patch.object(App, 'start_version_check'):
             self.root = tk.Tk()
             self.app = App(self.root)

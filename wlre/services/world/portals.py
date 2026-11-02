@@ -46,7 +46,7 @@ class Portals:
             # reason to fall through to the tracked 1262 portals.json file.
             # Keep that legacy file solely for explicit fixture/audit reads.
             revision = baseline_revision()
-            if revision != '1275':
+            if revision == '1262':
                 self.data = {
                     'portals': {}, 'audit': [], 'entities': {},
                     'source_revision': 1275, 'source_ready': False,
@@ -55,11 +55,10 @@ class Portals:
                 }
                 self.audit = {}
                 return
-            if revision == '1275':
-                # The verified 1275 Eve table includes a door index and its
-                # local coordinates, but not an audited destination or proof
-                # that C20-8 is safe on this server. Expose the original
-                # positions as read-only map markers; NEVER reuse 1262 routes.
+            if revision != '1262':
+                # Build markers from the active runtime. Manual triggers require
+                # a matched destination, scaled position and valid door index;
+                # the presence of a dynamic Catalog identity is not a blocker.
                 source_ready = False
                 doors = {}
                 duplicate_report = {}
@@ -214,7 +213,7 @@ class Portals:
                                       '傳點 #' + str(index) +
                                       '（官方名稱未取得）'))
                             visible.append({
-                                'id': f'1275:{scene_id}:{index}',
+                                'id': f'{revision}:{scene_id}:{index}',
                                 'scene': scene_id, 'index': index,
                                 'name': label,
                                 'official_name': official_name,
@@ -223,7 +222,7 @@ class Portals:
                                 'source_scene_name_known': scene_id in scene_names,
                                 'destination_label': target_label,
                                 'kind': 'door',
-                                'source_revision': 1275,
+                                'source_revision': int(revision),
                                 'coordinate_valid': valid_xy,
                                 'coordinate_source': (
                                     'verified_eve_door_links_scaled' if strict_valid_xy
@@ -300,7 +299,7 @@ class Portals:
                                 scene_id, scene_names),
                             'source_scene_name_known': scene_id in scene_names,
                             'destination_label': target_label or '目的地未確認',
-                            'kind': 'door', 'source_revision': 1275,
+                            'kind': 'door', 'source_revision': int(revision),
                             'coordinate_valid': valid,
                             'coordinate_source': 'official_link_reference_scaled',
                             'projection_guard': (
@@ -359,7 +358,7 @@ class Portals:
                                 scene_id, scene_names),
                             'source_scene_name_known': scene_id in scene_names,
                             'destination_label': dest_label or '目的地未確認',
-                            'kind': 'link', 'source_revision': 1275,
+                            'kind': 'link', 'source_revision': int(revision),
                             'coordinate_valid': valid,
                             'coordinate_source': '1275_hidden_stage_marker',
                             'projection_guard': (
@@ -386,7 +385,7 @@ class Portals:
                     pass
                 self.data = {
                     'portals': doors, 'audit': [], 'entities': {},
-                    'source_revision': 1275,
+                    'source_revision': int(revision),
                     'door_count': door_count,
                     'official_link_reference_count': (len(portal_evidence) if source_ready else 0),
                     'official_route_reference_count': (len(portal_extra_routes) if source_ready else 0),

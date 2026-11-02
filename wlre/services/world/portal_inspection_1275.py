@@ -4,6 +4,8 @@ A source grid coordinate, packet-space XY and arrival XY are different
 concepts. These fields are for diagnostics/UI only, not a new trigger index
 or permission to send C20-8.
 """
+
+from wlre.services.world.catalog_source_policy import is_official_revision
 from wlre.services.world.scene_names_1275 import source_scene_label
 
 
@@ -55,7 +57,7 @@ def link_inspection_fields(reference, scene, index, scene_names):
 
 def portal_inspection_text(portal):
     """Human-readable 1275 source/arrival status, explicitly non-authorizing."""
-    if not isinstance(portal, dict) or portal.get('source_revision') != 1275:
+    if not isinstance(portal, dict) or not is_official_revision(portal.get('source_revision')):
         return ''
     target = portal.get('reference_destination_label')
     if target is None and type(portal.get('hidden_destination_scene_id')) is int:

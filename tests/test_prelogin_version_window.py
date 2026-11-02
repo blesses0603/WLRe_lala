@@ -1,4 +1,6 @@
 """Dedicated version-check window must use official server results exclusively."""
+
+from gui_support import isolate_gui_background_checks
 import os
 import tkinter as tk
 import unittest
@@ -37,6 +39,7 @@ def official_result(main="1262", data="1262", status="version_identifiers_match"
                      "需要桌面顯示環境")
 class PreloginVersionWindowTests(unittest.TestCase):
     def setUp(self):
+        isolate_gui_background_checks(self)
         self.root = tk.Tk()
         self.patcher = patch.object(VersionGateController, "start_version_check")
         self.patcher.start()
@@ -60,10 +63,31 @@ class PreloginVersionWindowTests(unittest.TestCase):
         self.assertTrue(self.app.version_window.winfo_ismapped())
         self.assertEqual(self.app.login_window.state(), "withdrawn")
         self.assertEqual(str(self.app.connect_button.cget("state")), "disabled")
-        self.assertEqual(self.app._version_baseline.get(), "1275")
+        self.assertEqual(self.app._version_baseline.get(), "等待官方版本確認")
         self.assertNotIn("選擇遊戲目錄",
                          [str(x.cget("text")) for x in self.app.version_window.winfo_children()
                           if "text" in x.keys()])
+
+    def test_matching_current_database_allows_login_without_protocol_acceptance(self):
+        remote={'status':'resources_changed','resource_path':'1.3.22.1',
+                'official_exe_version':'1.3.0','newer_official_client':False,
+                'packages':{'DataPackage':{'remote':'1286_full','comparison':'newer'},
+                            'MainPackage':{'remote':'1284_full','comparison':'newer'}}}
+        result={'status':'database_matches_official','blocked':False,
+                'login_allowed':True,'database_verified':True,'database_comparison':'same',
+                'dynamic_runtime':'verified','data_compatibility':'compatible',
+                'protocol_compatibility':'unverified','remote':remote,
+                'baseline_label':'DataPackage 1286／MainPackage 1284',
+                'runtime_identity':{'data_ver':'1.3.22.1','exe_version':'1.3.0',
+                    'packages':[{'name':p,'full_version':v['remote']} for p,v in remote['packages'].items()]}}
+        self.deliver(result)
+        self.assertEqual(self.app.version_gate_state,'ready')
+        self.assertFalse(self.app._version_continue_button.instate(['disabled']))
+        self.assertIn('可以登入',self.app._version_heading.get())
+        self.app.continue_to_login()
+        self.assertTrue(self.app._version_gate_entry_approved)
+        self.assertEqual(self.app.version_window.state(),'withdrawn')
+        self.assertTrue(self.app.can_login_after_version_check())
 
     def test_confirmed_remote_change_blocks(self):
         self.deliver(official_result("1275", "1262", "blocked"))
@@ -100,8 +124,8 @@ class PreloginVersionWindowTests(unittest.TestCase):
                         supported, clear=True):
             fake = SimpleNamespace()
             VersionGateController.initialize_version_gate(fake)
-            self.assertEqual(fake._version_baseline.get(), "1275")
-            self.assertIn("1275", fake.version_gate_text.get())
+            self.assertEqual(fake._version_baseline.get(), "等待官方版本確認")
+            self.assertIn("官方", fake.version_gate_text.get())
             # An actual redraw uses the current package baselines instead of
             # keeping a hard-coded 1262 in its comparison text.
             self.deliver(official_result("1280", "1280", "blocked"))

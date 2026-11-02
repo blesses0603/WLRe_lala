@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 import zipfile
 
-DATA_SUFFIXES={'.json','.zip','.gz','.png','.ico'}
+DATA_SUFFIXES={'.json','.zip','.gz','.png','.ico','.sqlite3'}
 REQUIRED_RESOURCES=(
     'alchemy_catalog.json','combat_catalog.json','crafting_catalog.json','default_profile.json',
     'lala_supported_resources.json',
@@ -25,15 +25,23 @@ REQUIRED_RESOURCES=(
 
 def require_resources(root):
     root=Path(root)
-    missing=[name for name in REQUIRED_RESOURCES if not (root/name).is_file()]
+    from wlre.storage.full_resource_seed import SEED_NAME, verify_seed, SOURCE_MANIFEST
+    seeded=(root/SEED_NAME).is_file()
+    if seeded: verify_seed(root/SEED_NAME)
+    missing=[name for name in REQUIRED_RESOURCES
+             if not (seeded and name in SOURCE_MANIFEST) and not (root/name).is_file()]
     if missing:raise RuntimeError('Missing resources: '+', '.join(missing))
 
 
-def data_files(package_root):
+def data_files(package_root, *, compact=False):
     package_root=Path(package_root)
-    require_resources(package_root/'resources')
+    from wlre.storage.full_resource_seed import SEED_NAME, build_seed, SOURCE_MANIFEST
+    resources=package_root/'resources'
+    if compact: build_seed(resources,resources/SEED_NAME)
+    require_resources(resources)
     return sorted(p for p in package_root.rglob('*')
                   if p.is_file() and p.suffix.lower() in DATA_SUFFIXES
+                  and not (compact and p.parent==resources and p.name in SOURCE_MANIFEST)
                   and not any(part.startswith('.') or part=='__pycache__' for part in p.relative_to(package_root).parts))
 
 

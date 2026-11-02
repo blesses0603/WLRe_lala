@@ -3,6 +3,8 @@
 No movement commands are emitted. Original HomeMap methods remain callable
 through inheritance. This layer keeps missing image / stale navigation closed.
 """
+
+from wlre.services.world.catalog_source_policy import is_official_revision
 from wlre.services.world.navigation import NavigationError
 from wlre.services.world.map_names import map_label, parse_map_id
 from wlre.services.world.scene_names_1275 import source_scene_label
@@ -19,7 +21,7 @@ class MinimapNavigationMixin:
         scene_id = self.selected_id
         catalog = getattr(self, 'portals', None)
         data = getattr(catalog, 'data', {}) if catalog is not None else {}
-        if data.get('source_revision') == 1275:
+        if is_official_revision(data.get('source_revision')):
             if type(scene_id) is not int or not 0 <= scene_id <= 65535:
                 # Untrusted/stale scene snapshots must not crash the UI.
                 # Do not guess a 1262 name or silently select a different map.
@@ -33,6 +35,11 @@ class MinimapNavigationMixin:
         self.map_title.set('小地圖｜' + MinimapNavigationMixin.scene_display_name(self))
 
     def show_map(self,map_id):
+        refresh_sources=getattr(self,'refresh_runtime_sources',None)
+        if callable(refresh_sources):
+            refresh_sources()
+        self.map_error=None
+        self.picked_destination=None
         self.route=None
         self.image=None
         self.mesh=None
@@ -46,15 +53,20 @@ class MinimapNavigationMixin:
                 if getattr(self.maps, 'supports_navigation', True):
                     try:self.mesh=self.repository.load(scene)
                     except NavigationError:pass
-                self.note.set(self.scene_display_name()+'｜官方 1275 場景座標（僅供檢視）'
-                              if getattr(self.maps, 'source_revision', None) == '1275'
-                              else self.scene_display_name()+'｜原始小地圖')
+                if is_official_revision(getattr(self.maps, 'source_revision', None)):
+                    action='單擊選目標，雙擊移動' if self.mesh is not None else '可選目標，導航資料尚未就緒'
+                    self.note.set(self.scene_display_name()+f'｜官方 {self.maps.source_revision} 場景座標｜'+action)
+                else:
+                    self.note.set(self.scene_display_name()+'｜原始小地圖')
             else:
                 self.projection=None
-                self.note.set(self.scene_display_name()+'｜沒有原始小地圖；請使用左側返回出口。')
+                self.map_error='目前場景的對應小地圖圖片尚未就緒'
+                self.note.set(self.scene_display_name()+'｜'+self.map_error+'。')
         except (OSError,ValueError,KeyError) as exc:
             self.image=None;self.mesh=None;self.projection=None
-            self.note.set(str(exc))
+            self.map_error=str(exc)
+            self.note.set(self.map_error)
+        self._map_runtime_catalog_key=getattr(self,'_runtime_catalog_key',None)
         self.refresh_portals()
         self.draw()
 
@@ -63,7 +75,11 @@ class MinimapNavigationMixin:
         self.state=state or {}
         self.update_portal_button()
         scene=self.state.get('player',{}).get('scene')
-        if scene is not None and (force or scene!=self.selected_id):
+        refresh_sources=getattr(self,'refresh_runtime_sources',None)
+        runtime_changed=refresh_sources() if callable(refresh_sources) else False
+        runtime_changed = runtime_changed or (getattr(self,'_map_runtime_catalog_key',None) !=
+                                               getattr(self,'_runtime_catalog_key',None))
+        if scene is not None and (force or runtime_changed or scene!=self.selected_id):
             self.show_map(scene)
         self.update_npc_buttons()
         self.show_dialogue_status()

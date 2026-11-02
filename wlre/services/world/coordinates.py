@@ -23,6 +23,18 @@ class Coordinates:
             stage = self.stages[str(parse_map_id(logical_map))]
         except (KeyError,TypeError,ValueError):
             raise NavigationError('地圖表沒有這個邏輯地圖 ID。')
+        from wlre.services.world.dynamic_bundle_runtime import current_runtime, dynamic_attempted
+        runtime=current_runtime()
+        if runtime is not None:
+            current=runtime.stages.get(parse_map_id(logical_map))
+            if not isinstance(current,dict):
+                raise NavigationError('目前官方資料沒有此場景，無法規劃移動。')
+            fields=('model_id','map_width','map_height','small_offset_x','small_offset_y')
+            if any(current.get(key)!=stage.get(key) for key in fields):
+                raise NavigationError('官方場景與資料庫導航的模型／尺寸不一致，請更新導航資料。')
+            stage={**current,'offset_y':stage['offset_y']}
+        elif dynamic_attempted():
+            raise NavigationError('目前官方 Runtime 尚未就緒，請先完成資料同步。')
         scene = 'M'+str(stage['model_id']).zfill(5)
         if scene not in self.origins:
             raise NavigationError('此地圖模型尚無已解碼的導航圖：'+scene)
@@ -44,6 +56,7 @@ class Coordinates:
         result = mesh.route(self.to_navigation(logical_map,*start),self.to_navigation(logical_map,*end),
                             start_height,end_height)
         result['logical_map'] = parse_map_id(logical_map)
+        result['navigation_source'] = 'database_geometry_scene_matched'
         result['map_label'] = map_label(logical_map)
         result['packet_points_xy_float'] = [self.to_packet(logical_map,p[0],p[2]) for p in result['points']]
         result['coordinate_formula_source_checked'] = True

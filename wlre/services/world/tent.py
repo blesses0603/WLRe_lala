@@ -18,6 +18,7 @@ def defaults():
         'deployed_scene': None, 'tent_id': None, 'x': None, 'y': None,
         'kind': None, 'make': None, 'inside': False, 'access_open': None,
         'pending': None, 'uncertain': False, 'status': '帳篷狀態待伺服器同步',
+        'interior_scene': None, 'return_scene': None, 'entry_context': None,
     }
 
 
@@ -82,17 +83,50 @@ def _visible(t, data, scene):
 
 def _removed(t):
     t.update(visible=False, deployed_scene=None, tent_id=None,
-             x=None, y=None, inside=False, pending=None,
+             x=None, y=None, inside=False, interior_scene=None, entry_context=None, pending=None,
              uncertain=False, status='伺服器已確認收起帳篷')
 
 
+def _private_scene(scene):
+    from wlre.services.world.dynamic_bundle_runtime import current_runtime
+    runtime=current_runtime()
+    return (runtime is not None and type(scene) is int and 1<=scene<=65535
+            and scene not in getattr(runtime,'stages',{}))
+
+
 def _confirm_enter(t, scene):
-    pending = t.get('pending')
-    if (pending and pending['action'] == 'enter'
-            and pending.get('furniture_received')
-            and scene in HOUSE_SCENES):
-        t.update(pending=None, uncertain=False, inside=True,
-                 status='已進入自家帳篷（伺服器場景與家具確認）')
+    context=t.get('entry_context') or t.get('pending')
+    if (context and context.get('action')=='enter'
+            and context.get('furniture_received')
+            and scene!=context.get('source_scene')
+            and (scene in HOUSE_SCENES or _private_scene(scene))):
+        t.update(pending=None,uncertain=False,inside=True,interior_scene=scene,
+                 return_scene=context.get('source_scene'),entry_context=None,
+                 status='已進入自家帳篷（伺服器換圖與自家家具確認）')
+
+
+def exit_door_index():
+    """Use current official house-template door links, never an invented opcode."""
+    from wlre.services.world.dynamic_bundle_runtime import current_runtime
+    runtime=current_runtime()
+    if runtime is None:raise ProtocolError('目前官方帳篷出口資料尚未就緒')
+    candidates=set()
+    for template in HOUSE_SCENES:
+        for door in getattr(runtime,'doors',{}).get(template,()):
+            index=door.get('index')
+            link=getattr(runtime,'portal_destinations',{}).get((template,index),{})
+            destination=link.get('destination')
+            if (type(index) is int and 1<=index<=65535
+                    and link.get('matched_stage_map') is True
+                    and link.get('destination_verified') is True
+                    and type(destination) is int and 1<=destination<=65535
+                    and destination not in HOUSE_SCENES
+                    and link.get('event_x')==door.get('x')
+                    and link.get('event_y')==door.get('y')):
+                candidates.add(index)
+    if len(candidates)!=1:
+        raise ProtocolError('目前官方帳篷出口索引未能唯一核對，請重新同步官方資源')
+    return next(iter(candidates))
 
 
 def apply_tent(state, event):
@@ -105,12 +139,18 @@ def apply_tent(state, event):
     if kind == 'position_snapshot' and event.get('role_id') == pid:
         scene = event['scene']
         if t['scene'] != scene:
-            t.update(scene=scene, scene_known=False, visible=False,
-                     inside=False)
-            t['status'] = ('已切換場景，等待自家帳篷內部資料確認'
-                           if t.get('pending') and t['pending']['action'] == 'enter'
-                           else '已切換場景，等待本場景帳篷資料')
-            _confirm_enter(t, scene)
+            was_inside=t['inside']
+            t.update(scene=scene,scene_known=False,visible=False)
+            if was_inside and scene==t.get('return_scene'):
+                t.update(inside=False,interior_scene=None,pending=None,uncertain=False,
+                         status='已離開自家帳篷（伺服器位置確認）')
+            elif was_inside and (scene in HOUSE_SCENES or _private_scene(scene)):
+                t.update(inside=True,interior_scene=scene)
+            else:
+                t['inside']=False
+                t['status']=('已切換場景，等待自家帳篷內部資料確認'
+                             if t.get('entry_context') else '已切換場景，等待本場景帳篷資料')
+            _confirm_enter(t,scene)
         return
     if kind == 'tent_added':
         if pid is not None and event['tent']['owner_id'] == pid:
@@ -131,10 +171,10 @@ def apply_tent(state, event):
     elif kind == 'tent_limit' and t.get('pending') and t['pending']['action'] == 'open':
         t.update(pending=None, status='伺服器拒絕：本場景帳篷已達上限')
     elif kind == 'tent_entry_denied' and t.get('pending') and t['pending']['action'] == 'enter':
-        t.update(pending=None, status='伺服器拒絕進入帳篷')
+        t.update(pending=None,entry_context=None,status='伺服器拒絕進入帳篷')
     elif kind == 'tent_error' and t.get('pending'):
         code = event['code']
-        t.update(pending=None, status=(
+        t.update(pending=None,entry_context=None,status=(
             '伺服器拒絕：沒有帳篷標記' if code == 2
             else f'帳篷操作未成功（伺服器錯誤碼 {code}）'))
     elif kind == 'tent_access':
@@ -142,19 +182,20 @@ def apply_tent(state, event):
     elif kind == 'tent_appearance':
         t.update(kind=event['kind'], make=event['make'])
     elif (event.get('room_action') == 'snapshot' and pid is not None
-          and event.get('owner') == pid and t.get('pending')
-          and t['pending']['action'] == 'enter'):
-        t['pending']['furniture_received'] = True
-        _confirm_enter(t, state.player.get('scene'))
-        if t['pending']:
-            t['status'] = '自家帳篷家具已收到，等待房屋場景確認'
+          and event.get('owner') == pid and t.get('entry_context')):
+        t['entry_context']['furniture_received']=True
+        _confirm_enter(t,state.player.get('scene'))
+        if not t['inside']:
+            t['status']='自家帳篷家具已收到，等待房屋場景確認'
+    elif kind=='event_rejected' and t.get('pending') and t['pending']['action']=='leave':
+        t.update(pending=None,status=event.get('reason','伺服器拒絕離開帳篷'))
 
 
 @writes('tent')
 def command(state, instruction, now=None):
     now = time.monotonic() if now is None else now
     action = instruction.get('action')
-    if action not in ('open', 'close', 'enter'):
+    if action not in ('open', 'close', 'enter', 'leave'):
         raise ProtocolError('未知帳篷操作')
     if (state.phase != 'world_ready' or not state.initial_data_complete
             or not state.player.get('role_id')):
@@ -186,11 +227,19 @@ def command(state, instruction, now=None):
             raise ProtocolError('在自己的小屋內不能收起帳篷')
         packet = Packet(65, 2)
         label = '收起'
+    elif action=='leave':
+        if not t['inside'] or t.get('interior_scene')!=state.player.get('scene'):
+            raise ProtocolError('目前尚未確認位於自家帳篷內')
+        packet=Packet(20,8,Writer().u16(exit_door_index()).build())
+        label='離開'
     else:
         if not t['visible'] or t['scene'] != state.player.get('scene'):
             raise ProtocolError('目前場景尚未確認自家帳篷，請先展開或移至帳篷所在場景')
         packet = Packet(65, 1, Writer().u32(state.player['role_id']).build())
         label = '進入'
+    if action=='enter':
+        t['entry_context']={'action':'enter','source_scene':state.player.get('scene'),
+                            'furniture_received':False}
     t.update(pending={'action': action, 'due': now + TIMEOUT},
              status=f'已要求{label}帳篷，等待伺服器確認')
     return [packet]

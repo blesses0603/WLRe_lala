@@ -37,3 +37,19 @@ def mark_timed_recipes(rows):
                                         type(row.get('time_id')) is not int for row in rows):
         raise ValueError('Recipe time condition is missing or invalid')
     return [{**row, 'read_only': row['time_id'] != 0} for row in rows]
+
+
+def parse_smith_records(data):
+    """Select the reviewed 33/35-byte layout, preserving every recipe row."""
+    if type(data) is not bytes or len(data) < 4:
+        raise ValueError('Invalid Smith table header')
+    count=struct.unpack_from('<i',data)[0]
+    if not 0 <= count <= 20000:
+        raise ValueError('Invalid Smith table count')
+    if len(data)==4+count*33:
+        rows=list(parse_smith_1275(data).values())
+    elif len(data)==4+count*35:
+        rows=parse_smith_candidate(data)
+    else:
+        raise ValueError('Unknown Smith table layout')
+    return mark_timed_recipes(rows)

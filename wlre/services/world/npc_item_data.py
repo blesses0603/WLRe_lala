@@ -63,10 +63,26 @@ def load_items(path=None):
 
 
 @lru_cache(maxsize=1)
-def item_catalog():
+def _legacy_item_catalog():
     """Only serve the independently verified current official 1275 runtime."""
     from wlre.services.world.runtime_1275 import active_runtime
     return active_runtime().items
+
+
+def item_catalog():
+    """Current dynamic data never shares the historical singleton cache."""
+    from wlre.services.world.dynamic_bundle_runtime import current_runtime, dynamic_attempted
+    current = current_runtime()
+    if current is not None:
+        return current.items
+    if dynamic_attempted():
+        from wlre.services.world.runtime_1275 import active_runtime
+        return active_runtime().items
+    return _legacy_item_catalog()
+
+
+# Preserve the existing public cache invalidation hook for callers/tests.
+item_catalog.cache_clear = _legacy_item_catalog.cache_clear
 
 
 def sellable(item):

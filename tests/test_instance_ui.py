@@ -1,4 +1,6 @@
 """Regression tests for the instance and co-op navigation skeleton."""
+
+from gui_support import isolate_gui_background_checks
 import os
 import tkinter as tk
 import unittest
@@ -11,6 +13,7 @@ from wlre.ui.gui import App
 @unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt', 'Requires a desktop or Xvfb')
 class InstanceNavigation(unittest.TestCase):
     def setUp(self):
+        isolate_gui_background_checks(self)
         self.root = tk.Tk()
         self.app = App(self.root)
         self.errors = []

@@ -37,12 +37,23 @@ def build_catalog_grid(self, middle, w, embedded):
 def render_catalog_grid(self, force=False, *, recipes, confirmed_unlocked,
                         room_known, tool_status, item_name, availability):
     q=self.search.get().strip().casefold();favs=set(self.favorite_store.ids)
-    rows=[r for r in list(recipes.values()) if confirmed_unlocked(r) and (self.filter_key=='all' or self.filter_key=='favorites' and r['item_id'] in favs or str(r['tool_id'])==self.filter_key) and q in (item_name(r['item_id'])+' '+str(r['item_id'])+' '+item_name(r['tool_id'])).casefold()]
+    rows=[r for r in list(recipes.values()) if (self.filter_key=='all' or self.filter_key=='favorites' and r['item_id'] in favs or str(r['tool_id'])==self.filter_key) and q in (item_name(r['item_id'])+' '+str(r['item_id'])+' '+item_name(r['tool_id'])).casefold()]
+    rows.sort(key=lambda recipe: not confirmed_unlocked(recipe))
     if self.only_tools.get() and room_known(self.state) and self.filter_key!='favorites':rows=[r for r in rows if tool_status(self.state,r['tool_id'])=='已擺放']
     self.rows=rows;pages=max(1,math.ceil(len(rows)/self.page_size));self.page=min(self.page,pages-1)
-    self.page_label.set(f'{self.page+1}/{pages} · 已解鎖 {len(rows)} 項')
+    self.page_label.set(f'{self.page+1}/{pages} · 配方 {len(rows)} 項')
     visible=rows[self.page*self.page_size:(self.page+1)*self.page_size]
-    signature=(tuple((r['item_id'],availability(self.state,r)[0],r['item_id'] in favs) for r in visible),self.selected)
+    if not recipes:
+        self.empty_catalog_message='目前版本的製作配方尚未載入，請重新同步官方資料'
+    elif q:
+        self.empty_catalog_message='沒有符合搜尋條件的配方'
+    elif self.filter_key=='favorites':
+        self.empty_catalog_message='目前沒有符合的收藏配方，可先從全部配方加入收藏'
+    elif self.only_tools.get() and room_known(self.state):
+        self.empty_catalog_message='小屋已有設備沒有對應配方；取消設備篩選可查看全部'
+    else:
+        self.empty_catalog_message='目前設備分類沒有對應配方，請切換全部配方'
+    signature=(q,self.filter_key,self.only_tools.get(),tuple((r['item_id'],availability(self.state,r)[0],r['item_id'] in favs) for r in visible),self.selected)
     if not force and signature==self.grid_key:return
     self.grid_key=signature
     for i,card in enumerate(self.cards):

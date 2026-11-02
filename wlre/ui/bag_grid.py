@@ -10,7 +10,6 @@ from tkinter import ttk
 from wlre.services.items.combat_resources import CAT, heal_effects, available
 from wlre.services.items.catalog import item_display_name as item_name, verified_item_metadata
 from wlre.services.world.feature_resource_index import feature_note
-from wlre.services.world.auto_candidate_reader import candidate_item_name
 from wlre.ui.theme import CYAN
 
 COLUMNS = 6
@@ -92,20 +91,6 @@ def item_details(inventory, index, record):
             'available': available(inventory, str(index)),
             'kind': None, 'effects': {}, 'lines': lines,
             'metadata_source': 'verified_1275_itemdata',
-        }
-    preview = candidate_item_name(sid)
-    if preview is not None:
-        # A private candidate was verified as an auto-downloaded source but
-        # has not passed independent formal approval. Display only its name.
-        return {
-            'id': sid, 'name': preview, 'index': int(index),
-            'count': record.get('count', 0),
-            'reserved': inventory.get('reserved', {}).get(str(index), 0),
-            'available': available(inventory, str(index)),
-            'kind': None, 'effects': {},
-            'lines': ['官方 1275 候選物品名稱（自動接收，尚未正式核准）',
-                      '使用效果與交易限制尚未驗證，不能依候選資料操作'],
-            'metadata_source': 'automatic_1275_display_candidate',
         }
     effects = heal_effects(sid)
     lines = [f"HP +{effects['hp']}" for _ in (0,) if effects.get('hp')]
@@ -288,7 +273,8 @@ class BagGrid(ttk.Frame):
         capacity = self.inventory.get('capacity')
         self.summary.set(f"{len(rows)} / {capacity if capacity is not None else '?'} 格｜{feature_note('bag')}")
         self.page_label.set(f'{self.page + 1} / {pages}')
-        signature = (tuple((index, item['item_id'], item.get('count'),
+        from wlre.services.world.dynamic_bundle_runtime import current_catalog_token
+        signature = (current_catalog_token(), tuple((index, _name, item['item_id'], item.get('count'),
                            item.get('locked'), item.get('limited_time'),
                            item.get('available_time'), available(self.inventory, index))
                            for index, item, _name in rows), self.page, self.index_selected,

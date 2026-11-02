@@ -1,4 +1,6 @@
 """v0.5.2: all secondary functions are fixed windows centered on main."""
+
+from gui_support import isolate_gui_background_checks
 import os
 import tkinter as tk
 import unittest
@@ -44,6 +46,7 @@ class CenterGeometry(unittest.TestCase):
                      'Requires Tk / Xvfb')
 class SecondaryFeatures(unittest.TestCase):
     def setUp(self):
+        isolate_gui_background_checks(self)
         from wlre.ui.gui import App
         self.root=tk.Tk()
         self.app=App(self.root)

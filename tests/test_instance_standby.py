@@ -1,4 +1,6 @@
 """Co-op standby uses current normal deployed NPC, never switches pets."""
+
+from gui_support import isolate_gui_background_checks
 import os
 import tkinter as tk
 import unittest
@@ -139,6 +141,7 @@ class StandbyNetwork(unittest.TestCase):
                      'Requires desktop/Xvfb')
 class StandbyUI(unittest.TestCase):
     def setUp(self):
+        isolate_gui_background_checks(self)
         from wlre.ui.gui import App
         self.root = tk.Tk()
         self.app = App(self.root)

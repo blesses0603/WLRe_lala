@@ -30,7 +30,11 @@ def load_supported_resources(path=None):
     """
     filename = Path(path) if path is not None else RESOURCE_ROOT / FILENAME
     try:
-        raw = filename.read_bytes()
+        if path is None:
+            from wlre.storage.full_resource_seed import read_config
+            raw = read_config(FILENAME, root=RESOURCE_ROOT)
+        else:
+            raw = filename.read_bytes()
     except OSError as exc:
         raise ResourceBaselineError("LaLa 內建相容性基準檔缺失或無法讀取") from exc
     if len(raw) > MAX_CONFIG_SIZE:

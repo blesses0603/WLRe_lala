@@ -13,9 +13,11 @@ import sqlite3
 from wlre.storage.paths import data_root
 
 
-def load_bundled_bytes(name, *, root=None, database=None):
+def load_bundled_bytes(name, *, root=None, database=None, refresh=False):
     """Prefer verified SQLite BLOBs; import bundled files only when needed.
 
+    Existing verified rows are read without opening the original file.
+    Use refresh=True or resource_migration to import a new bundled revision.
     An existing active row must pass its SHA-256 check before it can be used
     or replaced. A changed bundled file is an explicit new bundled revision,
     not evidence that a 1262 catalog is valid for 1275 gameplay.
@@ -29,6 +31,19 @@ def load_bundled_bytes(name, *, root=None, database=None):
     source = Path(root) / name
     path = (Path(database) if database is not None else data_root() /
             'official_sync' / 'derived_catalogs' / 'resource_inventory.sqlite3')
+    # A shipped, independently pinned full seed supplies a clean installation.
+    seed = Path(root) / 'resource_catalog_seed.sqlite3'
+    if not source.is_file() and seed.is_file():
+        needs_seed = not path.is_file()
+        if not needs_seed:
+            with closing(sqlite3.connect(path.resolve().as_uri() + '?mode=ro', uri=True)) as existing:
+                try:
+                    needs_seed = existing.execute('SELECT 1 FROM bundled_active WHERE name=?', (name,)).fetchone() is None
+                except sqlite3.OperationalError:
+                    needs_seed = True
+        if needs_seed:
+            from wlre.storage.full_resource_seed import provision_seed
+            provision_seed(seed, path)
     # A missing DB and missing file must not create an empty user database.
     if not path.is_file() and not source.is_file():
         raise FileNotFoundError('Bundled resource missing: ' + name)
@@ -46,6 +61,8 @@ def load_bundled_bytes(name, *, root=None, database=None):
             if (stored is None or not isinstance(stored[0], bytes)
                     or hashlib.sha256(stored[0]).hexdigest() != active[0]):
                 raise ValueError('Bundled database resource failed integrity check')
+        if active and not refresh:
+            return bytes(stored[0])
         if source.is_file():
             # Preserve support for a new source revision without rewriting
             # SQLite when the source and the active verified BLOB are identical.
@@ -66,10 +83,10 @@ def load_bundled_bytes(name, *, root=None, database=None):
         return bytes(stored[0])
 
 
-def load_bundled_json(name, *, root=None, database=None):
+def load_bundled_json(name, *, root=None, database=None, refresh=False):
     if not isinstance(name, str) or not name.endswith('.json'):
         raise ValueError('Invalid bundled JSON name')
-    return json.loads(load_bundled_bytes(name, root=root, database=database).decode('utf-8-sig'))
+    return json.loads(load_bundled_bytes(name, root=root, database=database, refresh=refresh).decode('utf-8-sig'))
 
 
 def read_pinned_legacy_bytes(name, *, root=None, database=None):
@@ -130,6 +147,12 @@ def load_legacy_resource(name, *, root=None, database=None):
     try:
         return read_pinned_legacy_bytes(name, database=database)
     except FileNotFoundError:
+        seed = Path(root) / 'resource_catalog_seed.sqlite3'
+        if seed.is_file():
+            from wlre.storage.full_resource_seed import provision_seed
+            target_db = Path(database) if database is not None else data_root() / 'official_sync' / 'derived_catalogs' / 'resource_inventory.sqlite3'
+            provision_seed(seed, target_db)
+            return read_pinned_legacy_bytes(name, database=target_db)
         path = Path(root) / name
         if not path.is_file():
             raise

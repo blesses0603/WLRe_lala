@@ -1,3 +1,5 @@
+
+from gui_support import isolate_gui_background_checks
 import os
 import tkinter as tk
 import unittest
@@ -9,6 +11,7 @@ from wlre.core.state import State
 @unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt','Requires a desktop or Xvfb')
 class CompactCrafting(unittest.TestCase):
     def setUp(self):
+        isolate_gui_background_checks(self)
         self.root=tk.Tk();self.app=App(self.root);self.errors=[]
         self.root.report_callback_exception=lambda *args:self.errors.append(args)
         self.app.show_main();self.app.open_feature('crafting');self.root.update()

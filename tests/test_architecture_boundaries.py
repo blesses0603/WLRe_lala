@@ -24,7 +24,9 @@ class ArchitectureRegressionTests(unittest.TestCase):
     def test_corrupt_extra_image_rejected(self):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp)
-            for name in REQUIRED_RESOURCES:
+            from wlre.storage.full_resource_seed import SEED_NAME, SOURCE_MANIFEST
+            for name in (SEED_NAME, *REQUIRED_RESOURCES):
+                if name in SOURCE_MANIFEST: continue
                 target=root/name;target.parent.mkdir(parents=True,exist_ok=True)
                 target.symlink_to(RESOURCE_ROOT/name)
             (root/'broken.png').write_bytes(b'not an image')

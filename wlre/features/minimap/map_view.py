@@ -27,8 +27,12 @@ class MinimapCanvasMixin:
         self._resize_job=None
         self.canvas.delete('all')
         if not self.projection:
+            reason=getattr(self,'map_error',None) or '小地圖資料尚未就緒'
+            message=('等待角色地圖同步…' if self.selected_id is None else
+                     '小地圖暫時無法顯示\n'+reason[:180]+'\n地圖座標操作暫停')
             self.canvas.create_text(self.canvas.winfo_width()/2,self.canvas.winfo_height()/2,
-                                    text=('等待角色地圖同步…' if self.selected_id is None else '此場景沒有原始小地圖\n請從左側清單選擇返回出口\n地圖圖示與座標操作已停用'),fill='#c8d3dc',font=('Microsoft JhengHei UI',-14),justify='center')
+                                    text=message,fill='#c8d3dc',font=('Microsoft JhengHei UI',-14),
+                                    justify='center',width=max(80,self.canvas.winfo_width()-24))
             return
         left,top,scale=self.view()
         size=max(1,round(1024*scale))
@@ -75,6 +79,9 @@ class MinimapCanvasMixin:
         local=self.state.get('local_movement')
         if local and local.get('scene')==self.selected_id:
             targets=[local['target']]
+        picked=getattr(self,'picked_destination',None)
+        if picked and picked.get('scene')==self.selected_id:
+            targets=[picked]
         if targets:
             target=max(targets,key=lambda t:t.get('packet_number',0))
             x,y=self.screen_pixel(*self.projection.packet_to_pixel(target['x'],target['y']))

@@ -41,7 +41,9 @@ class OfficialPipelineTests(unittest.TestCase):
             'checked_at_utc': '2026-10-24T00:00:00+00:00',
             'assets_ready': False,
         }
+        from test_itemdata_v1 import sample
         self.source_data = {
+            'items': struct.pack('<I', 1) + sample(),
             'npc': index_blob('EventData.NewNpc'),
             'shops': index_blob('EventData.NewInteract'),
             'crafting': struct.pack('<i', 0),
@@ -53,13 +55,13 @@ class OfficialPipelineTests(unittest.TestCase):
             bundle_bytes = b'dummy-UnityFS-' + package.encode()
             name = package.lower() + '_data_v.bundle'
             rows = []
-            for feature in ('npc', 'shops', 'crafting', 'scenes'):
-                if (feature in ('npc', 'shops', 'crafting')) != (package == 'DataPackage'):
+            for feature in ('npc', 'shops', 'crafting', 'scenes', 'items'):
+                if (feature in ('npc', 'shops', 'crafting', 'items')) != (package == 'DataPackage'):
                     continue
                 path = 'Assets/Test/' + feature
                 rows.append({'path': path, 'bundle_name': name})
                 raw = self.source_data[feature]
-                schema = {'npc': 'eve-npc-json-v1',
+                schema = {'items': 'itemdata-v1', 'npc': 'eve-npc-json-v1',
                           'shops': 'eve-interact-json-v1',
                           'crafting': 'smith-new-33-v1',
                           'scenes': 'stage-new-76-v1'}[feature]
@@ -124,7 +126,7 @@ class OfficialPipelineTests(unittest.TestCase):
 
     def test_exact_asset_resolution_with_independent_package_versions(self):
         plan = self.plan()
-        self.assertEqual(len(plan.sources), 4)
+        self.assertEqual(len(plan.sources), 5)
         self.assertEqual(set(p.package for p in plan.updates),
                          {'DataPackage', 'MainPackage'})
         self.assertEqual({p.download_count for p in plan.updates}, {0})
@@ -150,9 +152,9 @@ class OfficialPipelineTests(unittest.TestCase):
             return self.source_data[binding.contract.feature]
         result, parsed = run_catalog_pipeline(
             plan, download=True, extractor=extractor, bundle_root=self.bundle_root)
-        self.assertEqual(result['parsed_features'], 4)
-        self.assertEqual(set(parsed), {'npc', 'shops', 'crafting', 'scenes'})
-        self.assertEqual(len(observed), 4)
+        self.assertEqual(result['parsed_features'], 5)
+        self.assertEqual(set(parsed), {'npc', 'shops', 'crafting', 'scenes', 'items'})
+        self.assertEqual(len(observed), 5)
         self.assertEqual(len(next(paths for feature, paths in observed
                                   if feature == 'shops')), 2)
         self.assertTrue(all(not p.can_send_packets and not p.assets_ready
@@ -241,7 +243,7 @@ class OfficialPipelineTests(unittest.TestCase):
             previous_finder=lambda current, cache_root=None: None,
             bundle_root=self.bundle_root)
         self.assertEqual(observed, ['DataPackage', 'MainPackage'])
-        self.assertEqual(len(plan.sources), 4)
+        self.assertEqual(len(plan.sources), 5)
 
 
 if __name__ == '__main__':
