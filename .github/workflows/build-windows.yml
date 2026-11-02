@@ -1,4 +1,4 @@
-name: Windows EXE build
+name: Version tag and Windows EXE build
 run-name: Windows EXE - ${{ github.ref_name }} - ${{ github.sha }}
 
 on:
@@ -22,13 +22,57 @@ env:
   NUITKA_CACHE_DIR: ${{ github.workspace }}/.nuitka-cache
 
 jobs:
+  version-tag:
+    if: github.ref == 'refs/heads/main'
+    name: Create version tag for the exact main commit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      source_sha: ${{ steps.tag.outputs.source_sha }}
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.12'
+      - name: Create tag without overwriting an existing version
+        id: tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          version=$(python -c 'from wlre import __version__; print(__version__)')
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo '::error::Invalid application version'
+            exit 1
+          fi
+          tag="v$version"
+          if existing=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" --jq '.object.sha' 2>/dev/null); then
+            if [[ "$existing" != "$GITHUB_SHA" ]]; then
+              echo "::error::Tag $tag already points to another object; refusing to overwrite it"
+              exit 1
+            fi
+          else
+            gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/$tag" -f "sha=$GITHUB_SHA"
+          fi
+          echo "source_sha=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Created or verified $tag at $GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+
   windows-exe:
+    needs: version-tag
     name: Test, compile and archive Windows x64
+    permissions:
+      contents: read
     runs-on: windows-2022
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v7.0.1
         with:
+          ref: ${{ needs.version-tag.outputs.source_sha }}
           persist-credentials: false
       - uses: actions/setup-python@v7.0.0
         with:

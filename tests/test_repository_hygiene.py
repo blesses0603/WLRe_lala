@@ -72,7 +72,11 @@ class DocumentationAndReleaseAudit(unittest.TestCase):
         self.assertIn("wlre/__init__.py", triggers)
         self.assertNotIn("pull_request:", triggers)
         self.assertNotIn("gh release create", windows)
-        self.assertNotIn("contents: write", windows)
+        build_job = windows.split("  windows-exe:", 1)[1]
+        self.assertNotIn("contents: write", build_job)
+        self.assertIn("ref=refs/tags/$tag", windows)
+        self.assertIn("refusing to overwrite", windows)
+        self.assertIn("needs: version-tag", build_job)
         self.assertLess(windows.index("python -m unittest discover"), windows.index("tools.build.build_nuitka --mode standalone"))
         self.assertIn("if-no-files-found: error", windows)
 
