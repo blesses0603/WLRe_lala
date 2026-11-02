@@ -1,10 +1,10 @@
-"""Read-only server-confirmed room storage, derived from 1262 RoomStorage.lua.
+"""Server-confirmed room storage, derived from 1262 RoomStorage.lua.
 
 62-7/11/13: garage full ItemSaveData records and changes.
 62-57: materials cupboard compact records.
 62-71/72/73/74/75: storage result and capacities.
 
-No outbound deposit/withdraw requests are generated here.
+Outbound moves are owned by room_storage_transfer; quantities change only here.
 """
 from wlre.network.wire import Reader, ProtocolError
 from wlre.network.live_data import item_save
@@ -12,13 +12,14 @@ from wlre.network.live_data import item_save
 
 def defaults():
     return {
-        'garage': {'ready': False, 'reliable': True, 'items': {}, 'capacity': None},
-        'materials': {'ready': False, 'reliable': True, 'items': {}, 'capacity': None},
+        'garage': {'ready': False, 'reliable': True, 'items': {}, 'capacity': None, 'reserved': {}, 'holds': {}},
+        'materials': {'ready': False, 'reliable': True, 'items': {}, 'capacity': None, 'reserved': {}, 'holds': {}},
         'material_stack_limit': None,
         'parameters_ready': False,
         'revision': 0,
         'last_result': None,
         'last_error': None,
+        'pending': None, 'uncertain': False, 'status': '等待儲藏空間同步',
     }
 
 
@@ -78,6 +79,11 @@ def decode_storage(packet):
 
 
 def _add(bucket, item):
+    if (type(item.get('index')) is not int or not 1<=item['index']<=65535
+            or type(item.get('item_id')) is not int or not 1<=item['item_id']<=65535
+            or type(item.get('count')) is not int or not 1<=item['count']<=65535):
+        bucket['reliable']=False
+        return
     index = str(item['index'])
     previous = bucket['items'].get(index)
     if previous and previous['item_id'] != item['item_id']:
@@ -95,6 +101,8 @@ def _delete(bucket, index, count):
     if not previous or count < 1 or count > previous['count']:
         bucket['reliable'] = False
         return
+    from wlre.services.items import reservations
+    reservations.consumed(bucket,index,count)
     previous['count'] -= count
     if previous['count'] == 0:
         bucket['items'].pop(key)
@@ -118,6 +126,12 @@ def apply_storage(state, event):
             _delete(bucket, event['index'], event['count'])
     elif kind in ('storage_materials_initial', 'storage_materials_add', 'storage_materials_delete'):
         bucket = storage['materials']
+        if kind in ('storage_materials_initial','storage_materials_add'):
+            proof=state.inventory.setdefault('server_stackable',{})
+            for entry in event['items']:
+                if (type(entry.get('item_id')) is int and 1<=entry['item_id']<=65535
+                        and type(entry.get('count')) is int and entry['count']>0):
+                    proof[str(entry['item_id'])]=True
         if kind == 'storage_materials_initial':
             for entry in event['items']:
                 _add(bucket, entry)
@@ -148,11 +162,13 @@ def apply_storage(state, event):
 def confirmed_material_count(storage,item_id):
     """Read cupboard quantities only after a complete, reliable S62 baseline."""
     bucket=storage.get('materials',{})
-    if not bucket.get('ready') or not bucket.get('reliable',True):return None
+    if (storage.get('pending') or storage.get('uncertain') or not bucket.get('ready')
+            or not bucket.get('reliable',True)):return None
+    from wlre.services.items.reservations import available
     count=0
-    for row in bucket.get('items',{}).values():
+    for index,row in bucket.get('items',{}).items():
         if row.get('item_id')!=item_id:continue
         value=row.get('count')
         if type(value) is not int or not 0<value<=65535:return None
-        count+=value
+        count+=available(bucket,index)
     return count

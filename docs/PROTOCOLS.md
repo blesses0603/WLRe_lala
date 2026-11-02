@@ -95,7 +95,7 @@ SmithData_C (1030 x33-byte records after int32 count) is from DataPackage_1262.
 Its checksum is in crafting_catalog.json. Layout: SmithData:New; runtime needs
 only the extracted JSON, not UnityPy. Room.lua and Protocols_064 define:
 C64-1 tool:u16, product:u16, batches:u8, bag_count:u8, [index:u8,count:u8],
-cabinet_count:u16=0, furniture_count:u8=0. C64-2 tool:u16, schedule:u8,
+cabinet_count:u16, [index:u16,count:u16], furniture_count:u8=0. C64-2 tool:u16, schedule:u8,
 human_index:u8,human_id:u32; C64-3 pause:u8; C64-4 delete:u8; C64-6 swap:u8,u8;
 C64-10 has no body (normal completion, never paid acceleration).
 S64-1 records index:u8,id:u16,time_ms:u32,count:u8,base_time_s:u32 + active:u8;
@@ -111,8 +111,15 @@ in either order. Completion is sent once, accepts a server completion only for
 the active row, and auto-next waits for matching product updates rather than
 unrelated inventory revisions. Queue replacement/reordering uses server indices
 and revisions. Reconnect defaults to no automatic completion/continuation.
-Design unlocks, timed/limited recipes, cabinet materials and placed furniture
-ingredients are not fabricated; unsupported conditions remain explicitly gated.
+Craft materials allocate bag first, then synchronized cupboard stock, with
+independent reservations and deductions for both sources. Design unlocks,
+timed/limited recipes and placed furniture ingredients remain gated.
+
+Storage transfers from UIRoomStorage.lua use C62-18 (garage deposit), C62-19
+(garage withdrawal), and C62-52 (kind 1 cupboard deposit, kind 2 withdrawal).
+Garage and deposit rows use u8 indices/counts; cupboard withdrawal rows use
+u16 index + u8 count, split at 200 each. Completion requires matching S62-71
+and both inventories. See [storage protocol details](room_storage_1262.md).
 
 
 ## v0.3.38 craft browser evidence

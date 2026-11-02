@@ -6,7 +6,7 @@ replies. Stop/timeout never frees an uncertain hold. Reconnect creates new State
 import copy
 from wlre.network.wire import ProtocolError
 
-OWNERS=frozenset(('battle','field_supply','alchemy','crafting','expedition','maintenance'))
+OWNERS=frozenset(('battle','field_supply','alchemy','crafting','expedition','maintenance','storage'))
 SLOT_FIELDS={'alchemy':'alchemy_slots','expedition':'expedition_slots','maintenance':'maintenance_slots'}
 
 
@@ -85,6 +85,7 @@ def consumed(inv,index,count):
 
 
 def refreshed(old,fresh):
+    if 'server_stackable' in old:fresh['server_stackable']=copy.deepcopy(old['server_stackable'])
     fresh['holds']=copy.deepcopy(old.get('holds',{}))
     for owner,rows in fresh['holds'].items():
         for row in rows:

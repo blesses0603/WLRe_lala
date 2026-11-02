@@ -43,6 +43,7 @@ def dispatch(logic,command,state):
     reason=command_reason(state,command,maintenance_pending=bool(logic.maintenance.pending),
                           maintenance_uncertain=logic.maintenance.uncertain)
     if reason:raise ProtocolError(reason)
+    if kind=='room_storage':return logic.room_storage.command(state,command)
     if kind == 'npc_start':
         packets=request_npc(state,command)
         logic.pending_event=False  # Prevent a stale C20-6 from an older event.

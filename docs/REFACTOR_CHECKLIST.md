@@ -93,3 +93,10 @@
 - 第 10 項本機資料稽核與 Ubuntu 補測：[39162618822](https://github.com/blesses0603/WLRe_lala/actions/runs/39162618822)，423 tests（2 skips）、GUI、資源、語法與嚴格檔案稽核均成功；20 份 Markdown／191 條本機連結完整。其後 Commit `d72f3de` 三平台回歸及原生打包再次成功。實機／實服仍是獨立限制。
 
 - 第 10 項 CI 原生打包產物：`desktop-windows-x64-validation`、`desktop-macos-arm64-validation`、`desktop-macos-x64-validation`，附於 [39171233020](https://github.com/blesses0603/WLRe_lala/actions/runs/39171233020)；本次為測試版 artifacts，**不是新的 GitHub Release**，應用程式版本常數仍是 `0.5.0`。
+
+## PR #64 儲物與製作擴充
+
+- 依使用者補上的 1262 Lua 接入 C62-18／19／52 存入、取出；成功回覆與雙邊庫存全部確認後才解鎖。
+- 製作依背包、雜物櫃順序分配材料，C64-1 寫入雜物櫃索引與數量，與其他消耗功能共用保留及逾時防重送。
+- 儲物頁改為固定 6×4；修正換頁時 PhotoImage 提前釋放，以及製作四欄材料表的 GUI 回歸檢查。
+- 上述為第 04 項唯讀階段之後的擴充；正式服實際存取／製作仍需人工驗收，新提交 CI 狀態另以 Actions 為準。

@@ -165,20 +165,20 @@ sequenceDiagram
 | 製作 | `crafting_ui.py`、`crafting_browser.py`、`crafting_plan_ui.py` | `items/crafting.py`、`crafting_plan.py`、`crafting_browser_model.py` | 設備、材料、伺服器排程與本機清單分開 |
 | 煉金 | `services_ui.py` | `items/alchemy.py` | 結果、扣料與入包確認後才接續 |
 | 背包與特技 | `resource_view.py`、`bag_grid.py` | `items/combat_resources.py` | 只呈現已同步物品與已確認特技；使用時再驗證 |
-| 小屋儲藏室／雜物櫃 | `resource_view.py` 的超空間袋頁 | `items/room_storage.py` | 目前只有唯讀同步，不能當作自動取料來源 |
+| 小屋儲藏室／雜物櫃 | `resource_view.py` 的超空間袋頁 | `items/room_storage.py`、`room_storage_transfer.py` | 存取等待結果及兩邊庫存；製作可直接取用雜物櫃 |
 | 地圖與導航 | `home_map.py`、`minimap.py`、`navigation_gui.py` | `world/coordinates.py`、`navigation.py`、`movement.py`、`portal_travel.py`、`roaming.py` | 導航座標、封包座標與伺服器位置確認分開 |
 | 聊天／公會 | `chat_ui.py`、`chat_emoji.py` | `social/chat.py`、`chat_names.py`、`guild.py` | 顯示事件與發話封包分開 |
 | 經驗效率 | `efficiency_ui.py` | `core/efficiency.py` | 首場作基準；預估不是伺服器保證時間 |
 
 ### 背包與小屋資料的差別
 
-一般背包以 `inventory` 為準；儲藏室／雜物櫃以 `room_storage` 為準。超空間袋頁目前只是將已驗證的 S62 伺服器資料顯示出來，沒有存入、領出或自動挪用倉庫物品的送出流程。
+一般背包以 `inventory` 為準；儲藏室／雜物櫃以 `room_storage` 為準。超空間袋頁顯示 S62 權威資料並提供取出，背包頁提供存入；製作可直接分配雜物櫃材料。存取服務擁有 `room_storage`／`inventory` 寫入範圍，製作亦可更新雜物櫃保留狀態；結果需伺服器回覆及兩邊庫存確認。
 
-普通背包格狀介面採 6 欄 × 4 列，一頁 24 格；內嵌儲物頁採 6 欄 × 2 列，一頁 12 格。這是 UI 分頁容量，並不是背包或小屋的伺服器容量。
+普通背包格狀介面依空間調整欄列；內嵌儲物頁固定採 6 欄 × 4 列，一頁 24 格。這是 UI 分頁容量，並不是背包或小屋的伺服器容量。
 
 ## 8. 資源保留與操作互斥
 
-`items/reservations.py` 是所有消耗功能的共用登記入口。`inventory.holds` 按 battle、field_supply、alchemy、crafting、expedition、maintenance 分組，記錄格位、物品／序號身分、用途、原始數量、保留數量、尚待扣除數量及結果不明標記。
+`items/reservations.py` 是所有消耗功能的共用登記入口。`inventory.holds` 按 battle、field_supply、alchemy、crafting、expedition、maintenance、storage 分組，雜物櫃也使用獨立的 holds／reserved。登記記錄格位、物品／序號身分、用途、原始數量、保留數量、尚待扣除數量及結果不明標記。
 
 | 介面／資料 | 用途 |
 |---|---|

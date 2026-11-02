@@ -51,10 +51,11 @@ def availability(state,recipe,count=1):
     materials=material_rows(state,recipe,count)
     if any(v['usable'] is None for v in materials):return '待同步','背包材料尚未同步'
     missing=[v for v in materials if v['usable']<v['required']]
-    if missing:
-        if any(v['cupboard'] for v in missing):
-            return '待取料','背包材料不足；雜物櫃已有材料，需取出後加入排程'
-        return '缺材料','背包可用材料不足'
+    if any(v['cupboard'] is None for v in missing):
+        return '待同步','背包不足，等待可靠的雜物櫃材料資料'
+    if any(v['usable']+v['cupboard']<v['required'] for v in missing):
+        return '缺材料','背包與雜物櫃可用材料不足'
+    if missing:return '可製作','將先使用背包材料，不足部分由雜物櫃取用'
     return '可製作','設備與背包材料已確認；仍需伺服器接受'
 
 class Favorites:

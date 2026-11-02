@@ -64,12 +64,15 @@ class CupboardCraftingViewTests(unittest.TestCase):
         self.state.apply(decode(Packet(62,57,Writer().u8(1).u8(1).u16(0).build())))
         self.assertEqual(self.row()['cupboard'],0)
 
-    def test_materials_in_cupboard_do_not_claim_unimplemented_consumption(self):
+    def test_materials_in_cupboard_can_supply_missing_recipe_materials(self):
         self.snapshot()
         status,reason=availability(self.state.snapshot(),recipe(),1)
-        self.assertEqual(status,'待取料')
+        self.assertEqual(status,'可製作')
         self.assertIn('雜物櫃',reason)
-        with self.assertRaises(ProtocolError):recipe_plan(self.state,7,1)
+        _,allocations,packet=recipe_plan(self.state,7,1)
+        self.assertEqual([(a.get('source','bag'),a['index'],a['count']) for a in allocations],
+                         [('bag',10,2),('materials',10,2)])
+        self.assertEqual(packet.payload[-7:],Writer().u16(1).u16(10).u16(2).u8(0).build())
         self.assertIsNone(self.state.crafting['pending'])
 
     def test_matching_storage_revision_refreshes_existing_browser(self):

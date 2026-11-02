@@ -38,7 +38,7 @@
 | [auto_battle/model.py](../wlre/ui/auto_battle/model.py) | AI 規則草稿驗證、已確認特技及可用行動清單。 |
 | [auto_battle/action_editor.py](../wlre/ui/auto_battle/action_editor.py) | 行動編輯、技能與物品選取、目標與條件。 |
 | [auto_battle/rule_card.py](../wlre/ui/auto_battle/rule_card.py) | 各類 AI 規則卡片與操作控制項。 |
-| [bag_grid.py](../wlre/ui/bag_grid.py) | 背包與唯讀儲物格狀介面、分頁規格與物品詳情模型。 |
+| [bag_grid.py](../wlre/ui/bag_grid.py) | 背包與伺服器儲物格狀介面、分頁規格與物品詳情模型。 |
 | [battle_view.py](../wlre/ui/battle_view.py) | 戰場陣形、單位卡片、目標選擇與檢視。 |
 | [button_art.py](../wlre/ui/button_art.py) | 原版按鈕切片縮放、視窗控制與設定／包包／回復圖示按鈕。 |
 | [chat_emoji.py](../wlre/ui/chat_emoji.py) | 聊天表情圖像資源與解析。 |
@@ -190,7 +190,8 @@
 | [post_battle_maintenance.py](../wlre/services/items/post_battle_maintenance.py) | 逐筆修理、販售、丟棄與格位／裝備確認。 |
 | [recovery.py](../wlre/services/items/recovery.py) | HP／SP 補給偏好、藥水儲存槽與補給選擇規則。 |
 | [reservations.py](../wlre/services/items/reservations.py) | 跨戰鬥、補給、煉金、製作、遠征與維護的背包保留登記。 |
-| [room_storage.py](../wlre/services/items/room_storage.py) | S62 儲藏室／雜物櫃的唯讀解碼、權威狀態及製作庫存讀取。 |
+| [room_storage_transfer.py](../wlre/services/items/room_storage_transfer.py) | 儲藏室／雜物櫃存取規劃、來源保留與雙邊庫存確認。 |
+| [room_storage.py](../wlre/services/items/room_storage.py) | S62 儲藏室／雜物櫃解碼、權威狀態及製作可用庫存。 |
 
 ## wlre/services/social：聊天與公會
 
@@ -261,7 +262,7 @@
 | [EXPEDITION.md](EXPEDITION.md) | 遠征資料、組隊與自動化流程。 |
 | [MAINTENANCE.md](MAINTENANCE.md) | 戰後修理／整理流程與原始協定。 |
 | [attribute_points_1262.md](attribute_points_1262.md) | 角色配點協定與限制。 |
-| [room_storage_1262.md](room_storage_1262.md) | 小屋倉庫唯讀資料同步。 |
+| [room_storage_1262.md](room_storage_1262.md) | 小屋倉庫同步、存取封包與製作取料。 |
 | [CONNECTION_DIAGNOSTICS.md](CONNECTION_DIAGNOSTICS.md) | 連線與介面診斷。 |
 | [CLEANUP.md](CLEANUP.md) | 週期清理。 |
 | [NUITKA_BUILD.md](NUITKA_BUILD.md) | 原生打包與發版操作。 |

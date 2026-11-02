@@ -11,7 +11,8 @@ import inspect
 FIELDS={
     'expedition':frozenset(('expedition','inventory')),
     'alchemy':frozenset(('alchemy','inventory')),
-    'crafting':frozenset(('crafting','inventory')),
+    'crafting':frozenset(('crafting','inventory','room_storage')),
+    'room_storage':frozenset(('room_storage','inventory')),
     'tent':frozenset(('tent',)),
     'field_supply':frozenset(('inventory','potion_storage')),
     'maintenance':frozenset(('maintenance','inventory')),

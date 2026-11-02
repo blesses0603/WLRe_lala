@@ -48,6 +48,9 @@ def maintenance_trace_event(state, logic, now):
 
 def advance_services(logic,state,send_command,send_raw,emit,on_state):
     state.assert_writer()
+    before_storage=state.room_storage['revision']
+    logic.room_storage.tick(state,time.monotonic())
+    if before_storage!=state.room_storage['revision'] and on_state:notify_state(on_state,state)
     before_maintenance=state.maintenance
     before_maintenance_ai=state.auto_battle
     maintenance_now=time.monotonic()

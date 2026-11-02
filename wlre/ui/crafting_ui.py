@@ -49,12 +49,15 @@ class CraftingPanel(ttk.Frame):
             count=int(count)
             from types import SimpleNamespace
             data=self.state
-            state=SimpleNamespace(player=data.get('player',{}),furniture=data.get('furniture',{}),crafting=data.get('crafting',{}),inventory=data.get('inventory',{}))
+            state=SimpleNamespace(player=data.get('player',{}),furniture=data.get('furniture',{}),crafting=data.get('crafting',{}),inventory=data.get('inventory',{}),room_storage=data.get('room_storage',{}))
             if not item_id:raise ProtocolError('請選擇配方')
             if not data.get('player'):raise ProtocolError('請先登入角色')
             recipe,allocations,_=recipe_plan(state,item_id,count)
         except (ValueError,KeyError,ProtocolError,AttributeError) as exc:self.status.set(str(exc));return
-        text=f"製作：{item_name(item_id)} ×{recipe['output']*count}\n設備：{item_name(recipe['tool_id'])}\n背包消耗："+'、'.join(f"{item_name(a['item_id'])} ×{a['count']}" for a in allocations)
+        text=f"製作：{item_name(item_id)} ×{recipe['output']*count}\n設備：{item_name(recipe['tool_id'])}"
+        for source,label in (('bag','背包消耗'),('materials','雜物櫃消耗')):
+            rows=[a for a in allocations if a.get('source','bag')==source]
+            if rows:text+='\n'+label+'：'+'、'.join(f"{item_name(a['item_id'])} ×{a['count']}" for a in rows)
         if not messagebox.askyesno('加入製作排程',text+'\n\n確認送出？',parent=self.app.root):return
         self.app.send({'type':'craft','action':'add','item_id':item_id,'count':count})
 

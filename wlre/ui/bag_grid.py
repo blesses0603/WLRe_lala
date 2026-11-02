@@ -120,9 +120,10 @@ def item_details(inventory, index, record):
 class BagGrid(ttk.Frame):
     """Roomy icon pages with a compact bottom details strip."""
 
-    def __init__(self, parent, icons, use_item, read_only=False, title='背包格位', compact=False):
+    def __init__(self, parent, icons, use_item, read_only=False, title='背包格位', compact=False, storage_actions=False):
         super().__init__(parent)
         self.read_only = read_only
+        self.storage_actions = storage_actions
         self.compact = compact
         self.columns, self.row_count, self.icon_size = grid_profile(compact)
         self.page_size = self.columns * self.row_count
@@ -299,6 +300,9 @@ class BagGrid(ttk.Frame):
         self._paint()
 
     def _paint(self):
+        # Keep old PhotoImages alive until every label has its replacement.
+        # Tk also resolves its current image when configuring the background.
+        previous_images = self._images
         self._images = []
         page_rows = self.rows[self.page * self.page_size: (self.page + 1) * self.page_size]
         for position, cell in enumerate(self.cells[:self.page_size]):
@@ -320,6 +324,7 @@ class BagGrid(ttk.Frame):
                 cell['icon'].configure(image='')
                 cell['count'].configure(text='')
         self._show_card()
+        del previous_images
 
     def pick(self, position):
         index = self.cells[position]['index']
@@ -364,7 +369,8 @@ class BagGrid(ttk.Frame):
         self._detail_image = self.icons.get(details['id'], 56)
         self.large_icon.configure(image=self._detail_image)
         if self.read_only:
-            self.meta.set(f"ID {details['id']}　格位 {details['index']}　數量 {details['count']}（唯讀）")
+            suffix='（伺服器庫存）' if getattr(self,'storage_actions',False) else '（唯讀）'
+            self.meta.set(f"ID {details['id']}　格位 {details['index']}　數量 {details['count']}"+suffix)
         else:
             self.meta.set(
                 f"ID {details['id']}　格位 {details['index']}　"

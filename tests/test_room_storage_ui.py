@@ -28,7 +28,7 @@ class RoomStorageStatusTests(unittest.TestCase):
             'materials': {'ready': False, 'reliable': True, 'items': {}},
         }
         msg = storage_sync_message(storage)
-        self.assertIn('已同步 1 / 90 格（唯讀）', msg)
+        self.assertIn('已同步 1 / 90 格', msg)
         self.assertIn('雜物櫃：等待初始 S62 同步', msg)
         storage['garage']['reliable'] = False
         self.assertIn('同步異常', storage_sync_message(storage))

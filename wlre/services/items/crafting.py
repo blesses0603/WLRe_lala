@@ -3,7 +3,7 @@ from wlre.core.state_ownership import writes
 from wlre.services.items import reservations
 from wlre.services.coordination import reason as coordination_reason
 from wlre.paths import RESOURCE_ROOT
-import json,time
+import copy,json,time
 from wlre.network.wire import Packet, Reader, Writer, ProtocolError
 from wlre.services.items.combat_resources import item_name, available
 
@@ -222,30 +222,48 @@ def recipe_plan(state,item_id,count):
     if not inv.get('ready') or not inv.get('reliable'):raise ProtocolError('背包資料尚未同步或不可靠')
     needs={}
     for mat in r['materials']:needs[mat['item_id']]=needs.get(mat['item_id'],0)+mat['count']*count
+    storage=getattr(state,'room_storage',{})
+    if storage.get('pending') or storage.get('uncertain'):
+        raise ProtocolError('等待儲藏存取確認，結果不明時請重新登入同步')
+    cupboard=storage.get('materials',{})
     allocations=[]
     for mid,number in needs.items():
         for index,item in sorted(inv['items'].items(),key=lambda x:int(x[0])):
             if item['item_id']!=mid or item.get('locked'):continue
-            # Do not consume strengthened/embedded/custom equipment as ingredients.
             if item.get('enhance_level',0) or item.get('magic_spar',0) or item.get('beat_level',0):continue
             use=min(number,available(inv,index),255)
-            if use:allocations.append({'index':int(index),'item_id':mid,'count':use,'before':item['count'],'serial':item.get('serial')});number-=use
+            if use:
+                allocations.append({'index':int(index),'item_id':mid,'count':use,
+                                    'before':item['count'],'serial':item.get('serial')})
+                number-=use
             if not number:break
-        if number:raise ProtocolError(item_name(mid)+'材料不足；目前只使用背包材料，不拆用已擺家具或雜物櫃')
-    if len(allocations)>255:raise ProtocolError('使用的背包格數過多')
+        if number and cupboard.get('ready') and cupboard.get('reliable',True):
+            for index,item in sorted(cupboard.get('items',{}).items(),key=lambda x:int(x[0])):
+                if item['item_id']!=mid:continue
+                use=min(number,available(cupboard,index),65535)
+                if use:
+                    allocations.append({'source':'materials','index':int(index),'item_id':mid,
+                                        'count':use,'before':item['count']})
+                    number-=use
+                if not number:break
+        if number:raise ProtocolError(item_name(mid)+'材料不足；請確認背包與雜物櫃已同步且有足夠可用材料')
+    bag_allocations=[row for row in allocations if row.get('source')!='materials']
+    material_allocations=[row for row in allocations if row.get('source')=='materials']
+    if len(bag_allocations)>255:raise ProtocolError('使用的背包格數過多')
     catalog=active_recipe_catalog()
     if catalog is not None:
         from wlre.services.items.crafting_official_v1286 import build_add_packet
         current=catalog.get(r.get('recipe_id'))
         if current is None or current['item_id']!=item_id:
             raise ProtocolError('目前配方來源已變更，請重新選取')
-        packet=build_add_packet(catalog,r['recipe_id'],tool,count,allocations)
+        packet=build_add_packet(catalog,r['recipe_id'],tool,count,bag_allocations,material_allocations)
     else:
         if r.get('recipe_id') is not None:
             raise ProtocolError('目前官方配方來源尚未就緒，請重新同步')
-        w=Writer().u16(tool).u16(item_id).u8(count).u8(len(allocations))
-        for a in allocations:w.u8(a['index']).u8(a['count'])
-        w.u16(0).u8(0) # no cabinet or placed furniture ingredients
+        from wlre.services.items.crafting_official_v1286 import write_cupboard
+        w=Writer().u16(tool).u16(item_id).u8(count).u8(len(bag_allocations))
+        for a in bag_allocations:w.u8(a['index']).u8(a['count'])
+        write_cupboard(w,material_allocations).u8(0) # no placed furniture ingredients
         packet=Packet(64,1,w.build())
     return r,allocations,packet
 
@@ -260,8 +278,9 @@ class Crafting(PlanMixin):
 
     @writes('crafting')
     def _clear(self,state,confirmed=True):
-        if confirmed:reservations.release(state.inventory,'crafting')
-        else:reservations.uncertain(state.inventory,'crafting')
+        for bucket in (state.inventory,state.room_storage['materials']):
+            if confirmed:reservations.release(bucket,'crafting')
+            else:reservations.uncertain(bucket,'crafting')
         self.pending=None;state.crafting['pending']=None
 
     @writes('crafting')
@@ -283,8 +302,18 @@ class Crafting(PlanMixin):
             if pause:raise ProtocolError(pause)
             if action=='add':
                 r,allocations,packet=recipe_plan(state,int(command['item_id']),command['count'])
-                reservations.acquire(state.inventory,'crafting',allocations,exclusive=True)
-                self._set_pending(state,'add',now,item_id=r['item_id'],allocations=allocations,ack=False,quick=r['seconds']==0,quick_done=False)
+                bag=[a for a in allocations if a.get('source')!='materials']
+                materials=[a for a in allocations if a.get('source')=='materials']
+                cupboard=state.room_storage['materials']
+                saved=reservations.checkpoint(state.inventory),{k:copy.deepcopy(cupboard.get(k,{})) for k in ('holds','reserved')}
+                try:
+                    if bag:reservations.acquire(state.inventory,'crafting',bag,exclusive=True)
+                    if materials:reservations.acquire(cupboard,'crafting',materials,exclusive=True)
+                except (ValueError,KeyError):
+                    reservations.restore(state.inventory,saved[0]);reservations.restore(cupboard,saved[1])
+                    raise
+                self._set_pending(state,'add',now,item_id=r['item_id'],allocations=bag,
+                                  material_allocations=materials,ack=False,quick=r['seconds']==0,quick_done=False)
                 return [packet]
             if not c['ready']:raise ProtocolError('製作排程尚未同步')
             if action=='start':
@@ -338,6 +367,13 @@ class Crafting(PlanMixin):
                     item=state.inventory['items'].get(str(a['index']))
                     if item and (item['item_id']!=a['item_id'] or item.get('serial')!=a['serial'] or item['count']>a['before']-a['count']):consumed=False
                     if item is None and a['before']>a['count']:consumed=False
+                if p.get('material_allocations'):
+                    cupboard=state.room_storage['materials']
+                    consumed=consumed and bool(cupboard.get('reliable'))
+                    for a in p['material_allocations']:
+                        item=cupboard['items'].get(str(a['index']));remaining=a['before']-a['count']
+                        if item is None and remaining!=0:consumed=False
+                        elif item is not None and (item['item_id']!=a['item_id'] or item['count']!=remaining):consumed=False
                 if consumed:self._clear(state);c['status']='排程與材料扣除均已確認'
         elif p and ((p['action']=='start' and k=='craft_started') or (p['action']=='pause' and k=='craft_paused') or (p['action']=='delete' and k=='craft_deleted') or (p['action'] in ('up','down') and k=='craft_swapped')):self._clear(state)
 
@@ -345,7 +381,12 @@ class Crafting(PlanMixin):
     def _server_tick(self,state,now=None):
         now=time.monotonic() if now is None else now;c=state.crafting
         if self.pending and now>=self.pending['due']:
-            if self.pending['action']=='add':state.inventory['reliable']=False
+            if self.pending['action']=='add':
+                state.inventory['reliable']=False
+                if self.pending.get('material_allocations'):
+                    state.room_storage['materials']['reliable']=False
+                    state.room_storage.update(uncertain=True,status='製作雜物櫃扣料未確認，請重新登入同步')
+                    state.room_storage['revision']+=1
             self._clear(state,confirmed=False);c.update(auto_continue=False,uncertain=True,status='製作回覆逾時，停止重送；請重新登入同步');return []
         if self.pending or not c['auto_continue'] or c['uncertain']:return []
         if coordination_reason(state,'crafting'):return []
@@ -376,6 +417,11 @@ class Crafting(PlanMixin):
 
     @writes('crafting')
     def disconnect(self,state):
-        if self.pending and self.pending['action']=='add':state.inventory['reliable']=False
+        if self.pending and self.pending['action']=='add':
+            state.inventory['reliable']=False
+            if self.pending.get('material_allocations'):
+                state.room_storage['materials']['reliable']=False
+                state.room_storage.update(uncertain=True,status='連線結束，製作扣料尚未確認')
+                state.room_storage['revision']+=1
         self.plan(state).update(enabled=False,status='連線已結束，請確認剩餘清單後重新啟動')
         self._clear(state,confirmed=False);self.next_start=False;self.wait_output=None;state.crafting.update(auto_continue=False,status='連線已結束，重新登入後同步伺服器排程')

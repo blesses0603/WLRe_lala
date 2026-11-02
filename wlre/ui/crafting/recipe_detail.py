@@ -37,7 +37,7 @@ def build_recipe_detail(self, box, body, embedded):
         self.material_table.tag_configure('missing',foreground='#f2b0a8')
         self.material_table.tag_configure('ready',foreground='#a8e4c0')
     else:
-        self.material_box=group(right,text='材料：背包可用／需求',padding=5)
+        self.material_box=group(right,text='材料：背包／雜物櫃／需求',padding=5)
         self.material_box.pack(fill='both',expand=True,pady=(4,0))
         for i in range(5):
             line=ttk.Frame(self.material_box);line.pack(fill='x',pady=3)
@@ -87,12 +87,12 @@ def render_recipe_detail(self, force=False, *, recipes, owned_counts, material_r
     for i,(line,icon,text) in enumerate(self.material_widgets):
         if i>=len(materials):line.pack_forget();continue
         line.pack(fill='x',pady=2);m=materials[i];icon.image=self.icons.get(m['item_id'],28);icon.configure(image=icon.image)
-        text.configure(text=f"{m['name']}   背包 {fmt(m['usable'])}｜雜物櫃 {fmt(m.get('cupboard'))}／需求 {m['required']}"+(f"｜已擺 {m['placed']} 不計入" if m['placed'] else ''),foreground='#f2b0a8' if m['usable'] is None or m['usable']<m['required'] else '#a8e4c0')
+        text.configure(text=f"{m['name']}   背包 {fmt(m['usable'])}｜雜物櫃 {fmt(m.get('cupboard'))}／需求 {m['required']}"+(f"｜已擺 {m['placed']} 不計入" if m['placed'] else ''),foreground='#f2b0a8' if m['usable'] is None or m['usable']+(m.get('cupboard') or 0)<m['required'] else '#a8e4c0')
     if self.material_table is not None:
         self.material_table.delete(*self.material_table.get_children());self.material_images=[]
         for material in materials:
             image=self.icons.get(material['item_id'],24);self.material_images.append(image)
-            tag='missing' if material['usable'] is None or material['usable']<material['required'] else 'ready'
+            tag='missing' if material['usable'] is None or material['usable']+(material.get('cupboard') or 0)<material['required'] else 'ready'
             name=material['name']+(f"（已擺 {material['placed']} 不計入）" if material['placed'] else '')
             self.material_table.insert('','end',image=image,values=(name,fmt(material['usable']),fmt(material.get('cupboard')),material['required']),tags=(tag,))
     plan_ok=False
