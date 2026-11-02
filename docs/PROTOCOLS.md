@@ -204,7 +204,7 @@ Packet capture import/replay/profile extraction and standalone packet inspection
 
 ## 海岸／航海大地圖出口
 
-StageMapData_C 不一定有每個海岸出口的一般 Kind=2 標記，而且 EveDoorLinks 連線序號也不一定是 Eve 實際門編號。航海大地圖（Define.lua WorldMapId=58001）及通往海圖的入口，先撤銷以相同序號直接推定的綁定，再用同版 Eve NewDoor 的唯一矩形碰撞範圍與 PlayerTouch 事件，核對 EveDoorLinks 的來源點。綁定以實際門 index 為鍵，另存獨立 `link_index`；名稱與連線稽核按連線序號查找，畫點和 C20-8 使用配對後的實際門資料。同一門被多條連線認領或多個範圍重疊時不任意選取。其他一般標記仍沿用原有檢查。
+所有地圖共用實體門配對，不再把 EveDoorLinks 的連線序號或 StageMap EvtID 直接當成 Eve NewDoor 實際門編號。矩形 signType 1／4 使用同版來源點、場景倍率、唯一碰撞範圍及 PlayerTouch；signType 2／3／5 的碰撞形狀由 Prefab 決定，目前只接受與 NewPortal 精確錨點唯一吻合，不推測半徑。資料以實際門 index 為鍵，另存 `link_index` 追溯原連線。標記、名稱或序號相同，都不能代替實體配對。
 
 來源：使用者提供的 1262 Lua `EventData.NewDoor/NewEvent`、`Data.LoadEve`、`EventManager._NewPortal`、`Stage.TransferGridPosition`、`StageObjectData.New`、`PlayerController.OnTriggerEnter` 和 `Role.SendMeetDoor`。矩形只支援 signType 1／4；已確認 PlayerTouch 發生種類旗標為 2。原始門格座標轉封包座標為 `(grid-1)*20*sceneRatio + signOffset*sceneRatio`，不可和 EveDoorLinks 的 `point*sceneRatio` 混用。
 
@@ -226,3 +226,12 @@ StageMapData_C 不一定有每個海岸出口的一般 Kind=2 標記，而且 Ev
 NewDoor 的 Big5／CP950 名稱、門觸碰事件 ID，以及相關 NewEvent 的名稱、條件與效果欄位均保留。條件 paraValue 為無號 32 位，效果 paraValue 為有號 32 位，依上傳 Lua EventData.NewEvent 的定義解析。無效名稱保留原始位元組供診斷；無關門事件的效果不展開，以限制記憶體使用。
 
 這些效果明細是原始證據，不代表已解碼換圖效果語意。現有 Lua 提供結果欄位格式，但不足以獨立確認所有換圖效果代碼；`destination_decoded=False` 不會被改成已驗收。目的地配對仍來自已驗證的官方連線和門事件綁定，實際換圖則由伺服器回覆判定；收到不同場景會記為 `different_map`，不回報成功。
+
+
+## 全地圖目的地錯配修正
+
+已移除一般地圖「StageMap／連線／門事件序號相同即綁定」的處理；正式 Runtime、預覽及位置／目的地低階 API 都採相同的實體配對。只有場景 ID 集合、缺少場景幾何時，不再回傳可執行綁定。
+
+同一門被多條連線認領時不任意保留一條；即使其中一條指向未知場景，也不能先忽略它再宣稱另一條為唯一目的地。獨立 DoorLinkData 的同場景、同來源位置若列出不同目的地，會撤銷唯一目的地綁定，並在唯讀證據列出衝突及候選場景。未配對的原始入口與條件路線仍保留於核對資料。
+
+這些檢查解決本機序號誤配及可見的多目的地衝突，不構成所有官方事件效果已解碼或正式服已實測。伺服器依條件選擇的實際目的地，仍以權威場景回覆確認。

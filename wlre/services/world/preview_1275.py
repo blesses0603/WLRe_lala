@@ -236,12 +236,10 @@ def load_preview(data_archive, eve_archive):
             from wlre.services.world.portal_evidence_1275 import (read_only_portal_evidence)
             portal_link_evidence = read_only_portal_evidence(
                 stage_map, link_table, doors, stages)
-            portal_positions = verified_portal_positions(
-                stage_map, link_table, doors, stages)
+            portal_positions = {}
             portal_display_destinations = read_only_portal_destinations(
                 stage_map, link_table, doors, stages)
-            portal_destinations = verified_portal_destinations(
-                stage_map, link_table, doors, stages)
+            portal_destinations = {}
             from wlre.services.world.boundary_portals import reconcile_touch_bindings
             reconcile_touch_bindings(
                 stage_map, link_table, doors, stages, portal_positions, portal_destinations)
@@ -281,6 +279,9 @@ def load_preview(data_archive, eve_archive):
             portal_extra_routes = read_only_door_link_routes(raw_routes, stages)
     except (ValueError, TypeError, KeyError):
         pass
+    from wlre.services.world.boundary_portals import reconcile_route_conflicts
+    reconcile_route_conflicts(portal_positions, portal_destinations, portal_extra_routes,
+        portal_link_evidence)
     from wlre.services.world.portal_coverage import audit_portal_coverage
     coverage = audit_portal_coverage(doors, stages, stage_map, link_table,
                                     portal_positions, portal_destinations, portal_names,

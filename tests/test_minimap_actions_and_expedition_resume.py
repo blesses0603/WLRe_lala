@@ -146,8 +146,9 @@ class MinimapActionTests(unittest.TestCase):
 
 class DynamicPortalTriggerTests(unittest.TestCase):
     def test_fully_matched_dynamic_portal_can_send_one_manual_trigger(self):
-        doors={11016:[{'index':1,'x':42,'y':64}]}
-        links=verified_portal_destinations(stage_marker(),door_links(),doors,{11016,11017})
+        from test_portal_coordinates_1275 import physical_door, physical_stages
+        doors={11016:[physical_door()]}
+        links=verified_portal_destinations(stage_marker(),door_links(),doors,physical_stages())
         runtime=SimpleNamespace(revision=1286,catalog_identity=SimpleNamespace(key='a'*64),
             doors=doors,portal_positions=position_fixture(),portal_destinations=links,
             scene_names={11016:'來源',11017:'目的地'})

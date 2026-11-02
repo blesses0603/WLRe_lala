@@ -61,7 +61,7 @@ def portal_inspection_text(portal):
         return ''
     target = portal.get('reference_destination_label')
     if (not target and portal.get('destination_verified') is True
-            and portal.get('binding_kind') == 'unique_boundary_touch_region'):
+            and portal.get('binding_kind') in ('unique_boundary_touch_region','unique_door_anchor')):
         target = portal.get('destination_label')
     if target is None and type(portal.get('hidden_destination_scene_id')) is int:
         hidden = portal['hidden_destination_scene_id']
@@ -98,6 +98,7 @@ def portal_inspection_text(portal):
     if portal.get('destination_verified') is not True:
         reason_labels = {
             'missing_eve_door': '缺少門事件',
+            'conflicting_official_destinations': '同一位置有多個官方目的地，可能含條件分支',
             'duplicate_eve_door': '門事件索引重複',
             'missing_normal_stage_marker': '缺少普通傳點標記',
             'source_scene_undefined': '來源場景無正式定義',
@@ -113,7 +114,9 @@ def portal_inspection_text(portal):
                 parts.append('待核對：' + '、'.join(labels[:4]))
         parts.append('僅供查看，未核准換圖')
     else:
-        if portal.get('binding_kind') == 'unique_boundary_touch_region':
-            parts.append('海岸碰撞範圍與實際觸碰門編號已核對')
+        if portal.get('binding_kind') in ('unique_boundary_touch_region','unique_door_anchor'):
+            parts.append('門事件精確位置與實際觸碰門編號已核對'
+                         if portal.get('binding_kind') == 'unique_door_anchor' else
+                         '碰撞範圍與實際觸碰門編號已核對（含海岸碰撞範圍）')
         parts.append('門索引交叉核對完成，伺服器傳送尚待驗收')
     return '｜'.join(parts)

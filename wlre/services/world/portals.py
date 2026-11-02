@@ -259,7 +259,7 @@ class Portals:
                                 'trigger_bounds': position.get('trigger_bounds'),
                                 'navigation_status': 'unverified',
                                 'direct_note': (
-                                    '官方海岸觸碰區域／門編號／目的地已核對；可手動單次試傳，'
+                                    '官方門觸碰範圍／精確位置、門編號與連線目的地已配對；可手動單次試傳，'
                                     '載具與進入條件由伺服器判定'
                                     if verified_target and link.get('matched_touch_region') else
                                     '1275 門編號／位置／目的地已交叉核對；可在手動確認後單次試傳，'

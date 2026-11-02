@@ -19,19 +19,30 @@ def door_links(scene=11016, x=200, y=300):
             ).encode('utf-16-le')
 
 
+def physical_door():
+    return dict(index=1,x=11,y=16,sign_type=2,sign_x=0,sign_y=0,touch_event_ids=[7])
+
+
+def physical_stages():
+    return {11016:dict(pos_x_ratio=3,pos_y_ratio=2,map_width=1000,map_height=1000,
+                       small_offset_x=0,small_offset_y=0),11017:{}}
+
+
 def position_fixture():
-    return verified_portal_positions(
-        stage_marker(), door_links(),
-        {11016: [{'index': 1, 'x': 42, 'y': 64}]},
-        {11016: {'pos_x_ratio': 3, 'pos_y_ratio': 2}})
+    return verified_portal_positions(stage_marker(),door_links(),
+                                     {11016:[physical_door()]},physical_stages())
 
 
 class IdentityProjection:
+    rate=100.0
+    offset_x=0
+    offset_y=0
+    height=1000
     def packet_to_pixel(self, x, y):
         return x, y
 
 
-class OffscreenProjection:
+class OffscreenProjection(IdentityProjection):
     def packet_to_pixel(self, x, y):
         return x + 1000, y + 1000
 
@@ -55,9 +66,9 @@ class PortalPosition1275Tests(unittest.TestCase):
 
     def test_destination_uses_event_identity_and_separately_scaled_marker(self):
         from wlre.services.world.portal_links_1275 import verified_portal_destinations
-        doors = {11016: [{'index': 1, 'x': 42, 'y': 64}]}
+        doors = {11016: [physical_door()]}
         bindings = verified_portal_destinations(
-            stage_marker(), door_links(), doors, {11016, 11017})
+            stage_marker(), door_links(), doors, physical_stages())
         runtime = SimpleNamespace(revision=1275, 
             doors=doors, portal_positions=position_fixture(), portal_destinations=bindings,
             scene_names={11016: '新手海灘', 11017: '目的場景'})
@@ -176,8 +187,8 @@ class PortalPosition1275Tests(unittest.TestCase):
                  'small_offset_x': 25, 'small_offset_y': 30}
         calibrated = verified_portal_positions(
             stage_marker(), door_links(),
-            {11016: [{'index': 1, 'x': 42, 'y': 64}]},
-            {11016: stage})[(11016, 1)]
+            {11016: [physical_door()]},
+            {11016: stage,11017:{}})[(11016, 1)]
         expected = {'rate': 100.0, 'offset_x': 25,
                     'offset_y': 30, 'height': 1000}
         self.assertEqual(calibrated['projection_guard'], expected)

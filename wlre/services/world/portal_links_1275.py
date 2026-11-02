@@ -1,12 +1,9 @@
-"""Strict 1275 read-only portal destinations, derived from official tables.
+"""Official portal references and physical door bindings.
 
-1275 Eve.NewDoor supplies source scene / door index / position. The game's
-StageMapData_C marker references a source event index; EveDoorLinks supplies a
-destination by ordinal. Bind the unique scene/event identity across all sources;
-their event, marker and link coordinates are not interchangeable.
-
-This module NEVER approves C20-8 packets. Only a successful server scene
-snapshot can confirm an actual transfer.
+EveDoorLinks ordinals and StageMap display IDs are independent of Eve.NewDoor
+container IDs. Actionable mappings require physical identity from current Eve
+and scene geometry; display-only names have a separate API. A source binding
+never proves that the live server accepted a transfer.
 """
 from __future__ import annotations
 
@@ -129,76 +126,9 @@ def parse_eve_door_links(raw):
 
 
 def verified_portal_positions(stage_raw, link_raw, doors, stages):
-    """Map the *actual* official minimap portal point into packet XY.
-
-    UIMain._SetPortalPosition displays EveDoorLinks.mapPosition, not Eve
-    NewDoor's common-event x/y. Lua multiplies EveDoorLinks' grid values
-    by the source scene's PosXRatio / PosYRatio before TransferPosition.
-    In packet XY, TEMP_OFFSET_X=0 and the mapHeight y-inversion cancels.
-    StageMapData proves the (scene, EvtID) portal identity only; its
-    PositionX/Y and Eve.NewDoor x/y are NOT screen coordinates.
-
-    A missing/ambiguous entry, unknown scene ratios or impossible result
-    is never silently projected or sent to the movement handler.
-    """
-    markers = parse_stage_map_portals(stage_raw)
-    links = parse_eve_door_links(link_raw)
-    result = {}
-    for scene, entries in doors.items():
-        if type(scene) is not int:
-            continue
-        stage = stages.get(scene)
-        if not isinstance(stage, dict):
-            continue
-        rx, ry = stage.get('pos_x_ratio'), stage.get('pos_y_ratio')
-        if (type(rx) is not int or type(ry) is not int
-                or not 1 <= rx <= 255 or not 1 <= ry <= 255):
-            continue
-        linked = links.get(scene, ())
-        for door in entries:
-            if not isinstance(door, dict):
-                continue
-            index = door.get('index')
-            if (type(index) is not int or not 1 <= index <= len(linked)
-                    or (scene, index) not in markers
-                    or markers[(scene, index)]['kind'] != 2):
-                continue
-            link = linked[index - 1]
-            if link.get('scene') != scene or link.get('index') != index:
-                continue
-            x, y = link['x'] * rx, link['y'] * ry
-            if not 0 <= x <= 65535 or not 0 <= y <= 65535:
-                continue
-            # Runtime minimap images are still sourced from the older
-            # resource pack. When 1275 provides geometry, require it to
-            # agree with the image projection before displaying a marker.
-            known_geometry = all(type(stage.get(key)) is int for key in (
-                'map_width', 'map_height', 'small_offset_x', 'small_offset_y'))
-            geometry = None
-            if known_geometry:
-                width = (6992 if stage['map_width'] == 65535
-                         else stage['map_width'])
-                height = (6992 if stage['map_height'] == 65535
-                          else stage['map_height'])
-                if max(width, height) <= 0:
-                    continue
-                geometry = {
-                    'rate': 100 * (1024 - 24) / max(width, height),
-                    'offset_x': stage['small_offset_x'],
-                    'offset_y': stage['small_offset_y'],
-                    'height': height,
-                }
-            result[(scene, index)] = {
-                'x': x, 'y': y, 'scene': scene, 'index': index,
-                'projection_guard': geometry,
-                'source_kind': '1275_eve_door_links_grid_scaled',
-                'raw_link_x': link['x'], 'raw_link_y': link['y'],
-                'pos_x_ratio': rx, 'pos_y_ratio': ry,
-                'position_verified': True,
-            }
-    return result
-
-
+    """Match physical doors; equal marker/link/container numbers prove nothing."""
+    from wlre.services.world.boundary_portals import boundary_portal_bindings
+    return boundary_portal_bindings(stage_raw,link_raw,doors,stages)[0]
 
 
 def read_only_portal_destinations(stage_raw, link_raw, doors, scene_ids):
@@ -236,41 +166,11 @@ def read_only_portal_destinations(stage_raw, link_raw, doors, scene_ids):
 
 
 def verified_portal_destinations(stage_raw, link_raw, doors, scene_ids):
-    """Reconcile three independent official 1275 sources without packet approval.
+    """Resolve actual doors using current scene geometry, never ordinal joins.
 
-    Bind by unique scene/event identity, as EveDoorLinksData.GetDoorDataByIndex.
-    Event XY, marker XY and link grid XY are different coordinate spaces.
-    Position scaling/projection is validated independently before any action.
-    An ambiguous or incomplete mapping remains unavailable to the UI.
+    A bare set of scene IDs supplies no physical identity evidence and cannot
+    authorize a destination binding. Read-only labels use their separate API.
     """
-    markers = parse_stage_map_portals(stage_raw)
-    links = parse_eve_door_links(link_raw)
-    scenes = set(scene_ids)
-    result = {}
-    for scene, entries in doors.items():
-        if type(scene) is not int or scene not in scenes:
-            continue
-        scene_links = links.get(scene, ())
-        counts = {}
-        for row in entries:
-            if isinstance(row, dict) and type(row.get('index')) is int:
-                counts[row['index']] = counts.get(row['index'], 0) + 1
-        for row in entries:
-            if not isinstance(row, dict):
-                continue
-            index = row.get('index')
-            if (type(index) is not int or index <= 0 or index > len(scene_links)
-                    or counts.get(index) != 1):
-                continue
-            marker = markers.get((scene, index))
-            if not marker or marker['kind'] != 2:
-                continue
-            link = scene_links[index - 1]
-            if (link['scene'] != scene or link['index'] != index
-                    or link['destination'] not in scenes):
-                continue
-            result[(scene, index)] = dict(link, matched_stage_map=True,
-                                         event_x=row.get('x'), event_y=row.get('y'),
-                                         destination_verified=True,
-                                         trigger_verified=False)
-    return result
+    from wlre.services.world.boundary_portals import boundary_portal_bindings
+    if not isinstance(scene_ids,dict):return {}
+    return boundary_portal_bindings(stage_raw,link_raw,doors,scene_ids)[1]

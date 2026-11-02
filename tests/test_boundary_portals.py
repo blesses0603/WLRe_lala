@@ -161,7 +161,7 @@ class BoundaryPortalTests(unittest.TestCase):
     def test_catalog_and_ui_enable_only_bound_coastal_door(self):
         catalog=self.catalog();row,=catalog.for_scene(60000)
         self.assertTrue(row['direct_eligible']);self.assertEqual(row['direct_door_index'],3)
-        self.assertIn('航海大地圖',row['name']);self.assertIn('海岸',row['direct_note'])
+        self.assertIn('航海大地圖',row['name']);self.assertIn('觸碰',row['direct_note'])
         self.assertEqual(row['trigger_bounds'],(0,0,280,8880))
         from wlre.services.world.portal_inspection_1275 import portal_inspection_text
         self.assertIn('海岸碰撞範圍',portal_inspection_text(row))

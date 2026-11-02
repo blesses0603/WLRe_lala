@@ -57,7 +57,7 @@ def audit_portal_coverage(doors, stages, stage_raw=None, link_raw=None,
             marker = stage_markers.get(index)
             binding = destinations.get((scene,index),{})
             boundary = (binding.get('matched_touch_region') is True
-                        and binding.get('binding_kind') == 'unique_boundary_touch_region'
+                        and binding.get('binding_kind') in ('unique_boundary_touch_region','unique_door_anchor')
                         and (scene,index) in positions)
             link_index = binding.get('link_index',index)
             reasons = []
