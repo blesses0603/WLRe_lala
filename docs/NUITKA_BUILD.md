@@ -99,3 +99,14 @@ macOS Intel 的 GitHub hosted runner 曾在原始碼 Tk GUI 冒煙測試逾時�
 py -m pip install -r requirements-extractor.txt
 py WLRE_Client.py --self-test-unityfs
 ```
+
+
+## v0.7.0 main 版本更新的 Windows EXE
+
+依使用者要求，新增 .github/workflows/build-windows.yml。main 的程式版本常數或本工作流程更新時自動執行，也可從 Actions 手動啟動；不對一般 PR 自動編譯。
+
+Windows x64 工作會安裝測試依賴，執行語法／資源稽核、完整回歸，再用既有 Nuitka MSVC standalone 流程編譯。編譯產物須通過資源自檢、UnityFS 解包器與 GUI smoke test，才封裝並檢查 ZIP CRC。
+
+成功後在 Actions → Windows EXE build → 對應工作 → Artifacts 下載 windows-exe-<commit SHA>。內含 WLRe_LaLa_v0.7.0_windows_x64.zip 與 SHA256SUMS.txt；解壓後執行 WLRe_LaLa/WLRe_LaLa.exe，不能只搬走 EXE。產物與編譯診斷保留 14 天。
+
+此工作只有 contents: read，不建立 Tag／Release；版本提升與編譯成功也不代表所有正式服功能完成驗收。既有手動跨平台原生打包與正式 Tag 發布流程保留。

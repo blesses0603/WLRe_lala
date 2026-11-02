@@ -1,8 +1,12 @@
-# WLRe:LaLa | v0.6.1 開發版（已合併 main，尚未正式發布）
+# WLRe:LaLa | v0.7.0 開發版（非正式發布）
+
+> **程式版本（2026-11-02）**：程式已更新為 `0.7.0`，包含 PR #63 的動態資料及功能修正。視窗版本、自檢與 Windows／macOS 建置版本共用 `wlre.__version__`；版本提升不代表全部正式服功能已驗收。小地圖操作、遠征、製作排程與帳篷進出已提交修正，逐項結果以 CI 與正式服操作驗收為準；尚未建立 Release／Tag 或正式安裝包。
+
+> **Windows EXE 建置**：版本更新合併 main 後，Actions 的 **Windows EXE build** 會先測試、再編譯並上傳完整 EXE 資料夾 ZIP 與 SHA-256（保留 14 天）。解壓後執行 `WLRe_LaLa/WLRe_LaLa.exe`，請保留整個資料夾。此流程不建立 Git Tag 或 GitHub Release。詳見 [Nuitka 打包](docs/NUITKA_BUILD.md)。
 
 > **PR #63 資料庫替代完成**：27 項舊 JSON／ZIP／GZ 已從目前分支移除，改為隨附完整初始 SQLite；乾淨下載可直接啟動與打包。舊版本說明中的原始檔安裝方式屬歷史紀錄。詳見 [資料庫替代說明](docs/RESOURCE_DATABASE_REPLACEMENT.md)。
 
-> **PR #63 動態 Runtime（2026-11-02，未合併）**：新增物品獨立第五類來源，並將 NPC／互動與商店、物品、製作、場景及遠征接至完整動態 Bundle Runtime。官方實測 DataPackage 1286／MainPackage 1284 可成功解析 11,326 個物品、1,026 筆配方、1,337 個場景；不再以固定 1275 筆數作為新版驗證條件。保留獨立登入與協定限制，尚未執行正式服操作 E2E。可執行 `py -3 -m wlre.services.world.dynamic_bundle_runtime --sync` 核對實際版本、雜湊與筆數，詳見 [動態 Runtime 驗收紀錄](docs/DYNAMIC_RUNTIME_VALIDATION.md)。
+> **PR #63 動態 Runtime（2026-11-02）**：新增物品獨立第五類來源，並將 NPC／互動與商店、物品、製作、場景及遠征接至完整動態 Bundle Runtime。官方實測 DataPackage 1286／MainPackage 1284 可成功解析 11,326 個物品、1,026 筆配方、1,337 個場景；不再以固定 1275 筆數作為新版驗證條件。LaLa 資料庫與當次官方版本、雙 Manifest 及必要原始表一致即可登入，不再以「協定未驗收」額外封鎖；各功能正式服驗收進度需分別確認。可執行 `py -3 -m wlre.services.world.dynamic_bundle_runtime --sync` 核對實際版本、雜湊與筆數，詳見 [動態 Runtime 驗收紀錄](docs/DYNAMIC_RUNTIME_VALIDATION.md)。
 
 > **版本狀態（2026-10-26）**：`main` 整合 **v0.6.1 開發版**（PR #56、PR #57，後者三平台 CI #1115 通過），**使用者已回報本次測試的功能正常、未發現問題；逐功能正式服 E2E 證據與正式 Release／Tag／安裝包仍待驗收／發布**。官方 MainPackage／DataPackage 支援 1275 基準與已驗證 Bundle 的安全補建；資源缺失、校驗失敗或格式不相容時仍拒絕登入。資料版本相符不代表所有遊戲功能已通過驗收。最近正式 Release 為 [v0.5.0](https://github.com/blesses0603/WLRe_lala/releases/tag/v0.5.0)。
 

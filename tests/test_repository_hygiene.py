@@ -47,7 +47,7 @@ class DocumentationAndReleaseAudit(unittest.TestCase):
         self.assertIn("releases/tag/v0.5.0", readme)
         self.assertIn("不是正式發布", changelog)
 
-    def test_actions_run_regressions_with_manual_native_packaging(self):
+    def test_actions_run_regressions_with_scoped_native_packaging(self):
         daily = (ROOT / ".github/workflows/test.yml").read_text(encoding="utf-8")
         native = (ROOT / ".github/workflows/desktop-packaging.yml").read_text(encoding="utf-8")
         release = (ROOT / ".github/workflows/release-windows.yml").read_text(encoding="utf-8")
@@ -66,6 +66,15 @@ class DocumentationAndReleaseAudit(unittest.TestCase):
         self.assertIn("tags:", release)
         self.assertIn("workflow_dispatch:", release)
         self.assertIn("build_macos:", release)
+        windows = (ROOT / ".github/workflows/build-windows.yml").read_text(encoding="utf-8")
+        triggers = windows.split("on:\n", 1)[1].split("\npermissions:", 1)[0]
+        self.assertIn("branches: [main]", triggers)
+        self.assertIn("wlre/__init__.py", triggers)
+        self.assertNotIn("pull_request:", triggers)
+        self.assertNotIn("gh release create", windows)
+        self.assertNotIn("contents: write", windows)
+        self.assertLess(windows.index("python -m unittest discover"), windows.index("tools.build.build_nuitka --mode standalone"))
+        self.assertIn("if-no-files-found: error", windows)
 
     def test_legacy_compatibility_and_experience_regressions_retained(self):
         for relative in (

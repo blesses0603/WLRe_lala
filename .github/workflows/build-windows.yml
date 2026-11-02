@@ -1,0 +1,84 @@
+name: Windows EXE build
+run-name: Windows EXE - ${{ github.ref_name }} - ${{ github.sha }}
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - wlre/__init__.py
+      - .github/workflows/build-windows.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-exe-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  WLRE_DISABLE_AUTO_CATALOG: '1'
+  PYTHONUTF8: '1'
+  NUITKA_CACHE_DIR: ${{ github.workspace }}/.nuitka-cache
+
+jobs:
+  windows-exe:
+    name: Test, compile and archive Windows x64
+    runs-on: windows-2022
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.12'
+          architecture: x64
+          cache: pip
+          cache-dependency-path: |
+            requirements-ui.txt
+            requirements-build.txt
+            requirements-build-macos.txt
+            requirements-extractor.txt
+      - name: Install test dependencies
+        run: python -m pip install -r requirements-ui.txt -r requirements-extractor.txt
+      - name: Validate source and bundled database
+        run: |
+          python -m compileall -q wlre tools tests WLRE_Client.py
+          python -m tools.audit_repository --strict-git
+          python WLRE_Client.py --self-test
+          python WLRE_Client.py --self-test-unityfs
+      - name: Run full regression suite
+        run: python -m unittest discover -s tests -q
+      - name: Restore Nuitka compiler cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.NUITKA_CACHE_DIR }}
+          key: desktop-nuitka-v1-windows-x64-py312-${{ hashFiles('requirements-build.txt', 'requirements-build-macos.txt', 'requirements-ui.txt', 'requirements-extractor.txt') }}-${{ github.sha }}
+          restore-keys: |
+            desktop-nuitka-v1-windows-x64-py312-${{ hashFiles('requirements-build.txt', 'requirements-build-macos.txt', 'requirements-ui.txt', 'requirements-extractor.txt') }}-
+            desktop-nuitka-v1-windows-x64-py312-
+      - name: Compile and self-test Windows EXE
+        run: python -m tools.build.build_nuitka --mode standalone --compiler msvc
+      - name: Package and verify Windows ZIP
+        shell: pwsh
+        run: |
+          $version = python -c "from wlre import __version__; print(__version__)"
+          python -m tools.build.release_nuitka --tag "v$version"
+      - name: Upload Windows EXE package and checksums
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: windows-exe-${{ github.sha }}
+          path: dist_nuitka/release/*
+          if-no-files-found: error
+          retention-days: 14
+      - name: Preserve compiler diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: windows-exe-diagnostics-${{ github.sha }}
+          path: |
+            dist_nuitka/standalone/build.log
+            dist_nuitka/standalone/compilation-report.xml
+          if-no-files-found: ignore
+          retention-days: 14
