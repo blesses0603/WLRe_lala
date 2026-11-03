@@ -127,6 +127,7 @@ class SecondaryFeatures(unittest.TestCase):
         self.assertEqual([other.tabs.tab(p,'text') for p in other.tabs.tabs()],['方舟','組織'])
         for panel in (other.ark_panel,other.guild_panel):
             self.assertEqual(panel.winfo_toplevel(),self.app.feature_windows['other'])
+        self.assertTrue(other.tabs.buttons[str(other.guild_panel)].cget('image'))
         self.assertFalse(hasattr(benefits,'ark_panel'))
         self.assertFalse(hasattr(benefits,'guild_panel'))
 

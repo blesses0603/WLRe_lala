@@ -16,6 +16,7 @@ class OriginalHomeActionIcons(unittest.TestCase):
         '製作': 'MainIcon_011',
         '經驗效率': 'MainIcon_020',
         '其他功能': 'Btn_CategoryAISetting004',
+        '組織': 'Btn_CategoryGuild001',
     }
 
     def test_each_action_uses_its_original_bundled_png(self):

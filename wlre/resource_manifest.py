@@ -20,7 +20,7 @@ REQUIRED_RESOURCES=(
     *('assets/function-icons/'+name+'.png' for name in (
         'Btn_AI','MainIcon_001','MainIcon_005','MainIcon_007','MainIcon_010',
         'MainIcon_011','MainIcon_020','MainIcon_023','MainIcon_038','MainIcon_041',
-        'Btn_CategoryLoginAward002','Btn_CategoryGuild003','Btn_CategoryGuild007','Btn_CategoryAISetting004')),
+        'Btn_CategoryLoginAward002','Btn_CategoryGuild003','Btn_CategoryGuild007','Btn_CategoryAISetting004','Btn_CategoryGuild001')),
 )
 
 
