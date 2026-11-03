@@ -61,6 +61,8 @@ def _safe_bag(state):
 
 
 def _guard(state):
+    if state.star_ark.get("pending") or state.star_ark.get("uncertain"):
+        return "等待方舟操作確認"
     if state.guild_actions.get("pending") or state.guild_actions.get("uncertain"):
         raise ProtocolError("等待組織操作確認")
     if state.daily_tasks.get("pending") or state.daily_tasks.get("uncertain"):

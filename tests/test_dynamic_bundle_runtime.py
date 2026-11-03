@@ -191,6 +191,25 @@ class DynamicBundleRuntimeTests(unittest.TestCase):
                 self.assertIsNone(dynamic.current_runtime())
                 self.raw[name] = original
 
+    def test_ark_tables_use_verified_sqlite_and_only_ark_stops_on_bad_layout(self):
+        from test_star_ark import raw_catalogs
+        from wlre.services.world.ark_catalog import TABLES
+        from wlre.services.world.resource_database import read_catalog_tables
+        self.raw.update(raw_catalogs())
+        manifest=self.manifests['DataPackage']
+        manifest.index['assets'].extend(dict(path=_ASSET_ROOT+t+'.bytes',
+            bundle_name=manifest.index['bundles'][0]['name']) for t in TABLES)
+        runtime=dynamic.activate_for_official(self.remote,**self.kwargs())
+        self.assertEqual(runtime.ark_catalog['stars'][1]['prices'][0],120)
+        self.assertEqual(runtime.ark_catalog['agents'][1]['name'],'新版任務')
+        parsed=read_catalog_tables(self.root/'derived_catalogs'/'resource_inventory.sqlite3',
+            runtime.catalog_identity.key,('ark_stars','ark_agents','ark_fights'))
+        self.assertEqual(parsed['ark_fights'][1]['awards'][0]['value'],28)
+        self.raw['ArkStarData_C']+=b'!'
+        runtime=dynamic.activate_for_official(self.remote,**self.kwargs())
+        self.assertIsNone(runtime.ark_catalog)
+        self.assertEqual(len(runtime.items),1)
+
     def test_missing_item_id_in_shop_refuses_runtime(self):
         self.raw['ItemData_C'] = struct.pack('<i', 1) + item_record(iid=999)
         with self.assertRaisesRegex(ValueError, '商店商品'):

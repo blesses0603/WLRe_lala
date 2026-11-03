@@ -24,12 +24,14 @@ from wlre.services.battle.attribute_points import defaults as points_defaults, a
 
 from wlre.services.time_cube import defaults as cube_defaults, apply_cube
 from wlre.services.daily_tasks import defaults as daily_defaults, apply_daily_tasks
+from wlre.services.star_ark import defaults as ark_defaults, apply_ark
 
 POSITION_CACHE_LIMIT = 2048
 
 
 @dataclass
 class State:
+    star_ark: dict = field(default_factory=ark_defaults)
     guild_actions: dict = field(default_factory=guild_action_defaults)
     daily_tasks: dict = field(default_factory=daily_defaults)
     time_cube: dict = field(default_factory=cube_defaults)
@@ -169,6 +171,7 @@ class State:
         observe_shop_evidence(self,event)
         observe_efficiency(self,event)
         apply_actions(self,event)
+        apply_ark(self,event)
 
     def snapshot(self):
         self.assert_writer()

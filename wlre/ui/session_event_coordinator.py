@@ -65,6 +65,8 @@ class SessionEventCoordinator:
                     self.expedition_panel.status.set(event['error'])
                 if event_kind=='command_rejected' and event.get('command_type')=='time_cube':
                     self.benefits_panel.status.set(event['error'])
+                if event_kind=='command_rejected' and event.get('command_type')=='star_ark':
+                    self.benefits_panel.ark_panel.status.set(event['error'])
                 if event_kind=='command_rejected' and event.get('command_type')=='guild_actions':
                     self.benefits_panel.guild_panel.status.set(event['error'])
                 if event_kind.startswith('chat_'):continue

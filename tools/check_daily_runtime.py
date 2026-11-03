@@ -10,6 +10,7 @@ def main(argv=None):
     parser.add_argument('--online',action='store_true',help='允許下載當次官方驗證 Bundle，不登入遊戲')
     parser.add_argument('--cache-dir',type=Path)
     parser.add_argument('--guild',action='store_true',help='同時驗證組織捐獻價格與等級資料')
+    parser.add_argument('--ark',action='store_true',help='同時驗證方舟派遣價格、情報員及戰鬥事件')
     args=parser.parse_args(argv)
     if not args.online:parser.error('需要 --online 才會連線下載官方資源')
     from wlre.services.world.dynamic_bundle_runtime import prepare_dynamic_runtime
@@ -40,7 +41,14 @@ def main(argv=None):
                    primary_quote=quote(rules,8,{},False),
                    price_kinds={str(i):rules['sell'][i]['second_kind'] for i in (8,9,10)},
                    sources=rules['sources'])
-    print(json.dumps(dict(status='verified',guild=guild,catalog_key=runtime.catalog_identity.key,
+    ark=None
+    if args.ark:
+        if not runtime.ark_catalog:raise ValueError(runtime.ark_catalog_status)
+        rules=runtime.ark_catalog
+        ark=dict(planet_count=len(rules['stars']),agent_count=len(rules['agents']),
+                 fight_count=len(rules['fights']),planet_one_prices=rules['stars'][1]['prices'],
+                 sources=rules['sources'])
+    print(json.dumps(dict(status='verified',guild=guild,ark=ark,catalog_key=runtime.catalog_identity.key,
         packages={p.name:p.full_version for p in runtime.catalog_identity.packages},
         task_count=len(catalog['tasks']),reward_count=len(catalog['rewards']),
         cycles=sorted({r['cycle'] for r in catalog['tasks']}),

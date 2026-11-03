@@ -5,6 +5,7 @@ from tkinter import ttk
 from wlre.ui.rounded_notebook import RoundedNotebook
 from wlre.ui.daily_tasks_ui import DailyTaskPanel
 from wlre.ui.guild_actions_ui import GuildActionsPanel
+from wlre.ui.star_ark_ui import StarArkPanel
 
 
 class BenefitsPanel(ttk.Frame):
@@ -34,6 +35,8 @@ class BenefitsPanel(ttk.Frame):
         self.tabs.add(self.weekly_panel,text='每週任務')
         self.guild_panel=GuildActionsPanel(self.tabs,app)
         self.tabs.add(self.guild_panel,text='組織')
+        self.ark_panel=StarArkPanel(self.tabs,app)
+        self.tabs.add(self.ark_panel,text='方舟')
         self.render({})
         self.timer=self.after(1000,self.refresh_clock)
         self.bind('<Destroy>',self.cleanup,add='+')
@@ -53,6 +56,7 @@ class BenefitsPanel(ttk.Frame):
 
     def render(self,state):
         self.guild_panel.render(state)
+        self.ark_panel.render(state)
         self.daily_panel.render(state)
         self.weekly_panel.render(state)
         cube=state.get('time_cube',{})

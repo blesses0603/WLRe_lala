@@ -244,7 +244,11 @@ def read_catalog_tables(path, catalog_key, sources, *, expected_digests=None):
     from wlre.services.world.daily_task_1275 import parse_daily_tasks
     from wlre.services.world.daily_task_catalog import parse_rewards
     from wlre.services.world.guild_catalog import parse_sell,parse_formulas,parse_organization
-    parsers = {'guild_sell': ('UISellData_C.bytes',parse_sell),
+    from wlre.services.world.ark_catalog import parse_stars,parse_agents,parse_fights
+    parsers = {'ark_stars':('ArkStarData_C.bytes',parse_stars),
+               'ark_agents':('ArkAgentData_C.bytes',parse_agents),
+               'ark_fights':('ArkFightData_C.bytes',parse_fights),
+               'guild_sell': ('UISellData_C.bytes',parse_sell),
                'guild_formulas': ('FormulaData_C.bytes',parse_formulas),
                'guild_levels': ('OrganizationFunctionData_C.bytes',parse_organization),
                'daily_tasks': ('DailyTaskData_C.bytes', parse_daily_tasks),
