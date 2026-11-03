@@ -244,6 +244,8 @@ def task_rows(data,catalog):
                      'condition':CONDITIONS.get(task['condition_kind'],'未知條件'),
                      'execution':('既有魔方自動流程' if task['condition_kind']==16 else
                                   '伺服器記錄登入' if task['condition_kind']==1 else
+                                  '組織簽到／捐獻自動流程（需符合資格與金幣額度）'
+                                  if task['condition_kind']==10 and task['condition_params'][0] in (1,2) else
                                   '依指定的煉金／製作目標接續' if task['condition_kind'] in (7,8) else
                                   '副本／協力需手動開始' if task['condition_kind']==12 else '需使用者執行條件')})
     return sorted(rows,key=lambda r:(r['cycle'],not r['eligible'],r['id']))

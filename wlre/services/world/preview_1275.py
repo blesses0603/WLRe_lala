@@ -148,6 +148,8 @@ class Preview1275:
     portal_metadata_status: str = 'missing_stage_map'
     portal_schema_report: dict = field(default_factory=dict)
     portal_coverage: dict = field(default_factory=dict)
+    guild_catalog: dict | None = None
+    guild_catalog_status: str = '等待組織消費資料'
     daily_tasks: dict | None = None
     daily_task_status: str = '每日任務尚未同步'
     expedition: dict | None = None

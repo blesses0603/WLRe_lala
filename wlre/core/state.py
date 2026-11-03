@@ -6,6 +6,7 @@ from wlre.core.state_ownership import FIELDS, guarded, plain
 from wlre.core.state_events import dispatch_local
 from wlre.services.world.obstacle_scope import affects_navigation
 from wlre.services.social.guild import apply_guild
+from wlre.services.social.guild_actions import defaults as guild_action_defaults, apply_actions
 from wlre.services.items.recovery import apply_recovery
 from wlre.services.items.combat_resources import apply_live
 from wlre.services.battle.party import party_defaults, apply_party
@@ -29,6 +30,7 @@ POSITION_CACHE_LIMIT = 2048
 
 @dataclass
 class State:
+    guild_actions: dict = field(default_factory=guild_action_defaults)
     daily_tasks: dict = field(default_factory=daily_defaults)
     time_cube: dict = field(default_factory=cube_defaults)
     automation: dict = field(default_factory=lambda:{'enabled':True,'status':'依指定目標自動接續'})
@@ -166,6 +168,7 @@ class State:
         apply_tent(self,event)
         observe_shop_evidence(self,event)
         observe_efficiency(self,event)
+        apply_actions(self,event)
 
     def snapshot(self):
         self.assert_writer()

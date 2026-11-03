@@ -43,15 +43,16 @@ class DailyTaskPanel(ttk.Frame):
         selected=self.tree.selection();row=self.rows.get(selected[0]) if selected else None
         self.details.set(row['name']+'｜'+row['execution'] if row else '選取任務可查看執行方式；進度由伺服器確認。')
         self.claim.configure(state='normal' if self.live and row and row['eligible'] and not self.blocked else 'disabled')
-        self.go.configure(state='normal' if row and row['condition_kind'] in (7,8,12,16) else 'disabled')
+        self.go.configure(state='normal' if row and (row['condition_kind'] in (7,8,12,16) or
+            row['condition_kind']==10 and row['condition_params'][0] in (1,2)) else 'disabled')
 
     def open_destination(self):
         selected=self.tree.selection();row=self.rows.get(selected[0]) if selected else None
         if not row:return
         kind=row['condition_kind']
-        if kind==16:
+        if kind in (10,16):
             panel=self.app.benefits_panel
-            panel.tabs.select(panel.cube)
+            panel.tabs.select(panel.guild_panel if kind==10 else panel.cube)
         else:self.app.open_feature({7:'alchemy',8:'crafting',12:'instance'}[kind])
 
     def render(self,state):

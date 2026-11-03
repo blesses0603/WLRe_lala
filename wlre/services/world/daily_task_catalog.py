@@ -59,33 +59,10 @@ def bind_catalog(tasks,rewards,texts,items):
 
 def load_verified_catalog(manifest,bundle_root,loader,root,identity,texts,items):
     """Verify current manifest entries, persist and reparse the exact SQLite rows."""
-    from wlre.services.official_incremental_sync import build_update_plan
-    from wlre.services.official_bundle_download import _verified_file
-    from wlre.services.world.catalog_adapters import SourceContract
-    from wlre.services.world.official_catalog_pipeline import AssetBinding
-    from wlre.services.world.unity_textasset import extract_textasset
-    from wlre.services.world.resource_database import record_inventory,read_catalog_tables
-    from pathlib import Path
-    payloads={}
-    for table in TABLES:
-        asset='Assets/ResourcesBuild/Data/'+table+'.bytes'
-        plan=build_update_plan(manifest,asset_paths=(asset,),cache_root=bundle_root)
-        if not plan.entries or any(r.action!='cached' for r in plan.entries):
-            raise ValueError('每日任務 Bundle 尚未同步')
-        paths=tuple(r.spec.cache_path(bundle_root) for r in plan.entries)
-        if any(not _verified_file(p,r.spec) for p,r in zip(paths,plan.entries)):
-            raise ValueError('每日任務 Bundle 校驗失敗')
-        binding=AssetBinding(asset,SourceContract('scenes',table,'stage-new-76-v1',
-                            '0'*64,'DataPackage',manifest.spec.package_version))
-        payloads['tables/'+table+'.bytes']=extract_textasset(binding,paths,loader=loader)
-    # Reject invalid data before writing the current identity to SQLite.
-    bind_catalog(parse_daily_tasks(payloads['tables/DailyTaskData_C.bytes']),
-                 parse_rewards(payloads['tables/DailyTaskRewardData_C.bytes']),texts,items)
-    database=Path(root)/'derived_catalogs'/'resource_inventory.sqlite3'
-    database.parent.mkdir(parents=True,exist_ok=True)
-    record_inventory(database,identity.key,payloads,identity=identity)
-    parsed=read_catalog_tables(database,identity.key,('daily_tasks','daily_rewards'))
+    from wlre.services.world.resource_database import load_verified_tables
+    parsed,sources=load_verified_tables(manifest,bundle_root,loader,root,identity,
+                    {'daily_tasks':('DailyTaskData_C',parse_daily_tasks),
+                     'daily_rewards':('DailyTaskRewardData_C',parse_rewards)})
     result=bind_catalog(parsed['daily_tasks'],parsed['daily_rewards'],texts,items)
-    import hashlib
-    result['sources']={name:hashlib.sha256(raw).hexdigest() for name,raw in payloads.items()}
+    result['sources']=sources
     return result

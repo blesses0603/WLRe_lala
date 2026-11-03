@@ -18,6 +18,8 @@ def command_reason(state,command,*,maintenance_pending=False,maintenance_uncerta
     kind=command.get('type')
     # Stopping continuation cannot cancel an outstanding request or its holds.
     if kind in STOP_COMMANDS or kind=='craft' and command.get('action') in ('stop_auto','plan_pause'):return ''
+    if active(state.guild_actions) and kind not in ('guild_actions','daily_tasks','time_cube','automatic_flows'):
+        return '等待組織簽到／捐獻確認，結果不明時請重新登入同步'
     if active(state.daily_tasks) and kind in ('room_storage','craft','companion','field_item','field_storage',
                                              'battle_item','start_alchemy','start_expedition'):
         return '等待每日任務領獎確認；結果不明時請重新登入同步'
@@ -41,6 +43,7 @@ def command_reason(state,command,*,maintenance_pending=False,maintenance_uncerta
 
 def reason(state,service):
     """Return a temporary pause reason, without disabling any service."""
+    if service!='guild_actions' and active(state.guild_actions):return '等待組織簽到／捐獻確認'
     if service!='daily_tasks' and active(state.daily_tasks):return '等待每日任務領獎確認'
     if service!='time_cube' and active(state.time_cube):return '等待魔方開啟確認'
     if active(state.room_storage) and service in ('auto_battle','expedition','alchemy','crafting','maintenance'):

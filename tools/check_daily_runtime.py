@@ -9,6 +9,7 @@ def main(argv=None):
     parser=argparse.ArgumentParser(description='核對官方每日／每週任務資料與 SQLite 載入')
     parser.add_argument('--online',action='store_true',help='允許下載當次官方驗證 Bundle，不登入遊戲')
     parser.add_argument('--cache-dir',type=Path)
+    parser.add_argument('--guild',action='store_true',help='同時驗證組織捐獻價格與等級資料')
     args=parser.parse_args(argv)
     if not args.online:parser.error('需要 --online 才會連線下載官方資源')
     from wlre.services.world.dynamic_bundle_runtime import prepare_dynamic_runtime
@@ -30,7 +31,16 @@ def main(argv=None):
         if identity!=runtime.catalog_identity:raise ValueError('官方資源已變動，拒絕混用')
         catalog=load_verified_catalog(manifests['DataPackage'],root/'bundles',lru_cache(maxsize=3)(_loader),
                                       root,identity,runtime.texts,runtime.items)
-    print(json.dumps(dict(status='verified',catalog_key=runtime.catalog_identity.key,
+    guild=None
+    if args.guild:
+        from wlre.services.world.guild_catalog import quote
+        if not runtime.guild_catalog:raise ValueError(runtime.guild_catalog_status)
+        rules=runtime.guild_catalog
+        guild=dict(level_count=len(rules['levels']),
+                   primary_quote=quote(rules,8,{},False),
+                   price_kinds={str(i):rules['sell'][i]['second_kind'] for i in (8,9,10)},
+                   sources=rules['sources'])
+    print(json.dumps(dict(status='verified',guild=guild,catalog_key=runtime.catalog_identity.key,
         packages={p.name:p.full_version for p in runtime.catalog_identity.packages},
         task_count=len(catalog['tasks']),reward_count=len(catalog['rewards']),
         cycles=sorted({r['cycle'] for r in catalog['tasks']}),

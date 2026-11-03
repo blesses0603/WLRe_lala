@@ -166,6 +166,21 @@ class DynamicBundleRuntimeTests(unittest.TestCase):
         self.assertIsNone(runtime.daily_tasks)
         self.assertEqual(len(runtime.items),1)
 
+    def test_guild_catalog_uses_verified_sqlite_and_rejects_changed_price_layout(self):
+        from test_guild_actions import raw_catalogs
+        from wlre.services.world.guild_catalog import TABLES,quote
+        self.raw.update(raw_catalogs())
+        manifest=self.manifests['DataPackage']
+        manifest.index['assets'].extend(dict(path=_ASSET_ROOT+t+'.bytes',
+                        bundle_name=manifest.index['bundles'][0]['name']) for t in TABLES)
+        runtime=dynamic.activate_for_official(self.remote,**self.kwargs())
+        self.assertIsNotNone(runtime.guild_catalog)
+        self.assertEqual(quote(runtime.guild_catalog,8,{},False)['price'],150)
+        self.raw['FormulaData_C']+=b'!'
+        runtime=dynamic.activate_for_official(self.remote,**self.kwargs())
+        self.assertIsNone(runtime.guild_catalog)
+        self.assertEqual(len(runtime.items),1)
+
     def test_unknown_smith_layout_and_corrupt_item_table_refuse_activation(self):
         for name in ('SmithData_C', 'ItemData_C'):
             with self.subTest(name=name):
