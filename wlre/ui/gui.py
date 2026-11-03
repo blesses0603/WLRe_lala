@@ -240,6 +240,7 @@ class App(LoginController, AccountController,
         self.companion_panel.render({})
         self.expedition_panel.render({})
         self.benefits_panel.render({})
+        self.other_features_panel.render({})
         self.instance_panel.render({}, live=False)
         self.overview_panel.update_state({})
         self.live_active=True
@@ -297,6 +298,7 @@ class App(LoginController, AccountController,
         if self.companion_panel.winfo_ismapped():self.companion_panel.render(state)
         self.expedition_panel.render(state)
         self.benefits_panel.render(state)
+        self.other_features_panel.render(state)
         self.instance_panel.render(state, live=self.live_active)
         if self.party_panel.winfo_ismapped():self.party_panel.render(state)
         else:

@@ -50,9 +50,13 @@ class DailyTaskPanel(ttk.Frame):
         selected=self.tree.selection();row=self.rows.get(selected[0]) if selected else None
         if not row:return
         kind=row['condition_kind']
-        if kind in (9,10,16):
+        if kind in (9,10):
+            self.app.open_feature('other')
+            panel=self.app.other_features_panel
+            panel.tabs.select(panel.ark_panel if kind==9 else panel.guild_panel)
+        elif kind==16:
             panel=self.app.benefits_panel
-            panel.tabs.select(panel.ark_panel if kind==9 else panel.guild_panel if kind==10 else panel.cube)
+            panel.tabs.select(panel.cube)
         else:self.app.open_feature({7:'alchemy',8:'crafting',12:'instance'}[kind])
 
     def render(self,state):

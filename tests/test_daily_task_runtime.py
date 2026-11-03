@@ -230,7 +230,7 @@ class DailyTaskUITests(unittest.TestCase):
 
     def test_tabs_render_real_rows_selection_and_claim_have_no_confirmation_dialog(self):
         self.assertEqual([self.panel.tabs.tab(p,'text') for p in self.panel.tabs.tabs()],
-                         ['魔方','每日任務','每週任務','組織','方舟'])
+                         ['魔方','每日任務','每週任務'])
         panel=self.panel.daily_panel
         panel.tree.selection_set('200');panel.select();self.root.update()
         self.app.send.assert_not_called()
