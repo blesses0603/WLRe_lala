@@ -8,6 +8,7 @@ class StarArkPanel(ttk.Frame):
     def __init__(self,parent,app):
         super().__init__(parent,padding=12);self.app=app;self.signature=None;self.config_identity=None;self.rows={}
         self.enabled=tk.BooleanVar(value=True);self.dispatch=tk.BooleanVar(value=True);self.fights=tk.BooleanVar(value=True)
+        self.questions=tk.BooleanVar(value=True)
         self.hours=tk.StringVar(value='1');self.budget=tk.StringVar(value='120')
         self.summary=tk.StringVar();self.status=tk.StringVar();self.question=tk.StringVar()
         self.columnconfigure(0,weight=1)
@@ -17,7 +18,7 @@ class StarArkPanel(ttk.Frame):
         self.summary_label=ttk.Label(self,textvariable=self.summary,wraplength=720,width=1)
         self.summary_label.grid(row=1,column=0,sticky='ew',pady=3)
         bar=ttk.Frame(self);bar.grid(row=2,column=0,sticky='ew',pady=3)
-        for text,var in (('自動接續每日方舟任務',self.enabled),('派遣情報員',self.dispatch),('戰鬥事件',self.fights)):
+        for text,var in (('自動接續每日方舟任務',self.enabled),('派遣情報員',self.dispatch),('戰鬥事件',self.fights),('問答自動答題',self.questions)):
             ttk.Checkbutton(bar,text=text,variable=var).pack(side='left',padx=(0,12))
         form=ttk.Frame(self);form.grid(row=3,column=0,sticky='ew',pady=3)
         ttk.Label(form,text='採集小時').pack(side='left')
@@ -73,7 +74,7 @@ class StarArkPanel(ttk.Frame):
         try:hours,budget=int(self.hours.get()),int(self.budget.get())
         except ValueError:self.status.set('請輸入整數小時與星力上限');return
         self.act('settings',enabled=self.enabled.get(),dispatch_enabled=self.dispatch.get(),
-                 fights_enabled=self.fights.get(),hours=hours,budget=budget)
+                 fights_enabled=self.fights.get(),questions_enabled=self.questions.get(),hours=hours,budget=budget)
 
     def selection(self):
         selected=self.tree.selection();row=self.rows.get(selected[0]) if selected else None
@@ -96,7 +97,7 @@ class StarArkPanel(ttk.Frame):
         config=d.get('role'),d.get('settings_revision',0),d.get('catalog_token')
         if config!=self.config_identity:
             self.config_identity=config
-            for var,key in ((self.enabled,'enabled'),(self.dispatch,'dispatch_enabled'),(self.fights,'fights_enabled')):
+            for var,key in ((self.enabled,'enabled'),(self.dispatch,'dispatch_enabled'),(self.fights,'fights_enabled'),(self.questions,'questions_enabled')):
                 var.set(d.get(key,True))
             self.hours.set(str(d.get('hours',1)));self.budget.set(str(d.get('budget',120)))
         ship=d.get('ship',{});coin=d.get('starcoin',{});q=d.get('quote')

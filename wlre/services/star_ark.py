@@ -10,7 +10,7 @@ from wlre.storage.ark_questions import QuestionStore,identity as question_identi
 
 
 def defaults():
-    return dict(enabled=True,dispatch_enabled=True,fights_enabled=True,pending=None,uncertain=False,
+    return dict(enabled=True,dispatch_enabled=True,fights_enabled=True,questions_enabled=True,pending=None,uncertain=False,
         role=None,ready=False,events_ready=False,planet=0,explore=0,agents={},ship={},events={},main_events={},
         starcoin=dict(ready=False,reliable=False,amount=None,revision=0),
         budget=120,hours=1,reserved=0,confirmed=0,settings_revision=0,catalog_token=None,
@@ -383,10 +383,13 @@ def command(state,value,world_acknowledged,now=None):
         if d['pending']:raise ProtocolError('方舟操作待確認時不能修改設定')
         for k in ('enabled','dispatch_enabled','fights_enabled'):
             if type(value.get(k)) is not bool:raise ProtocolError('方舟自動設定必須為布林值')
+        if type(value.get('questions_enabled',d['questions_enabled'])) is not bool:
+            raise ProtocolError('問答自動設定必須為布林值')
         if type(value.get('budget')) is not int or not 0<=value['budget']<=0xffffffff:
             raise ProtocolError('星力上限必須為非負整數')
         if type(value.get('hours')) is not int or not 1<=value['hours']<=6:raise ProtocolError('採集時間必須為 1～6 小時')
         d.update({k:value[k] for k in ('enabled','dispatch_enabled','fights_enabled','budget','hours')})
+        d['questions_enabled']=value.get('questions_enabled',d['questions_enabled'])
         d.update(settings_revision=d['settings_revision']+1,status='已套用方舟設定');return []
     if action=='answer':
         p=d['pending'];q=d['question'];index=value.get('index')
@@ -435,7 +438,7 @@ def tick(state,world_acknowledged,now=None):
             d.update(pending=None,question=None,status='伺服器已確認方舟事件完成；每日進度另以 S124 為準')
         elif p['due'] is not None and now>=p['due']:freeze(d,'方舟操作逾時，結果不明')
         elif (p['kind']=='question' and d['question'] and d['question']['selected'] is None
-              and d['enabled'] and state.automation['enabled']):
+              and d['enabled'] and d['questions_enabled'] and state.automation['enabled']):
             q=d['question']
             if q.get('known_answer') is not None:
                 _remember_question(state,p,q)
@@ -469,13 +472,17 @@ def tick(state,world_acknowledged,now=None):
     if dispatch_needed and d['dispatch_enabled']:
         try:return begin(state,'dispatch',True,now=now)
         except ProtocolError as exc:d['status']=str(exc)
-    if events_needed and d['fights_enabled']:
+    if events_needed and (d['fights_enabled'] or d['questions_enabled']):
         failures=[]
         for event in sorted(d['events'].values(),key=lambda e:e['index']):
-            if not event['id'] or event['kind']!=1:continue
-            try:return begin(state,'fight',True,event,now)
+            if not event['id']:continue
+            action=None
+            if event['kind']==1 and d['fights_enabled']:action='fight'
+            elif event['kind']==3 and d['questions_enabled']:action='question'
+            if action is None:continue
+            try:return begin(state,action,True,event,now)
             except ProtocolError as exc:failures.append(str(exc))
-        d['status']='尚有方舟探索次數；'+('；'.join(dict.fromkeys(failures)) if failures else '目前沒有可自動執行的戰鬥事件，請查看事件限制')
+        d['status']='尚有方舟探索次數；'+('；'.join(dict.fromkeys(failures)) if failures else '目前沒有可自動執行的戰鬥／問答事件，請查看事件限制')
     elif not dispatch_needed and not events_needed:d['status']='當日方舟任務已達標或未列入當期任務'
     return []
 

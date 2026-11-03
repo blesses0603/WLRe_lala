@@ -4,6 +4,7 @@ from pathlib import Path
 import sqlite3
 import tempfile
 import unittest
+from contextlib import closing
 
 from wlre.storage.ark_questions import QuestionStore
 
@@ -19,7 +20,7 @@ class QuestionStoreTests(unittest.TestCase):
 
     def test_unknown_questions_are_saved_without_inventing_answers(self):
         self.assertEqual(self.store.observe(self.token, 1, self.question), (None, 'unknown'))
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db:
             answer, source = db.execute('SELECT answer,source FROM questions').fetchone()
         self.assertIsNone(answer); self.assertEqual(source, 'observed')
 
@@ -79,9 +80,9 @@ class QuestionStoreTests(unittest.TestCase):
         self.assertEqual(self.path.read_bytes(), b'corrupt database')
 
     def test_future_schema_is_not_replaced(self):
-        with sqlite3.connect(self.path) as db: db.execute('PRAGMA user_version=99')
+        with closing(sqlite3.connect(self.path)) as db: db.execute('PRAGMA user_version=99')
         with self.assertRaises(ValueError): self.store.observe(self.token, 1, self.question)
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db:
             self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], 99)
 
 

@@ -278,6 +278,63 @@ class StarArkTests(unittest.TestCase):
         self.assertEqual(ark.tick(self.state,True,5),[])
         self.assertIn('衝突',self.state.star_ark['question_store_status'])
 
+    def test_scheduler_requests_question_then_sends_known_answer_without_manual_commands(self):
+        from wlre.network.service_scheduler import advance_services
+        self.confirm_question();self.feed(events(3,3))
+        self.state.star_ark.update(enabled=True,dispatch_enabled=False,fights_enabled=False)
+        self.state.daily_tasks['enabled']=False
+        sent=[]
+        def advance():
+            with patch('wlre.services.daily_tasks.tick',return_value=[]):
+                advance_services(self.logic,self.state,sent.append,lambda p:None,lambda e:None,None)
+        advance();advance()
+        self.assertEqual(sent,[Packet(191,6,b'\x01\x03\x00')])
+        self.feed(Packet(191,11,struct.pack('<IBII4I',20,6,8,10,24,23,21,22)))
+        advance();advance()
+        self.assertEqual(sent,[Packet(191,6,b'\x01\x03\x00'),Packet(191,7,b'\x04')])
+        self.feed(Packet(191,12,b'\x01\x04'));advance()
+        self.assertIsNotNone(self.state.star_ark['pending'])
+        self.feed(Packet(191,10,b'\x01\x03\x00'));advance()
+        self.assertIsNotNone(self.state.star_ark['pending'])
+        self.progress(1,2);advance();advance()
+        self.assertIsNone(self.state.star_ark['pending'])
+        self.assertEqual(len(sent),2)
+
+    def test_automatic_unknown_question_requests_once_then_waits_for_manual_answer(self):
+        self.feed(events(3,2))
+        self.state.star_ark.update(enabled=True,dispatch_enabled=False,fights_enabled=False)
+        self.assertEqual(ark.tick(self.state,True,1),[Packet(191,6,b'\x01\x02\x00')])
+        self.assertEqual(ark.tick(self.state,True,2),[])
+        self.feed(Packet(191,11,struct.pack('<IBII4I',20,6,8,10,21,22,23,24)))
+        self.assertEqual(ark.tick(self.state,True,10000),[])
+        self.assertIsNone(self.state.star_ark['pending']['due'])
+        self.assertIsNone(self.state.star_ark['question']['selected'])
+
+    def test_automatic_question_respects_toggles_pause_and_daily_goal(self):
+        for mode in ('questions','global','local','goal'):
+            with self.subTest(mode=mode):
+                self.setUp();self.feed(events(3,2))
+                self.state.star_ark.update(enabled=True,dispatch_enabled=False,fights_enabled=False)
+                if mode=='questions':self.state.star_ark['questions_enabled']=False
+                elif mode=='global':self.state.automation['enabled']=False
+                elif mode=='local':self.state.star_ark['enabled']=False
+                else:self.progress(1,3)
+                self.assertEqual(ark.tick(self.state,True,1),[])
+                self.assertIsNone(self.state.star_ark['pending'])
+
+    def test_question_setting_is_independent_and_legacy_settings_preserve_it(self):
+        value=dict(action='settings',enabled=True,dispatch_enabled=False,fights_enabled=True,hours=1,budget=120)
+        ark.command(self.state,{**value,'questions_enabled':False},True)
+        ark.command(self.state,value,True)
+        self.assertFalse(self.state.star_ark['questions_enabled'])
+        with self.assertRaises(ProtocolError):ark.command(self.state,{**value,'questions_enabled':1},True)
+
+    def test_question_switch_blocks_known_answer_but_manual_answer_remains_available(self):
+        self.confirm_question();self.open_question(event_id=3,now=4)
+        self.state.star_ark.update(enabled=True,questions_enabled=False)
+        self.assertEqual(ark.tick(self.state,True,5),[])
+        self.assertEqual(ark.command(self.state,dict(action='answer',index=2),True,6),[Packet(191,7,b'\x02')])
+
     def test_main_items_shops_are_not_auto_executed_and_global_pause_preserves_intent(self):
         self.state.star_ark.update(enabled=True,dispatch_enabled=False)
         self.feed(events(2,2));self.assertEqual(ark.tick(self.state,True,1),[])
@@ -394,8 +451,9 @@ class ArkGuiTests(unittest.TestCase):
         app=SimpleNamespace(live_active=True,send=Mock())
         panel=StarArkPanel(self.root,app);d=ark.defaults()
         panel.render(dict(phase='world_ready',star_ark=d))
-        panel.budget.set('240');panel.settings()
+        panel.budget.set('240');panel.questions.set(False);panel.settings()
         self.assertEqual(app.send.call_args.args[0]['budget'],240)
+        self.assertFalse(app.send.call_args.args[0]['questions_enabled'])
         d['status']='收到新狀態';panel.render(dict(phase='world_ready',star_ark=d))
         self.assertEqual(panel.budget.get(),'240')
         panel.pause.invoke();self.assertEqual(app.send.call_args.args[0]['action'],'pause')

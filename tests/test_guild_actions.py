@@ -236,6 +236,7 @@ class GuildCatalogTests(unittest.TestCase):
 
     def test_database_bytes_must_match_the_independent_bundle_digest(self):
         import sqlite3,hashlib,tempfile
+        from contextlib import closing
         from pathlib import Path
         from wlre.services.world.resource_database import record_inventory,read_catalog_tables
         raw=raw_catalogs()['FormulaData_C']
@@ -245,7 +246,7 @@ class GuildCatalogTests(unittest.TestCase):
             self.assertEqual(read_catalog_tables(db,'a'*64,('guild_formulas',),
                 expected_digests={'FormulaData_C.bytes':digest})['guild_formulas'][10015]['params'][0],150)
             changed=bytearray(raw);changed[7:9]=(1).to_bytes(2,'little');changed=bytes(changed)
-            with sqlite3.connect(db) as con:
+            with closing(sqlite3.connect(db)) as con, con:
                 con.execute('UPDATE resources SET data=?,sha256=? WHERE name=?',
                             (changed,hashlib.sha256(changed).hexdigest(),'FormulaData_C.bytes'))
             with self.assertRaisesRegex(ValueError,'verified Bundle'):
