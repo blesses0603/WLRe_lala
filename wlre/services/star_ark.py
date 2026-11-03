@@ -208,7 +208,7 @@ def apply_ark(state,event):
         if any(i not in texts for i in [event['question']]+event['options']):
             freeze(d,'問答缺少同版題目文字');return
         d['question']={**event,'selected':None,'text':texts[event['question']],
-                       'labels':[texts[i] for i in event['options']]};p['due']=time.monotonic()+120
+                       'labels':[texts[i] for i in event['options']]};p['due']=None
         d['status']='等待選擇問答答案；沒有已確認答案時不猜題'
     elif kind=='ark_answer_result' and p and p['kind']=='question':
         q=d['question']
@@ -388,7 +388,7 @@ def tick(state,world_acknowledged,now=None):
         elif (p['kind'] in ('fight','question') and p['complete'] and p['result'] and _task_ack(state,p)
               and not state.battle.get('active') and _bag_ack(state,p)):
             d.update(pending=None,question=None,status='伺服器已確認方舟事件完成；每日進度另以 S124 為準')
-        elif now>=p['due']:freeze(d,'方舟操作逾時，結果不明')
+        elif p['due'] is not None and now>=p['due']:freeze(d,'方舟操作逾時，結果不明')
         elif (p['kind']=='question' and d['question'] and d['question']['selected'] is None
               and d['enabled'] and state.automation['enabled']):
             q=d['question'];answer=d['answers'].get(q['question'])

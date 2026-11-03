@@ -199,6 +199,31 @@ class StarArkTests(unittest.TestCase):
         self.assertEqual(ark.tick(self.state,True,2),[])
         self.assertEqual(self.state.star_ark['reserved'],0)
 
+    def test_reading_unknown_question_has_no_deadline_but_sent_answer_still_times_out(self):
+        self.feed(events(3,2));ark.tick(self.state,True,0)
+        ark.command(self.state,dict(action='question',index=1),True,1)
+        self.feed(Packet(191,11,struct.pack('<IBII4I',20,6,8,10,21,22,23,24)))
+        self.assertIsNone(self.state.star_ark['pending']['due'])
+        self.assertEqual(ark.tick(self.state,True,10000),[])
+        self.assertIsNotNone(self.state.star_ark['pending'])
+        self.assertFalse(self.state.star_ark['uncertain'])
+        self.assertEqual(ark.command(self.state,dict(action='answer',index=3),True,10000),[Packet(191,7,b'\x03')])
+        self.assertEqual(self.state.star_ark['pending']['due'],10020)
+        ark.tick(self.state,True,10021)
+        self.assertTrue(self.state.star_ark['uncertain'])
+
+    def test_waiting_for_human_answer_still_invalidates_on_day_or_role_change(self):
+        for change in ('role','day'):
+            with self.subTest(change=change):
+                self.setUp();self.feed(events(3,2));ark.tick(self.state,True,0)
+                ark.command(self.state,dict(action='question',index=1),True,1)
+                self.feed(Packet(191,11,struct.pack('<IBII4I',20,6,8,10,21,22,23,24)))
+                if change=='role':self.state.player['role_id']=2
+                else:self.state.daily_tasks['generation']+=1
+                ark.tick(self.state,True,2)
+                self.assertTrue(self.state.star_ark['uncertain'])
+                with self.assertRaises(ProtocolError):ark.command(self.state,dict(action='answer',index=3),True,3)
+
     def test_real_session_and_scheduler_send_once_and_never_start_dungeons(self):
         from wlre.network.service_scheduler import advance_services
         self.logic.command(dict(type='star_ark',action='settings',enabled=True,dispatch_enabled=True,
@@ -287,3 +312,29 @@ class ArkGuiTests(unittest.TestCase):
         d['status']='收到新狀態';panel.render(dict(phase='world_ready',star_ark=d))
         self.assertEqual(panel.budget.get(),'240')
         panel.pause.invoke();self.assertEqual(app.send.call_args.args[0]['action'],'pause')
+
+    def test_long_question_scrolls_while_all_answers_and_status_stay_visible(self):
+        from wlre.ui.star_ark_ui import StarArkPanel
+        from wlre.ui.theme_styles import apply_styles
+        from tkinter import ttk
+        apply_styles(ttk.Style(self.root),self.root,'TkDefaultFont',bg='#102638',panel='#16364b',
+                     ink='#eff7ff',muted='#a8c2d1',cyan='#62c9e0')
+        app=SimpleNamespace(live_active=True,send=Mock());panel=StarArkPanel(self.root,app)
+        panel.pack(fill='both',expand=True);self.root.deiconify()
+        d=ark.defaults();d.update(pending=dict(kind='question'),
+            question=dict(text='長題目測試。'*500,labels=['答案甲','答案乙','答案丙','答案丁'],selected=None),
+            status='等待選擇問答答案；沒有已確認答案時不猜題')
+        panel.render(dict(phase='world_ready',star_ark=d))
+        for size in ('860x560','1024x600','1080x650'):
+            with self.subTest(size=size):
+                self.root.geometry(size);self.root.update()
+                bottom=panel.winfo_rooty()+panel.winfo_height()
+                for widget in (*panel.answers,panel.status_label):
+                    self.assertTrue(widget.winfo_ismapped())
+                    self.assertLessEqual(widget.winfo_rooty()+widget.winfo_height(),bottom)
+                self.assertLess(panel.question_text.yview()[1],1)
+                self.assertEqual(str(panel.question_text['state']),'disabled')
+                self.assertIn('請選下方答案',panel.event_button['text'])
+        app.send.assert_not_called()
+        panel.answers[2].invoke()
+        app.send.assert_called_once_with(dict(type='star_ark',action='answer',index=3))
