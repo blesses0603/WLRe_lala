@@ -1,0 +1,38 @@
+name: LaLa agent inventory (read-only)
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 3 * * *'
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+  issues: read
+concurrency:
+  group: lala-agent-inventory
+  cancel-in-progress: false
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Gather safe GitHub state
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p agent-report
+          gh api "repos/$GH_REPO" --jq '{full_name,default_branch,private,archived}' > agent-report/repository.json
+          gh api "repos/$GH_REPO/pulls?state=open&per_page=50" --jq '[.[] | {number,title,draft,head:.head.ref,base:.base.ref,updated_at}]' > agent-report/pulls.json
+          gh api "repos/$GH_REPO/actions/runs?per_page=30" --jq '[.workflow_runs[] | {id,name,head_branch,conclusion,status,html_url,created_at}]' > agent-report/runs.json
+          gh api "repos/$GH_REPO/issues?state=open&per_page=50" --jq '[.[] | select(.pull_request == null) | {number,title,labels:[.labels[].name],updated_at}]' > agent-report/issues.json
+          printf '## LaLa read-only inventory\n\nRepository: %s\n' "$GH_REPO" >> "$GITHUB_STEP_SUMMARY"
+          echo 'No code changes, API calls to AI models, releases, or PR merges were performed.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: lala-agent-inventory
+          path: agent-report/
+          retention-days: 7
