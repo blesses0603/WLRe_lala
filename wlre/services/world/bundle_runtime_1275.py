@@ -437,6 +437,8 @@ def load_verified_bundle_runtime(*, sync_root=None, _verified_context=None):
             except (ValueError, TypeError, KeyError):
                 portal_schema_report['DoorLinkData_C'] = {
                     'status': 'layout_unrecognized', 'can_send_packets': False}
+        from wlre.services.world.event_portals import reconcile_event_portals
+        reconcile_event_portals(doors, scene_rows, portal_positions, portal_destinations)
         from wlre.services.world.boundary_portals import reconcile_route_conflicts
         reconcile_route_conflicts(portal_positions, portal_destinations, portal_extra_routes,
             portal_link_evidence)

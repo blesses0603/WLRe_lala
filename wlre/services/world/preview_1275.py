@@ -288,6 +288,8 @@ def load_preview(data_archive, eve_archive):
             portal_extra_routes = read_only_door_link_routes(raw_routes, stages)
     except (ValueError, TypeError, KeyError):
         pass
+    from wlre.services.world.event_portals import reconcile_event_portals
+    reconcile_event_portals(doors, stages, portal_positions, portal_destinations)
     from wlre.services.world.boundary_portals import reconcile_route_conflicts
     reconcile_route_conflicts(portal_positions, portal_destinations, portal_extra_routes,
         portal_link_evidence)
