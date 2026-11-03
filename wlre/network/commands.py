@@ -39,6 +39,12 @@ def dispatch(logic,command,state):
         logic.selected = True
         state.phase = 'role_selected_awaiting_world'
         return [packet]
+    if kind=='time_cube':
+        from wlre.services.time_cube import command as cube_command
+        if command.get('action')=='open' and not logic.world_acknowledged:
+            raise ProtocolError('等待世界初始化確認')
+        return cube_command(state,command)
+    if kind=='automatic_flows':return logic.flows.set_enabled(state,command.get('enabled'))
     if not logic.world_acknowledged: raise ProtocolError('world initialization has not completed')
     reason=command_reason(state,command,maintenance_pending=bool(logic.maintenance.pending),
                           maintenance_uncertain=logic.maintenance.uncertain)
@@ -138,7 +144,7 @@ def dispatch(logic,command,state):
     if kind=='stop_alchemy':
         logic.alchemy.stop(state)
         return []
-    if kind in ('start_roaming','walk','portal_walk','portal_direct'):
+    if kind in ('start_roaming','walk','portal_walk','portal_direct','npc_approach'):
         team=own_team(state)
         if team and team['leader_id']!=state.player.get('role_id'):raise ProtocolError('隊員跟隨隊長，請先離隊再自主移動')
     if kind == 'set_party_guard':
@@ -167,6 +173,12 @@ def dispatch(logic,command,state):
     if kind in ('stop_roaming','stop_walk'):
         logic.portal_travel.cancel(state)
         logic.roaming.stop(state,logic.movement)
+        return []
+    if kind == 'npc_approach':
+        from wlre.services.world.npc_approach import approach
+        if logic.roaming.enabled:logic.roaming.stop(state,logic.movement,'改為前往 NPC 附近')
+        approach(state,logic.movement,command,time.monotonic())
+        logic.portal_travel.cancel(state,'改為前往 NPC 附近')
         return []
     if kind == 'walk':
         logic.portal_travel.cancel(state,'改為手動移動')

@@ -6,12 +6,34 @@ purchase, or server authority is implemented in this UI mixin.
 import tkinter as tk
 from tkinter import ttk, messagebox
 from wlre.services.world.npc_catalog import npc_detail
+from wlre.services.world.npc_position import interaction_position_problem
 from wlre.services.world.npc_talk import dialogue_text
 from wlre.services.world.npc_shop import shop_catalog
 from wlre.services.world.npc_item_data import item_catalog, sellable
 
 
 class NPCInteractionMixin:
+    def sync_npc_action_menu(self):
+        """Mirror the original guarded action states immediately before opening."""
+        for position,(_,button) in enumerate(self._npc_menu_buttons):
+            self.npc_action_menu.entryconfigure(position,state=str(button.cget('state')))
+
+    def show_npc_details(self):
+        """Show complete status text without growing the compact sidebar."""
+        from tkinter.scrolledtext import ScrolledText
+        from wlre.ui.window_layout import configure_dialog
+        previous=getattr(self,'npc_detail_window',None)
+        if previous is not None and previous.winfo_exists():previous.destroy()
+        window=tk.Toplevel(self)
+        window.title('NPC 資訊')
+        configure_dialog(window,560,320)
+        content=ScrolledText(window,wrap='word',background='#203f53',foreground='#f4e4b5',
+                             borderwidth=0,highlightthickness=0,padx=10,pady=10)
+        content.pack(fill='both',expand=True)
+        content.insert('1.0',self.npc_message.get())
+        content.configure(state='disabled')
+        self.npc_detail_window=window
+
     def choose_npc(self,event=None):
         selected=self.npc_list.curselection()
         if not selected or selected[0]>=len(self.npc_rows):return
@@ -19,6 +41,31 @@ class NPCInteractionMixin:
         self.select_npc(npc)
         if npc['x'] is not None and 0<=npc['x']<=65535 and 0<=npc['y']<=65535:
             self.on_pick(self.selected_id,npc['x'],npc['y'])
+
+    def approach_npc(self,event=None):
+        """Double-click requests movement only; interaction remains explicit."""
+        if event is not None:
+            position=self.npc_list.nearest(event.y)
+            bounds=self.npc_list.bbox(position)
+            if bounds is None or not bounds[1]<=event.y<bounds[1]+bounds[3]:return 'break'
+        else:
+            selected=self.npc_list.curselection()
+            if not selected:return 'break'
+            position=selected[0]
+        if not 0<=position<len(self.npc_rows):return 'break'
+        npc=self.npc_rows[position]
+        self.select_npc(npc)
+        if not npc.get('verified'):
+            self.npc_message.set('此 NPC 身分尚未核對，無法自動前往')
+        elif npc.get('scene')!=self.state.get('player',{}).get('scene'):
+            self.npc_message.set('請切回角色目前地圖，再前往 NPC')
+        elif self.on_npc is None:
+            self.npc_message.set('NPC 移動功能尚未接上')
+        else:
+            accepted=self.on_npc({'type':'npc_approach','scene':npc['scene'],
+                                 'npc_index':npc['npc_index'],'npc_id':npc['npc_id']})
+            if accepted is not False:self.npc_message.set('已要求移動至 '+npc['name']+' 附近')
+        return 'break'
 
     def select_npc(self,npc):
         self.selected_npc=npc
@@ -38,16 +85,14 @@ class NPCInteractionMixin:
         npc=self.selected_npc
         current=self.state or {}
         player=current.get('player',{})
-        loc=current.get('location',{})
-        confirmed=loc.get('confirmed') or {}
         battle=current.get('battle',{})
         dialogue=current.get('npc_dialogue',{})
         post=(battle.get('post_event') or {}).get('status')
-        moving=(current.get('local_movement') or {}).get('status') in ('running','finished')
+        position_ready=interaction_position_problem(current) is None
         can_start=(self.on_npc is not None and npc is not None and npc.get('verified')
                    and npc.get('event_count',0)>0 and current.get('phase')=='world_ready'
-                   and npc.get('scene')==player.get('scene')==confirmed.get('scene')
-                   and loc.get('confirmed_is_current') and not moving
+                   and npc.get('scene')==player.get('scene') and position_ready
+                   and not dialogue.get('active')
                    and not current.get('roaming',{}).get('enabled')
                    and not battle.get('active') and post in (None,'completed')
                    and not current.get('event_flow',{}).get('blocked'))
@@ -84,13 +129,24 @@ class NPCInteractionMixin:
         self.npc_options_button.configure(
             state='normal' if choices is not None and self.on_npc_next is not None else 'disabled')
 
+    def present_automatic_npc(self):
+        info=self.state.get('npc_dialogue',{})
+        if not self.state.get('automation',{}).get('enabled') or not info.get('active'):
+            self._automatic_npc_view=None
+            return
+        if info.get('phase')!='choice_unavailable' or info.get('scene')!=self.state.get('player',{}).get('scene'):
+            self._automatic_npc_view=None
+            return
+        key=(info.get('scene'),info.get('npc_index'),info.get('option_index'),info.get('effect_packet'))
+        if getattr(self,'_automatic_npc_view',None)==key:return
+        if str(self.npc_shop_button.cget('state'))=='normal':
+            self._automatic_npc_view=key;self.show_npc_shop()
+        elif str(self.npc_options_button.cget('state'))=='normal':
+            self._automatic_npc_view=key;self.show_npc_choices()
+
     def interact_npc(self):
         npc=self.selected_npc
         if npc is None or str(self.npc_talk_button.cget('state'))!='normal':
-            return
-        if not messagebox.askyesno('確認 NPC 互動',
-                '只送出一次官方 C20-1。NPC 事件可能啟動戰鬥、任務或未支援的選項。'
-                '\n不會自動靠近、購物或重送封包。確定要互動嗎？',parent=self):
             return
         self.on_npc({'type':'npc_start','confirmed':True,'scene':npc['scene'],
                      'npc_index':npc['npc_index'],'npc_id':npc['npc_id'],
@@ -213,11 +269,6 @@ class NPCInteractionMixin:
                              index=self.npc_interacts)
         if current!=catalog:
             return
-        if not messagebox.askyesno('確認關閉商店',
-                '官方 C20-9 空內容關閉商店，不會購買／出售任何物品。'
-                '\n只送出一次，需等待伺服器 S20-8；確認關閉嗎？',
-                parent=self.npc_shop_window or self):
-            return
         if self.npc_shop_window is not None and self.npc_shop_window.winfo_exists():
             self.npc_shop_window.destroy()
             self.npc_shop_window=None
@@ -261,7 +312,7 @@ class NPCInteractionMixin:
             btn=ttk.Button(contents,text=label,command=lambda item=choice:
                            self.choose_npc_reply(options,item),width=48)
             btn.pack(fill='x',pady=3)
-        ttk.Label(panel,text='僅手動確認後送出一次；任務效果由伺服器決定。',
+        ttk.Label(panel,text='點選選項後送出一次；任務效果由伺服器決定。',
                   wraplength=470).pack(fill='x',pady=(8,0))
 
     def choose_npc_reply(self, options, item):
@@ -274,11 +325,6 @@ class NPCInteractionMixin:
         fresh=self.npc_interacts.choices(options['scene'],options['index'],self.npc_talks)
         if fresh!=options or item not in options['options']:
             return
-        if not messagebox.askyesno('確認 NPC 選項',
-                f"你選擇：「{item['text']}」\n此操作可能觸發任務、物品或戰鬥效果。"
-                "\n只會發送一次，不會自動重試。確定送出嗎？",
-                parent=self.npc_choice_window or self):
-            return
         if self.npc_choice_window is not None and self.npc_choice_window.winfo_exists():
             self.npc_choice_window.destroy()
             self.npc_choice_window=None
@@ -288,10 +334,6 @@ class NPCInteractionMixin:
 
     def close_npc_option(self):
         if str(self.npc_close_button.cget('state'))!='normal':
-            return
-        if not messagebox.askyesno('確認關閉 NPC 選項',
-                '使用官方 C20-9 40 關閉這個選項清單，不選擇任何選項。'
-                '\n需等待伺服器 S20-8；逾時不會重送。確定嗎？',parent=self):
             return
         self.on_npc_next({'type':'npc_close_choice','confirmed':True})
 
@@ -337,6 +379,7 @@ class NPCInteractionMixin:
         win.transient(self.winfo_toplevel())
 
     def show_dialogue_status(self):
+        self.present_automatic_npc()
         dialogue=self.state.get('npc_dialogue',{})
         if dialogue.get('active'):
             phase=dialogue.get('phase')
@@ -349,14 +392,16 @@ class NPCInteractionMixin:
                         + ('…（可查看全文）' if len(content)>85 else ''))
                 else:
                     self.npc_message.set(
-                        f"對話文字 ID {text_id}；尚無已驗證的文字表，請手動接續。")
+                        f"對話文字 ID {text_id}；尚無已驗證的文字表。")
             elif phase=='continue':
-                self.npc_message.set('伺服器允許繼續，請按下一段對話。')
+                self.npc_message.set('伺服器允許繼續，將自動接續。' if dialogue.get('auto_continue') else '伺服器允許繼續，請按下一段對話。')
             elif phase=='choice_unavailable' and (
                     (shop_catalog(dialogue.get('scene'),dialogue.get('option_index'),
                      index=self.npc_interacts) is not None)):
                 self.npc_message.set('NPC 商店已開啟：可查看官方商品基礎價與不可販售標記；'
                                      '折扣與金幣同步未確認，不會購買或販售。')
+            elif phase=='choice_unavailable' and str(self.npc_options_button.cget('state'))=='normal':
+                self.npc_message.set('NPC 選項已就緒；選定目標後自動接續。')
             elif phase=='closing_shop':
                 self.npc_message.set('已要求關閉 NPC 商店，等待伺服器確認；不會重送。')
             elif phase=='choice_unavailable':
@@ -364,7 +409,7 @@ class NPCInteractionMixin:
                     f"選項索引 {dialogue.get('option_index')} 尚無可信資料；"
                     "不會自行選擇；可手動按「關閉選項」，或重新登入同步。")
             elif phase=='awaiting_choice':
-                self.npc_message.set('已送出一般 NPC 選項；等待伺服器回覆，不會重送。')
+                self.npc_message.set('已送出 NPC 選項，將接續一次以取得後續內容；不會重送。')
             elif phase=='closing':
                 self.npc_message.set('已要求關閉選項，等待伺服器 S20-8；不自動重送。')
             elif phase=='effect_unavailable':

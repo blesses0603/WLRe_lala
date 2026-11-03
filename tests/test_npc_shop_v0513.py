@@ -159,7 +159,7 @@ class NPCShopUITests(unittest.TestCase):
             view.show_npc_shop()
             self.assertTrue(view.npc_shop_window.winfo_exists())
             send.assert_not_called()
-            with patch('wlre.ui.home_map.messagebox.askyesno',return_value=True):
+            with patch('wlre.ui.home_map.messagebox.askyesno',side_effect=AssertionError('不應跳出二次確認')):
                 view.close_npc_shop_dialog(shop_catalog(10080,6))
             send.assert_called_once_with({'type':'npc_close_shop','confirmed':True})
         finally:

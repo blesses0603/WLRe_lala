@@ -60,10 +60,15 @@ def portal_inspection_text(portal):
     if not isinstance(portal, dict) or not is_official_revision(portal.get('source_revision')):
         return ''
     target = portal.get('reference_destination_label')
+    if (not target and portal.get('destination_verified') is True
+            and portal.get('binding_kind') in ('unique_boundary_touch_region','unique_door_anchor')):
+        target = portal.get('destination_label')
     if target is None and type(portal.get('hidden_destination_scene_id')) is int:
         hidden = portal['hidden_destination_scene_id']
         target = portal.get('display_destination_label') or (
             f'場景 {hidden}（官方隱藏傳點參考）')
+    if not target and portal.get('stage_marker_only') and portal.get('door_binding_verified'):
+        target = portal.get('destination_label') if portal.get('destination_verified') else '目的地由伺服器確認'
     if not target:
         return '官方傳點目的地尚無可辨識的連線資料；不可直接傳送'
     source = portal.get('reference_source_xy')
@@ -71,6 +76,19 @@ def portal_inspection_text(portal):
     arrival = portal.get('reference_arrival_xy')
     arrival_grid = portal.get('reference_arrival_grid')
     parts = ['官方唯讀連線：' + target]
+    if portal.get('destination_verified') is True:
+        parts[0] = '已配對目的地：' + str(portal.get('destination_label') or target)
+    marker_name = portal.get('official_name')
+    door_name = portal.get('door_event_name')
+    if marker_name:parts.append('原地圖標籤：' + marker_name)
+    if door_name:parts.append('門容器原名：' + door_name)
+    index, link_index = portal.get('direct_door_index'), portal.get('link_index')
+    if type(index) is int:parts.append(f'實際門編號 {index}')
+    if type(link_index) is int:parts.append(f'連線序號 {link_index}')
+    events = portal.get('touch_event_ids')
+    if events:parts.append('觸碰事件 ' + ', '.join(str(i) for i in events))
+    if portal.get('touch_event_records'):
+        parts.append('事件條件與效果明細已保留；換圖效果語意尚未獨立核對')
     if source is not None:
         parts.append(f'來源座標 {source}')
     elif source_grid is not None:
@@ -79,9 +97,13 @@ def portal_inspection_text(portal):
         parts.append(f'落點座標 {arrival}')
     elif arrival_grid is not None:
         parts.append(f'落點原始格點 {arrival_grid}（倍率待核對）')
-    if portal.get('destination_verified') is not True:
+    from wlre.services.world.portal_policy import stage_marker_trigger
+    if stage_marker_trigger(portal):
+        parts.append('StageMap 已配對實際門；可手動單次觸發，等待伺服器抵達場景')
+    elif portal.get('destination_verified') is not True:
         reason_labels = {
             'missing_eve_door': '缺少門事件',
+            'conflicting_official_destinations': '同一位置有多個官方目的地，可能含條件分支',
             'duplicate_eve_door': '門事件索引重複',
             'missing_normal_stage_marker': '缺少普通傳點標記',
             'source_scene_undefined': '來源場景無正式定義',
@@ -97,5 +119,9 @@ def portal_inspection_text(portal):
                 parts.append('待核對：' + '、'.join(labels[:4]))
         parts.append('僅供查看，未核准換圖')
     else:
+        if portal.get('binding_kind') in ('unique_boundary_touch_region','unique_door_anchor'):
+            parts.append('門事件精確位置與實際觸碰門編號已核對'
+                         if portal.get('binding_kind') == 'unique_door_anchor' else
+                         '碰撞範圍與實際觸碰門編號已核對（含海岸碰撞範圍）')
         parts.append('門索引交叉核對完成，伺服器傳送尚待驗收')
     return '｜'.join(parts)

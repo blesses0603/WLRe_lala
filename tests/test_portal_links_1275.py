@@ -26,15 +26,25 @@ def link_bytes(source=12170, destination=12171, x=5701, y=3230):
     return text.encode('utf-16-le')
 
 
+def physical_door():
+    return dict(index=1,x=286,y=162,right=287,bottom=163,sign_type=1,
+                sign_x=1,sign_y=10,event_ids=[7],touch_event_ids=[7])
+
+
+def physical_stages():
+    return {12170:dict(pos_x_ratio=1,pos_y_ratio=1,map_width=10000,map_height=10000,
+                       small_offset_x=0,small_offset_y=0),12171:{}}
+
+
 def verified_mapping(*, marker_scene=12170, marker_index=1,
                      marker_x=5701, link_scene=12170,
                      link_destination=12171):
     raw = stage_rows((marker_scene, 2, 0, marker_index,
                       marker_x, 3230, 0, 0))
     links = link_bytes(link_scene, link_destination)
-    doors = {12170: [{'index': 1, 'x': 5701, 'y': 3230}]}
+    doors = {12170: [physical_door()]}
     return verified_portal_destinations(
-        raw, links, doors, {12170, 12171})
+        raw, links, doors, physical_stages())
 
 
 def position_map():
@@ -60,8 +70,12 @@ class PortalLinks1275Test(unittest.TestCase):
         self.assertTrue(mapping[(12170, 1)]['destination_verified'])
         self.assertFalse(mapping[(12170, 1)]['trigger_verified'])
         self.assertEqual(verified_mapping(marker_x=5702)[(12170, 1)]['destination'], 12171)
-        self.assertEqual(verified_mapping(marker_index=2), {})
-        self.assertEqual(verified_mapping(link_scene=12172), {})
+        self.assertEqual(verified_mapping(marker_index=2)[12170,1]['destination'],12171)
+        stage_only = verified_mapping(link_scene=12172)[12170,1]
+        self.assertTrue(stage_only['stage_marker_only'])
+        self.assertTrue(stage_only['door_binding_verified'])
+        self.assertIsNone(stage_only['destination'])
+        self.assertFalse(stage_only['destination_verified'])
         self.assertEqual(verified_mapping(link_destination=12000), {})
 
     def test_destination_label_never_requires_eve_grid_and_link_grid_to_match(self):
@@ -69,16 +83,15 @@ class PortalLinks1275Test(unittest.TestCase):
         # grid-space XY is NOT expected to equal Eve.NewDoor event XY.
         marker = stage_rows((12170, 2, 0, 1, 21, 31, 0, 0))
         link = link_bytes(12170, 12171, x=200, y=300)
-        doors = {12170: [{'index': 1, 'x': 5701, 'y': 3230}]}
+        doors = {12170: [physical_door()]}
         display = read_only_portal_destinations(
             marker, link, doors, {12170, 12171})
         self.assertEqual(display, {(12170, 1): 12171})
         # Scene/EvtID provides the link. Event/marker/link coordinates need
         # not be equal; projected position remains a separate action guard.
         binding = verified_portal_destinations(marker, link, doors, {12170, 12171})
-        self.assertEqual(binding[(12170, 1)]['destination'], 12171)
-        self.assertEqual(binding[(12170, 1)]['event_x'], 5701)
-        self.assertEqual(binding[(12170, 1)]['x'], 200)
+        self.assertEqual(binding, {})  # marker/ordinal identity is read-only evidence
+        self.assertEqual(verified_portal_destinations(marker,link,doors,physical_stages()), {})
         runtime = SimpleNamespace(revision=1275, 
             doors=doors, portal_display_destinations=display,
             portal_destinations={},
@@ -105,7 +118,7 @@ class PortalLinks1275Test(unittest.TestCase):
             (12170, 2, 0, 1, 5701, 3230, 10000, 0))
         self.assertEqual(verified_portal_destinations(
             duplicated, link_bytes(), {12170: [
-                {'index': 1, 'x': 5701, 'y': 3230}]},
+                physical_door()]},
             {12170, 12171}), {})
         self.assertEqual(verified_portal_destinations(
             stage_rows((12170, 2, 0, 1, 20, 30, 0, 0)), link_bytes(),
@@ -115,7 +128,7 @@ class PortalLinks1275Test(unittest.TestCase):
     def test_ui_uses_verified_destination_name_but_never_sends(self):
         mapping = verified_mapping()
         runtime = SimpleNamespace(revision=1275, 
-            doors={12170: [{'index': 1, 'x': 5701, 'y': 3230, 'event_ids': []}]},
+            doors={12170: [physical_door()]},
             portal_destinations=mapping,
             portal_positions=position_map(),
             scene_names={12170: '瑪雅野豬叢林二', 12171: '瑪雅野豬叢林三'})
@@ -132,7 +145,7 @@ class PortalLinks1275Test(unittest.TestCase):
         self.assertEqual(row['direct_door_index'], 1)
         self.assertIsNone(destination_problem(row, SimpleNamespace(
             has_image=lambda scene: scene == 12171)))
-        self.assertIsNotNone(destination_problem(row, SimpleNamespace(
+        self.assertIsNone(destination_problem(row, SimpleNamespace(
             has_image=lambda scene: False)))
         self.assertEqual(Portals.direct_target(row, 12170), 1)
         with self.assertRaises(ValueError):
@@ -141,7 +154,7 @@ class PortalLinks1275Test(unittest.TestCase):
     def test_validated_route_click_sends_once_without_confirmation_popup(self):
         mapping = verified_mapping()
         runtime = SimpleNamespace(revision=1275, 
-            doors={12170: [{'index': 1, 'x': 5701, 'y': 3230}]},
+            doors={12170: [physical_door()]},
             portal_destinations=mapping,
             portal_positions=position_map(),
             scene_names={12171: '瑪雅野豬叢林三'})
@@ -175,7 +188,7 @@ class PortalLinks1275Test(unittest.TestCase):
 
     def test_confirmed_manual_try_sends_once_then_waits_for_server_scene(self):
         runtime = SimpleNamespace(revision=1275, 
-            doors={12170: [{'index': 1, 'x': 5701, 'y': 3230}]},
+            doors={12170: [physical_door()]},
             portal_destinations=verified_mapping(),
             portal_positions=position_map(),
             scene_names={12171: '瑪雅野豬叢林三'})

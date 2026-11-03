@@ -158,6 +158,7 @@ class InstanceModePage(CooperativeActionsMixin, CooperativeRewardViewMixin,
         self.refresh_button = ttk.Button(
             controls, text='更新房間清單', command=self.refresh_rooms, state='disabled')
         self.refresh_button.pack(side='left')
+        self.bind('<Map>',lambda event:self.automatic_refresh_rooms() if event.widget is self else None,add='+')
         self.create_button = ttk.Button(
             controls, text='建立公開／私人房間', command=self.open_create_dialog,
             state='disabled')
@@ -226,6 +227,14 @@ class InstanceModePage(CooperativeActionsMixin, CooperativeRewardViewMixin,
             self.cancel_reward_button.state(['!disabled'] if self._cancel_ready else ['disabled'])
             self.auto_reward_button.state(['!disabled'] if self._auto_toggle_ready else ['disabled'])
 
+    def automatic_refresh_rooms(self):
+        worker=getattr(self.app,'worker',None) if self.app is not None else None
+        if (worker is not None and worker.is_alive() and self.app.live_active
+                and getattr(self,'_automatic_refresh_ready',False) and self.winfo_ismapped()
+                and time.monotonic()>=getattr(self,'_automatic_refresh_due',0)):
+            self._automatic_refresh_due=time.monotonic()+60
+            self.refresh_rooms()
+
     def refresh_rooms(self):
         if self.app is not None and self.app.live_active:
             self.app.send({'type': 'instance_refresh', 'mode': self.mode})
@@ -233,7 +242,7 @@ class InstanceModePage(CooperativeActionsMixin, CooperativeRewardViewMixin,
     def render(self, data, *, live=False, other=None,
                local_role_id=None, active_npc_id=None, local_scene=None,
                activity_blocked=False, inventory=None,
-               creation_reasons=()):
+               creation_reasons=(), automation_enabled=False):
         other = other or {}
         self._room_data = dict(data)
         self._room_other = dict(other)
@@ -322,9 +331,11 @@ class InstanceModePage(CooperativeActionsMixin, CooperativeRewardViewMixin,
             live, data, current_room, member_data, host_id, local_role_id,
             room_capacity, reward_locked, activity_blocked)
         self.refresh_button.state(['!disabled'] if live else ['disabled'])
+        self._automatic_refresh_ready=live and automation_enabled and not activity_blocked
+        self.automatic_refresh_rooms()
         self.note.set(data.get('status', '尚未查詢房間') if live else '尚未連線，無法查詢副本房間')
         self.render_room_list(data, live, local_role_id, instance_details)
-        # Only a deliberate user click on a live, confirmed started room can enter.
+        # The guarded automatic flow may also enter after a chosen room starts.
         self.enter_button.state(['!disabled'] if self._enter_ready else ['disabled'])
 
 
@@ -381,11 +392,15 @@ class InstancePanel(ttk.Frame):
         )
         self.main_page.render(instances.get('main', {}), live=live,
                               other=instances.get('coop', {}),
+                              automation_enabled=(state.get('automation',{}).get('enabled',False)
+                                                  and state.get('phase')=='world_ready'),
                               local_role_id=local_role, active_npc_id=active_npc,
                               local_scene=player.get('scene'), activity_blocked=activity_blocked,
                               creation_reasons=creation_block_reasons(state, 'main', live))
         self.coop_page.render(instances.get('coop', {}), live=live,
                               other=instances.get('main', {}),
+                              automation_enabled=(state.get('automation',{}).get('enabled',False)
+                                                  and state.get('phase')=='world_ready'),
                               local_role_id=local_role, active_npc_id=active_npc,
                               local_scene=player.get('scene'), activity_blocked=activity_blocked,
                               inventory=state.get('inventory') or {},

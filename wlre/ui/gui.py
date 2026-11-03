@@ -196,7 +196,7 @@ class App(LoginController, AccountController,
 
     def save_profile(self):
         if not self.profile:return
-        path=filedialog.asksaveasfilename(parent=self.dialog_parent(),defaultextension='.json',initialfile='connection_profile.json',filetypes=[('連線設定','*.json')])
+        path=filedialog.asksaveasfilename(confirmoverwrite=False,parent=self.dialog_parent(),defaultextension='.json',initialfile='connection_profile.json',filetypes=[('連線設定','*.json')])
         if path:
             # Explicit allowlist: account/password can never enter settings.
             fields=('rx_xor','tx_xor','platform','language','verification_endpoint','game_endpoint','capture_sha256','observed_packets','evidence')
@@ -239,6 +239,7 @@ class App(LoginController, AccountController,
         self.efficiency_panel.update_state({})
         self.companion_panel.render({})
         self.expedition_panel.render({})
+        self.benefits_panel.render({})
         self.instance_panel.render({}, live=False)
         self.overview_panel.update_state({})
         self.live_active=True
@@ -295,6 +296,7 @@ class App(LoginController, AccountController,
         if self.overview_panel.winfo_ismapped():self.overview_panel.update_state(state)
         if self.companion_panel.winfo_ismapped():self.companion_panel.render(state)
         self.expedition_panel.render(state)
+        self.benefits_panel.render(state)
         self.instance_panel.render(state, live=self.live_active)
         if self.party_panel.winfo_ismapped():self.party_panel.render(state)
         else:

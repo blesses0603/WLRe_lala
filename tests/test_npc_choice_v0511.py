@@ -72,7 +72,7 @@ class NPCInteractTests(unittest.TestCase):
         self.assertTrue(state.event_flow['awaiting_response'])
         with self.assertRaises(ProtocolError):self.attempt(state,cmd)
 
-    def test_server_continue_after_choice_remains_manual(self):
+    def test_server_permission_preserves_choice_continuation_grant(self):
         from wlre.network.protocol import decode
         state=self.make_state()
         cmd={'confirmed':True,'scene':10000,'interact_index':1,
@@ -81,6 +81,62 @@ class NPCInteractTests(unittest.TestCase):
         state.apply(decode(Packet(20,10,b'')))
         self.assertEqual(state.npc_dialogue['phase'],'continue')
         self.assertFalse(state.event_flow['awaiting_response'])
+        self.assertTrue(state.npc_dialogue['choice_continuation_pending'])
+
+    def queued_choice(self):
+        from wlre.network.client import SessionLogic
+        state=self.make_state();state.phase='world_ready'
+        state.player['role_id']=123
+        logic=SessionLogic();logic.world_acknowledged=True
+        cmd={'type':'npc_choose','confirmed':True,'scene':10000,
+             'interact_index':1,'choice':0,'text_id':10001}
+        with (patch('wlre.services.world.npc_interact.NPCInteractIndex',return_value=self.index),
+              patch('wlre.services.world.npc_talk.load_catalog',return_value=TALKS)):
+            packets=logic.command(cmd,state)
+        self.assertEqual(packets,[Packet(20,9,b'\x1e')])
+        return logic,state,cmd
+
+    def test_choice_flush_continues_once_without_waiting_for_another_server_permission(self):
+        from wlre.network.protocol import decode
+        from test_npc_dialogue_v058 import s20_effect
+        logic,state,cmd=self.queued_choice()
+        self.assertEqual(logic.flush_events(state),[Packet(20,6,b'\x00')])
+        self.assertEqual(state.npc_dialogue['phase'],'awaiting_reply')
+        self.assertEqual(state.event_flow['requests_sent'],1)
+        self.assertEqual(logic.flush_events(state),[])
+        with self.assertRaises(ProtocolError):logic.command(cmd,state)
+        # The next effect can open the shop; do not skip its interaction UI.
+        event=decode(s20_effect(6,2));state.apply(event);logic.receive(event,state)
+        self.assertEqual(state.npc_dialogue['option_index'],2)
+        self.assertEqual(state.npc_dialogue['phase'],'choice_unavailable')
+        self.assertEqual(logic.flush_events(state),[])
+
+    def test_choice_permission_in_same_batch_still_continues_only_once(self):
+        from wlre.network.protocol import decode
+        logic,state,_=self.queued_choice()
+        event=decode(Packet(20,10,b''));state.apply(event);logic.receive(event,state)
+        self.assertEqual(logic.flush_events(state),[Packet(20,6,b'\x00')])
+        self.assertEqual(logic.flush_events(state),[])
+
+    def test_new_server_effect_end_rejection_battle_or_scene_cancels_queued_choice(self):
+        from wlre.network.protocol import decode
+        from test_npc_dialogue_v058 import s20_effect
+        for packet in (Packet(20,8),Packet(20,74,b'\x01'),
+                       s20_effect(1,211),s20_effect(6,2),Packet(20,1,b'')):
+            with self.subTest(packet=packet):
+                logic,state,_=self.queued_choice()
+                event=decode(packet);state.apply(event);logic.receive(event,state)
+                self.assertEqual(logic.flush_events(state),[])
+        for change in ('battle','scene','inactive'):
+            with self.subTest(change=change):
+                logic,state,_=self.queued_choice()
+                if change=='battle':state.battle['active']=True
+                elif change=='scene':state.player['scene']=11000
+                else:state.npc_dialogue['active']=False
+                self.assertEqual(logic.flush_events(state),[])
+                state.battle['active']=False;state.player['scene']=10000
+                state.npc_dialogue['active']=True
+                self.assertEqual(logic.flush_events(state),[])
 
     def test_reject_unverified_scene_index_shop_stale_and_unconfirmed(self):
         good={'confirmed':True,'scene':10000,'interact_index':1,

@@ -76,7 +76,7 @@ class DungeonExtractionContract(unittest.TestCase):
                                       678, 10000, True)
         self.assertFalse(page._enter_ready)
 
-    def test_manual_actions_require_confirmation_and_lock_before_send(self):
+    def test_manual_actions_send_without_prompt_and_lock_before_send(self):
         page = DungeonActionsMixin()
         page.cooperative = False
         page.app = SimpleNamespace(live_active=True, send=Mock())
@@ -87,12 +87,8 @@ class DungeonExtractionContract(unittest.TestCase):
         page.request_start()
         page.app.send.assert_not_called()
         page._start_ready = True
-        with patch('wlre.features.dungeon.buttons.messagebox.askyesno',
-                   return_value=False):
-            page.request_start()
-        page.app.send.assert_not_called()
-        with patch('wlre.features.dungeon.buttons.messagebox.askyesno',
-                   return_value=True):
+        with patch('tkinter.messagebox.askyesno',
+                   side_effect=AssertionError('不應跳出二次確認')):
             page.request_start()
         page.app.send.assert_called_once_with({
             'type': 'instance_start', 'mode': 'main'})
@@ -101,8 +97,8 @@ class DungeonExtractionContract(unittest.TestCase):
         self.assertEqual(page.app.send.call_count, 1)
         page.app.send.reset_mock()
         page._enter_ready = True
-        with patch('wlre.features.dungeon.buttons.messagebox.askyesno',
-                   return_value=True):
+        with patch('tkinter.messagebox.askyesno',
+                   side_effect=AssertionError('不應跳出二次確認')):
             page.request_enter()
         page.app.send.assert_called_once_with({
             'type': 'instance_enter', 'mode': 'main'})

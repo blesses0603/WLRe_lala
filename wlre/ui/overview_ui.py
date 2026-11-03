@@ -50,6 +50,10 @@ def summarize(state, live, guard, now=None):
     if state.get('event_flow',{}).get('blocked'):activity.append('等待伺服器事件結束')
     if supply.get('uncertain'):activity.append('補給結果未確認，已鎖定重複使用')
     elif supply.get('pending'):activity.append('等待補給確認')
+    automatic=state.get('automation',{})
+    if automatic:
+        activity.append('自動流程：'+('啟用' if automatic.get('enabled') else '暫停'))
+        if automatic.get('status'):activity.append(automatic['status'])
     activity.extend(state.get('activities',{}))
     if not live:activity=['已離線｜以下為最後收到的資料']
     else:
@@ -160,6 +164,9 @@ class OverviewPanel(ttk.Frame):
                 self.tent_enter_button=ttk.Button(tools,text='進入',
                     command=self.enter_or_leave_tent,padding=(3,2))
                 self.tent_enter_button.pack(side='left')
+                self.flow_button=ttk.Button(tools,text='暫停自動接續',
+                    command=self.toggle_flows,padding=(3,2))
+                self.flow_button.pack(side='left',padx=(4,0))
             value=tk.StringVar();self.values[key]=value
             label=ttk.Label(frame,textvariable=value,justify='left',anchor='w')
             label.grid(row=1,column=0,columnspan=2,sticky='nsew',pady=(2,0))
@@ -199,6 +206,10 @@ class OverviewPanel(ttk.Frame):
                                padding=(3,2)).pack(side='left', padx=(6,0))
             self.actions[key]=button
         self.after(1000,self.tick)
+
+    def toggle_flows(self):
+        enabled=self.app.snapshot.get('automation',{}).get('enabled',True)
+        self.app.send({'type':'automatic_flows','enabled':not enabled})
 
     def enter_or_leave_tent(self):
         inside=self.app.snapshot.get('tent',{}).get('inside',False)
@@ -244,6 +255,7 @@ class OverviewPanel(ttk.Frame):
     def refresh(self):
         state=getattr(self,'state',{})
         tent=state.get('tent',{})
+        self.flow_button.configure(text='暫停自動接續' if state.get('automation',{}).get('enabled',True) else '啟用自動接續')
         self.tent_enter_button.configure(text='離開帳篷' if tent.get('inside') else '進入')
         self.tent_toggle_button.configure(text=('收起帳篷' if tent.get('deployed_scene') is not None else '展開帳篷'))
         for key,section in (('ai','auto_battle'),('roaming','roaming'),('expedition','expedition')):

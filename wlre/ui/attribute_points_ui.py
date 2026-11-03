@@ -1,6 +1,6 @@
 """Original LaLa attribute allocation window, separate from game Lua UI."""
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk
 
 from wlre.ui.window_layout import configure_dialog
 from wlre.services.battle.attribute_points import (FIELDS, KEYS, MAX_BASE_ATTRIBUTE, baseline,
@@ -96,11 +96,6 @@ class AttributePointWindow:
 
     def confirm(self):
         if self.base is None or self.locked() or not any(self.add.values()):
-            return
-        total = sum(self.add.values())
-        if not messagebox.askyesno("確認能力配點",
-                "將使用 {} 點能力點。確認後由遊戲伺服器處理，無法在此撤銷。確定送出？".format(total),
-                parent=self.window):
             return
         if self.app.send({"type": "allocate_points", "baseline": dict(self.base),
                           "increments": dict(self.add)}):

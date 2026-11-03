@@ -6,7 +6,7 @@ from wlre.ui.instance_menu_icons import menu_icon_photo
 
 ICONS={'主頁':'MainIcon_041', '組隊':'MainIcon_005', '夥伴出戰':'MainIcon_010',
        '遠征':'MainIcon_038', '煉金':'MainIcon_007', '製作':'MainIcon_011',
-       '經驗效率':'MainIcon_020', '自動戰鬥':'Btn_AI', '包包':'MainIcon_001'}
+       '經驗效率':'MainIcon_020', '自動戰鬥':'Btn_AI', '包包':'MainIcon_001', '福利':'MainIcon_023', '魔方':'Btn_CategoryLoginAward002'}
 
 
 @lru_cache(maxsize=16)
@@ -40,4 +40,10 @@ def icon_photo(widget, title, size=34):
         if official is not None:
             return official
     name=ICONS.get(title)
-    return ImageTk.PhotoImage(icon_image(name,size),master=widget) if name else None
+    if not name:
+        return None
+    # Optional icons must not prevent the dashboard from opening before assets are installed.
+    try:
+        return ImageTk.PhotoImage(icon_image(name,size),master=widget)
+    except (OSError, ValueError):
+        return None

@@ -277,15 +277,12 @@ class RewardUI(unittest.TestCase):
             reward_mark=1, npc_id=0)
         return data
 
-    def test_manual_free_claim_requires_confirmation(self):
+    def test_manual_free_claim_needs_click_without_second_prompt(self):
         data = self.snapshot()
         self.app.instance_panel.render(data, live=True)
         self.assertTrue(self.page.claim_button.instate(['!disabled']))
         with patch.object(self.app, 'send') as send:
-            with patch('wlre.ui.instance_ui.messagebox.askyesno', return_value=False):
-                self.page.claim_button.invoke()
-                send.assert_not_called()
-            with patch('wlre.ui.instance_ui.messagebox.askyesno', return_value=True):
+            with patch('wlre.ui.instance_ui.messagebox.askyesno', side_effect=AssertionError('不應跳出二次確認')):
                 self.page.claim_button.invoke()
                 send.assert_called_once_with(
                     {'type': 'instance_reward_claim', 'mode': 'coop', 'action': 'free'})
@@ -300,7 +297,7 @@ class RewardUI(unittest.TestCase):
         self.assertTrue(self.page.claim_button.instate(['disabled']))
         self.assertTrue(self.page.cancel_reward_button.instate(['!disabled']))
         with patch.object(self.app, 'send') as send:
-            with patch('wlre.ui.instance_ui.messagebox.askyesno', return_value=True):
+            with patch('wlre.ui.instance_ui.messagebox.askyesno', side_effect=AssertionError('不應跳出二次確認')):
                 self.page.cancel_reward_button.invoke()
                 send.assert_called_once_with(
                     {'type': 'instance_reward_cancel', 'mode': 'coop',
@@ -313,7 +310,7 @@ class RewardUI(unittest.TestCase):
         self.app.instance_panel.render(data, live=True)
         self.assertTrue(self.page.claim_button.instate(['disabled']))
         with patch.object(self.app, 'send') as send:
-            with patch('wlre.ui.instance_ui.messagebox.askyesno', return_value=True):
+            with patch('wlre.ui.instance_ui.messagebox.askyesno', side_effect=AssertionError('不應跳出二次確認')):
                 self.page.auto_reward_button.invoke()
                 send.assert_called_once_with(
                     {'type': 'instance_auto_reward', 'mode': 'coop', 'enabled': True})

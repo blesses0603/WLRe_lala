@@ -38,6 +38,7 @@ def apply_session_event(state, event):
     elif kind == 'movement_stop':
         state.event_flow={**state.event_flow,'blocked':True,'last_source':f"S6-2 kind={event['kind']}"}
     elif kind == 'event_active':
+        state.npc_dialogue={**state.npc_dialogue,'choice_continuation_pending':False}
         effect=event.get('npc_effect')
         if effect is not None:
             if state.npc_dialogue.get('active'):
@@ -47,7 +48,7 @@ def apply_session_event(state, event):
                     talk_history.append(effect['mean_number'])
                     talk_history=talk_history[-50:]
                 state.npc_dialogue={**state.npc_dialogue,
-                    'history':talk_history,
+                    'history':talk_history,'effect_packet':state.packet_count,
                     'phase': ('talk' if effect_type==1 else
                               'choice_unavailable' if effect_type==6 else 'effect_unavailable'),
                     'effect_type':effect_type,
@@ -69,11 +70,11 @@ def apply_session_event(state, event):
         state.event_flow={**state.event_flow,'blocked':False,'awaiting_response':False,'last_source':'S20-8'}
 
         if state.npc_dialogue.get('active'):
-            state.npc_dialogue={**state.npc_dialogue,'active':False,'phase':'ended'}
+            state.npc_dialogue={**state.npc_dialogue,'active':False,'phase':'ended','choice_continuation_pending':False}
     elif kind == 'event_rejected' and state.npc_dialogue.get('active'):
         state.event_flow={**state.event_flow,'blocked':False,'awaiting_response':False,
                           'last_source':'S20-74'}
-        state.npc_dialogue={**state.npc_dialogue,'active':False,'phase':'rejected','reason':event.get('reason','')}
+        state.npc_dialogue={**state.npc_dialogue,'active':False,'phase':'rejected','choice_continuation_pending':False,'reason':event.get('reason','')}
     elif kind == "initial_data_complete":
         state.initial_data_complete = True
 

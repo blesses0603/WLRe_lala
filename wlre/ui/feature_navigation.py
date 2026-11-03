@@ -24,7 +24,7 @@ class FeatureWindowController:
             'party':'party_panel','companion':'companion_panel',
             'expedition':'expedition_panel','instance':'instance_panel',
             'alchemy':'alchemy_panel','crafting':'crafting_panel',
-            'efficiency':'efficiency_panel'}[key])
+            'benefits':'benefits_panel','efficiency':'efficiency_panel'}[key])
         if key=='instance':
             panel.render(self.snapshot,live=self.live_active)
         elif key=='efficiency':

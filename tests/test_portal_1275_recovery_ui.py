@@ -68,6 +68,9 @@ class Portal1275UI(unittest.TestCase):
             doors={12170: [{'index': 1, 'x': 42, 'y': 64},
                            {'index': 2, 'x': 43, 'y': 65}]},
             portal_names={(12170, 1): '前往北島-北'},
+            portal_destinations={(12170,1):{'matched_stage_map':True,
+                'destination_verified':True,'trigger_verified':False,
+                'destination':60000,'event_x':42,'event_y':64}},
             portal_positions={(12170, 1): {
                 'scene': 12170, 'index': 1, 'x': 200, 'y': 300,
                 'position_verified': True, 'source_kind': '1275_eve_door_links_grid_scaled'}},
@@ -107,6 +110,31 @@ class Portal1275UI(unittest.TestCase):
         self.assertEqual(table.item('12171', 'values')[2], '0')
         self.sent.assert_not_called()
         window.destroy()
+
+    def test_list_and_canvas_share_one_destination_and_keep_raw_audit_rows(self):
+        from PIL import Image
+        from test_portal_display import portal
+        rows=[portal(9),portal(3,x=600),
+              portal(4,destination=None,destination_verified=False),
+              portal(5,official_name=None,display_destination_label=None),portal(6,x=2000),
+              portal(8,destination=None,destination_verified=False,direct_eligible=False,
+                     reference_destination_defined=True,reference_destination_scene_id=60001)]
+        self.map.portals.data.update(source_revision=1286,source_ready=True,
+            portals={'58001':rows},scene_names={58001:'航海大地圖'},
+            portal_metadata_status='destination_links_loaded')
+        self.map.selected_id=58001;self.map.state={'player':{'scene':58001}}
+        self.map.image=Image.new('RGB',(1024,1024))
+        self.map.projection=SimpleNamespace(packet_to_pixel=lambda x,y:(x,y))
+        self.map.refresh_portals();self.map.draw();self.root.update()
+        self.assertEqual(len(self.map.portal_rows),1)
+        self.assertEqual(self.map.portal_rows[0]['id'],rows[1]['id'])
+        self.assertEqual(self.map.portal_list.size(),1)
+        self.assertEqual(len([i for i in self.map.canvas.find_all() if self.map.canvas.type(i)=='oval']),1)
+        self.assertEqual(len(self.map.portals.for_scene(58001)),6)
+        self.assertIn('合併',self.map.portal_info.get());self.assertIn('已隱藏',self.map.portal_info.get())
+        self.map.portal_list.selection_set(0);self.map.choose_portal()
+        with patch.object(self.map.maps,'has_image',return_value=True):self.assertTrue(self.map.go_portal())
+        self.sent.assert_called_once_with(rows[1]['id'])
 
 
 if __name__ == '__main__':

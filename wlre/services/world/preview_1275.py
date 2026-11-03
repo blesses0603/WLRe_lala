@@ -227,6 +227,9 @@ def load_preview(data_archive, eve_archive):
             read_only_stage_portal_markers)
         portal_stage_markers = read_only_stage_portal_markers(stage_map, stages)
         portal_metadata_status = 'stage_map_ready'
+        from wlre.services.world.boundary_portals import reconcile_touch_bindings
+        reconcile_touch_bindings(stage_map,None,doors,stages,
+            portal_positions,portal_destinations)
         try:
             link_table = _table(data_archive, manifest, 'EveDoorLinks')
             portal_schema_report['EveDoorLinks'] = recognize_portal_source(
@@ -236,12 +239,13 @@ def load_preview(data_archive, eve_archive):
             from wlre.services.world.portal_evidence_1275 import (read_only_portal_evidence)
             portal_link_evidence = read_only_portal_evidence(
                 stage_map, link_table, doors, stages)
-            portal_positions = verified_portal_positions(
-                stage_map, link_table, doors, stages)
+            portal_positions = {}
             portal_display_destinations = read_only_portal_destinations(
                 stage_map, link_table, doors, stages)
-            portal_destinations = verified_portal_destinations(
-                stage_map, link_table, doors, stages)
+            portal_destinations = {}
+            from wlre.services.world.boundary_portals import reconcile_touch_bindings
+            reconcile_touch_bindings(
+                stage_map, link_table, doors, stages, portal_positions, portal_destinations)
             portal_metadata_status = 'destination_links_loaded'
         except (ValueError, KeyError, TypeError, PortalLinkSourceError):
             portal_metadata_status = 'destination_links_missing_or_invalid'
@@ -267,6 +271,8 @@ def load_preview(data_archive, eve_archive):
                     stage_for_reference, link_table, doors, stages)
         except (ValueError, TypeError, KeyError):
             pass
+    if portal_destinations and not portal_link_evidence:
+        portal_metadata_status = 'stage_map_ready'
     # The independent route table contains no Eve event IDs; read-only.
     try:
         raw_routes = _table(data_archive, manifest, 'DoorLinkData_C')
@@ -278,6 +284,9 @@ def load_preview(data_archive, eve_archive):
             portal_extra_routes = read_only_door_link_routes(raw_routes, stages)
     except (ValueError, TypeError, KeyError):
         pass
+    from wlre.services.world.boundary_portals import reconcile_route_conflicts
+    reconcile_route_conflicts(portal_positions, portal_destinations, portal_extra_routes,
+        portal_link_evidence)
     from wlre.services.world.portal_coverage import audit_portal_coverage
     coverage = audit_portal_coverage(doors, stages, stage_map, link_table,
                                     portal_positions, portal_destinations, portal_names,

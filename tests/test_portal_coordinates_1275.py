@@ -19,19 +19,30 @@ def door_links(scene=11016, x=200, y=300):
             ).encode('utf-16-le')
 
 
+def physical_door():
+    return dict(index=1,x=11,y=16,sign_type=2,sign_x=0,sign_y=0,touch_event_ids=[7])
+
+
+def physical_stages():
+    return {11016:dict(pos_x_ratio=3,pos_y_ratio=2,map_width=1000,map_height=1000,
+                       small_offset_x=0,small_offset_y=0),11017:{}}
+
+
 def position_fixture():
-    return verified_portal_positions(
-        stage_marker(), door_links(),
-        {11016: [{'index': 1, 'x': 42, 'y': 64}]},
-        {11016: {'pos_x_ratio': 3, 'pos_y_ratio': 2}})
+    return verified_portal_positions(stage_marker(),door_links(),
+                                     {11016:[physical_door()]},physical_stages())
 
 
 class IdentityProjection:
+    rate=100.0
+    offset_x=0
+    offset_y=0
+    height=1000
     def packet_to_pixel(self, x, y):
         return x, y
 
 
-class OffscreenProjection:
+class OffscreenProjection(IdentityProjection):
     def packet_to_pixel(self, x, y):
         return x + 1000, y + 1000
 
@@ -39,21 +50,25 @@ class OffscreenProjection:
 class PortalPosition1275Tests(unittest.TestCase):
     def test_list_contains_only_named_visible_markers_without_changing_catalog(self):
         ready = {'source_revision': 1275, 'coordinate_valid': True,
-                 'official_name': '海灘出口', 'x': 200, 'y': 300}
-        reference = dict(ready, official_name=None, display_destination_label='北島-北(60000)')
+                 'official_name': '海灘出口', 'x': 200, 'y': 300,
+                 'destination_verified':True,'destination':11017}
+        reference = dict(ready, official_name=None, display_destination_label='北島-北(60000)',
+                         destination=None,destination_verified=False,
+                         reference_destination_scene_id=60000,reference_destination_defined=True)
         unnamed = dict(ready, official_name=None)
         offscreen = dict(ready, x=2000)
         missing = dict(ready, coordinate_valid=False)
         rows = [ready, reference, unnamed, offscreen, missing]
-        self.assertEqual(marked_portals(rows, IdentityProjection()), [ready, reference])
+        ready['direct_eligible']=True;ready['direct_door_index']=1
+        self.assertEqual(marked_portals(rows, IdentityProjection()), [ready])
         self.assertEqual(len(rows), 5)
         self.assertEqual(marked_portals(rows, None), [])
 
     def test_destination_uses_event_identity_and_separately_scaled_marker(self):
         from wlre.services.world.portal_links_1275 import verified_portal_destinations
-        doors = {11016: [{'index': 1, 'x': 42, 'y': 64}]}
+        doors = {11016: [physical_door()]}
         bindings = verified_portal_destinations(
-            stage_marker(), door_links(), doors, {11016, 11017})
+            stage_marker(), door_links(), doors, physical_stages())
         runtime = SimpleNamespace(revision=1275, 
             doors=doors, portal_positions=position_fixture(), portal_destinations=bindings,
             scene_names={11016: '新手海灘', 11017: '目的場景'})
@@ -78,7 +93,8 @@ class PortalPosition1275Tests(unittest.TestCase):
                          {'state': 'normal', 'text': '手動確認換圖'})
         page.maps = SimpleNamespace(has_image=lambda scene: False)
         page.update_portal_button()
-        self.assertEqual(page.portal_go.configure.call_args.kwargs['text'], '目的地無地圖')
+        self.assertEqual(page.portal_go.configure.call_args.kwargs,
+                         {'state':'normal','text':'手動確認換圖'})
     def test_official_uimain_ratio_not_eve_common_grid_xy(self):
         points = position_fixture()
         self.assertEqual(points[(11016, 1)]['x'], 600)
@@ -172,8 +188,8 @@ class PortalPosition1275Tests(unittest.TestCase):
                  'small_offset_x': 25, 'small_offset_y': 30}
         calibrated = verified_portal_positions(
             stage_marker(), door_links(),
-            {11016: [{'index': 1, 'x': 42, 'y': 64}]},
-            {11016: stage})[(11016, 1)]
+            {11016: [physical_door()]},
+            {11016: stage,11017:{}})[(11016, 1)]
         expected = {'rate': 100.0, 'offset_x': 25,
                     'offset_y': 30, 'height': 1000}
         self.assertEqual(calibrated['projection_guard'], expected)

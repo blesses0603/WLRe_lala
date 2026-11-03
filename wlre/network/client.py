@@ -33,6 +33,8 @@ from wlre.services.battle.auto_battle import AutoBattle
 
 
 from wlre.network.commands import dispatch
+from wlre.network.automatic_flows import AutomaticFlows
+from wlre.network.npc_dialogue import flush_npc_choice
 from wlre.services.items import reservations
 
 
@@ -142,6 +144,7 @@ def verify_account(endpoint, profile, account, password, emit, stop_event, timeo
 class SessionLogic:
     """Deterministic reactions shared by network operation and tests."""
     def __init__(self, role_index=None):
+        self.flows = AutomaticFlows()
         self.last_chat_time = None
         self.last_companion_time = None
         self.field_supply = FieldSupply()
@@ -177,6 +180,7 @@ class SessionLogic:
         self.field_supply.observe(event,state)
         self.maintenance.observe(event,state)
         self.crafting.observe(event,state)
+        self.flows.observe(event,state)
         self.alchemy.observe(event,state)
         if kind in ('team_join','team_list','team_new_leader'):
             team=own_team(state)
@@ -277,6 +281,13 @@ class SessionLogic:
 
     def flush_events(self,state):
         state.assert_writer()
+        # Manual choice is itself a Lua continuation grant; it does not wait
+        # for S20-10. Consume only this one grant, keeping other NPC steps manual.
+        if self.world_acknowledged:
+            choice_packets=flush_npc_choice(state)
+            if choice_packets:
+                self.pending_event=False
+                return choice_packets
         # Lua grants set one boolean; its Update sends once after the packet batch.
         if self.post_battle_due is not None:
             if time.monotonic()<self.post_battle_due:return []
@@ -293,11 +304,16 @@ class SessionLogic:
     def command(self, command, state):
         state.assert_writer()
         validate_command(command)
-        return dispatch(self, command, state)
+        packets=dispatch(self, command, state)
+        self.flows.remember(command,state)
+        return packets
 
 
     def disconnect(self,state):
         """Freeze uncertain bag requests and disable intent before final publication."""
+        from wlre.services.time_cube import disconnect as cube_disconnect
+        cube_disconnect(state)
+        self.flows.clear(state)
         state.assert_writer()
         from wlre.services.instance_creation import disconnect as instance_disconnect
         instance_disconnect(state)
@@ -400,7 +416,7 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
                             _send_command_packet(connection,packet,profile['tx_xor'],state,emit,on_state)
                         if command.get('type') in ('start_auto_battle', 'stop_auto_battle'):
                             emit(auto_battle_status_event(state))
-                        if command.get('type') in ('team','start_alchemy','stop_alchemy','reset_efficiency','craft','room_storage','start_expedition','stop_expedition','allocate_points','instance_create','instance_join','instance_leave','instance_coop_standby','instance_start','instance_enter','instance_auto_reward','instance_reward_claim','instance_reward_cancel','npc_start','npc_next','npc_close_choice','npc_choose','npc_close_shop','tent') and on_state:notify_state(on_state,state)
+                        if command.get('type') in ('team','start_alchemy','stop_alchemy','reset_efficiency','craft','room_storage','start_expedition','stop_expedition','allocate_points','instance_create','instance_join','instance_leave','instance_coop_standby','instance_start','instance_enter','instance_auto_reward','instance_reward_claim','instance_reward_cancel','automatic_flows','time_cube','npc_start','npc_approach','npc_next','npc_close_choice','npc_choose','npc_close_shop','tent') and on_state:notify_state(on_state,state)
                         if command.get('type') in ('start_auto_battle','stop_auto_battle','set_party_guard'):
                             emit({'type':'auto_battle_status',**state.auto_battle})
                             if on_state:notify_state(on_state,state)

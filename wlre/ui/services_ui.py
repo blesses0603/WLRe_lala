@@ -55,10 +55,10 @@ class PartyPanel(ttk.Frame):
     def member_action(self,action):
         selected=self.members.selection()
         if not selected:return
-        rid=int(selected[0]);name=player_name(self.app.snapshot,rid)
-        if messagebox.askyesno('組隊',f'確認對「{name}（{rid}）」執行'+('移除隊員？' if action=='kick' else '轉交隊長？'),parent=self.app.root):self.act(action,role_id=rid)
+        rid=int(selected[0])
+        self.act(action,role_id=rid)
     def leave_team(self):
-        if messagebox.askyesno('離隊／解散','確認離開目前隊伍？隊長離隊會解散隊伍。',parent=self.app.root):self.act('leave')
+        self.act('leave')
     def respond(self,answer):
         selected=self.requests.selection()
         if selected:self.act('respond',request=selected[0],answer=answer)
@@ -150,9 +150,8 @@ class AlchemyPanel(ttk.Frame):
                 command['materials'].append({'index':item['index'],'item_id':item['item_id'],'count':int(count.get())})
             from types import SimpleNamespace
             state=SimpleNamespace(**self.app.snapshot);state.snapshot=lambda:self.app.snapshot
-            plan=prepare(state,command)
-            text='\n'.join(f"{item_name(row['item_id'])}｜包包#{row['index']}｜每次合計{row['count']}，總消耗{row['count']*plan['runs']}" for row in plan['consumption'])
-            if messagebox.askyesno('開始自動煉金',f"{plan['mode']}煉金，共{plan['runs']}次\n{text}\n\n依伺服器結果逐次執行，材料將會消耗。",parent=self.app.root):self.app.send(command)
+            prepare(state,command)
+            self.app.send(command)
         except (ValueError,KeyError,TypeError,AttributeError) as exc:messagebox.showinfo('煉金設定',str(exc),parent=self.app.root)
     def render(self,state):
         inv=state.get('inventory',{});alchemy=state.get('alchemy',{});available=modes(state);busy=alchemy.get('enabled') or alchemy.get('pending')

@@ -37,8 +37,18 @@ class _Reader:
         return int.from_bytes(self.take(4), 'little')
 
 
+def _event_name(reader):
+    raw = reader.take(20).split(b'\0',1)[0]
+    try:
+        name = raw.decode('cp950').strip()
+    except UnicodeDecodeError:
+        return {'name': None, 'name_bytes': raw.hex(), 'name_valid': False}
+    valid = bool(name) and not any(ord(ch)<32 for ch in name)
+    return {'name': name if valid else None, 'name_bytes': raw.hex(), 'name_valid': valid}
+
+
 def _common(reader):
-    reader.skip(20)
+    name = _event_name(reader)
     reader.u8()
     x, y = reader.u32(), reader.u32()
     event_count = reader.u8()
@@ -46,7 +56,7 @@ def _common(reader):
     leader_count = reader.u8()
     reader.skip(leader_count)
     reader.u8()
-    return {'x': x, 'y': y, 'event_ids': events}
+    return {**name, 'x': x, 'y': y, 'event_ids': events}
 
 
 def _npc(reader):
@@ -59,6 +69,46 @@ def _npc(reader):
     param_count = reader.u8()
     reader.skip(param_count * (4 + 11*8 + 11))
     reader.skip(2 + 2 + 4 + 1 + 4 + 2 + 2 + 1 + 5*4)
+
+
+def _event_parameters(reader, *, signed):
+    """EventData.NewEvent layout; preserve effects without guessing their meaning."""
+    fields = ('id','para_main','para_kind','para_style','para_type','para_operator',
+              'para_value','group_number','para_class1','para_class2')
+    values = struct.unpack('<BBHHHB' + ('i' if signed else 'I') + 'BII',reader.take(22))
+    return dict(zip(fields,values))
+
+
+def _touch_events(reader, needed_event_ids):
+    # EventData.NewMine/NewGoods precede NewEvent. Keep each variable common
+    # record aligned; a door's event_ids alone do not prove PlayerTouch.
+    for tail in (10, 11):
+        count = reader.u16()
+        if count > 4096:raise DoorSourceError('Eve 事件物件數量不合理')
+        for _ in range(count):
+            reader.u16();_common(reader);reader.skip(tail)
+    count = reader.u16()
+    if count > 4096:raise DoorSourceError('Eve 事件數量不合理')
+    touch, seen = {}, set()
+    for _ in range(count):
+        index, occur = reader.u16(), reader.u8()
+        if index in seen:raise DoorSourceError('Eve 場景內重複的事件 index')
+        seen.add(index)
+        name = _event_name(reader)
+        conditions = []
+        keep = bool(occur & 2) and index in needed_event_ids
+        for _ in range(reader.u8()):
+            if keep:
+                condition = _event_parameters(reader, signed=False)
+                results = [_event_parameters(reader, signed=True) for _ in range(reader.u8())]
+                conditions.append({'data':condition, 'results':results})
+            else:
+                reader.skip(22)
+                reader.skip(22 * reader.u8())
+        if keep:  # Define.lua EEventOccurType.PlayerTouch
+            touch[index] = {'index':index, 'occur_type':occur, **name,
+                            'conditions':conditions, 'destination_decoded':False}
+    return touch
 
 
 def parse_doors_1275(raw):
@@ -100,10 +150,18 @@ def parse_verified_doors(raw, *, expected_scene_count=None):
         for _ in range(door_count):
             index = reader.u16()
             row = _common(reader)
-            reader.skip(4*2 + 1 + 4*2 + 4*3)
+            right, bottom, sign_type = reader.u32(), reader.u32(), reader.u8()
+            sign_x, sign_y = reader.u32(), reader.u32()
+            col_x, col_y, col_z = reader.u32(), reader.u32(), reader.u32()
             if index in seen:
                 raise DoorSourceError('1275 場景內重複的門事件 index')
             seen.add(index)
-            entries.append({'index': index, **row})
+            entries.append({'index': index, **row, 'right': right, 'bottom': bottom,
+                            'sign_type': sign_type, 'sign_x': sign_x, 'sign_y': sign_y,
+                            'col_x': col_x, 'col_y': col_y, 'col_z': col_z})
+        touch = _touch_events(reader, {i for row in entries for i in row['event_ids']})
+        for row in entries:
+            row['touch_event_ids'] = [i for i in row['event_ids'] if i in touch]
+            row['touch_event_records'] = [touch[i] for i in row['touch_event_ids']]
         scenes[scene] = entries
     return scenes

@@ -2,7 +2,7 @@
 import json
 import tkinter as tk
 from wlre.ui.window_layout import configure_dialog
-from tkinter import ttk,messagebox,filedialog
+from tkinter import ttk,filedialog
 from pathlib import Path
 from wlre.ui.layout import heading,scroll_table
 from wlre.services.items.crafting_plan import validate_rows
@@ -66,7 +66,7 @@ class PlanWindow:
         i=self.selected()
         if i is not None:self.rows.pop(i);self.refresh()
     def clear(self):
-        if self.editable() and messagebox.askyesno('清空自訂清單','清空所有尚未送出的項目？',parent=self.window):self.rows=[];self.refresh()
+        if self.editable():self.rows=[];self.refresh()
     def edit_count(self):
         if not self.editable():return
         i=self.selected()
@@ -76,7 +76,7 @@ class PlanWindow:
         except ValueError as exc:self.status.set(str(exc));return
         self.refresh();self.table.selection_set(str(i))
     def save(self):
-        path=filedialog.asksaveasfilename(parent=self.window,defaultextension='.json',filetypes=[('製作方案','*.json')],initialfile='家具製作方案.json')
+        path=filedialog.asksaveasfilename(confirmoverwrite=False,parent=self.window,defaultextension='.json',filetypes=[('製作方案','*.json')],initialfile='家具製作方案.json')
         if not path:return
         try:
             rows=validate_rows(self.rows);dest=Path(path);tmp=dest.with_name(dest.name+'.tmp');tmp.write_text(json.dumps({'format':'wlre-crafting-plan','version':1,'rows':rows},ensure_ascii=False,indent=2),encoding='utf-8');tmp.replace(dest);self.status.set('方案已儲存')
@@ -96,7 +96,6 @@ class PlanWindow:
         except ValueError as exc:self.status.set(str(exc));return
         if not rows:self.status.set('請先加入製作物');return
         if not self.panel.app.live_active:self.status.set('請先登入角色');return
-        if not messagebox.askyesno('啟動自訂製作清單',f'依順序送出 {len(rows)} 項製作，將消耗背包材料。\n每項總批數不限，每次最多送出 255 批。\n伺服器有空位時自動補入，缺材料或設備時暫停。\n\n確認開始？',parent=self.window):return
         p=self.panel.state.get('crafting',{}).get('local_plan',{});revision=p.get('revision',0)
         self.follow_revision=revision+1;self.runtime_key=None;self.row_images={}
         self.panel.app.send({'type':'craft','action':'plan_set','rows':rows,'revision':revision})

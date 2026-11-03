@@ -17,7 +17,7 @@ def _coop(state):
     return state.instances['coop']
 
 
-def bag_claim_problem(bag):
+def bag_claim_problem(bag,required_slots=4):
     """Read-only reason for the same conservative four-slot claim rule.
 
     The 1262 UICooperateAward client checks two empty slots. S186-10 can
@@ -41,9 +41,10 @@ def bag_claim_problem(bag):
         if not 1 <= index <= capacity or index in occupied:
             return '背包格位索引超出容量或重複'
         occupied.add(index)
+    # Time cube uses the same slot checks with its authoritative cube count.
     empty = capacity - len(occupied)
-    if empty < 4:
-        return f'背包剩餘 {empty} 格，保守領獎需要至少 4 格'
+    if empty < required_slots:
+        return f'背包剩餘 {empty} 格，保守領獎需要至少 {required_slots} 格'
     if any(bag.get(k) for k in ('holds', 'alchemy_slots',
                                'expedition_slots', 'maintenance_slots')):
         return '背包仍有其他功能保留的物品或格位'
@@ -60,6 +61,8 @@ def _safe_bag(state):
 
 
 def _guard(state):
+    if state.time_cube.get("pending") or state.time_cube.get("uncertain"):
+        raise ProtocolError("等待魔方開啟確認")
     if (state.phase != 'world_ready' or not state.initial_data_complete
             or not state.player.get('role_id')):
         raise ProtocolError('角色或世界同步未完成，不能領取獎勵')

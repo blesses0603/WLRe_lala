@@ -105,28 +105,49 @@ def _confirm_enter(t, scene):
                  status='已進入自家帳篷（伺服器換圖與自家家具確認）')
 
 
-def exit_door_index():
-    """Use current official house-template door links, never an invented opcode."""
+def exit_door_index(*, return_scene=None):
+    """Resolve current house exits across old and physical-binding schemas.
+
+    Prefer an explicitly declared outdoor exit. A StageMap-only marker may
+    trigger its verified door when entry recorded a real return scene; the
+    server must still confirm that this leaves the private interior.
+    """
     from wlre.services.world.dynamic_bundle_runtime import current_runtime
     runtime=current_runtime()
     if runtime is None:raise ProtocolError('目前官方帳篷出口資料尚未就緒')
-    candidates=set()
+    from wlre.services.world.portal_policy import stage_marker_has_no_target
+    candidates, server_decided=set(),set()
     for template in HOUSE_SCENES:
-        for door in getattr(runtime,'doors',{}).get(template,()):
+        rows=getattr(runtime,'doors',{}).get(template,())
+        for door in rows:
             index=door.get('index')
             link=getattr(runtime,'portal_destinations',{}).get((template,index),{})
+            if (type(index) is not int or not 1<=index<=65535
+                    or sum(d.get('index')==index for d in rows)!=1
+                    or not (link.get('matched_stage_map') is True
+                            or link.get('matched_touch_region') is True)
+                    or link.get('event_x')!=door.get('x')
+                    or link.get('event_y')!=door.get('y')):continue
             destination=link.get('destination')
-            if (type(index) is int and 1<=index<=65535
-                    and link.get('matched_stage_map') is True
-                    and link.get('destination_verified') is True
+            if (link.get('destination_verified') is True
                     and type(destination) is int and 1<=destination<=65535
-                    and destination not in HOUSE_SCENES
-                    and link.get('event_x')==door.get('x')
-                    and link.get('event_y')==door.get('y')):
+                    and destination not in HOUSE_SCENES):
                 candidates.add(index)
-    if len(candidates)!=1:
-        raise ProtocolError('目前官方帳篷出口索引未能唯一核對，請重新同步官方資源')
-    return next(iter(candidates))
+            elif (destination is None and link.get('stage_marker_only') is True
+                    and link.get('door_binding_verified') is True
+                    and stage_marker_has_no_target(link)
+                    and link.get('index')==index and door.get('touch_event_ids')
+                    and type(return_scene) is int and 1<=return_scene<=65535
+                    and return_scene not in HOUSE_SCENES):
+                # A name is a marker label, never evidence for a guessed scene.
+                label=(getattr(runtime,'texts',{}).get(link.get('stage_marker_name_id'))
+                       or getattr(runtime,'portal_names',{}).get(
+                           (template,link.get('stage_marker_event_id'))))
+                if type(label) is str and label.strip():server_decided.add(index)
+    resolved=candidates if candidates else server_decided
+    if len(resolved)!=1:
+        raise ProtocolError('目前官方帳篷出口索引未能唯一核對；缺少或衝突的門事件不能直接觸發')
+    return next(iter(resolved))
 
 
 def apply_tent(state, event):
@@ -230,7 +251,7 @@ def command(state, instruction, now=None):
     elif action=='leave':
         if not t['inside'] or t.get('interior_scene')!=state.player.get('scene'):
             raise ProtocolError('目前尚未確認位於自家帳篷內')
-        packet=Packet(20,8,Writer().u16(exit_door_index()).build())
+        packet=Packet(20,8,Writer().u16(exit_door_index(return_scene=t.get('return_scene'))).build())
         label='離開'
     else:
         if not t['visible'] or t['scene'] != state.player.get('scene'):

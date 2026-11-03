@@ -1,6 +1,6 @@
 """Shared instance room dialogs for main and cooperative modes.
 
-Both modes use the same widget lifecycle, confirmation prompts, and local
+Both modes use the same input widget lifecycle and local
 single-click locks. Mode-specific coop fields belong to its feature module.
 Final authority remains the network-thread instance services.
 """
@@ -76,12 +76,6 @@ class InstanceRoomDialogMixin:
                     messagebox.showwarning('房間人數', '協力人數超出副本允許範圍。',
                                            parent=dialog)
                     return
-            suffix = '此操作可能消耗門票或點數；沿用目前正常出戰夥伴。\\n' if self.cooperative else ''
-            message = ('即將建立「%s」%s房間。\\n%s'
-                       '送出後會等待伺服器確認；結果不明時請勿重試。確定嗎？'
-                       % (record['name'], '私人' if private else '公開', suffix))
-            if not messagebox.askyesno('確認建立副本房間', message, parent=dialog):
-                return
             command = {
                 'type': 'instance_create', 'mode': self.mode,
                 'public': not private, 'password': secret,
@@ -112,45 +106,19 @@ class InstanceRoomDialogMixin:
             messagebox.showwarning('房間清單過期', '請重新更新伺服器房間清單。',
                                    parent=self.winfo_toplevel())
             return
-        root = self.winfo_toplevel()
-        dialog = tk.Toplevel(self.app.root if self.app is not None else root)
-        dialog.title('加入副本房間')
-        dialog.transient(root)
-        configure_dialog(dialog,460,250 if self.cooperative else 210)
-        form = ttk.Frame(dialog, padding=16)
-        form.pack(fill='both', expand=True)
-        ttk.Label(form, text='房間 #%s（%s）' %
-                  (room['room_id'], '公開' if room['public'] else '私人'),
-                  style='Heading.TLabel').pack(anchor='w', pady=(0, 8))
-        if self.cooperative:
-            ttk.Label(form, text='協力加入可能消耗點數／門票，請確認。',
-                      style='Muted.TLabel').pack(anchor='w', pady=(0, 8))
-        secret = tk.StringVar()
-        if not room['public']:
-            ttk.Label(form, text='私人房間密碼（4 位 ASCII 數字）').pack(anchor='w')
-            ttk.Entry(form, textvariable=secret, show='*', width=18).pack(
-                anchor='w', pady=(0, 8))
-        buttons = ttk.Frame(form)
-        buttons.pack(fill='x')
+        dialog = None
+        secret = None
 
-        def submit():
+        def submit(password=''):
             if not self._join_ready or not self.app.live_active:
                 messagebox.showwarning('房間狀態', '房間狀態已變更，請重新整理。',
-                                       parent=dialog)
+                                       parent=dialog or self.winfo_toplevel())
                 return
-            password = secret.get()
             if not room['public'] and (
                     len(password) != 4 or not password.isascii()
                     or not password.isdecimal() or password == '0000'):
                 messagebox.showwarning('私人密碼', '請輸入四位 ASCII 數字，不能為 0000。',
                                        parent=dialog)
-                return
-            warning = ('協力加入可能消耗點數或門票。\\n'
-                       if self.cooperative else '')
-            if not messagebox.askyesno(
-                    '確認加入', warning + '要加入房間 #%s 嗎？\\n'
-                    '只會送出一次，結果不明時請重新登入同步。' % room['room_id'],
-                    parent=dialog):
                 return
             command = {'type': 'instance_join', 'mode': self.mode,
                        'room_id': room['room_id'], 'password': password}
@@ -160,11 +128,35 @@ class InstanceRoomDialogMixin:
                 command['sn'] = room['sn']
             self._join_ready = False
             self._update_room_buttons()
-            secret.set('')
-            dialog.destroy()
+            if secret is not None:
+                secret.set('')
+            if dialog is not None:
+                dialog.destroy()
             self.app.send(command)
+
+        if room['public']:
+            submit()
+            return
+        root = self.winfo_toplevel()
+        dialog = tk.Toplevel(self.app.root)
+        dialog.title('加入副本房間')
+        dialog.transient(root)
+        configure_dialog(dialog,460,250 if self.cooperative else 210)
+        form = ttk.Frame(dialog, padding=16)
+        form.pack(fill='both', expand=True)
+        ttk.Label(form, text='私人房間 #%s' % room['room_id'],
+                  style='Heading.TLabel').pack(anchor='w', pady=(0, 8))
+        if self.cooperative:
+            ttk.Label(form, text='協力加入可能消耗點數／門票。',
+                      style='Muted.TLabel').pack(anchor='w', pady=(0, 8))
+        secret = tk.StringVar()
+        ttk.Label(form, text='私人房間密碼（4 位 ASCII 數字）').pack(anchor='w')
+        ttk.Entry(form, textvariable=secret, show='*', width=18).pack(
+            anchor='w', pady=(0, 8))
+        buttons = ttk.Frame(form)
+        buttons.pack(fill='x')
         ttk.Button(buttons, text='取消', command=dialog.destroy).pack(side='right')
-        ttk.Button(buttons, text='確認加入', command=submit).pack(
+        ttk.Button(buttons, text='確認加入', command=lambda: submit(secret.get())).pack(
             side='right', padx=(0, 8))
         dialog.grab_set()
         dialog.focus_set()
@@ -174,11 +166,6 @@ class InstanceRoomDialogMixin:
             return
         current = self._room_data.get('room') or {}
         if not current.get('room_id'):
-            return
-        if not messagebox.askyesno('確認離開副本房間',
-                                   '確定離開房間 #%s？\\n需要伺服器回覆才算成功。'
-                                   % current['room_id'],
-                                   parent=self.winfo_toplevel()):
             return
         self._leave_ready = False
         self._update_room_buttons()

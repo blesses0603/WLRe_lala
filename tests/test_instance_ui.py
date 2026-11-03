@@ -219,7 +219,7 @@ class InstanceNavigation(unittest.TestCase):
         panel.render(State().snapshot(), live=False)
         self.assertTrue(panel.coop_page.create_button.instate(['disabled']))
 
-    def test_create_dialog_requires_confirm_before_send(self):
+    def test_create_form_submits_without_second_prompt(self):
         from wlre.core.state import State
         panel = self.app.instance_panel
         self.app.live_active = True
@@ -232,17 +232,7 @@ class InstanceNavigation(unittest.TestCase):
             for child in widget.winfo_children():
                 yield from visit(child)
         with patch.object(self.app, 'send') as send:
-            with patch('wlre.ui.instance_ui.messagebox.askyesno', return_value=False):
-                page.open_create_dialog()
-                dialog = next(w for w in self.root.winfo_children()
-                              if isinstance(w, tk.Toplevel) and w.title() == '建立副本房間')
-                confirm = next(w for w in visit(dialog)
-                               if isinstance(w, ttk.Button)
-                               and w.cget('text') == '確認建立')
-                confirm.invoke()
-                send.assert_not_called()
-                dialog.destroy()
-            with patch('wlre.ui.instance_ui.messagebox.askyesno', return_value=True):
+            with patch('wlre.ui.instance_ui.messagebox.askyesno', side_effect=AssertionError('不應跳出二次確認')):
                 page.open_create_dialog()
                 dialog = next(w for w in self.root.winfo_children()
                               if isinstance(w, tk.Toplevel) and w.title() == '建立副本房間')

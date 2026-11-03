@@ -56,7 +56,7 @@ class CooperativeRoomDialogsUI(unittest.TestCase):
         self.assertTrue(self.page.create_button.instate(['!disabled']))
         with patch.object(self.app, 'send') as send:
             with patch('wlre.ui.instance_ui.messagebox.askyesno',
-                       return_value=True):
+                       side_effect=AssertionError('不應跳出二次確認')):
                 self.page.open_create_dialog()
                 dialog, confirm = self.dialog_button(
                     '建立副本房間', '確認建立')
@@ -73,7 +73,7 @@ class CooperativeRoomDialogsUI(unittest.TestCase):
             })
         self.assertTrue(self.page.create_button.instate(['disabled']))
 
-    def test_coop_join_requires_confirmation_and_cost_flag(self):
+    def test_coop_public_join_without_dialog_keeps_cost_flag(self):
         data = State().snapshot()
         data['instances']['coop'].update(
             ready=True, list_updated_at=time.monotonic(),
@@ -85,25 +85,19 @@ class CooperativeRoomDialogsUI(unittest.TestCase):
         self.assertTrue(self.page.join_button.instate(['!disabled']))
         with patch.object(self.app, 'send') as send:
             with patch('wlre.ui.instance_ui.messagebox.askyesno',
-                       return_value=False):
+                       side_effect=AssertionError('不應跳出二次確認')):
                 self.page.open_join_dialog()
-                dialog, confirm = self.dialog_button(
-                    '加入副本房間', '確認加入')
-                confirm.invoke()
-                send.assert_not_called()
-                dialog.destroy()
-            with patch('wlre.ui.instance_ui.messagebox.askyesno',
-                       return_value=True):
+                self.assertFalse(any(isinstance(w, tk.Toplevel)
+                                     and w.title()=='加入副本房間'
+                                     for w in self.root.winfo_children()))
                 self.page.open_join_dialog()
-                _, confirm = self.dialog_button('加入副本房間', '確認加入')
-                confirm.invoke()
             send.assert_called_once_with({
                 'type': 'instance_join', 'mode': 'coop',
                 'room_id': 91, 'password': '', 'confirm_cost': True,
             })
         self.assertTrue(self.page.join_button.instate(['disabled']))
 
-    def test_coop_leave_waits_for_manual_confirmation(self):
+    def test_coop_leave_without_second_prompt(self):
         data = State().snapshot()
         data['instances']['coop'].update(
             room={'room_id': 91, 'host_id': 678, 'standby': False},
@@ -112,11 +106,7 @@ class CooperativeRoomDialogsUI(unittest.TestCase):
         self.assertTrue(self.page.leave_button.instate(['!disabled']))
         with patch.object(self.app, 'send') as send:
             with patch('wlre.ui.instance_ui.messagebox.askyesno',
-                       return_value=False):
-                self.page.leave_button.invoke()
-                send.assert_not_called()
-            with patch('wlre.ui.instance_ui.messagebox.askyesno',
-                       return_value=True):
+                       side_effect=AssertionError('不應跳出二次確認')):
                 self.page.leave_button.invoke()
             send.assert_called_once_with({
                 'type': 'instance_leave', 'mode': 'coop',

@@ -42,8 +42,8 @@ class CooperativeFeatureStructure(unittest.TestCase):
         page.request_standby()
         sender.assert_not_called()
         page._standby_ready = True
-        with patch('wlre.features.cooperative.buttons.messagebox.askyesno',
-                   return_value=True):
+        with patch('tkinter.messagebox.askyesno',
+                   side_effect=AssertionError('不應跳出二次確認')):
             page.request_standby()
         sender.assert_called_once_with({
             'type': 'instance_coop_standby', 'mode': 'coop', 'standby': True})

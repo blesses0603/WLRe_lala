@@ -385,21 +385,24 @@ def load_verified_bundle_runtime(*, sync_root=None, _verified_context=None):
                 portal_stage_markers = read_only_stage_portal_markers(
                     optional['StageMapData_C'], scene_rows)
                 portal_metadata_status = 'stage_map_ready'
+                from wlre.services.world.boundary_portals import reconcile_touch_bindings
+                reconcile_touch_bindings(optional['StageMapData_C'],None,doors,scene_rows,
+                    portal_positions,portal_destinations)
                 if 'EveDoorLinks' in optional:
                     try:
                         from wlre.services.world.portal_evidence_1275 import (read_only_portal_evidence)
                         portal_link_evidence = read_only_portal_evidence(
                             optional['StageMapData_C'], optional['EveDoorLinks'],
                             doors, scene_rows)
-                        portal_positions = verified_portal_positions(
-                            optional['StageMapData_C'], optional['EveDoorLinks'],
-                            doors, scene_rows)
+                        portal_positions = {}
                         portal_display_destinations = read_only_portal_destinations(
                             optional['StageMapData_C'], optional['EveDoorLinks'],
                             doors, scene_rows)
-                        portal_destinations = verified_portal_destinations(
-                            optional['StageMapData_C'], optional['EveDoorLinks'],
-                            doors, scene_rows)
+                        portal_destinations = {}
+                        from wlre.services.world.boundary_portals import reconcile_touch_bindings
+                        reconcile_touch_bindings(
+                            optional['StageMapData_C'], optional['EveDoorLinks'], doors, scene_rows,
+                            portal_positions, portal_destinations)
                         portal_metadata_status = 'destination_links_loaded'
                     except (ValueError, KeyError, TypeError):
                         portal_metadata_status = 'destination_links_missing_or_invalid'
@@ -421,6 +424,8 @@ def load_verified_bundle_runtime(*, sync_root=None, _verified_context=None):
                     optional['EveDoorLinks'], doors, scene_rows)
             except (ValueError, TypeError, KeyError):
                 pass
+        if portal_destinations and not portal_link_evidence:
+            portal_metadata_status = 'stage_map_ready'
         # DoorLinkData has coordinates and destination IDs, but no C20-8
         # event index. Keep its route network separate from ordinary doors.
         if 'DoorLinkData_C' in optional:
@@ -432,6 +437,9 @@ def load_verified_bundle_runtime(*, sync_root=None, _verified_context=None):
             except (ValueError, TypeError, KeyError):
                 portal_schema_report['DoorLinkData_C'] = {
                     'status': 'layout_unrecognized', 'can_send_packets': False}
+        from wlre.services.world.boundary_portals import reconcile_route_conflicts
+        reconcile_route_conflicts(portal_positions, portal_destinations, portal_extra_routes,
+            portal_link_evidence)
         if (not dynamic and len(recipes) != 1032) or any(
                 ident not in items or type(items[ident].get('open_used')) is not int
                 for ident in recipes):

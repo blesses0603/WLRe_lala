@@ -303,6 +303,30 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
                          'destination_links_textasset_extract_failed')
         self.assertEqual(len(runtime.recipes), 1032)
 
+    def test_stage_only_doors_survive_missing_link_bundle_in_real_loader(self):
+        from test_stage_map_only_portals import fixture
+        f=fixture()
+        self.raw['StageMapData_C']=f.raw
+        def extract(binding,paths,loader=None):
+            name=binding.contract.source_name
+            if name=='EveDoorLinks':raise ValueError('link bundle unavailable')
+            return self.raw[name]
+        self.extract.side_effect=extract
+        with ExitStack() as stack:
+            self.patches(stack)
+            stack.enter_context(patch('wlre.services.instance_catalog.parse_stages',return_value=f.stages))
+            stack.enter_context(patch('wlre.services.world.doors_1275.parse_doors_1275',return_value=f.doors))
+            stack.enter_context(patch('wlre.services.expedition.data.parse_text_data',
+                                      return_value={3:'正式文字',10:'往航海大地圖'}))
+            runtime=load_verified_bundle_runtime(sync_root=self.root)
+        row=runtime.portal_destinations[12500,1]
+        self.assertTrue(row['door_binding_verified'])
+        self.assertTrue(row['stage_marker_only'])
+        self.assertIsNone(row['destination'])
+        self.assertEqual(runtime.portal_positions[12500,1]['source_kind'],'1275_stage_map_grid_scaled')
+        self.assertEqual(runtime.portal_metadata_status,'stage_map_ready')
+        self.assertEqual(len(runtime.recipes),1032)
+
     def test_known_1262_layout_recognized_from_verified_1275_bundles(self):
         with ExitStack() as stack:
             self.patches(stack)

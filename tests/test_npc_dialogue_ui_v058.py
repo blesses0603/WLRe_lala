@@ -90,14 +90,31 @@ class NPCDialogueUITests(unittest.TestCase):
         self.root.update()
         self.assertTrue(self.map.npc_choice_window.winfo_exists())
         choice=self.map.npc_interacts.choices(12903,1,self.map.npc_talks)
-        with patch('wlre.ui.home_map.messagebox.askyesno',return_value=False):
-            self.map.choose_npc_reply(choice,choice['options'][0])
-        self.send.assert_not_called()
-        with patch('wlre.ui.home_map.messagebox.askyesno',return_value=True):
+        with patch('wlre.ui.home_map.messagebox.askyesno',side_effect=AssertionError('不應跳出二次確認')):
             self.map.choose_npc_reply(choice,choice['options'][1])
         self.send.assert_called_once_with({
             'type':'npc_choose','confirmed':True,
             'scene':12903,'interact_index':1,'choice':1,'text_id':10002})
+
+    def test_automatic_mode_opens_known_choices_once_without_selecting(self):
+        self.map.npc_talks={50063:'要做什麼？',10001:'選項一',10002:'選項二'}
+        self.map.npc_interacts.scenes={12903:{1:{'index':1,'form_kind':1,'link_number':1,'items':[
+            {'id':1,'text_id':50063,'database_kind':1,'kind':1},
+            {'id':2,'text_id':10001,'database_kind':1,'kind':3},
+            {'id':3,'text_id':10002,'database_kind':1,'kind':3}]}}}
+        state={**self.ready_state,'automation':{'enabled':True},
+               'npc_dialogue':{'active':True,'phase':'choice_unavailable','scene':12903,
+                   'npc_index':7,'effect_type':6,'option_index':1,'effect_packet':10}}
+        self.map.set_state(state)
+        first=self.map.npc_choice_window
+        self.assertTrue(first.winfo_exists())
+        self.map.set_state(state)
+        self.assertIs(first,self.map.npc_choice_window)
+        self.send.assert_not_called()
+        state['npc_dialogue']={**state['npc_dialogue'],'effect_packet':11}
+        self.map.set_state(state)
+        self.assertIsNot(first,self.map.npc_choice_window)
+        self.send.assert_not_called()
 
     def test_shop_option_does_not_enable_choose_button(self):
         self.map.npc_interacts.scenes={12903:{1:{
@@ -110,17 +127,14 @@ class NPCDialogueUITests(unittest.TestCase):
         self.map.show_npc_choices()
         self.send.assert_not_called()
 
-    def test_close_choice_requires_confirmation(self):
+    def test_close_choice_sends_without_second_prompt(self):
         state={**self.ready_state,
                'event_flow':{'blocked':True},
                'npc_dialogue':{'active':True,'phase':'choice_unavailable',
                                'scene':12903,'effect_type':6,'option_index':15}}
         self.map.set_state(state)
         self.assertEqual(str(self.map.npc_close_button.cget('state')),'normal')
-        with patch('wlre.ui.home_map.messagebox.askyesno',return_value=False):
-            self.map.close_npc_option()
-        self.send.assert_not_called()
-        with patch('wlre.ui.home_map.messagebox.askyesno',return_value=True):
+        with patch('wlre.ui.home_map.messagebox.askyesno',side_effect=AssertionError('不應跳出二次確認')):
             self.map.close_npc_option()
         self.send.assert_called_once_with({'type':'npc_close_choice','confirmed':True})
 
@@ -131,12 +145,9 @@ class NPCDialogueUITests(unittest.TestCase):
         self.map.interact_npc()
         self.send.assert_not_called()
 
-    def test_verified_npc_requires_confirmation_and_one_manual_next(self):
+    def test_verified_npc_sends_without_prompt_and_one_manual_next(self):
         self.assertEqual(str(self.map.npc_talk_button.cget('state')),'normal')
-        with patch('wlre.ui.home_map.messagebox.askyesno',return_value=False):
-            self.map.interact_npc()
-        self.send.assert_not_called()
-        with patch('wlre.ui.home_map.messagebox.askyesno',return_value=True):
+        with patch('wlre.ui.home_map.messagebox.askyesno',side_effect=AssertionError('不應跳出二次確認')):
             self.map.interact_npc()
         self.send.assert_called_once_with({
             'type':'npc_start','confirmed':True,'scene':12903,

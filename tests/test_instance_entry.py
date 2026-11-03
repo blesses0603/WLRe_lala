@@ -167,7 +167,7 @@ class EntryUI(unittest.TestCase):
             self.root.tk.call('after', 'cancel', job)
         self.root.destroy()
 
-    def test_click_requires_server_started_and_explicit_confirmation(self):
+    def test_click_requires_server_started_without_second_prompt(self):
         snap = State().snapshot()
         snap['player'].update(role_id=678, scene=12000)
         snap['instances']['main'].update(
@@ -176,10 +176,7 @@ class EntryUI(unittest.TestCase):
         self.app.instance_panel.render(snap, live=True)
         self.assertTrue(self.page.enter_button.instate(['!disabled']))
         with patch.object(self.app, 'send') as send:
-            with patch('wlre.ui.instance_ui.messagebox.askyesno', return_value=False):
-                self.page.enter_button.invoke()
-                send.assert_not_called()
-            with patch('wlre.ui.instance_ui.messagebox.askyesno', return_value=True):
+            with patch('wlre.ui.instance_ui.messagebox.askyesno', side_effect=AssertionError('不應跳出二次確認')):
                 self.page.enter_button.invoke()
                 send.assert_called_once_with({'type': 'instance_enter', 'mode': 'main'})
         self.assertTrue(self.page.enter_button.instate(['disabled']))

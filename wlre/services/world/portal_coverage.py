@@ -47,33 +47,50 @@ def audit_portal_coverage(doors, stages, stage_raw=None, link_raw=None,
         counts = Counter(row['index'] for row in events if isinstance(row, dict) and type(row.get('index')) is int)
         stage_markers = by_scene.get(scene, {})
         scene_links = {row['index']: row for row in links.get(scene, ())}
-        indices = set(counts) | {index for sid, index in marker_counts if sid == scene} | set(scene_links)
+        resolved_links = {row.get('link_index', idx) for (sid,idx),row in destinations.items()
+                          if sid == scene and row.get('matched_touch_region') is True
+                          and type(row.get('link_index',idx)) is int}
+        indices = (set(counts) | {index for sid,index in marker_counts
+                   if sid == scene and index not in resolved_links}
+                   | (set(scene_links) - resolved_links))
         details, gaps, ordinary = [], 0, 0
         for index in sorted(indices):
             marker = stage_markers.get(index)
+            binding = destinations.get((scene,index),{})
+            boundary = (binding.get('matched_touch_region') is True
+                        and binding.get('binding_kind') in ('unique_boundary_touch_region','unique_door_anchor')
+                        and (scene,index) in positions)
+            link_index = binding.get('link_index',index)
             reasons = []
-            if marker_counts[scene, index] > 1: reasons.append('duplicate_stage_marker')
+            if not boundary and marker_counts[scene, index] > 1: reasons.append('duplicate_stage_marker')
             # Hidden portals have different semantics, not ordinal links.
             kind = marker.get('kind') if marker else None
-            if kind == 3:
+            if kind == 3 and not boundary:
                 category = 'hidden_portal'
-            elif marker_counts[scene, index] == 0 and index not in scene_links:
+            elif not boundary and marker_counts[scene, index] == 0 and index not in scene_links:
                 category = 'event_container_only' if statuses['StageMapData_C'] == 'parsed' else 'source_incomplete'
             else:
-                category = 'ordinary_portal'
+                category = ('stage_marker_portal' if binding.get('stage_marker_only') else
+                            'boundary_portal') if boundary else 'ordinary_portal'
                 ordinary += 1
-                if marker_counts[scene, index] == 0: reasons.append('missing_stage_marker')
+                if marker_counts[scene, index] == 0 and not boundary: reasons.append('missing_stage_marker')
                 if counts[index] == 0: reasons.append('missing_eve_door')
                 elif counts[index] != 1: reasons.append('duplicate_eve_door')
-                link = scene_links.get(index)
-                if not link: reasons.append('missing_door_link')
-                elif link['destination'] not in expected_scenes: reasons.append('unknown_destination_scene')
+                link = scene_links.get(link_index)
+                if not link and not binding.get('stage_marker_only'): reasons.append('missing_door_link')
+                elif link and link['destination'] not in expected_scenes: reasons.append('unknown_destination_scene')
                 if (scene, index) not in positions: reasons.append('position_unverified')
                 if (scene, index) not in destinations: reasons.append('destination_unverified')
             gaps += bool(reasons)
-            link_info = evidence.get((scene, index), {})
-            details.append({'index': index, 'category': category, 'issues': reasons,
-                            'named': (scene, index) in names,
+            link_info = evidence.get((scene, link_index), {})
+            details.append({'index': index, 'link_index': link_index,
+                            'stage_marker_event_id': binding.get('stage_marker_event_id'),
+                            'destination_status': ('server_decided' if binding.get('stage_marker_only')
+                                and binding.get('destination') is None else
+                                'verified' if binding.get('destination_verified') else 'unverified'),
+                            'direct_door_index': index if boundary else None, 'category': category, 'issues': reasons,
+                            'named': (scene,binding.get('stage_marker_event_id')
+                                      if binding.get('stage_marker_only') else link_index) in names,
                             'official_link_destination': link_info.get('destination'),
                             'official_link_position': (
                                 (link_info.get('x'), link_info.get('y'))
