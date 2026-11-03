@@ -34,12 +34,15 @@ jobs:
               path=fetch_bundle(spec,cache_root=cache,timeout=60)
               env=UnityPy.load(str(path))
               targets={'MainIcon_023':(59,57),'Btn_CategoryLoginAward002':(60,60)}
+              identities={'MainIcon_023':-2515466733963183331,'Btn_CategoryLoginAward002':4957864707032211526}
               found={}
               for obj in env.objects:
                   if obj.type.name!='Sprite':continue
                   sprite=obj.read()
                   name=sprite.m_Name
                   if name not in targets:continue
+                  print('SPRITE_CANDIDATE '+name+' '+str(obj.path_id)+' '+str(obj.assets_file.name))
+                  if obj.path_id!=identities[name]:continue
                   if name in found:raise ValueError('Duplicate sprite '+name)
                   image=sprite.image
                   if image.size!=targets[name]:raise ValueError('Unexpected sprite size '+name+str(image.size))
