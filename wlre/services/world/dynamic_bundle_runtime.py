@@ -186,6 +186,7 @@ def prepare_dynamic_runtime(*, sync=False, sync_root=None, observe=None,
     manifests = {p: retrieve(spec_from_snapshot(before, p), cache_root=root / 'manifests')
                  for p in PACKAGES}
     identity = identity_from_verified_manifests(before, manifests)
+    from wlre.services.world.daily_task_catalog import TABLES as DAILY_TABLES
     if sync:
         pre_download = validate_snapshot(observe())
         if any(before[k] != pre_download[k] for k in ('data_ver', 'exe_version', 'packages')):
@@ -198,7 +199,7 @@ def prepare_dynamic_runtime(*, sync=False, sync_root=None, observe=None,
         # Optional metadata cannot prevent the core runtime from loading.
         left_bytes = max_download_bytes - plan.download_bytes
         left_files = max_downloads - plan.download_count
-        for table in _PORTAL_TABLES + _OPTIONAL_ROUTE_TABLES:
+        for table in _PORTAL_TABLES + _OPTIONAL_ROUTE_TABLES + DAILY_TABLES:
             try:
                 optional = build_update_plan(manifests['DataPackage'],
                     asset_paths=(_ASSET_ROOT + table + '.bytes',), cache_root=root / 'bundles')

@@ -241,7 +241,11 @@ def read_catalog_tables(path, catalog_key, sources):
     from wlre.services.world.eve_v115 import derive_eve_index
     from wlre.services.expedition.data import parse_catalog, attach_names, parse_npcs
     from wlre.services.world.smith_candidate import parse_smith_records
-    parsers = {'items': ('ItemData_C.bytes', parse_itemdata),
+    from wlre.services.world.daily_task_1275 import parse_daily_tasks
+    from wlre.services.world.daily_task_catalog import parse_rewards
+    parsers = {'daily_tasks': ('DailyTaskData_C.bytes', parse_daily_tasks),
+               'daily_rewards': ('DailyTaskRewardData_C.bytes', parse_rewards),
+               'items': ('ItemData_C.bytes', parse_itemdata),
                'talks': ('TalkData_C.bytes', parse_talk_data),
                'texts': ('TextData_C.bytes', parse_text_data),
                'scenes': ('ScenesData_C.bytes', parse_stages),

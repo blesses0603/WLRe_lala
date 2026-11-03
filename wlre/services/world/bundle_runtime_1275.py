@@ -487,6 +487,17 @@ def load_verified_bundle_runtime(*, sync_root=None, _verified_context=None):
             },
         }
 
+        daily_catalog=None
+        daily_status='每日任務需要當次官方動態 Runtime'
+        if dynamic:
+            try:
+                from wlre.services.world.daily_task_catalog import load_verified_catalog
+                daily_catalog=load_verified_catalog(verified_data,bundle_root,load_container,
+                                                     root,identity,texts,items)
+                daily_status='每日／每週任務與活躍寶箱已由同版 SQLite 載入'
+            except (OSError,ValueError,TypeError,KeyError,RuntimeError):
+                daily_status='每日任務資料缺少或格式未通過驗證，其他功能不受影響'
+
         stage = '正式 Runtime 建立'
         from wlre.services.world.portal_coverage import audit_portal_coverage
         coverage = audit_portal_coverage(doors, scene_rows,
@@ -513,6 +524,7 @@ def load_verified_bundle_runtime(*, sync_root=None, _verified_context=None):
             portal_metadata_status=portal_metadata_status,
             portal_schema_report=portal_schema_report,
             portal_coverage=coverage,
+            daily_tasks=daily_catalog, daily_task_status=daily_status,
             doors=doors, expedition=expedition, revision=revision,
         )
         if dynamic:

@@ -22,12 +22,14 @@ from wlre.services.battle.attribute_points import defaults as points_defaults, a
 
 
 from wlre.services.time_cube import defaults as cube_defaults, apply_cube
+from wlre.services.daily_tasks import defaults as daily_defaults, apply_daily_tasks
 
 POSITION_CACHE_LIMIT = 2048
 
 
 @dataclass
 class State:
+    daily_tasks: dict = field(default_factory=daily_defaults)
     time_cube: dict = field(default_factory=cube_defaults)
     automation: dict = field(default_factory=lambda:{'enabled':True,'status':'依指定目標自動接續'})
     maintenance: dict = field(default_factory=lambda:{'pending':None,'uncertain':False,'checking':False,'status':'尚未執行戰後修理／整理','completed':0})
@@ -148,6 +150,7 @@ class State:
     def apply(self, event):
         self.assert_writer()
         self.packet_count += 1
+        apply_daily_tasks(self,event)
         apply_cube(self,event)
         apply_recovery(self,event)
         apply_guild(self,event)

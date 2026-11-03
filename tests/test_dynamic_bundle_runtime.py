@@ -133,6 +133,39 @@ class DynamicBundleRuntimeTests(unittest.TestCase):
             recipe_plan(State(), 3874, 1)
         self.assertFalse(runtime.can_send_packets)
 
+    def test_daily_tables_use_verified_bundle_then_sqlite_and_real_claim(self):
+        from test_daily_task_1275 import sample_daily
+        from wlre.services.world.daily_task_catalog import TABLES
+        from wlre.core.state import State
+        from wlre.network.protocol import decode
+        from wlre.network.wire import Packet
+        from wlre.services import daily_tasks
+        from test_daily_task_runtime import snapshot
+        daily=bytearray(sample_daily());struct.pack_into('<I',daily,15,10)
+        self.raw.update(DailyTaskData_C=bytes(daily),
+                        DailyTaskRewardData_C=struct.pack('<iHBII',1,7,1,20,1)+
+                        struct.pack('<BII',10,3874,1)+b'\0'*27)
+        manifest=self.manifests['DataPackage']
+        manifest.index['assets'].extend(dict(path=_ASSET_ROOT+t+'.bytes',
+                        bundle_name=manifest.index['bundles'][0]['name']) for t in TABLES)
+        runtime=dynamic.activate_for_official(self.remote,**self.kwargs())
+        self.assertIsNotNone(runtime.daily_tasks)
+        self.assertEqual(runtime.daily_tasks['tasks'][0]['name'],'新版任務')
+        from wlre.services.world.resource_database import read_catalog_tables
+        parsed=read_catalog_tables(self.root/'derived_catalogs'/'resource_inventory.sqlite3',runtime.catalog_identity.key,
+                                   ('daily_tasks','daily_rewards'))
+        self.assertEqual(parsed['daily_tasks']['task_count'],1)
+        state=State(phase='world_ready',initial_data_complete=True)
+        state.player.update(role_id=1);state.daily_tasks['role_id']=1
+        state.inventory.update(ready=True,reliable=True,capacity=10,revision=1,items={})
+        state.apply(decode(snapshot()));state.apply(decode(Packet(124,2,b'\x01\x02')))
+        self.assertEqual(daily_tasks.tick(state,True,1),[Packet(124,1,b'\x01\x00')])
+        # One changed optional schema disables only daily tasks, never the core runtime.
+        self.raw['DailyTaskRewardData_C']+=b'!'
+        runtime=dynamic.activate_for_official(self.remote,**self.kwargs())
+        self.assertIsNone(runtime.daily_tasks)
+        self.assertEqual(len(runtime.items),1)
+
     def test_unknown_smith_layout_and_corrupt_item_table_refuse_activation(self):
         for name in ('SmithData_C', 'ItemData_C'):
             with self.subTest(name=name):

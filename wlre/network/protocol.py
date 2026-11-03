@@ -4,6 +4,7 @@ import json
 from wlre.network.wire import Packet, Reader, Writer, ProtocolError
 from wlre.network.layouts import role_list, world_player, battle_unit
 from wlre.services.time_cube import decode_cube
+from wlre.services.daily_tasks import decode_daily_tasks
 from wlre.network.live_data import decode_live
 from wlre.network.social_protocol import decode_social
 from wlre.services.social.chat import decode_chat
@@ -68,7 +69,7 @@ def use_field_item(item_id,index,npc_index):
 def decode(packet, local_role_id=None):
     chat=decode_chat(packet,local_role_id)
     if chat is not None:return chat
-    extra=(decode_cube(packet) or decode_instances(packet) or decode_storage(packet) or decode_expedition(packet) or decode_recovery(packet)
+    extra=(decode_daily_tasks(packet) or decode_cube(packet) or decode_instances(packet) or decode_storage(packet) or decode_expedition(packet) or decode_recovery(packet)
            or decode_guild(packet) or decode_activity(packet) or decode_crafting(packet)
            or decode_tent(packet))
     if extra is not None:return extra

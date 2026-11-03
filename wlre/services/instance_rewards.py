@@ -61,6 +61,8 @@ def _safe_bag(state):
 
 
 def _guard(state):
+    if state.daily_tasks.get("pending") or state.daily_tasks.get("uncertain"):
+        raise ProtocolError("等待每日任務領獎確認")
     if state.time_cube.get("pending") or state.time_cube.get("uncertain"):
         raise ProtocolError("等待魔方開啟確認")
     if (state.phase != 'world_ready' or not state.initial_data_complete

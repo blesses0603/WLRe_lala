@@ -311,6 +311,8 @@ class SessionLogic:
 
     def disconnect(self,state):
         """Freeze uncertain bag requests and disable intent before final publication."""
+        from wlre.services.daily_tasks import disconnect as daily_disconnect
+        daily_disconnect(state)
         from wlre.services.time_cube import disconnect as cube_disconnect
         cube_disconnect(state)
         self.flows.clear(state)
@@ -416,7 +418,7 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
                             _send_command_packet(connection,packet,profile['tx_xor'],state,emit,on_state)
                         if command.get('type') in ('start_auto_battle', 'stop_auto_battle'):
                             emit(auto_battle_status_event(state))
-                        if command.get('type') in ('team','start_alchemy','stop_alchemy','reset_efficiency','craft','room_storage','start_expedition','stop_expedition','allocate_points','instance_create','instance_join','instance_leave','instance_coop_standby','instance_start','instance_enter','instance_auto_reward','instance_reward_claim','instance_reward_cancel','automatic_flows','time_cube','npc_start','npc_approach','npc_next','npc_close_choice','npc_choose','npc_close_shop','tent') and on_state:notify_state(on_state,state)
+                        if command.get('type') in ('team','start_alchemy','stop_alchemy','reset_efficiency','craft','room_storage','start_expedition','stop_expedition','allocate_points','instance_create','instance_join','instance_leave','instance_coop_standby','instance_start','instance_enter','instance_auto_reward','instance_reward_claim','instance_reward_cancel','automatic_flows','daily_tasks','time_cube','npc_start','npc_approach','npc_next','npc_close_choice','npc_choose','npc_close_shop','tent') and on_state:notify_state(on_state,state)
                         if command.get('type') in ('start_auto_battle','stop_auto_battle','set_party_guard'):
                             emit({'type':'auto_battle_status',**state.auto_battle})
                             if on_state:notify_state(on_state,state)
