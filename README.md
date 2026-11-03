@@ -4,6 +4,8 @@
 
 > **PR #65 時間魔方（2026-11-03，預計 v7.1.0）**：新增「福利 > 魔方」。登入同步後預設自動開啟伺服器確認已分析完成的魔方，可獨立關閉，並遵守主畫面的全域暫停。顯示可開啟次數（最多 3 次）、分析倒數與等待原因；關閉福利視窗仍可運作。依上傳 1262 Lua 的 S122-1／3 解析、空 payload C122-2 實作，不用倒數推算可領次數、不用廢棄 S122-2 當成功回執。背包需有對應空位且無其他未確認操作；送出後等次數減少與背包更新，15 秒未確認即停止重送，需重新登入同步。頁面狀態更新不等同獎勵內容已核實；正式服端到端、桌面畫面及 CI 結果分別驗收，尚未打包或發布。
 
+> **福利／魔方圖示整合（2026-11-03，PR #65）**：官方圖示：福利入口使用 `MainIcon_023.png`（Sprite PathID `-2515466733963183331`，59×57），魔方分頁使用 `Btn_CategoryLoginAward002.png`（PathID `4957864707032211526`，60×60）。兩者由官方 MainPackage `1284_2026_10_28_19_50_04_11` 的 `mainpackage_atlas.bundle` 精準擷取，下載已核對 Manifest／Bundle 長度、MD5 與 CRC；Bundle SHA-256 為 `069b5ccf41c5a19bdc8f2a20d5f0339b0fb6fbb3dd572c239c2ccfdf50578996`。保留原 Sprite 尺寸與透明背景，PNG 編碼由解包工具輸出；納入必要資源與既有 Windows／macOS 打包清單，不需使用者自行補圖。
+
 > **Windows EXE 建置**：版本更新合併 main 後，Actions 的 **Version tag and Windows EXE build** 會建立指向該 main 提交的版本 Tag（例如 `v7.0.1`），再測試、編譯並上傳完整 EXE 資料夾 ZIP 與 SHA-256（保留 14 天）。解壓後執行 `WLRe_LaLa/WLRe_LaLa.exe`，請保留整個資料夾。同名 Tag 不會被覆寫；此流程不建立 GitHub Release。詳見 [Nuitka 打包](docs/NUITKA_BUILD.md)。
 
 > **PR #63 資料庫替代完成**：27 項舊 JSON／ZIP／GZ 已從目前分支移除，改為隨附完整初始 SQLite；乾淨下載可直接啟動與打包。舊版本說明中的原始檔安裝方式屬歷史紀錄。詳見 [資料庫替代說明](docs/RESOURCE_DATABASE_REPLACEMENT.md)。

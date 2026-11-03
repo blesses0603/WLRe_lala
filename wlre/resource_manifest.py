@@ -19,7 +19,8 @@ REQUIRED_RESOURCES=(
         'Btn_004','Btn_014','Btn_016','Btn_Bag','Btn_CategoryAISetting003','Btn_Close04','Btn_Setting')),
     *('assets/function-icons/'+name+'.png' for name in (
         'Btn_AI','MainIcon_001','MainIcon_005','MainIcon_007','MainIcon_010',
-        'MainIcon_011','MainIcon_020','MainIcon_038','MainIcon_041')),
+        'MainIcon_011','MainIcon_020','MainIcon_023','MainIcon_038','MainIcon_041',
+        'Btn_CategoryLoginAward002')),
 )
 
 

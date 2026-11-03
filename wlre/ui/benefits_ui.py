@@ -9,7 +9,7 @@ class BenefitsPanel(ttk.Frame):
     def __init__(self,parent,app):
         super().__init__(parent,padding=12)
         self.app=app
-        self.tabs=RoundedNotebook(self)
+        self.tabs=RoundedNotebook(self,icons=True)
         self.tabs.pack(fill='both',expand=True)
         self.cube=ttk.Frame(self.tabs,padding=16)
         self.tabs.add(self.cube,text='魔方')

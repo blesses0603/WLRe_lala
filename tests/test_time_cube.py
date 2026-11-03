@@ -141,6 +141,22 @@ class CubeTests(unittest.TestCase):
         self.assertEqual(sent,[Packet(122,2)])
 
 
+class CubeIconTests(unittest.TestCase):
+    def test_official_pngs_decode_at_original_sprite_dimensions(self):
+        from PIL import Image
+        from wlre.paths import RESOURCE_ROOT
+        from wlre.ui.function_icons import icon_image
+        for name,size in (('MainIcon_023',(59,57)),('Btn_CategoryLoginAward002',(60,60))):
+            with self.subTest(name=name):
+                with Image.open(RESOURCE_ROOT/'assets'/'function-icons'/(name+'.png')) as image:
+                    self.assertEqual(image.format,'PNG')
+                    self.assertEqual(image.size,size)
+                    image.verify()
+                rendered=icon_image(name)
+                self.assertEqual(rendered.size,(34,34))
+                self.assertIsNotNone(rendered.getbbox())
+
+
 # Native UI coverage runs on CI's Xvfb / Windows desktop.
 import os
 import tkinter as tk
@@ -164,6 +180,14 @@ class CubeUITests(unittest.TestCase):
         state=State(phase='world_ready',initial_data_complete=True)
         state.time_cube.update(ready=True,count=1,deadline=0)
         self.panel.render(state.snapshot());self.root.update()
+        # A real PhotoImage must survive tab rebuilds; opening never sends a packet.
+        button=self.panel.tabs.buttons[str(self.panel.cube)]
+        self.assertTrue(button.cget('image'))
+        self.assertTrue(hasattr(button,'_function_icon'))
+        from wlre.ui.function_icons import icon_photo
+        self.assertIsNotNone(icon_photo(self.root,'福利'))
+        self.panel.tabs._rebuild()
+        self.assertTrue(self.panel.tabs.buttons[str(self.panel.cube)].cget('image'))
         self.app.send.assert_not_called()
         self.panel.auto.invoke()
         self.app.send.assert_called_once_with(dict(type='time_cube',action='auto',enabled=False))
