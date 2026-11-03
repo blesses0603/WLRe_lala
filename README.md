@@ -1,4 +1,6 @@
-# WLRe:LaLa | v7.1.0 開發版（非正式發布）
+# WLRe:LaLa | v7.1.1 開發版（非正式發布）
+
+> **v7.1.1 傳送點補齊（開發中）**：新增同版 Eve 的門 → PlayerTouch → Convey 解析，補上巨鯨島等未列於 EveDoorLinks／StageMap 的入口；條件分支保留所有目的地，進入條件仍由伺服器判定。詳見 [全場景傳送點核對](docs/PORTAL_CONVEY_COMPLETION.md)。本分支尚未合併、發布或完成正式服驗收。
 
 > **程式版本（2026-11-03）**：桌面版更新為 `7.1.0`，整合 PR #65 的福利魔方自動開啟與官方圖示、NPC／製作自動接續、小地圖入口修復；副本開始及協力準備仍由使用者手動操作。介面、自檢及建置版本沿用 `wlre.__version__`。原功能提交的 Windows／Ubuntu／macOS CI 已通過；正式伺服器端到端與安裝包驗收另行確認。main 合併後由既有流程建立版本 Tag 並建置 Windows EXE，不代表已發布 GitHub Release。
 

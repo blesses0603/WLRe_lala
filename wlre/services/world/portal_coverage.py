@@ -58,7 +58,7 @@ def audit_portal_coverage(doors, stages, stage_raw=None, link_raw=None,
             marker = stage_markers.get(index)
             binding = destinations.get((scene,index),{})
             boundary = (binding.get('matched_touch_region') is True
-                        and binding.get('binding_kind') in ('unique_boundary_touch_region','unique_door_anchor')
+                        and binding.get('binding_kind') in ('unique_boundary_touch_region','unique_door_anchor','eve_convey')
                         and (scene,index) in positions)
             link_index = binding.get('link_index',index)
             reasons = []
@@ -70,25 +70,35 @@ def audit_portal_coverage(doors, stages, stage_raw=None, link_raw=None,
             elif not boundary and marker_counts[scene, index] == 0 and index not in scene_links:
                 category = 'event_container_only' if statuses['StageMapData_C'] == 'parsed' else 'source_incomplete'
             else:
-                category = ('stage_marker_portal' if binding.get('stage_marker_only') else
+                category = ('event_convey_portal' if binding.get('event_convey_verified') else
+                            'stage_marker_portal' if binding.get('stage_marker_only') else
                             'boundary_portal') if boundary else 'ordinary_portal'
                 ordinary += 1
                 if marker_counts[scene, index] == 0 and not boundary: reasons.append('missing_stage_marker')
                 if counts[index] == 0: reasons.append('missing_eve_door')
                 elif counts[index] != 1: reasons.append('duplicate_eve_door')
                 link = scene_links.get(link_index)
-                if not link and not binding.get('stage_marker_only'): reasons.append('missing_door_link')
+                if not link and not binding.get('stage_marker_only') and not binding.get('event_convey_verified'): reasons.append('missing_door_link')
                 elif link and link['destination'] not in expected_scenes: reasons.append('unknown_destination_scene')
                 if (scene, index) not in positions: reasons.append('position_unverified')
                 if (scene, index) not in destinations: reasons.append('destination_unverified')
+            door = next((r for r in events if r.get('index') == index), {})
+            transfer_records = [t for e in door.get('touch_event_records', [])
+                                for t in e.get('convey_transfers', [])]
+            if not boundary and transfer_records:
+                reasons.append(door.get('portal_resolution_issue') or 'event_convey_unbound')
+            if any(e.get('missing_convey_ids') for e in door.get('touch_event_records', [])):
+                reasons.append('missing_convey')
             gaps += bool(reasons)
             link_info = evidence.get((scene, link_index), {})
             details.append({'index': index, 'link_index': link_index,
                             'stage_marker_event_id': binding.get('stage_marker_event_id'),
-                            'destination_status': ('server_decided' if binding.get('stage_marker_only')
+                            'destination_status': ('server_decided' if (binding.get('stage_marker_only') or binding.get('event_decided_only'))
                                 and binding.get('destination') is None else
                                 'verified' if binding.get('destination_verified') else 'unverified'),
                             'direct_door_index': index if boundary else None, 'category': category, 'issues': reasons,
+                            'convey_transfer_count': len(transfer_records),
+                            'destination_candidates': binding.get('destination_candidates', []),
                             'named': (scene,binding.get('stage_marker_event_id')
                                       if binding.get('stage_marker_only') else link_index) in names,
                             'official_link_destination': link_info.get('destination'),

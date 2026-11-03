@@ -42,7 +42,7 @@ def destination_problem(portal, maps=None):
             and 1 <= portal['direct_door_index'] <= 65535
             and type(portal.get('destination')) is int
             and 0 < portal['destination'] <= 65535)
-        if not verified and not stage_marker_trigger(portal):
+        if not verified and not stage_marker_trigger(portal) and not event_decided_trigger(portal):
             return ('1275 門事件的目的地或觸碰索引尚未完成交叉核對；'
                     '不會送出傳點指令。')
         return None
@@ -61,3 +61,16 @@ def allowed_rows(catalog, scene, maps, recovery=False):
     return [p for p in catalog.for_scene(scene)
             if destination_problem(p, maps) is None
             and (not recovery or p.get('direct_eligible'))]
+
+
+def event_decided_trigger(portal):
+    """A physical Eve door with several decoded conditional destinations."""
+    return (portal.get('event_decided_only') is True
+            and portal.get('event_convey_verified') is True
+            and portal.get('door_binding_verified') is True
+            and portal.get('direct_eligible') is True
+            and portal.get('coordinate_valid') is True
+            and type(portal.get('direct_door_index')) is int
+            and 1 <= portal['direct_door_index'] <= 65535
+            and portal.get('destination') is None
+            and bool(portal.get('destination_candidates')))

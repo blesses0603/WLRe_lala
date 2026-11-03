@@ -158,9 +158,13 @@ class PortalTravel:
                 expected = p.get('destination')
                 if p.get('mode') == 'direct' and event['scene'] == p['scene']:
                     # A same-map location sync alone does not prove a transfer.
-                    if expected != p['scene'] or (event['x'],event['y']) == (p['origin_x'],p['origin_y']):
+                    candidates = p.get('destination_candidates') or []
+                    if (expected != p['scene'] and p['scene'] not in candidates
+                            or (event['x'],event['y']) == (p['origin_x'],p['origin_y'])):
                         return
-                matched = expected is None or event['scene'] == expected
+                candidates = p.get('destination_candidates') or []
+                matched = (event['scene'] in candidates if candidates else
+                           expected is None or event['scene'] == expected)
                 self.status(state, 'completed' if matched else 'different_map',
                             '伺服器已確認換圖與抵達座標' if matched else '伺服器傳送至其他地圖，以實際回覆為準')
                 state.portal_travel['arrival'] = {k: event[k] for k in ('scene', 'x', 'y')}
