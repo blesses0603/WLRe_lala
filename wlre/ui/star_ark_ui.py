@@ -55,7 +55,8 @@ class StarArkPanel(ttk.Frame):
         self.status_label.grid(row=8,column=0,sticky='ew',pady=4)
         self.help_label=ttk.Label(self,text='派遣使用第一星球的一名空閒情報員，依官方價格與技能計算星力。\n'
                   '一般戰鬥沿用已啟用的自動戰鬥；主線、交付物品、商人購買不自動代做。\n'
-                  '未知問答需選擇答案；僅重用伺服器確認答對的答案，不付費刷新、加速或升級技能。',
+                  '問答會保存伺服器確認答案，同角色與版本可跨登入重用；未知題目需選答。\n'
+                  '不付費刷新、加速或升級技能。',
                   wraplength=720,width=1)
         self.help_label.grid(row=9,column=0,sticky='ew',pady=3);self.help_label.grid_remove()
         for label in (self.summary_label,self.status_label,self.help_label):
@@ -128,4 +129,5 @@ class StarArkPanel(ttk.Frame):
                 and not d.get('uncertain') else 'disabled')
         note=d.get('status','等待星之方舟同步')
         if not state.get('automation',{}).get('enabled',True):note='全域自動接續已暫停；已送出操作仍等待確認'
+        if d.get('question_store_status'):note+='\n題庫：'+d['question_store_status']
         self.status.set(note)

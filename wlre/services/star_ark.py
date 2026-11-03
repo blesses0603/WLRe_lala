@@ -4,7 +4,9 @@ Evidence: StarArk.lua, UIStarArk.lua, Protocols_191.lua and Protocols_075.lua.
 No local daily progress fabrication, paid refresh, item shortcut or skill upgrade.
 """
 import time
+import sqlite3
 from wlre.network.wire import Packet,Reader,Writer,ProtocolError
+from wlre.storage.ark_questions import QuestionStore,identity as question_identity
 
 
 def defaults():
@@ -13,6 +15,7 @@ def defaults():
         starcoin=dict(ready=False,reliable=False,amount=None,revision=0),
         budget=120,hours=1,reserved=0,confirmed=0,settings_revision=0,catalog_token=None,
         rows=[],quote=None,question=None,answers={},attempted=[],generation=0,
+        question_store_status='題庫會保存伺服器確認答對的答案',
         status='等待星之方舟與每日任務同步')
 
 
@@ -129,6 +132,44 @@ def decode_ark(packet):
 def freeze(d,note):d.update(pending=None,uncertain=True,status=note+'；停止重送，請重新登入同步')
 
 
+def _question_current(state,p):
+    catalog,token,_=runtime_catalog()
+    return (catalog is not None and p['token']==token and p['role']==state.player.get('role_id')
+            and p['role']==state.star_ark['role']
+            and p['daily_generation']==state.daily_tasks['generation'])
+
+
+def _remember_question(state,p,q,correct=None):
+    """A failed private cache must never break the game receive loop."""
+    d=state.star_ark
+    try:
+        key=question_identity(p['token'],p['role'],q)[2]
+        store=QuestionStore()
+        if correct is None:
+            answer,status=store.observe(p['token'],p['role'],q)
+            q['known_answer']=answer
+            q['answer_source']='永久題庫（伺服器已確認）' if answer is not None else ''
+        elif correct:
+            answer=q['options'][q['selected']-1]
+            status=store.confirm(p['token'],p['role'],q,answer)
+            if status=='confirmed':d['answers'][key]=answer
+            else:d['answers'].pop(key,None)
+        else:
+            answer=q['options'][q['selected']-1]
+            store.reject(p['token'],p['role'],q,answer)
+            d['answers'].pop(key,None)
+            status='wrong'
+        d['question_store_status']={
+            'confirmed':'已保存伺服器確認答案；相同角色與版本可跨登入重用',
+            'unknown':'已收錄題目；尚無伺服器確認答案，請人工選答',
+            'conflict':'答案紀錄衝突，已停止此題自動選答',
+            'wrong':'此次回答錯誤；不由錯誤回覆推測答案',
+        }[status]
+    except (OSError,sqlite3.Error,ValueError,KeyError,TypeError):
+        q['known_answer']=None;q['answer_source']=''
+        d['question_store_status']='永久題庫無法讀寫，請人工選答；本次答案未保存'
+
+
 def apply_ark(state,event):
     d=state.star_ark;kind=event['type']
     if kind=='role_list_available':state.star_ark=defaults();return
@@ -138,6 +179,9 @@ def apply_ark(state,event):
         state.star_ark['role']=role;return
     if not kind.startswith('ark_') or not d['role'] or d['role']!=state.player.get('role_id'):return
     p=d['pending']
+    if (kind in ('ark_question','ark_answer_result') and p and p['kind']=='question'
+            and not _question_current(state,p)):
+        freeze(d,'問答回覆的角色／版本／每日任務週期已改變');return
     if kind=='ark_starcoin':
         c=d['starcoin'];before=c['amount'];delta=event['offset']*(1 if event['add'] else -1)
         reliable=(not event['offset'] or c['ready'] and c['reliable'] and before+delta==event['amount'])
@@ -209,6 +253,7 @@ def apply_ark(state,event):
             freeze(d,'問答缺少同版題目文字');return
         d['question']={**event,'selected':None,'text':texts[event['question']],
                        'labels':[texts[i] for i in event['options']]};p['due']=None
+        _remember_question(state,p,d['question'])
         d['status']='等待選擇問答答案；沒有已確認答案時不猜題'
     elif kind=='ark_answer_result' and p and p['kind']=='question':
         q=d['question']
@@ -217,8 +262,8 @@ def apply_ark(state,event):
             freeze(d,'答對回覆與已送出選項不符')
         else:
             p['result']=True
-            if event['correct'] and event['answer']==q['selected']:
-                d['answers'][q['question']]=q['options'][q['selected']-1]
+            _remember_question(state,p,q,event['correct'])
+            d['status']='答案正確，等待事件完成' if event['correct'] else '答案錯誤，等待事件完成'
     elif kind=='ark_error' and p:freeze(d,'伺服器拒絕方舟操作（代碼 '+str(event['code'])+'）')
 
 
@@ -391,8 +436,14 @@ def tick(state,world_acknowledged,now=None):
         elif p['due'] is not None and now>=p['due']:freeze(d,'方舟操作逾時，結果不明')
         elif (p['kind']=='question' and d['question'] and d['question']['selected'] is None
               and d['enabled'] and state.automation['enabled']):
-            q=d['question'];answer=d['answers'].get(q['question'])
-            if answer in q['options']:return command(state,dict(action='answer',index=q['options'].index(answer)+1),world_acknowledged,now)
+            q=d['question']
+            if q.get('known_answer') is not None:
+                _remember_question(state,p,q)
+                answer=q.get('known_answer')
+                if answer in q['options']:
+                    packets=command(state,dict(action='answer',index=q['options'].index(answer)+1),world_acknowledged,now)
+                    d['status']='已依永久題庫送出答案，等待伺服器結果與事件完成'
+                    return packets
         return []
     if d['catalog_token']!=token:
         if d['catalog_token'] is not None:

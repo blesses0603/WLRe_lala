@@ -1,6 +1,9 @@
 """Ark protocol, bounded currency consumption and real scheduler regressions."""
 import struct
 import unittest
+import tempfile
+from pathlib import Path
+from functools import partial
 from copy import deepcopy
 from types import SimpleNamespace
 from unittest.mock import patch,Mock
@@ -43,6 +46,11 @@ def events(kind=1,event_id=1):
 
 class StarArkTests(unittest.TestCase):
     def setUp(self):
+        from wlre.storage.ark_questions import QuestionStore
+        temporary=tempfile.TemporaryDirectory();self.addCleanup(temporary.cleanup)
+        self.question_db=Path(temporary.name)/'ark_questions.sqlite3'
+        store_patch=patch.object(ark,'QuestionStore',partial(QuestionStore,self.question_db))
+        store_patch.start();self.addCleanup(store_patch.stop)
         self.catalog=catalog();self.runtime=SimpleNamespace(ark_catalog=self.catalog,
             catalog_identity=SimpleNamespace(key='a'*64))
         for name,value in [('current_runtime',self.runtime),('current_catalog_token',(True,'a'*64))]:
@@ -185,11 +193,90 @@ class StarArkTests(unittest.TestCase):
         with self.assertRaises(ProtocolError):ark.command(self.state,dict(action='answer',index=2),True,4)
         self.feed(Packet(191,12,b'\x01\x02'));self.feed(Packet(191,10,b'\x01\x02\x00'))
         self.progress(1,1);ark.tick(self.state,True,5)
-        self.assertEqual(self.state.star_ark['answers'],{20:22})
+        self.assertEqual(list(self.state.star_ark['answers'].values()),[22])
         self.feed(events(3,3));ark.tick(self.state,True,6)
         ark.command(self.state,dict(action='question',index=1),True,7);self.feed(question)
         self.state.star_ark['enabled']=True
         self.assertEqual(ark.tick(self.state,True,8),[Packet(191,7,b'\x02')])
+
+    def open_question(self,options=(21,22,23,24),event_id=2,now=1):
+        self.feed(events(3,event_id));ark.tick(self.state,True,now-1)
+        ark.command(self.state,dict(action='question',index=1),True,now)
+        self.feed(Packet(191,11,struct.pack('<IBII4I',20,6,8,10,*options)))
+
+    def confirm_question(self):
+        self.open_question()
+        ark.command(self.state,dict(action='answer',index=2),True,2)
+        self.feed(Packet(191,12,b'\x01\x02'));self.feed(Packet(191,10,b'\x01\x02\x00'))
+        self.progress(1,1);ark.tick(self.state,True,3)
+
+    def test_persistent_answer_survives_login_reset_and_option_shuffle(self):
+        self.confirm_question()
+        self.state.apply(dict(type='role_list_available',roles=[]))
+        self.state.apply(dict(type='world_player',player=dict(role_id=1,x=0,y=0,scene=500)))
+        self.state.phase='world_ready';self.state.initial_data_complete=True
+        self.feed(snapshot());self.coin(1000)
+        self.state.star_ark.update(enabled=False,dispatch_enabled=False)
+        self.open_question((24,23,21,22),event_id=3,now=4)
+        self.assertEqual(self.state.star_ark['question']['known_answer'],22)
+        self.state.star_ark['enabled']=True
+        self.assertEqual(ark.tick(self.state,True,5),[Packet(191,7,b'\x04')])
+        self.assertEqual(ark.tick(self.state,True,6),[])
+
+    def test_cached_answer_respects_global_and_local_pause(self):
+        self.confirm_question();self.open_question(event_id=3,now=4)
+        self.assertEqual(ark.tick(self.state,True,5),[])
+        self.state.star_ark['enabled']=True;self.state.automation['enabled']=False
+        self.assertEqual(ark.tick(self.state,True,6),[])
+        self.state.automation['enabled']=True
+        self.assertEqual(ark.tick(self.state,True,7),[Packet(191,7,b'\x02')])
+
+    def test_changed_question_text_does_not_reuse_session_or_permanent_answer(self):
+        self.confirm_question();self.catalog['texts'][20]='新題目'
+        self.open_question(event_id=3,now=4);self.state.star_ark['enabled']=True
+        self.assertEqual(ark.tick(self.state,True,5),[])
+        self.assertIsNone(self.state.star_ark['question']['known_answer'])
+
+    def test_wrong_reply_never_creates_a_correct_answer(self):
+        self.open_question();ark.command(self.state,dict(action='answer',index=1),True,2)
+        self.feed(Packet(191,12,b'\x00\x02'))
+        self.assertEqual(self.state.star_ark['answers'],{})
+        from wlre.storage.ark_questions import QuestionStore
+        self.assertEqual(QuestionStore(self.question_db).observe((True,'a'*64),1,
+            self.state.star_ark['question']),(None,'unknown'))
+
+    def test_stale_result_cannot_poison_permanent_answers_before_next_tick(self):
+        for change in ('day','version','role'):
+            with self.subTest(change=change):
+                self.setUp();self.open_question()
+                ark.command(self.state,dict(action='answer',index=2),True,2)
+                if change=='day':self.state.daily_tasks['generation']+=1
+                elif change=='role':self.state.player['role_id']=2
+                else:
+                    with patch.object(ark,'runtime_catalog',return_value=(self.catalog,(True,'b'*64),'new')):
+                        self.feed(Packet(191,12,b'\x01\x02'))
+                if change!='version':self.feed(Packet(191,12,b'\x01\x02'))
+                self.assertEqual(self.state.star_ark['answers'],{})
+                from wlre.storage.ark_questions import QuestionStore
+                self.assertEqual(QuestionStore(self.question_db).observe((True,'a'*64),1,
+                    self.state.star_ark['question']),(None,'unknown'))
+
+    def test_corrupt_question_database_preserves_manual_answering(self):
+        self.question_db.write_bytes(b'corrupt')
+        self.open_question()
+        self.assertIn('無法讀寫',self.state.star_ark['question_store_status'])
+        self.assertEqual(ark.command(self.state,dict(action='answer',index=2),True,2),[Packet(191,7,b'\x02')])
+        self.feed(Packet(191,12,b'\x01\x02'))
+        self.assertFalse(self.state.star_ark['uncertain'])
+        self.assertEqual(self.question_db.read_bytes(),b'corrupt')
+
+    def test_conflict_recorded_by_another_instance_blocks_cached_automatic_send(self):
+        self.confirm_question();self.open_question(event_id=3,now=4)
+        from wlre.storage.ark_questions import QuestionStore
+        QuestionStore(self.question_db).confirm((True,'a'*64),1,self.state.star_ark['question'],23)
+        self.state.star_ark['enabled']=True
+        self.assertEqual(ark.tick(self.state,True,5),[])
+        self.assertIn('衝突',self.state.star_ark['question_store_status'])
 
     def test_main_items_shops_are_not_auto_executed_and_global_pause_preserves_intent(self):
         self.state.star_ark.update(enabled=True,dispatch_enabled=False)
