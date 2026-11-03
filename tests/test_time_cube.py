@@ -146,7 +146,7 @@ class CubeIconTests(unittest.TestCase):
         from PIL import Image
         from wlre.paths import RESOURCE_ROOT
         from wlre.ui.function_icons import icon_image
-        for name,size in (('MainIcon_023',(59,57)),('Btn_CategoryLoginAward002',(60,60))):
+        for name,size in (('MainIcon_023',(59,57)),('Btn_CategoryLoginAward002',(60,60)),('Btn_CategoryGuild003',(54,54)),('Btn_CategoryGuild007',(58, 53))):
             with self.subTest(name=name):
                 with Image.open(RESOURCE_ROOT/'assets'/'function-icons'/(name+'.png')) as image:
                     self.assertEqual(image.format,'PNG')
