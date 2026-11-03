@@ -63,6 +63,8 @@ def portal_inspection_text(portal):
     if (not target and portal.get('destination_verified') is True
             and portal.get('binding_kind') in ('unique_boundary_touch_region','unique_door_anchor')):
         target = portal.get('destination_label')
+    if portal.get('event_convey_verified'):
+        target = portal.get('destination_label') if portal.get('destination_verified') else '條件目的地由伺服器確認'
     if target is None and type(portal.get('hidden_destination_scene_id')) is int:
         hidden = portal['hidden_destination_scene_id']
         target = portal.get('display_destination_label') or (
@@ -88,7 +90,9 @@ def portal_inspection_text(portal):
     events = portal.get('touch_event_ids')
     if events:parts.append('觸碰事件 ' + ', '.join(str(i) for i in events))
     if portal.get('touch_event_records'):
-        parts.append('事件條件與效果明細已保留；換圖效果語意尚未獨立核對')
+        parts.append('已解析事件 → Convey 目的地；進入條件由伺服器判斷'
+                     if portal.get('event_convey_verified') else
+                     '事件條件與效果明細已保留；換圖效果語意尚未獨立核對')
     if source is not None:
         parts.append(f'來源座標 {source}')
     elif source_grid is not None:

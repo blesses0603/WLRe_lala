@@ -59,7 +59,8 @@ def boundary_portal_bindings(stage_raw, link_raw, doors, stages):
     retains the independent EveDoorLinks ordinal. StageMap markers are display
     references and cannot substitute for this geometric proof.
     """
-    parse_stage_map_portals(stage_raw)  # validate display metadata, not door identity
+    if stage_raw is not None:
+        parse_stage_map_portals(stage_raw)  # display metadata, not door identity
     links = parse_eve_door_links(link_raw) if link_raw is not None else {}
     positions, destinations = {}, {}
     for scene, entries in doors.items():
@@ -102,7 +103,7 @@ def boundary_portal_bindings(stage_raw, link_raw, doors, stages):
     # Kind 2 has no destination identity; Kind 3 EvtID is a destination scene,
     # never a door ID. Both must independently match a unique PlayerTouch door.
     candidates = {}
-    for marker in read_only_stage_portal_markers(stage_raw,stages):
+    for marker in read_only_stage_portal_markers(stage_raw,stages) if stage_raw is not None else ():
         if marker['kind'] not in (2,3) or not marker['position_verified']:continue
         scene = marker['scene']
         stage = stages.get(scene,{})
@@ -149,7 +150,10 @@ def boundary_portal_bindings(stage_raw, link_raw, doors, stages):
             door_binding_verified=True,matched_stage_map=True,matched_touch_region=True,
             event_x=door['x'],event_y=door['y'],destination_verified=target is not None,
             trigger_verified=False,binding_kind=binding)
-    return positions,{key:value for key,value in destinations.items() if value is not None}
+    destinations = {key:value for key,value in destinations.items() if value is not None}
+    from wlre.services.world.event_portals import reconcile_event_portals
+    reconcile_event_portals(doors, stages, positions, destinations)
+    return positions, destinations
 
 
 def reconcile_touch_bindings(stage_raw, link_raw, doors, stages, positions, destinations):
@@ -180,6 +184,8 @@ def reconcile_route_conflicts(positions, destinations, routes, evidence=None):
     for key,row in list(destinations.items()):
         point = positions.get(key,{})
         alternatives = targets.get((key[0],point.get('x'),point.get('y')),set())
+        if row.get('event_convey_verified') and alternatives <= set(row.get('destination_candidates', [])):
+            continue
         if (len(alternatives)>1 if row.get('destination') is None
                 else bool(alternatives - {row['destination']})):
             if isinstance(evidence,dict):

@@ -140,7 +140,7 @@ class Portals:
                             valid_xy = (
                                 position.get('position_verified') is True
                                 and position.get('source_kind')
-                                in ('1275_eve_door_links_grid_scaled','1275_stage_map_grid_scaled')
+                                in ('1275_eve_door_links_grid_scaled','1275_stage_map_grid_scaled','eve_convey_door_scaled')
                                 and position.get('scene') == scene_id
                                 and position.get('index') == index
                                 and type(map_x) is int and type(map_y) is int
@@ -184,6 +184,9 @@ class Portals:
                                 and link.get('index') == index
                                 and link.get('event_x') == x and link.get('event_y') == y
                                 and strict_valid_xy)
+                            verified_event_door = bool(link.get('event_convey_verified')
+                                and link.get('door_binding_verified') and strict_valid_xy
+                                and link.get('event_x') == x and link.get('event_y') == y)
                             destination = destination if verified_target else None
                             target_label = (source_scene_label(destination, scene_names)
                                             if verified_target else '目的地未確認')
@@ -198,6 +201,8 @@ class Portals:
                                 or portal_names.get((scene_id,link.get('stage_marker_event_id')))
                                 if verified_stage_door or link.get('matched_touch_region') is True
                                 else portal_names.get((scene_id,link_index)))
+                            if verified_event_door and not official_name:
+                                official_name = row.get('name')
                             if (type(official_name) is not str
                                     or not official_name.strip() or len(official_name)>160
                                     or any(ord(ch)<32 for ch in official_name)):
@@ -227,8 +232,12 @@ class Portals:
                                       '傳點 #' + str(index) +
                                       '（官方名稱未取得）'))
                             from wlre.services.world.portal_policy import stage_marker_has_no_target
-                            server_decided = bool(verified_stage_door and stage_marker_has_no_target(link)
+                            server_decided = bool((verified_stage_door and stage_marker_has_no_target(link)
                                                   and destination is None and official_name)
+                                or (verified_event_door and link.get('event_decided_only')))
+                            if verified_event_door and not verified_target:
+                                label = '條件出口：' + '／'.join(source_scene_label(t, scene_names)
+                                    for t in link.get('destination_candidates', []))
                             if (verified_target and type(scene_names.get(destination)) is str
                                     and scene_names[destination].strip()):
                                 label = '前往 ' + target_label
@@ -248,6 +257,7 @@ class Portals:
                                 'source_revision': int(revision),
                                 'coordinate_valid': valid_xy,
                                 'coordinate_source': (
+                                    'verified_eve_convey_scaled' if strict_valid_xy and verified_event_door else
                                     'verified_stage_map_scaled' if strict_valid_xy and verified_stage_door else
                                     'verified_eve_door_links_scaled' if strict_valid_xy
                                     else 'official_link_reference_scaled' if reference_xy
@@ -272,7 +282,11 @@ class Portals:
                                 'direct_door_index': index if (verified_target and strict_valid_xy or server_decided) and 1 <= index <= 65535 else None,
                                 'door_index': index if (verified_target and strict_valid_xy or server_decided) and 1 <= index <= 65535 else None,
                                 'stage_marker_only': verified_stage_door,
-                                'door_binding_verified': verified_stage_door,
+                                'door_binding_verified': verified_stage_door or verified_event_door,
+                                'event_convey_verified': verified_event_door,
+                                'event_decided_only': bool(verified_event_door and link.get('event_decided_only')),
+                                'destination_candidates': link.get('destination_candidates', []),
+                                'convey_transfers': link.get('convey_transfers', []),
                                 'stage_marker_kind': link.get('stage_marker_kind'),
                                 'stage_marker_event_id': link.get('stage_marker_event_id'),
                                 'destination_status': 'server_decided' if server_decided else
@@ -282,7 +296,7 @@ class Portals:
                                 'trigger_bounds': position.get('trigger_bounds'),
                                 'navigation_status': 'unverified',
                                 'direct_note': (
-                                    'StageMap 標籤／位置與實際門事件已核對；目的地由伺服器確認，僅單次手動觸發'
+                                    '門事件已核對；條件與目的地由伺服器確認，僅單次觸發'
                                     if server_decided else
                                     '官方門觸碰範圍／精確位置、門編號與連線目的地已配對；可手動單次試傳，'
                                     '載具與進入條件由伺服器判定'
@@ -529,20 +543,20 @@ def marked_portals(rows, projection, *, allow_unprojected=False):
     """Only bound, labeled official doors reach the main map; audit keeps all."""
     from wlre.services.world.catalog_source_policy import is_official_revision
     from wlre.services.world.portal_dedup_1275 import display_destination
-    from wlre.services.world.portal_policy import stage_marker_trigger
+    from wlre.services.world.portal_policy import stage_marker_trigger, event_decided_trigger
     def labeled(row):
         official = row.get('official_name')
         label = row.get('display_destination_label')
-        return (type(official) is str and bool(official.strip()) or
+        return (event_decided_trigger(row) or type(official) is str and bool(official.strip()) or
                 type(label) is str and bool(label.strip())
                 and row.get('display_destination_name_known') is not False)
     def bound_door(row):
         index = row.get('direct_door_index')
-        return (stage_marker_trigger(row) or row.get('destination_verified') is True
+        return (stage_marker_trigger(row) or event_decided_trigger(row) or row.get('destination_verified') is True
                 and row.get('direct_eligible') is True
                 and type(index) is int and 1 <= index <= 65535)
     return [row for row in rows if not is_official_revision(row.get('source_revision')) or (
-        bound_door(row) and (display_destination(row) is not None or stage_marker_trigger(row)) and labeled(row)
+        bound_door(row) and (display_destination(row) is not None or stage_marker_trigger(row) or event_decided_trigger(row)) and labeled(row)
         and (portal_map_pixel(row, projection) is not None
              or allow_unprojected and row.get('coordinate_valid') is True))]
 
