@@ -1,9 +1,11 @@
 """Official organization donation rules; never infer or evaluate arbitrary Lua."""
+from wlre.services.parser_diagnostics import diagnosed
 from wlre.services.world.daily_task_1275 import Reader
 
 TABLES=('UISellData_C','FormulaData_C','OrganizationFunctionData_C')
 
 
+@diagnosed('guild-sell-v1')
 def parse_sell(raw):
     r=Reader(raw);count=r.i32();rows={}
     if not 0<count<=10000:raise ValueError('UISell 筆數無效')
@@ -18,6 +20,7 @@ def parse_sell(raw):
     return rows
 
 
+@diagnosed('guild-formulas-v1')
 def parse_formulas(raw):
     r=Reader(raw);count=r.i32();rows={}
     if not 0<count<=65535:raise ValueError('公式筆數無效')
@@ -29,6 +32,7 @@ def parse_formulas(raw):
     return rows
 
 
+@diagnosed('guild-organization-v1')
 def parse_organization(raw):
     r=Reader(raw);count=r.i32();rows={}
     if not 0<count<=255:raise ValueError('組織等級筆數無效')
