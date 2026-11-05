@@ -152,7 +152,7 @@ def _manifest_records(verified):
 
 def build_update_plan(current, *, asset_paths=(), bundle_names=(), previous=None,
                       cache_root=None):
-    """Resolve chosen asset/bundle roots plus all transitive dependencies.
+    """Resolve roots plus their manifest-listed complete dependency sets.
 
     Compares the *entire* old/new Bundle index by stable name/fingerprint but
     only schedules selected roots. A renamed Bundle with identical FileHash can
@@ -192,23 +192,15 @@ def build_update_plan(current, *, asset_paths=(), bundle_names=(), previous=None
             old_content_specs.setdefault(key, []).append(old_bundle)
 
     roots = set(requested_bundles) | {assets[path] for path in requested_assets}
-    ordered = []
-    visiting, visited = set(), set()
-
-    def visit(name):
-        if name in visiting:
-            raise IncrementalSyncError('YooAsset dependency cycle')
-        if name in visited:
-            return
-        visiting.add(name)
-        for dep in sorted(names[name]['dependencies']):
-            visit(dep)
-        visiting.remove(name)
-        visited.add(name)
-        ordered.append(name)
-
-    for name in sorted(roots):
-        visit(name)
+    # YooAsset 2.2.10 PackageManifest.GetAllDependencies reads the root's
+    # DependIDs directly. These are engine-produced complete sets, not DAG
+    # edges. Recursing into them falsely rejects valid mutually dependent
+    # bundles and can schedule unrelated resources. Download ordering does
+    # not perform Unity object loading; keep dependencies before roots only
+    # for deterministic plans. Every selected bundle still passes spec,
+    # size, checksum and download-budget validation below.
+    dependencies = {dep for name in roots for dep in names[name]['dependencies']}
+    ordered = sorted(dependencies - roots) + sorted(roots)
 
     from tools.resources.lala_manifest_full_index import bundle_fingerprint
     added = set(names) - set(old_names) if previous is not None else set()
