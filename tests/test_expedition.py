@@ -188,18 +188,11 @@ class ExpeditionAutomation(ExpeditionFixture, unittest.TestCase):
 
 
 class ExpeditionWire(unittest.TestCase):
-    def test_bundled_official_catalog_uses_minutes_and_level_reduction(self):
-        value = json.loads(read_config('expedition_catalog.json', root=RESOURCE_ROOT).decode('utf-8'))
-        self.assertEqual(len(value['tasks']), 260)
-        self.assertEqual(len(value['levels']), 10)
-        self.assertEqual(value['tasks']['1']['name'], '遺跡探索 I')
-        self.assertTrue(all(q.get('name') for q in value['tasks'].values()))
-        self.assertEqual(duration(value['tasks']['1'], value['levels']['1']), 30 * 60)
-        longest = max(value['tasks'].values(), key=lambda q: q['minutes'])
-        self.assertEqual(longest['minutes'], 720)
-        self.assertEqual(duration(longest, value['levels']['10']), 612 * 60)
-        # Native code rounds minutes, then formats hours/minutes, not seconds.
-        self.assertEqual(duration({'minutes': 31}, {'reduction': 150}), 26 * 60)
+    def test_duration_uses_minutes_and_level_reduction(self):
+        self.assertEqual(duration({'minutes':30},{'reduction':0}),30*60)
+        self.assertEqual(duration({'minutes':720},{'reduction':150}),612*60)
+        # Native code rounds minutes before converting to seconds.
+        self.assertEqual(duration({'minutes':31},{'reduction':150}),26*60)
 
     def test_outpost_faith_and_strict_lengths(self):
         w = Writer().u8(1).u8(1).u8(4).u16(101).u8(0)
@@ -406,5 +399,5 @@ class ExpeditionClaiming(ExpeditionFixture, unittest.TestCase):
         w = Writer().u8(1).u8(1).u16(0).u16(0).u8(10).u32(34014).u32(2)
         self.assertEqual(decode(Packet(31, 16, w.build()))['rewards'], [self.award])
         from wlre.services.expedition import claim_space
-        official = json.loads(read_config('expedition_catalog.json', root=RESOURCE_ROOT).decode('utf-8'))
-        self.assertTrue(all(claim_space(q) is not None for q in official['tasks'].values()))
+        self.assertIsNotNone(claim_space({'rewards':[self.award],'special_reward':{'kind':0,'id':0,'value':0}}))
+        self.assertIsNone(claim_space({'rewards':[{'kind':255,'id':1,'value':1}],'special_reward':{'kind':0,'id':0,'value':0}}))

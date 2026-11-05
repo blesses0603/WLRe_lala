@@ -8,7 +8,7 @@ DATA_SUFFIXES={'.json','.zip','.gz','.png','.ico','.sqlite3'}
 REQUIRED_RESOURCES=(
     'alchemy_catalog.json','combat_catalog.json',
 
-    'emoji_catalog.json','emoji_images.zip','expedition_catalog.json','instance_catalog_1262.json','graph_origins.json',
+    'emoji_catalog.json','emoji_images.zip','instance_catalog_1262.json','graph_origins.json',
     'item_icon_coverage.json','item_icon_map.json','item_icons.zip','item_stackable.json',
     'map_names.json','navigation_data.zip','normal_attack_data.json','npc_event_index_1262.json.gz','npc_battle_talk_1262.json.gz',
     'npc_talk_1262.json.gz','npc_text_1262.json.gz','npc_interact_1262.json.gz',

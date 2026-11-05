@@ -69,13 +69,11 @@ class TeamSuccess(unittest.TestCase):
             team = choose_members(q, roles, 80)
             self.assertEqual(tuple(r['index'] for r in team), tuple(-i for i in expected[-1]))
 
-    def test_official_recommendations_and_npc_metadata_are_bundled(self):
-        c = json.loads(read_config('expedition_catalog.json', root=RESOURCE_ROOT).decode('utf-8'))
-        self.assertEqual(len(c['npcs']), 7543)
-        self.assertTrue(all(len(q['recommendations']) == 4 for q in c['tasks'].values()))
-        q = next(q for q in c['tasks'].values() if q['name'] == '入侵威脅 II')
-        r = role(); r['stats'].update(wis=100, agi=100)
-        self.assertEqual(success_details(q, [r], c['npcs'])['percent'], 100)
+    def test_recommendations_resolve_against_supplied_npc_metadata(self):
+        q=quest();q['recommendations']=[{'condition':[4,99,0],'bonus':500}]
+        r=role()
+        self.assertEqual(success_details(q,[r],{'101':{'original':99}})['percent'],100)
+        self.assertFalse(success_details(q,[r],{})['complete'])
 
 
 class MinimumSuccess(ExpeditionFixture, unittest.TestCase):
