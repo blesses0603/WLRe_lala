@@ -19,7 +19,6 @@ class ResourceSafetyContract(unittest.TestCase):
         for name in (
             'smallmaps.zip',
             'navigation_data.zip', 'portals.json',
-            'npc_battle_talk_1262.json.gz',
         ):
             with self.subTest(resource=name):
                 self.assertIn(name, names)

@@ -4,9 +4,8 @@ from pathlib import Path
 import sqlite3
 from contextlib import closing
 
-NAMES = (
-    'npc_battle_talk_1262.json.gz',
-)
+# Compatibility tooling can still create an empty schema; no game data ships.
+NAMES = ()
 SEED_NAME = 'legacy_catalog_seed.sqlite3'
 
 

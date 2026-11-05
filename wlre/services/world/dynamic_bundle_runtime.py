@@ -194,6 +194,7 @@ def prepare_dynamic_runtime(*, sync=False, sync_root=None, observe=None,
     from wlre.services.world.guild_catalog import TABLES as GUILD_TABLES
     from wlre.services.world.ark_catalog import TABLES as ARK_TABLES
     from wlre.services.world.instance_runtime import TABLES as INSTANCE_TABLES
+    from wlre.services.world.npc_battle_catalog import TABLES as BATTLE_TALK_TABLES
     if sync:
         pre_download = validate_snapshot(observe())
         if any(before[k] != pre_download[k] for k in ('data_ver', 'exe_version', 'packages')):
@@ -206,7 +207,7 @@ def prepare_dynamic_runtime(*, sync=False, sync_root=None, observe=None,
         # Optional metadata cannot prevent the core runtime from loading.
         left_bytes = max_download_bytes - plan.download_bytes
         left_files = max_downloads - plan.download_count
-        for table in INSTANCE_TABLES + _PORTAL_TABLES + _OPTIONAL_ROUTE_TABLES + DAILY_TABLES + GUILD_TABLES + ARK_TABLES:
+        for table in BATTLE_TALK_TABLES + INSTANCE_TABLES + _PORTAL_TABLES + _OPTIONAL_ROUTE_TABLES + DAILY_TABLES + GUILD_TABLES + ARK_TABLES:
             try:
                 optional = build_update_plan(manifests['DataPackage'],
                     asset_paths=(_ASSET_ROOT + table + '.bytes',), cache_root=root / 'bundles')

@@ -13,6 +13,7 @@ def audit_sources(sources):
     from wlre.services.world.eve_v115 import derive_eve_index
     from wlre.services.world.doors_1275 import parse_verified_doors
     from wlre.services.world.npc_talk import parse_talk_data
+    from wlre.services.world.npc_battle_catalog import parse_known_battle_talk
     from wlre.services.world.smith_candidate import parse_smith_records
     from wlre.services.world.daily_task_1275 import parse_daily_tasks
     from wlre.services.instance_catalog import parse_stages, parse_dungeons, parse_cooperative_events
@@ -26,6 +27,7 @@ def audit_sources(sources):
         ('interactions', ('Eve',), derive_eve_index, {'source': 'EventData.NewInteract'}),
         ('doors', ('Eve',), parse_verified_doors, {}),
         ('talks', ('TalkData_C',), parse_talk_data, {}),
+        ('battle_talk', ('NpcTalkData_C',), parse_known_battle_talk, {}),
         ('texts', ('TextData_C',), parse_text_data, {}),
         ('recipes', ('SmithData_C',), parse_smith_records, {}),
         ('scenes', ('ScenesData_C',), parse_stages, {}),

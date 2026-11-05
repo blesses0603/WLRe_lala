@@ -39,9 +39,9 @@ class BundledNPCResourceTests(unittest.TestCase):
             self.assertEqual(load_catalog()[1],'dialogue')
             self.assertEqual(load_text_data()[1],'localization')
         self.assertIsNone(dialogue_text(talks,True))
-        battle=load_battle_talk()
-        self.assertEqual(len(battle),16)
-        self.assertEqual(sum(len(v) for v in battle.values()),94)
+        value.battle_talk={1:[dict(text_id=1,kind=4,parameter=1,duration=5)]}
+        with patch('wlre.services.world.runtime_1275.active_runtime',return_value=value):
+            self.assertEqual(load_battle_talk(),value.battle_talk)
 
     def test_modified_default_text_is_blocked_before_display(self):
         with TemporaryDirectory() as temp:

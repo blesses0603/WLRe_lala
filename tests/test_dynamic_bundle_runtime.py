@@ -99,6 +99,25 @@ class DynamicBundleRuntimeTests(unittest.TestCase):
         return dict(sync_root=self.root, observe=lambda: deepcopy(self.snapshot),
                     retrieve=lambda spec, cache_root: self.manifests[spec.package])
 
+    def test_battle_talk_current_text_join_and_source_failure(self):
+        from test_npc_battle_catalog import fixture
+        from wlre.services.world import npc_battle_catalog as catalog
+        from wlre.services.world.npc_localization import load_battle_talk
+        raw,_=fixture()
+        # Use current runtime's existing Text IDs (10/20).
+        raw=raw.replace(struct.pack('<I',100),struct.pack('<I',10)).replace(struct.pack('<I',101),struct.pack('<I',20))
+        manifest=self.manifests['DataPackage']
+        manifest.index['assets'].append(dict(path=_ASSET_ROOT+'NpcTalkData_C.bytes',
+            bundle_name=manifest.index['bundles'][0]['name']))
+        self.raw['NpcTalkData_C']=raw
+        with patch.object(catalog,'KNOWN_SHA256',hashlib.sha256(raw).hexdigest()):
+            runtime=dynamic.activate_for_official(self.remote,**self.kwargs())
+            self.assertEqual(len(load_battle_talk()[1]),2)
+            self.raw['NpcTalkData_C']=b'unknown'
+            runtime=dynamic.activate_for_official(self.remote,**self.kwargs())
+            self.assertIsNone(runtime.battle_talk)
+            with self.assertRaises(ValueError):load_battle_talk()
+
     def test_instances_verified_tables_database_update_and_invalid_source(self):
         from test_instance_catalog_1262 import payloads
         from wlre.services.world.instance_runtime import TABLES

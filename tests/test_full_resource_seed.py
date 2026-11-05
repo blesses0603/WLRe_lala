@@ -16,11 +16,12 @@ class FullResourceSeedTests(unittest.TestCase):
             build_seed(RESOURCE_ROOT,root/SEED_NAME)
             db=base/'new_user.sqlite3'
             from wlre.storage.bundled_database import load_legacy_resource
-            self.assertEqual(load_legacy_resource('npc_battle_talk_1262.json.gz',root=root,database=db),read_config('npc_battle_talk_1262.json.gz', root=RESOURCE_ROOT))
+            with self.assertRaises(FileNotFoundError):
+                load_legacy_resource('npc_battle_talk_1262.json.gz',root=root,database=db)
             for name in SOURCE_MANIFEST:
                 self.assertEqual(load_bundled_bytes(name,root=root,database=db),read_config(name, root=RESOURCE_ROOT))
             with closing(sqlite3.connect(db)) as conn:
-                self.assertEqual(conn.execute('SELECT count(*) FROM bundled_active').fetchone()[0],15)
+                self.assertEqual(conn.execute('SELECT count(*) FROM bundled_active').fetchone()[0],14)
             self.assertEqual(list(root.iterdir()),[root/SEED_NAME])
 
     def test_modified_blob_and_self_computed_hash_cannot_replace_reviewed_source(self):
@@ -43,7 +44,7 @@ class FullResourceSeedTests(unittest.TestCase):
             name=next(iter(SOURCE_MANIFEST))
             self.assertEqual(load_bundled_bytes(name,root=root,database=db),read_config(name, root=RESOURCE_ROOT))
             with closing(sqlite3.connect(db)) as conn:
-                self.assertEqual(conn.execute('SELECT count(*) FROM bundled_active').fetchone()[0],15)
+                self.assertEqual(conn.execute('SELECT count(*) FROM bundled_active').fetchone()[0],14)
                 self.assertEqual(conn.execute('SELECT value FROM user_settings').fetchone()[0],'preserve')
 
 
@@ -69,10 +70,10 @@ class SourceRemovalTests(unittest.TestCase):
         from tools.audit_all_resource_database import audit
         with tempfile.TemporaryDirectory() as directory:
             database=Path(directory)/'user.sqlite3'
-            self.assertEqual(migrate_resources(RESOURCE_ROOT,database),15)
+            self.assertEqual(migrate_resources(RESOURCE_ROOT,database),14)
             report=audit(database,RESOURCE_ROOT)
             self.assertTrue(report['all_identical'],report)
-            self.assertEqual(report['summary']['identical'],15)
+            self.assertEqual(report['summary']['identical'],14)
 
     def test_retired_bootstrap_resources_are_absent_from_seed_and_package(self):
         from wlre.storage.resource_seed_manifest import RETIRED_RESOURCES

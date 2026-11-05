@@ -15,20 +15,20 @@ from wlre.storage.bundled_database import read_pinned_legacy_bytes, load_legacy_
 class LegacySQLiteFallbackTests(unittest.TestCase):
     def test_verified_npc_catalog_without_source_file(self):
         from wlre.paths import RESOURCE_ROOT
-        original = read_config('npc_battle_talk_1262.json.gz', root=RESOURCE_ROOT)
+        original = b'synthetic historical bytes'
         digest = hashlib.sha256(original).hexdigest()
         with TemporaryDirectory() as folder:
             db_path = Path(folder) / 'resources.sqlite3'
             with closing(sqlite3.connect(db_path)) as db, db:
                 db.execute('CREATE TABLE bundled_active (name TEXT PRIMARY KEY, sha256 TEXT NOT NULL)')
                 db.execute('CREATE TABLE bundled_resources (name TEXT NOT NULL, sha256 TEXT NOT NULL, data BLOB NOT NULL, PRIMARY KEY(name,sha256))')
-                db.execute('INSERT INTO bundled_active VALUES (?,?)', ('npc_battle_talk_1262.json.gz', digest))
-                db.execute('INSERT INTO bundled_resources VALUES (?,?,?)', ('npc_battle_talk_1262.json.gz', digest, original))
-            self.assertEqual(read_pinned_legacy_bytes('npc_battle_talk_1262.json.gz', database=db_path), original)
+                db.execute('INSERT INTO bundled_active VALUES (?,?)', ('instance_catalog_1262.json', digest))
+                db.execute('INSERT INTO bundled_resources VALUES (?,?,?)', ('instance_catalog_1262.json', digest, original))
+            self.assertEqual(read_pinned_legacy_bytes('instance_catalog_1262.json', database=db_path), original)
 
     def test_sqlite_preferred_even_if_source_differs(self):
-        name = 'npc_battle_talk_1262.json.gz'
-        original = read_config(name, root=RESOURCE_ROOT)
+        name = 'instance_catalog_1262.json'
+        original = b'synthetic historical bytes'
         digest = hashlib.sha256(original).hexdigest()
         with TemporaryDirectory() as folder:
             root = Path(folder)
@@ -45,13 +45,11 @@ class LegacySQLiteFallbackTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 load_legacy_resource(name, root=root, database=db_path)
 
-    def test_missing_database_uses_verified_original(self):
-        name = 'npc_battle_talk_1262.json.gz'
+    def test_retired_resource_is_not_recreated_from_shipped_seed(self):
         with TemporaryDirectory() as folder:
-            self.assertEqual(
-                load_legacy_resource(name, root=RESOURCE_ROOT,
-                                     database=Path(folder) / 'absent.sqlite3'),
-                read_config(name, root=RESOURCE_ROOT))
+            with self.assertRaises(FileNotFoundError):
+                load_legacy_resource('npc_battle_talk_1262.json.gz', root=RESOURCE_ROOT,
+                                     database=Path(folder)/'absent.sqlite3')
 
     def test_missing_db_fails_closed(self):
         with TemporaryDirectory() as folder:

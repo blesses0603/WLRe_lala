@@ -10,7 +10,7 @@ REQUIRED_RESOURCES=(
 
     'emoji_catalog.json','emoji_images.zip','graph_origins.json',
     'item_icon_coverage.json','item_icon_map.json','item_icons.zip','item_stackable.json',
-    'navigation_data.zip','normal_attack_data.json','npc_battle_talk_1262.json.gz',
+    'navigation_data.zip','normal_attack_data.json',
 
     'portals.json',
     'smallmaps.zip','stage_coordinates.json',
