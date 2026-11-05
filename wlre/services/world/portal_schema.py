@@ -7,6 +7,8 @@ partial parsing or 1262 scene/door/coordinate fallback is allowed.
 """
 from __future__ import annotations
 
+from wlre.services.parser_diagnostics import diagnosed, checkpoint
+
 import struct
 
 # Verified against Lua/Data/StageMapData.lua and
@@ -33,11 +35,13 @@ def _record_count(raw, layout, name):
     return count
 
 
+@diagnosed('stage-map-v1')
 def inspect_stage_map(raw):
     """Check the complete 18-byte binary table, not merely its portal rows."""
     count = _record_count(raw, _STAGE_MAP, 'StageMapData_C')
     kinds = {kind: 0 for kind in range(6)}
     for offset in range(4, len(raw), _STAGE_MAP.size):
+        checkpoint(offset=offset, field='marker', record=(offset - 4) // _STAGE_MAP.size + 1)
         scene, kind, cross, evt, x, y, name, sorting = (
             _STAGE_MAP.unpack_from(raw, offset))
         if kind not in kinds or not scene:
@@ -49,6 +53,7 @@ def inspect_stage_map(raw):
             'kind_counts': kinds, 'can_send_packets': False}
 
 
+@diagnosed('eve-links-utf16-v1')
 def inspect_eve_door_links(raw):
     """Only the explicit UTF-16LE event-header format is recognized."""
     from wlre.services.world.portal_links_1275 import (
@@ -63,6 +68,7 @@ def inspect_eve_door_links(raw):
             'can_send_packets': False}
 
 
+@diagnosed('door-link-v1')
 def parse_door_link_data(raw):
     """Read-only 12-byte routing edges, NOT EveDoorLinks event indices.
 
@@ -73,6 +79,7 @@ def parse_door_link_data(raw):
     _record_count(raw, _DOOR_LINK, 'DoorLinkData_C')
     rows = []
     for offset in range(4, len(raw), _DOOR_LINK.size):
+        checkpoint(offset=offset, field='route', record=(offset - 4) // _DOOR_LINK.size + 1)
         source, x, y, destination, arrival_x, arrival_y = (
             _DOOR_LINK.unpack_from(raw, offset))
         if not source or not destination:
@@ -84,6 +91,7 @@ def parse_door_link_data(raw):
     return rows
 
 
+@diagnosed('door-link-v1')
 def inspect_door_link_data(raw):
     rows = parse_door_link_data(raw)
     return {'source': 'DoorLinkData_C', 'schema': DOOR_LINK_LAYOUT,
@@ -121,6 +129,7 @@ def _failure_detail(error):
     return {'reason_code': 'unrecognized_layout', 'parse_hint': '資料未通過已審核結構；需核對實際來源'}
 
 
+@diagnosed('portal-reviewed-v1')
 def recognize_portal_source(source, raw):
     """Return a bounded, JSON-friendly verdict without guessing a new schema.
 

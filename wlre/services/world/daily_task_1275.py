@@ -1,4 +1,6 @@
 """依照官方 Lua DailyTaskData / AwardData 嚴格解析 1275，僅供離線驗證。"""
+
+from wlre.services.parser_diagnostics import diagnosed, checkpoint, read_checkpoint
 import struct
 
 
@@ -11,6 +13,7 @@ class Reader:
 
     def read(self, fmt):
         size = struct.calcsize("<" + fmt)
+        read_checkpoint(self.pos, size, len(self.data) - self.pos)
         if self.pos + size > len(self.data):
             raise ValueError("DailyTaskData_C 資料截斷")
         value = struct.unpack_from("<" + fmt, self.data, self.pos)[0]
@@ -30,6 +33,7 @@ class Reader:
         return self.read("i")
 
 
+@diagnosed('daily-task-v1')
 def parse_daily_tasks(data):
     """Count/group integrity only; never send daily-task completion packets."""
     r = Reader(data)
@@ -37,7 +41,8 @@ def parse_daily_tasks(data):
     if not 0 <= group_count <= 1000:
         raise ValueError("每日任務群組數量不合理")
     groups, group_ids = [], set()
-    for _ in range(group_count):
+    for index in range(group_count):
+        checkpoint(offset=r.pos, field='group', record=index + 1)
         row = {"mission_kind": r.u8(), "refresh_kind": r.u8(), "group": r.u8()}
         if row["refresh_kind"] not in (1, 2) or row["group"] in group_ids:
             raise ValueError("每日任務群組重複或更新週期不合法")
@@ -47,7 +52,8 @@ def parse_daily_tasks(data):
     if not 0 <= task_count <= 50000:
         raise ValueError("每日任務筆數不合理")
     rows, keys = [], set()
-    for _ in range(task_count):
+    for index in range(task_count):
+        checkpoint(offset=r.pos, field='task', record=index + 1)
         row = {"index": r.u16(), "group": r.u8(), "id": r.u8(),
                "mission_name_text_id": r.u32(), "condition_kind": r.u8(),
                "condition_params": [r.u16() for _ in range(3)],

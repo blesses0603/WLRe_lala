@@ -639,6 +639,20 @@ def rebuild_raw_resources(identity, data_manifest, *,
         }
         reused += 1
 
+    from wlre.services.parser_diagnostics import diagnostics_active, record_identity
+    if diagnostics_active():
+        from wlre.services.world.resource_parser_audit import audit_sources
+        record_identity(identity.key)
+        raw_tables = {}
+        duplicates = set()
+        for member, body in payloads.items():
+            if member.startswith('tables/') and member.endswith('.bytes'):
+                table = member.rsplit('/', 1)[-1].removesuffix('.bytes')
+                if table in raw_tables:
+                    duplicates.add(table)
+                raw_tables[table] = body
+        audit_sources({k: v for k, v in raw_tables.items() if k not in duplicates})
+
     official_revision = data_manifest.spec.package_version.split('_', 1)[0]
     derived_candidates = _derive_candidate_indexes(
         payloads, revision=official_revision)

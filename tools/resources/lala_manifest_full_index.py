@@ -26,6 +26,11 @@ try:
 except ImportError:  # Also allow running directly beside lala_manifest_compare.py.
     from lala_manifest_compare import _Libarchive, inspect_archive, MAX_ENTRY_BYTES, CHUNK_SIZE
 
+# Direct script invocation starts with tools/resources on sys.path.
+if __package__ in (None, ''):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from wlre.services.parser_diagnostics import diagnosed, read_checkpoint
+
 MAX_ITEMS = 1_000_000
 MAGIC = 0x00594F4F  # 'OOY\x00' as little-endian uint32
 FORMAT_VERSION = "2.2.5"
@@ -53,6 +58,7 @@ class Reader:
         self.pos = 0
 
     def take(self, size: int) -> memoryview:
+        read_checkpoint(self.pos, size, len(self.data) - self.pos)
         if size < 0 or self.pos + size > len(self.data):
             raise ParseError(f"Unexpected end of manifest at offset {self.pos}, wanted {size}")
         value = self.data[self.pos : self.pos + size]
@@ -92,6 +98,7 @@ class Reader:
         return [self.i32() for _ in range(self.u16())]
 
 
+@diagnosed('yooasset-2.2.5')
 def parse_manifest(data: bytes) -> dict:
     reader = Reader(data)
     if reader.u32() != MAGIC:

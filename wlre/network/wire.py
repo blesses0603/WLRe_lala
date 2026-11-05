@@ -6,6 +6,8 @@ This module does not perform TCP sequence reassembly; see capture.py.
 import struct
 from dataclasses import dataclass
 
+from wlre.services.parser_diagnostics import read_checkpoint
+
 
 class ProtocolError(ValueError):
     pass
@@ -21,6 +23,7 @@ class Reader:
         return len(self.data) - self.offset
 
     def take(self, size):
+        read_checkpoint(self.offset, size, self.remaining)
         if size < 0 or size > self.remaining:
             raise ProtocolError(f"offset {self.offset}: need {size}, have {self.remaining}")
         result = self.data[self.offset:self.offset + size]
@@ -46,6 +49,7 @@ class Reader:
             raise ProtocolError("invalid UTF-16LE string") from exc
 
     def end(self):
+        read_checkpoint(self.offset, 0, self.remaining)
         if self.remaining:
             raise ProtocolError(f"unexpected trailing bytes: {self.remaining}")
 

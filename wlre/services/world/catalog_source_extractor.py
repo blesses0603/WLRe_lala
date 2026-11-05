@@ -6,6 +6,8 @@ with offline *base* item values, never an authorized transaction price.
 """
 from __future__ import annotations
 
+from wlre.services.parser_diagnostics import diagnosed
+
 import hashlib
 import json
 from pathlib import PurePosixPath
@@ -49,6 +51,7 @@ def _shop_index(binding, bundle_paths, raw):
                       separators=(',', ':')).encode('utf-8')
 
 
+@diagnosed('catalog-textasset-v1')
 def extract_catalog_source(binding: AssetBinding, bundle_paths):
     """Verified Bundle cache -> TextAsset -> optional Eve/ItemData derived JSON."""
     if not isinstance(binding, AssetBinding):

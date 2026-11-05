@@ -1,4 +1,6 @@
 """Read official AdventureData_C/AdventureLvData_C using the 1262 Lua layout."""
+
+from wlre.services.parser_diagnostics import diagnosed, checkpoint
 from wlre.storage.paths import data_root as user_data_root
 import hashlib
 import json
@@ -12,13 +14,15 @@ def data_root():
     return user_data_root()
 
 
+@diagnosed('adventure-v1')
 def parse_catalog(tasks_data, levels_data):
     r = Reader(tasks_data)
     tasks = {}
     count = r.i32()
     if not 1 <= count <= 65535:
         raise ProtocolError('遠征任務資料筆數錯誤')
-    for _ in range(count):
+    for index in range(count):
+        checkpoint(offset=r.offset, field='record', record=index + 1)
         q = {'id': r.u16(), 'area': r.u8(), 'area_name': r.u32(), 'difficulty': r.u8(),
              'name_id': r.u32(), 'description_id': r.u32(), 'minutes': r.u16(),
              'faith_cost': r.u8(), 'success_rate': r.u16(),
@@ -38,7 +42,8 @@ def parse_catalog(tasks_data, levels_data):
     if not 1 <= count <= 255:
         raise ProtocolError('遠征等級資料筆數錯誤')
     levels = {}
-    for _ in range(count):
+    for index in range(count):
+        checkpoint(offset=r.offset, field='record', record=index + 1)
         level = r.u8()
         r.u32(); r.u32()
         value = {'teams': r.u8(), 'difficulty': r.u8(), 'reduction': r.u16()}
@@ -58,6 +63,7 @@ def load_catalog():
     return load_bundled_json(path.name, root=path.parent)
 
 
+@diagnosed('text-v1')
 def parse_text_data(text_data):
     """Strictly read official TextData_C v1; no guessed fields or fallback.
 
@@ -72,7 +78,8 @@ def parse_text_data(text_data):
     if not 1 <= count <= 1000000:
         raise ProtocolError('文字資料筆數錯誤')
     texts = {}
-    for _ in range(count):
+    for index in range(count):
+        checkpoint(offset=r.offset, field='record', record=index + 1)
         key, size = r.u32(), r.u16()
         if size % 2 or key in texts:
             raise ProtocolError('文字資料長度或識別碼錯誤')
@@ -97,6 +104,7 @@ def attach_names(catalog, text_data):
         **catalog.get('source_sha256', {}), 'TextData_C': hashlib.sha256(text_data).hexdigest()}}
 
 
+@diagnosed('npc-career-v1')
 def parse_npcs(npc_data, career_data):
     """NpcData.New fixed numeric fields, and NpcCareerData.LoadData mapping."""
     r = Reader(career_data)
@@ -104,7 +112,8 @@ def parse_npcs(npc_data, career_data):
     career_count = r.i32()
     if not 0 <= career_count <= 65535:
         raise ProtocolError('轉職夥伴資料筆數錯誤')
-    for _ in range(career_count):
+    for index in range(career_count):
+        checkpoint(offset=r.offset, field='career', record=index + 1)
         record = r.take(17)
         original, career = struct.unpack_from('<HH', record, 2)
         if career in careers: raise ProtocolError('轉職夥伴對照重複')
@@ -114,7 +123,8 @@ def parse_npcs(npc_data, career_data):
     count = r.i32()
     if not 1 <= count <= 65535: raise ProtocolError('夥伴資料筆數錯誤')
     npcs = {}
-    for _ in range(count):
+    for index in range(count):
+        checkpoint(offset=r.offset, field='record', record=index + 1)
         for _ in range(2):
             size = r.u16()
             if size % 2: raise ProtocolError('夥伴名稱長度錯誤')

@@ -6,6 +6,8 @@ Fiddler evidence (2026-10-22):
 Both .version responses were 27-byte YooAsset revision identifiers, 1275.
 No local game installation or login credentials are needed.
 """
+
+from wlre.services.parser_diagnostics import diagnosed
 import json
 import re
 import socket
@@ -150,6 +152,7 @@ def fetch_bytes(url, *, timeout=12, opener=None, cache_bust=True):
         raise VersionSourceError(_request_problem(exc)) from exc
 
 
+@diagnosed('package-version-v1')
 def parse_version(body):
     try:
         value = body.decode("utf-8-sig").strip()
@@ -218,6 +221,7 @@ def _decode_resource_map(body):
     return data
 
 
+@diagnosed('resource-path-v1')
 def parse_resource_path(body, exe_version=SUPPORTED_OFFICIAL_EXE_VERSION):
     """Parse official PC ExeVer->DataVer JSON; no best-guess version fallback."""
     data = _decode_resource_map(body)
