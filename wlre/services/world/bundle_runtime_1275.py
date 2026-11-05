@@ -334,7 +334,8 @@ def load_verified_bundle_runtime(*, sync_root=None, _verified_context=None):
                 or len(npc.get('scenes', {})) != 1262):
             raise BundleRuntimeUnavailable('NPC／互動事件數不符合已審核 1275 資料')
         stage = 'ItemData_C'
-        items = parse_itemdata(sources['ItemData_C'])
+        items = parse_itemdata(sources['ItemData_C'],
+                               package_version=verified_data.spec.package_version)
         if dynamic:
             for rows in interacts['scenes'].values():
                 for interaction in rows:
