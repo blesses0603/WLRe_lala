@@ -1,0 +1,35 @@
+name: Official daily guild and Ark runtime schema
+on:
+  push:
+    branches: [feature/daily-task-runtime]
+    paths:
+      - wlre/services/world/daily_task*.py
+      - wlre/services/world/bundle_runtime_1275.py
+      - wlre/services/world/dynamic_bundle_runtime.py
+      - wlre/services/world/guild_catalog.py
+      - wlre/services/world/ark_catalog.py
+      - wlre/services/world/resource_database.py
+      - tools/check_daily_runtime.py
+      - .github/workflows/daily-runtime-validation.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: daily-runtime-schema-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  schema:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      WLRE_DISABLE_AUTO_CATALOG: '1'
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements-ui.txt -r requirements-extractor.txt
+      - name: Verify current official daily tables and SQLite bindings
+        run: python -m tools.check_daily_runtime --online --guild --ark --cache-dir "${{ runner.temp }}/daily-runtime"

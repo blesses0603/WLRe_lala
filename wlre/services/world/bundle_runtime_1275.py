@@ -523,6 +523,37 @@ def load_verified_bundle_runtime(*, sync_root=None, _verified_context=None):
             },
         }
 
+        daily_catalog=None
+        daily_status='每日任務需要當次官方動態 Runtime'
+        if dynamic:
+            try:
+                from wlre.services.world.daily_task_catalog import load_verified_catalog
+                daily_catalog=load_verified_catalog(verified_data,bundle_root,load_container,
+                                                     root,identity,texts,items)
+                daily_status='每日／每週任務與活躍寶箱已由同版 SQLite 載入'
+            except (OSError,ValueError,TypeError,KeyError,RuntimeError):
+                daily_status='每日任務資料缺少或格式未通過驗證，其他功能不受影響'
+
+        guild_catalog=None
+        guild_status='組織捐獻需要當次官方動態 Runtime'
+        if dynamic:
+            try:
+                from wlre.services.world.guild_catalog import load_verified_catalog as load_guild
+                guild_catalog=load_guild(verified_data,bundle_root,load_container,root,identity)
+                guild_status='同版組織捐獻與價格資料已由 SQLite 載入'
+            except (OSError,ValueError,TypeError,KeyError,RuntimeError):
+                guild_status='組織消費資料缺少或格式不合，簽到可獨立運作'
+
+        ark_catalog=None
+        ark_status='方舟自動操作需要當次官方動態 Runtime'
+        if dynamic:
+            try:
+                from wlre.services.world.ark_catalog import load_verified_catalog as load_ark
+                ark_catalog=load_ark(verified_data,bundle_root,load_container,root,identity,texts,items)
+                ark_status='同版方舟星力、情報員與戰鬥事件已由 SQLite 載入'
+            except (OSError,ValueError,TypeError,KeyError,RuntimeError):
+                ark_status='方舟資料缺少或格式不合，已停用方舟自動操作'
+
         stage = '正式 Runtime 建立'
         from wlre.services.world.portal_coverage import audit_portal_coverage
         coverage = audit_portal_coverage(doors, scene_rows,
@@ -549,6 +580,9 @@ def load_verified_bundle_runtime(*, sync_root=None, _verified_context=None):
             portal_metadata_status=portal_metadata_status,
             portal_schema_report=portal_schema_report,
             portal_coverage=coverage,
+            ark_catalog=ark_catalog,ark_catalog_status=ark_status,
+            guild_catalog=guild_catalog,guild_catalog_status=guild_status,
+            daily_tasks=daily_catalog, daily_task_status=daily_status,
             doors=doors, expedition=expedition, revision=revision,
         )
         if dynamic:

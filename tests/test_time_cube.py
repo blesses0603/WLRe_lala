@@ -146,7 +146,7 @@ class CubeIconTests(unittest.TestCase):
         from PIL import Image
         from wlre.paths import RESOURCE_ROOT
         from wlre.ui.function_icons import icon_image
-        for name,size in (('MainIcon_023',(59,57)),('Btn_CategoryLoginAward002',(60,60))):
+        for name,size in (('MainIcon_023',(59,57)),('Btn_CategoryLoginAward002',(60,60)),('Btn_CategoryGuild003',(54,54)),('Btn_CategoryGuild007',(58, 53))):
             with self.subTest(name=name):
                 with Image.open(RESOURCE_ROOT/'assets'/'function-icons'/(name+'.png')) as image:
                     self.assertEqual(image.format,'PNG')
@@ -176,7 +176,7 @@ class CubeUITests(unittest.TestCase):
         self.addCleanup(self.root.destroy)
 
     def test_cube_subtab_and_controls_send_only_explicit_commands(self):
-        self.assertEqual([self.panel.tabs.tab(p,'text') for p in self.panel.tabs.tabs()],['魔方'])
+        self.assertEqual([self.panel.tabs.tab(p,'text') for p in self.panel.tabs.tabs()],['魔方','每日任務','每週任務'])
         state=State(phase='world_ready',initial_data_complete=True)
         state.time_cube.update(ready=True,count=1,deadline=0)
         self.panel.render(state.snapshot());self.root.update()

@@ -6,7 +6,7 @@ from wlre.ui.instance_menu_icons import menu_icon_photo
 
 ICONS={'主頁':'MainIcon_041', '組隊':'MainIcon_005', '夥伴出戰':'MainIcon_010',
        '遠征':'MainIcon_038', '煉金':'MainIcon_007', '製作':'MainIcon_011',
-       '經驗效率':'MainIcon_020', '自動戰鬥':'Btn_AI', '包包':'MainIcon_001', '福利':'MainIcon_023', '魔方':'Btn_CategoryLoginAward002'}
+       '經驗效率':'MainIcon_020', '自動戰鬥':'Btn_AI', '包包':'MainIcon_001', '福利':'MainIcon_023', '魔方':'Btn_CategoryLoginAward002', '每日任務':'Btn_CategoryGuild003', '每週任務':'Btn_CategoryGuild007', '其他功能':'Btn_CategoryAISetting004', '組織':'Btn_CategoryGuild001'}
 
 
 @lru_cache(maxsize=16)

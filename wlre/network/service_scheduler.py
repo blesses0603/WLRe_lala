@@ -146,3 +146,21 @@ def advance_services(logic,state,send_command,send_raw,emit,on_state):
     cube_packets=tick_cube(state,logic.world_acknowledged,time.monotonic())
     for packet in cube_packets:send_command(packet)
     if (cube_packets or state.time_cube!=before_cube) and on_state:notify_state(on_state,state)
+
+    from wlre.services.daily_tasks import tick as tick_daily
+    before_daily=dict(state.daily_tasks)
+    daily_packets=tick_daily(state,logic.world_acknowledged,time.monotonic())
+    for packet in daily_packets:send_command(packet)
+    if (daily_packets or state.daily_tasks!=before_daily) and on_state:notify_state(on_state,state)
+
+    from wlre.services.social.guild_actions import tick as tick_guild
+    before_guild=dict(state.guild_actions)
+    guild_packets=tick_guild(state,logic.world_acknowledged,time.monotonic())
+    for packet in guild_packets:send_command(packet)
+    if (guild_packets or state.guild_actions!=before_guild) and on_state:notify_state(on_state,state)
+
+    from wlre.services.star_ark import tick as tick_ark
+    before_ark=dict(state.star_ark)
+    ark_packets=tick_ark(state,logic.world_acknowledged,time.monotonic())
+    for packet in ark_packets:send_command(packet)
+    if (ark_packets or state.star_ark!=before_ark) and on_state:notify_state(on_state,state)

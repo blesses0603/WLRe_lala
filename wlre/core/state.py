@@ -6,6 +6,7 @@ from wlre.core.state_ownership import FIELDS, guarded, plain
 from wlre.core.state_events import dispatch_local
 from wlre.services.world.obstacle_scope import affects_navigation
 from wlre.services.social.guild import apply_guild
+from wlre.services.social.guild_actions import defaults as guild_action_defaults, apply_actions
 from wlre.services.items.recovery import apply_recovery
 from wlre.services.items.combat_resources import apply_live
 from wlre.services.battle.party import party_defaults, apply_party
@@ -22,12 +23,17 @@ from wlre.services.battle.attribute_points import defaults as points_defaults, a
 
 
 from wlre.services.time_cube import defaults as cube_defaults, apply_cube
+from wlre.services.daily_tasks import defaults as daily_defaults, apply_daily_tasks
+from wlre.services.star_ark import defaults as ark_defaults, apply_ark
 
 POSITION_CACHE_LIMIT = 2048
 
 
 @dataclass
 class State:
+    star_ark: dict = field(default_factory=ark_defaults)
+    guild_actions: dict = field(default_factory=guild_action_defaults)
+    daily_tasks: dict = field(default_factory=daily_defaults)
     time_cube: dict = field(default_factory=cube_defaults)
     automation: dict = field(default_factory=lambda:{'enabled':True,'status':'依指定目標自動接續'})
     maintenance: dict = field(default_factory=lambda:{'pending':None,'uncertain':False,'checking':False,'status':'尚未執行戰後修理／整理','completed':0})
@@ -148,6 +154,7 @@ class State:
     def apply(self, event):
         self.assert_writer()
         self.packet_count += 1
+        apply_daily_tasks(self,event)
         apply_cube(self,event)
         apply_recovery(self,event)
         apply_guild(self,event)
@@ -163,6 +170,8 @@ class State:
         apply_tent(self,event)
         observe_shop_evidence(self,event)
         observe_efficiency(self,event)
+        apply_actions(self,event)
+        apply_ark(self,event)
 
     def snapshot(self):
         self.assert_writer()

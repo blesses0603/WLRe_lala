@@ -10,6 +10,22 @@ from wlre.ui.feature_windows import WINDOWS
 from wlre.ui.window_layout import center_on_main
 
 
+class DailyDestinationRouting(unittest.TestCase):
+    def test_ark_and_guild_open_other_window_and_select_their_page_without_sending(self):
+        from types import SimpleNamespace
+        from wlre.ui.daily_tasks_ui import DailyTaskPanel
+        for kind,target in ((9,'ark_panel'),(10,'guild_panel')):
+            with self.subTest(kind=kind):
+                other=SimpleNamespace(tabs=Mock(),ark_panel=object(),guild_panel=object())
+                app=SimpleNamespace(other_features_panel=other,open_feature=Mock(),send=Mock())
+                tree=Mock();tree.selection.return_value=('1',)
+                panel=SimpleNamespace(app=app,tree=tree,rows={'1':dict(condition_kind=kind)})
+                DailyTaskPanel.open_destination(panel)
+                app.open_feature.assert_called_once_with('other')
+                other.tabs.select.assert_called_once_with(getattr(other,target))
+                app.send.assert_not_called()
+
+
 class CenterGeometry(unittest.TestCase):
     def test_main_center_when_display_has_space(self):
         main=Mock()
@@ -62,16 +78,16 @@ class SecondaryFeatures(unittest.TestCase):
 
     def test_every_non_home_tab_is_a_launcher(self):
         self.assertEqual(tuple(self.app.feature_windows),tuple(WINDOWS))
-        self.assertEqual(len(self.app.feature_launchers),8)
+        self.assertEqual(len(self.app.feature_launchers),9)
         self.assertEqual(
             [self.app.left_tabs.tab(t,'text') for t in self.app.left_tabs.tabs()],
-            ['主頁','組隊','夥伴出戰','遠征','副本','福利','煉金','製作','經驗效率'])
+            ['主頁','組隊','夥伴出戰','遠征','副本','福利','其他功能','煉金','製作','經驗效率'])
         for key in WINDOWS:
             panel=getattr(self.app, {
                 'party':'party_panel','companion':'companion_panel',
                 'expedition':'expedition_panel','instance':'instance_panel',
                 'alchemy':'alchemy_panel','crafting':'crafting_panel',
-                'benefits':'benefits_panel','efficiency':'efficiency_panel'}[key])
+                'benefits':'benefits_panel','other':'other_features_panel','efficiency':'efficiency_panel'}[key])
             self.assertEqual(panel.winfo_toplevel(),
                              self.app.feature_windows[key])
             self.assertEqual(self.app.feature_windows[key].state(),'withdrawn')
@@ -103,6 +119,17 @@ class SecondaryFeatures(unittest.TestCase):
         self.app.hide_all_features()
         self.assertTrue(all(window.state()=='withdrawn'
                             for window in self.app.feature_windows.values()))
+
+    def test_other_window_owns_ark_and_guild_pages_and_benefits_keeps_only_rewards(self):
+        benefits=self.app.benefits_panel;other=self.app.other_features_panel
+        self.assertEqual([benefits.tabs.tab(p,'text') for p in benefits.tabs.tabs()],
+                         ['魔方','每日任務','每週任務'])
+        self.assertEqual([other.tabs.tab(p,'text') for p in other.tabs.tabs()],['方舟','組織'])
+        for panel in (other.ark_panel,other.guild_panel):
+            self.assertEqual(panel.winfo_toplevel(),self.app.feature_windows['other'])
+        self.assertTrue(other.tabs.buttons[str(other.guild_panel)].cget('image'))
+        self.assertFalse(hasattr(benefits,'ark_panel'))
+        self.assertFalse(hasattr(benefits,'guild_panel'))
 
     def test_missing_game_sidebar_sprites_fall_back_to_text(self):
         from wlre.ui.instance_menu_icons import MENU_ASSETS, menu_icon_photo

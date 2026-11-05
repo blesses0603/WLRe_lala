@@ -39,6 +39,15 @@ def dispatch(logic,command,state):
         logic.selected = True
         state.phase = 'role_selected_awaiting_world'
         return [packet]
+    if kind=='star_ark':
+        from wlre.services.star_ark import command as ark_command
+        return ark_command(state,command,logic.world_acknowledged)
+    if kind=='guild_actions':
+        from wlre.services.social.guild_actions import command as guild_command
+        return guild_command(state,command,logic.world_acknowledged)
+    if kind=='daily_tasks':
+        from wlre.services.daily_tasks import command as daily_command
+        return daily_command(state,command,logic.world_acknowledged)
     if kind=='time_cube':
         from wlre.services.time_cube import command as cube_command
         if command.get('action')=='open' and not logic.world_acknowledged:

@@ -3,6 +3,7 @@ import time
 import tkinter as tk
 from tkinter import ttk
 from wlre.ui.rounded_notebook import RoundedNotebook
+from wlre.ui.daily_tasks_ui import DailyTaskPanel
 
 
 class BenefitsPanel(ttk.Frame):
@@ -26,6 +27,10 @@ class BenefitsPanel(ttk.Frame):
         ttk.Label(self.cube,textvariable=self.status,wraplength=590).pack(anchor='w',fill='x',pady=6)
         ttk.Label(self.cube,text='最多儲存 3 次。分析由伺服器自動累積；可開啟時自動送出，關閉視窗仍繼續。',
                   style='Muted.TLabel',wraplength=590).pack(anchor='w',fill='x',pady=6)
+        self.daily_panel=DailyTaskPanel(self.tabs,app,1)
+        self.weekly_panel=DailyTaskPanel(self.tabs,app,2)
+        self.tabs.add(self.daily_panel,text='每日任務')
+        self.tabs.add(self.weekly_panel,text='每週任務')
         self.render({})
         self.timer=self.after(1000,self.refresh_clock)
         self.bind('<Destroy>',self.cleanup,add='+')
@@ -44,6 +49,8 @@ class BenefitsPanel(ttk.Frame):
         self.app.send(dict(type='time_cube',action='open'))
 
     def render(self,state):
+        self.daily_panel.render(state)
+        self.weekly_panel.render(state)
         cube=state.get('time_cube',{})
         live=self.app.live_active and state.get('phase')=='world_ready'
         self.auto.configure(state='normal' if live else 'disabled')

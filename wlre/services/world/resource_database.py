@@ -227,7 +227,7 @@ def read_active_database_identity(path):
         return None
 
 
-def read_catalog_tables(path, catalog_key, sources):
+def read_catalog_tables(path, catalog_key, sources, *, expected_digests=None):
     """Read and reparse requested tables from one database catalog identity.
 
     This is a read-only raw resource interface, not a gameplay authorization.
@@ -241,7 +241,19 @@ def read_catalog_tables(path, catalog_key, sources):
     from wlre.services.world.eve_v115 import derive_eve_index
     from wlre.services.expedition.data import parse_catalog, attach_names, parse_npcs
     from wlre.services.world.smith_candidate import parse_smith_records
-    parsers = {'items': ('ItemData_C.bytes', parse_itemdata),
+    from wlre.services.world.daily_task_1275 import parse_daily_tasks
+    from wlre.services.world.daily_task_catalog import parse_rewards
+    from wlre.services.world.guild_catalog import parse_sell,parse_formulas,parse_organization
+    from wlre.services.world.ark_catalog import parse_stars,parse_agents,parse_fights
+    parsers = {'ark_stars':('ArkStarData_C.bytes',parse_stars),
+               'ark_agents':('ArkAgentData_C.bytes',parse_agents),
+               'ark_fights':('ArkFightData_C.bytes',parse_fights),
+               'guild_sell': ('UISellData_C.bytes',parse_sell),
+               'guild_formulas': ('FormulaData_C.bytes',parse_formulas),
+               'guild_levels': ('OrganizationFunctionData_C.bytes',parse_organization),
+               'daily_tasks': ('DailyTaskData_C.bytes', parse_daily_tasks),
+               'daily_rewards': ('DailyTaskRewardData_C.bytes', parse_rewards),
+               'items': ('ItemData_C.bytes', parse_itemdata),
                'talks': ('TalkData_C.bytes', parse_talk_data),
                'texts': ('TextData_C.bytes', parse_text_data),
                'scenes': ('ScenesData_C.bytes', parse_stages),
@@ -275,6 +287,8 @@ def read_catalog_tables(path, catalog_key, sources):
                 if (row is None or type(row[1]) is not bytes or len(row[1]) > 16 * 1024 * 1024
                         or hashlib.sha256(row[1]).hexdigest() != row[0]):
                     raise ValueError('Catalog table missing or integrity check failed: ' + name)
+                if expected_digests is not None and row[0]!=expected_digests.get(name):
+                    raise ValueError('Catalog bytes differ from verified Bundle: '+name)
                 blobs[name] = row[1]
         result = {source: parsers[source][1](blobs[parsers[source][0]])
                   for source in sources if source not in ('expedition', 'recipes')}
@@ -328,3 +342,32 @@ def database_matches_runtime(path, runtime):
         return True
     except (sqlite3.Error,OSError,ValueError,TypeError,AttributeError,UnicodeError):
         return False
+
+
+def load_verified_tables(manifest,bundle_root,loader,root,identity,schemas):
+    """Read exact current Bundle tables through the shared SQLite, pinning raw digests."""
+    from wlre.services.official_incremental_sync import build_update_plan
+    from wlre.services.official_bundle_download import _verified_file
+    from wlre.services.world.catalog_adapters import SourceContract
+    from wlre.services.world.official_catalog_pipeline import AssetBinding
+    from wlre.services.world.unity_textasset import extract_textasset
+    from pathlib import Path
+    payloads={}
+    for source,(table,parser) in schemas.items():
+        asset='Assets/ResourcesBuild/Data/'+table+'.bytes'
+        plan=build_update_plan(manifest,asset_paths=(asset,),cache_root=bundle_root)
+        if not plan.entries or any(r.action!='cached' for r in plan.entries):
+            raise ValueError('Optional official table not cached: '+table)
+        paths=tuple(r.spec.cache_path(bundle_root) for r in plan.entries)
+        if any(not _verified_file(p,r.spec) for p,r in zip(paths,plan.entries)):
+            raise ValueError('Official Bundle integrity failed: '+table)
+        binding=AssetBinding(asset,SourceContract('scenes',table,'stage-new-76-v1',
+                            '0'*64,'DataPackage',manifest.spec.package_version))
+        raw=extract_textasset(binding,paths,loader=loader);parser(raw)
+        payloads['tables/'+table+'.bytes']=raw
+    database=Path(root)/'derived_catalogs'/'resource_inventory.sqlite3'
+    database.parent.mkdir(parents=True,exist_ok=True)
+    record_inventory(database,identity.key,payloads,identity=identity)
+    digests={name.split('/')[-1]:hashlib.sha256(raw).hexdigest() for name,raw in payloads.items()}
+    parsed=read_catalog_tables(database,identity.key,tuple(schemas),expected_digests=digests)
+    return parsed,digests
