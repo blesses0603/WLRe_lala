@@ -14,6 +14,7 @@ from wlre.services.world.launcher_catalog import (
 
 class LauncherCatalogTests(unittest.TestCase):
     def setUp(self):
+        self.server_sync = self.enterContext(patch('wlre.services.official_server_list.sync_server_list', return_value={'count': 7}))
         identity = patch('wlre.services.world.runtime_manifest_identity.discover_runtime_identity',
                          side_effect=ValueError('offline fixture'))
         identity.start()

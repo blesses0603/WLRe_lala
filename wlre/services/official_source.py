@@ -10,7 +10,7 @@ OFFICIAL_HOSTS = ('wlreftp.chinesegamer.net', 'wlreftpsrc.chinesegamer.net')
 
 def selected_host(environ=None):
     environ = os.environ if environ is None else environ
-    host = environ.get('WLRE_OFFICIAL_RESOURCE_HOST', OFFICIAL_HOSTS[0])
+    host = environ.get('WLRE_OFFICIAL_RESOURCE_HOST', 'wlreftpsrc.chinesegamer.net')
     if host not in OFFICIAL_HOSTS:
         raise ValueError('Unsupported official resource host')
     return host

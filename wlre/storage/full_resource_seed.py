@@ -4,7 +4,7 @@ import hashlib
 from pathlib import Path
 import sqlite3
 import tempfile
-from wlre.storage.resource_seed_manifest import SOURCE_MANIFEST
+from wlre.storage.resource_seed_manifest import SOURCE_MANIFEST, RETIRED_RESOURCES
 from wlre.storage.resource_migration import migrate_resources
 
 SEED_NAME = 'resource_catalog_seed.sqlite3'
@@ -15,6 +15,8 @@ def verify_seed(path):
         if db.execute('PRAGMA integrity_check').fetchone()[0] != 'ok':
             raise ValueError('資源種子資料庫結構損壞')
         names={r[0] for r in db.execute('SELECT name FROM bundled_active')}
+        if any(r[0] in RETIRED_RESOURCES for r in db.execute('SELECT name FROM bundled_resources')):
+            raise ValueError('已遷移的啟動資料不得留在隨附種子內')
         if names != set(SOURCE_MANIFEST):
             raise ValueError('完整資源種子清單不符')
         for name,(size,digest) in SOURCE_MANIFEST.items():

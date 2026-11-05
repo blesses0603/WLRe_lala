@@ -20,8 +20,9 @@ from wlre.network.expedition import decode_expedition
 from wlre.network.instances import decode_instances
 from wlre.network.npc_dialogue import decode_effect as decode_npc_effect
 
-from wlre.storage.bundled_database import load_bundled_json
-ENUMS = load_bundled_json('enums.json', root=RESOURCE_ROOT)
+from copy import deepcopy
+from wlre.configuration import PROTOCOL_ENUMS
+ENUMS = deepcopy(PROTOCOL_ENUMS)
 ATTR_NAMES = {v: k for k, v in ENUMS["EAttribute"].items()}
 SKILL_NAMES = {v: k for k, v in ENUMS["ESkill"].items()}
 

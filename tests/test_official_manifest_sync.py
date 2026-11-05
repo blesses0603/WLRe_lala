@@ -57,7 +57,7 @@ class OfficialManifestSyncTests(unittest.TestCase):
         for package in ('DataPackage', 'MainPackage'):
             with self.subTest(package=package):
                 value = ManifestSpec('1.3.21', package, spec().package_version)
-                prefix = ('https://wlreftp.chinesegamer.net/WLN/TW/1.3.21/'
+                prefix = ('https://wlreftpsrc.chinesegamer.net/WLN/TW/1.3.21/'
                           'ResourcesPC/AssetBundle/' + package)
                 self.assertEqual(value.url('bytes'), prefix + '.bytes')
                 self.assertEqual(value.url('hash'), prefix + '.hash')

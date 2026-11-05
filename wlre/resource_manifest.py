@@ -6,14 +6,14 @@ import zipfile
 
 DATA_SUFFIXES={'.json','.zip','.gz','.png','.ico','.sqlite3'}
 REQUIRED_RESOURCES=(
-    'alchemy_catalog.json','combat_catalog.json','crafting_catalog.json','default_profile.json',
-    'lala_supported_resources.json',
-    'emoji_catalog.json','emoji_images.zip','enums.json','expedition_catalog.json','instance_catalog_1262.json','graph_origins.json',
+    'alchemy_catalog.json','combat_catalog.json','crafting_catalog.json',
+
+    'emoji_catalog.json','emoji_images.zip','expedition_catalog.json','instance_catalog_1262.json','graph_origins.json',
     'item_icon_coverage.json','item_icon_map.json','item_icons.zip','item_stackable.json',
     'map_names.json','navigation_data.zip','normal_attack_data.json','npc_event_index_1262.json.gz','npc_battle_talk_1262.json.gz',
     'npc_talk_1262.json.gz','npc_text_1262.json.gz','npc_interact_1262.json.gz',
     'portals.json',
-    'server_list.json','smallmaps.zip','stage_coordinates.json',
+    'smallmaps.zip','stage_coordinates.json',
     'assets/app.ico','assets/exp_background.png',
     *('assets/buttons/'+name+'.png' for name in (
         'Btn_004','Btn_014','Btn_016','Btn_Bag','Btn_CategoryAISetting003','Btn_Close04','Btn_Setting')),
@@ -37,11 +37,13 @@ def require_resources(root):
 def data_files(package_root, *, compact=False):
     package_root=Path(package_root)
     from wlre.storage.full_resource_seed import SEED_NAME, build_seed, SOURCE_MANIFEST
+    from wlre.storage.resource_seed_manifest import RETIRED_RESOURCES
     resources=package_root/'resources'
     if compact: build_seed(resources,resources/SEED_NAME)
     require_resources(resources)
     return sorted(p for p in package_root.rglob('*')
                   if p.is_file() and p.suffix.lower() in DATA_SUFFIXES
+                  and not (p.parent==resources and p.name in RETIRED_RESOURCES)
                   and not (compact and p.parent==resources and p.name in SOURCE_MANIFEST)
                   and not any(part.startswith('.') or part=='__pycache__' for part in p.relative_to(package_root).parts))
 

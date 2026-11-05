@@ -7,8 +7,8 @@ class OfficialSourceTests(unittest.TestCase):
         for host in ('wlreftp.chinesegamer.net', 'wlreftpsrc.chinesegamer.net'):
             self.assertEqual(selected_host({'WLRE_OFFICIAL_RESOURCE_HOST': host}), host)
 
-    def test_default_preserves_existing_installation(self):
-        self.assertEqual(selected_host({}), 'wlreftp.chinesegamer.net')
+    def test_default_uses_user_confirmed_official_source(self):
+        self.assertEqual(selected_host({}), 'wlreftpsrc.chinesegamer.net')
 
     def test_arbitrary_or_credentialed_hosts_are_rejected(self):
         for host in ('', 'evil.example', 'https://wlreftpsrc.chinesegamer.net',
