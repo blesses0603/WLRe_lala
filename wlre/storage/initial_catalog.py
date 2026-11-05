@@ -6,8 +6,6 @@ from contextlib import closing
 
 NAMES = (
     'instance_catalog_1262.json', 'npc_battle_talk_1262.json.gz',
-    'npc_event_index_1262.json.gz', 'npc_interact_1262.json.gz',
-    'npc_talk_1262.json.gz', 'npc_text_1262.json.gz',
 )
 SEED_NAME = 'legacy_catalog_seed.sqlite3'
 

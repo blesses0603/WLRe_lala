@@ -15,7 +15,7 @@ from wlre.services.world.npc_shop import (
 
 
 class NPCShopCatalogueTests(unittest.TestCase):
-    def test_real_eve_65_shops_are_readonly_and_accurate(self):
+    def test_synthetic_shop_kinds_remain_readonly_without_item_evidence(self):
         idx=NPCInteractIndex()
         shops=[]
         # Historical Eve fixture remains; the 1262 item-price archive does not.
@@ -23,9 +23,9 @@ class NPCShopCatalogueTests(unittest.TestCase):
         with patch('wlre.services.world.npc_shop.item_catalog',
                    side_effect=ValueError('尚無正式物品來源')):
             shops=self._assert_historical_shop_preview_without_prices(idx)
-        self.assertEqual(len(shops),65)
-        self.assertEqual(sum(c['form_kind']==2 for c in shops),19)
-        self.assertEqual(sum(c['form_kind']==3 for c in shops),46)
+        self.assertEqual(len(shops),2)
+        self.assertEqual(sum(c['form_kind']==2 for c in shops),1)
+        self.assertEqual(sum(c['form_kind']==3 for c in shops),1)
         self.assertIsNone(shop_catalog(10000,1,index=idx))
 
     def _assert_historical_shop_preview_without_prices(self, idx):
@@ -168,13 +168,17 @@ class NPCShopUITests(unittest.TestCase):
             root.destroy()
 
 
-# These historical tests verify bundled 1262 fixtures explicitly. Production
-# LaLa now defaults to 1275, with no implicit source fallback.
+# Packet compatibility uses a legacy baseline with an explicit synthetic
+# runtime fixture; no shipped NPC catalog is required.
 from unittest.mock import patch as _legacy_patch
 _legacy_context = None
 
 
 def setUpModule():
+    global _official_context
+    from npc_runtime_fixtures import runtime
+    _official_context = _legacy_patch('wlre.services.world.runtime_1275.active_runtime',return_value=runtime())
+    _official_context.start()
     global _legacy_context
     _legacy_context = _legacy_patch(
         'wlre.services.world.runtime_1275.baseline_revision', return_value='1262')
@@ -184,6 +188,7 @@ def setUpModule():
 
 
 def tearDownModule():
+    _official_context.stop()
     from wlre.services.world.npc_item_data import item_catalog
     item_catalog.cache_clear()
     _legacy_context.stop()

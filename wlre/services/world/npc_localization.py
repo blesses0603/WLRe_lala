@@ -43,6 +43,9 @@ def _catalog(filename, expected_source, path=None):
 
 
 def load_text_data(path=None):
+    if path is None:
+        from wlre.services.world.runtime_1275 import active_runtime
+        return dict(active_runtime().texts)
     data=_catalog('npc_text_1262.json.gz','TextData_C',path)
     result={}
     for key,value in data.items():

@@ -21,24 +21,15 @@ MAX_SIZE = 8 * 1024 * 1024
 class NPCInteractIndex:
     def __init__(self, path=None):
         if path is None:
-            from wlre.services.world.runtime_1275 import baseline_revision, active_runtime
-            if baseline_revision() != '1262':
-                self.path = None
-                self.scenes = active_runtime().interact_index.scenes
-                return
-        self.path = Path(path) if path is not None else RESOURCE_ROOT / NAME
+            from wlre.services.world.runtime_1275 import active_runtime
+            self.path = None
+            self.scenes = active_runtime().interact_index.scenes
+            return
+        self.path = Path(path)
         self.scenes = {}
-        if path is None:
-            from wlre.storage.bundled_database import load_legacy_resource
-            raw = load_legacy_resource(NAME)
-        elif not self.path.is_file():
-            raise FileNotFoundError(self.path)
-        else:
-            raw = self.path.read_bytes()
+        raw = self.path.read_bytes()
         if len(raw) > 128 * 1024:
             raise ValueError('Eve NPC 選項索引壓縮檔異常過大')
-        if path is None and hashlib.sha256(raw).hexdigest() != EXPECTED_SHA256:
-            raise ValueError('Eve NPC 選項索引 SHA-256 不符')
         with gzip.GzipFile(fileobj=io.BytesIO(raw)) as stream:
             content = stream.read(MAX_SIZE + 1)
         if len(content) > MAX_SIZE:

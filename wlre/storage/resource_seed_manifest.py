@@ -1,5 +1,5 @@
 """Remaining reviewed bundled resources; retired bootstrap data is not shipped."""
-RETIRED_RESOURCES = frozenset(('default_profile.json', 'enums.json', 'lala_supported_resources.json', 'server_list.json', 'crafting_catalog.json', 'expedition_catalog.json'))
+RETIRED_RESOURCES = frozenset(('default_profile.json', 'enums.json', 'lala_supported_resources.json', 'server_list.json', 'crafting_catalog.json', 'expedition_catalog.json', 'npc_event_index_1262.json.gz', 'npc_interact_1262.json.gz', 'npc_talk_1262.json.gz', 'npc_text_1262.json.gz'))
 SOURCE_MANIFEST = {'alchemy_catalog.json': (858266,
                           '464c11ac052158a21efbb7d691357d18412f03b08f394d62c1edf871e1a427c4'),
  'combat_catalog.json': (4109213,
@@ -28,14 +28,6 @@ SOURCE_MANIFEST = {'alchemy_catalog.json': (858266,
                              '9cd6da60ae92e423c8c6cfd6debd36d79bd71a1bb3b559aa80b03220d9ad7e5d'),
  'npc_battle_talk_1262.json.gz': (653,
                                   'f592a9e07feebe29383a946130625f45a58bd22e3a68efb225770599e8d11f14'),
- 'npc_event_index_1262.json.gz': (124521,
-                                  '90967dd1abdf5d3b8266c967803aa60dfbaf31dddc9253cf9ee55f2bc4d1cfe2'),
- 'npc_interact_1262.json.gz': (19914,
-                               '37bba3db9ec06cc4838bec99a2fb16d6b49f7064edcfc46e59bf30ac08888592'),
- 'npc_talk_1262.json.gz': (886406,
-                           'f47212c1e46cf44f323756ff724813e81990c945587c8b966efdb7fd5ed69599'),
- 'npc_text_1262.json.gz': (757105,
-                           'b99d65a0c2b6c37ab9ddbbae276c102c49560ec8d54bdda27296e2ebddc32f1d'),
  'portals.json': (2486104,
                   'a6d2b5bc7cc2cce34ff23b95e1551fe216266adf1e0945a218f865c904dfb2fc'),
  'smallmaps.zip': (21835044,

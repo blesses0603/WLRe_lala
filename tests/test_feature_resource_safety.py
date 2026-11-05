@@ -19,8 +19,6 @@ class ResourceSafetyContract(unittest.TestCase):
         for name in (
             'instance_catalog_1262.json', 'smallmaps.zip',
             'navigation_data.zip', 'portals.json',
-            'npc_event_index_1262.json.gz', 'npc_talk_1262.json.gz',
-            'npc_text_1262.json.gz', 'npc_interact_1262.json.gz',
             'npc_battle_talk_1262.json.gz',
         ):
             with self.subTest(resource=name):
