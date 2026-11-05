@@ -1,11 +1,9 @@
 """Remaining reviewed bundled resources; retired bootstrap data is not shipped."""
-RETIRED_RESOURCES = frozenset(('default_profile.json', 'enums.json', 'lala_supported_resources.json', 'server_list.json'))
+RETIRED_RESOURCES = frozenset(('default_profile.json', 'enums.json', 'lala_supported_resources.json', 'server_list.json', 'crafting_catalog.json'))
 SOURCE_MANIFEST = {'alchemy_catalog.json': (858266,
                           '464c11ac052158a21efbb7d691357d18412f03b08f394d62c1edf871e1a427c4'),
  'combat_catalog.json': (4109213,
                          '64dbbfcd21b8eec2654026c6f90d21477d7d75e0ed6ff41d0bf919f85357e35c'),
- 'crafting_catalog.json': (305939,
-                           '8421888dcf8b8108454d8fc988996bf33ea8b5b3753a10476b05827564509da4'),
  'emoji_catalog.json': (10294,
                         '7c459754267c5104d5f315b6ecec31fb6737d107efeffa57805d6b88bc50cfae'),
  'emoji_images.zip': (396222,

@@ -73,7 +73,7 @@ class RuntimeConsumerRefreshTests(unittest.TestCase):
                  patch('wlre.ui.crafting_browser.current_catalog_token',return_value=(True,'b')):
                 self.assertTrue(CraftingBrowser.refresh_runtime_catalog(page))
                 self.assertFalse(CraftingBrowser.refresh_runtime_catalog(page))
-            self.assertEqual(page.favorite_store.ids,[2])
+            self.assertEqual(page.favorite_store.ids,[1,2])
             self.assertEqual(path.read_text(),original)
             self.assertIsNone(page.selected)
             self.assertIsNone(page.grid_key)
