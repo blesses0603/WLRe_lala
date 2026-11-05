@@ -27,6 +27,9 @@ def catalog():
 
 class ExpeditionFixture:
     def setUp(self):
+        # Explicit synthetic current-version metadata; no bundled stack table.
+        self.enterContext(patch('wlre.services.world.item_stack_rules.CurrentStackRules._items',
+                                return_value={34014:{'stackable':True}}))
         self.state = State(phase='world_ready')
         self.state.expedition.update(ready=True, outpost_ready=True, level=1,
             roles={'1': role()}, quests={'1': 1, '2': 2}, teams={

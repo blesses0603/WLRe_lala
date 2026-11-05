@@ -11,6 +11,8 @@ class ShopEvidenceTests(unittest.TestCase):
         state=State()
         state.apply({'type':'bag_snapshot','capacity':40,'items':[]})
         state.apply(decode(Packet(26,4,(5000).to_bytes(4,'little'))))
+        # Explicit synthetic stack proof for the receipt-order fixture.
+        state.inventory['server_stackable']={'32297':True}
         self.assertTrue(state.inventory['reliable'])
         self.assertTrue(state.gold['reliable'])
         return state

@@ -85,7 +85,8 @@ def parse_itemdata(raw: bytes, *, package_version=None) -> dict[int,dict]:
         if not 1<=iid<=65535 or iid in result:
             raise ItemDataDecodeError('Invalid or duplicate ItemData item ID')
         order,icon_id,shop_icon_id=r.u16(),r.u16(),r.u16()
-        r.skip(4*2 + 2*(2+1+4))
+        r.skip(4*2)
+        attributes=[dict(kind=r.u16(),effect=r.u8(),value=int.from_bytes(r.take(4),'little',signed=True)) for _ in range(2)]
         material,level,fit_type,special=r.u8(),r.u8(),r.u8(),r.u8()
         r.skip(4*4*4)
         open_used=r.u8()
@@ -109,7 +110,9 @@ def parse_itemdata(raw: bytes, *, package_version=None) -> dict[int,dict]:
         available_time,limited_time,use_count=r.u16(),r.u16(),r.u16()
         r.skip(2+2)
         r.skip(6*4)
-        r.skip(2+2+1+1+1+1+1+1+2+1)
+        r.skip(2+2+1)
+        flags2=r.u8()
+        r.skip(1+1+1+1+2+1)
         r.skip(5*2)
         r.skip(1+2+2+2)
         result[iid]={'name':name,'price':price,'sell_price':sell_price,
@@ -122,11 +125,14 @@ def parse_itemdata(raw: bytes, *, package_version=None) -> dict[int,dict]:
             # Only expose these additional semantics for the independently
             # pinned 1296 source and its decoded official ItemData.lua.
             result[iid].update(kind=kind,order=order,icon_id=icon_id,
+                attributes=attributes,flags2=flags2,is_pvp_time_over=bool(flags2&1),
                 shop_icon_id=shop_icon_id,material=material,level=level,
                 fit_type=fit_type,special=special,spares=spares,
                 size_l=size_l,size_w=size_w,size_h=size_h,item_w=item_w,item_h=item_h,
                 available_time=available_time,limited_time=limited_time,use_count=use_count,
                 style_bank_set_sort_id=int.from_bytes(tail,'little'))
+            from wlre.services.world.item_stack_rules import can_overlap
+            result[iid]['stackable']=can_overlap(iid,result[iid])
     checkpoint(offset=r.pos, field='end_of_file', expected=len(raw), actual=r.pos)
     if r.pos!=len(raw):
         raise ItemDataDecodeError('ItemData record layout changed or trailing bytes')

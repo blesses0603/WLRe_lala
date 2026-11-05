@@ -12,7 +12,8 @@ from wlre.storage.full_resource_seed import read_config
 B=Path(__file__).resolve().parents[1]/'wlre/resources'
 
 def setup():
- s=State();s.player={'role_id':111,'name':'測試','scene':12000,'x':0,'y':0};s.inventory.update(ready=True,reliable=True,capacity=200)
+ # Synthetic receipt fixture: explicitly supply the stackability proof it needs.
+ s=State();s.inventory['server_stackable']={'10000':True};s.player={'role_id':111,'name':'測試','scene':12000,'x':0,'y':0};s.inventory.update(ready=True,reliable=True,capacity=200)
  from wlre.services.items.alchemy import category
  mats=[]
  for sid in CAT['items']:

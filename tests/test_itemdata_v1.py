@@ -106,6 +106,7 @@ class ItemDataTests(unittest.TestCase):
         # u16 name bytes + UTF16 A + kind + u16 kind bytes + kind + item ID.
         start=2+2+1+2+len('雜物'.encode('utf-16-le'))+2
         struct.pack_into('<HHH',blob,start,7,4321,5432)
+        struct.pack_into('<HBiHBi',blob,start+6+8,25,2,-17,26,3,450)
         material_at=start+6+8+14
         struct.pack_into('<BBBB',blob,material_at,3,44,5,67)
         spares_at=material_at+4+64+13+11
@@ -115,11 +116,14 @@ class ItemDataTests(unittest.TestCase):
         struct.pack_into('<2B',blob,size_at+5,6,7)
         time_at=size_at+7+12+3
         struct.pack_into('<3H',blob,time_at,13,14,15)
+        blob[time_at+6+4+24+5]=1
         legacy=struct.pack('<I',1)+blob
         self.assertNotIn('icon_id',parse_itemdata(legacy)[321])
         raw=legacy+struct.pack('<H',6789)
         with patch('wlre.services.world.itemdata_v1.ITEMDATA_1296_SHA256',hashlib.sha256(raw).hexdigest()):
             row=parse_itemdata(raw,package_version='1296_2026_11_04_13_34_19_13')[321]
+        self.assertEqual(row['attributes'],[{'kind':25,'effect':2,'value':-17},{'kind':26,'effect':3,'value':450}])
+        self.assertEqual(row['flags2'],1);self.assertTrue(row['is_pvp_time_over']);self.assertFalse(row['stackable'])
         expected={'kind':1,'order':7,'icon_id':4321,'shop_icon_id':5432,
                   'material':3,'level':44,'fit_type':5,'special':67,
                   'spares':[8,9,10,11,12],'size_l':2,'size_w':3,'size_h':4,

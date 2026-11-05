@@ -1,4 +1,4 @@
-"""Offline, fail-closed decoder for six independently reviewed official Lua files.
+"""Offline, fail-closed decoder for independently reviewed official Lua files.
 
 No client code is executed. No keys or Lua content are shipped: content codec
 parameters come from the fingerprint-checked public client metadata supplied
@@ -11,7 +11,24 @@ import struct
 
 METADATA_SHA256 = '5a71da3a4b37486b056b9873655e42d7d7a583eae6ebfe2efdd18ebe66a23260'
 MAX_LUA_BYTES = 2 * 1024 * 1024
-KNOWN_FILES = {'EmojiData.lua': ('a2e7d0bd5b9c732fbc507bae0cec109862209ee93a1cf8b17a575cb89520171b', '84f2d17ccd8fd232b89bc65d83e23882c68c759535a83c5ebf0b5a1757fef698'), 'ItemData.lua': ('a102fea143c4e9f953c67b07c030c7212379538beb159d360020be4c31b3b115', '438f5470cc1fc1f09661935bf210135ad0f22aeaf536d9a5c18f17646c062d42'), 'NpcTalkData.lua': ('761ee4f272fd65138cd4bb51db71b443c1cb961ff6314a483d384d2d66041e26', '2ea284d5d2ccca42fad4b684c55c0e9a8dc706f14bcbcc4d9032399f9b5fc0a5'), 'SkillData.lua': ('1304e566b6f33e23d4cdc569e35b350a4c5eaa438c8942f126f4f96af000cb3c', '962e95717ddce2c8d56da622df0e578afbf7bd6c63a19e53a809fb4a283f3228'), 'SkillMotionData.lua': ('9682ce2874f540bafebe50d37efcc7589b2dab018c8891558782f05e80ab7dcd', '54fb4daf742c8379fc9778d00f2a4329355250277a6d9c607236c68b419d4c0b'), 'StageMapData.lua': ('ba17aafad21c0529bffe1dd472268c7f37463234602c95afbd87e2d9e6a21631', 'fcd4b5704ff46341cb0307c5e1d5be753c69fd9a7c6b6361af26c3cabeb49a06')}
+KNOWN_FILES = {'Attribute.lua': ('8ffef7d396a0d55eb09859a3f7f5789e4295203ae4e7696f141047e3ea39df95',
+                   '37427f02cd62302032c5a77ca66e1e51f6586aaa8ebf23b95cb5be96dfd26fc8'),
+ 'Define.lua': ('e91e32a77d5ce5aa5b039fdd2584eb606b07298af11205c8aff6552343341140',
+                '452e32903a686f22b8e98c1707efca80a45dcf73fd4f1bd5e7e08b38ae3db92c'),
+ 'EmojiData.lua': ('a2e7d0bd5b9c732fbc507bae0cec109862209ee93a1cf8b17a575cb89520171b',
+                   '84f2d17ccd8fd232b89bc65d83e23882c68c759535a83c5ebf0b5a1757fef698'),
+ 'Function.lua': ('7b1d8bb32c0a71f92f2f8fbaa050d6ce1219d90bee24109666a3537cdb3cb5b6',
+                  '2ed9b6b981d2b0d5b99f773a40c0493495f06e47f709046b51dcc3f6621efdd1'),
+ 'ItemData.lua': ('a102fea143c4e9f953c67b07c030c7212379538beb159d360020be4c31b3b115',
+                  '438f5470cc1fc1f09661935bf210135ad0f22aeaf536d9a5c18f17646c062d42'),
+ 'NpcTalkData.lua': ('761ee4f272fd65138cd4bb51db71b443c1cb961ff6314a483d384d2d66041e26',
+                     '2ea284d5d2ccca42fad4b684c55c0e9a8dc706f14bcbcc4d9032399f9b5fc0a5'),
+ 'SkillData.lua': ('1304e566b6f33e23d4cdc569e35b350a4c5eaa438c8942f126f4f96af000cb3c',
+                   '962e95717ddce2c8d56da622df0e578afbf7bd6c63a19e53a809fb4a283f3228'),
+ 'SkillMotionData.lua': ('9682ce2874f540bafebe50d37efcc7589b2dab018c8891558782f05e80ab7dcd',
+                         '54fb4daf742c8379fc9778d00f2a4329355250277a6d9c607236c68b419d4c0b'),
+ 'StageMapData.lua': ('ba17aafad21c0529bffe1dd472268c7f37463234602c95afbd87e2d9e6a21631',
+                      'fcd4b5704ff46341cb0307c5e1d5be753c69fd9a7c6b6361af26c3cabeb49a06')}
 
 
 def _digest(raw):
