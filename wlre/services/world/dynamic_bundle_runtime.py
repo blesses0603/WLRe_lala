@@ -248,6 +248,14 @@ def prepare_dynamic_runtime(*, sync=False, sync_root=None, observe=None,
                     max_download_bytes=max_emoji_download_bytes,max_downloads=max_emoji_downloads)
         except (OSError,ValueError,RuntimeError):
             pass
+    if sync:
+        try:
+            from wlre.services.world.item_image_database import image_paths as item_paths, MAX_DOWNLOAD_BYTES, MAX_DOWNLOADS
+            item_images = build_update_plan(manifests['MainPackage'],asset_paths=item_paths(manifests['MainPackage']),cache_root=root/'bundles')
+            execute(item_images,cache_root=root/'bundles',download=True,
+                    max_download_bytes=MAX_DOWNLOAD_BYTES,max_downloads=MAX_DOWNLOADS)
+        except (OSError,ValueError,RuntimeError):
+            pass  # Optional images: the loader reports precise unavailable status.
     runtime = load_verified_bundle_runtime(sync_root=root,
                         _verified_context=(before, manifests, identity))
     after = validate_snapshot(observe())

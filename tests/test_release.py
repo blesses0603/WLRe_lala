@@ -123,22 +123,15 @@ class Concurrency(unittest.TestCase):
   self.assertEqual(auto_battle.validate(cfg)['profiles']['player']['orderAction'][0]['id'],-1)
 
 class Images(unittest.TestCase):
- def test_catalog_mapping_complete(self):
-  self.assertEqual(set(json.loads(read_config('item_icon_map.json', root=B).decode('utf-8'))['items']),set(CAT['items']))
- def test_all_png_valid(self):
-  with zipfile.ZipFile(io.BytesIO(read_config('item_icons.zip', root=B))) as z:
-   self.assertEqual(len(z.namelist()),4334)
-   for n in z.namelist():
-    with self.subTest(n=n):
-     with Image.open(io.BytesIO(z.read(n))) as image:image.verify()
- def test_coverage(self):
-  items=json.loads(read_config('item_icon_map.json', root=B).decode('utf-8'))['items']
-  with zipfile.ZipFile(io.BytesIO(read_config('item_icons.zip', root=B))) as z:
-   available=0
-   for sid,row in items.items():
-    present=row['icon']+'.png' in z.NameToInfo
-    self.assertEqual(row['original_available'],present)
-    available+=present
-  self.assertEqual(available,9855);self.assertEqual(len(items)-available,1432)
+ def test_item_images_are_not_shipped_in_seed(self):
+  from wlre.storage.resource_seed_manifest import SOURCE_MANIFEST, RETIRED_RESOURCES
+  for name in ('item_icon_map.json','item_icons.zip'):
+   self.assertNotIn(name,SOURCE_MANIFEST)
+   self.assertIn(name,RETIRED_RESOURCES)
+ def test_cold_start_does_not_activate_legacy_image_mapping(self):
+  from unittest.mock import patch
+  from wlre.services.world.item_image_database import current_catalog
+  with patch('wlre.services.world.dynamic_bundle_runtime.current_runtime',return_value=None):
+   self.assertIsNone(current_catalog())
 
 if __name__=='__main__':unittest.main(verbosity=2)

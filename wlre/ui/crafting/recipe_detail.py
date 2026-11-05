@@ -72,7 +72,8 @@ def render_recipe_detail(self, force=False, *, recipes, owned_counts, material_r
     try:count=int(self.count.get())
     except ValueError:count=0
     valid=1<=count<=255;counts=owned_counts(self.state,self.selected);materials=material_rows(self.state,recipe,max(1,count));status,reason=availability(self.state,recipe,max(1,count))
-    signature=(self.selected,count,self.app.live_active,tuple(counts.items()),tuple(tuple(m.items()) for m in materials),status,c.get('pending'),c.get('revision'),self.state.get('furniture',{}).get('revision'))
+    from wlre.services.world.item_image_database import source_token, current_catalog
+    signature=(source_token(),self.selected,count,self.app.live_active,tuple(counts.items()),tuple(tuple(m.items()) for m in materials),status,c.get('pending'),c.get('revision'),self.state.get('furniture',{}).get('revision'))
     if not force and signature==self.detail_key:return
     self.detail_key=signature;self.name.set(item_name(self.selected));self.large_photo=self.icons.get(self.selected,32 if self.embedded else 80);self.large_image.configure(image=self.large_photo)
     fmt=lambda v:'待同步' if v is None else str(v)
@@ -81,9 +82,10 @@ def render_recipe_detail(self, force=False, *, recipes, owned_counts, material_r
         self.hold.set(f"背包 {number(counts['bag'])}｜小屋 {number(counts['placed'])}\n保管 {number(counts['stored'])}｜排程 {counts['queued']}")
     else:self.hold.set(f"背包持有 {fmt(counts['bag'])}｜小屋已擺 {fmt(counts['placed'])}\n保管中 {fmt(counts['stored'])}｜排程預計產出 {counts['queued']}")
     tool=recipe['tool_id'];self.device.set(f'設備：{item_name(tool)} · {tool_status(self.state,tool)}')
-    meta=icon_map.get(str(self.selected),{});size=f"｜{meta['width']:.1f}×{meta['height']:.1f}" if meta.get('width') and meta.get('height') else ''
+    meta=icon_map.get(str(self.selected),{});size=f"｜背包佔格 {meta['width']:.0f}×{meta['height']:.0f}" if meta.get('width') and meta.get('height') else ''
     seconds=recipe['seconds']*max(1,count);adjusted=effective_time(self.state,{'base_time':seconds})
     self.time.set((f"產量 {recipe['output']*max(1,count)}｜時間 {duration(adjusted if adjusted is not None else seconds)}" if self.embedded else f"產量 {recipe['output']*max(1,count)}{size}\n時間：{duration(seconds)}"+(f' → {duration(adjusted)}' if adjusted is not None and seconds else '')))
+    if current_catalog() is None:self.time.set(self.time.get()+' · 官方圖示尚未同步')
     for i,(line,icon,text) in enumerate(self.material_widgets):
         if i>=len(materials):line.pack_forget();continue
         line.pack(fill='x',pady=2);m=materials[i];icon.image=self.icons.get(m['item_id'],28);icon.configure(image=icon.image)
