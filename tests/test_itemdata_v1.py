@@ -99,4 +99,32 @@ class ItemDataTests(unittest.TestCase):
                             for row, offset in zip(rows.values(), offsets)))
 
 
+
+    def test_reviewed_1296_extended_fields_and_legacy_isolation(self):
+        # Independent synthetic wire values for official ItemData:New fields.
+        blob=bytearray(sample(321,name='A'))
+        # u16 name bytes + UTF16 A + kind + u16 kind bytes + kind + item ID.
+        start=2+2+1+2+len('雜物'.encode('utf-16-le'))+2
+        struct.pack_into('<HHH',blob,start,7,4321,5432)
+        material_at=start+6+8+14
+        struct.pack_into('<BBBB',blob,material_at,3,44,5,67)
+        spares_at=material_at+4+64+13+11
+        struct.pack_into('<5H',blob,spares_at,8,9,10,11,12)
+        size_at=spares_at+10+2
+        struct.pack_into('<3B',blob,size_at,2,3,4)
+        struct.pack_into('<2B',blob,size_at+5,6,7)
+        time_at=size_at+7+12+3
+        struct.pack_into('<3H',blob,time_at,13,14,15)
+        legacy=struct.pack('<I',1)+blob
+        self.assertNotIn('icon_id',parse_itemdata(legacy)[321])
+        raw=legacy+struct.pack('<H',6789)
+        with patch('wlre.services.world.itemdata_v1.ITEMDATA_1296_SHA256',hashlib.sha256(raw).hexdigest()):
+            row=parse_itemdata(raw,package_version='1296_2026_11_04_13_34_19_13')[321]
+        expected={'kind':1,'order':7,'icon_id':4321,'shop_icon_id':5432,
+                  'material':3,'level':44,'fit_type':5,'special':67,
+                  'spares':[8,9,10,11,12],'size_l':2,'size_w':3,'size_h':4,
+                  'item_w':6,'item_h':7,'available_time':13,'limited_time':14,
+                  'use_count':15,'style_bank_set_sort_id':6789}
+        self.assertEqual({key:row[key] for key in expected},expected)
+
 if __name__=='__main__':unittest.main()

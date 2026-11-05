@@ -77,29 +77,37 @@ def parse_itemdata(raw: bytes, *, package_version=None) -> dict[int,dict]:
     for index in range(count):
         checkpoint(offset=r.pos, field='name_length', record=index + 1)
         name=r.utf16()
-        r.skip(1)
+        kind=r.u8()
         checkpoint(offset=r.pos, field='kind_name_length')
         r.utf16(allow_empty=True)   # kindName
         checkpoint(offset=r.pos, field='item_id')
         iid=r.u16()
         if not 1<=iid<=65535 or iid in result:
             raise ItemDataDecodeError('Invalid or duplicate ItemData item ID')
-        r.skip(2+2+2 + 4*2 + 2*(2+1+4) + 4 + 4*4*4)
+        order,icon_id,shop_icon_id=r.u16(),r.u16(),r.u16()
+        r.skip(4*2 + 2*(2+1+4))
+        material,level,fit_type,special=r.u8(),r.u8(),r.u8(),r.u8()
+        r.skip(4*4*4)
         open_used=r.u8()
         need_level=r.u8()
         price=r.u32()
         sell_price=r.u32()
         r.skip(1)
         restrict=r.u16()
-        r.skip(4 + 1 + 4 + 2 + 5*2)
+        r.skip(4 + 1 + 4 + 2)
+        spares=[r.u16() for _ in range(5)]
         checkpoint(offset=r.pos, field='description_length')
         desc_size=r.u16()
         if desc_size>MAX_TEXT or desc_size%2:
             raise ItemDataDecodeError('Invalid ItemData description length')
         r.skip(desc_size)
-        r.skip(3 + 2 + 1 + 1)
+        size_l,size_w,size_h=r.u8(),r.u8(),r.u8()
+        r.skip(2)
+        item_w,item_h=r.u8(),r.u8()
         r.skip(1+2+2+2+2+1+1+1)
-        r.skip(1+1+1+2+2+2+2+2)
+        r.skip(1+1+1)
+        available_time,limited_time,use_count=r.u16(),r.u16(),r.u16()
+        r.skip(2+2)
         r.skip(6*4)
         r.skip(2+2+1+1+1+1+1+1+2+1)
         r.skip(5*2)
@@ -109,7 +117,16 @@ def parse_itemdata(raw: bytes, *, package_version=None) -> dict[int,dict]:
                      'need_level':need_level}
         if is_1296:
             checkpoint(offset=r.pos, field='unknown_tail_1296')
-            result[iid]['unknown_tail_1296_hex'] = r.take(2).hex()
+            tail=r.take(2)
+            result[iid]['unknown_tail_1296_hex'] = tail.hex()  # Preserve diagnostic compatibility.
+            # Only expose these additional semantics for the independently
+            # pinned 1296 source and its decoded official ItemData.lua.
+            result[iid].update(kind=kind,order=order,icon_id=icon_id,
+                shop_icon_id=shop_icon_id,material=material,level=level,
+                fit_type=fit_type,special=special,spares=spares,
+                size_l=size_l,size_w=size_w,size_h=size_h,item_w=item_w,item_h=item_h,
+                available_time=available_time,limited_time=limited_time,use_count=use_count,
+                style_bank_set_sort_id=int.from_bytes(tail,'little'))
     checkpoint(offset=r.pos, field='end_of_file', expected=len(raw), actual=r.pos)
     if r.pos!=len(raw):
         raise ItemDataDecodeError('ItemData record layout changed or trailing bytes')

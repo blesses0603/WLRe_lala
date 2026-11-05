@@ -331,7 +331,7 @@ def load_verified_bundle_runtime(*, sync_root=None, _verified_context=None):
         def stored(feature, tables, parse):
             return load_parsed(root / 'derived_catalogs' / 'resource_inventory.sqlite3',
                                normalized_key, feature,
-                               'runtime-v1-' + ('dynamic' if dynamic else '1275'),
+                               ('runtime-v2-' if feature == 'items' else 'runtime-v1-') + ('dynamic' if dynamic else '1275'),
                                {name: sources[name] for name in tables}, parse)
 
         stage = 'Eve'
