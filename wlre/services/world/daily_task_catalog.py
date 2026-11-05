@@ -1,9 +1,11 @@
 """DailyTask/DailyTaskReward schemas from the official Lua, version agnostic."""
+from wlre.services.parser_diagnostics import diagnosed
 from wlre.services.world.daily_task_1275 import Reader, parse_daily_tasks
 
 TABLES=('DailyTaskData_C','DailyTaskRewardData_C')
 
 
+@diagnosed('daily-task-rewards-v1')
 def parse_rewards(raw):
     r=Reader(raw);count=r.i32()
     if not 0<count<=1000:raise ValueError('活躍寶箱筆數無效')

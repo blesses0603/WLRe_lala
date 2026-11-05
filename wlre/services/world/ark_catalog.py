@@ -1,4 +1,5 @@
 """Current official Ark tables, transcribed from ArkData.lua."""
+from wlre.services.parser_diagnostics import diagnosed
 from wlre.services.world.daily_task_1275 import Reader
 
 TABLES=('ArkStarData_C','ArkAgentData_C','ArkFightData_C')
@@ -15,10 +16,12 @@ def _rows(raw,read):
     return rows
 
 
+@diagnosed('ark-stars-v1')
 def parse_stars(raw):
     return _rows(raw,lambda r:dict(id=r.u8(),prices=[r.u16() for _ in range(6)]))
 
 
+@diagnosed('ark-agents-v1')
 def parse_agents(raw):
     def read(r):
         row=dict(id=r.u8(),name_id=r.u32(),race=r.u32(),career=r.u32(),birth=r.u32(),
@@ -46,6 +49,7 @@ def _parse_fights(raw,with_tail):
     return _rows(raw,read)
 
 
+@diagnosed('ark-fights-v1')
 def parse_fights(raw):
     # Uploaded 1262 Lua has no tail. Verified 1286 bytes add one boolean per
     # record; retain it without assigning gameplay meaning or bypass rights.
