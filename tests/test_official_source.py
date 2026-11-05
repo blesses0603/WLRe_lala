@@ -16,3 +16,15 @@ class OfficialSourceTests(unittest.TestCase):
                      'wlreftpsrc.chinesegamer.net/path'):
             with self.subTest(host=host), self.assertRaises(ValueError):
                 selected_host({'WLRE_OFFICIAL_RESOURCE_HOST': host})
+
+    def test_metadata_accepts_official_generic_mime_with_same_body_validation(self):
+        import io
+        from wlre.services.official_version import fetch_bytes, RESOURCE_MAP_URL
+        class Response(io.BytesIO):
+            status = 200
+            def geturl(self):
+                return RESOURCE_MAP_URL
+        def opener(request, timeout):
+            self.assertEqual(request.get_header('Accept'), '*/*')
+            return Response(b'[]')
+        self.assertEqual(fetch_bytes(RESOURCE_MAP_URL, opener=opener, cache_bust=False), b'[]')
