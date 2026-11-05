@@ -1,5 +1,9 @@
 import unittest
 import struct
+import hashlib
+import os
+from pathlib import Path
+from unittest.mock import patch
 from wlre.services.world.itemdata_v1 import parse_itemdata, ItemDataDecodeError
 
 
@@ -46,6 +50,53 @@ class ItemDataTests(unittest.TestCase):
         blob[4]=3
         with self.assertRaises(ItemDataDecodeError):
             parse_itemdata(bytes(blob))
+
+    def test_1296_preserves_unknown_tail_and_consumes_whole_file(self):
+        version = '1296_2026_11_04_13_34_19_13'
+        raw = struct.pack('<I', 2) + sample(10) + b'\x00\xff' + sample(11) + b'\x12\x34'
+        with patch('wlre.services.world.itemdata_v1.ITEMDATA_1296_SHA256', hashlib.sha256(raw).hexdigest()):
+            rows = parse_itemdata(raw, package_version=version)
+            self.assertEqual(rows[10]['unknown_tail_1296_hex'], '00ff')
+            self.assertEqual(rows[11]['unknown_tail_1296_hex'], '1234')
+            self.assertEqual(parse_itemdata(raw), rows)
+            with self.assertRaises(ItemDataDecodeError):
+                parse_itemdata(raw, package_version='1297_2026_11_05_00_00_00_00')
+            with self.assertRaises(ItemDataDecodeError):
+                parse_itemdata(raw, package_version='1286_2026_10_29_13_42_37_94')
+            with self.assertRaises(ItemDataDecodeError):
+                parse_itemdata(raw[:-1], package_version=version)
+        for malformed in (raw[:-1], raw + b'\x00'):
+            with patch('wlre.services.world.itemdata_v1.ITEMDATA_1296_SHA256', hashlib.sha256(malformed).hexdigest()):
+                with self.assertRaises(ItemDataDecodeError):
+                    parse_itemdata(malformed, package_version=version)
+
+    @unittest.skipUnless(os.environ.get('WLRE_ITEMDATA_1296_BUNDLE'), 'private official bundle not supplied')
+    def test_private_1296_bundle(self):
+        import UnityPy
+        from wlre.services.world.unity_textasset import _payload
+        bundle = Path(os.environ['WLRE_ITEMDATA_1296_BUNDLE'])
+        env = UnityPy.load(str(bundle))
+        raw = next(_payload(obj, path) for path, obj in env.container.items()
+                   if path.lower().endswith('/itemdata_c.bytes'))
+        self.assertEqual(hashlib.sha256(raw).hexdigest(),
+                         '5195d5ee8ae201dea55439274914930551176c3fcf50d735e03b09c5d04acbb4')
+        starts = []
+        from wlre.services.world import itemdata_v1
+
+        class RecordingReader(itemdata_v1.Reader):
+            def utf16(self, *, allow_empty=False):
+                if not allow_empty:
+                    starts.append(self.pos)
+                return super().utf16(allow_empty=allow_empty)
+
+        with patch.object(itemdata_v1, 'Reader', RecordingReader):
+            rows = parse_itemdata(raw, package_version='1296_2026_11_04_13_34_19_13')
+        self.assertEqual(starts[0], 4)
+        offsets = [boundary - 2 for boundary in starts[1:] + [len(raw)]]
+        self.assertEqual(len(rows), 11366)
+        self.assertEqual(len(offsets), len(rows))
+        self.assertTrue(all(bytes.fromhex(row['unknown_tail_1296_hex']) == raw[offset:offset+2]
+                            for row, offset in zip(rows.values(), offsets)))
 
 
 if __name__=='__main__':unittest.main()
