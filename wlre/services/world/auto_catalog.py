@@ -5,6 +5,8 @@ No candidate ZIP is created or promoted by this synchronization entry point.
 """
 from __future__ import annotations
 
+from wlre.services.parser_diagnostics import update_diagnostics, record_identity
+
 import hashlib
 from pathlib import Path
 
@@ -154,6 +156,7 @@ def _rebuild_known_resources(result, *, identity, manifests, bundle_root,
                        else 'partial_raw')}
 
 
+@update_diagnostics('candidate_root', injected=('observe', 'retrieve', 'extractor'))
 def run_auto_catalog(*, download=True, parse=True, observe=None, retrieve=None,
                      previous_finder=None, extractor=None,
                      manifest_root=None, bundle_root=None, candidate_root=None,
@@ -215,6 +218,7 @@ def run_auto_catalog(*, download=True, parse=True, observe=None, retrieve=None,
     bindings = _bindings_for_snapshot(snapshot)
     plan = plan_catalog_pipeline(snapshot, manifests, bindings,
                                  previous_manifests=previous, bundle_root=bundle_root)
+    record_identity(plan.identity.key)
     # Compare the current fully checked Manifest identity with the last
     # OBSERVED official revision, not with an installed or gameplay-approved
     # revision. Saving this metadata never switches the active game runtime.

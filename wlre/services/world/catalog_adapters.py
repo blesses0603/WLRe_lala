@@ -7,6 +7,8 @@ release-reviewed exact SHA-256 and schema for each source at every revision.
 """
 from __future__ import annotations
 
+from wlre.services.parser_diagnostics import diagnosed
+
 from dataclasses import dataclass
 import hashlib
 import json
@@ -171,6 +173,7 @@ def _decode(contract: SourceContract, raw: bytes):
     raise CatalogAdapterError('Unreviewed schema adapter')
 
 
+@diagnosed('catalog-contract-v1')
 def parse_feature(*, catalog_key: str, package_versions: Mapping[str, str],
                   contract: SourceContract, raw: bytes) -> ParsedCatalog:
     """Fail closed on any unreviewed format/version/digest; never enable gameplay."""
@@ -195,6 +198,7 @@ def parse_feature(*, catalog_key: str, package_versions: Mapping[str, str],
                          contract.schema_id, digest, count, records)
 
 
+@diagnosed('catalog-set-v1')
 def parse_selected(*, catalog_key: str, package_versions: Mapping[str, str],
                    contracts: Mapping[str, SourceContract],
                    source_payloads: Mapping[str, bytes]) -> dict[str, ParsedCatalog]:

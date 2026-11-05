@@ -6,6 +6,8 @@ Unreviewed Eve event-index transformation is intentionally NOT attempted.
 """
 from __future__ import annotations
 
+from wlre.services.parser_diagnostics import diagnosed
+
 from pathlib import Path, PurePosixPath
 import struct
 from typing import Callable
@@ -128,6 +130,7 @@ def _find_exact_container_object(container, asset_path):
         raise UnityTextAssetError('Unity container AssetPath enumeration failed') from exc
 
 
+@diagnosed('unityfs-textasset-v1')
 def extract_textasset(binding: AssetBinding, bundle_paths: tuple[Path, ...], *,
                       loader: Callable | None = None) -> bytes:
     """Unpack exact .bytes TextAsset bytes through UnityPy's .container.items().

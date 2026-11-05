@@ -6,6 +6,8 @@ approve game versions, login, navigation or network packet sending.
 """
 from __future__ import annotations
 
+from wlre.services.parser_diagnostics import update_diagnostics, record_identity
+
 from datetime import datetime, timezone
 import json
 import os
@@ -93,6 +95,7 @@ def _store_status(report, *, root=None):
             pending.unlink(missing_ok=True)
 
 
+@update_diagnostics('root', injected=('runner',))
 def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
     """Synchronously verify official resources before Tk starts.
 

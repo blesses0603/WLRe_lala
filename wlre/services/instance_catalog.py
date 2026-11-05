@@ -3,6 +3,8 @@
 Derived from Lua/Data/{DungeonData,CooperateEventData,StageData,AwardData}.lua.
 Records are NOT fabricated when the corresponding official binary is absent.
 """
+
+from wlre.services.parser_diagnostics import diagnosed, checkpoint
 import json
 from pathlib import Path
 
@@ -31,11 +33,13 @@ def _flags(reader):
     return values
 
 
+@diagnosed('dungeon-v1')
 def parse_dungeons(data):
     """Read DungeonData_C, including exactly 16 AwardData entries per row."""
     r = Reader(data)
     result = []
-    for _ in range(_count(r)):
+    for index in range(_count(r)):
+        checkpoint(offset=r.offset, field='record', record=index + 1)
         row = {'id': r.u16(), 'kind': r.u8(), 'para_kind': r.u8(),
                'map_id': r.u16(), 'description_id': r.u32(),
                'picture': r.u8(), 'score_display': r.u8(),
@@ -51,11 +55,13 @@ def parse_dungeons(data):
     return result
 
 
+@diagnosed('cooperate-v1')
 def parse_cooperative_events(data):
     """Read CooperateEventData_C; 4 named follower slots + one AwardData."""
     r = Reader(data)
     result = []
-    for _ in range(_count(r)):
+    for index in range(_count(r)):
+        checkpoint(offset=r.offset, field='record', record=index + 1)
         row = {'id': r.u8(), 'text_id': r.u32(), 'npc_x': r.u16(),
                'npc_y': r.u16(), 'fight_count': r.u8(),
                'step_mark_id': r.u16(), 'finish_mark_id': r.u16(),
@@ -67,11 +73,13 @@ def parse_cooperative_events(data):
     return result
 
 
+@diagnosed('stage-76-v1')
 def parse_stages(data):
     """Read ScenesData_C records via StageData:New (Lua/Logic/Data.lua)."""
     r = Reader(data)
     result = {}
-    for _ in range(_count(r)):
+    for index in range(_count(r)):
+        checkpoint(offset=r.offset, field='record', record=index + 1)
         stage_id = r.u16()
         r.take(2)  # landType / businessType
         name_id = r.u32()

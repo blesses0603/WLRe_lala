@@ -31,6 +31,7 @@ _REQUIRED_TABLES = (
 # breaks the core ten-table NPC/recipe runtime or enables game packets.
 _PORTAL_TABLES = ('StageMapData_C', 'EveDoorLinks')
 _OPTIONAL_ROUTE_TABLES = ('DoorLinkData_C',)
+_DIAGNOSTIC_TABLES = ('DailyTaskData_C', 'DungeonData_C', 'CooperateEventData_C')
 _ASSET_ROOT = 'Assets/ResourcesBuild/Data/'
 
 
@@ -273,22 +274,54 @@ def load_verified_bundle_runtime(*, sync_root=None, _verified_context=None):
     sources = {}
     stage = '原始資料'
     try:
+        from wlre.services.parser_diagnostics import diagnostics_active
+        extraction_errors = []
         for table in _REQUIRED_TABLES:
             stage = table
-            asset = _ASSET_ROOT + table + '.bytes'
-            plan = build_update_plan(
-                verified_data, asset_paths=(asset,), cache_root=bundle_root)
-            if not plan.entries or any(entry.action != 'cached' for entry in plan.entries):
-                raise BundleRuntimeUnavailable('仍缺少官方 Bundle：' + table)
-            paths = tuple(entry.spec.cache_path(bundle_root) for entry in plan.entries)
-            if any(not _verified_file(path, row.spec)
-                   for path, row in zip(paths, plan.entries)):
-                raise BundleRuntimeUnavailable('Bundle 來源校驗失敗：' + table)
-            binding = AssetBinding(
-                asset, SourceContract(
-                    'scenes', table, 'stage-new-76-v1',
-                    '0' * 64, 'DataPackage', verified_data.spec.package_version))
-            sources[table] = extract_textasset(binding, paths, loader=load_container)
+            try:
+                asset = _ASSET_ROOT + table + '.bytes'
+                plan = build_update_plan(
+                    verified_data, asset_paths=(asset,), cache_root=bundle_root)
+                if not plan.entries or any(entry.action != 'cached' for entry in plan.entries):
+                    raise BundleRuntimeUnavailable('仍缺少官方 Bundle：' + table)
+                paths = tuple(entry.spec.cache_path(bundle_root) for entry in plan.entries)
+                if any(not _verified_file(path, row.spec)
+                       for path, row in zip(paths, plan.entries)):
+                    raise BundleRuntimeUnavailable('Bundle 來源校驗失敗：' + table)
+                binding = AssetBinding(
+                    asset, SourceContract(
+                        'scenes', table, 'stage-new-76-v1',
+                        '0' * 64, 'DataPackage', verified_data.spec.package_version))
+                sources[table] = extract_textasset(binding, paths, loader=load_container)
+
+            except (OSError, ValueError, RuntimeError) as error:
+                if not diagnostics_active():
+                    raise
+                extraction_errors.append((table, error))
+
+        from wlre.services.parser_diagnostics import diagnostics_active
+        if diagnostics_active():
+            from wlre.services.world.resource_parser_audit import audit_sources
+            audit_inputs = dict(sources)
+            for table in _PORTAL_TABLES + _OPTIONAL_ROUTE_TABLES + _DIAGNOSTIC_TABLES:
+                try:
+                    asset = _ASSET_ROOT + table + '.bytes'
+                    plan = build_update_plan(verified_data, asset_paths=(asset,), cache_root=bundle_root)
+                    if not plan.entries or any(e.action != 'cached' for e in plan.entries):
+                        continue
+                    if any(not _verified_file(e.spec.cache_path(bundle_root), e.spec) for e in plan.entries):
+                        continue
+                    binding = AssetBinding(asset, SourceContract(
+                        'scenes', table, 'stage-new-76-v1', '0' * 64,
+                        'DataPackage', verified_data.spec.package_version))
+                    audit_inputs[table] = extract_textasset(binding,
+                        tuple(e.spec.cache_path(bundle_root) for e in plan.entries), loader=load_container)
+                except (OSError, ValueError, RuntimeError):
+                    continue
+            audit_sources(audit_inputs)
+        if extraction_errors:
+            stage, error = extraction_errors[0]
+            raise error
 
         stage = 'Eve'
         eve = sources['Eve']
@@ -301,7 +334,8 @@ def load_verified_bundle_runtime(*, sync_root=None, _verified_context=None):
                 or len(npc.get('scenes', {})) != 1262):
             raise BundleRuntimeUnavailable('NPC／互動事件數不符合已審核 1275 資料')
         stage = 'ItemData_C'
-        items = parse_itemdata(sources['ItemData_C'])
+        items = parse_itemdata(sources['ItemData_C'],
+                               package_version=verified_data.spec.package_version)
         if dynamic:
             for rows in interacts['scenes'].values():
                 for interaction in rows:

@@ -5,6 +5,8 @@ supported 1262 baseline, register network commands, or emit any packets.
 """
 from __future__ import annotations
 
+from wlre.services.parser_diagnostics import diagnosed, checkpoint
+
 import gzip
 from copy import deepcopy
 import io
@@ -61,6 +63,7 @@ def _table(archive, manifest, table):
         return z.read(matches[0])
 
 
+@diagnosed('smith-33-v1')
 def parse_smith_1275(data):
     """Parse official SmithData.New 33-byte records into LaLa recipe shape.
 
@@ -74,6 +77,7 @@ def parse_smith_1275(data):
     result = {}
     for order in range(1, count + 1):
         pos = 4 + (order - 1) * 33
+        checkpoint(offset=pos, field='recipe', record=order)
         item_id, design = struct.unpack_from('<HH', data, pos)
         skill = data[pos + 4]
         tool = struct.unpack_from('<H', data, pos + 5)[0]

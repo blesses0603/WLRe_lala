@@ -6,6 +6,8 @@ Unknown revisions fail closed; no event execution or packet authorization.
 """
 from __future__ import annotations
 
+from wlre.services.parser_diagnostics import diagnosed, checkpoint, read_checkpoint
+
 import json
 import struct
 
@@ -27,6 +29,7 @@ class Reader:
         self.raw, self.pos, self.end = raw, start, end
 
     def take(self, n):
+        read_checkpoint(self.pos, n, self.end - self.pos)
         if n < 0 or self.pos + n > self.end:
             raise EveDecodeError('Eve record exceeds verified scene limits')
         value = self.raw[self.pos:self.pos+n]
@@ -191,6 +194,7 @@ def _scene(r, source):
     return result
 
 
+@diagnosed('eve-v115')
 def derive_eve_index(raw: bytes, source: str) -> bytes:
     """Produce the schema-v1 UTF-8 JSON accepted by the NPC/shop adapters."""
     if type(raw) is not bytes or not 12 <= len(raw) <= 16 * 1024 * 1024:
@@ -204,6 +208,7 @@ def derive_eve_index(raw: bytes, source: str) -> bytes:
     segments = []
     records = 0
     for idx in range(count):
+        checkpoint(offset=12 + 12 * idx, field='scene_header', record=idx + 1)
         scene_id, model, offset, size = struct.unpack_from('<HHII', raw, 12 + 12 * idx)
         if (scene_id in scenes or offset < 12 + 12 * count or size < 6
                 or offset + size > len(raw)):
@@ -214,6 +219,7 @@ def derive_eve_index(raw: bytes, source: str) -> bytes:
     for i, (start, end, scene) in enumerate(segments):
         if i and segments[i-1][1] > start:
             raise EveDecodeError('Eve scene segments overlap')
+        checkpoint(offset=start, field='scene', record=i + 1)
         try:
             row = _scene(Reader(raw, start, end), source)
         except EveDecodeError as exc:

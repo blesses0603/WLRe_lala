@@ -7,6 +7,8 @@ never proves that the live server accepted a transfer.
 """
 from __future__ import annotations
 
+from wlre.services.parser_diagnostics import diagnosed, checkpoint
+
 import re
 import struct
 
@@ -15,6 +17,7 @@ class PortalLinkSourceError(ValueError):
     pass
 
 
+@diagnosed('stage-map-v1')
 def parse_stage_map_portals(raw):
     """StageMapData.New: Kind 2 normal portal, Kind 3 hidden portal."""
     if type(raw) is not bytes or len(raw) < 4:
@@ -24,6 +27,7 @@ def parse_stage_map_portals(raw):
         raise PortalLinkSourceError('1275 StageMapData_C 筆數或長度不符')
     entries = {}
     for pos in range(4, len(raw), 18):
+        checkpoint(offset=pos, field='marker', record=(pos - 4) // 18 + 1)
         scene, kind, cross_scene, event_id, x, y, name_id, sorting = (
             struct.unpack_from('<HBHIHHIB', raw, pos))
         if kind > 5:
@@ -81,6 +85,7 @@ _POINT = re.compile(r'^\s*[^:：\[\],]+[:：]\s*(\d+)\s*,\s*'
 _HEADER = re.compile(r'^\s*(?:事件ID|\[事件ID\])\s*=\s*(\d+)\s*$')
 
 
+@diagnosed('eve-links-utf16-v1')
 def parse_eve_door_links(raw):
     """EveDoorLinks is a UTF-16LE scene heading followed by 3 bracket fields."""
     if type(raw) is not bytes or not raw or len(raw) % 2 or len(raw) > 4 * 1024 * 1024:
@@ -90,7 +95,8 @@ def parse_eve_door_links(raw):
     except UnicodeDecodeError as exc:
         raise PortalLinkSourceError('1275 EveDoorLinks 文字編碼無效') from exc
     results, scene = {}, None
-    for line in text.splitlines():
+    for lineno, line in enumerate(text.splitlines(), 1):
+        checkpoint(field='line', record=lineno)
         line = line.strip()
         if not line:
             continue

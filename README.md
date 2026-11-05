@@ -1,4 +1,6 @@
-# WLRe:LaLa | v7.1.1 開發版（非正式發布）
+# WLRe:LaLa | v7.3.0 開發版（非正式發布）
+
+> **v7.3.0 官方資源解析診斷（開發中）**：每次 Launcher／Runtime 更新自動記錄解析器、資料雜湊、失敗欄位與位元組位置，並檢查其他可取得資料。已知 33／35-byte 配方仍使用原有嚴格選擇；未知格式只產生診斷，不猜測欄位或解除登入。可執行 `python -m tools.diagnose_parsers` 檢視結果；加 `--sync` 重新同步檢查。涵蓋範圍與驗收見 [解析器自動診斷](docs/PARSER_DIAGNOSTICS.md)。尚未合併、發布或通過正式服驗收。
 
 > **v7.1.1 傳送點補齊（開發中）**：新增同版 Eve 的門 → PlayerTouch → Convey 解析，補上巨鯨島等未列於 EveDoorLinks／StageMap 的入口；條件分支保留所有目的地，進入條件仍由伺服器判定。詳見 [全場景傳送點核對](docs/PORTAL_CONVEY_COMPLETION.md)。本分支尚未合併、發布或完成正式服驗收。
 
