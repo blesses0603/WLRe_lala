@@ -13,7 +13,7 @@ REQUIRED_RESOURCES=(
     'navigation_data.zip','normal_attack_data.json',
 
     'portals.json',
-    'smallmaps.zip','stage_coordinates.json',
+    'stage_coordinates.json',
     'assets/app.ico','assets/exp_background.png',
     *('assets/buttons/'+name+'.png' for name in (
         'Btn_004','Btn_014','Btn_016','Btn_Bag','Btn_CategoryAISetting003','Btn_Close04','Btn_Setting')),

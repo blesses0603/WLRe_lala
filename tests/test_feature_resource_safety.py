@@ -17,7 +17,6 @@ class ResourceSafetyContract(unittest.TestCase):
         names = set(REQUIRED_RESOURCES)
         self.assertEqual(len(names), len(REQUIRED_RESOURCES))
         for name in (
-            'smallmaps.zip',
             'navigation_data.zip', 'portals.json',
         ):
             with self.subTest(resource=name):

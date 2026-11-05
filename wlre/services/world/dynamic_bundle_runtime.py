@@ -161,7 +161,8 @@ def parse_runtime_recipes(raw, items):
 def prepare_dynamic_runtime(*, sync=False, sync_root=None, observe=None,
                             retrieve=None, execute=None,
                             max_download_bytes=32 * 1024 * 1024,
-                            max_downloads=24):
+                            max_downloads=24, max_image_download_bytes=64*1024*1024,
+                            max_image_downloads=4):
     """Official observation -> verified manifests/Bundles -> complete runtime.
 
     Verification is performed on every load, including cache hits. Downloading
@@ -186,6 +187,9 @@ def prepare_dynamic_runtime(*, sync=False, sync_root=None, observe=None,
             or not 0 <= max_downloads <= 24 or type(max_download_bytes) is not int
             or not 0 <= max_download_bytes <= 32 * 1024 * 1024):
         raise DynamicRuntimeUnavailable('Invalid runtime download budget')
+    if (type(max_image_download_bytes) is not int or not 0 <= max_image_download_bytes <= 64*1024*1024
+            or type(max_image_downloads) is not int or not 0 <= max_image_downloads <= 4):
+        raise DynamicRuntimeUnavailable('Invalid image download budget')
     before = validate_snapshot(observe())
     manifests = {p: retrieve(spec_from_snapshot(before, p), cache_root=root / 'manifests')
                  for p in PACKAGES}
@@ -221,6 +225,16 @@ def prepare_dynamic_runtime(*, sync=False, sync_root=None, observe=None,
                         max_downloads=optional.download_count)
             except (OSError, ValueError, RuntimeError):
                 pass
+    if sync:
+        # Image Bundles have a separate bounded budget from core data tables.
+        try:
+            from wlre.services.world.smallmap_database import image_paths, MAX_DOWNLOAD_BYTES, MAX_DOWNLOADS
+            images = build_update_plan(manifests['MainPackage'],
+                asset_paths=image_paths(manifests['MainPackage']),cache_root=root/'bundles')
+            execute(images,cache_root=root/'bundles',download=True,
+                    max_download_bytes=max_image_download_bytes,max_downloads=max_image_downloads)
+        except (OSError,ValueError,RuntimeError):
+            pass  # Core tables remain available; image loader reports absence.
     runtime = load_verified_bundle_runtime(sync_root=root,
                         _verified_context=(before, manifests, identity))
     after = validate_snapshot(observe())

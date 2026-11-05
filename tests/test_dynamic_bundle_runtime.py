@@ -99,6 +99,28 @@ class DynamicBundleRuntimeTests(unittest.TestCase):
         return dict(sync_root=self.root, observe=lambda: deepcopy(self.snapshot),
                     retrieve=lambda spec, cache_root: self.manifests[spec.package])
 
+    def test_smallmap_publication_is_bound_to_same_runtime_and_failure_clears_it(self):
+        from wlre.services.world.smallmap_database import import_images, PREFIX
+        from wlre.services.world.smallmaps import SmallMaps
+        from PIL import Image
+        # Add valid current projection fields to the synthetic ScenesData.
+        stage=bytearray(self.raw['ScenesData_C'])
+        struct.pack_into('<HH',stage,4+52,1000,1000)
+        self.raw['ScenesData_C']=bytes(stage)
+        path=PREFIX+'SmallMap2D_123.png'
+        def verified(manifest,bundles,root,identity):
+            return import_images(root/'derived_catalogs'/'official_images.sqlite3',identity.key,
+                {'verified_test':'source'},(path,),lambda:iter([(path,Image.new('RGBA',(1024,1024),'blue'))]))
+        with patch('wlre.services.world.smallmap_database.load_verified_images',side_effect=verified):
+            runtime=dynamic.activate_for_official(self.remote,**self.kwargs())
+            maps=SmallMaps();self.assertTrue(maps.has_image(500))
+            self.assertEqual(maps.image('M00123').size,(1024,1024))
+        with patch('wlre.services.world.smallmap_database.load_verified_images',side_effect=ValueError('source invalid')):
+            runtime=dynamic.activate_for_official(self.remote,**self.kwargs())
+            self.assertIsNone(runtime.smallmaps)
+            self.assertFalse(maps.has_image(500))
+            self.assertFalse(SmallMaps().has_image(500))
+
     def test_battle_talk_current_text_join_and_source_failure(self):
         from test_npc_battle_catalog import fixture
         from wlre.services.world import npc_battle_catalog as catalog

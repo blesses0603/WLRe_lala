@@ -36,6 +36,8 @@ class MinimapActionTests(unittest.TestCase):
         stage=deepcopy(self.converter.stages['12170'])
         self.runtime=SimpleNamespace(revision=1286,catalog_identity=SimpleNamespace(key='a'*64),
                                      stages={12170:stage})
+        from smallmap_runtime_fixtures import attach
+        attach(self.runtime)
         self.current=patch('wlre.services.world.dynamic_bundle_runtime.current_runtime',return_value=self.runtime)
         self.active=patch('wlre.services.world.runtime_1275.active_runtime',return_value=self.runtime)
         for item in (self.current,self.active):

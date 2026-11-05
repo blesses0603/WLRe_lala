@@ -28,6 +28,8 @@ class AutomaticMap(unittest.TestCase):
         # would unintentionally break unrelated module initialization.
         self.scene_patch = patch.object(SmallMaps, '_stage_1275',
                                         autospec=True, side_effect=verified_scene)
+        image_patch=patch.object(SmallMaps,'image',side_effect=lambda model:__import__('PIL.Image',fromlist=['Image']).new('RGBA',(1024,1024),'blue'))
+        image_patch.start();self.addCleanup(image_patch.stop)
         self.scene_patch.start()
         self.addCleanup(self.scene_patch.stop)
         self.root=tk.Tk();self.root.geometry('600x500')
