@@ -32,7 +32,7 @@ _REQUIRED_TABLES = (
 # breaks the core ten-table NPC/recipe runtime or enables game packets.
 _PORTAL_TABLES = ('StageMapData_C', 'EveDoorLinks')
 _OPTIONAL_ROUTE_TABLES = ('DoorLinkData_C',)
-_DIAGNOSTIC_TABLES = ('DailyTaskData_C', 'DungeonData_C', 'CooperateEventData_C', 'NpcTalkData_C')
+_DIAGNOSTIC_TABLES = ('DailyTaskData_C', 'DungeonData_C', 'CooperateEventData_C', 'NpcTalkData_C', 'EmojiData_C')
 _ASSET_ROOT = 'Assets/ResourcesBuild/Data/'
 
 
@@ -566,6 +566,16 @@ def load_verified_bundle_runtime(*, sync_root=None, _verified_context=None):
             except (OSError,ValueError,TypeError,KeyError,RuntimeError):
                 ark_status='方舟資料缺少或格式不合，已停用方舟自動操作'
 
+        emoji_catalog = None
+        emoji_status = '表情需要當次官方資料'
+        if dynamic:
+            try:
+                from wlre.services.world.emoji_database import load_verified_catalog as load_emoji
+                emoji_catalog = load_emoji(verified_data,manifests['MainPackage'],bundle_root,root,identity,load_container)
+                emoji_status = '官方表情已由同版資料庫載入'
+            except (OSError,ValueError,TypeError,KeyError,RuntimeError,sqlite3.Error) as error:
+                emoji_status = '表情未通過驗證：' + str(error)
+
         smallmaps = None
         smallmap_status = '小地圖需要當次官方資料'
         if dynamic:
@@ -627,6 +637,7 @@ def load_verified_bundle_runtime(*, sync_root=None, _verified_context=None):
             ark_catalog=ark_catalog,ark_catalog_status=ark_status,
             guild_catalog=guild_catalog,guild_catalog_status=guild_status,
             daily_tasks=daily_catalog, daily_task_status=daily_status,
+            emoji_catalog=emoji_catalog, emoji_status=emoji_status,
             smallmaps=smallmaps, smallmap_status=smallmap_status,
             battle_talk=battle_talk, battle_talk_status=battle_talk_status,
             instances=instances, instance_status=instance_status,

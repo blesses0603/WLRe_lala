@@ -39,7 +39,7 @@ class ResourceMigrationTests(unittest.TestCase):
             self.assertEqual(load_bundled_bytes('a.json',root=root,database=db),b'old')
             self.assertEqual(load_bundled_bytes('a.json',root=root,database=db,refresh=True),b'new')
 
-    def test_icon_and_emoji_archives_open_with_no_original_files(self):
+    def test_icon_archive_opens_and_emoji_uses_no_bundled_files(self):
         import zipfile
         from unittest.mock import patch
         from wlre.ui.crafting import item_icons
@@ -52,9 +52,10 @@ class ResourceMigrationTests(unittest.TestCase):
                 with zipfile.ZipFile(root/name,'w') as archive: archive.writestr('fixture',b'ok')
             db=base/'official_sync'/'derived_catalogs'/'resource_inventory.sqlite3'
             migrate_resources(root,db)
-            with patch('wlre.storage.bundled_database.data_root',return_value=base), patch.object(item_icons,'BASE',empty), patch.object(chat_emoji,'RESOURCE_ROOT',empty):
+            with patch('wlre.storage.bundled_database.data_root',return_value=base), patch.object(item_icons,'BASE',empty), patch('wlre.services.world.dynamic_bundle_runtime.current_runtime',return_value=None):
                 icons=item_icons.ItemIcons(None);emoji=chat_emoji.EmojiImages(None)
                 try:
                     self.assertEqual(icons.archive.read('fixture'),b'ok')
-                    self.assertEqual(emoji.archive.read('fixture'),b'ok')
+                    self.assertEqual(emoji.catalog,{})
+                    self.assertIsNone(emoji.get('[Emoji1]'))
                 finally: icons.close();emoji.close()

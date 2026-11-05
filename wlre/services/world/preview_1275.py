@@ -158,6 +158,8 @@ class Preview1275:
     guild_catalog_status: str = '等待組織消費資料'
     daily_tasks: dict | None = None
     daily_task_status: str = '每日任務尚未同步'
+    emoji_catalog: dict | None = None
+    emoji_status: str = '表情尚未同步'
     smallmaps: object = None
     smallmap_status: str = '官方小地圖尚未同步'
     battle_talk: dict | None = None
