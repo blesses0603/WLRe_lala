@@ -17,7 +17,7 @@ class ResourceSafetyContract(unittest.TestCase):
         names = set(REQUIRED_RESOURCES)
         self.assertEqual(len(names), len(REQUIRED_RESOURCES))
         for name in (
-            'instance_catalog_1262.json', 'smallmaps.zip',
+            'smallmaps.zip',
             'navigation_data.zip', 'portals.json',
             'npc_battle_talk_1262.json.gz',
         ):

@@ -14,8 +14,10 @@ class LegacySQLiteMissingFilesTests(unittest.TestCase):
     def test_missing_files_can_read_existing_database_without_writing(self):
         with tempfile.TemporaryDirectory() as tmp:
             db = Path(tmp) / 'legacy.sqlite3'
-            name = 'instance_catalog_1262.json'
-            data = b'{"version":1262}'
+            name = 'npc_battle_talk_1262.json.gz'
+            from wlre.storage.full_resource_seed import read_config
+            from wlre.paths import RESOURCE_ROOT
+            data = read_config(name, root=RESOURCE_ROOT)
             digest = hashlib.sha256(data).hexdigest()
             with closing(sqlite3.connect(db)) as con, con:
                 con.execute('CREATE TABLE bundled_resources (name TEXT, sha256 TEXT, data BLOB)')
@@ -29,16 +31,16 @@ class LegacySQLiteMissingFilesTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             db = Path(tmp) / 'legacy.sqlite3'
             with self.assertRaises(FileNotFoundError):
-                read_pinned_legacy_bytes('instance_catalog_1262.json', database=db)
+                read_pinned_legacy_bytes('npc_battle_talk_1262.json.gz', database=db)
             with closing(sqlite3.connect(db)) as con, con:
                 con.execute('CREATE TABLE bundled_resources (name TEXT, sha256 TEXT, data BLOB)')
                 con.execute('CREATE TABLE bundled_active (name TEXT, sha256 TEXT)')
                 con.execute('INSERT INTO bundled_resources VALUES (?, ?, ?)',
-                            ('instance_catalog_1262.json', '0'*64, b'corrupt'))
+                            ('npc_battle_talk_1262.json.gz', '0'*64, b'corrupt'))
                 con.execute('INSERT INTO bundled_active VALUES (?, ?)',
-                            ('instance_catalog_1262.json', '0'*64))
+                            ('npc_battle_talk_1262.json.gz', '0'*64))
             with self.assertRaises(ValueError):
-                read_pinned_legacy_bytes('instance_catalog_1262.json', database=db)
+                read_pinned_legacy_bytes('npc_battle_talk_1262.json.gz', database=db)
 
     def test_unknown_name_is_rejected(self):
         with self.assertRaises(ValueError):

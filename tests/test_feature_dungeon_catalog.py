@@ -20,7 +20,7 @@ class CatalogExtractionContract(unittest.TestCase):
 
     def test_selection_rejects_invalid_or_missing_index(self):
         class Selection(InstanceCatalogMixin):
-            catalog_records = ({'kind': 1, 'name': '副本'},)
+            catalog_records = ({'kind': 1, 'name': '副本', 'creation_supported': True},)
             catalog_table = Mock()
         page = Selection()
         page.catalog_table.selection.return_value = ()
@@ -33,7 +33,7 @@ class CatalogExtractionContract(unittest.TestCase):
 
     def test_create_button_respects_catalog_and_server_guard(self):
         class Selection(InstanceCatalogMixin):
-            catalog_records = ({'kind': 1, 'name': '副本'},)
+            catalog_records = ({'kind': 1, 'name': '副本', 'creation_supported': True},)
             catalog_table = Mock()
             create_button = Mock()
             creation_hint = Mock()

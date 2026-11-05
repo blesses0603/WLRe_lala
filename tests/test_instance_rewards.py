@@ -315,3 +315,6 @@ class RewardUI(unittest.TestCase):
                 send.assert_called_once_with(
                     {'type': 'instance_auto_reward', 'mode': 'coop', 'enabled': True})
         self.assertTrue(self.page.auto_reward_button.instate(['disabled']))
+
+
+from instance_runtime_fixtures import install as setUpModule

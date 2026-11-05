@@ -76,7 +76,9 @@ class InstanceRoomDialogMixin:
                     messagebox.showwarning('房間人數', '協力人數超出副本允許範圍。',
                                            parent=dialog)
                     return
+            from wlre.services.instance_browser import selection_fields
             command = {
+                **selection_fields(record),
                 'type': 'instance_create', 'mode': self.mode,
                 'public': not private, 'password': secret,
             }

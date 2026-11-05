@@ -5,7 +5,7 @@ import sqlite3
 from contextlib import closing
 
 NAMES = (
-    'instance_catalog_1262.json', 'npc_battle_talk_1262.json.gz',
+    'npc_battle_talk_1262.json.gz',
 )
 SEED_NAME = 'legacy_catalog_seed.sqlite3'
 

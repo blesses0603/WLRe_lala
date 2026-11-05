@@ -1,48 +1,48 @@
-"""Browse the embedded, source-verified 1262 dungeon and co-op catalog.
-
-Static records never imply that a server has an open room or that a reward
-is claimable. No packet is emitted by this module.
-"""
-import json
-from functools import lru_cache
-
-from wlre.paths import RESOURCE_ROOT
-
-CATALOG_FILE = RESOURCE_ROOT / "instance_catalog_1262.json"
+"""Current verified SQLite instance catalog; no bundled game-data fallback."""
+from copy import deepcopy
+from wlre.network.wire import ProtocolError
 
 
-@lru_cache(maxsize=1)
 def official_catalog():
-    from wlre.storage.bundled_database import load_legacy_resource
-    value = json.loads(load_legacy_resource(CATALOG_FILE.name).decode('utf-8-sig'))
-    records = value.get("records")
-    counts = value.get("counts", {})
-    if value.get("version") != 1262 or not value.get("verified_source"):
-        raise ValueError("未經 1262 官方驗證的副本資料表")
-    if not isinstance(records, list) or len(records) != 30:
-        raise ValueError("副本資料筆數不符")
-    if counts.get("dungeon_records") != len(records):
-        raise ValueError("副本資料紀錄數不符")
-    if (sum(row["kind"] == 1 for row in records),
-        sum(row["kind"] == 2 for row in records),
-        sum(row["kind"] == 3 for row in records)) != (26, 3, 1):
-        raise ValueError("副本種類筆數不符")
-    seen = set()
-    for row in records:
-        key = (row["id"], row["variant"])
-        if key in seen or not isinstance(row.get("name"), str) or not row["name"].strip():
-            raise ValueError("副本重複或缺少官方中文名稱")
-        seen.add(key)
-        if not isinstance(row.get("awards"), list) or len(row["awards"]) > 16:
-            raise ValueError("副本獎勵資料不完整")
-        if any(len(award) != 4 or not (1 <= award[0] <= 16)
-               for award in row["awards"]):
-            raise ValueError("副本獎勵欄位異常")
-    return value
+    from wlre.services.world.runtime_1275 import active_runtime, Runtime1275Unavailable
+    try:
+        runtime = active_runtime()
+    except Runtime1275Unavailable as error:
+        raise ProtocolError('副本資料尚未由官方完成同步') from error
+    catalog = getattr(runtime, 'instances', None)
+    if catalog is None:
+        raise ProtocolError(getattr(runtime, 'instance_status', '副本資料尚未同步'))
+    return deepcopy(catalog)
+
+
+def catalog_token():
+    try:
+        return official_catalog()['catalog_key']
+    except ProtocolError:
+        return None
 
 
 def entries_for(mode):
-    if mode not in ("main", "coop"):
-        raise ValueError("未知副本分類")
-    rows = official_catalog()["records"]
-    return tuple(row for row in rows if (row["kind"] == 2) == (mode == "coop"))
+    if mode not in ('main', 'coop'):
+        raise ValueError('未知副本分類')
+    try:
+        rows = official_catalog()['records']
+    except ProtocolError:
+        return ()
+    return tuple(row for row in rows if (row['kind'] == 2) == (mode == 'coop'))
+
+
+def selection_fields(row):
+    return {'catalog_key': row['catalog_key'], 'catalog_id': row['id'],
+            'catalog_variant': row['variant']}
+
+
+def selected_entry(mode, command):
+    rows = entries_for(mode)
+    matches = [row for row in rows if all(command.get(key) == value
+               for key, value in selection_fields(row).items())]
+    if (type(command.get('catalog_id')) is not int
+            or type(command.get('catalog_variant')) is not int
+            or len(matches) != 1 or not matches[0].get('creation_supported')):
+        raise ProtocolError('副本資料已更新、尚未同步或不支援創房，請重新選擇')
+    return matches[0]

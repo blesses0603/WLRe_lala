@@ -29,7 +29,7 @@ class AutomationInstanceLockTests(unittest.TestCase):
                 self.assertNotIn('自動', '、'.join(creation_block_reasons(
                     state.snapshot(), 'main', True)))
                 _activity_guard(state, joining=False)
-                packets = create(state, {'mode': 'main', 'public': True,
+                packets = create(state, {**__import__('instance_runtime_fixtures').fields(), 'mode': 'main', 'public': True,
                                          'map_id': 30012})
                 self.assertEqual(len(packets), 1)
                 self.assertIsNotNone(state.instances['main']['create_pending'])
@@ -65,8 +65,11 @@ class AutomationInstanceLockTests(unittest.TestCase):
             with self.assertRaises(ProtocolError):
                 _activity_guard(state, joining=False)
             with self.assertRaises(ProtocolError):
-                create(state, {'mode': 'main', 'public': True, 'map_id': 30012})
+                create(state, {**__import__('instance_runtime_fixtures').fields(), 'mode': 'main', 'public': True, 'map_id': 30012})
 
 
 if __name__ == '__main__':
     unittest.main()
+
+
+from instance_runtime_fixtures import install as setUpModule

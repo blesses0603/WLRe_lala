@@ -158,6 +158,8 @@ class Preview1275:
     guild_catalog_status: str = '等待組織消費資料'
     daily_tasks: dict | None = None
     daily_task_status: str = '每日任務尚未同步'
+    instances: dict | None = None
+    instance_status: str = '副本資料尚未同步'
     expedition: dict | None = None
     revision: int = 1275
     can_send_packets: bool = False

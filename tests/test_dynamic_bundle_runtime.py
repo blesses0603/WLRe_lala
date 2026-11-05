@@ -99,6 +99,30 @@ class DynamicBundleRuntimeTests(unittest.TestCase):
         return dict(sync_root=self.root, observe=lambda: deepcopy(self.snapshot),
                     retrieve=lambda spec, cache_root: self.manifests[spec.package])
 
+    def test_instances_verified_tables_database_update_and_invalid_source(self):
+        from test_instance_catalog_1262 import payloads
+        from wlre.services.world.instance_runtime import TABLES
+        from wlre.services.instance_browser import entries_for, selection_fields, selected_entry
+        raw=payloads()
+        self.raw.update(raw)
+        manifest=self.manifests['DataPackage']
+        manifest.index['assets'].extend(dict(path=_ASSET_ROOT+t+'.bytes',
+            bundle_name=manifest.index['bundles'][0]['name']) for t in TABLES)
+        runtime=dynamic.activate_for_official(self.remote,**self.kwargs())
+        self.assertIsNotNone(runtime.instances, runtime.instance_status)
+        chosen=entries_for('main')[0]
+        self.assertEqual(selected_entry('main',selection_fields(chosen)),chosen)
+        # Rebuild from the same verified source/database; unknown bytes must
+        # disable only this feature and never revive the bundled catalog.
+        self.raw['DungeonData_C']=b'unknown'
+        runtime=dynamic.activate_for_official(self.remote,**self.kwargs())
+        self.assertIsNone(runtime.instances)
+        self.assertEqual(entries_for('main'),())
+        with self.assertRaises(ValueError):selected_entry('main',selection_fields(chosen))
+        self.raw['DungeonData_C']=raw['DungeonData_C']
+        runtime=dynamic.activate_for_official(self.remote,**self.kwargs())
+        self.assertIsNotNone(runtime.instances, runtime.instance_status)
+
     def test_full_parsing_activation_and_all_consumers_use_current_data(self):
         runtime = dynamic.activate_for_official(self.remote, **self.kwargs())
         self.assertEqual(runtime.revision, 1286)
