@@ -1,6 +1,7 @@
 """Regression: update diagnostics must never change a parser's verdict."""
 import ast
 import importlib
+import hashlib
 import json
 from pathlib import Path
 import struct
@@ -17,6 +18,42 @@ from test_itemdata_v1 import sample
 
 
 class ParserDiagnosticsTests(unittest.TestCase):
+
+    def test_1296_versioned_parse_preserves_rows_and_diagnostic_success(self):
+        raw = struct.pack('<I', 2) + sample(10) + b'\x00\xff' + sample(11) + b'\x12\x34'
+        with tempfile.TemporaryDirectory() as root:
+            with patch('wlre.services.world.itemdata_v1.ITEMDATA_1296_SHA256',
+                       hashlib.sha256(raw).hexdigest()):
+                with diagnostic_session(root):
+                    rows = parse_itemdata(raw, package_version='1296_2026_11_04_13_34_19_13')
+            self.assertEqual(rows[10]['unknown_tail_1296_hex'], '00ff')
+            self.assertEqual(rows[11]['unknown_tail_1296_hex'], '1234')
+            report = json.loads((Path(root) / 'parser_diagnostics/latest.json').read_text())
+            event, = report['parsers']
+            self.assertEqual(event['status'], 'passed')
+            self.assertEqual(event['record_count'], 2)
+            self.assertEqual(event['inputs']['raw']['sha256'], hashlib.sha256(raw).hexdigest())
+
+    def test_1296_truncated_tail_retains_exact_diagnostic_location(self):
+        raw = struct.pack('<I', 2) + sample(10) + b'\x00\xff' + sample(11) + b'\x12'
+        # Select the synthetic layout so this exercises the reader, not the digest gate.
+        with patch('wlre.services.world.itemdata_v1.ITEMDATA_1296_SHA256',
+                   hashlib.sha256(raw).hexdigest()):
+            with self.assertRaises(ItemDataDecodeError) as caught:
+                parse_itemdata(raw, package_version='1296_2026_11_04_13_34_19_13')
+        detail = caught.exception.parser_diagnostic
+        self.assertEqual(detail['location']['record'], 2)
+        self.assertEqual(detail['location']['field'], 'unknown_tail_1296')
+        self.assertEqual(detail['location']['offset'], len(raw) - 1)
+        self.assertEqual(detail['location']['requested_bytes'], 2)
+        self.assertEqual(detail['location']['available_bytes'], 1)
+
+    def test_explicit_legacy_version_keeps_original_record_layout(self):
+        raw = struct.pack('<I', 1) + sample()
+        rows = parse_itemdata(raw, package_version='1286_2026_10_29_13_42_37_94')
+        self.assertEqual(rows, parse_itemdata(raw))
+        self.assertNotIn('unknown_tail_1296_hex', rows[39852])
+
     def test_changed_item_record_fails_with_exact_row_and_offset(self):
         record = sample()
         raw = struct.pack('<I', 2) + record + b'\0\0' + sample(iid=39853)

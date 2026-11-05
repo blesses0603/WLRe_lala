@@ -5,6 +5,8 @@ No real server discounts, offers, currency balance or transaction permissions.
 """
 from __future__ import annotations
 
+import hashlib
+
 from wlre.services.parser_diagnostics import diagnosed, checkpoint, read_checkpoint
 
 MAX_ITEMS = 20000
@@ -50,7 +52,7 @@ class Reader:
 
 
 @diagnosed('itemdata-v1')
-def parse_itemdata(raw: bytes) -> dict[int,dict]:
+def parse_itemdata(raw: bytes, *, package_version=None) -> dict[int,dict]:
     """Return only confirmed item fields, never calculate live purchase totals."""
     if type(raw) is not bytes or not 4 < len(raw) <= 16*1024*1024:
         raise ItemDataDecodeError('ItemData is missing or oversized')
@@ -105,6 +107,9 @@ def parse_itemdata(raw: bytes) -> dict[int,dict]:
         result[iid]={'name':name,'price':price,'sell_price':sell_price,
                      'restrict':restrict,'open_used':open_used,
                      'need_level':need_level}
+        if is_1296:
+            checkpoint(offset=r.pos, field='unknown_tail_1296')
+            result[iid]['unknown_tail_1296_hex'] = r.take(2).hex()
     checkpoint(offset=r.pos, field='end_of_file', expected=len(raw), actual=r.pos)
     if r.pos!=len(raw):
         raise ItemDataDecodeError('ItemData record layout changed or trailing bytes')
