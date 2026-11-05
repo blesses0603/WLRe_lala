@@ -31,9 +31,12 @@ class Repository:
             from wlre.storage.bundled_database import load_bundled_bytes
             self._database_archive = load_bundled_bytes('navigation_data.zip', root=RESOURCE_ROOT)
         with self._open_archive() as z:
-            self.catalog = json.loads(z.read('catalog.json'))
-        for row in self.catalog:row['display_name']=model_label(row['id'])
-        self.scenes = {r['id']: r for r in self.catalog}
+            self._catalog = json.loads(z.read('catalog.json'))
+        self.scenes = {r['id']: r for r in self._catalog}
+
+    @property
+    def catalog(self):
+        return [{**row, 'display_name':model_label(row['id'])} for row in self._catalog]
 
     @staticmethod
     def normalize(scene):
