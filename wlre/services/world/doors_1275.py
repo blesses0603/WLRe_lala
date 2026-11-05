@@ -3,6 +3,8 @@
 A verified door index is still NOT proof that an existing 1262 portal route,
 destination, or C20-8 trigger is authorized on the live 1275 server.
 """
+
+from wlre.services.parser_diagnostics import diagnosed, checkpoint, read_checkpoint
 import hashlib
 import struct
 
@@ -18,6 +20,7 @@ class _Reader:
         self.raw, self.pos, self.end = raw, start, end
 
     def take(self, length):
+        read_checkpoint(self.pos, length, self.end - self.pos)
         if length < 0 or self.pos + length > self.end:
             raise DoorSourceError('Eve Door 解析超出範圍')
         at = self.pos
@@ -115,6 +118,7 @@ def _touch_events(reader, needed_event_ids):
     return touch
 
 
+@diagnosed('eve-1275-pinned')
 def parse_doors_1275(raw):
     """Read 1262 scene headers and 1275 NewDoor entries with exact source pin."""
     if type(raw) is not bytes or hashlib.sha256(raw).hexdigest() != SOURCE_SHA256:
@@ -122,6 +126,7 @@ def parse_doors_1275(raw):
     return parse_verified_doors(raw, expected_scene_count=1262)
 
 
+@diagnosed('eve-doors-v115')
 def parse_verified_doors(raw, *, expected_scene_count=None):
     """Decode v115 doors from an already verified Bundle; no network approval."""
     if type(raw) is not bytes or not 12 <= len(raw) <= 32 * 1024 * 1024:
@@ -135,6 +140,7 @@ def parse_verified_doors(raw, *, expected_scene_count=None):
         raise DoorSourceError('1275 Eve 場景數量或標頭不符')
     scenes = {}
     for i in range(scene_count):
+        checkpoint(offset=12 + i * 12, field='scene', record=i + 1)
         scene, model, offset, size = struct.unpack_from('<HHII', raw, 12 + i*12)
         if (scene in scenes or offset < 12 + scene_count*12
                 or size < 6 or offset + size > len(raw)):

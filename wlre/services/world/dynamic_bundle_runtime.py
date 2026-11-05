@@ -7,6 +7,8 @@ This does not grant gameplay or network protocol approval.
 """
 from __future__ import annotations
 
+from wlre.services.parser_diagnostics import diagnosed, update_diagnostics, record_identity
+
 import re
 from dataclasses import dataclass
 
@@ -126,6 +128,7 @@ def invalidate_runtime():
         return _generation
 
 
+@diagnosed('runtime-recipes-v1')
 def parse_runtime_recipes(raw, items):
     """Recognize reviewed 33/35-byte layouts; preserve every recipe identity.
 
@@ -154,6 +157,7 @@ def parse_runtime_recipes(raw, items):
     return {r['item_id']: r for r in checked if counts[r['item_id']] == 1}, checked
 
 
+@update_diagnostics('sync_root', injected=('observe', 'retrieve', 'execute'))
 def prepare_dynamic_runtime(*, sync=False, sync_root=None, observe=None,
                             retrieve=None, execute=None,
                             max_download_bytes=32 * 1024 * 1024,
@@ -173,7 +177,7 @@ def prepare_dynamic_runtime(*, sync=False, sync_root=None, observe=None,
     from wlre.services.world.catalog_identity import identity_from_verified_manifests
     from wlre.services.world.bundle_runtime_1275 import (
         load_verified_bundle_runtime, _REQUIRED_TABLES, _ASSET_ROOT,
-        _PORTAL_TABLES, _OPTIONAL_ROUTE_TABLES)
+        _PORTAL_TABLES, _OPTIONAL_ROUTE_TABLES, _DIAGNOSTIC_TABLES)
     observe = observe_official_versions if observe is None else observe
     retrieve = fetch_official_manifest if retrieve is None else retrieve
     execute = execute_update_plan if execute is None else execute
@@ -186,6 +190,7 @@ def prepare_dynamic_runtime(*, sync=False, sync_root=None, observe=None,
     manifests = {p: retrieve(spec_from_snapshot(before, p), cache_root=root / 'manifests')
                  for p in PACKAGES}
     identity = identity_from_verified_manifests(before, manifests)
+    record_identity(identity.key)
     if sync:
         pre_download = validate_snapshot(observe())
         if any(before[k] != pre_download[k] for k in ('data_ver', 'exe_version', 'packages')):
@@ -198,7 +203,7 @@ def prepare_dynamic_runtime(*, sync=False, sync_root=None, observe=None,
         # Optional metadata cannot prevent the core runtime from loading.
         left_bytes = max_download_bytes - plan.download_bytes
         left_files = max_downloads - plan.download_count
-        for table in _PORTAL_TABLES + _OPTIONAL_ROUTE_TABLES:
+        for table in _PORTAL_TABLES + _OPTIONAL_ROUTE_TABLES + _DIAGNOSTIC_TABLES:
             try:
                 optional = build_update_plan(manifests['DataPackage'],
                     asset_paths=(_ASSET_ROOT + table + '.bytes',), cache_root=root / 'bundles')

@@ -4,6 +4,8 @@ The on-disk dialogue catalogue is optional: no fabricated NPC dialogue when
 the extracted game TextAsset is unavailable. A supplied file's SHA256 proves
 integrity of that file, not that its source is official.
 """
+
+from wlre.services.parser_diagnostics import diagnosed, checkpoint
 import gzip
 import io
 import hashlib
@@ -22,6 +24,7 @@ CATALOG_NAME = 'npc_talk_1262.json.gz'
 _HASH = re.compile(r'^[0-9a-f]{64}$')
 
 
+@diagnosed('talk-v1')
 def parse_talk_data(raw):
     """Parse TalkData.OnLoadTalkData / TalkData.New, strictly including EOF.
 
@@ -34,11 +37,13 @@ def parse_talk_data(raw):
     if count < 1 or count > MAX_ENTRIES or count > (len(raw) - 4) // 39:
         raise ValueError('TalkData_C 筆數超出資料邊界')
     pos, rows = 4, {}
-    for _ in range(count):
+    for index in range(count):
+        checkpoint(offset=pos, field='talk_record', record=index + 1)
         if len(raw) - pos < 39:
             raise ValueError('TalkData_C 資料遭到截斷')
         ident, size = struct.unpack_from('<HH', raw, pos)
         pos += 4
+        checkpoint(offset=pos - 2, field='text_length', expected=size, actual=len(raw) - pos)
         if size % 2 or size > 32768 or len(raw) - pos < size + 35:
             raise ValueError('TalkData_C 字串長度不合法')
         try:

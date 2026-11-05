@@ -5,6 +5,8 @@ release-reviewed LaLa compatibility baseline. Only the game's published
 relative-path/MD5 list is observed and cached privately for comparison.
 """
 
+from wlre.services.parser_diagnostics import diagnosed, checkpoint
+
 from datetime import datetime, timezone
 import json
 import os
@@ -36,6 +38,7 @@ def list_url(data_ver):
     return OFFICIAL_LUA_BASE + '/' + data_ver + '/LuaScripts/LuaScriptPathList.txt'
 
 
+@diagnosed('lua-list-v1')
 def parse_list(body):
     """Strict path|MD5 table; reject traversal, duplicates and bad encodings."""
     if not isinstance(body, bytes) or not 0 < len(body) <= MAX_LIST_BYTES:
@@ -46,6 +49,7 @@ def parse_list(body):
         raise LuaIndexError('Official Lua list must be UTF-8') from exc
     result = {}
     for lineno, row in enumerate(source.splitlines(), start=1):
+        checkpoint(field='line', record=lineno)
         if not row.strip():
             continue
         fields = row.split('|')
