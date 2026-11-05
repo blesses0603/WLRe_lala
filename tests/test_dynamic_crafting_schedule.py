@@ -123,7 +123,14 @@ class DynamicCraftingScheduleTests(unittest.TestCase):
 
     def test_dynamic_33_byte_layout_keeps_legacy_wire_shape(self):
         self.fixture.raw['SmithData_C']=struct.pack('<i',1)+self.fixture.raw['SmithData_C'][6:]
-        runtime=dynamic.activate_for_official(self.fixture.remote,**self.fixture.kwargs())
+        # A different synthetic layout needs a separate catalog store: real
+        # immutable manifest identities must never acquire different bytes.
+        options=self.fixture.kwargs()
+        import shutil
+        original_root=options['sync_root']
+        options['sync_root']=original_root/'layout33'
+        shutil.copytree(original_root/'bundles',options['sync_root']/'bundles')
+        runtime=dynamic.activate_for_official(self.fixture.remote,**options)
         self.assertNotIn('recipe_id',runtime.recipe_catalog[0])
         _,_,packet=crafting.recipe_plan(self.state,3874,2)
         expected=Writer().u16(7).u16(3874).u8(2).u8(1).u8(3).u8(4).u16(0).u8(0).build()

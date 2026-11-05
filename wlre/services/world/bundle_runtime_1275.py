@@ -9,6 +9,7 @@ from __future__ import annotations
 from functools import lru_cache
 import hashlib
 import json
+import sqlite3
 from pathlib import Path
 
 from wlre.storage.paths import data_root
@@ -323,19 +324,29 @@ def load_verified_bundle_runtime(*, sync_root=None, _verified_context=None):
             stage, error = extraction_errors[0]
             raise error
 
+        from wlre.storage.normalized_resources import load_parsed
+        # Bundle verification above remains mandatory even on a database hit.
+        normalized_key = (identity.key if dynamic else hashlib.sha256(
+            json.dumps(_PINNED_MANIFEST_SHA256, sort_keys=True).encode()).hexdigest())
+        def stored(feature, tables, parse):
+            return load_parsed(root / 'derived_catalogs' / 'resource_inventory.sqlite3',
+                               normalized_key, feature,
+                               'runtime-v1-' + ('dynamic' if dynamic else '1275'),
+                               {name: sources[name] for name in tables}, parse)
+
         stage = 'Eve'
         eve = sources['Eve']
         if not dynamic and hashlib.sha256(eve).hexdigest() != EVE_SHA256:
             raise BundleRuntimeUnavailable('1275 Eve 來源 SHA-256 不符')
-        npc = json.loads(derive_eve_index(eve, 'EventData.NewNpc'))
-        interacts = json.loads(derive_eve_index(eve, 'EventData.NewInteract'))
+        npc = stored('npc', ('Eve',), lambda: json.loads(derive_eve_index(eve, 'EventData.NewNpc')))
+        interacts = stored('interactions', ('Eve',), lambda: json.loads(derive_eve_index(eve, 'EventData.NewInteract')))
         if not dynamic and (npc.get('record_count') != 10975
                 or interacts.get('record_count') != 1634
                 or len(npc.get('scenes', {})) != 1262):
             raise BundleRuntimeUnavailable('NPC／互動事件數不符合已審核 1275 資料')
         stage = 'ItemData_C'
-        items = parse_itemdata(sources['ItemData_C'],
-                               package_version=verified_data.spec.package_version)
+        items = stored('items', ('ItemData_C',), lambda: parse_itemdata(
+            sources['ItemData_C'], package_version=verified_data.spec.package_version))
         if dynamic:
             for rows in interacts['scenes'].values():
                 for interaction in rows:
@@ -346,23 +357,24 @@ def load_verified_bundle_runtime(*, sync_root=None, _verified_context=None):
                                 or offer['text_id'] not in items):
                             raise BundleRuntimeUnavailable('商店商品缺少同版 ItemData 來源')
         stage = 'TalkData_C'
-        talk_rows = parse_talk_data(sources['TalkData_C'])
+        talk_rows = stored('talks', ('TalkData_C',), lambda: parse_talk_data(sources['TalkData_C']))
         stage = 'TextData_C'
-        texts = parse_text_data(sources['TextData_C'])
+        texts = stored('texts', ('TextData_C',), lambda: parse_text_data(sources['TextData_C']))
         stage = 'SmithData_C'
         if dynamic:
             from wlre.services.world.dynamic_bundle_runtime import parse_runtime_recipes
-            recipes, recipe_catalog = parse_runtime_recipes(sources['SmithData_C'], items)
+            recipes, recipe_catalog = stored('recipes', ('SmithData_C', 'ItemData_C'),
+                lambda: parse_runtime_recipes(sources['SmithData_C'], items))
         else:
-            recipes = parse_smith_1275(sources['SmithData_C'])
+            recipes = stored('recipes', ('SmithData_C',), lambda: parse_smith_1275(sources['SmithData_C']))
         stage = 'ScenesData_C'
-        scene_rows = parse_stages(sources['ScenesData_C'])
+        scene_rows = stored('scenes', ('ScenesData_C',), lambda: parse_stages(sources['ScenesData_C']))
         stage = 'Eve'
         if dynamic:
             from wlre.services.world.doors_1275 import parse_verified_doors
-            doors = parse_verified_doors(eve)
+            doors = stored('doors', ('Eve',), lambda: parse_verified_doors(eve))
         else:
-            doors = parse_doors_1275(eve)
+            doors = stored('doors', ('Eve',), lambda: parse_doors_1275(eve))
         portal_destinations, portal_names, portal_positions = {}, {}, {}
         portal_display_destinations = {}
         portal_link_evidence = {}
@@ -492,11 +504,11 @@ def load_verified_bundle_runtime(*, sync_root=None, _verified_context=None):
                 hashlib.sha256(sources['AdventureLvData_C']).hexdigest()
                 != ADVENTURE_LEVEL_1275_SHA256):
             raise BundleRuntimeUnavailable('1275 遠征任務／等級來源 SHA-256 不符')
-        expedition = parse_expedition(
-            sources['AdventureData_C'], sources['AdventureLvData_C'])
+        expedition = stored('expedition', ('AdventureData_C', 'AdventureLvData_C'),
+            lambda: parse_expedition(sources['AdventureData_C'], sources['AdventureLvData_C']))
         stage = 'NpcData_C／NpcCareerData_C'
-        expedition_npcs = parse_expedition_npcs(
-            sources['NpcData_C'], sources['NpcCareerData_C'])
+        expedition_npcs = stored('expedition_npcs', ('NpcData_C', 'NpcCareerData_C'),
+            lambda: parse_expedition_npcs(sources['NpcData_C'], sources['NpcCareerData_C']))
         if not dynamic and (len(expedition['tasks']) != 260
                 or len(expedition['levels']) != 10
                 or len(expedition_npcs) != 7561):
@@ -600,6 +612,6 @@ def load_verified_bundle_runtime(*, sync_root=None, _verified_context=None):
         return runtime
     except BundleRuntimeUnavailable:
         raise
-    except (OSError, ValueError, KeyError, TypeError, RuntimeError) as exc:
+    except (OSError, ValueError, KeyError, TypeError, RuntimeError, sqlite3.Error) as exc:
         raise BundleRuntimeUnavailable(
             '官方 Bundle 的資料格式無法建立完整 1275 Runtime：' + stage) from exc

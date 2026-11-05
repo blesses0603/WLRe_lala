@@ -149,6 +149,18 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
             'wlre.services.world.doors_1275.parse_doors_1275',
             return_value={}))
 
+    def test_second_runtime_reads_normalized_database_but_rechecks_bundles(self):
+        with ExitStack() as stack:
+            self.patches(stack)
+            first = load_verified_bundle_runtime(sync_root=self.root)
+            with patch('wlre.services.world.itemdata_v1.parse_itemdata',
+                       side_effect=AssertionError('database should supply item records')):
+                second = load_verified_bundle_runtime(sync_root=self.root)
+            self.assertEqual(second.items, first.items)
+            with patch('wlre.services.official_bundle_download._verified_file', return_value=False):
+                with self.assertRaises(BundleRuntimeUnavailable):
+                    load_verified_bundle_runtime(sync_root=self.root)
+
     def _official_snapshot(self):
         return {
             'schema_version': 1,
