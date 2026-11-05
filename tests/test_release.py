@@ -132,9 +132,13 @@ class Images(unittest.TestCase):
     with self.subTest(n=n):
      with Image.open(io.BytesIO(z.read(n))) as image:image.verify()
  def test_coverage(self):
-  items=json.loads(read_config('item_icon_map.json', root=B).decode('utf-8'))['items'];r=json.loads(read_config('item_icon_coverage.json', root=B).decode('utf-8'))
+  items=json.loads(read_config('item_icon_map.json', root=B).decode('utf-8'))['items']
   with zipfile.ZipFile(io.BytesIO(read_config('item_icons.zip', root=B))) as z:
-   for sid,row in items.items():self.assertEqual(row['original_available'],row['icon']+'.png' in z.NameToInfo)
-  self.assertEqual(r['items_with_original_images'],9855);self.assertEqual(r['items_with_missing_icons'],1432)
+   available=0
+   for sid,row in items.items():
+    present=row['icon']+'.png' in z.NameToInfo
+    self.assertEqual(row['original_available'],present)
+    available+=present
+  self.assertEqual(available,9855);self.assertEqual(len(items)-available,1432)
 
 if __name__=='__main__':unittest.main(verbosity=2)

@@ -1,13 +1,11 @@
 """Remaining reviewed bundled resources; retired bootstrap data is not shipped."""
-RETIRED_RESOURCES = frozenset(('default_profile.json', 'enums.json', 'lala_supported_resources.json', 'server_list.json', 'crafting_catalog.json', 'expedition_catalog.json', 'npc_event_index_1262.json.gz', 'npc_interact_1262.json.gz', 'npc_talk_1262.json.gz', 'npc_text_1262.json.gz', 'map_names.json', 'instance_catalog_1262.json', 'npc_battle_talk_1262.json.gz', 'smallmaps.zip', 'portals.json', 'emoji_catalog.json', 'emoji_images.zip'))
+RETIRED_RESOURCES = frozenset(('default_profile.json', 'enums.json', 'lala_supported_resources.json', 'server_list.json', 'crafting_catalog.json', 'expedition_catalog.json', 'npc_event_index_1262.json.gz', 'npc_interact_1262.json.gz', 'npc_talk_1262.json.gz', 'npc_text_1262.json.gz', 'map_names.json', 'instance_catalog_1262.json', 'npc_battle_talk_1262.json.gz', 'smallmaps.zip', 'portals.json', 'emoji_catalog.json', 'emoji_images.zip', 'item_icon_coverage.json'))
 SOURCE_MANIFEST = {'alchemy_catalog.json': (858266,
                           '464c11ac052158a21efbb7d691357d18412f03b08f394d62c1edf871e1a427c4'),
  'combat_catalog.json': (4109213,
                          '64dbbfcd21b8eec2654026c6f90d21477d7d75e0ed6ff41d0bf919f85357e35c'),
  'graph_origins.json': (23651,
                         '30b740fbc4d966197556a5c4168a3fa524a5948109608fbf76be03dcbc52b52e'),
- 'item_icon_coverage.json': (35639,
-                             '915f972859c03a4b88d004c4076b197c8085ca5a080a85aaa3de20985f3e66d9'),
  'item_icon_map.json': (972126,
                         '6402f7db4f5ece6f16190145f30a73770b5ce71129e803d0966a754269b6daa9'),
  'item_icons.zip': (49543831,
