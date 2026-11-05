@@ -1,5 +1,4 @@
 """Versioned exits from EveDoorLinks, StageMapData and DoorLinkData."""
-from wlre.paths import RESOURCE_ROOT
 import json
 import math
 from pathlib import Path
@@ -42,9 +41,8 @@ class Portals:
     def __init__(self,path=None):
         if path is None:
             from wlre.services.world.runtime_1275 import baseline_revision, active_runtime
-            # The desktop client is 1275-only. An older revision is NOT a
-            # reason to fall through to the tracked 1262 portals.json file.
-            # Keep that legacy file solely for explicit fixture/audit reads.
+            # Default reads use only the verified official runtime.
+            # Historical files require an explicit caller-supplied path.
             revision = baseline_revision()
             if revision == '1262':
                 self.data = {
@@ -470,11 +468,7 @@ class Portals:
                 }
                 self.audit = {}
                 return
-        if path:
-            self.data=json.loads(Path(path).read_text(encoding='utf8'))
-        else:
-            from wlre.storage.bundled_database import load_bundled_json
-            self.data=load_bundled_json('portals.json', root=RESOURCE_ROOT)
+        self.data=json.loads(Path(path).read_text(encoding='utf8'))
         self.audit={r['scene']:r for r in self.data['audit']}
 
     def for_scene(self,scene):

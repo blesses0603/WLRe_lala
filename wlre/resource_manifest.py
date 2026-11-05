@@ -12,7 +12,6 @@ REQUIRED_RESOURCES=(
     'item_icon_coverage.json','item_icon_map.json','item_icons.zip','item_stackable.json',
     'navigation_data.zip','normal_attack_data.json',
 
-    'portals.json',
     'stage_coordinates.json',
     'assets/app.ico','assets/exp_background.png',
     *('assets/buttons/'+name+'.png' for name in (

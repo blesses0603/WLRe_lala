@@ -16,8 +16,9 @@ class ResourceSafetyContract(unittest.TestCase):
     def test_legacy_logical_entries_remain_required_in_database(self):
         names = set(REQUIRED_RESOURCES)
         self.assertEqual(len(names), len(REQUIRED_RESOURCES))
+        self.assertNotIn('portals.json', names)
         for name in (
-            'navigation_data.zip', 'portals.json',
+            'navigation_data.zip',
         ):
             with self.subTest(resource=name):
                 self.assertIn(name, names)
