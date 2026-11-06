@@ -333,3 +333,76 @@ phase-26 full suites (1,798 desktop / 1,476 Android), which were not rerun for t
 read-only tool and test/documentation-only phase. No APK/device/live acceptance is
 claimed. All three seeds remain; safe replacement still requires broader current
 cache validation and actual movement-pipeline equivalence.
+
+## Official ARM64 math vectors (phase 28)
+
+The FromToRotation wrapper in libil2cpp resolves an engine internal call, so its
+wrapper alone is not a complete math oracle. The same pinned official APK was
+read using bounded HTTP ranges with its recorded ETag/size. ZIP CRC verification
+produced `libunity.so`, 25,765,728 bytes, SHA-256
+`dab8b8d67f215b8f8c83870a3ef4b118e5a0e0e2c225eb1f48e23ba9f1bc582c`.
+Total research transfer was 10,434,855 bytes; the existing 32 MiB research cap was
+not increased. Neither library nor downloaded game data is committed.
+
+The Unity registration loop at `0x20bf38–0x20bf54` pairs the string array at
+`0x18004f8` with the function array at `0x18069c8`, for 3,226 entries. Index 241 is
+`UnityEngine.Quaternion::FromToRotation_Injected`, mapped to `0x17b6a4`, calling
+`0xb493e4`. The latter normalizes nontrivial inputs and calls the matrix/rotation
+helpers at `0xb51c0c` and `0xb48e7c`. This mapping is established from registration,
+not inferred solely from a plausible function's output.
+
+`tools.review_navigation_rotation` is an optional offline research tool requiring
+Unicorn 2.1.4 and pyelftools in a separate research environment. It accepts only
+the reviewed library SHA-256 values and size limit. Official ARM64 instructions
+execute in virtual CPU memory, never as host code. FromToRotation execution has
+an explicit instruction-address allowlist and a 2,048-instruction ceiling; the
+pure quaternion/vector multiply has a 128-instruction ceiling and only its own
+164 code bytes mapped. A nonreturning or unexpected path fails. There are no
+system-call hooks, network requests or game-server operations.
+
+Run with the independently verified libraries, keeping output outside the repo:
+
+```console
+python -m tools.review_navigation_rotation --libunity /path/to/libunity.so --libil2cpp /path/to/libil2cpp.so
+```
+
+The tool generated 136 official FromToRotation outputs (including opposite,
+nearly parallel and zero inputs) and 268 official quaternion/vector multiplication
+outputs. The combined official rotation direction error was at most approximately
+6.25e-7 for these normalized test inputs; comparison of multiply against the double
+precision formula differed by at most 2.34e-5 for the selected vectors. All 404
+ARM64 outputs match exactly between desktop and Android Python hosts. Host-side
+double-precision normalization/error reports can differ at their last decimal
+bits between Python versions; these are not different official float32 outputs.
+This is **pure-math emulation**, not full Unity/IL2CPP initialization, complete
+Funnel output, Android device execution or live movement acceptance.
+
+Route sampling was extended over the seventeen verified general models and all
+three preview masks: land 520 accepted / 68 rejected, sea 36 / 0, sky 566 / 22.
+Models with no eligible sea nodes contribute no sea routes; these counts do not
+claim water coverage on every map. Both host results are identical. No new model
+fingerprints or movement authorization were added in this phase. Both hosts pass
+28 focused tests, including oracle input/hash/size rejection and existing
+nonplanar movement guards. Application runtime code is unchanged; the previously
+recorded full suites and UI checks were not repeated for this research-tool phase.
+
+### Evidence still needed for nonplanar activation
+
+Math vectors do not resolve Funnel.Unwrap's accumulated portal transformations,
+portal repair, endpoint projection, Seeker modifier order/settings, or nearest-node
+constraints for all actor modes. The next oracle must compare complete ordered
+`vectorPath` results from the official pipeline. A minimal useful reference case
+contains the exact official graph digest/version; start/end world XYZ; actual
+Seeker mask and modifier settings; ordered node/portal identifiers; vectorPath
+before and after modifiers; and complete/error status. Include slope, folded
+corridor, near-collinear portal, overlapping levels, and a non-Land case.
+
+These can be obtained from an authorized instrumented client/test build recording
+its existing StartPathImmediately callback, or by extending isolated native
+emulation only after the required IL2CPP graph/list/runtime state is verified.
+No such complete reference cases were available or fabricated here. Do not replace
+the absent official pipeline with a locally guessed callback/rotation routine and
+label the result an official path. Nonhorizontal smoothing and all preview-based
+movement remain blocked; all three navigation seeds stay until replacement is
+validated across the necessary general-map consumers. House interior work remains
+out of scope; entry and exit remain supported.
