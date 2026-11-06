@@ -1,6 +1,7 @@
 from pathlib import Path
 import tempfile
 import unittest
+from tools.review_navigation_traversal import oracle as traversal_probe
 from tools.review_navigation_endpoints import run as endpoint_probe
 from tools.review_navigation_rotation import from_to_oracle,multiply_oracle,validate_vector
 
@@ -9,7 +10,7 @@ class RotationOracleBoundaryTests(unittest.TestCase):
     def test_unknown_library_rejected_before_optional_imports(self):
         with tempfile.TemporaryDirectory() as tmp:
             path=Path(tmp)/'unknown.so';path.write_bytes(b'not official code')
-            for factory in (from_to_oracle,multiply_oracle,endpoint_probe):
+            for factory in (from_to_oracle,multiply_oracle,endpoint_probe,traversal_probe):
                 with self.assertRaisesRegex(ValueError,'digest'):factory(path)
             with path.open('wb') as output:output.truncate(96*1024*1024+1)
             with self.assertRaisesRegex(ValueError,'size limit'):from_to_oracle(path)

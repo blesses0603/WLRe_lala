@@ -520,3 +520,63 @@ partial math/corner/Snap oracles must not be substituted for that chain. Offline
 investigation remains possible without credentials, but complete output parity
 has not yet been obtained. Formal movement, nonplanar restrictions, all three
 seeds, and house entry/exit behavior remain unchanged.
+
+## Native traversal and nearest constraints (phase 31)
+
+`tools.review_navigation_traversal` now evaluates the pinned official native
+Path.CanTraverse (`0x2d95850`), NNConstraint.Suitable (`0x2a8ff80`) and
+SuitableGraph (`0x2a8ff50`) with bounded synthetic ABI records. It executes the
+actual GraphNode walkability/tag getters where called. Custom traversal providers,
+area constraints and graph indices outside 0–31 are explicitly unsupported. No
+unknown provider, class initialization or area lookup is replaced with local code.
+The same digest/size guard, instruction allowlist and 512-instruction ceiling
+apply. This tool is optional research tooling, not a shipped game-data source.
+
+```console
+python -m tools.review_navigation_traversal --libil2cpp /path/to/libil2cpp.so
+```
+
+The native default policy confirms walkable flag bit 0 and the five tag bits at
+19–23, with the active mask selecting allowed tags. Tests include other hierarchy/
+graph flag bits to ensure they do not accidentally become tag bits. Native nearest
+suitability additionally respects independent constrainWalkability, desired
+walkable value and constrainTags switches. SuitableGraph independently checks its
+graph mask; node tags and graph selection are not interchangeable.
+
+Both hosts return identical outputs for 960 default flag/tag cases, 64 nearest
+constraint-switch cases and 128 graph-mask cases (1,152 total). Four explicit
+unsupported-state probes reject area/provider/unknown-kind/out-of-range-index
+requests. The seventeen actual current general-model caches contain 9,075 nodes.
+Across all three preview masks, 51 model/mode comparisons confirm that the existing
+PreviewMesh walkable set matches the official default CanTraverse and Suitable
+results on every serialized flag value. This validates default local filtering,
+not the player's live active mask or a custom traversal provider.
+
+### Why the complete graph state still matters
+
+GraphNode.get_Area (`0x2d93f00`) reads bits 1–17 as a **hierarchical node index**,
+then calls `HierarchicalGraph.GetConnectedComponent` (`0x2d84a14`) through the
+active AstarPath hierarchy. Those bits are not a self-contained serialized area
+ID. NNConstraint.Suitable invokes this lookup when constrainArea is enabled and
+area is nonnegative. PathNNConstraint.SetStart (`0x2a90220`) obtains the starting
+node's runtime area. A guessed area from raw flags would therefore produce an
+invalid nearest-node oracle, even if the geometric triangles look correct.
+
+Metadata identifies the hierarchy's children, connections, areas, dirty-node and
+free-index structures. Relevant native entry points are RecalculateAll
+`0x2d854c8`, FindHierarchicalNodeChildren `0x2d84edc`, FloodFill `0x2d85198`, and
+RecalculateIfNecessary `0x2d853bc`. Nearest search also uses the Recast BBTree
+(node lookup/tree/leaf structures), with QueryClosest `0x2843a34` and
+SearchBoxClosest `0x28440d4` (and separate XZ forms). The concrete next offline
+step is to verify reconstruction of those structures from one complete reviewed
+graph, then compare area-filtered nearest results before ABPath/Seeker integration.
+The current serialized triangle/connection reader alone is not that complete
+runtime state.
+
+Offline investigation can still advance; there is no new authentication or
+external access blocker and no need for credentials. The missing evidence is
+verified hierarchy/BBTree initialization and full native output parity, not just
+another sample coordinate. Both hosts pass 28 focused tests including unknown
+library rejection for the new oracle. Application runtime is unchanged; no new
+formal movement authority, seed removal, live server claim or full-suite rerun was
+introduced in this research-tool phase.
