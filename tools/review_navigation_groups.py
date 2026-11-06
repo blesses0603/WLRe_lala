@@ -31,8 +31,8 @@ def oracle(path,*,multiple=False):
     def data(a,n):
      s=next(s for s in segments if s['p_vaddr']<=a and a+n<=s['p_vaddr']+s['p_filesz']);o=s['p_offset']+a-s['p_vaddr'];return raw[o:o+n]
     u=Uc(UC_ARCH_ARM64,UC_MODE_ARM)
-    ranges=((0x2d84edc,0x2d85194),(0x2d94558,0x2d945d0),(0x29d6340,0x29d63ac),(0x1f50780,0x1f507d4),(0x2d85d64,0x2d85f38),(0x29d66b0,0x29d6770),(0x29d6848,0x29d68f0),(0x29d6a34,0x29d6a60),(0x1f50ee0,0x1f50f18),(0xe00550,0xe00554),(0xe81860,0xe81864),(0xec1130,0xec1178))
-    pages={p for a,b in ranges for p in range(a&~4095,((b+4095)//4096)*4096,4096)}|{0x4c5c000,0x49b9000,0x49a0000,0x4929000,0x4953000,0x4c68000,0x37ed000,0x496e000,0x496f000,0x493f000}
+    ranges=((0x2d93f00,0x2d93f70),(0x2a8ff80,0x2a90030),(0x2d83808,0x2d83814),(0x2d93f7c,0x2d93f88),(0x2d85198,0x2d853bc),(0x2d84a14,0x2d84a44),(0x17c10cc,0x17c1198),(0x20d129c,0x20d12a8),(0x1f51960,0x1f51984),(0x2a270e0,0x2a27120),(0x25371d0,0x253722c),(0x164c9d8,0x164ca18),(0x164cac8,0x164cad8),(0x2ce74f8,0x2ce758c),(0x20cda5c,0x20cda6c),(0xe005bc,0xe005c0),(0xe0fca4,0xe0fcac),(0x2d84edc,0x2d85194),(0x2d94558,0x2d945d0),(0x29d6340,0x29d63ac),(0x1f50780,0x1f507d4),(0x2d85d64,0x2d85f38),(0x29d66b0,0x29d6770),(0x29d6848,0x29d68f0),(0x29d6a34,0x29d6a60),(0x1f50ee0,0x1f50f18),(0xe00550,0xe00554),(0xe81860,0xe81864),(0xec1130,0xec1178))
+    pages={p for a,b in ranges for p in range(a&~4095,((b+4095)//4096)*4096,4096)}|{0x4c5c000,0x49b9000,0x49a0000,0x4929000,0x4953000,0x4c68000,0x37ed000,0x496e000,0x496f000,0x493f000,0x496a000,0x49a7000,0x498c000,0x498a000}
     for page in pages:u.mem_map(page,4096)
     u.mem_map(0x6000000,0x1000000)
     for a,b in ranges:u.mem_write(a,data(a,b-a))
@@ -47,7 +47,7 @@ def oracle(path,*,multiple=False):
     u.hook_add(UC_HOOK_CODE,guard)
     def execute(addr,x0,x1,x2=0):
      for reg,v in ((UC_ARM64_REG_X0,x0),(UC_ARM64_REG_X1,x1),(UC_ARM64_REG_X2,x2),(UC_ARM64_REG_SP,0x6fff000),(UC_ARM64_REG_LR,0x601f000)):u.reg_write(reg,v)
-     u.emu_start(addr,0x601f000,count=100000)
+     u.emu_start(addr,0x601f000,count=2000000)
      if u.reg_read(UC_ARM64_REG_PC)!=0x601f000:raise ValueError('Instruction budget')
      return u.reg_read(UC_ARM64_REG_X0)
     def group(adjacency,walkable):
@@ -84,9 +84,15 @@ def oracle(path,*,multiple=False):
         q(0x6000040,0x6062000);q(0x6062018,0x2d85d64);q(0x6062040,0x6000000)
         q(0x6063188,0x2d94558);q(0x6000048,0x6001000)
         q(0x6001010,0x6020000);w(0x6020018,512)
-        # Nonempty Contains requires an unresolved generic IndexOf context.
-        # Stop explicitly; never silently substitute a local deduplication result.
-        q(0x60103a0,0x6010500);q(0x6010508,0x601d000)
+        # Registered int-specialized native methods, with preinitialized
+        # comparer/static context; no Python search or deduplication callback.
+        q(0x60103a0,0x6010500);q(0x6010508,0x1f51960);q(0x6010520,0x6010200)
+        q(0x6010428,0x6010600);q(0x6010608,0x2a270e0);q(0x6010638,0x6010700)
+        q(0x6010700,0x6010800);q(0x6010808,0x25371d0);q(0x6010838,0x6010900)
+        q(0x6010900,0x6010a00);q(0x6010a08,0x164c9d8);q(0x6010a20,0x6014000)
+        u.mem_write(0x6014132,b'\x01');q(0x60140c0,0x6015000);q(0x6015000,0x6016000)
+        u.mem_write(0x6016132,b'\x01');q(0x60160b8,0x6017000);q(0x6017000,0x6018000)
+        q(0x6018000,0x6019000);q(0x60191d8,0x2ce74f8);q(0x60191e0,0x601a000);q(0x601a020,0x6010200)
         for g in range(n+1):
             record=0x6800000+g*0x3000
             u.mem_write(record,bytes(0x2000))
@@ -114,7 +120,27 @@ def oracle(path,*,multiple=False):
             record=0x6800000+g*0x3000;count=read(record+0x1118)
             if count>len(groups):raise ValueError('Invalid group link count')
             connections.append(list(struct.unpack('<'+'I'*count,u.mem_read(record+0x1220,count*4))))
-        return dict(groups=groups,connections=connections,flags=[read(0x6080014+i*0x100) for i in range(n)],queue_remaining=read(0x6001020))
+        # Keep native groups/connections in this VM and run native Area fill.
+        for slot in (0x496ae30,0x49a7608,0x498c2b8):q(slot,0x6010000)
+        w(0x60101e0,1);u.mem_write(0x4c5c03d,b'\x01')
+        size=len(groups)+1
+        w(0x6073018,size);q(0x6000020,0x67f0000);w(0x67f0018,size)
+        q(0x6000068,0x67e0000);u.mem_write(0x67e0000,bytes(0x100))
+        q(0x67e0010,0x67e1000);w(0x67e1018,1024)
+        execute(0x2d85198,0x6000000,0)
+        areas=[execute(0x2d84a14,0x6000000,i)&0xffffffff for i in range(size)]
+        area_output=dict(areas=areas,component_count_including_reserved_zero=read(0x60000a0),version=read(0x6000030))
+        u.mem_write(0x4c5c0a8,b'\x01');q(0x498a430,0x601b000);q(0x601b000,0x601b100)
+        w(0x601b1e0,1);q(0x601b1b8,0x601b300);q(0x601b318,0x601b400);q(0x601b4b8,0x6000000)
+        node_areas=[execute(0x2d93f00,0x6080000+i*0x100,0)&0xffffffff for i in range(n)]
+        u.mem_write(0x67d0000,bytes(0x100));u.mem_write(0x67d0014,b'\x01');u.mem_write(0x67d001c,b'\x01\x01')
+        suitable={}
+        for target in (0,1,-1):
+            w(0x67d0018,target&0xffffffff)
+            suitable[str(target)]=[bool(execute(0x2a8ff80,0x67d0000,0x6080000+i*0x100)&0xffffffff) for i in range(n)]
+
+        return dict(groups=groups,connections=connections,flags=[read(0x6080014+i*0x100) for i in range(n)],queue_remaining=read(0x6001020),native_area_output=area_output,native_node_areas=node_areas,native_area_suitable=suitable)
+
     return grouped if multiple else group
 
 
@@ -151,6 +177,9 @@ def multiple_vectors(path):
         cases.append(([[j for j in (i-1,i+1) if 0<=j<n] for i in range(n)],[True]*n))
     cases.append(([[] for _ in range(32)],[True]*32))
     cases.append(([[j for j in (i-1,i+1) if 0<=j<512] for i in range(512)],[i!=300 for i in range(512)]))
+    for n in (257,300,512):
+        cases.append(([[(i-1)%n,(i+1)%n] for i in range(n)],[True]*n))
+    cases.append(([[j for j in range(300) if j!=i and (j-i)%300 in (1,2,298,299)] for i in range(300)],[True]*300))
     rows=[]
     for adjacency,walkable in cases:
         output=build(adjacency,walkable)
@@ -168,19 +197,15 @@ def multiple_vectors(path):
             groups.append(children);links.append(neighbors)
             for other in neighbors:links[other].append(g)
         expected=dict(groups=groups,connections=links,flags=[int(w)+(assignments[i]<<1) for i,w in enumerate(walkable)],queue_remaining=0)
-        if output!=expected:raise ValueError('Multi-group native comparison failed')
         areas=area(output['connections'])
+        expected['native_area_output']=areas
+        node_areas=[areas['areas'][g] for g in assignments]
+        expected['native_node_areas']=node_areas
+        expected['native_area_suitable']={str(target):[w and (target==-1 or node_areas[i]==target) for i,w in enumerate(walkable)] for target in (0,1,-1)}
+        if output!=expected:raise ValueError('Multi-group native comparison failed')
         rows.append(dict(adjacency=adjacency,walkable=walkable,official_output=output,official_area_output=areas))
-    # A cycle crosses the boundary more than once; unresolved generic Contains
-    # dispatch must stop, rather than accepting guessed deduplication behavior.
-    n=300;cycle=[[(i-1)%n,(i+1)%n] for i in range(n)]
-    try:build(cycle,[True]*n)
-    except ValueError as error:
-        if str(error)!='Unverified branch 0x601d000':raise
-        rejection=str(error)
-    else:raise ValueError('Unverified cross-group deduplication was accepted')
-    return dict(source_sha256=IL2CPP_SHA,cases=rows,expected_unresolved_dedup_rejection=rejection,
-                can_send_packets=False,scope='Native group calls in synthetic deterministic root order, composed with native FloodFill; unresolved repeated cross-group links reject; not RecalculateAll/GetNearest')
+    return dict(source_sha256=IL2CPP_SHA,cases=rows,
+                can_send_packets=False,scope='Native grouping/deduplication and FloodFill in one synthetic VM state, independently cross-checked Area output; not RecalculateAll/GetNearest')
 
 
 def main():

@@ -807,3 +807,68 @@ Both hosts pass 35 focused tests. No application runtime code changed; complete
 application suites were not rerun (latest full results remain phase 26). There
 is no account/permission blocker to further offline investigation. All three
 seeds, movement guards, and no-packet authority of these probes remain intact.
+
+## Registered generic deduplication and shared hierarchy state (phase 36)
+
+The unresolved nonempty-Contains dispatch from phase 35 is now resolved.
+`tools.review_navigation_registration` checks both pinned binary and metadata
+hashes, metadata version/type counts, and six concrete Int32 MethodSpec records
+against generic method pointers and declaring method names. The checked native
+chain is List.Contains (`0x1f50ee0`) → List.IndexOf (`0x1f51960`) → Array.IndexOf
+(`0x2a270e0`) → Array.IndexOfImpl (`0x25371d0`) → EqualityComparer.get_Default
+(`0x164c9d8`) → GenericEqualityComparer.IndexOf (`0x2ce74f8`), whose integer
+comparison executes at `0x20cda5c`. The native memory fence also executes.
+
+The static layout investigation consulted the project's own
+[Il2CppDumper registration declarations](https://raw.githubusercontent.com/Perfare/Il2CppDumper/master/Il2CppDumper/Il2Cpp/Il2CppClass.cs).
+Layouts were checked against this binary's counts, relocations and method
+identities, rather than assuming all version annotations apply unchanged.
+The audit records six matching method identities and Int32 type arguments; it
+is not a general metadata decoder or managed-runtime constructor.
+
+```console
+python -m tools.review_navigation_registration --libil2cpp /path/to/libil2cpp.so --metadata /path/to/global-metadata.dat
+python -m tools.review_navigation_initialization --libil2cpp /path/to/libil2cpp.so
+```
+
+The grouping probe supplies preinitialized generic contexts and a
+GenericEqualityComparer<Int32> instance, then executes the actual native search
+chain. No Python equality/search callback substitutes for deduplication. Runtime
+comparer construction remains outside this synthetic test scope. Nine grouped
+cases now include 257/300/512-node cycles and a 300-node graph with additional
+cross-boundary edges, alongside the previous chains/disconnected/blocked cases.
+The cycle formerly rejected by the probe now succeeds and deduplicates group
+links. All groups, links and flags match independent traversal.
+
+Group initialization, cross-group links and FloodFill now run in **one emulator
+memory state**. GraphNode.get_Area (`0x2d93f00`) reads each node's assigned
+hierarchical index through a synthetic initialized AstarPath.active reference
+into that same hierarchy. NNConstraint.Suitable then runs against those nodes
+with area 0, area 1 and unrestricted area -1, retaining walkability checks.
+Native per-node areas and suitability match independent expectations. The Area
+output is additionally compared with the separate native Area oracle. The root
+iteration is still explicit test order; RecalculateAll and a complete live
+AstarPath instance are not claimed.
+
+For modf, the finite-domain behavior was checked against the published
+[AOSP Bionic implementation](https://raw.githubusercontent.com/aosp-mirror/platform_bionic/master/libm/upstream-freebsd/lib/msun/src/s_modf.c).
+That implementation removes fractional mantissa bits, preserves signed zero and
+subtracts the integral part. An independent binary64 mask reference now tests
+exponent boundaries, neighboring values and subnormals against the ratio-based
+model. This supports finite-domain mathematical equivalence; it does not pin the
+specific Android OS/libm binary used by a game client. The optional model remains
+explicitly identified, and NaN/infinity/out-of-domain inputs still reject.
+
+Both hosts produce identical six-method registration audits and complete probe
+outputs (99 modeled-center/BBTree cases and nine shared-hierarchy cases), and
+pass 36 focused tests. No application runtime behavior changed; latest full
+application regression results remain phase 26, without new device/live-server
+acceptance or remote CI claims.
+
+End-to-end GetNearest is still **not verified**. NavmeshBase.GetNearest
+(`0x27a375c`) dispatches into GetNearestForce (`0x27a3844`), which calls
+GetTileCoordinates (`0x27a1618`) before searching tile trees. The graph transform,
+tile dimensions/ownership, nearest-point geometry and outer AstarPath constraint
+selection still need a single verified graph state and combined execution. The
+now-shared hierarchy state is a prerequisite, not that result. Offline work can
+continue without credentials; all three seeds and movement guards remain.

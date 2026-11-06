@@ -4,6 +4,7 @@ import math
 import random
 import struct
 import unittest
+from tools.review_navigation_registration import inspect as registration_probe
 from tools.review_navigation_groups import oracle as group_probe,validate_graph
 from tools.review_navigation_vertices import oracle as vertex_probe,validate_inputs as validate_vertices,modeled_modf
 from tools.review_navigation_bbtree import oracle as bbtree_probe,validate_inputs,validate_tree
@@ -17,7 +18,7 @@ class RotationOracleBoundaryTests(unittest.TestCase):
     def test_unknown_library_rejected_before_optional_imports(self):
         with tempfile.TemporaryDirectory() as tmp:
             path=Path(tmp)/'unknown.so';path.write_bytes(b'not official code')
-            for factory in (from_to_oracle,multiply_oracle,endpoint_probe,traversal_probe,area_probe,bbtree_probe,group_probe,vertex_probe):
+            for factory in (from_to_oracle,multiply_oracle,endpoint_probe,traversal_probe,area_probe,bbtree_probe,group_probe,vertex_probe,lambda path:registration_probe(path,path)):
                 with self.assertRaisesRegex(ValueError,'digest'):factory(path)
             with path.open('wb') as output:output.truncate(96*1024*1024+1)
             with self.assertRaisesRegex(ValueError,'size limit'):from_to_oracle(path)
@@ -83,3 +84,21 @@ class ModfModelTests(unittest.TestCase):
     def test_multiple_group_input_ceiling(self):
         validate_graph([[]]*512,[True]*512,multiple=True)
         with self.assertRaises(ValueError):validate_graph([[]]*513,[True]*513,multiple=True)
+
+
+class ModfBitBoundaryTests(unittest.TestCase):
+    def test_binary64_mask_reference_at_exponent_boundaries(self):
+        # Independent IEEE-754 truncation, matching the finite-domain behavior
+        # of the inspected AOSP Bionic implementation; not a device binary test.
+        values=[0.0,-0.0]
+        for exponent in (-1074,-1022,-1,0,19,20,26):
+            value=math.ldexp(1.0,exponent)
+            for near in (math.nextafter(value,0.0),value,math.nextafter(value,math.inf)):
+                values.extend((near,-near))
+        for value in values:
+            bits=struct.unpack('<Q',struct.pack('<d',value))[0]
+            exponent=((bits>>52)&2047)-1023
+            mask=(1<<63) if exponent<0 else (~((1<<(52-exponent))-1)&((1<<64)-1))
+            integer=struct.unpack('<d',struct.pack('<Q',bits&mask))[0]
+            fraction=math.copysign(abs(value-integer),value)
+            self.assertEqual(struct.pack('<2d',*modeled_modf(value)),struct.pack('<2d',fraction,integer))
