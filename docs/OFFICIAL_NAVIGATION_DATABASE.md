@@ -6,6 +6,25 @@ live movement/UI consumers; this change does not replace those consumers or enab
 new movement packets. The shared database preview consumer and CLI run on desktop
 and Android Python cores. Android device/APK/UI acceptance has not been performed.
 
+## Current scope (phase 25)
+
+Player houses only require entry and exit. House interior navigation, furniture
+placement and obstacle rescans are excluded and are no longer migration completion
+criteria. Navigation requests reject logical templates 10000/10298/10299 and
+dynamic IDs 63501–65500; direct preview/sync also rejects models 10000/10004/10005
+before fetching. Instance IDs 61501–62000 are not houses and remain in scope.
+The existing tent enter C65-1 and leave C20-8 flows remain separate, including
+current official exit-door resolution and server-confirmation checks. Coordinate
+projection and non-navigation house features are unchanged.
+
+The three seeds cannot yet be deleted: the old stage table still contains 1,832
+non-house rows referencing 971 models; origins contains 724 entries and the
+navigation archive contains 724 decoded models (763 catalog rows total). Current
+official DB preview evidence covers six general-map models, plus three historical
+house samples now excluded. These counts are coverage evidence, not proof that
+every old model remains current. General-map movement still needs broader
+version-matched geometry coverage and traversal/smoothing verification.
+
 ## Implemented
 
 `navigation_sync.sync_model` obtains one selected reviewed model from the current
@@ -38,14 +57,14 @@ reviewed complete catalog identity. The route now uses the reviewed default seri
 [dynamic navigation progress](OFFICIAL_DYNAMIC_NAVIGATION.md) for the supported
 cost policy, planar smoothing and product UI entry points.
 It always reports `can_send_packets=false`. No existing live-movement path is
-switched to it. Dynamic player-house IDs without an explicit resolved stage are
-rejected rather than assigned the smallest house.
+switched to it. Player-house navigation is excluded by product scope, including
+verified floor contexts; entering and leaving the tent remain supported.
 
 Run after core official data preparation:
 
 ```console
-python -m tools.preview_official_navigation --map 10298 --sync
-python -m tools.preview_official_navigation --map 10298
+python -m tools.preview_official_navigation --map 10001 --sync
+python -m tools.preview_official_navigation --map 10001
 ```
 
 `--sync` is explicit and per model, not an automatic startup download. Omitting it

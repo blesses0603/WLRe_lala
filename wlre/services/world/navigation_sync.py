@@ -14,6 +14,8 @@ def sync_model(identity,model,*,root=None,fetch=None,manifest=None,observe=None)
     from wlre.services.official_resource_sync import observe_official_versions, validate_snapshot
     if type(model) is not int or model not in REVIEWED_MODELS:
         raise ValueError('Navigation model requires format review')
+    from wlre.services.world.house_navigation import require_general_navigation
+    require_general_navigation(model=model)
     root=Path(root) if root is not None else data_root()/'official_sync'
     database=database_path(root);version=identity.key
     observe=observe or observe_official_versions

@@ -83,6 +83,8 @@ class PreviewRepository:
 
     def load(self,model,*,download=False,travel_mode='land'):
         model=int(str(model).removeprefix('M'))
+        from wlre.services.world.house_navigation import require_general_navigation
+        require_general_navigation(model=model)
         if download:
             from wlre.services.world.navigation_sync import sync_model
             sync_model(self.identity,model,root=self.root)
@@ -95,11 +97,12 @@ class PreviewRepository:
         if self.identity.key not in REVIEWED_COORDINATE_CATALOGS:
             raise NavigationError('此版本的官方座標邏輯尚未完成驗證。')
         logical_map=int(logical_map)
+        from wlre.services.world.house_navigation import require_general_navigation
+        require_general_navigation(scene=logical_map)
         state=navigation_state or {}
         if state.get('scene')==logical_map and state.get('stale'):
             raise NavigationError('場景障礙已變更，尚未完成官方動態幾何重建。')
-        from wlre.services.world.house_navigation import HOUSE_MIN,HOUSE_MAX,resolve_house_stage
-        stage_id=resolve_house_stage(logical_map,state.get('house_context')) if HOUSE_MIN<=logical_map<=HOUSE_MAX else logical_map
+        stage_id=logical_map
         stage=self.stages.get(stage_id)
         if stage is None and 61501<=logical_map<=62000:
             from wlre.services.world.house_navigation import instance_aliases

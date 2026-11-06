@@ -51,7 +51,10 @@ class Coordinates:
         return (float(x)+origin[0])/10, stage['offset_y']-(float(z)+origin[2])/10
 
     def route(self, repository, logical_map, start, end, start_height=None,end_height=None):
+        from wlre.services.world.house_navigation import require_general_navigation
+        require_general_navigation(scene=parse_map_id(logical_map))
         stage,scene,_ = self.mapping(logical_map)
+        require_general_navigation(model=stage['model_id'])
         mesh = repository.load(scene)
         result = mesh.route(self.to_navigation(logical_map,*start),self.to_navigation(logical_map,*end),
                             start_height,end_height)

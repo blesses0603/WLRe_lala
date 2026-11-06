@@ -64,3 +64,14 @@ def instance_aliases(stages):
                 if next_id>62000 or next_id in stages:raise NavigationError('副本場景別名衝突或超出已審核範圍。')
                 aliases[next_id]=scene;next_id+=1
     return aliases
+
+
+HOUSE_MODELS=frozenset({10000,10004,10005})
+HOUSE_NAVIGATION_MESSAGE='玩家小屋僅支援進入與離開，不提供屋內自動導航。'
+
+def require_general_navigation(*,scene=None,model=None):
+    """Navigation-only policy; tent entry/exit never calls this guard."""
+    from wlre.services.world.navigation import NavigationError
+    if (scene in HOUSE_TEMPLATES.values() or
+            (type(scene) is int and HOUSE_MIN<=scene<=HOUSE_MAX) or model in HOUSE_MODELS):
+        raise NavigationError(HOUSE_NAVIGATION_MESSAGE)

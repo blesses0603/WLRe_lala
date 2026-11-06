@@ -37,6 +37,9 @@ class Movement:
         fix=state.location.get('confirmed')
         if not fix or not state.player.get('role_id'):raise ProtocolError('尚無本機起點座標，不能規劃移動')
         scene=state.player['scene']
+        from wlre.services.world.house_navigation import require_general_navigation
+        try:require_general_navigation(scene=scene)
+        except ValueError as error:raise ProtocolError(str(error)) from error
         if fix['scene']!=scene:raise ProtocolError('起點與角色地圖不同')
         if state.navigation.get('stale') and state.navigation.get('scene')==scene:
             raise ProtocolError('目前場景的動態障礙尚未重建，暫停導航：'+', '.join(state.navigation.get('reasons',[])))

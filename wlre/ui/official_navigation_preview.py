@@ -12,7 +12,7 @@ class OfficialNavigationPreview:
         ttk.Label(body,text='讀取官方導航資料庫；預覽不會移動角色。').pack(anchor='w')
         form=ttk.Frame(body);form.pack(fill='x',pady=8)
         player=state_getter().get('player',{});self.fields=[]
-        for i,(name,value) in enumerate((('地圖 ID',player.get('scene',10000)),('起點 X',player.get('x',0)),('起點 Y',player.get('y',0)),('終點 X',player.get('x',0)),('終點 Y',player.get('y',0)))):
+        for i,(name,value) in enumerate((('地圖 ID',player.get('scene',10001)),('起點 X',player.get('x',0)),('起點 Y',player.get('y',0)),('終點 X',player.get('x',0)),('終點 Y',player.get('y',0)))):
             ttk.Label(form,text=name).grid(row=i,column=0,sticky='w')
             field=ttk.Entry(form);field.insert(0,str(value));field.grid(row=i,column=1,sticky='ew');self.fields.append(field)
         form.columnconfigure(1,weight=1)

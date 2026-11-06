@@ -5,6 +5,13 @@ The three legacy navigation seeds remain. Formal movement is not switched to the
 new database: dynamic obstacle geometry is still incomplete. Both product UIs now
 expose a read-only official database preview, with an explicit movement guard.
 
+## Scope change after phase 24
+
+Player-house navigation and furniture obstacles are now explicitly out of scope.
+The historical research below is retained as evidence, not a remaining completion
+requirement. Product navigation rejects houses while tent entry and exit remain
+supported. General maps and version-matched routing remain the migration target.
+
 ## Actual collision source and rescan behavior
 
 The official MainPackage manifest places Furniture_9515 and Pillar_9194 in

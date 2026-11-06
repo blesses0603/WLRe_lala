@@ -19,26 +19,26 @@ class NavigationDatabaseTests(unittest.TestCase):
         self.root=Path(self.temp.name);self.db=database.database_path(self.root)
         self.raw=archive();self.sha=hashlib.sha256(self.raw).hexdigest();self.version='a'*64
         for target,name,value in ((codec,'REVIEWED_CACHES',{self.sha}),
-                                  (database,'REVIEWED_MODELS',{10000:self.sha})):
+                                  (database,'REVIEWED_MODELS',{10001:self.sha})):
             p=patch.object(target,name,value);p.start();self.addCleanup(p.stop)
 
     def put(self,version=None):
-        return database.import_cache(self.db,version or self.version,10000,self.raw,{'source':'synthetic'})
+        return database.import_cache(self.db,version or self.version,10001,self.raw,{'source':'synthetic'})
 
     def test_cold_start_and_exact_version(self):
-        self.assertIsNone(database.load_cache(self.db,self.version,10000))
+        self.assertIsNone(database.load_cache(self.db,self.version,10001))
         self.put()
-        self.assertIsNone(database.load_cache(self.db,'b'*64,10000))
-        self.assertEqual(database.load_cache(self.db,self.version,10000)['origin'],[0,0,0])
+        self.assertIsNone(database.load_cache(self.db,'b'*64,10001))
+        self.assertEqual(database.load_cache(self.db,self.version,10001)['origin'],[0,0,0])
 
     def test_failed_update_keeps_previous_snapshot(self):
         self.put()
         with self.assertRaises(ValueError):
-            database.import_cache(self.db,self.version,10000,b'bad',{})
-        database.record_failure(self.db,self.version,10000,'download failed')
-        self.assertIsNotNone(database.load_cache(self.db,self.version,10000))
+            database.import_cache(self.db,self.version,10001,b'bad',{})
+        database.record_failure(self.db,self.version,10001,'download failed')
+        self.assertIsNotNone(database.load_cache(self.db,self.version,10001))
         self.put('b'*64)
-        self.assertIsNotNone(database.load_cache(self.db,self.version,10000))
+        self.assertIsNotNone(database.load_cache(self.db,self.version,10001))
 
     def test_transaction_rolls_back_failed_activation(self):
         self.put()
@@ -47,19 +47,19 @@ class NavigationDatabaseTests(unittest.TestCase):
         with self.assertRaises(sqlite3.IntegrityError):self.put('b'*64)
         with sqlite3.connect(self.db) as db:
             self.assertEqual(db.execute('SELECT COUNT(*) FROM navigation_snapshots').fetchone()[0],1)
-        self.assertIsNotNone(database.load_cache(self.db,self.version,10000))
+        self.assertIsNotNone(database.load_cache(self.db,self.version,10001))
 
     def test_corrupt_normalized_or_raw_cache_rejected(self):
         for field,value in (('geometry','{}'),('raw',b'bad')):
             self.put()
             with sqlite3.connect(self.db) as db:db.execute(f'UPDATE navigation_snapshots SET {field}=?',(value,))
-            with self.assertRaises(ValueError):database.load_cache(self.db,self.version,10000)
+            with self.assertRaises(ValueError):database.load_cache(self.db,self.version,10001)
 
     def test_unknown_schema_not_replaced(self):
         self.put()
         with sqlite3.connect(self.db) as db:db.execute('UPDATE navigation_schema SET version=99')
         with self.assertRaises(ValueError):self.put()
-        with self.assertRaises(ValueError):database.load_cache(self.db,self.version,10000)
+        with self.assertRaises(ValueError):database.load_cache(self.db,self.version,10001)
 
     def test_no_movement_permission_or_unwalkable_route(self):
         result=self.put();mesh=PreviewMesh(result)
@@ -103,12 +103,11 @@ class NavigationDatabaseTests(unittest.TestCase):
     def test_house_floor_context_and_stale_geometry(self):
         self.put()
         repository=PreviewRepository(SimpleNamespace(key=self.version),
-            {10000:dict(model_id=10000,map_height=3400)},root=self.root)
+            {10001:dict(model_id=10001,map_height=3400)},root=self.root)
         state=dict(scene=63501,stale=False,house_context=dict(scene=63501,verified=True,floor=1,sizes={'1':3}))
         with patch('wlre.services.world.navigation_preview.REVIEWED_COORDINATE_CATALOGS',{self.version}):
-            route=repository.route(63501,(1,3399),(2,3398),navigation_state=state)
-            self.assertEqual(route['logical_map'],63501)
-            self.assertFalse(route['can_send_packets'])
+            with self.assertRaisesRegex(NavigationError,'僅支援進入與離開'):
+                repository.route(63501,(1,3399),(2,3398),navigation_state=state)
             state['stale']=True
             with self.assertRaises(NavigationError):repository.route(63501,(1,3399),(2,3398),navigation_state=state)
 
@@ -129,12 +128,12 @@ class NavigationDatabaseTests(unittest.TestCase):
     def test_coordinates_and_unknown_house_fail_closed(self):
         self.put()
         repository=PreviewRepository(SimpleNamespace(key=self.version),
-            {10000:dict(model_id=10000,map_height=3400)},root=self.root)
+            {10001:dict(model_id=10001,map_height=3400)},root=self.root)
         with patch('wlre.services.world.navigation_preview.REVIEWED_COORDINATE_CATALOGS',{self.version}):
-            route=repository.route(10000,(1,3399),(2,3398))
+            route=repository.route(10001,(1,3399),(2,3398))
             self.assertEqual(route['packet_points_xy_float'],[[1,3399],[2,3398]])
             with self.assertRaises(NavigationError):repository.route(61501,(1,1),(2,2))
-        with self.assertRaises(NavigationError):repository.route(10000,(1,3399),(2,3398))
+        with self.assertRaises(NavigationError):repository.route(10001,(1,3399),(2,3398))
 
     def test_unknown_model_and_path_rejected(self):
         repository=PreviewRepository(SimpleNamespace(key=self.version),{},root=self.root)
@@ -153,22 +152,22 @@ class NavigationSyncTests(unittest.TestCase):
         manifest_file=self.root/'manifest';manifest_file.write_bytes(b'synthetic')
         revision='1296_2026_11_04_13_36_07_72'
         identity=OfficialCatalogIdentity('1.3.23','1.3.0',tuple(PackageRevision(n,revision,hashlib.sha256(b'synthetic').hexdigest(),'00000000') for n in ('DataPackage','MainPackage')))
-        names=('mainpackage_scene_10000.bundle','mainpackage_scene_10000_dependency.bundle')
+        names=('mainpackage_scene_10001.bundle','mainpackage_scene_10001_dependency.bundle')
         index=dict(header=dict(package_name='MainPackage',file_version='2.2.5',output_name_style=1,package_version=revision),
-                   assets=[dict(address='M10000',path='Assets/M10000.unity',bundle_name=names[0])],
+                   assets=[dict(address='M10001',path='Assets/M10001.unity',bundle_name=names[0])],
                    bundles=[dict(name=n,file_size=20*1024*1024,file_hash='0'*32,file_crc='0'*8,dependencies=[names[1]]) for n in names])
         manifest=SimpleNamespace(spec=ManifestSpec('1.3.23','MainPackage',revision),cache_path=manifest_file,index=index)
         snapshot=dict(schema_version=1,origin='official_pc_version_endpoint',checked_at_utc='2026-11-06T00:00:00Z',assets_ready=False,data_ver='1.3.23',exe_version='1.3.0',packages={n:revision for n in ('DataPackage','MainPackage')})
         fetch=Mock(return_value=manifest_file)
         with self.assertRaisesRegex(ValueError,'budget'):
-            sync_model(identity,10000,root=self.root,fetch=fetch,manifest=manifest,observe=lambda:snapshot)
+            sync_model(identity,10001,root=self.root,fetch=fetch,manifest=manifest,observe=lambda:snapshot)
         fetch.assert_not_called()
         for row in index['bundles']:row['file_size']=10
         changed={**snapshot,'data_ver':'1.3.24'}
         with patch('wlre.services.official_bundle_download._verified_file',return_value=True), patch('wlre.services.world.navigation_sync.extract_cache',return_value=(self.raw,{})):
             with self.assertRaisesRegex(ValueError,'version changed'):
-                sync_model(identity,10000,root=self.root,fetch=fetch,manifest=manifest,observe=Mock(side_effect=[snapshot,changed]))
-        self.assertIsNone(database.load_cache(self.db,identity.key,10000))
+                sync_model(identity,10001,root=self.root,fetch=fetch,manifest=manifest,observe=Mock(side_effect=[snapshot,changed]))
+        self.assertIsNone(database.load_cache(self.db,identity.key,10001))
 
 
 if __name__=='__main__':unittest.main()
