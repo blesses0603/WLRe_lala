@@ -8,6 +8,14 @@ from wlre.services.world.navigation_database import database_path, load_cache
 REVIEWED_COORDINATE_CATALOGS=frozenset({'b500c9c684777edb5c80671541eb1ebc51bce5ed26a81270578a6fed259363e6'})
 
 
+class NoPreviewRoute(NavigationError):
+    """Search exhausted the reviewed, mode-filtered preview graph."""
+    def __init__(self, source, target, reached, travel_mode):
+        super().__init__('官方連線與通行標籤沒有允許的路徑。')
+        self.details = dict(source_node=source, target_node=target,
+                            reachable_nodes=reached, travel_mode=travel_mode)
+
+
 class PreviewMesh(Mesh):
     def __init__(self, result, *, travel_mode='land'):
         masks={'land':9,'sea':4,'sky':15}
@@ -51,7 +59,7 @@ class PreviewMesh(Mesh):
                 if value<costs.get(neighbor,float('inf')):
                     costs[neighbor]=value;parents[neighbor]=node
                     heapq.heappush(queue,(value,neighbor))
-        else:raise NavigationError('官方連線與通行標籤沒有允許的路徑。')
+        else:raise NoPreviewRoute(source, target, len(costs), self.travel_mode)
         faces=[target]
         while faces[-1]!=source:faces.append(parents[faces[-1]])
         faces.reverse();points=[sp]

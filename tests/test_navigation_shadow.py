@@ -45,7 +45,7 @@ class ShadowTests(unittest.TestCase):
 
     def test_legacy_metadata_mismatch(self):
         self.coordinates.mapping.return_value=({'model_id':9},'M00009',(0,0,0))
-        self.assertEqual(self.run_comparison()['legacy']['status'],'error')
+        self.assertEqual(self.run_comparison()['legacy']['reason'],'legacy_stage_mismatch')
         self.coordinates.route.assert_not_called()
 
     def test_state_change_discards_both_sides(self):
@@ -81,3 +81,42 @@ class ShadowTests(unittest.TestCase):
     def test_invalid_inputs_rejected(self):
         for map_id,start in ((True,(1,2)),(1,(float('nan'),2)),(1,(1,2,3))):
             with self.assertRaises(ValueError):compare(map_id,start,(3,4),**self.kw)
+
+    def test_missing_origin_does_not_substitute_official_geometry(self):
+        self.coordinates.stages={'1':self.stage}
+        self.coordinates.origins={}
+        result=self.run_comparison()
+        self.assertEqual(result['legacy']['status'],'unavailable')
+        self.assertEqual(result['legacy']['reason'],'legacy_origin_missing')
+        self.coordinates.route.assert_not_called()
+        self.assertEqual(result['official']['status'],'ready')
+
+    def test_changed_model_is_reported_with_both_values(self):
+        self.coordinates.stages={'1':{**self.stage,'model_id':15129}}
+        result=self.run_comparison()
+        self.assertEqual(result['legacy']['details']['model_id'],{'legacy':15129,'official':13221})
+        self.coordinates.route.assert_not_called()
+
+    def test_no_route_is_not_an_unexpected_error(self):
+        from wlre.services.world.navigation_preview import NoPreviewRoute
+        self.official.route.side_effect=NoPreviewRoute(1,2,3,'land')
+        result=self.run_comparison()
+        self.assertEqual(result['official']['status'],'no_route')
+        self.assertEqual(result['official']['details']['reachable_nodes'],3)
+        self.assertNotIn('exact_xy_sequence_match',result)
+
+    def test_independent_reachability_rejects_false_no_route(self):
+        from tools.review_navigation_shadow_samples import verify_disconnected
+        mesh=SimpleNamespace(serialized_connections=[[(1,5,0)],[]],adjacency=[{1:None},{}])
+        with self.assertRaises(AssertionError):
+            verify_disconnected(mesh,dict(source_node=0,target_node=1,reachable_nodes=2))
+        mesh.adjacency=[{},{}]
+        result=verify_disconnected(mesh,dict(source_node=0,target_node=1,reachable_nodes=1))
+        self.assertIs(result['target_reachable'],False)
+
+    def test_missing_origin_and_stage_drift_are_both_reported(self):
+        self.coordinates.stages={'1':{**self.stage,'map_height':65535}}
+        self.coordinates.origins={}
+        result=self.run_comparison()
+        self.assertEqual(result['legacy']['details']['missing_legacy_origin'],'M13221')
+        self.assertEqual(result['legacy']['details']['map_height']['legacy'],65535)

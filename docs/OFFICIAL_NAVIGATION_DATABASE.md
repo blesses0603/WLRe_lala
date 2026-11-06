@@ -2145,3 +2145,42 @@ acceptance were not rerun. All three bundled navigation seeds and movement guard
 remain. Actual OnAwakeSettings execution and final player settings still require
 runtime evidence unavailable in this environment; this diagnostic feature does
 not resolve that gap. Changes remain local, with no push, merge or release.
+
+### Phase 55: explain incomplete comparisons without weakening guards
+
+The previous 27 incomplete results have now been traced to source data:
+
+- 24 requests (land/sky on M13216 through M13227): neither legacy
+  `graph_origins.json` nor the navigation archive catalog contains the model.
+  Their legacy stage dimensions are also 65535/65535 with zero small-map offsets,
+  whereas the current official stages have concrete dimensions/offsets. The
+  earlier mapping exception hid this additional drift. Both causes are now
+  reported. Substituting official geometry into the legacy side would destroy
+  the independence of the comparison and is deliberately not done.
+- 2 requests on logical stage 12050: old model 15129 versus current model 12050.
+  Legacy model 15129 exists, but that does not establish equivalence with 12050.
+  The report records each differing field and both values; no seed is patched.
+- 1 request on stage/model 58001, land: source node 952 reaches only 952 and 953;
+  target 3777 is unreachable. Boundary targets 856 (tag 1), 341 and 494 (tag 2)
+  are excluded by the reviewed land mask 9. An independent unweighted traversal
+  confirms the preview result. This is an expected mode-filtered graph rejection,
+  not a crashed parser or evidence of official live-client behavior.
+
+`ComparisonUnavailable` now reports legacy provenance gaps separately from
+unexpected errors. `NoPreviewRoute` remains a `NavigationError` subclass for
+existing consumers and carries source, target, reached count and travel mode;
+shadow output labels it `no_route`. Overall comparison remains incomplete when
+one side has no path; no equality or success is fabricated. The offline sample
+reviewer checks every no-route rejection with independent unweighted reachability,
+records exact packet inputs for replay, and no longer catches arbitrary
+`ValueError` as an expected no-route result.
+
+Both hosts: 69 focused tests pass; 302 offline route pairs still yield 292 previews
+and 10 independently checked graph disconnections. The same 35 shadow requests
+still yield 8 completed and 27 incomplete comparisons, now with explicit causes.
+Tests cover combined metadata/missing-origin gaps, changed model IDs, typed
+no-route outcomes and rejection of a falsely claimed disconnected graph.
+No runtime semantics or movement authorization was expanded. Three seeds remain.
+The user's running LaLa 7.3.0 is not established to contain these unpushed local
+commits and is not acceptance evidence for this feature. No device/live-server
+acceptance, push, merge or release was performed.

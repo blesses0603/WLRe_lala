@@ -6,8 +6,39 @@ from wlre.services.world.coordinates import Coordinates
 from wlre.services.world.dynamic_bundle_runtime import current_runtime
 from wlre.services.world.house_navigation import require_general_navigation
 from wlre.services.world.navigation import Repository
-from wlre.services.world.navigation_preview import PreviewRepository
+from wlre.services.world.navigation_preview import PreviewRepository, NoPreviewRoute
 from wlre.services.world.navigation_preview_job import signature
+
+
+class ComparisonUnavailable(ValueError):
+    def __init__(self, reason, details):
+        super().__init__(reason)
+        self.reason, self.details = reason, details
+
+
+def legacy_metadata(coordinates, map_id, current):
+    """Report missing historical input without substituting new geometry."""
+    fields = ('model_id', 'map_width', 'map_height', 'small_offset_x', 'small_offset_y')
+    historical = getattr(coordinates, 'stages', None)
+    if isinstance(historical, dict):
+        stage = historical.get(str(map_id))
+        if stage is None:
+            raise ComparisonUnavailable('legacy_stage_missing', {'map_id': map_id})
+    else:
+        stage, _, _ = coordinates.mapping(map_id)
+    differences = {f: {'legacy': stage.get(f), 'official': (current or {}).get(f)}
+                   for f in fields if current is None or stage.get(f) != current.get(f)}
+    scene = f"M{stage['model_id']:05d}"
+    origins = getattr(coordinates, 'origins', None)
+    missing_origin = isinstance(origins, dict) and scene not in origins
+    if differences:
+        if missing_origin:
+            differences['missing_legacy_origin'] = scene
+        raise ComparisonUnavailable('legacy_stage_mismatch', differences)
+    if missing_origin:
+        raise ComparisonUnavailable('legacy_origin_missing', {'scene': scene})
+    # Preserve the original current-runtime guard as well.
+    coordinates.mapping(map_id)
 
 
 def _xy(value):
@@ -71,18 +102,19 @@ def compare(map_id, start, end, *, travel_mode='land', runtime_getter=current_ru
         try:
             if name == 'legacy':
                 coordinates = coordinates_factory()
-                # Retain existing checks and additionally bind legacy metadata to this snapshot.
-                stage, _, _ = coordinates.mapping(map_id)
-                current = stages.get(map_id)
-                fields = ('model_id', 'map_width', 'map_height', 'small_offset_x', 'small_offset_y')
-                if current is None or any(stage.get(f) != current.get(f) for f in fields):
-                    raise ValueError('Legacy stage differs from official snapshot')
+                legacy_metadata(coordinates, map_id, stages.get(map_id))
                 route = coordinates.route(legacy_factory(), map_id, start, end)
             else:
                 route = official_factory(identity, stages).route(
                     map_id, start, end, download=False, travel_mode=travel_mode,
                     smooth=False, navigation_state=copy.deepcopy(navigation))
             value = _summary(route, official=name == 'official', catalog_key=identity.key)
+        except ComparisonUnavailable as error:
+            value = dict(status='unavailable', can_send_packets=False,
+                         reason=error.reason, details=error.details)
+        except NoPreviewRoute as error:
+            value = dict(status='no_route', can_send_packets=False,
+                         reason='preview_graph_disconnected', details=error.details)
         except Exception as error:
             value = dict(status='error', can_send_packets=False, error=str(error)[:300] or type(error).__name__)
         if stale():
@@ -92,4 +124,7 @@ def compare(map_id, start, end, *, travel_mode='land', runtime_getter=current_ru
         old, new = report['legacy'], report['official']
         report.update(status='compared', exact_xy_sequence_match=old['diagnostic_xy'] == new['diagnostic_xy'],
                       xy_length_delta=new['xy_length'] - old['xy_length'])
+    if report['status'] == 'incomplete':
+        report['reasons'] = {side: report[side].get('reason', 'unexpected_error')
+                             for side in ('legacy', 'official') if report[side]['status'] != 'ready'}
     return report

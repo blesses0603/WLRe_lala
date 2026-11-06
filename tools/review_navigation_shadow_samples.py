@@ -7,10 +7,25 @@ import argparse
 from pathlib import Path
 import json,itertools
 from types import SimpleNamespace
-from wlre.services.world.navigation_preview import PreviewRepository
+from wlre.services.world.navigation_preview import PreviewRepository, NoPreviewRoute
 from wlre.services.world.navigation_database import REVIEWED_MODELS
 from wlre.services.world.catalog_identity import OfficialCatalogIdentity,PackageRevision
 from wlre.services.world.navigation_shadow import compare
+
+def verify_disconnected(mesh, details):
+    """Independent unweighted reachability check; no cost/search-queue reuse."""
+    source, target = details['source_node'], details['target_node']
+    pending = [source]; seen = {source}
+    while pending:
+        node = pending.pop()
+        for neighbor, _, _ in mesh.serialized_connections[node]:
+            if neighbor in mesh.adjacency[node] and neighbor not in seen:
+                seen.add(neighbor); pending.append(neighbor)
+    if target in seen or len(seen) != details['reachable_nodes']:
+        raise AssertionError('No-route result disagrees with independent reachability')
+    return dict(source_node=source, target_node=target, reachable_nodes=len(seen),
+                target_reachable=False, method='unweighted_graph_traversal')
+
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
@@ -30,14 +45,21 @@ def main():
         assert route['can_send_packets'] is False and route['travel_mode']==mode
         assert all(n in mesh.walkable for n in route['faces'])
         ok+=1
-       except ValueError as error:rejected[str(error)]=rejected.get(str(error),0)+1
+       except NoPreviewRoute as error:
+        verify_disconnected(mesh,error.details)
+        rejected['verified_preview_graph_disconnected']=rejected.get('verified_preview_graph_disconnected',0)+1
       rows.append(dict(model=model,mode=mode,nodes=len(nodes),successful=ok,rejected=rejected))
       if len(sample)>1:
        map_id=next(k for k,v in stages.items() if v['model_id']==model)
        offset=6992 if stages[map_id]['map_height']==65535 else stages[map_id]['map_height']
        def packet(node):
         p=mesh.centers[node];return ((p[0]+origin[0])/10,offset-(p[2]+origin[2])/10)
-       try:comparisons.append(compare(map_id,packet(sample[0]),packet(sample[-1]),travel_mode=mode,runtime_getter=lambda:runtime))
+       try:
+        result=compare(map_id,packet(sample[0]),packet(sample[-1]),travel_mode=mode,runtime_getter=lambda:runtime)
+        result['input_xy']={'start':packet(sample[0]),'end':packet(sample[-1])}
+        if result.get('official',{}).get('status')=='no_route':
+         result['no_route_check']=verify_disconnected(mesh,result['official']['details'])
+        comparisons.append(result)
        except ValueError as e:comparisons.append(dict(map_id=map_id,mode=mode,error=str(e)))
     report=dict(context='Historical pinned cached identity and stages; no current CDN or live state claim',catalog_key=identity.key,rows=rows,comparisons=comparisons)
     args.output.write_text(json.dumps(report,ensure_ascii=False,indent=2))
