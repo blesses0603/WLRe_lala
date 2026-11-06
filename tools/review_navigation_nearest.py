@@ -26,7 +26,11 @@ def validate_query(vertices,faces,point,origin):
         if not any(cross):raise ValueError('Degenerate triangle')
 
 
-def oracle(path,*,_state=None,_search_state=False):
+def oracle(path,*,_state=None,_search_state=False,_outer_instruction_limit=200000):
+    if type(_outer_instruction_limit) is not int or _outer_instruction_limit not in (200000,400000):
+        raise ValueError('Unreviewed diagnostic instruction budget')
+    if _search_state and _outer_instruction_limit!=200000:
+        raise ValueError('Extended diagnostic budget is not for path pipelines')
     # Optional native dependencies are loaded after the vertex factory checks hash.
     state={}
     node_base=0x6090000 if _search_state else 0x6080000
@@ -100,7 +104,7 @@ def oracle(path,*,_state=None,_search_state=False):
       w(0x6048010,graph_mask)
       u.mem_write(0x6049049,bytes([bool(full_search)]));u.mem_write(0x6048024,bytes([max_distance is not None]))
       u.mem_write(0x6049044,struct.pack('<f',max_distance or 0))
-      state['execute'](0x1a7a794,(0x6049000,0x6048000,0),instruction_limit=200000)
+      state['execute'](0x1a7a794,(0x6049000,0x6048000,0),instruction_limit=_outer_instruction_limit)
      else:
       state['execute'](0x27a375c if walkable is None else 0x27a3844,(0x6020000,0 if walkable is None else 0x6048000,0),instruction_limit=200000)
      node=struct.unpack('<Q',u.mem_read(0x6045000,8))[0]

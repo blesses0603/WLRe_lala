@@ -1900,3 +1900,100 @@ and static-source checks, not Windows/Android device or formal-server acceptance
 Four far queries still lack a completed native result within the previous
 instruction budget; no new far-query pass is claimed. Three seeds and movement
 guards remain, and work remains local without push, merge, release or remote CI.
+
+
+## Phase 52: dynamic links and completed bounded far-query diagnostics
+
+### What the 18 dynamic-capability sources actually establish
+
+`tools/review_navigation_dynamic_links.py` first revalidates all 866 indexed
+sources with the complete batch auditor, then verifies cipher and decoded
+SHA-256 again before cross-referencing dynamic symbols. Incomplete corpus input
+is an error. It reports direct literal locations, never a claim that aliases,
+computed names or native invocations are excluded.
+
+The most relevant concrete findings are:
+
+- InjectByModule appears only at its definition in LuaInjectionStation.lua:63.
+  InjectByName appears only in that same file at its internal call (67) and
+  definition (72). No other indexed source contains these literal entry names.
+- CacheInjectFunction occurs in InjectionBridgeInfo.lua:65 as mapping metadata
+  and in LuaInjectionStation.lua:86 as the generic registration call. The bridge
+  file has no literal AstarPath, Seeker, Pathfinding, FunnelModifier or LuaHelper
+  names. This is not proof against aliases or changes outside the pinned corpus.
+- The pinned LuaInjectionBus.lua has only a license comment and a commented-out
+  example require. The verifier checks that this particular file has no text
+  outside its known block/line-comment forms; it is not a general Lua lexer.
+  No injector was enabled or executed for this investigation.
+- DebugServerIp occurs only in tolua.lua:15-16, guarding the mobdebug require
+  and start call. The condition's value and any native assignment are unknown.
+  No debugger, remote connection or runtime flag was enabled.
+
+Other dynamic hits are narrower than their keywords might suggest. Reflection
+BindingFlags.lua defines numeric flags and a mask helper, rather than performing
+a reflected field write. jit/vmdef.lua contains library-name strings. cjson util
+has a generic run_script helper; this alone does not establish a navigation
+caller. Common/Function.lua uses rawset for string-key tables; PlayerSetting.lua
+uses it for stored player settings. Quaternion/Vector3 cache fields, protobuf/pbc
+manage data structures, and misc/strict supplies global-variable checks. These
+classifications come from inspected pinned source, not execution or universal
+absence proofs. All 18 source identities and dynamic literal locations remain
+in the reproducible report.
+
+Reproduction:
+
+```sh
+PYTHONPATH=/tmp/loader-research:. python -m tools.review_navigation_dynamic_links \
+  --index /workspace/validation/official-lua-1.3.23/index.json \
+  --metadata /workspace/validation/official-client/global-metadata.dat \
+  --cache-root /workspace/validation/navigation-lua-batches/phase50
+```
+
+### Four formerly incomplete far queries now finish under a separate cap
+
+Phase-49 instruction traces showed that the 200,000-step runs were still doing
+native geometry work. A new, explicit offline diagnostic permits 400,000 steps
+only as a second reviewed option. The default nearest factory still uses
+200,000; the full-path `_search_state` factory rejects the extended option.
+Unsupported numbers, booleans and non-integers fail before loading the library.
+Neither product download/safety limits nor movement authority changed.
+
+`tools/review_navigation_far_completion.py` accepts only the four pinned model
+IDs and graph hashes, at most 256 triangles, the reviewed non-XZ-only profile,
+land mask 9, full nearest search false and distance cap 100. A query point is
+101 units above the highest vertex, so every point of every mesh triangle is
+at least 101 units below it. The script executes the original native routines
+under the existing address guards; it does not substitute a Python rejection.
+An instruction hook starts counting at outer AstarPath.GetNearest, excluding
+graph construction. Every VM is fresh for its model, and the hard 400,000 cap
+still returns an explicitly unverified result if exhausted.
+
+All four original far points now return native node=None at the normal return
+sentinel 0x601f000, within the diagnostic bound:
+
+| Model | Triangles | Native query instructions | Native vertex calls |
+| --- | ---: | ---: | ---: |
+| 13221 | 212 | 241,769 | 1,272 |
+| 13223 | 232 | 261,283 | 1,392 |
+| 13225 | 188 | 210,397 | 1,128 |
+| 13226 | 250 | 279,473 | 1,500 |
+
+The earlier 200,000-step reports remain correct historical incomplete results;
+they are not overwritten or relabeled as passes. The new results close those
+four particular offline far-query cases, not arbitrary far points, live-client
+settings, full vectorPath equivalence or server acceptance. The other four
+far rejections from phase 48 remain unchanged.
+
+```sh
+PYTHONPATH=/tmp/loader-research:. python -m tools.review_navigation_far_completion \
+  --libil2cpp /workspace/validation/official-client/libil2cpp.so \
+  --cache-dir /workspace/validation/navigation-1296
+```
+
+Both hosts produce byte-identical dynamic-link and far-completion reports.
+The focused regression suite now has 55 passing tests on each host, including
+new gates rejecting unsupported budgets and extended budgets in path pipelines.
+Android parity still verifies 185 shared core sources. Full runtime callback
+state, indirect native writes and the complete path harness's earlier heuristic
+profile remain unresolved. Three seeds, house entry/exit scope and all movement
+guards remain. No push, merge, release, remote CI or device acceptance occurred.
