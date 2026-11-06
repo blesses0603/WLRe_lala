@@ -6,7 +6,7 @@ import struct
 import unittest
 import zipfile
 from unittest.mock import patch
-from tools import review_astar_cache as subject
+from wlre.services.world import astar_cache as subject
 
 
 def geometry():
@@ -22,7 +22,9 @@ def archive(**overrides):
     parts = dict.fromkeys(subject.MEMBERS, b'')
     parts.update({'graph0.json': json.dumps(settings).encode(),
                   'meta.json': b'{"version":4.3.60,"graphs":1,"guids":["synthetic"],"typeNames":["Pathfinding.RecastGraph"]}',
-                  'graph0_extra.binary': geometry(), 'node_link2.binary': bytes(4)})
+                  'graph0_extra.binary': geometry(), 'node_link2.binary': bytes(4),
+                  'graph_references.binary': struct.pack('<2i', 1, 1),
+                  'graph0_references.binary': bytes(4)})
     parts.update(overrides)
     stream = io.BytesIO()
     with zipfile.ZipFile(stream, 'w') as output:
@@ -41,7 +43,7 @@ class ReviewTests(unittest.TestCase):
         self.assertEqual(result['origin'], [0, 0, 0])
         self.assertEqual(result['mesh']['tiles'][0]['triangles'], [[0, 1, 2]])
         self.assertFalse(result['can_send_packets'])
-        self.assertFalse(result['references_interpreted'])
+        self.assertTrue(result['references_interpreted'])
         self.assertFalse(result['live_movement_verified'])
 
     def test_unknown_fingerprint(self):

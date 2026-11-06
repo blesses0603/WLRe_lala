@@ -1,6 +1,6 @@
 # Official navigation research: bounded standalone cache extraction
 
-Status: research only, 2026-11-06. The three navigation seeds remain required:
+Historical phase-21 status: research only, 2026-11-06. See [phase-22 database progress](OFFICIAL_NAVIGATION_DATABASE.md) for subsequent implementation. The three navigation seeds remain required:
 `navigation_data.zip`, `graph_origins.json`, and `stage_coordinates.json`.
 No production download quota, navigation consumer, or movement authority changes.
 
@@ -36,7 +36,7 @@ No partial HTTP response was treated as a checksum-verified full bundle.
 M10001's external CAB is `CAB-2e5f635a7d92492b3cd11085d1e7d040`, object
 `-5788657058253960011`; M12600's is `CAB-7965e005af08ae86fd7a9eac854a420b`,
 object `-4368270071059153749`. The cache SHA-256 fingerprints are recorded in
-`tools/review_astar_cache.py`. Raw official files and decoded game contents stay
+`wlre/services/world/astar_cache.py`. Raw official files and decoded game contents stay
 outside the repositories under the private validation directory.
 
 ## Reader evidence and verified scope
