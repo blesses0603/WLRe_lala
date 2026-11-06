@@ -466,3 +466,57 @@ only the path record, without session tokens or credentials.
 No complete official vectorPath was obtained during this feasibility check; no
 seed was removed and no movement restriction was relaxed. This phase changes
 research documentation only, so application regression suites were not rerun.
+
+## Endpoint preparation and native branch oracle (phase 30)
+
+Further read-only disassembly establishes the following chain in the pinned
+ARM64 binary:
+
+- StartEndModifier's constructor (`0x24d30b4`) writes integer mode 3 to both
+  endpoint settings (+0x1c and +0x20).
+- `Snap` (`0x24d2a10`) selects the first/last node from Path.path, reads its Int3
+  position and converts it with the official Int3-to-Vector3 function. Its verified
+  switch table at `0x37f3360` sends mode 3 to code returning Path's already
+  adjusted start/end coordinates at +0xf8/+0x104. Mode 0 returns node position.
+  This conclusion follows the actual numeric switch; no guessed enum decoder was
+  used to assign authority.
+- `ABPath.Prepare` (`0x234d214`) copies Path.enabledTags (+0xac) into the nearest
+  constraint's tag field (+0x20), calls AstarPath.GetNearest (`0x1a7a794`) for the
+  start and end, writes back adjusted points, and calls Path.CanTraverse
+  (`0x2d95850`). It also invokes constraint/path virtual methods. Thus supplying
+  locally projected endpoints to Snap would not validate the missing upstream
+  nearest-node/constraint behavior.
+- Seeker.RunModifiers iterates the runtime modifier list and dispatches modifier
+  interface calls. A complete oracle must retain actual registered ordering and
+  settings; manually concatenating guessed transformations is insufficient.
+
+The new optional `tools.review_navigation_endpoints` probe executes only Snap's
+reviewed native branches and their actual List element/Int3 conversion helpers.
+It uses synthetic preallocated ABI memory, explicit initialized-state slots, a
+2,048-instruction ceiling, a strict instruction-address allowlist, and the pinned
+library digest/size check from the rotation tool. Unknown runtime calls stop; no
+allocator, class initializer or substitute nearest-node implementation is hooked.
+
+```console
+python -m tools.review_navigation_endpoints --libil2cpp /path/to/libil2cpp.so
+```
+
+Twelve branch cases exercised 105 unique instruction addresses. Fixtures include
+start/end at different heights with the same X/Z, signed coordinates and both
+endpoint modes 0 and 3. Desktop/Android host output is byte-identical. Mode 3
+returns the supplied adjusted start/end values; mode 0 returns the supplied first/
+last node positions at the official Int3 scale. **These fixtures do not assert
+that supplied endpoints are correct GetNearest results.** The probe outputs
+`can_send_packets=false` and explicitly identifies its synthetic ABI scope.
+Both hosts pass the 28 focused oracle/navigation guard tests, now including
+rejection of an unreviewed library before endpoint emulation imports. No runtime
+application behavior changed, and full suites were not rerun for this tool phase.
+
+The complete vectorPath gap is now more specific: instantiate and verify the
+actual Recast node/nearest-constraint state, run ABPath.Prepare with real start/end
+XYZ and active mask, preserve its returned endpoints/node corridor, then apply
+the verified modifier sequence and nonplanar portal transformation. Current
+partial math/corner/Snap oracles must not be substituted for that chain. Offline
+investigation remains possible without credentials, but complete output parity
+has not yet been obtained. Formal movement, nonplanar restrictions, all three
+seeds, and house entry/exit behavior remain unchanged.
