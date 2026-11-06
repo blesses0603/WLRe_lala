@@ -4,6 +4,7 @@ import math
 import random
 import struct
 import unittest
+from tools.review_navigation_nearest import oracle as nearest_probe,validate_query,reference_triangle
 from tools.review_navigation_registration import inspect as registration_probe
 from tools.review_navigation_groups import oracle as group_probe,validate_graph
 from tools.review_navigation_vertices import oracle as vertex_probe,validate_inputs as validate_vertices,modeled_modf
@@ -18,7 +19,7 @@ class RotationOracleBoundaryTests(unittest.TestCase):
     def test_unknown_library_rejected_before_optional_imports(self):
         with tempfile.TemporaryDirectory() as tmp:
             path=Path(tmp)/'unknown.so';path.write_bytes(b'not official code')
-            for factory in (from_to_oracle,multiply_oracle,endpoint_probe,traversal_probe,area_probe,bbtree_probe,group_probe,vertex_probe,lambda path:registration_probe(path,path)):
+            for factory in (from_to_oracle,multiply_oracle,endpoint_probe,traversal_probe,area_probe,bbtree_probe,group_probe,vertex_probe,nearest_probe,lambda path:registration_probe(path,path)):
                 with self.assertRaisesRegex(ValueError,'digest'):factory(path)
             with path.open('wb') as output:output.truncate(96*1024*1024+1)
             with self.assertRaisesRegex(ValueError,'size limit'):from_to_oracle(path)
@@ -102,3 +103,18 @@ class ModfBitBoundaryTests(unittest.TestCase):
             integer=struct.unpack('<d',struct.pack('<Q',bits&mask))[0]
             fraction=math.copysign(abs(value-integer),value)
             self.assertEqual(struct.pack('<2d',*modeled_modf(value)),struct.pack('<2d',fraction,integer))
+
+
+class NativeNearestInputTests(unittest.TestCase):
+    def test_invalid_nearest_geometry_and_queries(self):
+        vertices=[[0,0,0],[1000,0,0],[0,0,1000]]
+        for faces,point in (([],[0,0,0]),([[0,0,1]],[0,0,0]),([[0,1,2]]*5,[0,0,0]),
+                            ([[0,1,2]],[float('nan'),0,0]),([[0,1,2]],[1001,0,0])):
+            with self.assertRaises(ValueError):validate_query(vertices,faces,point,(0,0,0))
+        validate_query(vertices,[[0,1,2]],(-.1,2,3),(0,0,0))
+
+    def test_independent_closest_point_reference(self):
+        tri=[[0,0,0],[10,0,0],[0,0,10]]
+        self.assertEqual(reference_triangle(tri,[2,3,2]),[2,0,2])
+        self.assertEqual(reference_triangle(tri,[20,3,20]),[5,0,5])
+        self.assertEqual(reference_triangle(tri,[-2,3,-2]),[0,0,0])

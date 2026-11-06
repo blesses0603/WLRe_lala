@@ -872,3 +872,56 @@ tile dimensions/ownership, nearest-point geometry and outer AstarPath constraint
 selection still need a single verified graph state and combined execution. The
 now-shared hierarchy state is a prerequisite, not that result. Offline work can
 continue without credentials; all three seeds and movement guards remain.
+
+## Native graph-level nearest-point integration (phase 37)
+
+`tools.review_navigation_nearest` now executes an end-to-end **graph-level**
+native query on bounded synthetic initialized state: NavmeshBase.GetNearest
+(`0x27a375c`) / GetNearestForce (`0x27a3844`) → GetTileCoordinates
+(`0x27a1618`) → GraphTransform.InverseTransform (`0x22d23f0`) → tile BBTree
+QueryClosest/SearchBoxClosest → TriangleMeshNode.ClosestPointOnNode
+(`0x2832dd8`) → native closest-point geometry (`0x2a98e20`). Native vertex
+reads, float32 math, distance comparisons, reference barriers and (for force
+queries) walkability constraints execute. Python does not supply the nearest
+node or point during emulation.
+
+```console
+python -m tools.review_navigation_nearest --libil2cpp /path/to/libil2cpp.so
+```
+
+The probe reuses pinned vertex/center preparation and the official BBTree
+builder. It materializes the returned leaf box and references in a synthetic
+single-tile RecastGraph/NavmeshBase state with initialized vtables and metadata
+slots. This is an explicit test fixture, not proof of complete runtime loading.
+Center preparation retains the separately identified modf model. At most four
+triangles are accepted; internal-tree traversal, multiple tiles and XZ-only
+nearest queries remain outside the execution allowlist.
+
+Translation-only inverse transform and the inverse-matrix branch both execute.
+The matrix cases contain an initialized inverse translation matrix, not an
+unverified general rotation or scale. Actual RecastGraph tile-size getters run,
+with the test fixture using 10-unit tiles. Native coordinate conversion truncates
+toward zero before graph search clamps tile selection; negative-coordinate cases
+explicitly check this rather than assuming mathematical floor.
+
+384 cases cover flat/sloping geometry, two/four vertically overlapping
+triangles, inside/edge/corner/outside queries, negative coordinates, translated
+origins, both transform branches, all-excluded and selectively walkable nodes.
+An independent double-precision plane projection plus clamped edge comparison
+checks nearest node and point (absolute coordinate tolerance 0.0002). Expected
+tile coordinates are checked separately. Both desktop and Android Python hosts
+produce identical native outputs. Both hosts pass 38 focused tests, including
+unknown-library rejection, degenerate geometry, input bounds and independent
+reference cases. The vertex oracle exposes private composition state only to
+these offline tools; no application behavior or source-data authority changed.
+
+This is the first bounded graph-level GetNearest integration result. It is
+**not** outer AstarPath.GetNearest, ABPath preparation, complete vectorPath,
+real-map coverage, or Android-device/live-server acceptance. The prior hierarchy
+probe validates area state separately; this graph query currently applies only
+walkability constraints, without merging hierarchy/Area into this graph state.
+Next work is internal BBTree branches, multiple-tile transforms/ownership,
+combined Area/tag constraints and outer AstarPath selection on verified graph
+fixtures, followed by actual official map inputs. No movement capability is
+unlocked by these tests. All three seeds and existing guards remain; complete
+application suites were not rerun (latest full results remain phase 26).

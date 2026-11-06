@@ -33,7 +33,7 @@ def modeled_modf(value):
     return fraction,integral
 
 
-def oracle(path,*,modeled_center=False):
+def oracle(path,*,modeled_center=False,_state=None):
     raw=checked_bytes(path,IL2CPP_SHA)
     from unicorn import Uc,UC_ARCH_ARM64,UC_MODE_ARM,UC_HOOK_CODE
     from unicorn.arm64_const import UC_ARM64_REG_CPACR_EL1,UC_ARM64_REG_D0,UC_ARM64_REG_X0,UC_ARM64_REG_X1,UC_ARM64_REG_SP,UC_ARM64_REG_LR,UC_ARM64_REG_PC
@@ -47,6 +47,7 @@ def oracle(path,*,modeled_center=False):
             (0x2a91878,0x2a91948),(0x20d129c,0x20d12a8),(0x20d1494,0x20d14a0))
     if modeled_center:
         ranges+=((0x28325e8,0x2832670),(0x2d85b24,0x2d85b40),(0x2d86434,0x2d86658),(0xb125f0,0xb12600))
+    ranges=list(ranges)
     pages={p for a,b in ranges for p in range(a&~4095,((b+4095)//4096)*4096,4096)}|{0x4c5a000,0x4989000,0x4935000,0x4c5b000,0x498c000,0x4c5c000,0x37f3000,0x4923000}
     for p in pages:vm.mem_map(p,4096)
     vm.mem_map(0x6000000,0x200000)
@@ -103,6 +104,8 @@ def oracle(path,*,modeled_center=False):
             if len(model_calls)!=3:raise ValueError('Unexpected modf call count')
             output.update(center=list(struct.unpack('<3i',vm.mem_read(0x600001c,12))),modf_model_inputs=list(model_calls))
         return output
+    if _state is not None:
+        _state.update(vm=vm,ranges=ranges,data=data,pages=pages,execute=execute)
     return run
 
 
