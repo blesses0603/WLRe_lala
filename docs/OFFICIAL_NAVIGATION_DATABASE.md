@@ -1638,3 +1638,84 @@ passed 53 focused navigation/safety tests. The Android parity audit still passes
 185 shared core files; the repository audit found no broken local links. These
 are host tests, not Windows-client, Android-device, live-server or full-suite
 acceptance. Changes remain local, with no push, merge, release or remote CI run.
+
+
+## Phase 49: verified player traffic-tag source
+
+Fetched only the indexed `Lua/Controller/PlayerController.lua` from
+`https://wlreftpsrc.chinesegamer.net/WLN/TW/1.3.23/LuaScripts/Lua/Controller/PlayerController.lua`.
+The bounded HTTPS request rejects redirects, requires HTTP 200 and the exact
+response URL, and checks the encrypted bytes against the existing pinned official
+index MD5 before metadata-based decoding and exact re-encryption verification.
+No client Lua was executed and no product decoder allowlist was expanded.
+The initial sandbox socket denial was resolved through the supported network
+permission mechanism; no proxy/TLS or destination-policy bypass was used.
+
+Encrypted SHA-256:
+`fae0333090b7ac4f8e21cbd7f7ffa3ffc550787556133f268dd72144efef3c05`.
+Decoded SHA-256:
+`0054442ed2d8a5196ea60c497155c8f5f45cd1ec303d01fd4ab6e36e3cccc542`.
+Decoded length: 72,754 bytes. These bytes remain in the private validation cache,
+not in either application repository.
+
+The new `tools/review_navigation_player_settings.py` validates the index,
+cipher identity, metadata and exact reviewed plaintext hashes. It checks the
+specific update branch and call sites without evaluating Lua. Source evidence:
+
+- `PlayerController.lua:88` creates the RoleController. The previously verified
+  MoveController initialization sets the initial land mask.
+- `UseTraffic` starts at line 1619. It creates TrafficController at line 1634,
+  then calls `UpdateTraversableTags` at line 1635, before the model-load callback.
+- `UnUseTraffic` starts at line 1671. It clears `self.traffic` at line 1680 and
+  calls `UpdateTraversableTags` at line 1682.
+- `GetTrafficKind` at line 1713 returns land when no traffic exists, otherwise
+  delegates to the current TrafficController.
+- `UpdateTraversableTags` at line 1735 selects sea/sky/land and assigns the
+  corresponding Seeker mask. The independently pinned Define.lua supplies
+  numeric values 4/15/9 respectively.
+
+This closes the earlier missing-source link between transport changes and
+Seeker tags. It does not establish that a particular live session invoked these
+branches or that no later code changes the mask. The new file has no literal
+OnAwakeSettings, heuristic, heuristicScale, maxNearestNodeDistance or
+fullGetNearestSearch references. It requires RoleController, TrafficController,
+ToolController and SmallPetController; the latter two are not in this reviewed
+cache. They are dependency leads, not proven callback registrants. No arbitrary
+missing Lua files were fetched merely to claim completeness.
+
+Reproduction:
+
+```sh
+PYTHONPATH=/tmp/loader-research:. python -m tools.review_navigation_player_settings \
+  --lua-root /workspace/validation/official-lua-1.3.23 \
+  --metadata /workspace/validation/official-client/global-metadata.dat
+```
+
+Both host environments produce byte-identical reports. Separate negative checks
+confirm that a one-byte change in the encrypted PlayerController source and a
+modified index are rejected. Both hosts pass the same 53 focused navigation and
+safety tests. This is static source verification and host testing, not Windows or
+Android device acceptance.
+
+### Far-query evidence remains bounded
+
+A private instruction trace of model 13221 resets its counter on entry to native
+AstarPath.GetNearest, excluding graph setup. Within the existing 200,000-step
+limit it records 1,039 calls to NavmeshBase.GetVertex and NavmeshTile.GetVertex,
+then stops at 0x28327c4 inside TriangleMeshNode.GetVertices. The method identities
+are resolved from the pinned metadata/native table. This shows substantial
+native geometry work on the far query, not a Lua callback wait or network need.
+It does not prove termination, native correctness or that raising the limit is
+safe. The instruction limit and product safety bounds remain unchanged.
+
+The earlier four verified far rejections remain valid; the other four cases
+remain unverified. No additional far-query pass, full-path setting equivalence,
+callback override, seed removal or newly enabled movement is claimed. Work stays
+local; no push, merge, release or remote CI run occurred.
+
+The complete cached-source audit was rerun after this download: 37 files now
+verify against the same 866-entry index, with zero literal OnAwakeSettings hits;
+829 indexed sources are still outside that audit. Far-query traces for models
+13223, 13225 and 13226 also exhaust the unchanged budget, stopping at 0x2d83840,
+0x2832698 and 0x2a98ed0 respectively. Their private traces are evidence of the
+limits reached, not successful rejection results.
