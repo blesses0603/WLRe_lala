@@ -1401,3 +1401,78 @@ need a device/client integration check. Server acceptance of movement and house
 entry/exit needs a controlled live-server check; neither has been performed here.
 The app-wide regression baseline is still phase 26, not this research-only change.
 No remote CI, push, merge or release is claimed. House scope remains entry/exit only.
+
+
+## Phase 46: verified scene settings and an explicit Awake override boundary
+
+`review_navigation_scene_settings.py` reads only existing cached scene bundles.
+It authenticates the cached MainPackage manifest, checks each scene's declared size,
+MD5 and CRC before UnityPy parsing, and records SHA-256 provenance. Each scene is
+bounded to 1 MiB and the aggregate to 20 MiB. No downloads or automatic external
+reference loads occur. MonoBehaviour script references are resolved only to
+MonoScript objects inside those same verified bytes, requiring the exact AstarPath
+class, empty namespace and AstarPathfindingProject.dll identity. The GameObject
+owner must also resolve locally. Missing/ambiguous profiles fail explicitly.
+
+All 17 reviewed ordinary scenes (1,696,639 compressed bytes total) contain exactly
+one locally resolved AstarPath with these serialized values:
+
+| Field | Scene value |
+| --- | --- |
+| heuristic | 2 |
+| heuristicScale | 1.0 |
+| maxNearestNodeDistance | 100.0 |
+| fullGetNearestSearch | false |
+| scanOnStartup | false |
+| data.cacheStartup | true |
+| component enabled / owner active | true / true |
+
+These are now scene-file observations, not just constructor defaults. They match
+the phase 45 constructor values for the shared fields but still differ from the
+existing zero-heuristic/full-nearest research profile. Owner active/enabled flags
+do not prove effective runtime activation through every parent/lifecycle condition.
+The manifest and bundles are specifically **ResourcesPC** assets. Identical results
+on desktop/Android Python hosts do not establish the installed Android client's
+scene package or runtime settings.
+
+`review_navigation_scene_initialization.py` provides reproducible pinned-source static
+evidence: the verified Stage.lua calls CGResource.LoadScene with the model-derived
+scene name and Stage.OnLoadStage callback. Its SHA-256 is
+784b5098241463159112b29fa81ca23dfa9a2cc24dd3fe20ec29f1a05df52605.
+The native AstarPath.Awake sequence reads OnAwakeSettings from static offset 0x20,
+skips it when null, and otherwise invokes the delegate at 0x1a78a50 before subsequent
+initialization calls. The pinned library and exact instructions are checked. This
+is disassembly evidence, not execution of Awake or proof of the delegate's actual
+target. No claim is made that all later native/Lua code leaves these fields intact.
+
+Both hosts produce byte-identical scene and initialization reports and pass 53
+focused tests, including missing/nonfinite/invalid profile fields and unknown
+source digests. This step does not rerun path calculation under the scene profile;
+phase 45's route results remain valid only under their stated research settings.
+No official scene content or extracted game data is added to the repository.
+
+### Remaining offline work and minimum runtime observation
+
+Offline work can still trace registrations of OnAwakeSettings, inspect additional
+platform/version manifests and serialized assets, and implement native path probes
+for the verified scene profile. The indirect callback alone is not evidence that
+it mutates settings or that runtime capture is the only possible next step.
+
+For a legitimate instrumented test client, the minimum useful runtime observation
+is one ordinary scene load with a record immediately after Awake and immediately
+before the first path request: client/package version and bundle identity; active
+AstarPath identity; the four search fields above; OnAwakeSettings target or null;
+Seeker traffic mask/tag penalties; actual modifier inventory/order and settings;
+and graph identity. Capture the input positions, raw node/vector path, modifier
+output and Lua-consumed point list without enabling unverified LaLa movement.
+Repeat on the target desktop and Android clients; record land/sea/sky only when
+those modes are actually available. No account password or unrelated account data
+is needed in the captured evidence. A supported diagnostic/test build or existing
+runtime logs are needed for these internal values; ordinary screenshots cannot
+prove them. This environment has no Unity runtime/device acceptance setup.
+
+That capture can validate lifecycle/managed/Lua binding behavior; server movement
+acceptance and house entry/exit remain separate controlled live checks. Neither
+kind of runtime test has been performed. Three navigation seeds and all unverified
+movement guards remain, with house scope restricted to entry/exit. Changes are
+local only; no remote CI, full application-suite rerun, push, merge or release.

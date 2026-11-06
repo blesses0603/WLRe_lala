@@ -1,3 +1,5 @@
+from tools.review_navigation_scene_settings import profile as scene_profile
+from tools.review_navigation_scene_initialization import inspect as initialization_probe
 from tools.review_navigation_constructor_defaults import run as defaults_probe
 from tools.review_navigation_modifier_registration import oracle as modifier_registration_probe,validate_order
 from tools.review_navigation_modifier_chain import oracle as chain_probe
@@ -43,10 +45,26 @@ class RotationOracleBoundaryTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_search([[0,0,0]]*n,[[] for _ in range(n)],[1]*n,[0]*n,0,0,9,[0]*32,[[0,0,0],[0,0,0]])
 
+    def test_scene_settings_require_explicit_serialized_values(self):
+        tree=dict(heuristic=2,heuristicScale=1.,maxNearestNodeDistance=100.,fullGetNearestSearch=0,scanOnStartup=0,m_Enabled=1,data=dict(cacheStartup=1))
+        output=scene_profile(tree)
+        self.assertEqual(output['heuristic'],2)
+        self.assertEqual(output['heuristicScale'],1.)
+        self.assertFalse(output['fullGetNearestSearch'])
+        self.assertTrue(output['cacheStartup'])
+
+    def test_scene_settings_reject_missing_or_invalid_data(self):
+        tree=dict(heuristic=2,heuristicScale=1.,maxNearestNodeDistance=100.,fullGetNearestSearch=0,scanOnStartup=0,m_Enabled=1,data=dict(cacheStartup=1))
+        for invalid in (None,{},dict(tree,data=None),dict(tree,heuristic=True),dict(tree,heuristic=4),dict(tree,heuristicScale=float('nan')),dict(tree,maxNearestNodeDistance=-1),dict(tree,fullGetNearestSearch=2),dict(tree,data={'cacheStartup':'true'})):
+            with self.assertRaises(ValueError):scene_profile(invalid)
+        for key in tree:
+            missing=dict(tree);del missing[key]
+            with self.assertRaises(ValueError):scene_profile(missing)
+
     def test_unknown_library_rejected_before_optional_imports(self):
         with tempfile.TemporaryDirectory() as tmp:
             path=Path(tmp)/'unknown.so';path.write_bytes(b'not official code')
-            for factory in (defaults_probe,modifier_registration_probe,chain_probe,lambda p:apply_probe(p,p),parts_probe,dispatch_probe,player_probe,modifier_order_probe,portal_probe,lambda p:pipeline_probe(p,p),prepare_probe,lambda p:unwrap_probe(p,p),lambda p:funnel_probe(p,p),search_probe,path_probe,from_to_oracle,multiply_oracle,endpoint_probe,traversal_probe,area_probe,bbtree_probe,group_probe,vertex_probe,nearest_probe,lambda path:registration_probe(path,path)):
+            for factory in (lambda p:initialization_probe(p,p),defaults_probe,modifier_registration_probe,chain_probe,lambda p:apply_probe(p,p),parts_probe,dispatch_probe,player_probe,modifier_order_probe,portal_probe,lambda p:pipeline_probe(p,p),prepare_probe,lambda p:unwrap_probe(p,p),lambda p:funnel_probe(p,p),search_probe,path_probe,from_to_oracle,multiply_oracle,endpoint_probe,traversal_probe,area_probe,bbtree_probe,group_probe,vertex_probe,nearest_probe,lambda path:registration_probe(path,path)):
                 with self.assertRaisesRegex(ValueError,'digest'):factory(path)
             with path.open('wb') as output:output.truncate(96*1024*1024+1)
             with self.assertRaisesRegex(ValueError,'size limit'):from_to_oracle(path)
