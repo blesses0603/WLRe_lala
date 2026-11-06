@@ -1274,3 +1274,59 @@ limited map/profile coverage still prevent final-player-path equivalence claims.
 No access or credential block occurred. The three seeds, movement guards and house
 entry/exit scope remain unchanged; no app-suite rerun, device/live-server acceptance,
 remote CI, push or merge is implied.
+
+
+## Phase 44: native registration/sort and FunnelModifier.Apply composition
+
+The research pipeline now runs Seeker.RegisterModifier, List.Sort,
+ArraySortHelper.Sort/IntrospectiveSort/IntroSort/SwapIfGreater, Comparison.Invoke
+and the native modifier Order comparator. Five bounded inventory cases cover empty,
+single and both registration orders of the StartEnd/Funnel pair. Both pair orders
+produce StartEnd then Funnel. Generic metadata, initialized statics and an existing
+cached comparison delegate are explicitly prepared; cold delegate construction,
+GC, arbitrary additional modifiers and the live inventory are not validated.
+
+Native Seeker.RunModifiers now drives guarded callbacks which execute native
+StartEnd.Apply in the retained search VM and native FunnelModifier.Apply in a
+separate prepared VM. StartEnd is replayed from Trace's original center point list
+and checked against the independently validated endpoint-modified output. The
+native dispatcher enforces the sorted sequence; the callbacks no longer merely
+record names. The bridge validates native caller, owner, path argument and order.
+
+FunnelModifier.Apply executes its native part splitting, portal construction,
+navmesh/Unity-object checks, list replacement and release sequence. Its call to
+Funnel.Calculate crosses a guarded ABI bridge to the already validated native
+funnel VM, including native Unity rotation. Object allocation, bounded pool storage,
+AddRange copying and releases are explicit models; no path geometry or smoothing
+formula is replaced with Python. Allocation/release ownership and the final vector
+list are checked. The profile is quality value 0, unwrap enabled, with split false
+and true separately; it excludes grid, off-mesh, cross-tile and high-quality
+simplification branches. A prepared non-null Unity handle does not prove a real
+Unity object's lifetime.
+
+The composed calculation continues through the verified official MoveController
+source callback on host Lua 5.4. Across both Python hosts, all 12 synthetic queries,
+18 official-map queries and five registration cases produce byte-identical output.
+Six synthetic queries complete and six stop at the native error boundary; masks
+include land/sea/sky/empty and folded geometry. On the two whole official maps,
+12 land/sky queries complete and six sea queries fail because the maps have no
+eligible sea nodes. Every successful query runs both split profiles. Native funnel
+and player callback point lists remain identical to phase 43. Both hosts pass
+50 focused tests, including ambiguous/duplicate modifier inventory rejection.
+
+This closes the register/sort/dispatch/Apply *composition* gap for the stated
+fixtures, not full-client equivalence. Runtime state and external dependencies
+remain prepared/modeled across VMs; the official Lua VM and managed binding,
+cold initialization, actual runtime settings/modifier changes, heuristic/profile
+coverage and broader ordinary-map coverage remain unverified. Only M13224 and
+M13216 are complete official-map inputs here; 15 other reviewed maps still exceed
+the 128-node research bound and are excluded without truncation. Native outputs
+are offline binary execution, not captured device/client/server outputs.
+
+No movement authority or seed removal follows from these results. All three
+navigation seeds and unverified-path guards remain, houses retain entry/exit only,
+and no product runtime changes, full app-suite rerun, remote CI, live-server/device
+acceptance, push, merge or release is claimed. No credential or permission block
+occurred. The next evidence needed is verified cold initialization/runtime profiles
+and expanded whole-map reference coverage, followed by comparison with the actual
+production consumer before any removal or enablement.

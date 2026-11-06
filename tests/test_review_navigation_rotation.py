@@ -1,3 +1,6 @@
+from tools.review_navigation_modifier_registration import oracle as modifier_registration_probe,validate_order
+from tools.review_navigation_modifier_chain import oracle as chain_probe
+from tools.review_navigation_funnel_apply import oracle as apply_probe
 from tools.review_navigation_parts import oracle as parts_probe
 from tools.review_navigation_dispatch import run as dispatch_probe
 from tools.review_navigation_player_points import oracle as player_probe
@@ -27,10 +30,15 @@ from tools.review_navigation_rotation import from_to_oracle,multiply_oracle,vali
 
 
 class RotationOracleBoundaryTests(unittest.TestCase):
+    def test_modifier_inventory_rejects_unknown_or_duplicate_entries(self):
+        for order in ([],[0],[1],[0,1],[1,0]):validate_order(order)
+        for order in (None,(0,1),[False],[2],[0,0],[0,1,0],['0']):
+            with self.assertRaises(ValueError):validate_order(order)
+
     def test_unknown_library_rejected_before_optional_imports(self):
         with tempfile.TemporaryDirectory() as tmp:
             path=Path(tmp)/'unknown.so';path.write_bytes(b'not official code')
-            for factory in (parts_probe,dispatch_probe,player_probe,modifier_order_probe,portal_probe,lambda p:pipeline_probe(p,p),prepare_probe,lambda p:unwrap_probe(p,p),lambda p:funnel_probe(p,p),search_probe,path_probe,from_to_oracle,multiply_oracle,endpoint_probe,traversal_probe,area_probe,bbtree_probe,group_probe,vertex_probe,nearest_probe,lambda path:registration_probe(path,path)):
+            for factory in (modifier_registration_probe,chain_probe,lambda p:apply_probe(p,p),parts_probe,dispatch_probe,player_probe,modifier_order_probe,portal_probe,lambda p:pipeline_probe(p,p),prepare_probe,lambda p:unwrap_probe(p,p),lambda p:funnel_probe(p,p),search_probe,path_probe,from_to_oracle,multiply_oracle,endpoint_probe,traversal_probe,area_probe,bbtree_probe,group_probe,vertex_probe,nearest_probe,lambda path:registration_probe(path,path)):
                 with self.assertRaisesRegex(ValueError,'digest'):factory(path)
             with path.open('wb') as output:output.truncate(96*1024*1024+1)
             with self.assertRaisesRegex(ValueError,'size limit'):from_to_oracle(path)

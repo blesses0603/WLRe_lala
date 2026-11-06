@@ -11,7 +11,7 @@ from tools.review_navigation_portals import oracle as portal_oracle
 from tools.review_navigation_rotation import IL2CPP_SHA
 
 
-def oracle(path):
+def oracle(path,*,_state=None):
     state={};portal=portal_oracle(path,_state=state);u=state['vm'];data=state['data']
     from unicorn import UC_HOOK_CODE
     from unicorn.arm64_const import UC_ARM64_REG_X0,UC_ARM64_REG_LR,UC_ARM64_REG_PC
@@ -46,7 +46,7 @@ def oracle(path):
         u.mem_write(ptr,bytes(0x2000));q(ptr+0x10,ptr+0x1000);w(ptr+0x1018,128 if address==0x1cc2c10 else 256)
         u.reg_write(UC_ARM64_REG_X0,ptr);u.reg_write(UC_ARM64_REG_PC,caller)
     u.hook_add(UC_HOOK_CODE,model)
-    def run(vertices,faces,connections,route,vector_path):
+    def run(vertices,faces,connections,route,vector_path,*,_prepare_only=False):
         if not 1<=len(vector_path)<=256 or any(len(p)!=3 or any(type(v) not in (int,float) or not math.isfinite(v) or abs(v)>1000 for v in p) for p in vector_path):raise ValueError('Invalid bounded vector path')
         expected=portal(vertices,faces,connections,route)
         allocated.clear();calls.clear()
@@ -57,6 +57,7 @@ def oracle(path):
             q(ptr+0x10,ptr+0x1000);w(ptr+0x18,count);w(ptr+0x1018,count)
         for i,n in enumerate(route):q(0x6002020+i*8,0x6080000+n*0x100)
         for i,p in enumerate(vector_path):u.mem_write(0x6004020+i*12,struct.pack('<3f',*p))
+        if _prepare_only:return expected
         result=struct.unpack('<Q',state['execute'](0x23565cc,(0x6000000,0),instruction_limit=500000)[:8])[0]
         if result!=0x60d0000 or read(result+0x18)!=1:raise ValueError('Unexpected native part count')
         part=bytes(u.mem_read(0x60d1020,36));a,b,*values=struct.unpack('<2i6fI',part)
@@ -73,6 +74,7 @@ def oracle(path):
             if points!=[f32(vector_path[0]),*expected[side],f32(vector_path[-1])]:raise ValueError('Native constructed portals differ')
             output.append(points)
         return dict(parts=[dict(start_index=a,end_index=b,start=values[:3],end=values[3:6],is_link=False)],left=output[0],right=output[1],pool_calls=list(calls),can_send_packets=False)
+    if _state is not None:_state.update(state,pool_allocated=allocated,pool_calls=calls)
     return run
 
 

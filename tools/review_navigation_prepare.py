@@ -23,7 +23,7 @@ def validate_inputs(vertices,faces,connections,flags,penalties,start_point,end_p
     validate_search([[i,0,0] for i in range(n)],connections,flags,penalties,0,0,tag_mask,[0]*32,[[0,0,0],[0,0,0]])
 
 
-def oracle(path):
+def oracle(path,*,_state=None):
     state={};nearest=nearest_oracle(path,_state=state,_search_state=True)
     search=search_oracle(path,_existing_state=state,_state=state);groups=groups_oracle(path,multiple=True)
     u=state['vm'];data=state['data']
@@ -88,6 +88,7 @@ def oracle(path):
             fixture.update(start=output['prepared']['nodes'][0],end=output['prepared']['nodes'][1],points=output['prepared']['int_points'])
             compare_search(fixture,output)
         return output
+    if _state is not None:_state.update(state)
     return run
 
 

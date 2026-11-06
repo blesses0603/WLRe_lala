@@ -1,23 +1,26 @@
 """Diagnostic native path pipeline for reviewed single-tile triangle maps.
 
 Prepare/search, native edge portals and native nonplanar funnel are composed via
-explicit data boundaries. Modifier registration/actor consumption
-are not executed; outputs are candidate profiles, never movement authority.
+explicit data boundaries. Native register/sort/dispatch and Apply are composed across guarded VMs.
+Player source processing is optional; no live-player equivalence is claimed.
 """
 import argparse
 import hashlib
 import io
 import json
+import struct
 from pathlib import Path
 import zipfile
 from tools.review_navigation_prepare import oracle as prepare_oracle
 from tools.review_navigation_parts import oracle as parts_oracle
-from tools.review_navigation_funnel_wrapper import oracle as funnel_oracle
+from tools.review_navigation_funnel_apply import oracle as apply_oracle
+from tools.review_navigation_modifier_chain import oracle as chain_oracle
 from tools.review_navigation_rotation import IL2CPP_SHA,UNITY_SHA
 
 
 def oracle(il2cpp,unity,*,move_source=None):
-    prepare=prepare_oracle(il2cpp);parts=parts_oracle(il2cpp);funnel=funnel_oracle(il2cpp,unity)
+    search_state={};prepare=prepare_oracle(il2cpp,_state=search_state);parts=parts_oracle(il2cpp)
+    apply=apply_oracle(il2cpp,unity);chain=chain_oracle(il2cpp)
     if move_source is not None:
         from tools.review_navigation_player_points import oracle as player_oracle
         player=player_oracle(move_source)
@@ -29,11 +32,23 @@ def oracle(il2cpp,unity,*,move_source=None):
         left=corridor['left'];right=corridor['right']
         candidates=[]
         for split in (False,True):
-            output=funnel(left,right,split=split)
+            def start_end(previous):
+                u=search_state['vm'];vectors=result['vector_path']
+                u.mem_write(0x600a018,struct.pack('<I',len(vectors)))
+                u.mem_write(0x600d020,b''.join(struct.pack('<3f',*p) for p in vectors))
+                search_state['execute'](0x24d26f0,(0x600f100,0x6008000,0),instruction_limit=500000)
+                count=struct.unpack('<I',u.mem_read(0x600a018,4))[0]
+                if not 2<=count<=256:raise ValueError('Invalid replayed StartEnd count')
+                modified=[list(struct.unpack('<3f',u.mem_read(0x600d020+i*12,12))) for i in range(count)]
+                if modified!=result['endpoint_modified_path']:raise ValueError('Dispatched StartEnd differs')
+                return modified
+            def apply_funnel(modified):return apply(vertices,faces,connections,result['path_nodes'],modified,split=split)
+            dispatched=chain(start_end,apply_funnel)
+            output=dispatched['funnel_apply']['funnel']
             if player is not None:output['player_callback']=player(output['vector_path'])
-            candidates.append(dict(profile=dict(start_end_modes=[3,3],unwrap=True,split_at_every_portal=split),funnel=output))
+            candidates.append(dict(profile=dict(start_end_modes=[3,3],unwrap=True,split_at_every_portal=split),funnel=output,modifier_chain=dispatched))
         return dict(search=result,portals=corridor,candidates=candidates,can_send_packets=False,
-                    scope='Native calculations composed across bounded VMs; native single-navmesh part boundary and two explicit modifier profiles, not actual Seeker dispatch or player final path')
+                    scope='Native calculations composed across bounded VMs; native single-navmesh part boundary and two explicit modifier profiles, cached-delegate registration and dispatch with native VM bridges, not full player runtime')
     return run
 
 
