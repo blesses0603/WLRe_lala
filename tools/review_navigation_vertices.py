@@ -33,7 +33,7 @@ def modeled_modf(value):
     return fraction,integral
 
 
-def oracle(path,*,modeled_center=False,_state=None):
+def oracle(path,*,modeled_center=False,_state=None,_path_magnitude=False):
     raw=checked_bytes(path,IL2CPP_SHA)
     from unicorn import Uc,UC_ARCH_ARM64,UC_MODE_ARM,UC_HOOK_CODE
     from unicorn.arm64_const import UC_ARM64_REG_CPACR_EL1,UC_ARM64_REG_D0,UC_ARM64_REG_X0,UC_ARM64_REG_X1,UC_ARM64_REG_SP,UC_ARM64_REG_LR,UC_ARM64_REG_PC
@@ -70,7 +70,7 @@ def oracle(path,*,modeled_center=False,_state=None):
         q(0x4923260,0x601e000)
     def guard(machine,address,size,user):
         if modeled_center and address==0x601e000:
-            if vm.reg_read(UC_ARM64_REG_LR) not in (0x2d864b0,0x2d86530,0x2d865c8):
+            if vm.reg_read(UC_ARM64_REG_LR) not in ((0x2d864b0,0x2d86530,0x2d865c8)+( (0x2d86af4,) if _path_magnitude else () )):
                 raise ValueError('Unreviewed modf caller')
             destination=vm.reg_read(UC_ARM64_REG_X0)
             if not 0x61fe000<=destination<=0x61ffff8:raise ValueError('Invalid modf output pointer')

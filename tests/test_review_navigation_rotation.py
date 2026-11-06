@@ -4,6 +4,7 @@ import math
 import random
 import struct
 import unittest
+from tools.review_navigation_search import oracle as search_probe,validate_graph as validate_search,compare as compare_search
 from tools.review_navigation_path_state import oracle as path_probe,validate_fixture
 from tools.review_navigation_nearest import oracle as nearest_probe,validate_query,reference_triangle
 from tools.review_navigation_registration import inspect as registration_probe
@@ -20,7 +21,7 @@ class RotationOracleBoundaryTests(unittest.TestCase):
     def test_unknown_library_rejected_before_optional_imports(self):
         with tempfile.TemporaryDirectory() as tmp:
             path=Path(tmp)/'unknown.so';path.write_bytes(b'not official code')
-            for factory in (path_probe,from_to_oracle,multiply_oracle,endpoint_probe,traversal_probe,area_probe,bbtree_probe,group_probe,vertex_probe,nearest_probe,lambda path:registration_probe(path,path)):
+            for factory in (search_probe,path_probe,from_to_oracle,multiply_oracle,endpoint_probe,traversal_probe,area_probe,bbtree_probe,group_probe,vertex_probe,nearest_probe,lambda path:registration_probe(path,path)):
                 with self.assertRaisesRegex(ValueError,'digest'):factory(path)
             with path.open('wb') as output:output.truncate(96*1024*1024+1)
             with self.assertRaisesRegex(ValueError,'size limit'):from_to_oracle(path)
@@ -148,3 +149,35 @@ class PathStateInputTests(unittest.TestCase):
             ([[0,0]],[None],[[float('nan'),0,0]],0),
             ([[0,0]],[None],[[0,0,0]],True)):
             with self.assertRaises(ValueError):validate_fixture(costs,parents,positions,end)
+
+
+class NativeSearchBoundaryTests(unittest.TestCase):
+    def fixture(self):
+        return dict(positions=[[0,0,0],[100,0,0]],connections=[[[1,10]],[]],
+                    flags=[1,1],penalties=[0,0],start=0,end=1,tag_mask=9,
+                    tag_penalties=[0]*32,points=[[0,0,0],[100,0,0]])
+
+    def test_invalid_graph_state_and_native_overflow_rejected(self):
+        good=self.fixture();validate_search(**good)
+        for change in (dict(start=True),dict(end=2),dict(flags=[1,1<<24]),
+                       dict(connections=[[[1,10],[1,10]],[]]),
+                       dict(connections=[[[0,10]],[]]),dict(connections=[[[1,-1]],[]]),
+                       dict(positions=[[0,0,0],[0,0,0]]),dict(penalties=[0,100001]),
+                       dict(tag_mask=-1),dict(tag_penalties=[0]*31),
+                       dict(points=[[float('nan'),0,0],[100,0,0]]),
+                       dict(positions=[[0,0,0],[1,0,0]],connections=[[[1,100000]],[]],
+                            points=[[1000000,0,0],[-1000000,0,0]])):
+            with self.assertRaises(ValueError):validate_search(**dict(good,**change))
+
+    def test_independent_cost_check_rejects_wrong_routes_and_false_success(self):
+        fixture=self.fixture()
+        good=dict(status='complete_prepared_search',total_cost=10,path_nodes=[0,1],
+                  vector_path=[[0.,0.,0.],[struct.unpack('<f',struct.pack('<f',100*struct.unpack('<f',struct.pack('<f',.001))[0]))[0],0.,0.]])
+        compare_search(fixture,good)
+        for bad in (dict(good,total_cost=11),dict(good,path_nodes=[0,0,1]),
+                    dict(good,vector_path=[[0,0,0],[0,0,0]]),
+                    dict(status='native_no_route_error_boundary')):
+            with self.assertRaises(ValueError):compare_search(fixture,bad)
+        fixture['flags'][1]=0
+        compare_search(fixture,dict(status='native_no_route_error_boundary'))
+        with self.assertRaises(ValueError):compare_search(fixture,good)

@@ -26,8 +26,8 @@ def validate_fixture(costs,parents,positions,end):
             seen.add(i);i=parents[i]
 
 
-def oracle(path):
-    state={};vertex_oracle(path,_state=state);u=state['vm'];data=state['data']
+def oracle(path,*,_state=None,_path_magnitude=False):
+    state={};vertex_oracle(path,_state=state,modeled_center=_path_magnitude,_path_magnitude=_path_magnitude);u=state['vm'];data=state['data']
     from unicorn.arm64_const import UC_ARM64_REG_CPACR_EL1
     ranges=((0x2d7f92c,0x2d7f9e0),(0x2d7fa34,0x2d7fb88),(0x2d7fba0,0x2d7fe7c),
             (0x2e9a75c,0x2e9a768),(0x2e9a940,0x2e9a978),(0x2d83814,0x2d83820),
@@ -37,7 +37,7 @@ def oracle(path):
     pages={p for a,b in ranges for p in range(a&~4095,((b+4095)//4096)*4096,4096)}|{0x4c5c000,0x49b4000,0x4966000,0x49ab000,0x49b9000,0x49a0000,0x4977000,0x495a000,0x49b5000,0x4990000,0x497c000,0x379a000,0x4c68000}
     for page in pages-state['pages']:u.mem_map(page,4096)
     for a,b in ranges:u.mem_write(a,data(a,b-a))
-    state['ranges'].extend(ranges);u.reg_write(UC_ARM64_REG_CPACR_EL1,3<<20)
+    state['pages'].update(pages);state['ranges'].extend(ranges);u.reg_write(UC_ARM64_REG_CPACR_EL1,3<<20)
     def q(a,v):u.mem_write(a,struct.pack('<Q',v))
     def w(a,v):u.mem_write(a,struct.pack('<I',v))
     for slot in (0x49b45e0,0x4966158,0x49ab548,0x49b9660,0x49a09e0,0x4977440,0x495a128,0x49b5318,0x4990b70,0x497c4f8):q(slot,0x6010000)
@@ -89,6 +89,7 @@ def oracle(path):
         expected_vectors=[[f32(f32(x)*f32(.001)) for x in positions[i]] for i in expected]
         if nodes!=expected or vector_path!=expected_vectors:raise ValueError('Native trace mismatch')
         return dict(heap_order=order,heap_priority_pairs=[[sum(final[i]),final[i][0]] for i in order],path_nodes=nodes,vector_path=vector_path)
+    if _state is not None:_state.update(state)
     return run
 
 
