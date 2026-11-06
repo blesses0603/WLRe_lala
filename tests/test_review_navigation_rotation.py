@@ -108,7 +108,7 @@ class ModfBitBoundaryTests(unittest.TestCase):
 class NativeNearestInputTests(unittest.TestCase):
     def test_invalid_nearest_geometry_and_queries(self):
         vertices=[[0,0,0],[1000,0,0],[0,0,1000]]
-        for faces,point in (([],[0,0,0]),([[0,0,1]],[0,0,0]),([[0,1,2]]*5,[0,0,0]),
+        for faces,point in (([],[0,0,0]),([[0,0,1]],[0,0,0]),([[0,1,2]]*513,[0,0,0]),
                             ([[0,1,2]],[float('nan'),0,0]),([[0,1,2]],[1001,0,0])):
             with self.assertRaises(ValueError):validate_query(vertices,faces,point,(0,0,0))
         validate_query(vertices,[[0,1,2]],(-.1,2,3),(0,0,0))
@@ -118,3 +118,13 @@ class NativeNearestInputTests(unittest.TestCase):
         self.assertEqual(reference_triangle(tri,[2,3,2]),[2,0,2])
         self.assertEqual(reference_triangle(tri,[20,3,20]),[5,0,5])
         self.assertEqual(reference_triangle(tri,[-2,3,-2]),[0,0,0])
+
+
+class OuterNearestComparisonTests(unittest.TestCase):
+    def test_reference_rejects_excluded_and_non_nearest_nodes(self):
+        from tools.review_navigation_outer import compare
+        vertices=[[0,0,0],[10000,0,0],[0,0,10000]];faces=[[0,1,2]]
+        compare(vertices,faces,[2,3,2],dict(node=0,point=[2,0,2]),[True])
+        compare(vertices,faces,[2,3,2],dict(node=None,point=None),[False])
+        with self.assertRaises(ValueError):compare(vertices,faces,[2,3,2],dict(node=0,point=[2,0,2]),[False])
+        with self.assertRaises(ValueError):compare(vertices,faces,[2,3,2],dict(node=0,point=[5,0,5]),[True])

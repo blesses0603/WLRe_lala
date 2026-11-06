@@ -925,3 +925,67 @@ combined Area/tag constraints and outer AstarPath selection on verified graph
 fixtures, followed by actual official map inputs. No movement capability is
 unlocked by these tests. All three seeds and existing guards remain; complete
 application suites were not rerun (latest full results remain phase 26).
+
+## Outer GetNearest, multiple tiles and official whole-mesh inputs (phase 38)
+
+The nearest probe now executes outer AstarPath.GetNearest (`0x1a7a794` /
+`0x1a7a7c4`), its graph-array access, SuitableGraph, graph search/fallback,
+final suitability/distance checks and NNInfo construction. Both full-search and
+normal-search modes run; the latter can reject the first graph result and invoke
+GetNearestForce with constraints. Graph masks and distance limits execute in the
+native code. The test AstarPath/Data graph array contains one graph, so selecting
+among multiple different graphs and prioritized-graph behavior remain untested.
+
+The probe now supports bounded 2×2 tiles, up to 512 triangles, and native BBTree
+internal traversal (including child-distance ordering). Each tile receives its
+own native-built boxes and node lookup references; native node vertex indices
+encode tile ownership. The graph settings supply cell size and tile cell counts,
+and source world vertices remain intact. Query execution has a bounded 200,000
+instruction ceiling; this is an offline research limit, not a changed application
+download or movement limit. Larger meshes reject rather than truncate.
+
+```console
+python -m tools.review_navigation_outer --libil2cpp /path/to/libil2cpp.so
+python -m tools.review_navigation_outer --libil2cpp /path/to/libil2cpp.so --cache-dir /path/to/reviewed/navigation-caches
+```
+
+144 synthetic cases check one/four tiles, tile boundaries, negative coordinates,
+full/normal search, graph exclusion and distance limits. The prior 384 graph-level
+cases were rerun on desktop after the memory-layout changes. All compare against
+independent geometry. Boundary ties may select another eligible triangle only
+when its independently computed closest point still matches (coordinate tolerance
+0.0002) and its squared distance remains minimal within 0.001; arbitrary node
+mismatches are not accepted.
+
+The official-data command reads complete cached official A* files, first enforcing
+the model-specific SHA-256 and 8 MiB cap, then the existing strict format review.
+It uses the complete vertices/triangles, actual node flags, origin, cell size and
+tile sizes. It does not download files, mutate the database, or substitute seed
+geometry. Thirteen complete reviewed maps (3,042 triangles) are within the probe
+bound; three query positions per map, two search modes and land/sky tag masks
+produce 156 native outer-query cases. Both hosts produce identical outputs, and
+all cases match independent geometry. This is official input data executed in a
+prepared emulator runtime, not execution by the installed official client.
+
+Four reviewed maps are explicitly excluded from this probe run, without dropping
+triangles: M12050 (844 nodes), M11139 (605), M12600 (513), and M58001 (4,071).
+Player houses are excluded by scope. All reviewed official cache formats are
+single-tile, so current multiple-tile coverage is synthetic only. Area constraints
+were verified in the prior hierarchy probe but are not yet merged into these
+outer-query fixtures. Sea tag masks, graph prioritization and multi-graph selection
+are not claimed by this run.
+
+Both hosts pass 39 focused tests, and shared-core parity remains 185 sources.
+No application runtime code changed; full application-suite results remain the
+previous phase-26 record. These are desktop/Android Python-host tests, not APK,
+device, official-server or remote CI acceptance. The explicit modf model remains.
+
+Full-path investigation identifies the next required native state:
+ABPath.Prepare (`0x234d214`), Initialize (`0x234d6f4`) and CalculateStep
+(`0x234da68`) use PathHandler.GetPathNode (`0x2e9a940`), PathNode costs and
+parents, BinaryHeap.Add (`0x2d7f92c`)/Remove (`0x2d7fba0`), and virtual node
+expansion before tracing. Those structures and transitions have not been executed
+together, and no complete vectorPath or postprocessed path is claimed. The next
+step is a bounded native PathHandler/heap fixture, combining the verified nearest
+and hierarchy stages before tracing and modifiers. All three seeds and all
+unverified-movement guards remain, with no changes pushed.

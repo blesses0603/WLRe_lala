@@ -83,10 +83,10 @@ def oracle(path,*,modeled_center=False,_state=None):
             return
         if not any(a<=address<b for a,b in ranges):raise ValueError('Unverified runtime branch '+hex(address))
     vm.hook_add(UC_HOOK_CODE,guard)
-    def execute(address,args):
+    def execute(address,args,*,instruction_limit=10000):
         for i,value in enumerate(args):vm.reg_write(UC_ARM64_REG_X0+i,value & ((1<<64)-1))
         vm.reg_write(UC_ARM64_REG_SP,0x61ff000);vm.reg_write(UC_ARM64_REG_LR,0x601f000)
-        vm.emu_start(address,0x601f000,count=10000)
+        vm.emu_start(address,0x601f000,count=instruction_limit)
         if vm.reg_read(UC_ARM64_REG_PC)!=0x601f000:raise ValueError('Instruction budget')
         return struct.pack('<2Q',vm.reg_read(UC_ARM64_REG_X0),vm.reg_read(UC_ARM64_REG_X1))
     def run(vertices,indices):
