@@ -4,6 +4,7 @@ import math
 import random
 import struct
 import unittest
+from tools.review_navigation_path_state import oracle as path_probe,validate_fixture
 from tools.review_navigation_nearest import oracle as nearest_probe,validate_query,reference_triangle
 from tools.review_navigation_registration import inspect as registration_probe
 from tools.review_navigation_groups import oracle as group_probe,validate_graph
@@ -19,7 +20,7 @@ class RotationOracleBoundaryTests(unittest.TestCase):
     def test_unknown_library_rejected_before_optional_imports(self):
         with tempfile.TemporaryDirectory() as tmp:
             path=Path(tmp)/'unknown.so';path.write_bytes(b'not official code')
-            for factory in (from_to_oracle,multiply_oracle,endpoint_probe,traversal_probe,area_probe,bbtree_probe,group_probe,vertex_probe,nearest_probe,lambda path:registration_probe(path,path)):
+            for factory in (path_probe,from_to_oracle,multiply_oracle,endpoint_probe,traversal_probe,area_probe,bbtree_probe,group_probe,vertex_probe,nearest_probe,lambda path:registration_probe(path,path)):
                 with self.assertRaisesRegex(ValueError,'digest'):factory(path)
             with path.open('wb') as output:output.truncate(96*1024*1024+1)
             with self.assertRaisesRegex(ValueError,'size limit'):from_to_oracle(path)
@@ -128,3 +129,22 @@ class OuterNearestComparisonTests(unittest.TestCase):
         compare(vertices,faces,[2,3,2],dict(node=None,point=None),[False])
         with self.assertRaises(ValueError):compare(vertices,faces,[2,3,2],dict(node=0,point=[2,0,2]),[False])
         with self.assertRaises(ValueError):compare(vertices,faces,[2,3,2],dict(node=0,point=[5,0,5]),[True])
+
+
+class PathStateInputTests(unittest.TestCase):
+    def test_cycles_and_invalid_references_rejected(self):
+        for parents in ([0], [1,0], [None,2], [None,True], [None,-1]):
+            with self.assertRaises(ValueError):
+                validate_fixture([[0,0]]*len(parents),parents,[[0,0,0]]*len(parents),0)
+        validate_fixture([[0,0]]*3,[None,0,1],[[0,-100,100]]*3,2)
+
+    def test_cost_position_and_size_bounds(self):
+        for costs,parents,positions,end in (
+            ([],[],[],0), ([[0,0]]*257,[None]*257,[[0,0,0]]*257,0),
+            ([[True,0]],[None],[[0,0,0]],0),
+            ([[100000001,0]],[None],[[0,0,0]],0),
+            ([[0,-1]],[None],[[0,0,0]],0),
+            ([[0,0]],[None],[[10000001,0,0]],0),
+            ([[0,0]],[None],[[float('nan'),0,0]],0),
+            ([[0,0]],[None],[[0,0,0]],True)):
+            with self.assertRaises(ValueError):validate_fixture(costs,parents,positions,end)

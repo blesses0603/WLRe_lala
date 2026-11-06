@@ -989,3 +989,46 @@ together, and no complete vectorPath or postprocessed path is claimed. The next
 step is a bounded native PathHandler/heap fixture, combining the verified nearest
 and hierarchy stages before tracing and modifiers. All three seeds and all
 unverified-movement guards remain, with no changes pushed.
+
+
+## Phase 39 — native path state, queue and supplied-parent tracing
+
+`tools/review_navigation_path_state.py` pins the same official library digest
+before optional emulator imports. It executes PathHandler.GetPathNode,
+BinaryHeap.Add/DecreaseKey/Remove and Path.Trace in prepared, bounded memory.
+Fourteen reproducible synthetic cases cover 1–256 nodes, decrease-key, equal
+priorities, branching parent chains and positive/negative heights. All parent
+chains and G/H costs are supplied inputs; ABPath does not generate these paths.
+The two Python hosts produce identical results. These are emulated ARM64 official
+instructions, not Android device runs or execution in the official game client.
+
+Each removal is checked for a valid unique node reference, cleared heap index,
+and nondecreasing primary F cost. Trace is checked against an independent parent
+walk, node order and exact float32 Int3-to-vector conversion. Cyclic parents,
+invalid indices, noninteger/negative costs, oversized fixtures and invalid
+positions are rejected before fixture memory is written. The probe preallocates
+lists and models inactive GC; it neither downloads data nor changes the app.
+
+An important native tie case is now preserved: for G/H pairs `(0,100)`,
+`(1,99)`, `(2,98)`, insertion followed by removal yields node order `[2,0,1]`.
+DecreaseKey insertion favors higher G at equal F, while Remove's child selection
+favors lower G. A conventional global `(F,G)` or `(F,-G)` sort is therefore not
+an equivalent queue oracle. The tool records complete native ordering, verifies
+primary priority, and separately asserts this minimal tie fixture.
+
+Further inspection identifies TriangleMeshNode.Open (`0x2833724`) reverse
+connection traversal, Path.CanTraverse (`0x2d95938`), node penalty plus tag
+penalty in GetTraversalCost (`0x2d95a34`), and UpdateRecursiveG (`0x2833638`).
+Open uses endpoint-flag-dependent virtual GetConnectionSpecialCost and updates
+previously reached nodes recursively when a cheaper parent is found. These
+transitions have not yet been executed together with ABPath.Initialize and
+CalculateStep. The next required work is to materialize their path IDs, virtual
+dispatch, tag penalties, heuristic configuration and endpoint state, then compare
+search-generated parents before invoking Trace and the player's modifiers.
+
+Both hosts pass 41 focused tests. The high/low positions here verify conversion
+and trace ordering only, not nonplanar route validity. Land/sea/sky traversal
+filters remain independently tested by earlier probes; they are not part of a
+complete mode-specific path comparison. No full vectorPath, postprocessing,
+application-wide rerun, remote CI or device acceptance is claimed. All three
+navigation seeds and movement guards remain, and no changes are pushed.
