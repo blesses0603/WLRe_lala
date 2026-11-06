@@ -136,6 +136,13 @@ class Images(unittest.TestCase):
    self.assertIsNone(current_catalog())
 
 
-from alchemy_runtime_fixtures import install as setUpModule
+from alchemy_runtime_fixtures import install as _previous_setUpModule
+
+
+
+def setUpModule():
+    from combat_runtime_fixtures import install
+    install()
+    _previous_setUpModule()
 
 if __name__=='__main__':unittest.main(verbosity=2)

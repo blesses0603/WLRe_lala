@@ -37,7 +37,7 @@ def make_command(python, root=ROOT, arch=None, jobs=None):
         '--macos-app-icon=' + str(root / 'wlre/resources/assets/app.ico'),
         '--macos-target-arch=' + ('x86_64' if arch == 'x64' else 'arm64'),
         '--enable-plugin=tk-inter', '--include-package=wlre',
-        '--include-package=UnityPy', '--include-package-data=UnityPy',
+        '--include-package=UnityPy','--include-package=Crypto','--include-package-data=Crypto', '--include-package-data=UnityPy',
         '--output-folder-name=WLRe_LaLa', '--output-filename=WLRe_LaLa', '--output-dir=' + str(output),
         '--report=' + str(output / 'compilation-report.xml'),
         '--assume-yes-for-downloads',

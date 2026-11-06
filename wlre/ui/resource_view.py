@@ -94,10 +94,12 @@ class ResourceView:
         return actors
 
     def set_state(self,state):
-        signature=(self.app.live_active,str(state.get('inventory')),str(state.get('knowledge')),str(state.get('battle_units')),state.get('battle',{}).get('active'),self.query.get(),state.get('room_storage',{}).get('revision'))
+        from wlre.services.items.live_combat_catalog import source_token
+        signature=(source_token(),self.app.live_active,str(state.get('inventory')),str(state.get('knowledge')),str(state.get('battle_units')),state.get('battle',{}).get('active'),self.query.get(),state.get('room_storage',{}).get('revision'))
         if signature==self.signature:return
         self.signature=signature;query=self.query.get().casefold();inv=state.get('inventory',{});k=state.get('knowledge',{})
         self.status.set(f"包包：{'已同步' if inv.get('ready') else '等待S23-5'}｜{'數量有效' if inv.get('reliable') else '尚不可自動取用'}｜{len(inv.get('items',{}))}格；角色技能：{'已同步' if k.get('player',{}).get('ready') else '等待S5-3'}；夥伴資料：{len(k.get('companions',{}))}隻。更新顯示不會發送未驗證的查包封包。")
+        self.status.set(self.status.get()+(' 官方戰鬥資料已同步。' if source_token() is not None else ' 官方戰鬥資料尚未同步，技能與物品規則暫不可用。'))
         selected_bag=self.bag.selection();selected_skill=self.skills.selection()
         self.skills.delete(*self.skills.get_children());self.skill_map={}
         self.bag_map=self.bag.render(inv,query)

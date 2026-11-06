@@ -216,7 +216,7 @@ def prepare_dynamic_runtime(*, sync=False, sync_root=None, observe=None,
         # Optional metadata cannot prevent the core runtime from loading.
         left_bytes = max_download_bytes - plan.download_bytes
         left_files = max_downloads - plan.download_count
-        for table in BATTLE_TALK_TABLES + INSTANCE_TABLES + _PORTAL_TABLES + _OPTIONAL_ROUTE_TABLES + DAILY_TABLES + GUILD_TABLES + ARK_TABLES + EMOJI_TABLES:
+        for table in ('SkillData_C',) + BATTLE_TALK_TABLES + INSTANCE_TABLES + _PORTAL_TABLES + _OPTIONAL_ROUTE_TABLES + DAILY_TABLES + GUILD_TABLES + ARK_TABLES + EMOJI_TABLES:
             try:
                 optional = build_update_plan(manifests['DataPackage'],
                     asset_paths=(_ASSET_ROOT + table + '.bytes',), cache_root=root / 'bundles')
@@ -256,8 +256,19 @@ def prepare_dynamic_runtime(*, sync=False, sync_root=None, observe=None,
                     max_download_bytes=MAX_DOWNLOAD_BYTES,max_downloads=MAX_DOWNLOADS)
         except (OSError,ValueError,RuntimeError):
             pass  # Optional images: the loader reports precise unavailable status.
+    combat_source_error = None
+    if sync:
+        try:
+            from wlre.services.world.official_combat_sources import load_inputs
+            load_inputs(root,identity.data_ver,download=True)
+        except (OSError,ValueError,RuntimeError,ImportError) as error:
+            combat_source_error = str(error)[:200]
     runtime = load_verified_bundle_runtime(sync_root=root,
                         _verified_context=(before, manifests, identity))
+    if combat_source_error is not None and hasattr(runtime,'combat_catalog'):
+        from dataclasses import replace
+        runtime=replace(runtime,combat_catalog=None,
+            combat_catalog_status='官方戰鬥來源同步失敗：'+combat_source_error)
     after = validate_snapshot(observe())
     if any(before[k] != after[k] for k in ('data_ver', 'exe_version', 'packages')):
         raise DynamicRuntimeUnavailable('Official versions changed during runtime load')

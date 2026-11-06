@@ -52,7 +52,7 @@ class Reader:
 
 
 @diagnosed('itemdata-v1')
-def parse_itemdata(raw: bytes, *, package_version=None) -> dict[int,dict]:
+def parse_itemdata(raw: bytes, *, package_version=None, include_skill_link=False) -> dict[int,dict]:
     """Return only confirmed item fields, never calculate live purchase totals."""
     if type(raw) is not bytes or not 4 < len(raw) <= 16*1024*1024:
         raise ItemDataDecodeError('ItemData is missing or oversized')
@@ -69,6 +69,8 @@ def parse_itemdata(raw: bytes, *, package_version=None) -> dict[int,dict]:
         raise ItemDataDecodeError('ItemData 1296 source digest mismatch')
     if package_version in legacy_versions and is_1296:
         raise ItemDataDecodeError('ItemData source and package version differ')
+    if include_skill_link and not is_1296:
+        raise ItemDataDecodeError('Skill link needs reviewed ItemData source')
     r=Reader(raw)
     count=r.u32()
     if not 0 < count <= MAX_ITEMS:
@@ -95,7 +97,8 @@ def parse_itemdata(raw: bytes, *, package_version=None) -> dict[int,dict]:
         sell_price=r.u32()
         r.skip(1)
         restrict=r.u16()
-        r.skip(4 + 1 + 4 + 2)
+        r.skip(4 + 1 + 4)
+        skill_link=r.u16()
         spares=[r.u16() for _ in range(5)]
         checkpoint(offset=r.pos, field='description_length')
         desc_size=r.u16()
@@ -133,6 +136,7 @@ def parse_itemdata(raw: bytes, *, package_version=None) -> dict[int,dict]:
                 style_bank_set_sort_id=int.from_bytes(tail,'little'))
             from wlre.services.world.item_stack_rules import can_overlap
             result[iid]['stackable']=can_overlap(iid,result[iid])
+            if include_skill_link:result[iid]['skill_link']=skill_link
     checkpoint(offset=r.pos, field='end_of_file', expected=len(raw), actual=r.pos)
     if r.pos!=len(raw):
         raise ItemDataDecodeError('ItemData record layout changed or trailing bytes')

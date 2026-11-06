@@ -159,6 +159,8 @@ class Preview1275:
     daily_tasks: dict | None = None
     daily_task_status: str = '每日任務尚未同步'
     emoji_catalog: dict | None = None
+    combat_catalog: dict | None = None
+    combat_catalog_status: str = '官方戰鬥資料尚未同步'
     normal_attack_catalog: dict | None = None
     normal_attack_status: str = '官方普攻資料尚未同步'
     item_images: object = None

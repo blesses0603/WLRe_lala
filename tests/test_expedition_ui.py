@@ -197,3 +197,8 @@ class ExpeditionPanelTests(unittest.TestCase):
         with self.assertRaises(ValueError):self.panel.load_settings('b'*64)
         self.assertEqual(self.panel.key,'a'*64)
         self.assertEqual(target.read_text(),'{broken')
+
+
+def setUpModule():
+    from combat_runtime_fixtures import install
+    install()

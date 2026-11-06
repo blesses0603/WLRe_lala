@@ -100,3 +100,8 @@ class RedesignedLayout(unittest.TestCase):
             battle.pick(event);battle.on_select.assert_called_once_with('3:1',False)
         finally:battle.on_select=original
         self.app.activity_tabs.select(self.app.logs_frame);self.root.update()
+
+
+def setUpModule():
+    from combat_runtime_fixtures import install
+    install()

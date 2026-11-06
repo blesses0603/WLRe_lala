@@ -566,6 +566,16 @@ def load_verified_bundle_runtime(*, sync_root=None, _verified_context=None):
             except (OSError,ValueError,TypeError,KeyError,RuntimeError):
                 ark_status='方舟資料缺少或格式不合，已停用方舟自動操作'
 
+        combat_catalog = None
+        combat_status = '官方戰鬥資料尚未同步'
+        if dynamic:
+            try:
+                from wlre.services.world.combat_catalog import load_verified_catalog as load_combat
+                combat_catalog = load_combat(verified_data,bundle_root,load_container,root,identity,sources,texts)
+                combat_status = '官方戰鬥資料已由同版資料庫載入'
+            except (OSError,ValueError,TypeError,KeyError,RuntimeError,ImportError,sqlite3.Error) as error:
+                combat_status = '官方戰鬥資料未通過驗證：' + str(error)
+
         normal_catalog = None
         normal_status = '官方普攻資料尚未同步'
         if dynamic:
@@ -658,6 +668,7 @@ def load_verified_bundle_runtime(*, sync_root=None, _verified_context=None):
             ark_catalog=ark_catalog,ark_catalog_status=ark_status,
             guild_catalog=guild_catalog,guild_catalog_status=guild_status,
             daily_tasks=daily_catalog, daily_task_status=daily_status,
+            combat_catalog=combat_catalog,combat_catalog_status=combat_status,
             normal_attack_catalog=normal_catalog,normal_attack_status=normal_status,
             item_images=item_images,item_image_status=item_image_status,
             emoji_catalog=emoji_catalog, emoji_status=emoji_status,

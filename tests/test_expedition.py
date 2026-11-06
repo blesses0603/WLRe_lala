@@ -404,3 +404,8 @@ class ExpeditionClaiming(ExpeditionFixture, unittest.TestCase):
         from wlre.services.expedition import claim_space
         self.assertIsNotNone(claim_space({'rewards':[self.award],'special_reward':{'kind':0,'id':0,'value':0}}))
         self.assertIsNone(claim_space({'rewards':[{'kind':255,'id':1,'value':1}],'special_reward':{'kind':0,'id':0,'value':0}}))
+
+
+def setUpModule():
+    from combat_runtime_fixtures import install
+    install()

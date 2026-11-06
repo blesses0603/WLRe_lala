@@ -1,6 +1,5 @@
 """Validated AutoPlay draft and server-confirmed action catalogue."""
 import copy
-from functools import lru_cache
 from wlre.services.battle.auto_battle import validate, ACTION_IDS
 from wlre.services.battle.battle_commands import ACTIONS, owned_units
 from wlre.services.items.combat_resources import CAT, skill_rows, field_context
@@ -47,7 +46,6 @@ def confirmed_action_label(row,state,who):
             return '特技未學會或尚未同步，請重新選擇'
     return action_label(row)
 
-@lru_cache(maxsize=1)
 def supply_catalogue():
     return tuple((int(sid),value['name']) for sid,value in CAT['items'].items() if value['kind'] in (23,32))
 

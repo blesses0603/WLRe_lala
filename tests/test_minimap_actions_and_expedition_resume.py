@@ -222,3 +222,8 @@ class ExpeditionResumeTests(ExpeditionFixture,unittest.TestCase):
         self.state.expedition.update(enabled=True,status='等待足夠的好友度恢復物品，補齊後自動繼續')
         text=summarize(self.state.snapshot(),True,{},now=10)['expedition']
         self.assertIn('好友度恢復物品',text)
+
+
+def setUpModule():
+    from combat_runtime_fixtures import install
+    install()

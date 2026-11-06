@@ -80,5 +80,11 @@ class BagGridModelTests(unittest.TestCase):
         self.assertEqual(visible_items({'items': {}}, ''), [])
 
 
+
+
+def setUpModule():
+    from combat_runtime_fixtures import install
+    install()
+
 if __name__ == '__main__':
     unittest.main()

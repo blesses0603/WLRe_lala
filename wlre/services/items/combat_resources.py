@@ -1,5 +1,6 @@
 """Server-backed inventory/skill knowledge; no inferred learned skills or HP gains."""
 import math
+from wlre.services.items.live_combat_catalog import one_catalog
 from wlre.network.wire import ProtocolError
 from wlre.services.battle.combat import BROKEN
 
@@ -7,12 +8,20 @@ from wlre.services.items.catalog import CAT, item_name, skill_name
 from wlre.services.items.inventory import apply_inventory, available, allocate, reserve
 NO_ITEMS={9,12,13,14,15,16,17,18,21,22,23,24}
 
+@one_catalog
 def apply_live(state,event):
     kind=event['type'];inv=state.inventory;k=state.knowledge
+    resolve_equips(k.get('player',{}))
     if apply_inventory(state,event):return
     if kind in ('equip_damage','equip_broken'):
         npc=event.get('npc_index',0)
         profile=k['player'] if not npc else k['companions'].get(str(npc),{})
+        if profile.get('unresolved_equips'):
+            queue=profile.setdefault('deferred_equip_updates',[])
+            if len(queue)>=256:
+                profile.update(equips=[],unresolved_equips=[],deferred_equip_updates=[],equipment_needs_snapshot=True)
+            else:queue.append(dict(event))
+            return
         equips=profile.get('equips',[])
         index=event.get('index')
         if index is None:
@@ -30,7 +39,7 @@ def apply_live(state,event):
         for v in data['skills']:
             sid=CAT['keys'].get(str(v['key']))
             if sid and v['level']>0:skills[str(sid)]={**v,'source':'S5-3'}
-        k['player']={**k['player'],'ready':True,'skills':skills,'stats':{**k['player'].get('stats',{}),**{a:b for a,b in data.items() if a!='skills'}}}
+        k['player']={**k['player'],'ready':True,'skills':skills,'server_skill_records':data['skills'],'removed_skill_ids':[],'stats':{**k['player'].get('stats',{}),**{a:b for a,b in data.items() if a!='skills'}}}
     elif kind=='star_info':
         k['player'].setdefault('stats',{}).update(level=event['level'],degree=2,exp=event['exp'])
     elif kind=='player_equip_data':
@@ -39,7 +48,8 @@ def apply_live(state,event):
             fit=CAT['items'].get(str(value['item_id']),{}).get('fit_type',0)
             if fit==11:fit=7
             if 1<=fit<=9:equips[fit-1]=dict(value)
-        k['player']['equips']=equips
+        k['player'].update(equips=equips,deferred_equip_updates=[],equipment_needs_snapshot=False)
+        k['player']['unresolved_equips']=[dict(v) for v in event['equips'] if str(v['item_id']) not in CAT['items']]
     elif kind=='companion_snapshot':
         # S15-8 may arrive in several packets: source adds each record, not clear-all.
         k['companions_ready']=True
@@ -62,6 +72,9 @@ def apply_live(state,event):
         if profile is not None:
             if event['kind']==110:
                 sid=str(event['parameter'])
+                removed=profile.setdefault('removed_skill_ids',[])
+                if sid in removed:removed.remove(sid)
+                if event['value']<=0:removed.append(sid)
                 if event['value']>0:profile['skills'][sid]={'level':event['value'],'exp':0,'source':f'S8-{event.get("sub",0)}'}
                 else:profile['skills'].pop(sid,None)
             else:
@@ -84,6 +97,10 @@ def apply_live(state,event):
     elif kind=='battle_equip' and 1<=event['equip_index']<=9:
         if event['owner_id']==state.player.get('role_id'):
             profile=k['player'] if not event['npc_index'] else k['companions'].get(str(event['npc_index']),{})
+            if profile.get('unresolved_equips'):
+                queue=profile.setdefault('deferred_equip_updates',[])
+                if len(queue)>=256:profile.update(equips=[],unresolved_equips=[],deferred_equip_updates=[],equipment_needs_snapshot=True)
+                else:queue.append(dict(event))
             equips=profile.get('equips',[]);index=event['equip_index']-1
             if index<len(equips) and equips[index].get('item_id')!=event['item_id']:
                 equips[index]={'item_id':event['item_id'],'design_id':event['design_id']}
@@ -92,6 +109,7 @@ def apply_live(state,event):
                    unit['master_id']==event['owner_id'] and unit['npc_index']==event['npc_index'])
             if match:unit['equips'][event['equip_index']-1]={'item_id':event['item_id'],'design_id':event['design_id']}
 
+@one_catalog
 def set_companion(state,data):
     index = str(data['index'])
     previous = state.knowledge['companions'].get(index)
@@ -103,13 +121,14 @@ def set_companion(state,data):
     for sid,value in zip(npc.get('skills',[]),data['skill_slots']):
         if sid and value['level']>0:skills[str(sid)]={**value,'source':'S15技能槽＋NpcData'}
     state.knowledge['companions'][str(data['index'])]={'ready':True,'npc_id':data['npc_id'],'index':data['index'],
-        'skills':skills,'stats':{a:b for a,b in data.items() if a not in ('skill_slots','equips')},'equips':data['equips']}
+        'skills':skills,'server_skill_slots':data['skill_slots'],'stats':{a:b for a,b in data.items() if a not in ('skill_slots','equips')},'equips':data['equips']}
     # Native Role temporarily queues S8 updates that precede S15 initialization.
     for key,value in state.attributes.get(f"follow:{data['index']}",{}).items():
         attribute,parameter=map(int,key.split(':'))
         apply_live(state,{'type':'attribute_set','entity':f"follow:{data['index']}",'index':data['index'],
             'human_kind':4,'kind':attribute,'parameter':parameter,'value':value})
 
+@one_catalog
 def profile_for(state,actor):
     k=state.get('knowledge',{});pid=state.get('player',{}).get('role_id')
     if actor['pid']==pid:return k.get('player',{})
@@ -117,8 +136,22 @@ def profile_for(state,actor):
     profile=k.get('companions',{}).get(str(actor.get('npc_index')),{})
     return profile if profile.get('npc_id')==actor['pid'] else {}
 
+@one_catalog
 def learned(state,actor):
-    profile=profile_for(state,actor);records={sid:dict(v) for sid,v in profile.get('skills',{}).items()}
+    profile=profile_for(state,actor)
+    records={sid:dict(v) for sid,v in profile.get('skills',{}).items()
+             if v.get('source') not in ('S5-3','S15技能槽＋NpcData')}
+    if 'server_skill_records' in profile:
+        for value in profile['server_skill_records']:
+            sid=CAT['keys'].get(str(value['key']))
+            if sid and value['level']>0:records.setdefault(str(sid),{**value,'source':'S5-3'})
+    elif 'server_skill_slots' in profile:
+        npc=CAT['npcs'].get(str(profile.get('npc_id')), {})
+        for sid,value in zip(npc.get('skills',[]),profile['server_skill_slots']):
+            if sid and value['level']>0:records.setdefault(str(sid),{**value,'source':'S15技能槽＋NpcData'})
+    else:
+        for sid,value in profile.get('skills',{}).items():records.setdefault(sid,dict(value))
+    for sid in profile.get('removed_skill_ids',[]):records.pop(sid,None)
     # Native AppearanceData keeps one equipment-skill record: last nonzero link.
     equip_skill=None
     for equip in actor.get('equips',[]):
@@ -134,11 +167,13 @@ def learned(state,actor):
         if record.get('level',0)>0:result[str(resolved)]=record
     return result
 
+@one_catalog
 def weapon_group(actor):
     if len(actor.get('equips',[]))<3:return None
     item=actor['equips'][2]['item_id'];kind=0 if item==0 or item in BROKEN else CAT['items'].get(str(item),{}).get('kind')
     return 1 if kind in (1,2,3,6,8) else 2 if kind in (0,7,9) else 3 if kind in (5,10) else 4 if kind==4 else 5 if kind==11 else None
 
+@one_catalog
 def skill_reasons(state,actor,sid):
     data=CAT['skills'].get(str(sid));problems=[];records=learned(state,actor)
     if data is None:return ['技能不在目前版本資料表']
@@ -161,6 +196,7 @@ def skill_reasons(state,actor,sid):
     if statuses.get('taunt') and (data['TargetKind']!=0 or data['RangeKind1']!=1):problems.append('挑戰狀態限制目標／範圍')
     return problems
 
+@one_catalog
 def target_valid(actor,target,data):
     if target.get('exited') or target.get('is_fly'):return False
     dead=target.get('hp',0)<=0
@@ -172,6 +208,7 @@ def target_valid(actor,target,data):
             (actor['col'],actor['row'])==(target['col'],target['row']) if kind==3 else
             same and (actor['col'],actor['row'])!=(target['col'],target['row']) if kind==5 else False)
 
+@one_catalog
 def learned_command(state,actor,sid,target_slot=None,target_kind=1,next_skill=False):
     sid=int(sid);records=learned(state,actor)
     if next_skill:
@@ -195,6 +232,7 @@ def learned_command(state,actor,sid,target_slot=None,target_kind=1,next_skill=Fa
     return {'type':'learned_action','col':actor['col'],'row':actor['row'],'actor_pid':actor['pid'],
         'target_col':target['col'],'target_row':target['row'],'skill_id':sid,'resource_reservations':costs}
 
+@one_catalog
 def best_skill_command(state,actor,target_slot=None,target_kind=1):
     candidates=[]
     for sid in learned(state,actor):
@@ -219,11 +257,13 @@ def best_skill_command(state,actor,target_slot=None,target_kind=1):
             target_slot=f"{chosen['col']}:{chosen['row']}"
     return action_command(state,actor,'normal',target_slot)
 
+@one_catalog
 def heal_effects(item_id):
     item=CAT['items'].get(str(item_id),{})
     if item.get('kind') not in (23,32):return {}
     return {('hp' if a['kind']==25 else 'sp'):a['value']-100 for a in item['attributes'] if a['kind'] in (25,26) and a['value']>100}
 
+@one_catalog
 def food_command(state,actor,resource='hp',item_id=None,target_slot=None,field=False,index=None):
     inv=state.get('inventory',{})
     if not inv.get('ready'):raise ProtocolError('包包尚未同步；請重新登入')
@@ -252,6 +292,7 @@ def food_command(state,actor,resource='hp',item_id=None,target_slot=None,field=F
         'target_col':target['col'],'target_row':target['row'],'item_id':item_id,'bag_index':index,'resource':resource,
         'resource_reservations':[{'index':index,'item_id':item_id,'count':1}]}
 
+@one_catalog
 def skill_rows(state,actor):
     result=[]
     for sid,record in learned(state,actor).items():
@@ -263,9 +304,11 @@ def skill_rows(state,actor):
     return sorted(result,key=lambda v:(v['category'],v['sp'] if v['sp'] is not None else 99999,v['id']))
 
 
+@one_catalog
 def field_context(state):
     """Only server-confirmed role / active follower health, never last attack deltas."""
     context=dict(state);k=state.get('knowledge',{});pid=state.get('player',{}).get('role_id')
+    resolve_equips(k.get('player',{}))
     stats=k.get('player',{}).get('stats',{})
     player={'sex':state.get('player',{}).get('sex'),'head':state.get('player',{}).get('head'),'equips':k.get('player',{}).get('equips',[]),'col':1,'row':1,'pid':pid,'master_id':0,'npc_index':0,'name':state.get('player',{}).get('name','角色'),**stats}
     units={'1:1':player}
@@ -276,3 +319,26 @@ def field_context(state):
             break
     context['battle_units']=units
     return context,player
+
+
+@one_catalog
+def resolve_equips(profile):
+    pending=profile.get('unresolved_equips',[])
+    if not pending:return
+    unresolved=[];equips=profile.setdefault('equips',[{'item_id':0} for _ in range(9)])
+    for value in pending:
+        row=CAT['items'].get(str(value['item_id']))
+        if row is None:unresolved.append(value);continue
+        fit=row.get('fit_type',0);fit=7 if fit==11 else fit
+        if 1<=fit<=len(equips):equips[fit-1]=dict(value)
+    profile['unresolved_equips']=unresolved
+    if not unresolved:
+        for event in profile.pop('deferred_equip_updates',[]):
+            index=event.get('equip_index') if event['type']=='battle_equip' else event.get('index')
+            if index is None:
+                fit=CAT['items'].get(str(event.get('item_id')),{}).get('fit_type')
+                index=7 if fit==11 else fit
+            if type(index) is int and 1<=index<=len(equips):
+                if event['type']=='battle_equip':equips[index-1]={'item_id':event['item_id'],'design_id':event['design_id']}
+                elif event['type']=='equip_broken':equips[index-1].update(item_id=event['item_id'],damage=250)
+                else:equips[index-1]['damage']=event['damage']
