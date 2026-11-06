@@ -20,7 +20,7 @@ projection and non-navigation house features are unchanged.
 The three seeds cannot yet be deleted: the old stage table still contains 1,832
 non-house rows referencing 971 models; origins contains 724 entries and the
 navigation archive contains 724 decoded models (763 catalog rows total). Current
-official DB preview evidence covers six general-map models, plus three historical
+official DB preview evidence covers seventeen general-map models, plus three historical
 house samples now excluded. These counts are coverage evidence, not proof that
 every old model remains current. General-map movement still needs broader
 version-matched geometry coverage and traversal/smoothing verification.
@@ -36,7 +36,7 @@ an exact serialized CAB/path-ID TextAsset reference are mandatory. Both bundles
 must pass size, MD5 and CRC verification. There is no fallback to an arbitrary URL,
 partial bundle or another version after failure.
 
-`astar_cache` recognizes only nine reviewed cache SHA-256 fingerprints and A* 4.3.60.
+`astar_cache` recognizes only twenty reviewed cache SHA-256 fingerprints and A* 4.3.60.
 It validates all archive members, geometry counts, vertex indices, exact binary
 consumption and the graph-space transform. The new reader also validates the node
 reference map and directed connections, including the declared triangle edge.
@@ -212,3 +212,63 @@ Android's isolated host regression passed 190 files / 1,456 tests (4 skipped).
 The final alias addition and all navigation/floor cases then passed the targeted
 27-test suite on both hosts. Android read and validated all nine actual database
 models. These results do not include APK/device execution or live movement.
+
+## General-map coverage expansion (phase 26)
+
+Official 1.3.23 MainPackage 1296 adds reviewed models 13217–13227, all from the
+current stage rows whose dimensions differ from the legacy table. Together with
+previous 12050/13216 and new logical map 15138 (model 11139), all fourteen
+new/changed stage rows now have a reviewed current geometry model. This does not
+mean the rest of the legacy archive has been validated against the current release.
+
+The eleven models required 9,911,919 bytes across 22 whole manifest-verified
+bundles. Each extraction resolves the exact serialized CAB/path-ID pointer. All
+passed strict archive, triangle, reference, directed-edge, tag and coordinate
+checks; paired vertex transform residual is zero for this batch. No bundle or
+game content is committed. Exact cache fingerprints are the only new reader
+allowances; malformed/unknown layouts remain rejected. Actual version-checked
+`sync_model` imports succeeded for all eleven models. Desktop and Android host
+readers produced identical results for 388 sampled planar smoothed routes. Each
+retained the serialized route cost, stayed within the triangle corridor, and was
+no longer than the midpoint baseline. These are sample checks, not exhaustive
+endpoint coverage or official-client movement traces.
+
+| Model | Nodes | Directed arcs | Cache SHA-256 |
+| --- | ---: | ---: | --- |
+| 13217 | 146 | 404 | `a728cd68b449c76d89585bcb2f8c29a7bdd146e5da18d9ad01f6647565e689e6` |
+| 13218 | 360 | 1012 | `ab622995a92f4bc8f6914c716fda0a82bc2bbfc52a3b6636e616c30d25485889` |
+| 13219 | 420 | 1200 | `5fb34818dba90dd16c133f2504fd4e3a6da1351eb90262bab538da87b8de61cb` |
+| 13220 | 375 | 1068 | `721540e7699eaa738ef8bf899bf2deb9b808fc11cf05c2678efbbf82b003337d` |
+| 13221 | 212 | 590 | `13c46904d5c16e3418f4c2dd7a7ab24621323b8eccad677900c3031c9c3edc3f` |
+| 13222 | 267 | 758 | `4899fcbe081b3f8924219ef26b4ae490afc007c38d85fb9b1b96d7a7dd38f1b9` |
+| 13223 | 232 | 650 | `2bc5d749067948ad630697f71da34d9a79164ca7f8783625a1341b14be3bc455` |
+| 13224 | 85 | 232 | `493c40032453791d503112d95dfc5ab87a5aa9674ba5be50b60122b7abe8b552` |
+| 13225 | 188 | 526 | `713401e696f3befe979e17db6e0182bbcd20822e02cae187dfa83feabc5b10e1` |
+| 13226 | 250 | 702 | `bd4581bbc2c1661123cd16e46303f0d9e8da63afea47330a50e38fce0b128828` |
+| 13227 | 144 | 404 | `d95005692c09067a3ca6e5d32759d4ed002baec095535a4f7bc592f141a8ae90` |
+
+`obstacle_scope` now reads the active official stage table when available, including
+reviewed instance aliases. It does not cache that table across runtime revisions.
+Unknown IDs/order or a failed official synchronization remain conservative; no
+stale bundled table is consulted in those cases. The historical pre-sync path
+still uses the stage seed, so that seed is not yet removable. House templates and
+dynamic house IDs remain explicitly classified as houses regardless of runtime.
+
+Remaining activation conditions: current-model coverage beyond this sample;
+nonplanar funnel/endpoint selection parity; and a verified connection between
+local actor travel state and the active Seeker mask. Official Role.CheckCanArrivePos
+uses the actor's `seeker.traversableTags`, while MoveController initializes Land.
+A user-selected preview travel mode is not sufficient movement authority. No
+current official-client endpoint/path/packet comparison or live server acceptance
+was performed. The existing formal movement remains on its legacy checked path;
+preview routes continue to carry `can_send_packets=false`. Removing all three
+seeds now would disable uncovered general-map features and is not safe.
+
+Further source check: official index-verified TrafficController.lua (ciphertext
+SHA-256 `4cefd6b037f2e6c32e8188aaca5dfee6617aa448b7d0bf943e481712e425748b`)
+and TrafficToolData.lua (`218f3419e4b9d8d2c337093eaa0d4fd01ffd5383b950c40ec2116b8d555faa1c`)
+were decoded locally. Neither supplied the missing Seeker mask assignment; this
+is not evidence that the assignment does not exist elsewhere. The next concrete
+check is native LuaHelper.GetPath / actor movement initialization, paired with
+reference paths for slope and multiple-height endpoints. No authentication or
+network policy denial occurred during this phase.
