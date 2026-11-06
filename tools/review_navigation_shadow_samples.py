@@ -8,9 +8,10 @@ from pathlib import Path
 import json,itertools
 from types import SimpleNamespace
 from wlre.services.world.navigation_preview import PreviewRepository, NoPreviewRoute
-from wlre.services.world.navigation_database import REVIEWED_MODELS
+from wlre.services.world.navigation_database import REVIEWED_MODELS, load_cache, database_path
 from wlre.services.world.catalog_identity import OfficialCatalogIdentity,PackageRevision
 from wlre.services.world.navigation_shadow import compare
+from tools.navigation_same_geometry_control import compare_algorithms
 
 def verify_disconnected(mesh, details):
     """Independent unweighted reachability check; no cost/search-queue reuse."""
@@ -59,6 +60,9 @@ def main():
         result['input_xy']={'start':packet(sample[0]),'end':packet(sample[-1])}
         if result.get('official',{}).get('status')=='no_route':
          result['no_route_check']=verify_disconnected(mesh,result['official']['details'])
+        if result.get('status')=='incomplete':
+         decoded=load_cache(database_path(),identity.key,model)
+         result['same_geometry_control']=compare_algorithms(decoded,stages[map_id],packet(sample[0]),packet(sample[-1]),travel_mode=mode)
         comparisons.append(result)
        except ValueError as e:comparisons.append(dict(map_id=map_id,mode=mode,error=str(e)))
     report=dict(context='Historical pinned cached identity and stages; no current CDN or live state claim',catalog_key=identity.key,rows=rows,comparisons=comparisons)

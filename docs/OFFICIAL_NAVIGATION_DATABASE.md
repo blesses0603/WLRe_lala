@@ -2184,3 +2184,47 @@ No runtime semantics or movement authorization was expanded. Three seeds remain.
 The user's running LaLa 7.3.0 is not established to contain these unpushed local
 commits and is not acceptance evidence for this feature. No device/live-server
 acceptance, push, merge or release was performed.
+
+### Phase 58: same-geometry controls for all 27 incomplete cases
+
+User-reported Windows execution of the 8dbbb02 offline kit matched all 343 file
+hashes and the expected 17-model, 292/10-route and 8/27-comparison counts, with no
+movement packets reported. This is user-reported offline Windows execution, not
+our direct observation, official client output, or live-server acceptance. The
+new checks below were subsequently run on Linux hosts; they are not in that kit.
+
+Added `tools/navigation_same_geometry_control.py`, called by the bounded sample
+reviewer for each incomplete comparison. Both algorithms receive the exact same
+verified official cache and packet-coordinate conversion. The unfiltered old
+shared-edge algorithm is compared with the mode-filtered official preview graph.
+This is explicitly an algorithm control, **not a replacement historical baseline**.
+It does not populate or alter any of the three legacy seeds.
+
+A separate FIFO label-correction algorithm independently checks minimum cost and
+reachability without using the preview priority queue. It has a fixed two-million
+arc-examination cap and fails explicitly if exceeded. It verifies the preview
+cost, but does not claim native player settings or optimality under unknown live
+rules. The largest observed workload was 10,799 arc examinations.
+
+Both hosts produced 27 controls: 26 preview paths with independently confirmed
+minimum costs, and one confirmed disconnection (58001 land). The unfiltered
+algorithm produced 27 paths, but 12 traverse nodes or edges forbidden by the
+preview graph. These are land cases 13217, 13218, 13219, 13220, 13221, 13222,
+13223, 13225, 13226, 13227, 12050 and 58001. Fifteen unfiltered paths are allowed
+by the preview graph. Of the 26 pairs with both paths, 12 have identical face
+sequences and 14 differ. These are diagnostic facts, not movement acceptance.
+
+Original historical comparison counts remain 8 complete / 27 incomplete:
+24 lack historical geometry and have stale dimensions/offsets, 2 refer to a
+changed model ID, and 1 is a normal preview graph disconnection. No historical
+source can safely be invented to change these counts. The 26 usable official
+paths now have additional independent validation instead of being discarded
+because the old baseline is unavailable.
+
+Desktop and Android each pass 72 focused tests. New synthetic checks exercise a
+late cheaper path requiring FIFO revisits, work-budget refusal, unreachable
+nodes, target penalty accounting and a geometrically shared edge absent from
+the official connection table. Reproduction uses the existing
+`tools.review_navigation_shadow_samples --snapshot DIR --output REPORT.json`;
+additional evidence is in each incomplete result's `same_geometry_control`.
+There is no live movement integration, new download, seed removal, push or merge.
