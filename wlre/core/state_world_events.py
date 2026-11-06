@@ -28,6 +28,9 @@ def apply_world_event(state, event, affects_navigation):
                 'stale':previous_navigation.get('stale',False) if same_scene else False,
                 'runtime_geometry_verified':False,
                 'reasons':previous_navigation.get('reasons',[]) if same_scene else []}
+            from wlre.services.world.house_navigation import update_context
+            context=update_context(previous_navigation.get('house_context'),event['scene'],event.get('house_floor'))
+            if context is not None:state.navigation['house_context']=context
         else:
             state.remember_position(event['role_id'],event['x'],event['y'])
     elif kind == 'movement_request':

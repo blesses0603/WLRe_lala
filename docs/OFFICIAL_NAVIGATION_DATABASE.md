@@ -17,7 +17,7 @@ an exact serialized CAB/path-ID TextAsset reference are mandatory. Both bundles
 must pass size, MD5 and CRC verification. There is no fallback to an arbitrary URL,
 partial bundle or another version after failure.
 
-`astar_cache` recognizes only six reviewed cache SHA-256 fingerprints and A* 4.3.60.
+`astar_cache` recognizes only nine reviewed cache SHA-256 fingerprints and A* 4.3.60.
 It validates all archive members, geometry counts, vertex indices, exact binary
 consumption and the graph-space transform. The new reader also validates the node
 reference map and directed connections, including the declared triangle edge.
@@ -82,9 +82,9 @@ Current official stage IDs 10299, 10298 and 10000 map to models 10005, 10004 and
 official house data: those are logical IDs, not the models to download.
 
 Comparing 1,337 current official stage rows with 1,836 old coordinate entries found
-one new stage, 500 old synthesized player-house IDs absent from the official table,
+one new stage, 500 old synthesized instance IDs absent from the official table,
 and 13 changed model/dimension rows. Twelve of those have changed map-height
-inversion values. The 500 IDs require real room-floor context, not static copies.
+inversion values. The 500 IDs (61501–62000) are in the instance-reserved range and require verified instance aliases, not house-floor assumptions. Player houses occupy 63501–65500.
 This is why the legacy coordinate seed cannot yet be deleted as a safe migration.
 
 ## Remaining work and validation limits
@@ -111,3 +111,84 @@ environment. All six official samples completed verified source extraction, atom
 import and database preview on desktop; Android's Python core independently read
 and validated the same six database snapshots. This is host validation, not APK
 or device execution. Repository documentation audit also passed.
+
+## Phase 23: nine models, verified house context and traversal tags
+
+The reviewed model set now additionally contains 12050 (844 nodes / 2,488 arcs),
+13216 (81 / 220) and 11139 (605 / 1,772). They cover changed scene dimensions and
+a model used by new logical stage 15138. This research batch fetched 5,960,481
+bytes under the unchanged 32 MiB cap. All three completed the real source-chain
+verification, database import and readback. The whitelist remains finite; this is
+not evidence for all remaining models.
+
+Correction to the earlier investigation: the 500 missing old coordinate IDs are
+61501–62000, in the **instance** reserved range, not player houses. Official
+Define.lua sets dmMinSceneNum=61501 and house bounds to 63501–65500. This correction
+is reflected in the stage-comparison discussion above; no mapping was activated
+from the mistaken house interpretation.
+
+Verified current Stage.ReceiveChangeMap (S7-1/S12-1) carries optional floor and
+size information. `house_navigation` recognizes only the observed reader's bounded
+extension layouts (1, 3 or 5 bytes), preserves an unverified result for other
+layouts, and does not infer a floor from empty S62-64. Only local-player position
+snapshots update navigation's context. Sizes are scoped to one house and discarded
+on an unknown extension, a different house, or leaving the house. The actual floor
+must have an explicitly observed size; client defaults are not substituted for a
+missing observation. Preview mapping uses the current official template stage and
+rejects a stale navigation state. Dynamic room context is not written into the
+static resource DB.
+
+Room.SetFurnitureAppear selects objects by active floor and normal use state,
+then uses FurnitureData.GetModelName and TransferFurniturePosition. Room's removal
+and pillar handlers call AstarPath.active:Scan after changes. Therefore a pristine
+house cache is not a verified populated-house obstacle map. The existing stale
+geometry guard remains in force. Collider/prefab source extraction, rotations,
+use-state toggles, pillar models and the Recast rescan have not been reproduced.
+These are concrete blockers to enabling live house movement from the new DB.
+
+Additional verified traversal evidence:
+
+* MoveController.New sets Seeker.traversableTags to TrafficPathTags.Land and adds
+  a FunnelModifier. Define.lua specifies masks land=9, sea=4, sky=15.
+* Native GraphNode.get_Tag at 0x2d93f7c extracts five bits starting at bit 19.
+* Role.CheckCanArrivePos passes the active seeker's mask to LuaHelper.GetPath.
+
+PreviewMesh now filters both walkability and those explicit travel-mode tag masks.
+Its default is land; the CLI accepts `--travel-mode land|sea|sky`. This is an
+explicit preview selection, not an assertion about the live character's vehicle
+or capabilities. Unknown modes are rejected. Geometric costs and edge midpoints
+still do not emulate the client's serialized costs and FunnelModifier. Routes
+continue to report no packet authorization, and the formal UI/movement consumers
+remain on their existing path pending the missing dynamic semantics.
+
+Source artifacts were fetched from the same verified official Lua index, MD5
+checked, decrypted, and round-trip verified privately. Ciphertext SHA-256:
+
+| Source | SHA-256 |
+| --- | --- |
+| Room.lua | 0e761261f506422fbcf4e566108a40e9fdc2090bc60fbad7f4047648c27a4b9d |
+| Protocols_062.lua | 4498cabfb3ecb3a1e68e5f56918627ccceefc1ebacfaf2db564fc167e4c2b4d0 |
+| Protocols_065.lua | 7e1e0e99cce318997a952cfabdb6fa00ff4c1643102021012d6e4ef3c454c260 |
+| Role.lua | 08bfc2d875172effde41c9e0b5c65da1762eca064c4e8e3b9d25bf5b99085657 |
+| MoveController.lua | 838d838df641f2c9c2b457a758c99b8387b12de9727176ff49a4623f98be3dc8 |
+| FurnitureData.lua | 24670ae4691e3f4cdd172f790aa0d0f34ccaf652a311dd930f107c90daf7e915 |
+
+No decoded source or key material is bundled. All three navigation seeds remain.
+
+
+The instance alias gap was subsequently resolved for the reviewed catalog:
+Data.OnLoadSceneData allocates aliases sequentially from 61501 in binary record
+order whenever isDupMis is nonzero, repeating dupRoomCount times. The existing
+normalized-resource encoding preserves dictionary insertion order; the preview
+also requires the exact reviewed order fingerprint before deriving aliases. All
+500 reconstructed current aliases (61501–62000) match the old model/dimension
+mappings. Sorting rows before allocation is explicitly rejected. This is runtime
+derivation from official table rows, not a shipped static alias table.
+Data.lua ciphertext SHA-256:
+`4582b74c53292dfe27e0eb60a0a065e7407f6ba2bfef56e264834f501a08490a`.
+
+Phase-23 validation: full desktop regression passed 1,778 tests (3 skipped);
+Android's isolated host regression passed 190 files / 1,456 tests (4 skipped).
+The final alias addition and all navigation/floor cases then passed the targeted
+27-test suite on both hosts. Android read and validated all nine actual database
+models. These results do not include APK/device execution or live movement.

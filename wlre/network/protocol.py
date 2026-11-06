@@ -159,7 +159,9 @@ def decode(packet, local_role_id=None):
         event.update(type='position_snapshot',role_id=r.u32(),scene=r.u16(),x=r.u16(),y=r.u16(),
                      source=f'S{packet.main}-{packet.sub}',same_stage_handler=packet.main==7)
         event['extension_bytes']=r.remaining
-        r.take(r.remaining)
+        extension=r.take(r.remaining)
+        from wlre.services.world.house_navigation import decode_floor_extension
+        event['house_floor']=decode_floor_extension(extension)
     elif key in ((11, 250), (11, 5)):
         event["type"] = "battle_start" if packet.sub == 250 else "battle_units"
         if packet.sub == 250:

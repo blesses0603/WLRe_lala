@@ -69,6 +69,27 @@ class NavigationDatabaseTests(unittest.TestCase):
         result['mesh']['tiles'][0]['node_metadata'][0][1]=0
         with self.assertRaises(NavigationError):PreviewMesh(result).route((10,10),(20,20))
 
+    def test_official_travel_tags_are_not_just_walkability(self):
+        result=self.put()
+        result['mesh']['tiles'][0]['node_metadata'][0][1]=1 | (2 << 19)
+        with self.assertRaises(NavigationError):PreviewMesh(result).route((10,10),(20,20))
+        route=PreviewMesh(result,travel_mode='sea').route((10,10),(20,20))
+        self.assertTrue(route['original_tags_applied'])
+        self.assertFalse(route['can_send_packets'])
+        with self.assertRaises(NavigationError):PreviewMesh(result,travel_mode='unknown')
+
+    def test_house_floor_context_and_stale_geometry(self):
+        self.put()
+        repository=PreviewRepository(SimpleNamespace(key=self.version),
+            {10000:dict(model_id=10000,map_height=3400)},root=self.root)
+        state=dict(scene=63501,stale=False,house_context=dict(scene=63501,verified=True,floor=1,sizes={'1':3}))
+        with patch('wlre.services.world.navigation_preview.REVIEWED_COORDINATE_CATALOGS',{self.version}):
+            route=repository.route(63501,(1,3399),(2,3398),navigation_state=state)
+            self.assertEqual(route['logical_map'],63501)
+            self.assertFalse(route['can_send_packets'])
+            state['stale']=True
+            with self.assertRaises(NavigationError):repository.route(63501,(1,3399),(2,3398),navigation_state=state)
+
     def test_serialized_direction_and_invalid_reference(self):
         import struct
         mesh=dict(tiles=[dict(vertices_b_int3=[[0,0,0],[1000,0,0],[0,0,1000],[1000,0,1000]],
