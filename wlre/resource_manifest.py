@@ -9,7 +9,7 @@ REQUIRED_RESOURCES=(
     'combat_catalog.json',
 
     'graph_origins.json',
-    'navigation_data.zip','normal_attack_data.json',
+    'navigation_data.zip',
 
     'stage_coordinates.json',
     'assets/app.ico','assets/exp_background.png',

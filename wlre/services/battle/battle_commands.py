@@ -16,7 +16,8 @@ def owned_units(state, living=True):
     return sorted(units,key=lambda u:(u['pid']!=pid,u['col'],u['row']))
 
 def catch_allowed(state,actor,target):
-    npc=DATA['npcs'].get(str(target['pid']))
+    data=DATA.snapshot()
+    npc=data['npcs'].get(str(target['pid']))
     if not npc or not npc.get('canCatch'):return False
     if any(u['pid']==target['pid'] for u in owned_units(state,False)):return False
     pid=state['player']['role_id']
@@ -26,7 +27,7 @@ def catch_allowed(state,actor,target):
     equips=actor.get('equips',[])
     if len(equips)<6:return False
     special=equips[5]['item_id']
-    bonus=DATA.get('catch_nets',{}).get(str(special),0)
+    bonus=data.get('catch_nets',{}).get(str(special),0)
     level=level_unit.get('degree',0)*100+level_unit['level']
     return target['level']<=level+bonus+5
 
