@@ -95,7 +95,8 @@ def oracle(path,*,_state=None,_existing_state=None):
             raise NoRoute()
     u.hook_add(UC_HOOK_CODE,hook)
     def execute(a,args):return state['execute'](a,args,instruction_limit=2000000)
-    def run(positions,connections,flags,penalties,start,end,tag_mask,tag_penalties=None,points=None,*,heuristic_scale=0.0,_prepare=None):
+    def run(positions,connections,flags,penalties,start,end,tag_mask,tag_penalties=None,points=None,*,heuristic_scale=0.0,heuristic=0,_prepare=None):
+        if type(heuristic) is not int or heuristic not in (0,2):raise ValueError('Unreviewed heuristic mode')
         if type(heuristic_scale) not in (int,float) or not math.isfinite(heuristic_scale) or not 0<=heuristic_scale<=1:raise ValueError('Invalid heuristic scale')
         tag_penalties=[0]*32 if tag_penalties is None else tag_penalties
         points=[positions[start],positions[end]] if points is None and type(start) is int and type(end) is int and 0<=start<len(positions) and 0<=end<len(positions) else points
@@ -113,9 +114,10 @@ def oracle(path,*,_state=None,_existing_state=None):
         q(0x600e258,0x234c80c);q(0x600e288,0x2d96358);q(0x600e2f8,0x234c294);q(0x600e318,0x234d55c)
         q(0x6008050,0x6009000);q(0x6008058,0x600a000)
         q(0x6009010,0x600b000);q(0x600a010,0x600d000);w(0x600b018,256);w(0x600d018,256)
-        # Native Manhattan branch, normally zero scale; the adversarial reopen
-        # fixture uses scale one. The embedding cost pointer remains null.
-        w(0x6008088,0);u.mem_write(0x600808c,struct.pack('<f',heuristic_scale));w(0x60080ac,tag_mask)
+        # Native reviewed modes 0 and 2. Default remains zero-scale mode 0;
+        # scene-profile diagnostics explicitly select mode 2, scale 1.
+        # The embedding cost pointer remains null.
+        w(0x6008088,heuristic);u.mem_write(0x600808c,struct.pack('<f',heuristic_scale));w(0x60080ac,tag_mask)
         q(0x60080b0,0x600c000);w(0x600c018,32);u.mem_write(0x600c020,struct.pack('<32I',*tag_penalties))
         q(0x60080d0,0x6090000+start*0x100);q(0x60080d8,0x6090000+end*0x100)
         u.mem_write(0x6008110,struct.pack('<3i',*points[0]));u.mem_write(0x60080a0,struct.pack('<3i',*points[1]))
@@ -136,6 +138,9 @@ def oracle(path,*,_state=None,_existing_state=None):
                 prepared=_prepare()
                 start,end=prepared['nodes'];points=prepared['int_points']
                 validate_graph(positions,connections,flags,penalties,start,end,tag_mask,tag_penalties,points)
+            stored_scale=struct.unpack('<f',u.mem_read(0x600808c,4))[0]
+            requested_scale=struct.unpack('<f',struct.pack('<f',heuristic_scale))[0]
+            if rw(0x6008088)!=heuristic or stored_scale!=requested_scale:raise ValueError('Prepared heuristic profile changed')
             execute(0x234d6f4,(0x6008000,0))
             if rw(0x6008040)!=2:execute(0x234da68,(0x6008000,2**63-1,0))
         except NoRoute:

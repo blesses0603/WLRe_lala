@@ -26,7 +26,7 @@ def review(libil2cpp,metadata):
         raise ValueError('Unmapped native range')
     def pointer(address):return rel.get(address,struct.unpack_from('<Q',raw,offset(address))[0])
     h=struct.unpack_from('<64I',meta);literals=[]
-    for slot,expected in ((0x49ace70,'Logic/'),(0x49acea0,'/Lua'),(0x4965968,'LuaArtifact'),(0x49382e8,'Initialize'),(0x4992ed8,'Update')):
+    for slot,expected in ((0x49ace70,'Logic/'),(0x49acea0,'/Lua'),(0x4965968,'LuaArtifact'),(0x49382e8,'Initialize'),(0x4992ed8,'Update'),(0x499d6b8,'OnAwakeSettings')):
         encoded=pointer(pointer(slot))
         if encoded>>29!=5:raise ValueError('Unexpected literal slot')
         index=(encoded&0x1fffffff)>>1
@@ -36,18 +36,34 @@ def review(libil2cpp,metadata):
         value=meta[h[4]+start:h[4]+start+size].decode('utf-8')
         if value!=expected:raise ValueError('Bootstrap literal changed')
         literals.append(dict(slot=hex(slot),index=index,value=value))
+    method_refs=[]
+    def metadata_name(index):
+        if not 0<=index<h[7]:raise ValueError('Method name bounds')
+        start=h[6]+index;end=meta.index(b'\0',start,h[6]+h[7]);return meta[start:end].decode('utf-8')
+    for slot,expected_name,expected_token in ((0x4942a18,'get_OnAwakeSettings',0x600122b),(0x494e5c0,'set_OnAwakeSettings',0x600125a)):
+        encoded=pointer(pointer(slot))
+        if encoded>>29!=3:raise ValueError('Unexpected method reference encoding')
+        index=(encoded&0x1fffffff)>>1
+        if index*36+36>h[13]:raise ValueError('Method reference bounds')
+        method=struct.unpack_from('<7I4H',meta,h[12]+index*36)
+        if method[1]*88+88>h[41]:raise ValueError('Declaring type bounds')
+        type_row=struct.unpack_from('<16I8H2I',meta,h[40]+method[1]*88)
+        if metadata_name(type_row[0])!='AstarPathWrap' or metadata_name(method[0])!=expected_name or method[6]!=expected_token:raise ValueError('Awake binding method changed')
+        method_refs.append(dict(slot=hex(slot),method_index=index,type='AstarPathWrap',method=expected_name,token=hex(expected_token)))
     decoder=Cs(CS_ARCH_ARM64,CS_MODE_LITTLE_ENDIAN);instructions=[]
     # Exact pinned sites, selected from full-method disassembly. No claim of a
     # complete control-flow graph or absence of other writes to the static slot.
     sites={0x3100640:('str','x1, [x0, #0x18]!'),0x30ff3a4:('ldr','x1, [x8, #0x18]'),
            0x30ff3ac:('bl','#0x194cc9c'),0x30ff3c8:('b','#0x3630400'),
-           0x1586098:('bl','#0x30ffab4')}
+           0x1586098:('bl','#0x30ffab4'),0x1b4d0c8:('bl','#0x360d710'),
+           0x1b4d0f8:('bl','#0x360d710'),0x1b4d110:('bl','#0x36316d4')}
     for address,expected in sites.items():
         decoded=list(decoder.disasm(raw[offset(address,4):offset(address,4)+4],address))
         if len(decoded)!=1 or (decoded[0].mnemonic,decoded[0].op_str)!=expected:raise ValueError('Bootstrap instruction changed')
         instructions.append(dict(address=hex(address),mnemonic=expected[0],operands=expected[1]))
     return dict(il2cpp_sha256=IL2CPP_SHA,metadata_sha256=METADATA_SHA256,literals=literals,
-                checked_instructions=instructions,scope=__doc__,runtime_execution_verified=False,
+                checked_instructions=instructions,awake_binding_method_refs=method_refs,
+                awake_binding_regvar_site='0x1b4d110',setter_invocation_observed=False,scope=__doc__,runtime_execution_verified=False,
                 callback_state_verified=False,all_static_writes_verified=False,can_send_packets=False)
 
 

@@ -50,7 +50,8 @@ def oracle(path,*,_state=None):
     q(0x4986eb0,0x601b700);q(0x601b700,0x601b800);u.mem_write(0x601b92c,b'\1')
     # A fixed canary in prepared single-thread TLS, not an Android TLS runtime.
     u.reg_write(UC_ARM64_REG_TPIDR_EL0,0x61d0000)
-    def run(vertices,faces,connections,flags,penalties,start_point,end_point,tag_mask,origin=(0,0,0),cell_size=1.,tile_cells=(10,10)):
+    def run(vertices,faces,connections,flags,penalties,start_point,end_point,tag_mask,origin=(0,0,0),cell_size=1.,tile_cells=(10,10),scene_profile=False):
+        if type(scene_profile) is not bool:raise ValueError('Invalid scene profile selector')
         validate_inputs(vertices,faces,connections,flags,penalties,start_point,end_point,tag_mask,origin)
         n=len(faces)
         # Native hierarchy construction ignores traffic tags, as the official
@@ -59,7 +60,7 @@ def oracle(path,*,_state=None):
         native_flags=[(f&~0x3fffe)|(h&0x3fffe) for f,h in zip(flags,hierarchy['flags'])]
         # Clear Area filtering before building/reusing graph and BBTree state.
         u.mem_write(0x6048014,b'\0');w(0x6048018,0xffffffff)
-        nearest(vertices,faces,start_point,origin,outer=True,full_search=True,node_flags=native_flags,tag_mask=tag_mask,cell_size=cell_size,tile_cells=tile_cells)
+        nearest(vertices,faces,start_point,origin,outer=True,full_search=not scene_profile,max_distance=100 if scene_profile else None,node_flags=native_flags,tag_mask=tag_mask,cell_size=cell_size,tile_cells=tile_cells)
         positions=[list(struct.unpack('<3i',u.mem_read(0x609001c+i*0x100,12))) for i in range(n)]
         areas=hierarchy['native_area_output']['areas'];w(0x6064018,len(areas));u.mem_write(0x6064020,struct.pack('<'+'I'*len(areas),*areas))
         def prepare():
@@ -83,7 +84,7 @@ def oracle(path,*,_state=None):
             if int_points!=[[round(f32(v*1000)) for v in point] for point in points]:raise ValueError('Native endpoint rounding mismatch')
             return dict(nodes=nodes,points=points,int_points=int_points,area=start_area)
         fixture=dict(positions=positions,connections=connections,flags=native_flags,penalties=penalties,start=0,end=0,tag_mask=tag_mask)
-        output=search(**fixture,_prepare=prepare)
+        output=search(**fixture,_prepare=prepare,heuristic=2 if scene_profile else 0,heuristic_scale=1.0 if scene_profile else 0.0)
         if 'prepared' in output:
             fixture.update(start=output['prepared']['nodes'][0],end=output['prepared']['nodes'][1],points=output['prepared']['int_points'])
             compare_search(fixture,output)

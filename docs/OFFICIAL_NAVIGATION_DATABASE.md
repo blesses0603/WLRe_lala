@@ -1997,3 +1997,96 @@ Android parity still verifies 185 shared core sources. Full runtime callback
 state, indirect native writes and the complete path harness's earlier heuristic
 profile remain unresolved. Three seeds, house entry/exit scope and all movement
 guards remain. No push, merge, release, remote CI or device acceptance occurred.
+
+
+## Phase 53: complete path fixtures under serialized scene parameters
+
+The full-path research harness can now explicitly select the reviewed scene
+profile instead of only the earlier zero-heuristic baseline. This is a research
+input option, not a production movement change. The default remains heuristic
+mode 0 with scale 0, full nearest search and no distance limit. The scene option
+uses the verified serialized values: mode 2, scale 1, full nearest search false,
+and maximum nearest distance 100. Only reviewed heuristic modes 0 and 2 are
+accepted. Before native Initialize, the harness reads back the prepared Path
+heuristic/scale fields and fails if they differ from the requested values.
+No native calculation is replaced with a Python implementation.
+
+`tools/review_navigation_scene_paths.py` revalidates the official scene manifests,
+bundle size/MD5/CRC and graph hashes, then compares both profiles for one endpoint
+pair in each land/sea/sky mode on each of eight complete reviewed ordinary maps.
+The nine other reviewed ordinary scenes remain excluded by the existing
+256-triangle graph bound, without truncation. Each successful search still passes
+the independent Bellman-Ford cost and route-edge checks before native endpoint,
+portal, modifier and funnel processing and pinned MoveController point-list
+handling. Both previously reviewed split-at-every-portal options are retained;
+neither is claimed to be an observed live-player setting.
+
+There are 24 input queries, executed under both profiles (48 native pipeline
+runs). In each profile, 16 land/sky cases complete and eight sea cases reach the
+expected native no-route boundary. Two sky queries change their route and final
+point list despite equal independently verified minimum costs:
+
+| Model | Mode | Baseline cost | Scene-profile cost | Funnel points, split=false |
+| --- | --- | ---: | ---: | --- |
+| 13226 | sky | 55,870 | 55,870 | 5 -> 6 |
+| 13227 | sky | 46,819 | 46,819 | 4 -> 4, with different coordinates |
+
+The split=true point lists also differ in these cases. This is concrete evidence
+that the old research profile must not be silently treated as scene-equivalent,
+even when a cost-only check passes. Both profiles' results remain in the report
+for reproducible regression comparison. It does not establish which profile a
+live session has after callbacks or other runtime mutation.
+
+```sh
+PYTHONPATH=/tmp/loader-research:. python -m tools.review_navigation_scene_paths \
+  --libil2cpp /workspace/validation/official-client/libil2cpp.so \
+  --libunity /workspace/validation/official-client/libunity.so \
+  --manifest-root /workspace/.localappdata/WLRE_LaLa/official_sync/manifests \
+  --bundle-root /workspace/validation/navigation-1296/bundles \
+  --cache-dir /workspace/validation/navigation-1296 \
+  --move-source /workspace/validation/official-lua-1.3.23/decoded/MoveController.lua
+```
+
+### Exact Lua binding for OnAwakeSettings
+
+The bootstrap verifier now also checks the native wrapper registration evidence:
+
+- The OnAwakeSettings name is metadata literal 9419, referenced by slot
+  0x499d6b8 inside AstarPathWrap.Register (0x1b4b6d8).
+- Slot 0x4942a18 resolves to method definition 4650,
+  AstarPathWrap.get_OnAwakeSettings, token 0x600122b.
+- Slot 0x494e5c0 resolves to method definition 4697,
+  AstarPathWrap.set_OnAwakeSettings, token 0x600125a.
+- The register block constructs LuaCSFunction delegates at 0x1b4d0c8 and
+  0x1b4d0f8 and calls LuaState.RegVar at 0x1b4d110 with that name and the
+  getter/setter pair. Exact pinned instructions and decoded metadata references
+  are checked by the tool; full-method disassembly supplies the surrounding
+  register dataflow.
+
+This closes the binding identity gap: the setter previously found by the native
+write scan is exposed as the named Lua variable. Registration is capability,
+not evidence of assignment. No setter invocation, non-null delegate target or
+post-Awake setting override has been observed, and the report explicitly keeps
+setter_invocation_observed=false and callback_state_verified=false.
+
+### Remaining evidence boundary
+
+The current environment has pinned Android-native functions, PC scene resources
+and a bounded synthetic VM state, not the official Unity/Lua application startup
+and scene lifecycle. Neither two matching Python-host reports nor complete
+indexed Lua text coverage supplies actual runtime callback state. The smallest
+missing runtime evidence is an authorized same-version test client's ordinary
+scene initialization trace: callback null/non-null and invocation target, search
+settings after Awake and immediately before a path request, plus the resulting
+final point list for fixed inputs. That would require a supported/authorized
+test environment with instrumentation; an ordinary-client recording or missing
+Player.log cannot provide these fields. No account credentials, debugger
+activation or client/security modifications were requested or performed.
+
+Both hosts produce byte-identical final scene-path and extended bootstrap
+reports and pass 55 focused navigation/safety tests. These are the same pinned
+Android native routines running in two host environments, not separate Windows
+and Android installed-client acceptance. The previous far-query diagnostics
+remain valid; no full-suite, live-server or device acceptance is claimed.
+Three seeds, house entry/exit-only scope, all movement guards and local-only
+branch restrictions remain; no push, merge, release or remote CI run occurred.
