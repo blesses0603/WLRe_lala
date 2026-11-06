@@ -2090,3 +2090,58 @@ and Android installed-client acceptance. The previous far-query diagnostics
 remain valid; no full-suite, live-server or device acceptance is claimed.
 Three seeds, house entry/exit-only scope, all movement guards and local-only
 branch restrictions remain; no push, merge, release or remote CI run occurred.
+
+### Phase 54: isolated shadow comparison and bounded offline coverage
+
+Added `navigation_shadow.compare` and `python -m tools.compare_navigation_shadow
+--map ID --start X Y --end X Y --travel-mode land`. The service consumes an
+already loaded runtime and cached database; official preview always receives
+`download=False`. It has no session or packet sender, exports diagnostic XY
+points rather than a movement route, and marks all results `can_send_packets=False`.
+The standalone CLI still checks CDN metadata through `prepare_dynamic_runtime(sync=False)`;
+it does not download navigation bundles, observe a live player, or continuously
+check CDN revisions. It is not an entirely offline command.
+
+Live callers can supply runtime/state getters. Changes in runtime, stage snapshot,
+scene, role or navigation revision discard both sides. Stale navigation and house
+navigation are rejected. Existing legacy coordinate guards remain; an additional
+stage-field comparison binds legacy metadata to the supplied official snapshot.
+Missing caches, mismatched provenance, missing prohibition markers, invalid points
+and excessive output become explicit diagnostic errors. Houses retain existing
+entry/exit behavior; this tool does not participate in either operation.
+
+Neither exact XY equality nor equal costs establishes correctness: legacy shared-edge
+geometry ignores official travel tags, heights are not compared, runtime obstacles
+are not applied, and preview search is not the full official player pipeline.
+There is no automatic acceptance threshold, UI integration or production movement
+activation in this change.
+
+Current CDN manifest audit at catalog
+`b500c9c684777edb5c80671541eb1ebc51bce5ed26a81270578a6fed259363e6`
+found 972 ordinary models / 1,333 stages: 770 within declared download budget,
+202 missing or ambiguous scene assets, and 17 reviewed models. These are manifest
+candidates, not 972 validated navigation graphs.
+
+For reproducible **offline historical** sampling, run
+`python -m tools.review_navigation_shadow_samples --snapshot DIR --output REPORT.json`.
+DIR supplies `current-identity.json` and `current-stages.json`; versioned navigation
+caches must already exist. This does not claim the snapshot is the current CDN
+version. Each of 17 reviewed ordinary models is tested in land/sea/sky modes,
+with at most five evenly spaced walkable node indices and ten pairs per mode.
+At the pinned catalog above: 51 model/mode rows, 302 attempted pairs, 292 previews
+and 10 explicit no-route rejections. Sixteen model/sea combinations have no
+walkable nodes and therefore no sampled pairs; they are not counted as passes.
+35 packet-coordinate shadow requests yielded 8 complete comparisons (2 exact XY
+matches) and 27 incomplete comparisons. Legacy errors were 24 missing-model
+cases and 2 stage mismatches; official preview rejected 1 disconnected case.
+These checks validate cache loading, output guards and selected path invariants,
+not official runtime equivalence. Desktop and Android statuses and point sequences
+agree exactly; accumulated XY lengths differ by less than 6e-11 packet units
+between host Python environments (not a navigation acceptance tolerance).
+
+Both hosts pass 64 focused tests (9 new shadow tests plus 55 existing navigation
+checks). Full application suites, Windows client, Android device and live-server
+acceptance were not rerun. All three bundled navigation seeds and movement guards
+remain. Actual OnAwakeSettings execution and final player settings still require
+runtime evidence unavailable in this environment; this diagnostic feature does
+not resolve that gap. Changes remain local, with no push, merge or release.
