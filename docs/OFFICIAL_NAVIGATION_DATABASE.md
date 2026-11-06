@@ -1330,3 +1330,74 @@ acceptance, push, merge or release is claimed. No credential or permission block
 occurred. The next evidence needed is verified cold initialization/runtime profiles
 and expanded whole-map reference coverage, followed by comparison with the actual
 production consumer before any removal or enablement.
+
+
+## Phase 45: cold delegate construction, defaults and eight complete maps
+
+The registration probe now executes the previously absent delegate branch of
+Seeker.RegisterModifier: allocation is a guarded zeroed-object model, while the
+native Comparison constructor, method-pointer/instance-flag access, cache write,
+Invoke and sorting are executed. Ten cold/warm inventory cases check the native
+target, receiver, MethodInfo and one allocation for each nonempty cold run. The
+composed path chain now starts with the cached delegate absent. Resolved metadata,
+class initialization and singleton state are still prepared; this is not full
+application cold-start or Unity AddComponent/Awake validation.
+
+The constructor-default probe executes StartEndModifier's complete constructor and
+FunnelModifier's constructor/base chain on zeroed objects with prepared static
+state. It verifies endpoint modes 3/3, raycasts disabled, layer mask -1; and funnel
+quality 0, unwrap true, split-at-every-portal false. A separate AstarPath constructor
+prefix stops at its first allocation boundary, after the relevant fields are set.
+Audited native field offsets plus native writes establish these constructor defaults:
+heuristic value 2, scale 1, maximum nearest distance 100, full nearest search false.
+This differs from the research profile (zero-scaled heuristic, full nearest search,
+no distance bound). Scene deserialization may override defaults; do not label these
+constructor values as verified live-player settings.
+
+Verified RoleController/MoveController source establishes fresh-root creation,
+component add/reuse and an initial Land mask. The 36 decoded Lua files inspected
+show no explicit heuristic/funnel setting mutation, which is limited corpus evidence.
+Serialized scene/prefab AstarPath values and later native changes still need offline
+inspection or a controlled runtime capture. No account credentials are needed for
+the offline work completed here.
+
+The research search/preparation/portal graph bound is now 256, with unchanged
+instruction limits and no product download-limit changes. Before expanding it,
+portal-VM connection arrays were moved from 0x60a0000 to 0x6120000: at larger node
+counts the former region would overlap the 0x60c0000/0x60d0000/0x60e0000 funnel,
+part and output buffers. The new bounded connection region ends at 0x6160000,
+inside the 0x6000000..0x6200000 arena. Search uses a separate VM; its 256 PathNodes
+and GraphNodes end at 0x6090000 and 0x60a0000, and its connection region ends at
+0x60e0000 before the node-class region. The funnel still accepts at most 128 portals;
+the composed pipeline rejects searched corridors above 127 nodes without truncation.
+A native 256-node search/Trace case exercises the exact graph boundary independently
+of the smaller funnel bound. Inputs with 257 nodes remain rejected.
+
+Eight whole official graphs now participate: M13217, M13221, M13223, M13224,
+M13225, M13226, M13227 and M13216, totaling 1,338 triangle nodes. Their 72 queries
+produce 48 completed land/sky searches and 24 sea Prepare error boundaries (these
+maps lack eligible sea nodes). Each completed query exercises both funnel profiles
+and the player-source callback. Maximum observed corridor length is 27. Nine other
+reviewed ordinary maps remain above the 256-node bound and are excluded, never
+truncated. Both hosts produce byte-identical results; outputs on the earlier two
+maps remain identical to phase 44. The 40 native search vectors (including the new
+256-node trace), ten registration cases and three constructor/default records also
+match across hosts. Both hosts pass 51 focused tests.
+
+### Evidence sufficient for data staging versus movement replacement
+
+Official hashes, versions, geometry, connection-edge interpretation and the bounded
+native/reference checks support the existing diagnostic/database staging work for
+the reviewed assets. They do not establish that all general-map seeds can be removed
+or that the production movement consumer is equivalent under actual player settings.
+The profile mismatch above is a concrete unresolved issue, in addition to incomplete
+map coverage and prepared runtime dependencies. All three seeds and movement guards
+remain; no production movement is enabled by these probes.
+
+Further offline work can inspect serialized AstarPath settings, execute verified
+heuristic/nearest profiles and expand complete-map references within audited bounds.
+Unity object lifecycle, official Lua/managed binding and actual movement behavior
+need a device/client integration check. Server acceptance of movement and house
+entry/exit needs a controlled live-server check; neither has been performed here.
+The app-wide regression baseline is still phase 26, not this research-only change.
+No remote CI, push, merge or release is claimed. House scope remains entry/exit only.

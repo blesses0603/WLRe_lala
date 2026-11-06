@@ -14,7 +14,7 @@ from tools.review_navigation_rotation import IL2CPP_SHA
 
 def validate_graph(positions,connections,flags,penalties,start,end,tag_mask,tag_penalties,points):
     n=len(positions)
-    if not 1<=n<=128 or len(connections)!=n or len(flags)!=n or len(penalties)!=n:
+    if not 1<=n<=256 or len(connections)!=n or len(flags)!=n or len(penalties)!=n:
         raise ValueError('Invalid bounded search graph')
     if any(type(i) is not int or not 0<=i<n for i in (start,end)):raise ValueError('Invalid endpoint index')
     for p in [*positions,*points]:
@@ -227,6 +227,13 @@ def vectors(path):
         fixture=dict(positions=[[0,0,0]],connections=[[]],flags=[1],penalties=[3],start=0,end=0,tag_mask=9)
         if points is not None:fixture['points']=points
         result=call(**fixture);compare(fixture,result);rows.append(dict(case='same_node',input=fixture,official_output=result))
+    n=256
+    boundary=dict(positions=[[i*1000,0,0] for i in range(n)],
+                  connections=[([[i-1,1000]] if i else [])+([[i+1,1000]] if i<n-1 else []) for i in range(n)],
+                  flags=[1]*n,penalties=[0]*n,start=0,end=n-1,tag_mask=9)
+    result=call(**boundary);compare(boundary,result)
+    if len(result['path_nodes'])!=256:raise ValueError('Full boundary trace missing')
+    rows.append(dict(case='maximum_256_node_trace',input=boundary,official_output=result))
     return dict(source_sha256=IL2CPP_SHA,cases=rows,can_send_packets=False,
                 modeled_dependencies=['finite modf','single-thread monitor enter/exit'],
                 scope='Native ABPath.Initialize/CalculateStep/Open/recursive G/heap/Trace and StartEndModifier modes 3 on prepared graph; not Prepare, nearest selection, Funnel, registered modifier sequence or player final vectorPath')
@@ -245,8 +252,8 @@ def official(path,cache_dir):
         with (Path(cache_dir)/f'M{model}-astar-cache.zip').open('rb') as stream:raw=stream.read(MAX_BYTES+1)
         if len(raw)>MAX_BYTES or hashlib.sha256(raw).hexdigest()!=digest:raise ValueError('Invalid official cache bytes')
         record=review_cache(raw);tile=record['mesh']['tiles'][0];faces=tile['triangles']
-        if len(faces)>128:
-            excluded.append(dict(model=model,nodes=len(faces),reason='Above 128-node bounded search fixture; no truncation'));continue
+        if len(faces)>256:
+            excluded.append(dict(model=model,nodes=len(faces),reason='Above 256-node bounded search fixture; no truncation'));continue
         positions=[center(tile['vertices_a_int3'],face)['center'] for face in faces]
         flags=[f for p,f in tile['node_metadata']];penalties=[p for p,f in tile['node_metadata']]
         connections=[[[target,cost] for target,cost,edge in row] for row in record['connections']]

@@ -17,7 +17,7 @@ from tools.review_navigation_rotation import IL2CPP_SHA
 def validate_inputs(vertices,faces,connections,flags,penalties,start_point,end_point,tag_mask,origin=(0,0,0)):
     validate_query(vertices,faces,start_point,origin);validate_query(vertices,faces,end_point,origin)
     n=len(faces)
-    if n>128:raise ValueError('Require at most 128 preparation nodes')
+    if n>256:raise ValueError('Require at most 256 preparation nodes')
     # Validate graph bookkeeping before creating native hierarchy. Exact native
     # centers and adjusted endpoint cost bounds are validated again by search.
     validate_search([[i,0,0] for i in range(n)],connections,flags,penalties,0,0,tag_mask,[0]*32,[[0,0,0],[0,0,0]])
@@ -129,8 +129,8 @@ def official(path,cache_dir):
         with (Path(cache_dir)/f'M{model}-astar-cache.zip').open('rb') as stream:raw=stream.read(MAX_BYTES+1)
         if len(raw)>MAX_BYTES or hashlib.sha256(raw).hexdigest()!=digest:raise ValueError('Invalid official cache bytes')
         record=review_cache(raw);tile=record['mesh']['tiles'][0];faces=tile['triangles']
-        if len(faces)>128:
-            excluded.append(dict(model=model,nodes=len(faces),reason='Above 128-node bound; no truncation'));continue
+        if len(faces)>256:
+            excluded.append(dict(model=model,nodes=len(faces),reason='Above 256-node bound; no truncation'));continue
         with zipfile.ZipFile(io.BytesIO(raw)) as archive:settings=json.loads(archive.read('graph0.json'))
         if settings['nearestSearchOnlyXZ']:raise ValueError('Unsupported XZ-only graph')
         vertices=tile['vertices_a_int3'];cases=[]

@@ -12,7 +12,7 @@ from tools.review_navigation_rotation import IL2CPP_SHA
 
 def validate_corridor(vertices,faces,connections,route):
     n=len(faces)
-    if not 1<=n<=128 or len(connections)!=n or not 1<=len(route)<=n:raise ValueError('Invalid bounded corridor')
+    if not 1<=n<=256 or len(connections)!=n or not 1<=len(route)<=n:raise ValueError('Invalid bounded corridor')
     for face in faces:
         validate_inputs(vertices,face)
         a,b,c=[vertices[i] for i in face];v=[b[i]-a[i] for i in range(3)];w=[c[i]-a[i] for i in range(3)]
@@ -52,7 +52,7 @@ def oracle(path,*,_state=None):
         validate_corridor(vertices,faces,connections,route)
         w(0x6030018,len(vertices));u.mem_write(0x6030020,b''.join(struct.pack('<3i',*p) for p in vertices))
         for i,(face,neighbors) in enumerate(zip(faces,connections)):
-            node=0x6080000+i*0x100;arr=0x60a0000+i*0x400
+            node=0x6080000+i*0x100;arr=0x6120000+i*0x400
             u.mem_write(node,bytes(0x100));q(node,0x6047000);w(node+0x14,1)
             u.mem_write(node+0x30,struct.pack('<3i',*face));q(node+0x28,arr);w(arr+0x18,len(neighbors))
             for j,(target,cost,edge) in enumerate(neighbors):

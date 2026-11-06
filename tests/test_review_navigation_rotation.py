@@ -1,3 +1,4 @@
+from tools.review_navigation_constructor_defaults import run as defaults_probe
 from tools.review_navigation_modifier_registration import oracle as modifier_registration_probe,validate_order
 from tools.review_navigation_modifier_chain import oracle as chain_probe
 from tools.review_navigation_funnel_apply import oracle as apply_probe
@@ -35,10 +36,17 @@ class RotationOracleBoundaryTests(unittest.TestCase):
         for order in (None,(0,1),[False],[2],[0,0],[0,1,0],['0']):
             with self.assertRaises(ValueError):validate_order(order)
 
+    def test_expanded_search_bound_remains_finite(self):
+        for n in (128,256):
+            validate_search([[0,0,0]]*n,[[] for _ in range(n)],[1]*n,[0]*n,0,0,9,[0]*32,[[0,0,0],[0,0,0]])
+        n=257
+        with self.assertRaises(ValueError):
+            validate_search([[0,0,0]]*n,[[] for _ in range(n)],[1]*n,[0]*n,0,0,9,[0]*32,[[0,0,0],[0,0,0]])
+
     def test_unknown_library_rejected_before_optional_imports(self):
         with tempfile.TemporaryDirectory() as tmp:
             path=Path(tmp)/'unknown.so';path.write_bytes(b'not official code')
-            for factory in (modifier_registration_probe,chain_probe,lambda p:apply_probe(p,p),parts_probe,dispatch_probe,player_probe,modifier_order_probe,portal_probe,lambda p:pipeline_probe(p,p),prepare_probe,lambda p:unwrap_probe(p,p),lambda p:funnel_probe(p,p),search_probe,path_probe,from_to_oracle,multiply_oracle,endpoint_probe,traversal_probe,area_probe,bbtree_probe,group_probe,vertex_probe,nearest_probe,lambda path:registration_probe(path,path)):
+            for factory in (defaults_probe,modifier_registration_probe,chain_probe,lambda p:apply_probe(p,p),parts_probe,dispatch_probe,player_probe,modifier_order_probe,portal_probe,lambda p:pipeline_probe(p,p),prepare_probe,lambda p:unwrap_probe(p,p),lambda p:funnel_probe(p,p),search_probe,path_probe,from_to_oracle,multiply_oracle,endpoint_probe,traversal_probe,area_probe,bbtree_probe,group_probe,vertex_probe,nearest_probe,lambda path:registration_probe(path,path)):
                 with self.assertRaisesRegex(ValueError,'digest'):factory(path)
             with path.open('wb') as output:output.truncate(96*1024*1024+1)
             with self.assertRaisesRegex(ValueError,'size limit'):from_to_oracle(path)

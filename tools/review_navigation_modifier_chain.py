@@ -29,7 +29,7 @@ def oracle(path):
     u.hook_add(UC_HOOK_CODE,bridge)
     def run(start_end,funnel,*,registration_order=(1,0)):
         if not callable(start_end) or not callable(funnel) or sorted(registration_order)!=[0,1]:raise ValueError('Require both native modifier callbacks')
-        registration=register(list(registration_order));calls.clear();output.clear();callbacks[:]=[start_end,funnel]
+        registration=register(list(registration_order),cold=True);calls.clear();output.clear();callbacks[:]=[start_end,funnel]
         # No external pre/post-process delegates in this explicit profile.
         state['execute'](0x2a8e6a0,(0x6000000,2,0x6005000,0),instruction_limit=100000)
         if calls!=['StartEnd.Apply','Funnel.Apply']:raise ValueError('Incomplete native modifier dispatch')
