@@ -406,3 +406,63 @@ label the result an official path. Nonhorizontal smoothing and all preview-based
 movement remain blocked; all three navigation seeds stay until replacement is
 validated across the necessary general-map consumers. House interior work remains
 out of scope; entry and exit remain supported.
+
+## Obtaining a complete official vectorPath (phase 29 feasibility check)
+
+**A game account is not currently required for further offline research.** The
+public official APK, its verified graph caches and the current bounded ARM64
+emulator are available. No credentials were requested, read, transmitted or used.
+This environment has no `adb`, Android emulator, qemu-aarch64 or Unity executable
+on PATH, so a complete Android/Unity client run has not been performed. Absence of
+those programs does not prove a game login is required for path calculation.
+
+A further isolated probe ran the actual `Funnel.Calculate` seven-argument numeric
+kernel at `0x23597a4`. Metadata parameter names are left, right, numPortals,
+startIndex, funnelPath, maxCorners and lastCorner. Native loads/stores establish
+Vector2 array length at +0x18/data at +0x20 and the output integer List's backing
+array at +0x10/count at +0x18/version at +0x1c. The probe supplied bounded,
+preallocated synthetic ABI memory, a marked initialized metadata state and inert
+unused method-reference slots. It did **not** initialize a real IL2CPP runtime.
+All execution was restricted to the kernel's address range; allocation, metadata
+resolution, logging, exceptions or another runtime branch would stop the probe.
+Three successful samples exercised 197 unique instruction addresses. Desktop and
+Android Python hosts returned the same corner indices and lastCorner=true:
+
+| Left portals | Right portals | Corner indices |
+| --- | --- | --- |
+| (0,0), (1,1), (3,0) | (0,0), (1,-1), (3,0) | 0, 2 |
+| (0,0), (1,2), (2,2), (3,4) | (0,0), (1,1), (2,1), (3,4) | 0, 2, 3 |
+| (0,0), (0,1), (1,2), (2,2) | (0,0), (1,0), (2,1), (2,2) | 0, 3 |
+
+This demonstrates that more of the official numeric algorithm can be evaluated
+without a server/account. It is not a full vectorPath oracle: the synthetic ABI
+setup bypasses normal managed initialization and supplies portal arrays directly.
+The probe and output remain private research files outside Git, rather than being
+promoted to a production decoder or movement authority.
+
+### Remaining offline work and optional external assistance
+
+The next offline work is to validate input/output layouts for Unwrap and the
+three-argument Calculate wrapper, accumulated portal transforms and index-to-3D
+reconstruction, then reproduce StartEndModifier and Seeker modifier settings with
+verified graph/node state. Each unresolved runtime call must remain a stop, not a
+locally guessed algorithm substituted into the reference run. Known graph digest,
+ordered corridor and start/end XYZ are available from current verified caches;
+complete initialized graph/List/Path state and output parity are not yet proven.
+No new access permission is needed for this investigation.
+
+If independent client traces are supplied to accelerate validation, the smallest
+useful assistance is a few **sanitized path records**, not an account/password or
+just a gameplay screenshot. An authorized client/test build must expose the actual
+StartPathImmediately callback, with graph version/digest, start/end world XYZ,
+Seeker mask, enabled modifiers/settings, complete/error status, node corridor and
+ordered vectorPath before/after modifiers. Include a flat control, a slope and an
+overlapping-height case. A stock logged-in client or account alone does not provide
+that internal output. A test scene may permit offline collection; whether a
+particular client build requires login to load its scene has not been established.
+If collection requires live gameplay, the user should run it themselves and share
+only the path record, without session tokens or credentials.
+
+No complete official vectorPath was obtained during this feasibility check; no
+seed was removed and no movement restriction was relaxed. This phase changes
+research documentation only, so application regression suites were not rerun.
