@@ -1185,3 +1185,43 @@ research tools; app runtime behavior is unchanged, full app-suite results remain
 phase 26, and no remote CI or live-server acceptance is claimed. Three navigation
 seeds and all movement guards remain; house entry/exit scope is unchanged. Changes
 remain local and are not pushed.
+
+
+## Phase 42: searched corridors through native portals and funnel
+
+The local research pipeline now composes native Prepare/GetNearest, search/Trace,
+TriangleMeshNode.GetPortal and the nonplanar Funnel.Calculate wrapper. It consumes
+the actual searched node sequence and serialized connection edge indices; portal
+coordinates are no longer manually supplied. Invalid, missing, cross-tile or
+unsupported edge records are rejected. The probe remains bounded to 128 nodes,
+uses prepared single-tile state, and never permits packet transmission.
+
+Twelve synthetic queries cover rising/falling folded terrain and land/sea/sky/empty
+masks. Eighteen queries on the complete M13224 and M13216 official graphs yield
+12 successful searches (24 funnel profiles, split false/true) and six expected sea
+Prepare error boundaries. Fifteen larger reviewed ordinary graphs remain excluded
+without truncation. All synthetic, official-input and four native modifier-order
+comparison results are byte-identical across the desktop and Android Python hosts.
+
+The native Seeker registration comparison delegate, interface Order getters and
+Int32 comparison establish StartEnd order 0 before Funnel order 10 for these two
+components. This is not execution of complete registration, List.Sort or dispatch.
+
+Further verified Lua evidence refines phase 41's initialization uncertainty:
+RoleController.New creates a fresh GameObject, then constructs MoveController,
+and only afterwards ModelController. The verified decoded RoleController SHA-256
+is af01c2a8e1b785ff9bc53f080b9282ebcd3b31c275ec8f3ff10e1a0f869ce8e9.
+This fresh-root initialization path supports examining new-component defaults;
+it does not establish absence of subsequent changes or the full modifier inventory.
+The 36 decoded Lua files inspected contain no explicit funnel-setting mutation,
+which is not a claim about the entire official Lua corpus.
+
+Remaining gaps are native part splitting/ConstructFunnelPortals/FunnelModifier.Apply,
+complete Seeker registration and dispatch, and the player's final point processing.
+The composed probe supplies single-part boundaries and runs separate prepared VMs;
+its candidate outputs are not yet an official final-player-path oracle. Coverage
+also remains limited to two full ordinary graphs and explicit fixture settings.
+No credentials or permissions block this research. No app runtime behavior changes,
+seed deletion, device/live-server acceptance, full app-suite rerun or remote CI run
+is claimed. Both hosts pass 49 focused tests. The final three navigation seeds and
+movement guards remain, with house entry/exit retained. Changes remain local.

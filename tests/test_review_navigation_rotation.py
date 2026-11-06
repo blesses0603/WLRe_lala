@@ -1,3 +1,6 @@
+from tools.review_navigation_modifier_order import run as modifier_order_probe
+from tools.review_navigation_portals import oracle as portal_probe,validate_corridor
+from tools.review_navigation_path_pipeline import oracle as pipeline_probe
 from tools.review_navigation_prepare import oracle as prepare_probe,validate_inputs as validate_prepare
 from tools.review_navigation_unwrap import oracle as unwrap_probe,validate_portals,compare_unfolding
 from tools.review_navigation_funnel_wrapper import oracle as funnel_probe
@@ -24,7 +27,7 @@ class RotationOracleBoundaryTests(unittest.TestCase):
     def test_unknown_library_rejected_before_optional_imports(self):
         with tempfile.TemporaryDirectory() as tmp:
             path=Path(tmp)/'unknown.so';path.write_bytes(b'not official code')
-            for factory in (prepare_probe,lambda p:unwrap_probe(p,p),lambda p:funnel_probe(p,p),search_probe,path_probe,from_to_oracle,multiply_oracle,endpoint_probe,traversal_probe,area_probe,bbtree_probe,group_probe,vertex_probe,nearest_probe,lambda path:registration_probe(path,path)):
+            for factory in (modifier_order_probe,portal_probe,lambda p:pipeline_probe(p,p),prepare_probe,lambda p:unwrap_probe(p,p),lambda p:funnel_probe(p,p),search_probe,path_probe,from_to_oracle,multiply_oracle,endpoint_probe,traversal_probe,area_probe,bbtree_probe,group_probe,vertex_probe,nearest_probe,lambda path:registration_probe(path,path)):
                 with self.assertRaisesRegex(ValueError,'digest'):factory(path)
             with path.open('wb') as output:output.truncate(96*1024*1024+1)
             with self.assertRaisesRegex(ValueError,'size limit'):from_to_oracle(path)
@@ -215,3 +218,20 @@ class NativePortalInputTests(unittest.TestCase):
         good=dict(left=[[0,0],[1,1],[3,0]],right=[[0,0],[1,-1],[3,0]])
         compare_unfolding(left,right,good)
         with self.assertRaises(ValueError):compare_unfolding(left,right,dict(good,right=[[0,0],[1,-2],[3,0]]))
+
+
+class NativePortalEdgeTests(unittest.TestCase):
+    def test_bad_edges_or_route_are_never_guessed(self):
+        good=dict(vertices=[[0,0,0],[1000,0,0],[0,500,1000],[1000,500,1000]],
+                  faces=[[0,1,2],[1,3,2]],connections=[[[1,10,1]],[[0,10,2]]],route=[0,1])
+        validate_corridor(**good)
+        for change in (dict(route=[0,0]),dict(route=[True,1]),dict(route=[0,2]),
+                       dict(connections=[[[1,10,0]],[[0,10,2]]]),
+                       dict(connections=[[[1,10,255]],[[0,10,2]]]),
+                       dict(connections=[[],[[0,10,2]]]),
+                       dict(connections=[[[1,1<<28,1]],[[0,10,2]]]),
+                       dict(faces=[[0,0,1],[1,3,2]])):
+            with self.assertRaises(ValueError):validate_corridor(**dict(good,**change))
+
+    def test_single_node_corridor_has_no_invented_portals(self):
+        validate_corridor([[0,0,0],[1000,0,0],[0,0,1000]],[[0,1,2]],[[]],[0])
