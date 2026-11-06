@@ -1719,3 +1719,84 @@ verify against the same 866-entry index, with zero literal OnAwakeSettings hits;
 13223, 13225 and 13226 also exhaust the unchanged budget, stopping at 0x2d83840,
 0x2832698 and 0x2a98ed0 respectively. Their private traces are evidence of the
 limits reached, not successful rejection results.
+
+
+## Phase 50: bounded Common, Controller and Logic source census
+
+The new offline `tools/review_navigation_lua_batch.py` selects deterministic,
+lexically sorted batches from the same pinned 866-entry official Lua index.
+It covers all Common (13), Controller (27) and Logic (154, including Protocols)
+files, in five batches of 40/40/40/40/34. Each batch is bounded to 40 files and
+16 MiB encrypted bytes, each file to 2 MiB; download requests additionally use
+15-second timeouts and a 300-second batch deadline. Only the exact indexed
+Common/Controller/Logic and Logic/Protocols path shapes are accepted. An initial
+path check rejected nested Protocols entries before downloading; the validator
+was extended only for that observed indexed subdirectory, retaining traversal
+rejection and the pinned index check.
+
+Acquisition reused 20 verified cached files and fetched 174 from the pinned
+1.3.23 LuaScripts URL on wlreftpsrc.chinesegamer.net. Redirects, unexpected status
+or response URL, oversized responses and wrong MD5s are rejected. No index or
+version was silently updated. All 194 files verify against index MD5, pinned
+metadata decoding and exact cipher round-trip; total encrypted input is
+5,044,544 bytes. Both per-file SHA-256 hashes and literal require references are
+recorded in private audit reports. No source code is executed or shipped, and
+no product decoder allowlist is enlarged. Files retain their full relative
+paths in a separate private cache, avoiding basename collisions and keeping the
+older 37-file audit inventory unchanged.
+
+The scanner records case-sensitive literal occurrences (including possible
+comments or strings) of OnAwakeSettings, heuristic, heuristicScale,
+maxNearestNodeDistance, fullGetNearestSearch, AstarPath, traversableTags,
+tagPenalties, FunnelModifier, StartEndModifier, Seeker and the relevant
+LuaHelper path/node calls. It is not a Lua AST or runtime analysis. No literal
+OnAwakeSettings, heuristic/heuristicScale, maxNearestNodeDistance,
+fullGetNearestSearch or tagPenalties reference occurs in these 194 sources.
+The AstarPath hits are in MoveController, StageObjController, Role and Room;
+the Role.lua:338 occurrence is commented-out source, illustrating why literal
+hits are not themselves execution evidence. Existing house scope remains only
+entry/exit; Room scan calls do not add house navigation to the product scope.
+
+### A concrete initialization entry point
+
+The verified `Lua/Logic/LuaArtifact.lua` defines `LuaArtifact.Initialize` at
+line 116 and contains 98 literal require statements. It invokes UI.Initialize
+at line 135, Config.Initialize at 138, Resource.Initialize at 164,
+Data.Initialize at 182, Stage.Initialize at 190, Network.Initialize at 196 and
+Role.Initialize at 202, then opens the login UI at line 334. This is static
+call-order evidence (some work is inside a coroutine), not proof of observed
+startup or callback-null behavior. It gives a concrete next chain rather than
+assuming an unindexed Main.lua exists.
+
+Across the batch, 546 distinct literal require module names map to entries in
+the pinned index under the observed `Lua/<module>.lua` convention. In particular,
+Logic/UI.lua contains 228 literal requires and Logic/Data.lua contains 132.
+Those dependency lists include sources outside this batch; validating an edge
+or parent file does not validate the required module's execution or contents.
+Dynamically constructed names, native bootstrap and modules loaded outside this
+index remain outside this literal scan.
+
+Reproduction uses the private encrypted cache and does not download anything:
+
+```sh
+PYTHONPATH=/tmp/loader-research:. python -m tools.review_navigation_lua_batch \
+  --index /workspace/validation/official-lua-1.3.23/index.json \
+  --metadata /workspace/validation/official-client/global-metadata.dat \
+  --cache-root /workspace/validation/navigation-lua-batches/phase50 \
+  --group controllers --batch 0
+```
+
+Repeat with `--group logic --batch 0`, then batches 1, 2 and 3. Missing files
+produce an explicitly incomplete report; corrupt files or invalid selectors
+raise errors. Both hosts produce byte-identical reports for all five batches.
+Negative checks verify incomplete-cache reporting, corrupt-source rejection
+and invalid group/batch rejection; each host also passes 53 focused navigation
+and safety tests.
+
+Coverage must not be conflated: this literal scan covers 194/866 files, leaving
+672 outside it. Combined with the prior 37-file source inventory, the unique
+verified-source union is 211/866 (655 not yet verified), but the additional 17
+older sources were not newly scanned for every term above. No runtime override
+absence, complete path equivalence or new far-query result is established.
+Three seeds and all movement guards remain. Changes remain local; no push,
+merge, release, remote CI or device acceptance occurred.
