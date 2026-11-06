@@ -636,3 +636,50 @@ possible; there was no access/authentication blocker, and no account is needed
 for the next isolated probes. The three seeds and all unverified movement guards
 remain. Full application suites were not repeated for this research-only change;
 the latest recorded application full-suite results remain phase 26.
+
+## Native BBTree internal construction (phase 33)
+
+`tools.review_navigation_bbtree` executes the pinned official
+RebuildFromInternal (`0x2842f6c`), NodeBounds, split helpers, GetBox and capacity
+checks, with synthetic initialized ABI records and preallocated buffers. It also
+executes the native identical-class type-check branch and reference write barrier
+with GC marking disabled in the synthetic state. No Python tree builder is
+substituted. Allocation, unreviewed branches and instruction-limit exhaustion
+fail closed. This is not complete managed-runtime or live graph initialization.
+
+```console
+python -m tools.review_navigation_bbtree --libil2cpp /path/to/libil2cpp.so
+```
+
+Nine cases cover 1, 4, 5, 8, 17, 64, 256 and 512 distinct input rectangles, plus
+65 coincident rectangles/centers to exercise the degenerate split fallback.
+Desktop and Android Python hosts return identical native boxes and references.
+Validation checks exact input-reference preservation (including pointer alignment),
+leaf padding/capacity, reachable acyclic box links and exact recursive bounds.
+Input limits are 512 nodes and bounded integer coordinates; binary digest and
+size checks run before loading optional emulator dependencies. Both hosts pass
+31 focused tests, including malformed input, duplicate references, cycles,
+unreachable boxes and incorrect bounds. These are host tests, not Android device
+acceptance. Full application suites were not repeated for tools-only changes;
+phase 26 remains the latest recorded complete application regression.
+
+This proves the internal builder for supplied rectangles and centers, not their
+extraction from official triangle objects. Triangle vertex ownership, native
+center rounding and complete RebuildFrom initialization still require comparison
+before connecting a real map to GetNearest.
+
+Further disassembly of FindHierarchicalNodeChildren and its callback
+(`0x2d85d64`) confirms that the callback reads hierarchical index from flags bits
+1–17. An already assigned different group is added to the group adjacency list
+unless already present. An unassigned node is accepted only when walkable and
+the current children count is at most 255 (then appended). This is evidence for
+a bounded grouped traversal, not proof of a locally invented grouping algorithm.
+The callback, queue operations, virtual GetConnections dispatch and full grouping
+initialization have not yet been run together against official output.
+
+Consequently area-constrained GetNearest and complete vectorPath remain
+unverified. Next work is the native grouped traversal and triangle-bound/center
+initializers, followed by combined nearest-point queries. No account or new
+permission is required for those offline probes; the obstacle is unverified ABI
+state and output equivalence. All movement guards and the three remaining seeds
+are retained. No application runtime behavior changed in this phase.
