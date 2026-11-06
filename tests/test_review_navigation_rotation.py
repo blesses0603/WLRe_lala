@@ -1,6 +1,8 @@
 from pathlib import Path
 import tempfile
 import unittest
+from tools.review_navigation_groups import oracle as group_probe,validate_graph
+from tools.review_navigation_vertices import oracle as vertex_probe,validate_inputs as validate_vertices
 from tools.review_navigation_bbtree import oracle as bbtree_probe,validate_inputs,validate_tree
 from tools.review_navigation_areas import oracle as area_probe,validate_adjacency
 from tools.review_navigation_traversal import oracle as traversal_probe
@@ -12,7 +14,7 @@ class RotationOracleBoundaryTests(unittest.TestCase):
     def test_unknown_library_rejected_before_optional_imports(self):
         with tempfile.TemporaryDirectory() as tmp:
             path=Path(tmp)/'unknown.so';path.write_bytes(b'not official code')
-            for factory in (from_to_oracle,multiply_oracle,endpoint_probe,traversal_probe,area_probe,bbtree_probe):
+            for factory in (from_to_oracle,multiply_oracle,endpoint_probe,traversal_probe,area_probe,bbtree_probe,group_probe,vertex_probe):
                 with self.assertRaisesRegex(ValueError,'digest'):factory(path)
             with path.open('wb') as output:output.truncate(96*1024*1024+1)
             with self.assertRaisesRegex(ValueError,'size limit'):from_to_oracle(path)
@@ -46,3 +48,19 @@ class BBTreeInputTests(unittest.TestCase):
                     dict(good,boxes=[[0,0,1,1,-1,0,0]]),
                     dict(good,boxes=good['boxes']*2)):
             with self.assertRaises(ValueError):validate_tree(bad,rects)
+
+
+class NativeInitializationInputTests(unittest.TestCase):
+    def test_group_input_bounds(self):
+        for adjacency,walkable in (([],[]),([[]],[False]),([[]],[1]),([[1]],[True]),
+                                  ([[True],[]],[True,True]),([[1,1],[]],[True,True]),
+                                  ([[]]*257,[True]*257)):
+            with self.assertRaises(ValueError):validate_graph(adjacency,walkable)
+        validate_graph([[1],[]],[True,False])
+
+    def test_vertex_input_bounds(self):
+        for vertices,indices in (([],[0,0,0]),([[0,0,0]],[0,0,1]),
+                                 ([[0,0,0]],[0,False,0]),([[10000001,0,0]],[0,0,0]),
+                                 ([[0,float('nan'),0]],[0,0,0]),([[0,0,0]]*4097,[0,0,0])):
+            with self.assertRaises(ValueError):validate_vertices(vertices,indices)
+        validate_vertices([[0,-1,2]],[0,0,0])

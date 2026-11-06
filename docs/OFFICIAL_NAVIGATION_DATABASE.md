@@ -683,3 +683,61 @@ initializers, followed by combined nearest-point queries. No account or new
 permission is required for those offline probes; the obstacle is unverified ABI
 state and output equivalence. All movement guards and the three remaining seeds
 are retained. No application runtime behavior changed in this phase.
+
+## Native group callbacks, queue and triangle access (phase 34)
+
+`tools.review_navigation_groups` now executes FindHierarchicalNodeChildren
+(`0x2d84edc`) together with actual MeshNode.GetConnections (`0x2d94558`), the
+hierarchy callback (`0x2d85d64`), Queue.Enqueue/Dequeue/MoveNext and empty-queue
+Clear. The synthetic node vtable points to the official GetConnections method;
+the synthetic delegate invokes the official callback. These dispatch records are
+prepared test state, not recovered full Unity runtime state. Native reference
+write barriers run with inactive GC marking. Buffers are preallocated, binary
+hashes are pinned, native instruction addresses are allowlisted, and allocation
+or other unreviewed branches stop the probe.
+
+Fifteen cases cover chains of 1–256 nodes, blocked intermediate nodes, a star,
+cycle/disconnected node and seeded directed graphs with mixed walkability.
+Desktop and Android hosts produce identical child order, updated flags and empty
+final queue. All match an independent traversal over the supplied directed arcs.
+The probe validates pointer alignment, child count and duplicate references. It
+requires a walkable start and bounds the complete input to 256 nodes. This tests
+one group, not RecalculateAll or multiple groups with cross-group links. The
+existing FloodFill probe still tests supplied hierarchy adjacency separately;
+these are not yet a complete real-map hierarchy/Area initialization.
+
+`tools.review_navigation_vertices` executes TriangleMeshNode.GetVertices
+(`0x2832670`), graph-index/holder lookup, native interface dispatch to
+NavmeshBase.GetVertex (`0x27a12ec`), and tile vertex access (`0x24c6354`) on a
+synthetic initialized single-tile holder. It then runs the official IntRect
+constructor/expansion and integer min/max helpers. Nine cases cover vertex
+permutations, repeated indices, negative coordinates, mixed heights and the
+probe's coordinate bounds. Repeated indices test access/bounds only and are not
+accepted as evidence of valid navigation triangles. Both hosts return identical
+vertices/bounds, matching the supplied vertices and independently calculated XZ
+bounds. This probe does not run the entire BBTree.RebuildFrom caller.
+
+```console
+python -m tools.review_navigation_groups --libil2cpp /path/to/libil2cpp.so
+python -m tools.review_navigation_vertices --libil2cpp /path/to/libil2cpp.so
+```
+
+Center initialization remains incomplete. UpdatePositionFromVertices
+(`0x28325e8`) reads three vertices, adds Int3 values and uses the native float32
+one-third constant with Int3 multiplication (`0x2d86434`). That method calls
+external `modf` via `0xb125f0` before rounding. ELF inspection confirms `modf` is
+undefined/imported in both available official libil2cpp and libunity binaries;
+neither contains its implementation. No approximate center or substituted host
+rounding was represented as full official native output. Completing this path
+requires a verified compatible AArch64 runtime implementation/ABI or a separately
+validated, explicitly identified external-function model. Such a model would
+remain a modeled dependency rather than an entirely official-binary oracle.
+
+The remaining work is multi-group initialization/cross-group deduplication,
+verified center initialization and then combined area-constrained GetNearest.
+Offline investigation can still advance; there is no account/permission blocker.
+The 33 focused tests pass on each host, including malformed graph and vertex
+inputs and unknown-binary rejection before optional imports. These are host
+regressions, not device/live-server acceptance. No app runtime behavior changed;
+full suites were not rerun (latest full results remain phase 26). All movement
+guards and the three seeds remain, and these tools cannot authorize movement.
