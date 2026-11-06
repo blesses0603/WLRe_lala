@@ -1476,3 +1476,74 @@ acceptance and house entry/exit remain separate controlled live checks. Neither
 kind of runtime test has been performed. Three navigation seeds and all unverified
 movement guards remain, with house scope restricted to entry/exit. Changes are
 local only; no remote CI, full application-suite rerun, push, merge or release.
+
+
+## Phase 47: callback write candidates and verified local Lua coverage
+
+`review_navigation_awake_writes.py` makes the offline investigation reproducible
+from the pinned official library/metadata and the existing private Lua cache. It
+finds 481 ADRP/LDR windows referring to the reviewed AstarPath type-info slot and
+tracks simple register aliases through bounded 768-byte windows. Three write
+instructions to static offset 0x20 are identified and manually checked:
+
+| Address | Reviewed native meaning |
+| --- | --- |
+| 0x1a79820 | AstarPath.OnDestroy's conditional callback-clear path |
+| 0x1b4a330 | AstarPathWrap.set_OnAwakeSettings, non-null delegate branch |
+| 0x1b4a350 | Same setter, null/general branch |
+
+The setter begins at 0x1b4a270. It calls ToLua.CheckDelegate at 0x20e7ab4 using
+Lua stack index 2, then stores the resulting delegate in the static callback field.
+The converter identity was resolved through the official generic-method table
+(method definition 16421), rather than assigning the nearest unrelated non-generic
+method name. Native method tables independently identify the setter token
+0x0600125a in Assembly-CSharp.dll and OnDestroy token 0x0600003a in
+AstarPathfindingProject.dll. A setter capable of receiving a delegate is not proof
+that the player bootstrap calls it or proof of any particular callback target.
+
+The scan is deliberately a candidate finder: it follows one known type-info slot
+and simple straight-line aliases, not complete control flow, all pointer aliases,
+reflection, dynamically generated names or arbitrary runtime stores. It must not
+be used to claim that these are the only possible writes in the entire application.
+The mapped method lookup used during investigation was also not treated as proof
+for generic/shared addresses; the relevant candidates were checked separately.
+
+All 36 locally decoded Lua files were revalidated against the pinned official
+866-entry path/MD5 index and their encrypted bytes, then decoded again using the
+pinned metadata codec with exact re-encryption checks. Decoded cache bytes must
+match. Basename plus MD5 resolves same-name entries (notably Function.lua) without
+guessing. No literal OnAwakeSettings reference appears in those 36 files. The
+remaining 830 indexed files are outside this cached-source audit, and computed
+field names are not ruled out. No new files were downloaded or executed, and the
+product Lua allowlist was not expanded.
+
+Both hosts produce byte-identical reports (481 windows, three write candidates,
+36 verified Lua files, zero literal hits) and pass 53 focused tests. This verifies
+repeatable offline analysis, not runtime behavior on an Android device or the
+Windows client. The actual registrant, delegate target and setting-override result
+remain unconfirmed. There is no evidence here that the callback is non-null in a
+normal player session, nor enough evidence to assume it is always null.
+
+### Minimum evidence to resolve the actual target
+
+Further offline resolution needs the applicable bootstrap and remaining official
+Lua source content or a statically resolvable registration path; the current cache
+is insufficient for a complete source search. The task remained offline.
+
+In an authorized diagnostic/test client, record whether the setter is invoked and,
+if it is, the source/function identity of the Lua argument at stack index 2 plus
+the converted delegate's target/method identity. At the first ordinary scene's
+Awake boundary, record callback null/non-null, each invocation target (including
+multiple delegates if present), and the four search settings immediately before
+and after invocation. Also record final settings immediately before the first path
+request to detect later changes, along with package/scene identity. A null callback
+must be recorded explicitly. One such trace per target client/version is the
+minimum useful starting point; one session does not establish every traffic mode
+or future version. These observations need supported runtime diagnostics rather
+than screenshots, and need no shared passwords or unrelated account data.
+
+No such device trace exists in this workspace. Therefore no overridden search
+profile, movement equivalence, server acceptance or seed removal is claimed.
+The three navigation seeds, unverified-movement guards and house entry/exit-only
+scope remain unchanged. Work stays local; no push, merge, release, remote CI or
+new full application-suite run occurred.

@@ -1,3 +1,4 @@
+from tools.review_navigation_awake_writes import inspect as awake_writes_probe
 from tools.review_navigation_scene_settings import profile as scene_profile
 from tools.review_navigation_scene_initialization import inspect as initialization_probe
 from tools.review_navigation_constructor_defaults import run as defaults_probe
@@ -64,7 +65,7 @@ class RotationOracleBoundaryTests(unittest.TestCase):
     def test_unknown_library_rejected_before_optional_imports(self):
         with tempfile.TemporaryDirectory() as tmp:
             path=Path(tmp)/'unknown.so';path.write_bytes(b'not official code')
-            for factory in (lambda p:initialization_probe(p,p),defaults_probe,modifier_registration_probe,chain_probe,lambda p:apply_probe(p,p),parts_probe,dispatch_probe,player_probe,modifier_order_probe,portal_probe,lambda p:pipeline_probe(p,p),prepare_probe,lambda p:unwrap_probe(p,p),lambda p:funnel_probe(p,p),search_probe,path_probe,from_to_oracle,multiply_oracle,endpoint_probe,traversal_probe,area_probe,bbtree_probe,group_probe,vertex_probe,nearest_probe,lambda path:registration_probe(path,path)):
+            for factory in (lambda p:awake_writes_probe(p,p,p),lambda p:initialization_probe(p,p),defaults_probe,modifier_registration_probe,chain_probe,lambda p:apply_probe(p,p),parts_probe,dispatch_probe,player_probe,modifier_order_probe,portal_probe,lambda p:pipeline_probe(p,p),prepare_probe,lambda p:unwrap_probe(p,p),lambda p:funnel_probe(p,p),search_probe,path_probe,from_to_oracle,multiply_oracle,endpoint_probe,traversal_probe,area_probe,bbtree_probe,group_probe,vertex_probe,nearest_probe,lambda path:registration_probe(path,path)):
                 with self.assertRaisesRegex(ValueError,'digest'):factory(path)
             with path.open('wb') as output:output.truncate(96*1024*1024+1)
             with self.assertRaisesRegex(ValueError,'size limit'):from_to_oracle(path)
