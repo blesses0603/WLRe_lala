@@ -2,12 +2,11 @@
 from wlre.core.state_ownership import writes
 from wlre.services.items import reservations
 from wlre.services.coordination import reason as coordination_reason
-from wlre.paths import RESOURCE_ROOT
-import json,time,copy
+import time,copy
 from wlre.network.wire import Packet, Writer, ProtocolError
-from wlre.services.items.combat_resources import CAT, item_name, available
-from wlre.storage.bundled_database import load_bundled_json
-META=load_bundled_json('alchemy_catalog.json', root=RESOURCE_ROOT)['items']
+from wlre.services.items.combat_resources import item_name, available
+from wlre.services.world.alchemy_metadata import CurrentAlchemyMetadata
+META=CurrentAlchemyMetadata()
 MODES={'無技能':(150,None),'一般':(14,15997),'中階':(87,15998),'高階':(101,15999)}
 
 
@@ -15,8 +14,8 @@ def defaults():return {'enabled':False,'pending':False,'paused':False,'pause_rea
 def modes(state):
     knowledge=state.get('knowledge',{}).get('player',{});skills=knowledge.get('skills',{})
     return [name for name,(_,sid) in MODES.items() if sid is None or knowledge.get('ready') and skills.get(str(sid),{}).get('level',0)>0]
-def material_problem(item):
-    sid=str(item.get('item_id'));data=CAT['items'].get(sid);meta=META.get(sid)
+def material_problem(item, *, metadata=None):
+    sid=str(item.get('item_id'));meta=(META if metadata is None else metadata).get(sid);data=meta
     if not data or not meta:return '缺少已核對的材料欄位'
     if item.get('locked'):return '物品已鎖定'
     if any(item.get(k,0) for k in ('beat_level','enhance_level','magic_spar','design_id','saddle_beat_level','star_soul_level','star_soul_kind','modeling')) or any(v.get('value') for v in item.get('plugins',[])):return '附加強化／鑲嵌物品不加入自動消耗'
@@ -24,8 +23,9 @@ def material_problem(item):
     if data['special']==149 and meta['spares'][0]!=73:return '不是可用煉金材料'
     return None
 
-def category(item):
-    sid=str(item['item_id']);data=CAT['items'][sid];meta=META[sid]
+def category(item, *, metadata=None):
+    sid=str(item['item_id']);meta=(META if metadata is None else metadata).get(sid);data=meta
+    if meta is None:raise ProtocolError('缺少當次官方材料欄位')
     if data['special']==141:return 'book'
     if data['special']==149 and meta['spares'][0]==73:return 'partner'
     if data['kind']==20:return 'pet'
@@ -44,6 +44,8 @@ def aggregate_rows(rows):
 
 
 def prepare(state,command):
+    catalog_key,metadata=META.snapshot()
+    if catalog_key is None:raise ProtocolError('官方材料資料尚未同步')
     snapshot=state.snapshot();inv=state.inventory
     if not inv.get('ready') or not inv.get('reliable'):raise ProtocolError('包包尚未可靠同步，請重新登入同步')
     mode=command.get('mode','無技能')
@@ -56,11 +58,11 @@ def prepare(state,command):
         index=int(row['index']);count=int(row['count']);item=inv['items'].get(str(index))
         if not 1<=index<=255:raise ProtocolError('材料格位須在1～255')
         if not item or item['item_id']!=int(row['item_id']):raise ProtocolError('材料格位已變更，請重新選取')
-        problem=material_problem(item)
+        problem=material_problem(item,metadata=metadata)
         if problem:raise ProtocolError(item_name(item['item_id'])+'：'+problem)
         if not 1<=count<=50:raise ProtocolError('每欄每次用量須為1～50')
         row.update(index=index,count=count,serial=item.get('serial'),initial_count=item['count'])
-        cats.append(category(item))
+        cats.append(category(item,metadata=metadata))
     consumption=aggregate_rows(rows)
     for row in consumption:
         required=row['count']*runs
@@ -71,11 +73,12 @@ def prepare(state,command):
     kinds={c for c in cats if c!='book'}
     if len(kinds)!=1:raise ProtocolError('一般、夥伴、寵物、設計圖與食譜材料不可混合')
     if kinds!={'normal'} and 'book' in cats:raise ProtocolError('特殊材料不支援搭配百科')
-    # Conservative free-space check; the ordinary bag uses rectangular item slots.
-    occupied=sum(META.get(str(item['item_id']),{}).get('width',1)*META.get(str(item['item_id']),{}).get('height',1) for item in inv['items'].values())
+    # Official Bag.GetNowUseNum delegates to ItemBox:GetCount (occupied slots).
+    # Preserve LaLa's conservative five-empty-slot policy, without geometry guesses.
+    occupied=len(inv['items'])
     if inv.get('capacity',0)-occupied<5:raise ProtocolError('請先保留至少5個空背包格位供產物使用')
     sub=MODES[mode][0] if kinds=={'normal'} else 115
-    return {'mode':mode,'runs':runs,'rows':rows,'consumption':consumption,'sub':sub,'role_id':state.player.get('role_id'),'scene':state.player.get('scene')}
+    return {'catalog_key':catalog_key,'mode':mode,'runs':runs,'rows':rows,'consumption':consumption,'sub':sub,'role_id':state.player.get('role_id'),'scene':state.player.get('scene')}
 
 
 class AutoAlchemy:
@@ -195,6 +198,8 @@ class AutoAlchemy:
         try:
             # Revalidate live slots and resources before every packet, with one-run quantities.
             checked=prepare(state,{'mode':plan['mode'],'runs':1,'materials':plan['rows']})
+            if checked['catalog_key']!=plan['catalog_key']:
+                raise ProtocolError('官方材料資料已更新，請重新選取材料')
             rows=checked['rows']
             for row,original in zip(rows,plan['rows']):
                 if row.get('serial')!=original.get('serial'):raise ProtocolError('材料序號改變，已停止')

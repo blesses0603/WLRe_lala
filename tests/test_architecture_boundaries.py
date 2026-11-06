@@ -13,7 +13,7 @@ from wlre.services.items.crafting_browser_model import Favorites,RECIPES
 
 class ArchitectureRegressionTests(unittest.TestCase):
     def test_missing_remaining_catalog_or_button_rejected(self):
-        for missing in ('alchemy_catalog.json','assets/buttons/Btn_Bag.png'):
+        for missing in ('navigation_data.zip','assets/buttons/Btn_Bag.png'):
             with self.subTest(missing=missing),tempfile.TemporaryDirectory() as temp:
                 root=Path(temp)
                 for name in REQUIRED_RESOURCES:

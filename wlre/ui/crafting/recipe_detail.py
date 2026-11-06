@@ -82,7 +82,7 @@ def render_recipe_detail(self, force=False, *, recipes, owned_counts, material_r
         self.hold.set(f"背包 {number(counts['bag'])}｜小屋 {number(counts['placed'])}\n保管 {number(counts['stored'])}｜排程 {counts['queued']}")
     else:self.hold.set(f"背包持有 {fmt(counts['bag'])}｜小屋已擺 {fmt(counts['placed'])}\n保管中 {fmt(counts['stored'])}｜排程預計產出 {counts['queued']}")
     tool=recipe['tool_id'];self.device.set(f'設備：{item_name(tool)} · {tool_status(self.state,tool)}')
-    meta=icon_map.get(str(self.selected),{});size=f"｜背包佔格 {meta['width']:.0f}×{meta['height']:.0f}" if meta.get('width') and meta.get('height') else ''
+    meta=icon_map.get(str(self.selected),{});size=f"｜物品欄尺寸 {meta['width']:.0f}×{meta['height']:.0f}" if meta.get('width') and meta.get('height') else ''
     seconds=recipe['seconds']*max(1,count);adjusted=effective_time(self.state,{'base_time':seconds})
     self.time.set((f"產量 {recipe['output']*max(1,count)}｜時間 {duration(adjusted if adjusted is not None else seconds)}" if self.embedded else f"產量 {recipe['output']*max(1,count)}{size}\n時間：{duration(seconds)}"+(f' → {duration(adjusted)}' if adjusted is not None and seconds else '')))
     if current_catalog() is None:self.time.set(self.time.get()+' · 官方圖示尚未同步')

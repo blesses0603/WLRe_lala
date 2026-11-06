@@ -135,4 +135,7 @@ class Images(unittest.TestCase):
   with patch('wlre.services.world.dynamic_bundle_runtime.current_runtime',return_value=None):
    self.assertIsNone(current_catalog())
 
+
+from alchemy_runtime_fixtures import install as setUpModule
+
 if __name__=='__main__':unittest.main(verbosity=2)

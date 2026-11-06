@@ -6,7 +6,7 @@ import zipfile
 
 DATA_SUFFIXES={'.json','.zip','.gz','.png','.ico','.sqlite3'}
 REQUIRED_RESOURCES=(
-    'alchemy_catalog.json','combat_catalog.json',
+    'combat_catalog.json',
 
     'graph_origins.json',
     'navigation_data.zip','normal_attack_data.json',

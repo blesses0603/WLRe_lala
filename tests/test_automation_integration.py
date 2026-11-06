@@ -244,3 +244,5 @@ class CraftingIntegration(unittest.TestCase):
         self.logic.crafting.tick(self.state,16)
         self.assertTrue(self.state.crafting['uncertain'])
         self.assertTrue(self.state.inventory['holds']['crafting'])
+
+from alchemy_runtime_fixtures import install as setUpModule

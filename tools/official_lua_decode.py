@@ -13,6 +13,8 @@ METADATA_SHA256 = '5a71da3a4b37486b056b9873655e42d7d7a583eae6ebfe2efdd18ebe66a23
 MAX_LUA_BYTES = 2 * 1024 * 1024
 KNOWN_FILES = {'Attribute.lua': ('8ffef7d396a0d55eb09859a3f7f5789e4295203ae4e7696f141047e3ea39df95',
                    '37427f02cd62302032c5a77ca66e1e51f6586aaa8ebf23b95cb5be96dfd26fc8'),
+ 'Bag.lua': ('c670a80f3bfaff53639bdaf1cb0d63ca1b53a4e47c92b46bb3d295c8483973e0',
+             '5db2707db0e17219314dc292f6c3d142a6170898626a1f7fb2f4d123c4512c70'),
  'Define.lua': ('e91e32a77d5ce5aa5b039fdd2584eb606b07298af11205c8aff6552343341140',
                 '452e32903a686f22b8e98c1707efca80a45dcf73fd4f1bd5e7e08b38ae3db92c'),
  'EmojiData.lua': ('a2e7d0bd5b9c732fbc507bae0cec109862209ee93a1cf8b17a575cb89520171b',
@@ -28,7 +30,11 @@ KNOWN_FILES = {'Attribute.lua': ('8ffef7d396a0d55eb09859a3f7f5789e4295203ae4e769
  'SkillMotionData.lua': ('9682ce2874f540bafebe50d37efcc7589b2dab018c8891558782f05e80ab7dcd',
                          '54fb4daf742c8379fc9778d00f2a4329355250277a6d9c607236c68b419d4c0b'),
  'StageMapData.lua': ('ba17aafad21c0529bffe1dd472268c7f37463234602c95afbd87e2d9e6a21631',
-                      'fcd4b5704ff46341cb0307c5e1d5be753c69fd9a7c6b6361af26c3cabeb49a06')}
+                      'fcd4b5704ff46341cb0307c5e1d5be753c69fd9a7c6b6361af26c3cabeb49a06'),
+ 'UIAlchemy.lua': ('e2db909788bffc82c27968cd8dd5007db2a0b52d241bac5efcace86e66003885',
+                   'ad2cf5da4225263c6fad00befe0a015c0758acbc879dbc7bc0386eb2da0836e0'),
+ 'UIAlchemyModule.lua': ('1f98191957abe9221a0a88deaaf2519169d99767034f84b30aa5f32638b14c4e',
+                         '5b82f11da409452a3a3ab20aeea7cb6e34e054b5f458bd8944239e1d0d3e7b56')}
 
 
 def _digest(raw):
