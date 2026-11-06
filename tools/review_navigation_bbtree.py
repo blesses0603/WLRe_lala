@@ -14,7 +14,7 @@ def validate_inputs(rects,centers):
     for rect,center in zip(rects,centers):
         if len(rect)!=4 or len(center)!=3 or any(type(v) is not int or abs(v)>10000000 for v in (*rect,*center)):
             raise ValueError('Require bounded integer rectangle/center inputs')
-        if not rect[0]<=center[0]<=rect[2] or not rect[1]<=center[2]<=rect[3]:raise ValueError('Center outside rectangle')
+        if rect[0]>rect[2] or rect[1]>rect[3]:raise ValueError('Inverted rectangle')
 
 
 def validate_tree(result,rects):

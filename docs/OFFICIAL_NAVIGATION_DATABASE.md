@@ -741,3 +741,69 @@ inputs and unknown-binary rejection before optional imports. These are host
 regressions, not device/live-server acceptance. No app runtime behavior changed;
 full suites were not rerun (latest full results remain phase 26). All movement
 guards and the three seeds remain, and these tools cannot authorize movement.
+
+## Composed initialization and explicit modf model (phase 35)
+
+`tools.review_navigation_initialization` composes two bounded offline probe
+chains: native triangle vertex access → center calculation with an explicit
+external-function model → native BBTree; and native group traversal → group
+links → native FloodFill/Area lookup. These remain separate synthetic graph
+states, not one complete live graph or a GetNearest/vectorPath oracle.
+
+```console
+python -m tools.review_navigation_initialization --libil2cpp /path/to/libil2cpp.so
+```
+
+ELF relocation inspection ties the PLT entry `0xb125f0` to the undefined `modf`
+symbol at GOT slot `0x4923260`. The optional center mode uses an explicitly
+identified mathematical contract model at that import: finite binary64 input in
+±100,000,000, integral part truncated toward zero, signed fractional and integral
+zero preserved. Integer-ratio decomposition avoids guessed rounding. Tests
+compare bit patterns against host libm for 1,010 values including signed zeros,
+half values and seeded float32 inputs; NaN/infinity/out-of-domain values reject.
+This verifies a bounded contract model, **not the missing Android libm binary**.
+The adapter accepts only the three inspected native call return addresses and a
+bounded stack output pointer. Unknown callers stop. Default vertex probing does
+not enable the model; `--modeled-center` opts into it explicitly, while the
+combined command identifies the model in its output and module description.
+
+The actual pinned float constant at `0x37f3af0` is bytes `9faaaa3e`, or
+**0.33333298563957214**, not exact 1/3 or float32(1/3). Native
+UpdatePositionFromVertices and Int3 addition/multiplication execute unchanged;
+only external modf is modeled. Ninety-nine triangle cases (permutations,
+repeated indices, extremes, mixed heights and seeded inputs) match a separately
+computed float32 sum/scale/ties-to-even reference using that exact constant.
+Both hosts return identical results. These centers and native bounds then feed
+the official BBTree builder, whose full reference/bounds validation passes.
+Repeated-index cases are numerical/ABI probes, not valid navigation triangles.
+
+This exposes a prior overly restrictive **probe** check: with large equal vertex
+coordinates, the approximate multiplier can produce a center just outside the
+vertex bounding rectangle. BBTree partitioning uses centers but its NodeBounds
+uses rectangles. The probe now requires ordered bounded rectangles and bounded
+centers independently; it no longer assumes center containment. A regression
+covers this evidence-backed case. Application movement/geometry checks were not
+changed.
+
+The extended group probe accepts up to 512 supplied nodes and calls the native
+group initializer in an explicit deterministic test-root order. Five cases cover
+257/300/512-node chains, 32 disconnected nodes and a blocked 512-node chain.
+Native child groups, flags and reciprocal group links match an independent
+bounded traversal; the links are passed into the existing native Area probe.
+Both hosts produce identical combined outputs. This root order is test setup,
+not proof of RecalculateAll's root enumeration.
+
+A 300-node cycle deliberately reaches repeated cross-group-link deduplication.
+The nonempty List.Contains path requires unresolved generic IndexOf context;
+the probe explicitly stops at an unreviewed dispatch sentinel instead of
+substituting a local search. This expected rejection is verified in the combined
+run. Multiple-group results therefore apply only to the exercised link cases,
+not arbitrary maps. Resolving that generic context and real root initialization,
+then constructing one shared graph/BBTree/Area state, are still needed before
+area-constrained GetNearest can be compared end to end. No GetNearest success
+or official Android runtime equivalence is claimed.
+
+Both hosts pass 35 focused tests. No application runtime code changed; complete
+application suites were not rerun (latest full results remain phase 26). There
+is no account/permission blocker to further offline investigation. All three
+seeds, movement guards, and no-packet authority of these probes remain intact.

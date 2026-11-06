@@ -1,8 +1,11 @@
 from pathlib import Path
 import tempfile
+import math
+import random
+import struct
 import unittest
 from tools.review_navigation_groups import oracle as group_probe,validate_graph
-from tools.review_navigation_vertices import oracle as vertex_probe,validate_inputs as validate_vertices
+from tools.review_navigation_vertices import oracle as vertex_probe,validate_inputs as validate_vertices,modeled_modf
 from tools.review_navigation_bbtree import oracle as bbtree_probe,validate_inputs,validate_tree
 from tools.review_navigation_areas import oracle as area_probe,validate_adjacency
 from tools.review_navigation_traversal import oracle as traversal_probe
@@ -34,10 +37,11 @@ class HierarchyInputTests(unittest.TestCase):
 
 class BBTreeInputTests(unittest.TestCase):
     def test_invalid_geometry_rejected(self):
-        for rects,centers in (([],[]),([(0,0,1,1)],[]), ([(0,0,1,1)],[(2,0,0)]),
+        for rects,centers in (([],[]),([(0,0,1,1)],[]), ([(1,0,0,1)],[(0,0,0)]),
                              ([(0,0,1,1)],[(True,0,0)]), ([(0,0,1,1)]*513,[(0,0,0)]*513)):
             with self.assertRaises(ValueError):validate_inputs(rects,centers)
         validate_inputs([(-1,-1,1,1)],[(0,0,0)])
+        validate_inputs([(10000000,0,10000000,0)],[(9999989,0,0)])
 
     def test_tree_reference_and_bounds_failures(self):
         rects=[(0,0,1,1)]
@@ -64,3 +68,18 @@ class NativeInitializationInputTests(unittest.TestCase):
                                  ([[0,float('nan'),0]],[0,0,0]),([[0,0,0]]*4097,[0,0,0])):
             with self.assertRaises(ValueError):validate_vertices(vertices,indices)
         validate_vertices([[0,-1,2]],[0,0,0])
+
+
+class ModfModelTests(unittest.TestCase):
+    def test_finite_contract_against_host_libm_including_signed_zero(self):
+        values=[0.0,-0.0,.5,-.5,1.5,-1.5,2.5,-2.5,100000000.0,-100000000.0]
+        rng=random.Random(1296)
+        values.extend(struct.unpack('<f',struct.pack('<f',rng.uniform(-100000000,100000000)))[0] for _ in range(1000))
+        for value in values:
+            self.assertEqual(struct.pack('<2d',*modeled_modf(value)),struct.pack('<2d',*math.modf(value)))
+        for value in (float('inf'),float('-inf'),float('nan'),100000001.0):
+            with self.assertRaises(ValueError):modeled_modf(value)
+
+    def test_multiple_group_input_ceiling(self):
+        validate_graph([[]]*512,[True]*512,multiple=True)
+        with self.assertRaises(ValueError):validate_graph([[]]*513,[True]*513,multiple=True)
