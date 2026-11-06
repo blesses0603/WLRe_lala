@@ -580,3 +580,59 @@ another sample coordinate. Both hosts pass 28 focused tests including unknown
 library rejection for the new oracle. Application runtime is unchanged; no new
 formal movement authority, seed removal, live server claim or full-suite rerun was
 introduced in this research-tool phase.
+
+## Native hierarchy flood-fill and BBTree construction audit (phase 32)
+
+The optional `tools.review_navigation_areas` now executes the official
+HierarchicalGraph.FloodFill (`0x2d85198`) and GetConnectedComponent (`0x2d84a14`)
+with preallocated synthetic hierarchy adjacency. Actual native integer Stack
+Push/Pop, List element access and integer Max helpers also execute; no local
+flood-fill implementation is substituted into the native run. A separate Python
+connected-component calculation checks the returned table afterward.
+
+```console
+python -m tools.review_navigation_areas --libil2cpp /path/to/libil2cpp.so
+```
+
+Inputs are bounded to 256 hierarchy nodes plus reserved index zero, require valid
+reciprocal links, and reject duplicates, self-links, bad indices and malformed
+arrays before emulation. Reciprocal input is this probe's scope, not a claim that
+all serialized triangle arcs are reciprocal. Native instruction addresses are
+allowlisted, allocation/unknown runtime paths stop, and each call has a fixed
+instruction ceiling. A pinned digest and synthetic initialized ABI records remain
+required. This is not complete Unity managed-runtime initialization.
+
+Nineteen cases (empty/reserved-only, isolated nodes, cycles and seeded graphs of
+4–64 nodes at multiple densities) produce identical outputs on desktop and
+Android hosts. All match the independent component partition. Reserved index zero
+remains zero; the native component-count property includes the reserved component
+and is at least one. The hierarchy version increments after filling. Each area
+entry is read through the official GetConnectedComponent function, not only by
+looking at raw memory. The 29 focused tests pass on both hosts, including new
+malformed hierarchy checks. No application runtime code changed.
+
+This validates the **given-hierarchy adjacency → Area table** stage only. It does
+not establish that one triangle should equal one hierarchy node, or that raw
+serialized hierarchical indices remain valid after loading. Those assumptions
+were not made. Official FindHierarchicalNodeChildren/RecalculateAll still need
+verified triangle-node/object/callback state to produce the actual grouped
+hierarchy.
+
+BBTree disassembly additionally confirms RebuildFromInternal (`0x2842f6c`)
+starts with NodeBounds (`0x28433a4`), obtains a box through GetBox (`0x2842ea4`),
+uses leaves of at most four entries, and otherwise partitions through SplitByX
+(`0x284327c`) / SplitByZ (`0x2843310`) and recurses. NodeBounds combines indexed
+IntRect inputs using actual integer min/max helpers. Tree boxes have a 28-byte
+stride in this binary; leaf node lookup slots are managed references. Capacity
+methods, reference write barriers and node/vertex ownership must be validated
+before treating a locally prepared tree as official initialized state. No BBTree
+output or complete GetNearest success is claimed from disassembly alone.
+
+The remaining concrete evidence gap is now two initializers: official triangle
+nodes → grouped hierarchy, and official node bounds/references → initialized
+BBTree. Afterwards, area-constrained GetNearest and ABPath endpoint preparation
+can be compared without inventing either table. Offline investigation remains
+possible; there was no access/authentication blocker, and no account is needed
+for the next isolated probes. The three seeds and all unverified movement guards
+remain. Full application suites were not repeated for this research-only change;
+the latest recorded application full-suite results remain phase 26.
