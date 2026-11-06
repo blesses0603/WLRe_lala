@@ -1547,3 +1547,94 @@ profile, movement equivalence, server acceptance or seed removal is claimed.
 The three navigation seeds, unverified-movement guards and house entry/exit-only
 scope remain unchanged. Work stays local; no push, merge, release, remote CI or
 new full application-suite run occurred.
+
+
+## Phase 48: scene-profile nearest checks and Lua responsibilities
+
+No user Player.log was available. This investigation therefore uses only pinned
+local official bytes and the existing bounded ARM64 emulation. It does not need
+login, server connections, process attachment, client modification or recordings.
+
+`tools/review_navigation_scene_nearest.py` reuses the verified PC scene reader
+and the pinned graph hashes. On eight whole ordinary maps (1,338 triangles), it
+checks three near points in each of land/sea/sky modes: 72 queries. Unlike the
+previous full-path research profile, these nearest-node calls use the actual
+serialized `fullGetNearestSearch=false` and `maxNearestNodeDistance=100`.
+The original unbounded/full-search result is checked independently against
+triangle projection, and the scene-profile result is checked for matching
+nearest distance/point or legitimate distance/tag rejection. All 72 near-query
+results match the original profile on these inputs. This is not a proof for
+arbitrary points, callback-modified settings or complete paths.
+
+One far point per map is placed 101 units above the highest mesh vertex.
+Models 13217, 13224, 13227 and 13216 reject it. Models 13221, 13223, 13225 and
+13226 reach the existing 200,000-instruction VM limit. Their reports explicitly
+say `unverified_instruction_budget`; no limit was raised and no rejection or
+client failure is inferred. A fresh VM is created after an incomplete execution.
+Nine other reviewed ordinary maps remain excluded by the existing 256-node
+research bound, without truncation. The report keeps `can_send_packets=false`,
+`runtime_overrides_verified=false`, `complete_paths_verified=false` and an
+explicit aggregate far-query verification flag.
+
+Reproduction (private inputs are not distributed in the repository):
+
+```sh
+PYTHONPATH=/tmp/loader-research:. python -m tools.review_navigation_scene_nearest \
+  --libil2cpp /workspace/validation/official-client/libil2cpp.so \
+  --manifest-root /workspace/.localappdata/WLRE_LaLa/official_sync/manifests \
+  --bundle-root /workspace/validation/navigation-1296/bundles \
+  --cache-dir /workspace/validation/navigation-1296
+```
+
+### Verified Lua call chain, not a runtime observation
+
+The phase-47 `review_navigation_awake_writes` check was rerun: all 36 cached
+Lua files again match the pinned 866-entry index, encrypted MD5 identity,
+metadata-based decoding and exact cleartext. None contains a literal
+`OnAwakeSettings` reference. This is a partial source audit; 830 indexed files
+remain outside this cache and dynamically computed names are not excluded.
+
+Concrete lines in the verified decoded sources:
+
+- `Define.lua:2430`: land/sea/sky tag masks are 9/4/15.
+- `Stage.lua:639`: `DoLoadStage` maps `stageData[stageId].modelid` to `M%05d`,
+  checks resource presence, and invokes `CGResource.LoadScene` at line 648.
+  `ReceiveChangeMap` reads the scene from a packet at line 1410 and calls
+  `LoadStage` at line 1457. This establishes one map-load path, not absence of
+  every possible offline entry point.
+- `MoveController.lua:45`: creates/reuses Seeker and FunnelModifier and sets
+  the initial land tag mask. Lines 379-408 check active AstarPath, choose
+  immediate player versus deferred non-player search, choose local/world
+  starting coordinates, then remove the first returned point when more than
+  one exists and copy the rest into `currentPath`.
+- `Role.lua:8177`: `CheckPosition` samples a 3-by-3 X/Z neighborhood with
+  offsets -0.05/0/0.05 and asks native `LuaHelper.GetNodeTag`. At line 8194,
+  `CheckClickPosition` tests the clicked point's tag. At line 8200,
+  `CheckCanArrivePos` calls `LuaHelper.GetPath` using the current Seeker tags.
+  The Lua therefore performs policy checks and consumes native results; these
+  functions do not contain the triangle search algorithm.
+- `TrafficController.lua:199`: `SetUser` changes scene layers and position
+  sampling for sea/sky traffic; it also selects X-axis facing in water/moon
+  scenes. Those layer changes alone do not establish final Seeker tag values.
+
+The pinned official index includes `Lua/Controller/PlayerController.lua`, but
+its bytes are not in the current decoded cache. That is a concrete next source
+for player initialization/traffic changes, not evidence that it registers the
+callback. Scene serialization supplies search defaults; native AstarPath and
+modifiers perform graph search and smoothing; the verified Lua controls requests
+and consumes their point lists. No final runtime override or Windows-native
+behavior has been established. The complete-path harness still uses its earlier
+zero-heuristic research profile and is not silently promoted to scene-equivalent.
+
+No recording is required for this offline step. Without a verified map-name to
+model mapping and a predicted observable discrepancy, asking the user to record
+an arbitrary map would not close the settings gap. Future ordinary-client video
+can compare visible routes only, not internal callbacks or exact 3D vectorPath.
+Three seeds, house entry/exit-only scope and movement guards remain unchanged.
+
+Validation: both host environments produced byte-identical final scene-nearest
+reports (48 accepted near queries and 24 tag-rejected near queries), and each
+passed 53 focused navigation/safety tests. The Android parity audit still passes
+185 shared core files; the repository audit found no broken local links. These
+are host tests, not Windows-client, Android-device, live-server or full-suite
+acceptance. Changes remain local, with no push, merge, release or remote CI run.
