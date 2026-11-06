@@ -1800,3 +1800,103 @@ older sources were not newly scanned for every term above. No runtime override
 absence, complete path equivalence or new far-query result is established.
 Three seeds and all movement guards remain. Changes remain local; no push,
 merge, release, remote CI or device acceptance occurred.
+
+
+## Phase 51: complete pinned Lua index and native bootstrap evidence
+
+The batch auditor now covers UI (450), Data (133) and the remaining support
+libraries (89), in addition to the phase-50 Common/Controller/Logic sources.
+Selection remains from the exact pinned index, with safe relative path segments,
+no traversal, at most 40 files per batch, 2 MiB per file and 16 MiB per batch.
+The support group is the explicit complement of the other four groups, avoiding
+both gaps and duplicate coverage. Empty/out-of-range batch selections are errors.
+Acquisition used at most four read-only workers at a time, each running the
+previous bounded request flow; neither download nor product limits were removed.
+All files retain their indexed relative paths in the private cache.
+
+All 866 indexed Lua files for the pinned 1.3.23 snapshot now verify against the
+published MD5 list and pinned client metadata codec, including exact cipher
+round-trips. Aggregate encrypted input is 13,550,304 bytes. The 24 batches have
+1 controller/common, 4 logic, 12 UI, 4 data and 3 support reports. This establishes
+coverage of this particular published Lua index, not every embedded native
+string, client variant, later update, dynamically supplied chunk or runtime state.
+No source code, metadata, cipher parameters or official client binary was added
+to Git or to the shipped product. The previous 37-file research cache is intact.
+
+### Literal and dynamic-reference results
+
+Across all 866 sources there are no literal OnAwakeSettings, heuristicScale,
+maxNearestNodeDistance, fullGetNearestSearch or tagPenalties hits. The two
+`heuristic` hits are unrelated English comments: ltn12.lua:15 describes global
+package export, and socket/http.lua:152 describes HTTP/0.9 recognition. The UI
+AstarPath references occur in UI/Logic/UIRoom.lua at 481/482/889; they do not
+expand the user-requested house entry/exit-only scope. Data-layer Seeker hits
+are in MissionData and NewbieTutorialData and are not evidence of search-profile
+assignment.
+
+The scanner additionally records literal loadstring, dofile, loadfile, rawset,
+setfenv, getfenv, System.Reflection, Injection and `_G[` occurrences. Eighteen
+files have such hits. Manual samples distinguish concrete mechanisms:
+
+- Common/Function.lua:1320 uses rawset for a string-key table helper.
+- Logic/PlayerSetting.lua:15 writes the player's settings data table.
+- System/Injection/LuaInjectionStation.lua uses an injection metadata pipeline,
+  replaces named method entries and installs a metatable __index function
+  (lines 33-48). This is a generic mechanism; its presence does not prove that
+  navigation uses it in a live session.
+- mobdebug, cjson, jit, protobuf and supporting files also contain dynamic
+  facilities. Names may occur in strings, comments or library capabilities
+  rather than active application code.
+
+These literal patterns are not a complete Lua parser, taint analysis or dynamic
+call graph. Concatenated/aliased field names and native/reflection writes are
+not eliminated by a zero-match result. No debugger, injection mechanism or
+remote Lua facility was activated during this investigation.
+
+### Native file-entry and Initialize dispatch
+
+`tools/review_navigation_lua_bootstrap.py` validates the pinned native binary and
+metadata hashes, resolves five metadata literal slots through ELF relocations,
+and checks selected exact ARM64 instructions from the inspected full methods.
+The native identities were resolved against the same metadata/module method
+tables, rather than inferred from nearest-address names.
+
+- Lua..cctor at 0x31005c4 loads literal `LuaArtifact` (slot 0x4965968,
+  metadata literal 8501) and stores it in the static field at offset 0x18
+  at instruction 0x3100640.
+- Lua.InitializeCallback at 0x30ff1d8 constructs a LuaState, opens libraries,
+  binds wrappers, adds a search path ending in `/Lua`, and starts the state.
+  It concatenates `Logic/` (slot 0x49ace70, literal 8461) with static +0x18,
+  then tail-calls LuaState.DoFile at 0x30ff3c8 -> 0x3630400. The default
+  source target is thus Logic/LuaArtifact, matching the verified index entry.
+- Artifact.Update has a branch at 0x1586098 calling Lua.DoFunction
+  (0x30ffab4) with static +0x18 and literal `Initialize` (slot 0x49382e8,
+  literal 7220). Another branch uses `Update` (slot 0x4992ed8, literal 13938).
+  These establish static dispatch sites, not execution in a live player.
+
+The bootstrap tool explicitly reports runtime_execution_verified=false,
+callback_state_verified=false and all_static_writes_verified=false. Its selected
+instruction checks are not exhaustive control-flow analysis. No absence of later
+changes to static +0x18 or OnAwakeSettings is asserted. Full source coverage
+therefore narrows the source gap without turning static evidence into runtime
+acceptance.
+
+Re-run the batch command from phase 50 with `--group ui --batch 0` through 11,
+`--group data --batch 0` through 3 and `--group support --batch 0` through 2.
+The updated scanner also records dynamic-literal hits for the earlier groups.
+Native bootstrap reproduction:
+
+```sh
+PYTHONPATH=/tmp/loader-research:. python -m tools.review_navigation_lua_bootstrap \
+  --libil2cpp /workspace/validation/official-client/libil2cpp.so \
+  --metadata /workspace/validation/official-client/global-metadata.dat
+```
+
+All 24 final batch reports and the bootstrap report are byte-identical across
+the two host environments. Checks verify disjoint full 866-file coverage,
+missing-cache incompleteness, corrupt-source rejection and invalid/empty batch
+rejection. Both hosts pass 53 focused navigation/safety tests. These are host
+and static-source checks, not Windows/Android device or formal-server acceptance.
+Four far queries still lack a completed native result within the previous
+instruction budget; no new far-query pass is claimed. Three seeds and movement
+guards remain, and work remains local without push, merge, release or remote CI.
