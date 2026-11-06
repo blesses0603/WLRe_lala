@@ -272,3 +272,64 @@ is not evidence that the assignment does not exist elsewhere. The next concrete
 check is native LuaHelper.GetPath / actor movement initialization, paired with
 reference paths for slope and multiple-height endpoints. No authentication or
 network policy denial occurred during this phase.
+
+## Native path pipeline and full manifest inventory (phase 27)
+
+Read-only analysis of the previously verified official ARM64 `libil2cpp.so`
+(SHA-256 `7798c9aaa6986ee200deacf9816a5d2f17a606944aa4a56dd06bfa1acb344636`)
+and metadata (SHA-256 `5a71da3a4b37486b056b9873655e42d7d7a583eae6ebfe2efdd18ebe66a23260`)
+resolved these calls by image method tokens and ELF relocation-backed method tables:
+
+- `LuaHelper.GetPath` at `0x31059f8`: constructs ABPath (`0x234c2f4`), writes
+  its caller-supplied mask at path offset `0xac`, calls AstarPath.StartPath
+  (`0x1a7a2bc`) and BlockUntilCalculated (`0x1a79d38`), then returns the path.
+- `StartPathImmediately` at `0x310587c`: cancels the Seeker's prior request,
+  constructs ABPath, copies the Seeker mask from offset `0x30` to path `0xac`,
+  calculates synchronously, and calls Seeker.RunModifiers (`0x2a8e6a0`) with
+  pass value 2 before its callback. GetPath does not make this modifier call.
+- MoveController.MoveToPosition selects StartPathImmediately for the player,
+  StartPath for other actors, and removes the first vector point when there are
+  multiple points. Initialization explicitly sets the Seeker Land mask and adds
+  or retrieves FunnelModifier. This does not prove the mask stays Land throughout
+  every later traffic state; no new actor-mode authority is inferred.
+- FunnelModifier's constructor at `0x24cda58` writes true at offset `0x2c`.
+  Metadata identifies its fields as quality, unwrap, splitAtEveryPortal and
+  accountForGridPenalties. Funnel.UnwrapHelper at `0x2358620` tests collinearity,
+  projects vectors around a portal edge, calls Quaternion.FromToRotation at
+  `0x30c70e0`, and applies Quaternion multiplication at `0x30c66a4`.
+  These calls confirm a 3-D unfolding operation; they do not establish complete
+  equivalence for a replacement implementation, degeneracies or endpoint rules.
+
+No native client code was executed and no reference client path outputs were
+obtained. Read-only disassembly and decoded Lua remain outside Git. Flat preview
+smoothing is unchanged; slopes are still rejected when smoothing is requested.
+
+`python -m tools.audit_official_navigation_coverage` now reports candidate source
+coverage without downloading scene bundles or authorizing movement. It checks the
+manifest package/version and SHA against the prepared runtime, excludes house IDs
+and models, checks exact scene asset uniqueness and declared candidate dependency,
+and reports whether the two complete bundles fit the existing limit. A candidate
+is explicitly **not** proof of a valid cache pointer or graph. Synthetic checks
+cover ambiguous/missing assets, undeclared dependencies, limits, stale manifests
+and corruption. The tool may check current official versions during core runtime
+preparation; it does not itself fetch scene bundles.
+
+The reviewed 1.3.23 identity yields 1,333 non-house source stage rows and 972 unique
+models: 770 have a unique candidate pair within the existing per-model budget,
+and 202 have no unique matching scene asset under the reviewed lookup. Seventeen
+models have reviewed cache fingerprints. This inventory covers source rows, not
+expanded generated instance aliases; it does not assert that unmatched models are
+unavailable from every other official resource path. Desktop and Android reports
+are identical.
+
+Actual DB route sampling across the seventeen general models produced identical
+host results: 520 successful planar routes, 33 rejected nonhorizontal corridors,
+and 35 paths rejected by serialized connectivity/tags. Added synthetic regression
+checks prove sloped previews cannot activate Movement or emit packets, sea cannot
+traverse a land-only fixture, and overlapping levels require height evidence.
+Both hosts passed 26 targeted navigation tests; desktop UI/tent regressions passed
+21 tests and Android navigation UI passed its test. These checks supplement the
+phase-26 full suites (1,798 desktop / 1,476 Android), which were not rerun for this
+read-only tool and test/documentation-only phase. No APK/device/live acceptance is
+claimed. All three seeds remain; safe replacement still requires broader current
+cache validation and actual movement-pipeline equivalence.
