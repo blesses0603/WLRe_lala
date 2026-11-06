@@ -1225,3 +1225,52 @@ No credentials or permissions block this research. No app runtime behavior chang
 seed deletion, device/live-server acceptance, full app-suite rerun or remote CI run
 is claimed. Both hosts pass 49 focused tests. The final three navigation seeds and
 movement guards remain, with house entry/exit retained. Changes remain local.
+
+
+## Phase 43: native parts, dispatch tracing and player callback source
+
+`review_navigation_parts.py` now executes native Funnel.SplitIntoParts and
+ConstructFunnelPortals, including virtual TriangleMeshNode.GetPortal calls. It
+consumes the searched corridor and native StartEnd-modified vector list. For the
+supported same-tile triangle corridor it verifies the native part's indices,
+endpoint values, non-link flag and all constructed left/right portal points.
+Only bounded pool allocations are modeled; graph state, type/interface tables and
+list storage remain explicitly prepared. Cross-tile/off-mesh links are rejected.
+This does not verify general mixed-graph or off-mesh splitting.
+
+The composed pipeline uses these native part results instead of supplying a
+single-part boundary. Its 12 synthetic and 18 official-map queries have identical
+outputs on both Python hosts; all native funnel vectors also remain identical to
+phase 42. Twelve official land/sky queries complete, each with two explicit funnel
+profiles; six sea queries stop at the native Prepare error boundary. The same two
+complete maps and 128-node limit apply. Larger graphs are not truncated.
+
+`review_navigation_dispatch.py` executes native Seeker.RunModifiers against five
+explicit prepared lists, with/without callbacks and pass values 0/1/2 (30 cases).
+Guarded callbacks record native receiver, path argument, call site and order.
+Pass 0 runs the pre-process callback then list PreProcess methods; pass 2 runs the
+post-process callback then list Apply methods; pass 1 runs neither in these cases.
+The native dispatcher preserves the supplied list order, including a deliberately
+reversed list. This is not registration/sort validation: the Apply callbacks here
+are observation boundaries, not the actual modifier calculations.
+
+`review_navigation_player_points.py` loads the complete external, hash-pinned
+MoveController.lua source and invokes its actual MoveToPosition method on host
+Lua 5.4. Twenty cases cover nil/empty/single/multiple points, world/local position,
+and immediate-player/asynchronous-nonplayer entry selection. The callback removes
+the first point only when more than one exists, then copies the remaining points.
+The pipeline also executes this source callback on every successful funnel output.
+The source digest is fa020de008d42e2d54c7e10bd75c67b9dbe2aaaba173ddf313b7d4c23646ef30.
+No official source is bundled. The managed list/RemoveAt bridge and immediate
+callback delivery are explicit host models, and source execution is instruction
+bounded. This is not the official Lua runtime, native binding or frame movement.
+
+Both hosts produce byte-identical dispatch and player-source test outputs and pass
+49 focused tests, including rejecting unknown source/library digests before use.
+The remaining connected-execution gap is native modifier registration/List.Sort,
+FunnelModifier.Apply (including its actual settings and lifetime behavior), and
+integration of these with the Seeker dispatcher. Prepared initialization and
+limited map/profile coverage still prevent final-player-path equivalence claims.
+No access or credential block occurred. The three seeds, movement guards and house
+entry/exit scope remain unchanged; no app-suite rerun, device/live-server acceptance,
+remote CI, push or merge is implied.

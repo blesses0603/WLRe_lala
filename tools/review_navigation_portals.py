@@ -32,14 +32,14 @@ def validate_corridor(vertices,faces,connections,route):
         if not any(t==b for t,c,e in connections[a]):raise ValueError('Missing route connection')
 
 
-def oracle(path):
+def oracle(path,*,_state=None):
     state={};vertex_oracle(path,_state=state);u=state['vm'];data=state['data']
     from unicorn.arm64_const import UC_ARM64_REG_CPACR_EL1
     ranges=((0x283393c,0x2833ef8),(0x2832b84,0x2832ca8),(0x2832dd0,0x2832dd8),(0x2d83820,0x2d83848))
     pages={p for a,b in ranges for p in range(a&~4095,((b+4095)//4096)*4096,4096)}|{0x49b5000,0x494b000,0x379a000}
     for p in pages-state['pages']:u.mem_map(p,4096)
     for a,b in ranges:u.mem_write(a,data(a,b-a))
-    state['ranges'].extend(ranges);u.reg_write(UC_ARM64_REG_CPACR_EL1,3<<20)
+    state['pages'].update(pages);state['ranges'].extend(ranges);u.reg_write(UC_ARM64_REG_CPACR_EL1,3<<20)
     def q(a,v):u.mem_write(a,struct.pack('<Q',v))
     def w(a,v):u.mem_write(a,struct.pack('<I',v))
     for a in (0x4c5aa90,0x4c5aa8a):u.mem_write(a,b'\1')
@@ -75,6 +75,7 @@ def oracle(path):
             expected=[[f32(f32(x)*f32(.001)) for x in vertices[faces[a][j]]] for j in selected[i]]
             if [left[i],right[i]]!=expected:raise ValueError('Native portal vertex mismatch')
         return dict(left=left,right=right,edge_indices=selected,can_send_packets=False)
+    if _state is not None:_state.update(state)
     return run
 
 
