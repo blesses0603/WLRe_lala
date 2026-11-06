@@ -9,6 +9,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--map',type=int,required=True)
     parser.add_argument('--sync',action='store_true',help='Download at most two bundles / 32 MiB for this model')
+    parser.add_argument('--smooth-planar',action='store_true',help='Preview flat corridors only; reject slopes')
     parser.add_argument('--travel-mode',choices=('land','sea','sky'),default='land')
     parser.add_argument('--start',nargs=2,type=float)
     parser.add_argument('--end',nargs=2,type=float)
@@ -18,7 +19,7 @@ def main():
     repository=PreviewRepository(runtime.catalog_identity,runtime.stages)
     try:
         if args.start:
-            result=repository.route(args.map,args.start,args.end,download=args.sync,travel_mode=args.travel_mode)
+            result=repository.route(args.map,args.start,args.end,download=args.sync,travel_mode=args.travel_mode,smooth=args.smooth_planar)
         else:
             stage=runtime.stages.get(args.map)
             if stage is None:raise ValueError('Official stage ID unavailable; dynamic house floor model not inferred')

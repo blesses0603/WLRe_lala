@@ -44,6 +44,7 @@ class NavigationWindow:
             try:self.scene.set(model_label(self.converter.mapping(suggested_scene)[1]))
             except NavigationError:self.background_image=None
         ttk.Button(toolbar,text='載入場景',command=self.load).pack(side='left',padx=5)
+        ttk.Button(toolbar,text='官方資料庫預覽',command=self.open_official_preview).pack(side='left',padx=5)
         ttk.Button(toolbar,text='縮放至全圖',command=self.fit).pack(side='left',padx=5)
         ttk.Button(toolbar,text='匯出預覽路徑',command=self.save).pack(side='left',padx=5)
         self.show_mesh=tk.BooleanVar(value=False)
@@ -78,6 +79,10 @@ class NavigationWindow:
         self.canvas.bind('<Button-4>',lambda e:self.zoom(e,1.2))
         self.canvas.bind('<Button-5>',lambda e:self.zoom(e,1/1.2))
         self.window.after_idle(self.load)
+
+    def open_official_preview(self):
+        from wlre.ui.official_navigation_preview import OfficialNavigationPreview
+        return OfficialNavigationPreview(self.window,lambda:self.linked_state or {})
 
     def load(self):
         self.refresh_names()

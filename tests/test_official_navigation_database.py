@@ -65,9 +65,31 @@ class NavigationDatabaseTests(unittest.TestCase):
         result=self.put();mesh=PreviewMesh(result)
         route=mesh.route((10,10),(20,20))
         self.assertFalse(route['can_send_packets'])
-        self.assertFalse(route['serialized_costs_applied'])
+        self.assertTrue(route['serialized_costs_applied'])
         result['mesh']['tiles'][0]['node_metadata'][0][1]=0
         with self.assertRaises(NavigationError):PreviewMesh(result).route((10,10),(20,20))
+
+    def test_serialized_cost_and_target_penalty(self):
+        mesh=dict(tiles=[dict(vertices_b_int3=[[0,0,0],[1000,0,0],[0,0,1000],[1000,0,1000]],
+                             triangles=[[0,1,2],[1,3,2]],node_metadata=[[91,1],[7,1]])])
+        preview=PreviewMesh(dict(mesh=mesh,connections=[[[1,123,1]],[[0,999,2]]]))
+        forward=preview.route((100,100),(900,900));reverse=preview.route((900,900),(100,100))
+        self.assertEqual(forward['cost'],130)
+        self.assertEqual(reverse['cost'],1090)
+        self.assertFalse(forward['smoothing_applied'])
+        preview.metadata[1][0]=0xffffffff
+        with self.assertRaises(NavigationError):preview.route((100,100),(900,900))
+
+    def test_low_cost_corridor_wins_over_geometric_tie(self):
+        vertices=[[0,0,0],[1000,0,0],[1000,0,1000],[0,0,1000],[500,0,500]]
+        mesh=dict(tiles=[dict(vertices_b_int3=vertices,triangles=[[0,1,4],[1,2,4],[2,3,4],[3,0,4]],node_metadata=[[0,1]]*4)])
+        arcs=[[[1,100,1],[3,1,2]],[[0,100,2],[2,100,1]],[[1,100,2],[3,1,1]],[[2,1,2],[0,1,1]]]
+        preview=PreviewMesh(dict(mesh=mesh,connections=arcs))
+        result=preview.route((500,100),(500,900),smooth=True)
+        self.assertEqual(result['faces'],[0,3,2])
+        self.assertEqual(result['cost'],2)
+        self.assertTrue(result['smoothing_applied'])
+        self.assertFalse(result['can_send_packets'])
 
     def test_official_travel_tags_are_not_just_walkability(self):
         result=self.put()

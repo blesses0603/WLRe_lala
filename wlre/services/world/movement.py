@@ -52,6 +52,8 @@ class Movement:
         self.converter=self.converter or Coordinates()
         self.repository=self.repository or Repository()
         route=self.converter.route(self.repository,scene,start,(x,y),start_height=start_height)
+        if route.get('can_send_packets') is False:
+            raise ProtocolError('這是僅供預覽的導航路徑，不能用於角色移動。')
         points=[tuple(p) for p in route['points']]
         # Validate the complete path before replacing an active movement.
         if not points or any(not all(math.isfinite(v) for v in p) for p in points):

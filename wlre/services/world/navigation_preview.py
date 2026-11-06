@@ -1,4 +1,6 @@
 """Official database route previews. Never authorizes live movement."""
+import heapq
+import math
 from wlre.services.world.navigation import Mesh, NavigationError, finite
 from wlre.services.world.navigation_database import database_path, load_cache
 
@@ -29,12 +31,47 @@ class PreviewMesh(Mesh):
         return node,point
 
     def route(self,*args,**kwargs):
-        result=super().route(*args,**kwargs)
-        result.update(connectivity='official_serialized_connections',
-                      original_walkability_applied=True,original_tags_applied=True,travel_mode=self.travel_mode,serialized_costs_applied=False,
-                      can_send_packets=False,live_movement_verified=False,
-                      navigation_source='official_versioned_database_preview')
-        return result
+        return self._route(*args,**kwargs)
+
+    def _route(self,start,end,start_height=None,end_height=None,*,smooth=False):
+        source,sp=self.locate(*start,height=start_height)
+        target,tp=self.locate(*end,height=end_height)
+        costs={source:0};parents={};queue=[(0,source)]
+        while queue:
+            cost,node=heapq.heappop(queue)
+            if cost!=costs[node]:continue
+            if node==target:break
+            for neighbor,arc_cost,edge in self.serialized_connections[node]:
+                if neighbor not in self.adjacency[node]:continue
+                # Native Path.GetTraversalCost adds target node penalty and tag
+                # penalty. Reviewed Seeker construction initializes tag penalties
+                # to zero; custom traversal providers are not supported here.
+                value=cost+arc_cost+self.metadata[neighbor][0]
+                if value>0xffffffff:raise NavigationError('路徑成本超出已驗證範圍。')
+                if value<costs.get(neighbor,float('inf')):
+                    costs[neighbor]=value;parents[neighbor]=node
+                    heapq.heappush(queue,(value,neighbor))
+        else:raise NavigationError('官方連線與通行標籤沒有允許的路徑。')
+        faces=[target]
+        while faces[-1]!=source:faces.append(parents[faces[-1]])
+        faces.reverse();points=[sp]
+        for a,b in zip(faces,faces[1:]):
+            midpoint=self.adjacency[a][b]
+            if midpoint!=points[-1]:points.append(midpoint)
+        if tp!=points[-1]:points.append(tp)
+        if smooth:
+            from wlre.services.world.navigation_funnel import smooth_corridor
+            points=smooth_corridor([self.faces[i] for i in faces],sp,tp)
+        return dict(scene_resource=self.scene_id,coordinate_space='navcache_vertices_b_int3',
+                    network_coordinates_verified=False,connectivity='official_serialized_connections',
+                    runtime_obstacles_applied=False,original_node_flags_applied=False,
+                    original_walkability_applied=True,original_tags_applied=True,
+                    travel_mode=self.travel_mode,serialized_costs_applied=True,
+                    cost=costs[target],cost_policy='arcs_plus_target_penalties_zero_tag_penalties',
+                    smoothing_applied=bool(smooth),points=points,faces=faces,
+                    length=sum(math.dist(a,b) for a,b in zip(points,points[1:])),
+                    can_send_packets=False,live_movement_verified=False,
+                    navigation_source='official_versioned_database_preview')
 
 
 class PreviewRepository:
@@ -54,7 +91,7 @@ class PreviewRepository:
         mesh=PreviewMesh(result,travel_mode=travel_mode);mesh.scene_id=f'M{model:05d}'
         return mesh,result['origin']
 
-    def route(self,logical_map,start,end,*,download=False,start_height=None,end_height=None,navigation_state=None,travel_mode='land'):
+    def route(self,logical_map,start,end,*,download=False,start_height=None,end_height=None,navigation_state=None,travel_mode='land',smooth=False):
         if self.identity.key not in REVIEWED_COORDINATE_CATALOGS:
             raise NavigationError('此版本的官方座標邏輯尚未完成驗證。')
         logical_map=int(logical_map)
@@ -76,7 +113,8 @@ class PreviewRepository:
         def convert(point):
             finite(*point)
             return float(point[0])*10-origin[0],(offset-float(point[1]))*10-origin[2]
-        result=mesh.route(convert(start),convert(end),start_height,end_height)
+        result=mesh.route(convert(start),convert(end),start_height,end_height,smooth=smooth)
         result.update(logical_map=int(logical_map),catalog_key=self.identity.key,
+                      source_label='官方資料 '+getattr(self.identity,'data_ver','（已校驗）'),
                       packet_points_xy_float=[[(p[0]+origin[0])/10,offset-(p[2]+origin[2])/10] for p in result['points']])
         return result

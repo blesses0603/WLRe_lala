@@ -34,8 +34,9 @@ unknown schema is rejected without overwriting it.
 `navigation_preview.PreviewRepository` reads this database, applies serialized
 connection direction and native walkability bit zero, and converts packet XY
 using the current official stage rows. Coordinate formulas are restricted to the
-reviewed complete catalog identity. The route uses geometric distance, not the
-client's serialized costs or all traversal/tag policies, and reports that fact.
+reviewed complete catalog identity. The route now uses the reviewed default serialized costs; see
+[dynamic navigation progress](OFFICIAL_DYNAMIC_NAVIGATION.md) for the supported
+cost policy, planar smoothing and product UI entry points.
 It always reports `can_send_packets=false`. No existing live-movement path is
 switched to it. Dynamic player-house IDs without an explicit resolved stage are
 rejected rather than assigned the smallest house.
