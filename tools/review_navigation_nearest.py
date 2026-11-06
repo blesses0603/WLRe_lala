@@ -26,16 +26,17 @@ def validate_query(vertices,faces,point,origin):
         if not any(cross):raise ValueError('Degenerate triangle')
 
 
-def oracle(path):
+def oracle(path,*,_state=None,_search_state=False):
     # Optional native dependencies are loaded after the vertex factory checks hash.
     state={}
-    load=vertex_oracle(path,modeled_center=True,_state=state);u=state['vm'];data=state['data']
+    node_base=0x6090000 if _search_state else 0x6080000
+    load=vertex_oracle(path,modeled_center=True,_state=state,_path_magnitude=_search_state);u=state['vm'];data=state['data']
     from unicorn.arm64_const import UC_ARM64_REG_S0,UC_ARM64_REG_X8
     ranges=((0x2843ff8,0x28440d4),(0x1a7a794,0x1a7abb0),(0x1a76cb8,0x1a76d34),(0x2e9b100,0x2e9b144),(0x2a903a4,0x2a903f4),(0x2a8ff50,0x2a8ff68),(0x2a8ff80,0x2a90030),(0x2d83808,0x2d83814),(0x2d93f7c,0x2d93f88),(0x27a375c,0x27a3c0c),(0x27a1618,0x27a16b8),(0x22d23f0,0x22d2454),(0x30c9944,0x30c999c),(0x28383b8,0x28383e0),(0x2d86f88,0x2d86f90),(0x2843af0,0x2843bc8),(0x2843cb0,0x2843d94),(0x28440d4,0x28442f4),(0x24c3e70,0x24c3e80),(0x2832dd8,0x2832f18),(0x2a98e20,0x2a99050),(0x2d83820,0x2d83848),(0x20d12c4,0x20d133c),(0x20d14bc,0x20d1534),(0xe00550,0xe00554),(0xe81860,0xe81864),(0xec1130,0xec1178))
     pages={p for a,b in ranges for p in range(a&~4095,((b+4095)//4096)*4096,4096)}|{0x379a000,0x4c4f000,0x4940000,0x494b000,0x4c68000,0x4c54000,0x4c50000}
     for p in pages-state['pages']:u.mem_map(p,4096)
     for a,b in ranges:u.mem_write(a,data(a,b-a))
-    state['ranges'].extend(ranges)
+    state['pages'].update(pages);state['ranges'].extend(ranges)
     def q(a,v):u.mem_write(a,struct.pack('<Q',v))
     def w(a,v):u.mem_write(a,struct.pack('<I',v))
     for a in (0x4c5a461,0x4c5a462,0x4c5aae8,0x4c5aa8c,0x4c4ff5d):u.mem_write(a,b'\x01')
@@ -72,7 +73,7 @@ def oracle(path):
      rects=[];centers=[]
      for i,face in enumerate(faces):
       result=load(vertices,face);rects.append(result['bounds']);centers.append(result['center'])
-      node=0x6080000+i*0x100
+      node=node_base+i*0x100
       u.mem_write(node,bytes(0x100));q(node,0x6040000);w(node+0x14,node_flags[i] if node_flags is not None else int(walkable[i]) if walkable is not None else 1)
       u.mem_write(node+0x1c,struct.pack('<3i',*result['center']));u.mem_write(node+0x30,struct.pack('<3i',*(j|(face_tiles[i]<<12) for j in face)))
      w(0x60200e0,tile_shape[0]);w(0x60200e4,tile_shape[1]);w(0x6023018,tile_count)
@@ -87,7 +88,7 @@ def oracle(path):
       q(tree_record+0x10,boxes);q(tree_record+0x18,refs);w(tree_record+0x20,len(tree['boxes']))
       w(boxes+0x18,len(tree['boxes']));w(refs+0x18,len(tree['leaf_references']))
       u.mem_write(boxes+0x20,b''.join(struct.pack('<7i',*box) for box in tree['boxes']))
-      for i,ref in enumerate(tree['leaf_references']):q(refs+0x20+i*8,0 if ref is None else 0x6080000+members[ref]*0x100)
+      for i,ref in enumerate(tree['leaf_references']):q(refs+0x20+i*8,0 if ref is None else node_base+members[ref]*0x100)
      u.mem_write(0x6041012,bytes([not matrix]));u.mem_write(0x60410a0,struct.pack('<3f',*origin))
      inverse=[1.,0.,0.,0.,0.,1.,0.,0.,0.,0.,1.,0.,-origin[0],-origin[1],-origin[2],1.]
      u.mem_write(0x6041054,struct.pack('<16f',*inverse))
@@ -103,11 +104,12 @@ def oracle(path):
      else:
       state['execute'](0x27a375c if walkable is None else 0x27a3844,(0x6020000,0 if walkable is None else 0x6048000,0),instruction_limit=200000)
      node=struct.unpack('<Q',u.mem_read(0x6045000,8))[0]
-     if node and (not 0x6080000<=node<0x6080000+len(faces)*0x100 or (node-0x6080000)%0x100):raise ValueError('Invalid nearest node')
-     result=dict(node=None if not node else (node-0x6080000)//0x100,
+     if node and (not node_base<=node<node_base+len(faces)*0x100 or (node-node_base)%0x100):raise ValueError('Invalid nearest node')
+     result=dict(node=None if not node else (node-node_base)//0x100,
                  point=list(struct.unpack('<3f',u.mem_read(0x6045008 if outer else 0x6045010,12))) if node else None,tile=list(tile))
      if result['point'] and not all(math.isfinite(x) for x in result['point']):raise ValueError('Nonfinite nearest output')
      return result
+    if _state is not None:_state.update(state)
     return query
 
 

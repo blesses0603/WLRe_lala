@@ -48,8 +48,9 @@ def validate_graph(positions,connections,flags,penalties,start,end,tag_mask,tag_
 
 
 
-def oracle(path):
-    state={};state_oracle(path,_state=state,_path_magnitude=True)
+def oracle(path,*,_state=None,_existing_state=None):
+    state={} if _existing_state is None else _existing_state
+    state_oracle(path,_state=state,_path_magnitude=True,_existing_state=_existing_state)
     u=state['vm'];data=state['data']
     from unicorn import UC_HOOK_CODE
     from unicorn.arm64_const import UC_ARM64_REG_X0,UC_ARM64_REG_X1,UC_ARM64_REG_X2,UC_ARM64_REG_LR,UC_ARM64_REG_PC
@@ -94,14 +95,14 @@ def oracle(path):
             raise NoRoute()
     u.hook_add(UC_HOOK_CODE,hook)
     def execute(a,args):return state['execute'](a,args,instruction_limit=2000000)
-    def run(positions,connections,flags,penalties,start,end,tag_mask,tag_penalties=None,points=None,*,heuristic_scale=0.0):
+    def run(positions,connections,flags,penalties,start,end,tag_mask,tag_penalties=None,points=None,*,heuristic_scale=0.0,_prepare=None):
         if type(heuristic_scale) not in (int,float) or not math.isfinite(heuristic_scale) or not 0<=heuristic_scale<=1:raise ValueError('Invalid heuristic scale')
         tag_penalties=[0]*32 if tag_penalties is None else tag_penalties
         points=[positions[start],positions[end]] if points is None and type(start) is int and type(end) is int and 0<=start<len(positions) and 0<=end<len(positions) else points
         if points is None:raise ValueError('Invalid endpoint points')
         validate_graph(positions,connections,flags,penalties,start,end,tag_mask,tag_penalties,points)
         # Endpoint choice is prepared input. No nearest-node or Area equivalence claimed.
-        if any(not flags[i]&1 or not tag_mask&(1<<((flags[i]>>19)&31)) for i in (start,end)):
+        if _prepare is None and any(not flags[i]&1 or not tag_mask&(1<<((flags[i]>>19)&31)) for i in (start,end)):
             raise ValueError('Prepared endpoint is not traversable')
         n=len(positions);counters.clear();lock[0]=False
         u.mem_write(0x6000000,bytes(0x10000));u.mem_write(0x60a0000,bytes(0x50000))
@@ -128,12 +129,17 @@ def oracle(path):
             w(arr+0x18,len(edges))
             for j,(target,cost) in enumerate(edges):q(arr+0x20+j*16,0x6090000+target*0x100);w(arr+0x28+j*16,cost)
             q(pn+0x10,node);h(pn+0x22,65535);q(0x6002020+i*8,pn)
-        execute(0x2e9a6d0,(0x6080000+end*0x100,1,0))
+        prepared=None
+        if _prepare is None:execute(0x2e9a6d0,(0x6080000+end*0x100,1,0))
         try:
+            if _prepare is not None:
+                prepared=_prepare()
+                start,end=prepared['nodes'];points=prepared['int_points']
+                validate_graph(positions,connections,flags,penalties,start,end,tag_mask,tag_penalties,points)
             execute(0x234d6f4,(0x6008000,0))
             if rw(0x6008040)!=2:execute(0x234da68,(0x6008000,2**63-1,0))
         except NoRoute:
-            return dict(status='native_no_route_error_boundary',calls=dict(counters),can_send_packets=False)
+            return dict(status='native_no_route_error_boundary',calls=dict(counters),can_send_packets=False,**({'prepare_completed':prepared is not None,**({'prepared':prepared} if prepared is not None else {})} if _prepare is not None else {}))
         if lock[0] or rw(0x6008040)!=2:raise ValueError('Incomplete native search')
         count=rw(0x6009018)
         if not 1<=count<=n or count!=rw(0x600a018):raise ValueError('Invalid native trace size')
@@ -148,12 +154,13 @@ def oracle(path):
         if modified_count!=max(2,count):raise ValueError('Invalid endpoint-modified size')
         modified=[list(struct.unpack('<3f',u.mem_read(0x600d020+i*12,12))) for i in range(modified_count)]
         expected=[list(v) for v in vectors] if count>1 else [list(vectors[0]),list(vectors[0])]
-        expected[0]=[f32(f32(x)*f32(.001)) for x in points[0]];expected[-1]=[f32(f32(x)*f32(.001)) for x in points[1]]
+        expected[0]=list(struct.unpack('<3f',u.mem_read(0x60080f8,12)));expected[-1]=list(struct.unpack('<3f',u.mem_read(0x6008104,12)))
         if modified!=expected:raise ValueError('Native endpoint modifier mismatch')
         parents=[];gs=[]
         for i in range(n):
             pn=0x6080000+i*0x100;parent=rq(pn+0x18);parents.append(None if parent==0 else (parent-0x6080000)//0x100);gs.append(rw(pn+0x28))
-        return dict(status='complete_prepared_search',path_nodes=nodes,vector_path=vectors,endpoint_modified_path=modified,total_cost=gs[end],parents=parents,g_costs=gs,calls=dict(counters),can_send_packets=False)
+        return dict(status='complete_prepared_search',path_nodes=nodes,vector_path=vectors,endpoint_modified_path=modified,total_cost=gs[end],parents=parents,g_costs=gs,calls=dict(counters),can_send_packets=False,**({'prepared':prepared} if prepared is not None else {}))
+    if _state is not None:_state.update(state)
     return run
 
 

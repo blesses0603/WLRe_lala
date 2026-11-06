@@ -1099,3 +1099,89 @@ vertex/center cases are rerun on both hosts. Application runtime behavior remain
 unchanged; full application-suite results remain phase 26. All three navigation
 seeds and movement guards remain; house entry/exit scope is unchanged. No changes
 are pushed.
+
+## Phase 41 — joined preparation and nonplanar funnel kernel
+
+`tools/review_navigation_prepare.py` joins native ABPath.Prepare, outer
+AstarPath.GetNearest, PathNNConstraint.SetStart, GraphNode.Area, Initialize,
+CalculateStep, Trace and StartEndModifier in **one VM graph state**. Unlike phase
+40, the original XYZ endpoints are inputs; native Prepare chooses nodes, clamps
+points, converts them to Int3 and marks the target. Its selected nodes/points are
+checked against independent triangle geometry, tag eligibility and start Area;
+the resulting search is checked against the independent cost reference.
+
+The graph uses complete triangle geometry and native BBTree output. Hierarchy
+flags/Area values are computed by the existing native grouping/FloodFill probe
+in a separate VM, then installed into this graph. Stale serialized hierarchy bits
+are cleared before assigning the recomputed groups. This is prepared runtime
+state, not a run of the official deserializer/RecalculateAll. The multiple-group
+probe now also supports all-unwalkable graphs: native FloodFill leaves reserved
+Area zero, and Prepare fails rather than inventing a traversable node.
+
+Twenty-five synthetic cases cover land/sea/sky/empty masks, positive and negative
+slopes, disconnected components and an all-unwalkable mesh. Area filtering may
+snap the requested endpoint to the nearest eligible node in the start component;
+that behavior is checked rather than silently treating the requested coordinates
+as the reached endpoint. Full nearest search, zero-scaled Manhattan heuristic,
+zero embedding pivots and prepared single-thread TLS/canary are explicit fixture
+settings. They are not claimed as every live player's settings.
+
+Two full reviewed official graphs, M13224 (85 nodes) and M13216 (81 nodes), run
+18 original-XYZ query cases through Prepare. Twelve land/sky cases complete and
+pass the independent checks; six sea cases reach the native error boundary during
+Prepare because neither map contains eligible sea nodes. Error-string construction
+is not emulated. Fifteen other ordinary graphs exceed the 128-node probe limit and
+are excluded without truncation. No new downloads or product limits changed.
+
+### Nonplanar funnel and explicit runtime dependencies
+
+`tools/review_navigation_unwrap.py` executes native Funnel.Unwrap/UnwrapHelper,
+collinearity tests and quaternion multiplication. The actual IL2CPP
+Quaternion.FromToRotation wrapper calls a guarded ABI bridge which executes the
+pinned **libunity.so** function in a second ARM64 VM. It does not substitute a
+Python rotation formula. Vector3's native static constructor is executed, including
+verification that its forward vector at static offset 0x48 is `(0,0,1)`; it is not
+guessed from metadata field ordering. Inputs remain supplied portal corridors.
+
+`tools/review_navigation_funnel_wrapper.py` executes the three-argument native
+Funnel.Calculate wrapper, Unwrap, FixFunnel, the corner-search kernel and 3-D
+reconstruction, with split-at-every-portal both false and true. Only its pool
+claim/release boundaries are replaced by bounded preallocated arrays/lists. Every
+bridge validates exact native call sites, capacity, pointer ownership and release
+lifecycle. No path-math or portal-selection function is replaced. These models do
+not prove the full managed pool/GC implementation or concurrent runtime behavior.
+
+Seventy-two cases (36 geometric corridors with both split settings) cover flat,
+folded, rotated, translated and differently scaled geometry. Independent checks
+verify local edge-length preservation during unfolding, endpoint preservation,
+corner-index reconstruction, and that each split point lies on its corresponding
+original 3-D portal. The native split setting materially changes folded outputs;
+its default must not be assumed to match an existing player's component settings.
+All 25 preparation, 18 official-input and 72 funnel cases have byte-identical
+outputs on desktop and Android Python hosts. No installed-client/device run is
+implied.
+
+### Remaining final-player-path gap
+
+The preparation/search and funnel tools are not yet one end-to-end player oracle.
+Funnel currently receives supplied portal lists: native ConstructFunnelPortals,
+TriangleMeshNode.GetPortal, part splitting and FunnelModifier.Apply must still be
+joined to the actual searched corridor. Seeker's registration/sort/dispatch and
+MoveController's final first-point removal also need a connected execution check.
+Read-only inspection identifies StartEndModifier.Order=0 and FunnelModifier.Order=10;
+this alone does not establish the whole registered list or its runtime settings.
+
+The verified decoded MoveController initialization explicitly adds **or reuses**
+Seeker and FunnelModifier and sets the Land mask. Thus constructor defaults cannot
+establish settings for an existing serialized component. The next evidence is the
+player object's actual prefab/component settings and/or the complete initialization
+and registration chain, alongside native portal extraction. No credential or
+permission block has occurred. Do not request account passwords or enable movement
+to obtain a reference result.
+
+Both hosts pass 47 focused tests. Native regression runs also cover the 384 nearest,
+9 multiple-group, 39 search, 99 vertex/center and 14 path-state cases. These remain
+research tools; app runtime behavior is unchanged, full app-suite results remain
+phase 26, and no remote CI or live-server acceptance is claimed. Three navigation
+seeds and all movement guards remain; house entry/exit scope is unchanged. Changes
+remain local and are not pushed.

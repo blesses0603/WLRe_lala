@@ -1,3 +1,6 @@
+from tools.review_navigation_prepare import oracle as prepare_probe,validate_inputs as validate_prepare
+from tools.review_navigation_unwrap import oracle as unwrap_probe,validate_portals,compare_unfolding
+from tools.review_navigation_funnel_wrapper import oracle as funnel_probe
 from pathlib import Path
 import tempfile
 import math
@@ -21,7 +24,7 @@ class RotationOracleBoundaryTests(unittest.TestCase):
     def test_unknown_library_rejected_before_optional_imports(self):
         with tempfile.TemporaryDirectory() as tmp:
             path=Path(tmp)/'unknown.so';path.write_bytes(b'not official code')
-            for factory in (search_probe,path_probe,from_to_oracle,multiply_oracle,endpoint_probe,traversal_probe,area_probe,bbtree_probe,group_probe,vertex_probe,nearest_probe,lambda path:registration_probe(path,path)):
+            for factory in (prepare_probe,lambda p:unwrap_probe(p,p),lambda p:funnel_probe(p,p),search_probe,path_probe,from_to_oracle,multiply_oracle,endpoint_probe,traversal_probe,area_probe,bbtree_probe,group_probe,vertex_probe,nearest_probe,lambda path:registration_probe(path,path)):
                 with self.assertRaisesRegex(ValueError,'digest'):factory(path)
             with path.open('wb') as output:output.truncate(96*1024*1024+1)
             with self.assertRaisesRegex(ValueError,'size limit'):from_to_oracle(path)
@@ -181,3 +184,34 @@ class NativeSearchBoundaryTests(unittest.TestCase):
         fixture['flags'][1]=0
         compare_search(fixture,dict(status='native_no_route_error_boundary'))
         with self.assertRaises(ValueError):compare_search(fixture,good)
+
+
+class NativePreparationInputTests(unittest.TestCase):
+    def test_invalid_mesh_bookkeeping_stops_before_native_state(self):
+        good=dict(vertices=[[0,0,0],[1000,0,0],[0,0,1000]],faces=[[0,1,2]],
+                  connections=[[]],flags=[1],penalties=[0],start_point=[0,1,0],end_point=[0,0,0],tag_mask=9)
+        validate_prepare(**good)
+        for change in (dict(flags=[True]),dict(flags=[1<<24]),dict(connections=[[[1,1]]]),
+                       dict(penalties=[-1]),dict(tag_mask=-1),dict(end_point=[float('nan'),0,0]),
+                       dict(faces=[[0,0,0]])):
+            with self.assertRaises(ValueError):validate_prepare(**dict(good,**change))
+
+    def test_empty_walkable_multiple_group_state_is_permitted(self):
+        validate_graph([[],[]],[False,False],multiple=True)
+        with self.assertRaises(ValueError):validate_graph([[]],[False])
+
+
+class NativePortalInputTests(unittest.TestCase):
+    def test_invalid_or_unbounded_portals(self):
+        for left,right in (([],[]),([[0,0,0]],[[0,0,0]]),
+                           ([[0,0,0]]*129,[[0,0,0]]*129),
+                           ([[0,0,0],[1,0,0]],[[0,0,0],[2,0,0]]),
+                           ([[float('nan'),0,0]]*2,[[float('nan'),0,0]]*2),
+                           ([[1001,0,0]]*2,[[1001,0,0]]*2)):
+            with self.assertRaises(ValueError):validate_portals(left,right)
+
+    def test_local_unfolded_geometry_check_detects_distortion(self):
+        left=[[0,0,0],[1,0,1],[3,0,0]];right=[[0,0,0],[1,0,-1],[3,0,0]]
+        good=dict(left=[[0,0],[1,1],[3,0]],right=[[0,0],[1,-1],[3,0]])
+        compare_unfolding(left,right,good)
+        with self.assertRaises(ValueError):compare_unfolding(left,right,dict(good,right=[[0,0],[1,-2],[3,0]]))

@@ -70,7 +70,7 @@ def oracle(path,*,modeled_center=False,_state=None,_path_magnitude=False):
         q(0x4923260,0x601e000)
     def guard(machine,address,size,user):
         if modeled_center and address==0x601e000:
-            if vm.reg_read(UC_ARM64_REG_LR) not in ((0x2d864b0,0x2d86530,0x2d865c8)+( (0x2d86af4,) if _path_magnitude else () )):
+            if vm.reg_read(UC_ARM64_REG_LR) not in ((0x2d864b0,0x2d86530,0x2d865c8)+( (0x2d86af4,0x2d86250,0x2d862d0,0x2d86340) if _path_magnitude else () )):
                 raise ValueError('Unreviewed modf caller')
             destination=vm.reg_read(UC_ARM64_REG_X0)
             if not 0x61fe000<=destination<=0x61ffff8:raise ValueError('Invalid modf output pointer')

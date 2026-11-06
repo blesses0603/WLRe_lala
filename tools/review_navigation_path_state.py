@@ -26,8 +26,10 @@ def validate_fixture(costs,parents,positions,end):
             seen.add(i);i=parents[i]
 
 
-def oracle(path,*,_state=None,_path_magnitude=False):
-    state={};vertex_oracle(path,_state=state,modeled_center=_path_magnitude,_path_magnitude=_path_magnitude);u=state['vm'];data=state['data']
+def oracle(path,*,_state=None,_path_magnitude=False,_existing_state=None):
+    state={} if _existing_state is None else _existing_state
+    if _existing_state is None:vertex_oracle(path,_state=state,modeled_center=_path_magnitude,_path_magnitude=_path_magnitude)
+    u=state['vm'];data=state['data']
     from unicorn.arm64_const import UC_ARM64_REG_CPACR_EL1
     ranges=((0x2d7f92c,0x2d7f9e0),(0x2d7fa34,0x2d7fb88),(0x2d7fba0,0x2d7fe7c),
             (0x2e9a75c,0x2e9a768),(0x2e9a940,0x2e9a978),(0x2d83814,0x2d83820),

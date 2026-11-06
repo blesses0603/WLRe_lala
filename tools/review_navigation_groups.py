@@ -14,8 +14,8 @@ from tools.review_navigation_rotation import checked_bytes,IL2CPP_SHA
 def validate_graph(adjacency,walkable,*,multiple=False):
     if not isinstance(adjacency,list) or not 1<=len(adjacency)<=(512 if multiple else 256):
         raise ValueError('Require bounded node count')
-    if len(walkable)!=len(adjacency) or any(type(v) is not bool for v in walkable) or not walkable[0]:
-        raise ValueError('Require Boolean flags and a walkable starting node')
+    if len(walkable)!=len(adjacency) or any(type(v) is not bool for v in walkable) or (not multiple and not walkable[0]):
+        raise ValueError('Require Boolean flags and a walkable single-group starting node')
     for i,neighbors in enumerate(adjacency):
         if not isinstance(neighbors,list) or any(type(j) is not int or not 0<=j<len(adjacency) or i==j for j in neighbors):
             raise ValueError('Invalid node references')
