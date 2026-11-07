@@ -1,0 +1,2389 @@
+[
+  {
+    "id": "desktop:wlre/services/ark_first_answer.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/ark_first_answer.py",
+    "source_sha256": "97fe0556760f64cfc6af7708ae6209b0c6d7b3be6cccd021a6f9dd9bae966d00",
+    "source_lines": 58,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.ark_first_answer",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "solve",
+          "line": 17
+        }
+      ],
+      "imports": [
+        "fractions",
+        "re"
+      ],
+      "existing_test_candidates": [
+        "tests/test_ark_first_answer.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/background_version_observer.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/background_version_observer.py",
+    "source_sha256": "ef81379088d2c84ac07dbfb81e2d7d817891c6db3ad4783ff5ec4d497ad12bf1",
+    "source_lines": 286,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.background_version_observer",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "VersionIdentifiers",
+          "line": 35
+        },
+        {
+          "name": "ObservationResult",
+          "line": 43
+        },
+        {
+          "name": "_snapshot_identifiers",
+          "line": 53
+        },
+        {
+          "name": "version_identifiers_from_database",
+          "line": 60
+        },
+        {
+          "name": "_NoRedirect",
+          "line": 86
+        },
+        {
+          "name": "_fetch_metadata",
+          "line": 91
+        },
+        {
+          "name": "_finite_timeout",
+          "line": 107
+        },
+        {
+          "name": "observe_background_versions",
+          "line": 116
+        },
+        {
+          "name": "bounded_interval",
+          "line": 170
+        },
+        {
+          "name": "_ObservationToken",
+          "line": 181
+        },
+        {
+          "name": "ObservationSchedule",
+          "line": 187
+        }
+      ],
+      "imports": [
+        "dataclasses",
+        "datetime",
+        "math",
+        "pathlib",
+        "re",
+        "threading",
+        "time",
+        "urllib.request",
+        "wlre.services",
+        "wlre.services.official_resource_sync",
+        "wlre.services.world.resource_database",
+        "wlre.storage.paths"
+      ],
+      "existing_test_candidates": [
+        "tests/test_background_version_observer.py",
+        "tests/test_background_version_ui.py",
+        "tests/test_prelogin_version_window.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/battle/__init__.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/battle/__init__.py",
+    "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "source_lines": 0,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.battle",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [],
+      "imports": [],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/battle/attribute_points.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/battle/attribute_points.py",
+    "source_sha256": "0d6f6b9f555922dd56c6cbe76a2ff5e683e2526584d73793eb7ea3b7f2a231b0",
+    "source_lines": 128,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.battle",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "defaults",
+          "line": 21
+        },
+        {
+          "name": "baseline",
+          "line": 26
+        },
+        {
+          "name": "preview_block_reason",
+          "line": 39
+        },
+        {
+          "name": "allocation",
+          "line": 66
+        },
+        {
+          "name": "begin",
+          "line": 93
+        },
+        {
+          "name": "apply_event",
+          "line": 102
+        },
+        {
+          "name": "expire",
+          "line": 118
+        }
+      ],
+      "imports": [
+        "time",
+        "wlre.network.wire"
+      ],
+      "existing_test_candidates": [
+        "tests/test_attribute_points.py",
+        "tests/test_character_sync_safety.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/battle/auto_battle.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/battle/auto_battle.py",
+    "source_sha256": "5f7700af1e3bf43ac4351e3cbe9c481e2bca67226f74da7ffb4cf185d538e994",
+    "source_lines": 272,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.battle",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "action",
+          "line": 17
+        },
+        {
+          "name": "default_profile",
+          "line": 19
+        },
+        {
+          "name": "defaults",
+          "line": 28
+        },
+        {
+          "name": "validate",
+          "line": 34
+        },
+        {
+          "name": "ordered_units",
+          "line": 85
+        },
+        {
+          "name": "choose_action",
+          "line": 87
+        },
+        {
+          "name": "AutoBattle",
+          "line": 158
+        },
+        {
+          "name": "summary",
+          "line": 270
+        }
+      ],
+      "imports": [
+        "copy",
+        "math",
+        "wlre.core.state_ownership",
+        "wlre.network.wire",
+        "wlre.services.battle",
+        "wlre.services.battle.battle_commands",
+        "wlre.services.coordination",
+        "wlre.services.items",
+        "wlre.services.items.combat_resources"
+      ],
+      "existing_test_candidates": [
+        "tests/test_auto_battle_ui_modules.py",
+        "tests/test_health_25804_diagnostics.py",
+        "tests/test_maintenance.py",
+        "tests/test_official_combat_catalog.py",
+        "tests/test_optimizations.py",
+        "tests/test_post_battle_maintenance.py",
+        "tests/test_server_account_settings.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/battle/battle_commands.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/battle/battle_commands.py",
+    "source_sha256": "417b37104b6c7a43507f5cfee11a9eddfc6510c5af5155e7a3d04de785acc182",
+    "source_lines": 71,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.battle",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "slot",
+          "line": 7
+        },
+        {
+          "name": "identity",
+          "line": 9
+        },
+        {
+          "name": "owned_units",
+          "line": 11
+        },
+        {
+          "name": "catch_allowed",
+          "line": 18
+        },
+        {
+          "name": "action_command",
+          "line": 34
+        },
+        {
+          "name": "plan_round",
+          "line": 53
+        }
+      ],
+      "imports": [
+        "wlre.network.wire",
+        "wlre.services.battle.combat",
+        "wlre.services.items.combat_resources"
+      ],
+      "existing_test_candidates": [
+        "tests/test_official_normal_attacks.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/battle/combat.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/battle/combat.py",
+    "source_sha256": "47d5b407aab34218761a7df66efc2ef4353ffb14190ddc29974f2dca784e87f8",
+    "source_lines": 71,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.battle",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Battle/CombatRules.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "normal_skill",
+          "line": 14
+        },
+        {
+          "name": "unit_label",
+          "line": 45
+        },
+        {
+          "name": "effect_text",
+          "line": 50
+        },
+        {
+          "name": "attack_lines",
+          "line": 61
+        }
+      ],
+      "imports": [
+        "wlre.network.wire",
+        "wlre.services.world.normal_attack_catalog"
+      ],
+      "existing_test_candidates": [
+        "tests/test_official_normal_attacks.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run",
+      "test_count": 450,
+      "evidence_files": [
+        "dotnet/Lala.Core.Tests/Battle/CombatRulesTests.cs",
+        "dotnet/Lala.Core.Tests/Battle/PythonCombatVectors.cs"
+      ],
+      "evidence_source": "Local .NET test run confirmed 450 passing tests: 160 normal-attack vectors, 288 effect vectors, snapshot ownership and culture tests; no live-server acceptance."
+    },
+    "migrated_scope": [
+      "normal_skill → CombatRules.NormalSkill, using immutable caller-supplied catalog/equipment snapshots",
+      "effect_text → CombatRules.EffectText, preserving server-reported effect formatting"
+    ],
+    "outstanding_scope": [
+      "unit_label and attack_lines not ported.",
+      "CurrentNormalData resource loading/integration not ported.",
+      "Full auto-battle, live command sending and server-result acceptance are not included."
+    ]
+  },
+  {
+    "id": "desktop:wlre/services/battle/companions.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/battle/companions.py",
+    "source_sha256": "6f80afbcd1b4639b5b2a9c07c78f79b079ec55464e1f96b3ec565ae9cd43ad82",
+    "source_lines": 61,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.battle",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "ambiguous_identity",
+          "line": 5
+        },
+        {
+          "name": "problem",
+          "line": 17
+        },
+        {
+          "name": "command",
+          "line": 54
+        }
+      ],
+      "imports": [
+        "wlre.network.wire"
+      ],
+      "existing_test_candidates": [
+        "tests/test_companion_sync_safety.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/battle/party.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/battle/party.py",
+    "source_sha256": "a5205fe2fd7ac4ee994420d0ea11a84e4914eb5960b72bfef92fc2278bd50d32",
+    "source_lines": 131,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.battle",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "party_defaults",
+          "line": 8
+        },
+        {
+          "name": "own_team",
+          "line": 9
+        },
+        {
+          "name": "player_name",
+          "line": 13
+        },
+        {
+          "name": "apply_party",
+          "line": 18
+        },
+        {
+          "name": "expire",
+          "line": 62
+        },
+        {
+          "name": "team_command",
+          "line": 71
+        },
+        {
+          "name": "event_text",
+          "line": 118
+        }
+      ],
+      "imports": [
+        "time",
+        "wlre.network.wire"
+      ],
+      "existing_test_candidates": [
+        "tests/test_npc_dialogue_v058.py",
+        "tests/test_optimizations.py",
+        "tests/test_party_guard.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/battle/party_guard.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/battle/party_guard.py",
+    "source_sha256": "007c3a71386e431e7b2b7711a15a589e5ed2b5e1c9b8ea86b07c14bc64ed068e",
+    "source_lines": 76,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.battle",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "defaults",
+          "line": 10
+        },
+        {
+          "name": "validate",
+          "line": 14
+        },
+        {
+          "name": "present_ids",
+          "line": 35
+        },
+        {
+          "name": "missing",
+          "line": 44
+        },
+        {
+          "name": "escape_reason",
+          "line": 49
+        },
+        {
+          "name": "settings_path",
+          "line": 54
+        },
+        {
+          "name": "load",
+          "line": 58
+        },
+        {
+          "name": "save",
+          "line": 65
+        }
+      ],
+      "imports": [
+        "json",
+        "os",
+        "pathlib",
+        "tempfile",
+        "wlre.network.wire",
+        "wlre.services.battle.party",
+        "wlre.storage.paths"
+      ],
+      "existing_test_candidates": [
+        "tests/test_optimizations.py",
+        "tests/test_party_guard.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/coordination.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/coordination.py",
+    "source_sha256": "4ce7e80381cae7c046b35db417586e9cf4e8ac5ea53e918c7c74660973d80f2a",
+    "source_lines": 87,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.coordination",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "active",
+          "line": 12
+        },
+        {
+          "name": "craft_busy",
+          "line": 13
+        },
+        {
+          "name": "expedition_busy",
+          "line": 14
+        },
+        {
+          "name": "command_reason",
+          "line": 17
+        },
+        {
+          "name": "reason",
+          "line": 48
+        }
+      ],
+      "imports": [],
+      "existing_test_candidates": [
+        "tests/test_automation_integration.py",
+        "tests/test_daily_task_runtime.py",
+        "tests/test_guild_actions.py",
+        "tests/test_postbattle_ai_lock_policy.py",
+        "tests/test_star_ark.py",
+        "tests/test_time_cube.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/daily_assistant.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/daily_assistant.py",
+    "source_sha256": "5b538257c3d32ebb9ef4d3c85706536e7f37dc5549686081adbaba15e8d5b481",
+    "source_lines": 270,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.daily_assistant",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "command",
+          "line": 28
+        },
+        {
+          "name": "_catalog_token",
+          "line": 92
+        },
+        {
+          "name": "_availability",
+          "line": 101
+        },
+        {
+          "name": "view",
+          "line": 185
+        }
+      ],
+      "imports": [
+        "copy",
+        "types",
+        "wlre.network.wire",
+        "wlre.services",
+        "wlre.services.social"
+      ],
+      "existing_test_candidates": [
+        "tests/test_daily_assistant.py",
+        "tests/test_daily_assistant_ui.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/daily_tasks.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/daily_tasks.py",
+    "source_sha256": "fdbf7a282799a3fc8d5d519835f97cc949d0ddbcd28d39a0810f995387500045",
+    "source_lines": 438,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.daily_tasks",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "defaults",
+          "line": 21
+        },
+        {
+          "name": "_read_marks",
+          "line": 49
+        },
+        {
+          "name": "decode_daily_tasks",
+          "line": 65
+        },
+        {
+          "name": "apply_daily_tasks",
+          "line": 136
+        },
+        {
+          "name": "_has_flag",
+          "line": 198
+        },
+        {
+          "name": "runtime_catalog",
+          "line": 218
+        },
+        {
+          "name": "received",
+          "line": 227
+        },
+        {
+          "name": "chest_received",
+          "line": 231
+        },
+        {
+          "name": "task_rows",
+          "line": 237
+        },
+        {
+          "name": "chest_rows",
+          "line": 259
+        },
+        {
+          "name": "slots_needed",
+          "line": 270
+        },
+        {
+          "name": "_item_totals",
+          "line": 285
+        },
+        {
+          "name": "_items_received",
+          "line": 299
+        },
+        {
+          "name": "candidates",
+          "line": 311
+        },
+        {
+          "name": "fingerprint",
+          "line": 326
+        },
+        {
+          "name": "guard",
+          "line": 331
+        },
+        {
+          "name": "begin",
+          "line": 352
+        },
+        {
+          "name": "command",
+          "line": 376
+        },
+        {
+          "name": "tick",
+          "line": 402
+        },
+        {
+          "name": "disconnect",
+          "line": 435
+        }
+      ],
+      "imports": [
+        "time",
+        "wlre.network.wire",
+        "wlre.services.coordination",
+        "wlre.services.instance_rewards",
+        "wlre.services.world.dynamic_bundle_runtime"
+      ],
+      "existing_test_candidates": [
+        "tests/test_resource_safety_hold.py",
+        "tests/test_star_ark.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/expedition/__init__.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/expedition/__init__.py",
+    "source_sha256": "77c3c9c5f8148538e7269db27aea223f6cbad784b173e889ef075a33b8ec3848",
+    "source_lines": 35,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.expedition",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "__getattr__",
+          "line": 29
+        },
+        {
+          "name": "__dir__",
+          "line": 34
+        }
+      ],
+      "imports": [
+        "",
+        "manager"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/expedition/data.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/expedition/data.py",
+    "source_sha256": "3d3c789c3b8496da415e0e88055211f68edc35e4f33c52acc6b7c3e92f31b80f",
+    "source_lines": 260,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.expedition",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "data_root",
+          "line": 11
+        },
+        {
+          "name": "parse_catalog",
+          "line": 16
+        },
+        {
+          "name": "load_catalog",
+          "line": 58
+        },
+        {
+          "name": "parse_text_data",
+          "line": 64
+        },
+        {
+          "name": "attach_names",
+          "line": 91
+        },
+        {
+          "name": "parse_npcs",
+          "line": 105
+        },
+        {
+          "name": "load_verified_1275_catalog",
+          "line": 145
+        },
+        {
+          "name": "load_active_catalog",
+          "line": 242
+        }
+      ],
+      "imports": [
+        "copy",
+        "hashlib",
+        "struct",
+        "wlre.network.wire",
+        "wlre.services.parser_diagnostics",
+        "wlre.services.world.catalog_source_policy",
+        "wlre.services.world.dynamic_bundle_runtime",
+        "wlre.services.world.game_data_1275",
+        "wlre.services.world.runtime_1275",
+        "wlre.storage.paths",
+        "zipfile"
+      ],
+      "existing_test_candidates": [
+        "tests/test_automatic_candidate_indexes.py",
+        "tests/test_bundle_runtime_1275.py",
+        "tests/test_dynamic_bundle_runtime.py",
+        "tests/test_parser_diagnostics.py",
+        "tests/test_resource_database.py",
+        "tests/test_verified_expedition_1275.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/expedition/manager.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/expedition/manager.py",
+    "source_sha256": "7a6f9d1c3b752d4d9120d949cba8a7e2e1fefff509bdd10dc0201006a3f24ad0",
+    "source_lines": 392,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.expedition",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "defaults",
+          "line": 17
+        },
+        {
+          "name": "apply_expedition",
+          "line": 23
+        },
+        {
+          "name": "with_deadline",
+          "line": 62
+        },
+        {
+          "name": "preferences",
+          "line": 66
+        },
+        {
+          "name": "validate",
+          "line": 70
+        },
+        {
+          "name": "faith_gain",
+          "line": 98
+        },
+        {
+          "name": "recovery_stock",
+          "line": 105
+        },
+        {
+          "name": "duration",
+          "line": 118
+        },
+        {
+          "name": "condition_ok",
+          "line": 123
+        },
+        {
+          "name": "blocked",
+          "line": 127
+        },
+        {
+          "name": "item_totals",
+          "line": 131
+        },
+        {
+          "name": "claim_space",
+          "line": 139
+        },
+        {
+          "name": "Expedition",
+          "line": 154
+        }
+      ],
+      "imports": [
+        "copy",
+        "data",
+        "math",
+        "teams",
+        "time",
+        "wlre.core.inventory_updates",
+        "wlre.core.state_ownership",
+        "wlre.network.wire",
+        "wlre.services.coordination",
+        "wlre.services.items",
+        "wlre.services.items.combat_resources",
+        "wlre.services.world.dynamic_bundle_runtime"
+      ],
+      "existing_test_candidates": [
+        "tests/test_expedition_service_modules.py",
+        "tests/test_official_stack_rules.py",
+        "tests/test_runtime_consumer_refresh.py",
+        "tests/test_verified_expedition_1275.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/expedition/teams.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/expedition/teams.py",
+    "source_sha256": "fd1678a58a015ea09c3057742ab7875be217e9bce05d1f7423638bbcbe3aec37",
+    "source_lines": 124,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.expedition",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Expedition/ExpeditionTeams.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_model",
+          "line": 5
+        },
+        {
+          "name": "_compile",
+          "line": 14
+        },
+        {
+          "name": "_met",
+          "line": 32
+        },
+        {
+          "name": "condition_met",
+          "line": 38
+        },
+        {
+          "name": "success_details",
+          "line": 44
+        },
+        {
+          "name": "choose_members",
+          "line": 57
+        },
+        {
+          "name": "_choose_cached",
+          "line": 68
+        }
+      ],
+      "imports": [
+        "functools"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "migrated_scope": [
+      "Offline condition evaluation, team rate calculation and exact team selection with cancellation."
+    ],
+    "outstanding_scope": [
+      "Protocol, scheduling, UI and live expedition integration not migrated.",
+      "Rejects negative malformed values explicitly rather than preserving unsafe pruning behavior."
+    ]
+  },
+  {
+    "id": "desktop:wlre/services/expedition_data.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/expedition_data.py",
+    "source_sha256": "0eae7846da14c4ea5c739474aa90857b246b02c3f250090ad7f774dca910a2cb",
+    "source_lines": 12,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.expedition_data",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "__getattr__",
+          "line": 11
+        }
+      ],
+      "imports": [
+        "expedition",
+        "expedition.data"
+      ],
+      "existing_test_candidates": [
+        "tests/test_expedition.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/expedition_teams.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/expedition_teams.py",
+    "source_sha256": "b196257993c0cab7da106f104d35ac6a54ce4247bef9ab0fdd4a2afdf3d50b08",
+    "source_lines": 14,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.expedition_teams",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "__getattr__",
+          "line": 13
+        }
+      ],
+      "imports": [
+        "expedition",
+        "expedition.teams"
+      ],
+      "existing_test_candidates": [
+        "tests/test_expedition_teams.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/game_version_gate.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/game_version_gate.py",
+    "source_sha256": "2ffe4ba17d21ad0dc79483e2e0dbee0d0d2d4ee24b005eda66c8d87a5135bfe6",
+    "source_lines": 142,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.game_version_gate",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "compare_database_identity",
+          "line": 11
+        },
+        {
+          "name": "configured_sources",
+          "line": 40
+        },
+        {
+          "name": "_report_progress",
+          "line": 45
+        },
+        {
+          "name": "_run_dynamic_check",
+          "line": 53
+        },
+        {
+          "name": "run_prelogin_check",
+          "line": 115
+        }
+      ],
+      "imports": [
+        "wlre.services.official_version",
+        "wlre.services.resource_compatibility",
+        "wlre.services.world.catalog_runtime",
+        "wlre.services.world.dynamic_bundle_runtime",
+        "wlre.services.world.resource_database",
+        "wlre.storage.paths"
+      ],
+      "existing_test_candidates": [
+        "tests/test_game_version_gate.py",
+        "tests/test_resource_compatibility.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/instance_activity.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/instance_activity.py",
+    "source_sha256": "ed15766ee26c9e884be02e4bb2dc8670acbb7133c7d3d0ecc03ff398cb9444a6",
+    "source_lines": 32,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.instance_activity",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_data",
+          "line": 21
+        },
+        {
+          "name": "instance_background_blockers",
+          "line": 29
+        }
+      ],
+      "imports": [
+        "collections.abc"
+      ],
+      "existing_test_candidates": [
+        "tests/test_instance_automation_independence.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/instance_browser.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/instance_browser.py",
+    "source_sha256": "2454e45fc3a3d05b08c3212ce6b0409b1740ff8c375657d1c69d0ee447654ec2",
+    "source_lines": 48,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.instance_browser",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "official_catalog",
+          "line": 6
+        },
+        {
+          "name": "catalog_token",
+          "line": 18
+        },
+        {
+          "name": "entries_for",
+          "line": 25
+        },
+        {
+          "name": "selection_fields",
+          "line": 35
+        },
+        {
+          "name": "selected_entry",
+          "line": 40
+        }
+      ],
+      "imports": [
+        "copy",
+        "wlre.network.wire",
+        "wlre.services.world.runtime_1275"
+      ],
+      "existing_test_candidates": [
+        "tests/instance_runtime_fixtures.py",
+        "tests/test_dynamic_bundle_runtime.py",
+        "tests/test_instance_catalog_1262.py",
+        "tests/test_instance_ui.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/instance_catalog.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/instance_catalog.py",
+    "source_sha256": "c51e76030b6f628e75ec559ee61f207f808e8f392dbed8d732d38282bfa9032e",
+    "source_lines": 147,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.instance_catalog",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_count",
+          "line": 17
+        },
+        {
+          "name": "_award",
+          "line": 24
+        },
+        {
+          "name": "_flags",
+          "line": 28
+        },
+        {
+          "name": "parse_dungeons",
+          "line": 37
+        },
+        {
+          "name": "parse_cooperative_events",
+          "line": 59
+        },
+        {
+          "name": "parse_stages",
+          "line": 77
+        },
+        {
+          "name": "catalog",
+          "line": 120
+        },
+        {
+          "name": "save_catalog",
+          "line": 143
+        }
+      ],
+      "imports": [
+        "json",
+        "pathlib",
+        "wlre.network.wire",
+        "wlre.services.parser_diagnostics"
+      ],
+      "existing_test_candidates": [
+        "tests/test_bundle_runtime_1275.py",
+        "tests/test_instance_protocol.py",
+        "tests/test_parser_diagnostics.py",
+        "tests/test_resource_database.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/instance_combat.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/instance_combat.py",
+    "source_sha256": "93205bf4887d7f7a8fbfff08ae83e30e02cdb7f996c78c15bc2f18164d658737",
+    "source_lines": 44,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.instance_combat",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "own_victory",
+          "line": 8
+        },
+        {
+          "name": "consume_coop_fight",
+          "line": 21
+        }
+      ],
+      "imports": [],
+      "existing_test_candidates": [
+        "tests/test_instance_improvements.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/instance_creation.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/instance_creation.py",
+    "source_sha256": "21deec9d5814a0f37775bb168b09098d598f8e2e584aa99f4ae2ce82ceb51424",
+    "source_lines": 183,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.instance_creation",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_validated_password",
+          "line": 28
+        },
+        {
+          "name": "create",
+          "line": 42
+        },
+        {
+          "name": "resolve",
+          "line": 103
+        },
+        {
+          "name": "expire",
+          "line": 165
+        },
+        {
+          "name": "disconnect",
+          "line": 178
+        }
+      ],
+      "imports": [
+        "time",
+        "wlre.network.instance_actions",
+        "wlre.network.wire",
+        "wlre.services.battle.party",
+        "wlre.services.instance_activity",
+        "wlre.services.instance_browser"
+      ],
+      "existing_test_candidates": [
+        "tests/test_instance_automation_independence.py",
+        "tests/test_instance_coop_host_start_v052.py",
+        "tests/test_instance_creation.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/instance_entry.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/instance_entry.py",
+    "source_sha256": "1c1a9bdd17fd85675293525f3de4219a904274df8739298963f6832b2c1ea924",
+    "source_lines": 142,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.instance_entry",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_no_unresolved_operations",
+          "line": 16
+        },
+        {
+          "name": "enter",
+          "line": 27
+        },
+        {
+          "name": "observe",
+          "line": 58
+        },
+        {
+          "name": "expire",
+          "line": 125
+        },
+        {
+          "name": "disconnect",
+          "line": 137
+        }
+      ],
+      "imports": [
+        "time",
+        "wlre.network.wire",
+        "wlre.services.instance_browser",
+        "wlre.services.instance_room_flow"
+      ],
+      "existing_test_candidates": [
+        "tests/test_automatic_flows.py",
+        "tests/test_instance_entry.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/instance_rewards.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/instance_rewards.py",
+    "source_sha256": "b1e9a4c103fb4e4c9dd5f6ab7b3240fef34acacabb0c846a8c189021d3544bfc",
+    "source_lines": 259,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.instance_rewards",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_coop",
+          "line": 16
+        },
+        {
+          "name": "bag_claim_problem",
+          "line": 20
+        },
+        {
+          "name": "_safe_bag",
+          "line": 59
+        },
+        {
+          "name": "_guard",
+          "line": 63
+        },
+        {
+          "name": "_reward",
+          "line": 97
+        },
+        {
+          "name": "_fingerprint",
+          "line": 106
+        },
+        {
+          "name": "set_auto",
+          "line": 111
+        },
+        {
+          "name": "claim",
+          "line": 127
+        },
+        {
+          "name": "cancel",
+          "line": 152
+        },
+        {
+          "name": "resolve",
+          "line": 172
+        },
+        {
+          "name": "tick",
+          "line": 222
+        },
+        {
+          "name": "expire",
+          "line": 239
+        },
+        {
+          "name": "disconnect",
+          "line": 252
+        }
+      ],
+      "imports": [
+        "time",
+        "wlre.network.wire"
+      ],
+      "existing_test_candidates": [
+        "tests/test_coop_chest_bag_snapshot_1275.py",
+        "tests/test_guild_actions.py",
+        "tests/test_instance_rewards.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/instance_room_flow.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/instance_room_flow.py",
+    "source_sha256": "e7e1e2e62c414e9ca442413b80cf88c5162ced00ecaba04799656232e9eb8718",
+    "source_lines": 226,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.instance_room_flow",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_data",
+          "line": 29
+        },
+        {
+          "name": "_busy",
+          "line": 35
+        },
+        {
+          "name": "_activity_guard",
+          "line": 46
+        },
+        {
+          "name": "join",
+          "line": 64
+        },
+        {
+          "name": "coop_completed_no_chest",
+          "line": 108
+        },
+        {
+          "name": "leave",
+          "line": 123
+        },
+        {
+          "name": "resolve",
+          "line": 148
+        },
+        {
+          "name": "expire",
+          "line": 203
+        },
+        {
+          "name": "disconnect",
+          "line": 219
+        }
+      ],
+      "imports": [
+        "time",
+        "wlre.network.instance_actions",
+        "wlre.network.wire",
+        "wlre.services.battle.party",
+        "wlre.services.instance_activity",
+        "wlre.services.instance_creation"
+      ],
+      "existing_test_candidates": [
+        "tests/test_coop_reward_lifecycle_v057.py",
+        "tests/test_instance_automation_independence.py",
+        "tests/test_instance_room_flow.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/instance_standby.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/instance_standby.py",
+    "source_sha256": "c7c39b307ee421c3acb7277538a002baf428cfabab10ba44407e14591be0aa36",
+    "source_lines": 118,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.instance_standby",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_no_unresolved_room_actions",
+          "line": 17
+        },
+        {
+          "name": "set_standby",
+          "line": 28
+        },
+        {
+          "name": "resolve",
+          "line": 74
+        },
+        {
+          "name": "expire",
+          "line": 101
+        },
+        {
+          "name": "disconnect",
+          "line": 113
+        }
+      ],
+      "imports": [
+        "time",
+        "wlre.network.wire",
+        "wlre.services.instance_room_flow"
+      ],
+      "existing_test_candidates": [
+        "tests/test_instance_standby.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/instance_start.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/instance_start.py",
+    "source_sha256": "98113cfa1c0a9e94a0a6508968342e16db763c8dd9e36060507427dd3259194f",
+    "source_lines": 106,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.instance_start",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_pending_or_uncertain",
+          "line": 18
+        },
+        {
+          "name": "start",
+          "line": 29
+        },
+        {
+          "name": "resolve",
+          "line": 69
+        },
+        {
+          "name": "expire",
+          "line": 89
+        },
+        {
+          "name": "disconnect",
+          "line": 101
+        }
+      ],
+      "imports": [
+        "time",
+        "wlre.network.wire",
+        "wlre.services.instance_browser",
+        "wlre.services.instance_room_flow"
+      ],
+      "existing_test_candidates": [
+        "tests/test_automatic_flows.py",
+        "tests/test_instance_start.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/instances.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/instances.py",
+    "source_sha256": "1900e4b52b7e96920f06ae10fae89078890a7870840a555a816c41e7255fb1d0",
+    "source_lines": 273,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.instances",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_clear_main_round",
+          "line": 2
+        },
+        {
+          "name": "_clear_coop_round",
+          "line": 10
+        },
+        {
+          "name": "defaults",
+          "line": 24
+        },
+        {
+          "name": "apply_instances",
+          "line": 55
+        }
+      ],
+      "imports": [
+        "time",
+        "wlre.services.instance_creation",
+        "wlre.services.instance_entry",
+        "wlre.services.instance_rewards",
+        "wlre.services.instance_room_flow",
+        "wlre.services.instance_standby",
+        "wlre.services.instance_start"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/items/__init__.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/items/__init__.py",
+    "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "source_lines": 0,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.items",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [],
+      "imports": [],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/items/alchemy.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/items/alchemy.py",
+    "source_sha256": "619b8a29617e16ed664b053f4526fceb27c56a3c8d1b3dcee01964140888ef23",
+    "source_lines": 216,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.items",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "defaults",
+          "line": 13
+        },
+        {
+          "name": "modes",
+          "line": 14
+        },
+        {
+          "name": "material_problem",
+          "line": 17
+        },
+        {
+          "name": "category",
+          "line": 26
+        },
+        {
+          "name": "aggregate_rows",
+          "line": 36
+        },
+        {
+          "name": "prepare",
+          "line": 46
+        },
+        {
+          "name": "AutoAlchemy",
+          "line": 84
+        }
+      ],
+      "imports": [
+        "copy",
+        "time",
+        "wlre.core.state_ownership",
+        "wlre.network.wire",
+        "wlre.services.coordination",
+        "wlre.services.items",
+        "wlre.services.items.combat_resources",
+        "wlre.services.world.alchemy_metadata"
+      ],
+      "existing_test_candidates": [
+        "tests/test_alchemy_continuation.py",
+        "tests/test_official_alchemy_metadata.py",
+        "tests/test_release.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/items/catalog.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/items/catalog.py",
+    "source_sha256": "a602c5dcd90d87c1cf761f0f7de54983acd610b73c4e2714b44adafbdcf0b6dc",
+    "source_lines": 64,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.items",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "item_name",
+          "line": 5
+        },
+        {
+          "name": "skill_name",
+          "line": 13
+        },
+        {
+          "name": "item_display_name",
+          "line": 16
+        },
+        {
+          "name": "verified_item_metadata",
+          "line": 36
+        }
+      ],
+      "imports": [
+        "wlre.services.items.live_combat_catalog",
+        "wlre.services.world.catalog_source_policy",
+        "wlre.services.world.dynamic_bundle_runtime",
+        "wlre.services.world.runtime_1275"
+      ],
+      "existing_test_candidates": [
+        "tests/test_dynamic_bundle_runtime.py",
+        "tests/test_feature_resource_index.py",
+        "tests/test_runtime_consumer_refresh.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/items/combat_resources.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/items/combat_resources.py",
+    "source_sha256": "47025368326c7581615da4f527ca523a08bc4566f03135cc04d02d1b0c662844",
+    "source_lines": 344,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.items",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "apply_live",
+          "line": 12
+        },
+        {
+          "name": "set_companion",
+          "line": 113
+        },
+        {
+          "name": "profile_for",
+          "line": 132
+        },
+        {
+          "name": "learned",
+          "line": 140
+        },
+        {
+          "name": "weapon_group",
+          "line": 171
+        },
+        {
+          "name": "skill_reasons",
+          "line": 177
+        },
+        {
+          "name": "target_valid",
+          "line": 200
+        },
+        {
+          "name": "learned_command",
+          "line": 212
+        },
+        {
+          "name": "best_skill_command",
+          "line": 236
+        },
+        {
+          "name": "heal_effects",
+          "line": 261
+        },
+        {
+          "name": "food_command",
+          "line": 267
+        },
+        {
+          "name": "skill_rows",
+          "line": 296
+        },
+        {
+          "name": "field_context",
+          "line": 308
+        },
+        {
+          "name": "resolve_equips",
+          "line": 325
+        }
+      ],
+      "imports": [
+        "math",
+        "wlre.network.wire",
+        "wlre.services.battle.battle_commands",
+        "wlre.services.battle.combat",
+        "wlre.services.items.catalog",
+        "wlre.services.items.inventory",
+        "wlre.services.items.live_combat_catalog"
+      ],
+      "existing_test_candidates": [
+        "tests/test_alchemy_continuation.py",
+        "tests/test_automation_integration.py",
+        "tests/test_expedition.py",
+        "tests/test_official_alchemy_metadata.py",
+        "tests/test_official_combat_catalog.py",
+        "tests/test_post_battle_maintenance.py",
+        "tests/test_redesigned_layout.py",
+        "tests/test_release.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/items/crafting.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/items/crafting.py",
+    "source_sha256": "28474c6b44993662d6567d559b4a50fcf8a7e04c5ed9a636b33c4ed15141417c",
+    "source_lines": 427,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.items",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "activate_1275_recipes",
+          "line": 14
+        },
+        {
+          "name": "activate_dynamic_recipes",
+          "line": 39
+        },
+        {
+          "name": "confirmed_unlocked",
+          "line": 55
+        },
+        {
+          "name": "defaults",
+          "line": 59
+        },
+        {
+          "name": "room_defaults",
+          "line": 60
+        },
+        {
+          "name": "active_recipe_catalog",
+          "line": 62
+        },
+        {
+          "name": "schedule_record",
+          "line": 76
+        },
+        {
+          "name": "furniture_record",
+          "line": 81
+        },
+        {
+          "name": "decode_crafting",
+          "line": 85
+        },
+        {
+          "name": "compact",
+          "line": 124
+        },
+        {
+          "name": "elapsed",
+          "line": 127
+        },
+        {
+          "name": "effective_time",
+          "line": 130
+        },
+        {
+          "name": "apply_crafting",
+          "line": 143
+        },
+        {
+          "name": "tools",
+          "line": 201
+        },
+        {
+          "name": "tool_for",
+          "line": 203
+        },
+        {
+          "name": "recipe_plan",
+          "line": 209
+        },
+        {
+          "name": "Crafting",
+          "line": 272
+        }
+      ],
+      "imports": [
+        "copy",
+        "time",
+        "wlre.core.state_ownership",
+        "wlre.network.wire",
+        "wlre.services.coordination",
+        "wlre.services.items",
+        "wlre.services.items.combat_resources",
+        "wlre.services.items.crafting_official_v1286",
+        "wlre.services.items.crafting_plan",
+        "wlre.services.world.catalog_source_policy",
+        "wlre.services.world.dynamic_bundle_runtime",
+        "wlre.services.world.runtime_1275"
+      ],
+      "existing_test_candidates": [
+        "tests/test_architecture_boundaries.py",
+        "tests/test_automatic_flows.py",
+        "tests/test_automation_integration.py",
+        "tests/test_bundle_runtime_1275.py",
+        "tests/test_compact_crafting.py",
+        "tests/test_crafting_catalog_visibility.py",
+        "tests/test_crafting_cupboard_execution.py",
+        "tests/test_crafting_cupboard_view.py",
+        "tests/test_crafting_official_v1286.py",
+        "tests/test_dynamic_bundle_runtime.py",
+        "tests/test_dynamic_crafting_schedule.py",
+        "tests/test_formal_candidate_bridge.py",
+        "tests/test_official_crafting_bootstrap.py",
+        "tests/test_official_runtime_bridge.py",
+        "tests/test_optimizations.py",
+        "tests/test_runtime_1275_baseline.py",
+        "tests/test_runtime_consumer_refresh.py",
+        "tests/test_smith_candidate.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/items/crafting_browser_model.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/items/crafting_browser_model.py",
+    "source_sha256": "8e1f7b9e5b29533817242456938356199ad432c9d14d7909de365d88062ce91c",
+    "source_lines": 93,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.items",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "room_known",
+          "line": 11
+        },
+        {
+          "name": "owned_counts",
+          "line": 13
+        },
+        {
+          "name": "tool_status",
+          "line": 25
+        },
+        {
+          "name": "material_rows",
+          "line": 33
+        },
+        {
+          "name": "availability",
+          "line": 43
+        },
+        {
+          "name": "Favorites",
+          "line": 61
+        }
+      ],
+      "imports": [
+        "json",
+        "pathlib",
+        "wlre.services.items.catalog",
+        "wlre.services.items.combat_resources",
+        "wlre.services.items.crafting",
+        "wlre.services.items.room_storage",
+        "wlre.storage.atomic",
+        "wlre.storage.paths"
+      ],
+      "existing_test_candidates": [
+        "tests/test_architecture_boundaries.py",
+        "tests/test_compact_crafting.py",
+        "tests/test_crafting_catalog_visibility.py",
+        "tests/test_crafting_cupboard_execution.py",
+        "tests/test_crafting_cupboard_view.py",
+        "tests/test_dynamic_crafting_schedule.py",
+        "tests/test_official_crafting_bootstrap.py",
+        "tests/test_optimizations.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/items/crafting_official_v1286.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/items/crafting_official_v1286.py",
+    "source_sha256": "67f465c3e5e50ab818a61b2edf58424caa0cc103eacbc39618857997095dc5a6",
+    "source_lines": 134,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.items",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "RecipeCatalog",
+          "line": 12
+        },
+        {
+          "name": "compare_legacy_recipes",
+          "line": 36
+        },
+        {
+          "name": "read_schedule_record",
+          "line": 70
+        },
+        {
+          "name": "decode_schedule",
+          "line": 82
+        },
+        {
+          "name": "write_cupboard",
+          "line": 100
+        },
+        {
+          "name": "build_add_packet",
+          "line": 114
+        }
+      ],
+      "imports": [
+        "collections",
+        "copy",
+        "wlre.network.wire"
+      ],
+      "existing_test_candidates": [
+        "tests/test_crafting_official_v1286.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/items/crafting_plan.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/items/crafting_plan.py",
+    "source_sha256": "85f0a0b32a83c2cb84c77872ae6bfcd1e86c67c8356e2337d2b6a780b747cf83",
+    "source_lines": 101,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.items",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "validate_rows",
+          "line": 7
+        },
+        {
+          "name": "PlanMixin",
+          "line": 22
+        }
+      ],
+      "imports": [
+        "wlre.core.state_ownership",
+        "wlre.network.wire",
+        "wlre.services.coordination",
+        "wlre.services.items.crafting"
+      ],
+      "existing_test_candidates": [
+        "tests/test_dynamic_crafting_schedule.py",
+        "tests/test_smith_candidate.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/items/field_supply.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/items/field_supply.py",
+    "source_sha256": "ea8b3b256fbc3949c858f9bb8f27f05244a5ce9989750ccab62c5bed690e4447",
+    "source_lines": 82,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.items",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "FieldSupply",
+          "line": 8
+        }
+      ],
+      "imports": [
+        "time",
+        "wlre.core.state_ownership",
+        "wlre.network.wire",
+        "wlre.services.items",
+        "wlre.services.items.combat_resources"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  }
+]

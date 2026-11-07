@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- Offline prototype deliberately has no INTERNET, foreground service, overlay,
+       storage, or notification permission. Add only with the implemented feature. -->
+  <application android:allowBackup="false" android:supportsRtl="true" android:label="LaLa 核心驗證" />
+</manifest>

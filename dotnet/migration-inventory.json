@@ -1,0 +1,106 @@
+{
+  "schema_version": 2,
+  "description": "Source-complete Python migration baseline with explicitly bounded first-increment evidence. Partial/offline ports are not full feature or live-server parity. Module entries are partitioned into module_files for bounded review and publication.",
+  "source_baselines": {
+    "desktop": {
+      "repository": "blesses0603/WLRe_lala",
+      "commit": "0f8bf6a99a70070cea1aeec60a0d6ca93dbc581a",
+      "fresh_remote_verified": true
+    },
+    "android": {
+      "repository": "blesses0603/WLRe_lala_Android",
+      "commit": "348163c32d3b20a2d0d380a639691b7b072c0e09",
+      "fresh_remote_verified": true,
+      "remote_main_commit": "348163c32d3b20a2d0d380a639691b7b072c0e09",
+      "remote_comparison": "Identical to inventoried baseline; verified with git ls-remote origin refs/heads/main on 2026-11-07."
+    }
+  },
+  "coverage_rule": "Every git-tracked .py outside tests is inventoried, including entrypoints, production packages, tools and p4a recipes. Generated/untracked files excluded. Java/platform assets tracked separately in the human plan.",
+  "acceptance_profiles": {
+    "protocol": [
+      "Byte-for-byte parity against source-generated vectors, including lengths and encoding.",
+      "Fragmentation, concatenated frames, overflow, malformed input and incomplete end-of-stream reject safely.",
+      "No live command enabled solely because offline codec tests pass."
+    ],
+    "state": [
+      "Replay known server events and compare state fields against Python snapshots.",
+      "Reject stale account/session results; test disconnect, cancellation and repeated events."
+    ],
+    "ui": [
+      "Display parity with verified snapshots; no synthetic data presented as live account state.",
+      "No blocking I/O or decoding on UI thread; test repeated open/close, navigation, late results and resize."
+    ],
+    "storage": [
+      "Schema and data values match existing verified samples; corrupt/version-mismatched data rejected.",
+      "Atomic writes and safe account isolation; preserve originals on migration failure."
+    ],
+    "service": [
+      "Port source-defined inputs, outputs and guards with differential fixtures.",
+      "Test limits, duplicate replies, timeout, cancellation and unknown-result stop; no unverified spending."
+    ],
+    "android": [
+      "Build signed test APK and test permission denial, background/foreground, process recreation and network changes.",
+      "Platform-specific behavior must be verified on Android; desktop tests do not establish mobile parity."
+    ],
+    "tooling": [
+      "Replace Python-specific build/verification steps with documented .NET equivalents where needed.",
+      "Run in CI on target platform and preserve integrity checks; removing a tool is not runtime feature parity."
+    ]
+  },
+  "status_values": [
+    "not_migrated",
+    "in_progress",
+    "offline_parity_verified",
+    "platform_verified",
+    "live_verified",
+    "retired_with_reason",
+    "ported_offline",
+    "partially_migrated"
+  ],
+  "summary": {
+    "modules_total": 696,
+    "by_repository": {
+      "desktop": 416,
+      "android": 280
+    },
+    "by_scope": {
+      "runtime": 536,
+      "developer_tooling": 139,
+      "build_tooling": 21
+    },
+    "by_target": {
+      "Lala.Desktop": 198,
+      "Lala.Core": 385,
+      "Lala.Android": 113
+    },
+    "by_status": {
+      "not_migrated": 689,
+      "ported_offline": 2,
+      "partially_migrated": 5
+    }
+  },
+  "status_definitions": {
+    "ported_offline": "Listed pure logic has passed offline parity; outstanding integration and live acceptance remain separately documented.",
+    "partially_migrated": "Only the explicitly listed subset is ported; the rest of the source module remains outstanding."
+  },
+  "module_files": [
+    "migration-inventory/modules-01.json",
+    "migration-inventory/modules-02.json",
+    "migration-inventory/modules-03.json",
+    "migration-inventory/modules-04.json",
+    "migration-inventory/modules-05.json",
+    "migration-inventory/modules-06.json",
+    "migration-inventory/modules-07.json",
+    "migration-inventory/modules-08.json",
+    "migration-inventory/modules-09.json",
+    "migration-inventory/modules-10.json",
+    "migration-inventory/modules-11.json",
+    "migration-inventory/modules-12.json",
+    "migration-inventory/modules-13.json",
+    "migration-inventory/modules-14.json",
+    "migration-inventory/modules-15.json",
+    "migration-inventory/modules-16.json",
+    "migration-inventory/modules-17.json",
+    "migration-inventory/modules-18.json"
+  ]
+}

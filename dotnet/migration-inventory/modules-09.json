@@ -1,0 +1,1886 @@
+[
+  {
+    "id": "desktop:wlre/storage/__init__.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/storage/__init__.py",
+    "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "source_lines": 0,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Storage.__init__",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [],
+      "imports": [],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "storage",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/storage/account_settings.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/storage/account_settings.py",
+    "source_sha256": "b8045018db5c9cabc22f1d22dbee34a60c4944234d1e970d41310ed383261e33",
+    "source_lines": 64,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Storage.account_settings",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_hash",
+          "line": 10
+        },
+        {
+          "name": "server_scope",
+          "line": 14
+        },
+        {
+          "name": "identity",
+          "line": 21
+        },
+        {
+          "name": "legacy_identities",
+          "line": 25
+        },
+        {
+          "name": "settings_file",
+          "line": 35
+        },
+        {
+          "name": "_read",
+          "line": 39
+        },
+        {
+          "name": "load",
+          "line": 46
+        },
+        {
+          "name": "save",
+          "line": 62
+        }
+      ],
+      "imports": [
+        "hashlib",
+        "json",
+        "wlre.services.battle",
+        "wlre.services.battle.auto_battle",
+        "wlre.storage",
+        "wlre.storage.atomic",
+        "wlre.storage.paths"
+      ],
+      "existing_test_candidates": [
+        "tests/test_official_server_list.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "storage",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/storage/ark_questions.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/storage/ark_questions.py",
+    "source_sha256": "907db412f2224e8613fd9cfe7b1b00c2fe6e4971b90abcb9d9e1f9c533f5d565",
+    "source_lines": 235,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Storage.ark_questions",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_digest",
+          "line": 15
+        },
+        {
+          "name": "fingerprint",
+          "line": 20
+        },
+        {
+          "name": "identity",
+          "line": 36
+        },
+        {
+          "name": "_answer",
+          "line": 46
+        },
+        {
+          "name": "_metadata",
+          "line": 51
+        },
+        {
+          "name": "QuestionStore",
+          "line": 57
+        }
+      ],
+      "imports": [
+        "contextlib",
+        "hashlib",
+        "json",
+        "pathlib",
+        "sqlite3",
+        "time",
+        "wlre.storage.paths"
+      ],
+      "existing_test_candidates": [
+        "tests/test_ark_candidates.py",
+        "tests/test_ark_question_store.py",
+        "tests/test_star_ark.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "storage",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/storage/atomic.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/storage/atomic.py",
+    "source_sha256": "088a79a28391f9c9d3bb1b11f36a7ffd325e9a1aa5d87355ffc4ce11553fcaa2",
+    "source_lines": 56,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Storage.atomic",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "file_lock",
+          "line": 12
+        },
+        {
+          "name": "write_json",
+          "line": 48
+        }
+      ],
+      "imports": [
+        "contextlib",
+        "fcntl",
+        "json",
+        "msvcrt",
+        "os",
+        "pathlib",
+        "tempfile",
+        "threading",
+        "time"
+      ],
+      "existing_test_candidates": [
+        "tests/test_optimizations.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "storage",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/storage/bundled_database.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/storage/bundled_database.py",
+    "source_sha256": "808962ee2ead8f113370402308b41bf8bc7e0bbe331e6422ff43d8431795e678",
+    "source_lines": 153,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Storage.bundled_database",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "load_bundled_bytes",
+          "line": 16
+        },
+        {
+          "name": "load_bundled_json",
+          "line": 76
+        },
+        {
+          "name": "read_pinned_legacy_bytes",
+          "line": 82
+        },
+        {
+          "name": "load_legacy_resource",
+          "line": 128
+        }
+      ],
+      "imports": [
+        "contextlib",
+        "hashlib",
+        "json",
+        "pathlib",
+        "re",
+        "sqlite3",
+        "wlre.paths",
+        "wlre.services.world.npc_asset_install",
+        "wlre.services.world.npc_interact",
+        "wlre.storage.paths",
+        "wlre.storage.resource_seed_manifest"
+      ],
+      "existing_test_candidates": [
+        "tests/test_bundled_database.py",
+        "tests/test_emoji_ui_database.py",
+        "tests/test_expedition_sqlite_fallback.py",
+        "tests/test_full_resource_seed.py",
+        "tests/test_instance_catalog_1262.py",
+        "tests/test_legacy_1262_sqlite_fallback.py",
+        "tests/test_legacy_sqlite_missing_files.py",
+        "tests/test_npc_battle_catalog.py",
+        "tests/test_npc_resource_integrity_v0510.py",
+        "tests/test_official_alchemy_metadata.py",
+        "tests/test_official_image_database.py",
+        "tests/test_official_map_names.py",
+        "tests/test_official_map_names_ui.py",
+        "tests/test_official_movement_adapter.py",
+        "tests/test_official_navigation_no_seed.py",
+        "tests/test_official_npc_bootstrap.py",
+        "tests/test_official_obstacle_scope.py",
+        "tests/test_portal_source_retirement.py",
+        "tests/test_resource_migration.py",
+        "tests/test_seedless_desktop_startup.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "storage",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/storage/defaults.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/storage/defaults.py",
+    "source_sha256": "abfa50fdc7b5a8204cc79384f01d462cfe37f7c5e3731944453c29869ce31af8",
+    "source_lines": 21,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Storage.defaults",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "load_default_profile",
+          "line": 6
+        }
+      ],
+      "imports": [
+        "copy",
+        "wlre.configuration",
+        "wlre.network.wire",
+        "wlre.paths"
+      ],
+      "existing_test_candidates": [
+        "tests/test_configuration_without_seed.py",
+        "tests/test_seed_only_runtime.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "storage",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/storage/expedition_settings.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/storage/expedition_settings.py",
+    "source_sha256": "4c88245fd838e47682caa9837512dd8b93a367700b77d8ad8ca3f194ea86ec0b",
+    "source_lines": 14,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Storage.expedition_settings",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "settings_file",
+          "line": 7
+        },
+        {
+          "name": "load",
+          "line": 8
+        },
+        {
+          "name": "save",
+          "line": 12
+        }
+      ],
+      "imports": [
+        "json",
+        "wlre.services.expedition",
+        "wlre.storage.atomic",
+        "wlre.storage.paths"
+      ],
+      "existing_test_candidates": [
+        "tests/test_expedition_ui.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "storage",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/storage/full_resource_seed.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/storage/full_resource_seed.py",
+    "source_sha256": "331399ec72f6ae91715e582a70bc051fcce3e73fb34451a1b12599e58b3e07e6",
+    "source_lines": 34,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Storage.full_resource_seed",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_retired",
+          "line": 10
+        },
+        {
+          "name": "verify_seed",
+          "line": 14
+        },
+        {
+          "name": "build_seed",
+          "line": 18
+        },
+        {
+          "name": "provision_seed",
+          "line": 22
+        },
+        {
+          "name": "read_config",
+          "line": 26
+        },
+        {
+          "name": "main",
+          "line": 30
+        }
+      ],
+      "imports": [
+        "wlre.storage.resource_seed_manifest"
+      ],
+      "existing_test_candidates": [
+        "tests/test_architecture_boundaries.py",
+        "tests/test_configuration_without_seed.py",
+        "tests/test_expedition.py",
+        "tests/test_expedition_teams.py",
+        "tests/test_full_resource_seed.py",
+        "tests/test_legacy_1262_sqlite_fallback.py",
+        "tests/test_legacy_sqlite_missing_files.py",
+        "tests/test_npc_catalog_v057.py",
+        "tests/test_npc_resource_integrity_v0510.py",
+        "tests/test_official_server_list.py",
+        "tests/test_release.py",
+        "tests/test_seed_only_runtime.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "storage",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/storage/initial_catalog.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/storage/initial_catalog.py",
+    "source_sha256": "4d0fffb67bcf451e732e8a1eeb07b076d064ff01b86a362aca0d4adc9aae4470",
+    "source_lines": 76,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Storage.initial_catalog",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "pinned_hashes",
+          "line": 12
+        },
+        {
+          "name": "verify_seed",
+          "line": 19
+        },
+        {
+          "name": "build_seed",
+          "line": 39
+        },
+        {
+          "name": "provision_seed",
+          "line": 65
+        }
+      ],
+      "imports": [
+        "contextlib",
+        "hashlib",
+        "pathlib",
+        "sqlite3",
+        "wlre.services.world.npc_asset_install",
+        "wlre.services.world.npc_interact",
+        "wlre.storage.full_resource_seed"
+      ],
+      "existing_test_candidates": [
+        "tests/test_initial_catalog.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "storage",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/storage/login_memory.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/storage/login_memory.py",
+    "source_sha256": "c1a27c1b8ec23267ad762cefa0582f97491629ba72a2793ea1871bbc0fab9085",
+    "source_lines": 159,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Storage.login_memory",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "MemoryError",
+          "line": 11
+        },
+        {
+          "name": "path",
+          "line": 15
+        },
+        {
+          "name": "_crypt",
+          "line": 19
+        },
+        {
+          "name": "_entropy",
+          "line": 44
+        },
+        {
+          "name": "identity",
+          "line": 48
+        },
+        {
+          "name": "_empty",
+          "line": 53
+        },
+        {
+          "name": "_read_unlocked",
+          "line": 56
+        },
+        {
+          "name": "_read",
+          "line": 72
+        },
+        {
+          "name": "list_entries",
+          "line": 78
+        },
+        {
+          "name": "load",
+          "line": 84
+        },
+        {
+          "name": "_write",
+          "line": 100
+        },
+        {
+          "name": "_transaction",
+          "line": 109
+        },
+        {
+          "name": "select",
+          "line": 123
+        },
+        {
+          "name": "delete",
+          "line": 130
+        },
+        {
+          "name": "forget_password",
+          "line": 139
+        },
+        {
+          "name": "save",
+          "line": 146
+        }
+      ],
+      "imports": [
+        "base64",
+        "ctypes",
+        "functools",
+        "hashlib",
+        "inspect",
+        "json",
+        "os",
+        "pathlib",
+        "tempfile",
+        "wlre.storage.atomic",
+        "wlre.storage.paths"
+      ],
+      "existing_test_candidates": [
+        "tests/test_login_memory.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "storage",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/storage/normalized_resources.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/storage/normalized_resources.py",
+    "source_sha256": "9fadde69313578fb16c84dac4f4de3efe8092650b234d1cf9658f9ed79180e60",
+    "source_lines": 211,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Storage.normalized_resources",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_pack",
+          "line": 19
+        },
+        {
+          "name": "_unpack",
+          "line": 31
+        },
+        {
+          "name": "_encode",
+          "line": 57
+        },
+        {
+          "name": "_decode",
+          "line": 65
+        },
+        {
+          "name": "_digest",
+          "line": 71
+        },
+        {
+          "name": "_schema",
+          "line": 75
+        },
+        {
+          "name": "load_parsed",
+          "line": 93
+        },
+        {
+          "name": "inspect_database",
+          "line": 171
+        }
+      ],
+      "imports": [
+        "contextlib",
+        "hashlib",
+        "json",
+        "math",
+        "pathlib",
+        "re",
+        "sqlite3"
+      ],
+      "existing_test_candidates": [
+        "tests/test_instance_catalog_1262.py",
+        "tests/test_normalized_resources.py",
+        "tests/test_npc_battle_catalog.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "storage",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/storage/paths.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/storage/paths.py",
+    "source_sha256": "94d488d6e66e4b301916f69ac5a5aac452d1151477aba1e6dfb659487c38921f",
+    "source_lines": 14,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Storage.paths",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "data_root",
+          "line": 5
+        },
+        {
+          "name": "account_file",
+          "line": 8
+        },
+        {
+          "name": "favorites_file",
+          "line": 12
+        },
+        {
+          "name": "legacy_favorites_file",
+          "line": 13
+        },
+        {
+          "name": "error_log_file",
+          "line": 14
+        }
+      ],
+      "imports": [
+        "os",
+        "pathlib"
+      ],
+      "existing_test_candidates": [
+        "tests/test_entrypoint_error_logging.py",
+        "tests/test_full_startup_retry.py",
+        "tests/test_launcher_catalog.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "storage",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/storage/resource_migration.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/storage/resource_migration.py",
+    "source_sha256": "71d477bc506dac11fe3c84a922edd58deff53c8fd60340eda2002b8f64670122",
+    "source_lines": 54,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Storage.resource_migration",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "migrate_resources",
+          "line": 8
+        },
+        {
+          "name": "main",
+          "line": 41
+        }
+      ],
+      "imports": [
+        "argparse",
+        "contextlib",
+        "hashlib",
+        "pathlib",
+        "sqlite3",
+        "wlre.paths",
+        "wlre.storage.paths",
+        "wlre.storage.resource_seed_manifest"
+      ],
+      "existing_test_candidates": [
+        "tests/test_full_resource_seed.py",
+        "tests/test_resource_migration.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "storage",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/storage/resource_seed_manifest.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/storage/resource_seed_manifest.py",
+    "source_sha256": "71ab7bfb62f9a4ecfdf669bd8bf3b8cfd2a8fc48382ffeffaa3fc2aabba3a575",
+    "source_lines": 6,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Storage.resource_seed_manifest",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [],
+      "imports": [],
+      "existing_test_candidates": [
+        "tests/test_build.py",
+        "tests/test_feature_resource_safety.py",
+        "tests/test_full_resource_seed.py",
+        "tests/test_npc_resource_integrity_v0510.py",
+        "tests/test_release.py",
+        "tests/test_seedless_desktop_startup.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "storage",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/storage/server_lines.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/storage/server_lines.py",
+    "source_sha256": "d5ad8b9fb3bd3231cde64feed63665976e48760d41fdaa47363d676d2c394e7e",
+    "source_lines": 49,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Storage.server_lines",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "path",
+          "line": 6
+        },
+        {
+          "name": "parse",
+          "line": 8
+        },
+        {
+          "name": "load",
+          "line": 29
+        },
+        {
+          "name": "for_endpoint",
+          "line": 35
+        },
+        {
+          "name": "status_label",
+          "line": 39
+        }
+      ],
+      "imports": [
+        "wlre.paths",
+        "wlre.services.official_server_list"
+      ],
+      "existing_test_candidates": [
+        "tests/test_official_server_list.py",
+        "tests/test_seed_only_runtime.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "storage",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/__init__.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/__init__.py",
+    "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "source_lines": 0,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.__init__",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [],
+      "imports": [],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/account_controller.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/account_controller.py",
+    "source_sha256": "a0be0fa3e9436d69c65475c480d3c06f0f4ef61543a671c2ac3ebdf236314901",
+    "source_lines": 27,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.account_controller",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "AccountController",
+          "line": 4
+        }
+      ],
+      "imports": [
+        "wlre.storage"
+      ],
+      "existing_test_candidates": [
+        "tests/test_optimized_ui.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/attribute_points_ui.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/attribute_points_ui.py",
+    "source_sha256": "6fc5e7a5fcd6fbd38e550ad59e5d7f56928bec7af0b7d7e6c8596ccf566b1a0b",
+    "source_lines": 144,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.attribute_points_ui",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "AttributePointWindow",
+          "line": 10
+        }
+      ],
+      "imports": [
+        "tkinter",
+        "wlre.services.battle.attribute_points",
+        "wlre.ui.window_layout"
+      ],
+      "existing_test_candidates": [
+        "tests/test_character_sync_safety.py",
+        "tests/test_direct_ui_actions.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/auto_battle/__init__.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/auto_battle/__init__.py",
+    "source_sha256": "6b3683c66f82e94bd337480abf6a6c7d4ebd04e1c6799b3a731164966629567d",
+    "source_lines": 1,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.__init__",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [],
+      "imports": [],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/auto_battle/action_editor.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/auto_battle/action_editor.py",
+    "source_sha256": "69bc015789ecc6669add93acb85045d43f741470f8077be0d4ca20a511397bfc",
+    "source_lines": 98,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.action_editor",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "ActionEditor",
+          "line": 12
+        }
+      ],
+      "imports": [
+        "copy",
+        "os",
+        "tkinter",
+        "wlre.ui.auto_battle.model",
+        "wlre.ui.layout",
+        "wlre.ui.window_layout"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/auto_battle/model.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/auto_battle/model.py",
+    "source_sha256": "e17fdf591f3e7e0edb624d45ff6827a075472ca89b9869cefb5658c08dfe3deb",
+    "source_lines": 82,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.model",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "action_label",
+          "line": 17
+        },
+        {
+          "name": "confirmed_skill_entries",
+          "line": 26
+        },
+        {
+          "name": "confirmed_action_label",
+          "line": 43
+        },
+        {
+          "name": "supply_catalogue",
+          "line": 49
+        },
+        {
+          "name": "action_entries",
+          "line": 52
+        },
+        {
+          "name": "RuleDraft",
+          "line": 64
+        }
+      ],
+      "imports": [
+        "copy",
+        "wlre.services.battle.auto_battle",
+        "wlre.services.battle.battle_commands",
+        "wlre.services.items.catalog",
+        "wlre.services.items.combat_resources"
+      ],
+      "existing_test_candidates": [
+        "tests/test_runtime_consumer_refresh.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/auto_battle/rule_card.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/auto_battle/rule_card.py",
+    "source_sha256": "8c32fd297648aa5f0dacffa8100a8892aae8427434cb795645cabac5cd97697b",
+    "source_lines": 72,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.rule_card",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "RuleCard",
+          "line": 8
+        }
+      ],
+      "imports": [
+        "copy",
+        "tkinter",
+        "wlre.ui.auto_battle.model",
+        "wlre.ui.theme"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/auto_battle_ui.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/auto_battle_ui.py",
+    "source_sha256": "504822ea5757a7f63f2a611c74a2cde25fc4e4f1603895f93683db6326548178",
+    "source_lines": 152,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.auto_battle_ui",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "SettingsEditor",
+          "line": 23
+        },
+        {
+          "name": "open_settings",
+          "line": 152
+        }
+      ],
+      "imports": [
+        "copy",
+        "json",
+        "os",
+        "tkinter",
+        "wlre.ui.auto_battle.action_editor",
+        "wlre.ui.auto_battle.model",
+        "wlre.ui.auto_battle.rule_card",
+        "wlre.ui.layout",
+        "wlre.ui.maintenance_ui",
+        "wlre.ui.recovery_ui",
+        "wlre.ui.rounded_notebook",
+        "wlre.ui.window_layout"
+      ],
+      "existing_test_candidates": [
+        "tests/test_dashboard_layout.py",
+        "tests/test_maintenance.py",
+        "tests/test_optimized_ui.py",
+        "tests/test_overview_controls.py",
+        "tests/test_redesigned_layout.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/automation_control_icons.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/automation_control_icons.py",
+    "source_sha256": "be8abec0c004a6eed4d99dbf7bb98e3cd290a680e4d9e70df117d53057f8954f",
+    "source_lines": 43,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.automation_control_icons",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "control_icon_image",
+          "line": 17
+        },
+        {
+          "name": "control_icon_photo",
+          "line": 30
+        },
+        {
+          "name": "apply_control_icon",
+          "line": 35
+        }
+      ],
+      "imports": [
+        "PIL",
+        "functools",
+        "wlre.paths"
+      ],
+      "existing_test_candidates": [
+        "tests/test_automation_control_icon_assets.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/background_version_controller.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/background_version_controller.py",
+    "source_sha256": "fa6bd3780b42753588ada2d654ccd462028b774c8f6b99430a8130609c627e6a",
+    "source_lines": 299,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.background_version_controller",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_unknown_observation",
+          "line": 26
+        },
+        {
+          "name": "_observation_time",
+          "line": 31
+        },
+        {
+          "name": "_display_identifier",
+          "line": 41
+        },
+        {
+          "name": "BackgroundVersionController",
+          "line": 46
+        }
+      ],
+      "imports": [
+        "datetime",
+        "math",
+        "os",
+        "queue",
+        "re",
+        "threading",
+        "time",
+        "tkinter",
+        "wlre.services.background_version_observer",
+        "wlre.ui.display_time"
+      ],
+      "existing_test_candidates": [
+        "tests/gui_support.py",
+        "tests/test_background_version_ui.py",
+        "tests/test_display_time.py",
+        "tests/test_prelogin_version_window.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/bag_grid.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/bag_grid.py",
+    "source_sha256": "7f7ec467da7ca2b0af09988690870f191231f37a95b24c69f95c352f3e67f9e7",
+    "source_lines": 387,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.bag_grid",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "grid_profile",
+          "line": 27
+        },
+        {
+          "name": "responsive_profile",
+          "line": 33
+        },
+        {
+          "name": "page_count",
+          "line": 49
+        },
+        {
+          "name": "reflow_page",
+          "line": 56
+        },
+        {
+          "name": "visible_items",
+          "line": 62
+        },
+        {
+          "name": "item_details",
+          "line": 74
+        },
+        {
+          "name": "BagGrid",
+          "line": 120
+        }
+      ],
+      "imports": [
+        "math",
+        "tkinter",
+        "wlre.services.items.catalog",
+        "wlre.services.items.combat_resources",
+        "wlre.services.world.dynamic_bundle_runtime",
+        "wlre.services.world.feature_resource_index",
+        "wlre.ui.theme"
+      ],
+      "existing_test_candidates": [
+        "tests/test_bag_grid.py",
+        "tests/test_crafting_cupboard_view.py",
+        "tests/test_feature_resource_index.py",
+        "tests/test_runtime_consumer_refresh.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/battle_view.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/battle_view.py",
+    "source_sha256": "ecb3ec5883f1b8d98505f9545f029bebe65926810fbacda2a842598e5b71c91c",
+    "source_lines": 114,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.battle_view",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "cards_from_state",
+          "line": 8
+        },
+        {
+          "name": "BattleView",
+          "line": 21
+        }
+      ],
+      "imports": [
+        "tkinter"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/benefits_ui.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/benefits_ui.py",
+    "source_sha256": "62778df378ba59866bcf76eadd0ea88023613a86c9aad82d4c915c05d5f3d5bd",
+    "source_lines": 77,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.benefits_ui",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "BenefitsPanel",
+          "line": 10
+        }
+      ],
+      "imports": [
+        "time",
+        "tkinter",
+        "wlre.ui.daily_assistant_ui",
+        "wlre.ui.daily_tasks_ui",
+        "wlre.ui.rounded_notebook"
+      ],
+      "existing_test_candidates": [
+        "tests/test_daily_assistant_ui.py",
+        "tests/test_daily_task_runtime.py",
+        "tests/test_time_cube.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/button_art.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/button_art.py",
+    "source_sha256": "419d77b0e5c2ff5d716c724e50bc4edbf8380b159125a4bebe1dc0c69cf5bf42",
+    "source_lines": 92,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.button_art",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "source",
+          "line": 9
+        },
+        {
+          "name": "button_image",
+          "line": 30
+        },
+        {
+          "name": "button_kind",
+          "line": 60
+        },
+        {
+          "name": "settings_button",
+          "line": 69
+        },
+        {
+          "name": "bag_button",
+          "line": 77
+        },
+        {
+          "name": "recovery_button",
+          "line": 86
+        }
+      ],
+      "imports": [
+        "PIL",
+        "functools",
+        "tkinter",
+        "wlre.paths"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/chat_emoji.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/chat_emoji.py",
+    "source_sha256": "c78e3d3c407ad9dc3ba8f43ca12166c1e2c98e07f90f09d0610907aec1fcd36a",
+    "source_lines": 40,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.chat_emoji",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "segments",
+          "line": 6
+        },
+        {
+          "name": "EmojiImages",
+          "line": 13
+        }
+      ],
+      "imports": [
+        "PIL",
+        "io",
+        "re",
+        "wlre.services.world.emoji_database"
+      ],
+      "existing_test_candidates": [
+        "tests/test_emoji_ui_database.py",
+        "tests/test_resource_migration.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/chat_ui.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/chat_ui.py",
+    "source_sha256": "52b646109835121ffdee2006255e8f6cdfb6fe7d94b65464da80cbbbeab314cf",
+    "source_lines": 261,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.chat_ui",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "ChatPanel",
+          "line": 15
+        }
+      ],
+      "imports": [
+        "collections",
+        "os",
+        "re",
+        "tkinter",
+        "types",
+        "wlre.network.wire",
+        "wlre.services.social.chat",
+        "wlre.services.social.chat_names",
+        "wlre.ui.chat_emoji",
+        "wlre.ui.display_time",
+        "wlre.ui.emoji_picker",
+        "wlre.ui.theme"
+      ],
+      "existing_test_candidates": [
+        "tests/test_emoji_ui_database.py",
+        "tests/test_guild_chat_safety.py",
+        "tests/test_single_page_emoji_picker.py",
+        "tests/test_ui_event_budget.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/companion_ui.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/companion_ui.py",
+    "source_sha256": "acafb09b8c642c89d701cca7ebd53146306946d1aef41d44d752d11d34601790",
+    "source_lines": 115,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.companion_ui",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "CompanionPanel",
+          "line": 10
+        }
+      ],
+      "imports": [
+        "tkinter",
+        "wlre.services.battle.companions",
+        "wlre.services.items.combat_resources",
+        "wlre.ui.layout"
+      ],
+      "existing_test_candidates": [
+        "tests/test_companion_ui.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/connection_status.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/connection_status.py",
+    "source_sha256": "7e900a198a8e8d183bb774e410bab28ee4ad9300d0d77314187396ad2df643eb",
+    "source_lines": 27,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.connection_status",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "ConnectionStatus",
+          "line": 10
+        }
+      ],
+      "imports": [
+        "time",
+        "wlre.network.connection_health",
+        "wlre.ui.display_time"
+      ],
+      "existing_test_candidates": [
+        "tests/test_connection_health.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/crafting/__init__.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/crafting/__init__.py",
+    "source_sha256": "023fcc6bff94dae5444cc6ec9eadf6d6fe57d7d59026c1fa6bd3da66e31ac60e",
+    "source_lines": 1,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.__init__",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [],
+      "imports": [],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/crafting/catalog_grid.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/crafting/catalog_grid.py",
+    "source_sha256": "782f0fba3f08d409989291d918870f9ea331d3831898345beb3b1fac04b2ac18",
+    "source_lines": 72,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.catalog_grid",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "build_catalog_grid",
+          "line": 11
+        },
+        {
+          "name": "render_catalog_grid",
+          "line": 37
+        }
+      ],
+      "imports": [
+        "PIL",
+        "math",
+        "tkinter"
+      ],
+      "existing_test_candidates": [
+        "tests/test_crafting_catalog_visibility.py",
+        "tests/test_crafting_ui_parts.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/crafting/icon_cache.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/crafting/icon_cache.py",
+    "source_sha256": "1a5efc9e908a8dd621aecae1dea9f1332d6f1497c6b2bcb2c2af94c033e34a0b",
+    "source_lines": 56,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.icon_cache",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "DecodedSpriteCache",
+          "line": 13
+        }
+      ],
+      "imports": [
+        "PIL",
+        "collections",
+        "io"
+      ],
+      "existing_test_candidates": [
+        "tests/test_icon_decode_cache.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/crafting/item_icons.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/crafting/item_icons.py",
+    "source_sha256": "c942f9e6b43a747533ac750d4a905bcdcb4d51a2d1a85aa601f00e9d423efee1",
+    "source_lines": 75,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.item_icons",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "LiveIconMap",
+          "line": 9
+        },
+        {
+          "name": "DatabaseArchive",
+          "line": 25
+        },
+        {
+          "name": "ItemIcons",
+          "line": 35
+        }
+      ],
+      "imports": [
+        "PIL",
+        "collections",
+        "collections.abc",
+        "wlre.services.world.item_image_database",
+        "wlre.ui.crafting.icon_cache"
+      ],
+      "existing_test_candidates": [
+        "tests/test_crafting_ui_modules.py",
+        "tests/test_icon_decode_cache.py",
+        "tests/test_item_image_ui_database.py",
+        "tests/test_resource_migration.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/crafting/queue_view.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/crafting/queue_view.py",
+    "source_sha256": "1c2e57f4d5ef585c0a27cf709c185f3cb1a548bd1d50ca6bd795ca50e5b7034b",
+    "source_lines": 61,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.queue_view",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "CraftingQueueMixin",
+          "line": 15
+        }
+      ],
+      "imports": [
+        "time",
+        "tkinter",
+        "wlre.core.efficiency",
+        "wlre.services.items.combat_resources",
+        "wlre.services.items.crafting",
+        "wlre.ui.window_layout"
+      ],
+      "existing_test_candidates": [
+        "tests/test_crafting_ui_modules.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/crafting/recipe_detail.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/crafting/recipe_detail.py",
+    "source_sha256": "bffa1222cd545cc18c64d57fdbed1a8ceaf66a2a065fe1f11c773683c14f504a",
+    "source_lines": 110,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.recipe_detail",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "build_recipe_detail",
+          "line": 10
+        },
+        {
+          "name": "render_recipe_detail",
+          "line": 62
+        }
+      ],
+      "imports": [
+        "tkinter",
+        "types",
+        "wlre.services.world.item_image_database",
+        "wlre.ui.theme"
+      ],
+      "existing_test_candidates": [
+        "tests/test_crafting_ui_parts.py",
+        "tests/test_dynamic_crafting_schedule.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/crafting_browser.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/crafting_browser.py",
+    "source_sha256": "6e4d2bbd5b804971722bd0519b5f452fa3cee02fc41dc5d7afdbcc7151864649",
+    "source_lines": 182,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.crafting_browser",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "CraftingBrowser",
+          "line": 19
+        }
+      ],
+      "imports": [
+        "math",
+        "tkinter",
+        "wlre.core.efficiency",
+        "wlre.services.items.catalog",
+        "wlre.services.items.crafting",
+        "wlre.services.items.crafting_browser_model",
+        "wlre.services.world.dynamic_bundle_runtime",
+        "wlre.services.world.feature_resource_index",
+        "wlre.ui.crafting.catalog_grid",
+        "wlre.ui.crafting.item_icons",
+        "wlre.ui.crafting.queue_view",
+        "wlre.ui.crafting.recipe_detail",
+        "wlre.ui.theme",
+        "wlre.ui.window_layout"
+      ],
+      "existing_test_candidates": [
+        "tests/test_compact_crafting.py",
+        "tests/test_crafting_catalog_visibility.py",
+        "tests/test_crafting_cupboard_view.py",
+        "tests/test_crafting_ui_modules.py",
+        "tests/test_dynamic_tent_exit.py",
+        "tests/test_runtime_consumer_refresh.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  }
+]

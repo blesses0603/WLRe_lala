@@ -1,0 +1,1930 @@
+[
+  {
+    "id": "desktop:tools/resources/preview_1275.py",
+    "source_repository": "desktop",
+    "source_path": "tools/resources/preview_1275.py",
+    "source_sha256": "61fb1396b091e15a0e210446dbc5ac1e994d673a94e9e39194ba6b3be0231513",
+    "source_lines": 65,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_shop_key",
+          "line": 17
+        },
+        {
+          "name": "main",
+          "line": 27
+        }
+      ],
+      "imports": [
+        "__future__",
+        "argparse",
+        "json",
+        "pathlib",
+        "wlre.services.world.preview_1275"
+      ],
+      "existing_test_candidates": [
+        "tests/test_preview_1275.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_astar_cache.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_astar_cache.py",
+    "source_sha256": "2be57d706f6d84c16844574363611d0353f71a5caa8a8cd3b6caf4aa8bd33aa3",
+    "source_lines": 20,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "main",
+          "line": 6
+        }
+      ],
+      "imports": [
+        "argparse",
+        "json",
+        "pathlib",
+        "wlre.services.world.astar_cache"
+      ],
+      "existing_test_candidates": [
+        "tests/test_review_astar_cache.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_house_colliders.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_house_colliders.py",
+    "source_sha256": "7f21dc90bdba8491d04d5655ca3f2ff86ce05624bf8b18d97f4fb8c895fbbdb8",
+    "source_lines": 102,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "multiply",
+          "line": 18
+        },
+        {
+          "name": "transform_matrix",
+          "line": 22
+        },
+        {
+          "name": "box_corners",
+          "line": 35
+        },
+        {
+          "name": "inspect_bundle",
+          "line": 45
+        },
+        {
+          "name": "main",
+          "line": 91
+        }
+      ],
+      "imports": [
+        "UnityPy",
+        "argparse",
+        "hashlib",
+        "itertools",
+        "json",
+        "math",
+        "pathlib"
+      ],
+      "existing_test_candidates": [
+        "tests/test_review_house_colliders.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_areas.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_areas.py",
+    "source_sha256": "858a952d8dbb4f44978cd9b1b0c9260cf5263dcc3cf509164feada487986a758",
+    "source_lines": 98,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "validate_adjacency",
+          "line": 13
+        },
+        {
+          "name": "oracle",
+          "line": 23
+        },
+        {
+          "name": "vectors",
+          "line": 68
+        },
+        {
+          "name": "main",
+          "line": 92
+        }
+      ],
+      "imports": [
+        "argparse",
+        "elftools.elf.elffile",
+        "io",
+        "json",
+        "random",
+        "struct",
+        "tools.review_navigation_rotation",
+        "unicorn",
+        "unicorn.arm64_const"
+      ],
+      "existing_test_candidates": [
+        "tests/test_review_navigation_rotation.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_awake_writes.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_awake_writes.py",
+    "source_sha256": "98ab664d760e85018fb34c7e6dc101e4de531929d3f253125062c06a0ac1fb76",
+    "source_lines": 104,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "inspect",
+          "line": 21
+        },
+        {
+          "name": "main",
+          "line": 99
+        }
+      ],
+      "imports": [
+        "argparse",
+        "array",
+        "capstone",
+        "elftools.elf.elffile",
+        "hashlib",
+        "io",
+        "json",
+        "pathlib",
+        "re",
+        "sys",
+        "tools.review_navigation_rotation",
+        "wlre.services.world.official_lua_codec"
+      ],
+      "existing_test_candidates": [
+        "tests/test_review_navigation_rotation.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_bbtree.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_bbtree.py",
+    "source_sha256": "d716bbf362f3efced1faf233b3cb6d39879f7e2ec2413fcd18c9e8c4830e1dc4",
+    "source_lines": 113,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "validate_inputs",
+          "line": 12
+        },
+        {
+          "name": "validate_tree",
+          "line": 21
+        },
+        {
+          "name": "oracle",
+          "line": 45
+        },
+        {
+          "name": "vectors",
+          "line": 93
+        },
+        {
+          "name": "main",
+          "line": 107
+        }
+      ],
+      "imports": [
+        "argparse",
+        "elftools.elf.elffile",
+        "io",
+        "json",
+        "struct",
+        "tools.review_navigation_rotation",
+        "unicorn",
+        "unicorn.arm64_const"
+      ],
+      "existing_test_candidates": [
+        "tests/test_review_navigation_diagnostic_limits.py",
+        "tests/test_review_navigation_rotation.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_candidates.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_candidates.py",
+    "source_sha256": "fc71639f2b53951f9a63c653df5a6753617b257f292a7566748714e6cf8cd0de",
+    "source_lines": 55,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "inspect_model",
+          "line": 17
+        },
+        {
+          "name": "main",
+          "line": 36
+        }
+      ],
+      "imports": [
+        "argparse",
+        "hashlib",
+        "json",
+        "pathlib",
+        "tools.resources.lala_manifest_full_index",
+        "wlre.services.official_bundle_download",
+        "wlre.services.world.astar_cache",
+        "wlre.services.world.house_navigation",
+        "wlre.services.world.navigation_sync"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_click_pixels.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_click_pixels.py",
+    "source_sha256": "5e665a0815c5763431652c253b11e068410b33706f9838de6d01c7cda15896a5",
+    "source_lines": 83,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "target_bounds",
+          "line": 6
+        },
+        {
+          "name": "sensitivity",
+          "line": 24
+        },
+        {
+          "name": "review",
+          "line": 34
+        }
+      ],
+      "imports": [
+        "argparse",
+        "hashlib",
+        "itertools",
+        "json",
+        "math",
+        "pathlib",
+        "tools.review_navigation_corner_following",
+        "wlre.services.world.catalog_identity",
+        "wlre.services.world.navigation",
+        "wlre.services.world.navigation_preview",
+        "wlre.services.world.smallmap_database"
+      ],
+      "existing_test_candidates": [
+        "tests/test_navigation_click_pixels.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_constructor_defaults.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_constructor_defaults.py",
+    "source_sha256": "2b51c69012738518a8d4fdda5854e5ec9a4b824e270a7b74a6470113bf5a957a",
+    "source_lines": 59,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "run",
+          "line": 13
+        },
+        {
+          "name": "main",
+          "line": 54
+        }
+      ],
+      "imports": [
+        "argparse",
+        "json",
+        "struct",
+        "tools.review_navigation_rotation",
+        "tools.review_navigation_vertices",
+        "unicorn",
+        "unicorn.arm64_const"
+      ],
+      "existing_test_candidates": [
+        "tests/test_review_navigation_rotation.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_corner_following.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_corner_following.py",
+    "source_sha256": "ce887a5fa7f86462d1371e8dcf40a7cf7abaf99fa831fd91aaf1c846b5552c00",
+    "source_lines": 132,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "distance_to_polyline",
+          "line": 23
+        },
+        {
+          "name": "follow",
+          "line": 33
+        },
+        {
+          "name": "review",
+          "line": 51
+        },
+        {
+          "name": "native_corridor",
+          "line": 93
+        },
+        {
+          "name": "main",
+          "line": 120
+        }
+      ],
+      "imports": [
+        "argparse",
+        "hashlib",
+        "json",
+        "math",
+        "pathlib",
+        "tools.review_navigation_funnel_apply",
+        "tools.review_navigation_player_points",
+        "wlre.services.world.catalog_identity",
+        "wlre.services.world.navigation",
+        "wlre.services.world.navigation_database",
+        "wlre.services.world.navigation_preview"
+      ],
+      "existing_test_candidates": [
+        "tests/test_navigation_corner_following.py",
+        "tests/test_navigation_motion_matrix.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_dispatch.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_dispatch.py",
+    "source_sha256": "1af92acd2d71b943b614d83b0af5464614381cebb9ba41d137fc19547aa14124",
+    "source_lines": 58,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "run",
+          "line": 13
+        },
+        {
+          "name": "main",
+          "line": 53
+        }
+      ],
+      "imports": [
+        "argparse",
+        "json",
+        "struct",
+        "tools.review_navigation_modifier_order",
+        "tools.review_navigation_rotation",
+        "unicorn",
+        "unicorn.arm64_const"
+      ],
+      "existing_test_candidates": [
+        "tests/test_review_navigation_rotation.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_dynamic_links.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_dynamic_links.py",
+    "source_sha256": "d64672128474b3bb57d9bd193626dd8ba31139ee0c62126fed2a27635a7f5af5",
+    "source_lines": 59,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "review",
+          "line": 19
+        },
+        {
+          "name": "main",
+          "line": 53
+        }
+      ],
+      "imports": [
+        "argparse",
+        "hashlib",
+        "json",
+        "pathlib",
+        "re",
+        "tools.review_navigation_lua_batch",
+        "wlre.services.world.official_lua_codec"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_endpoints.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_endpoints.py",
+    "source_sha256": "db2a12682b43f5696709cdab1e4a7a8bc1289ea22185bf7c68a4c3a7aaeebd4b",
+    "source_lines": 60,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "run",
+          "line": 13
+        },
+        {
+          "name": "main",
+          "line": 53
+        }
+      ],
+      "imports": [
+        "argparse",
+        "elftools.elf.elffile",
+        "io",
+        "json",
+        "struct",
+        "tools.review_navigation_rotation",
+        "unicorn",
+        "unicorn.arm64_const"
+      ],
+      "existing_test_candidates": [
+        "tests/test_review_navigation_rotation.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_far_completion.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_far_completion.py",
+    "source_sha256": "ef4aa6fc3bcdc29cf45a00e9973b557585c5d6240c8f3201250f6cb5534ab1de",
+    "source_lines": 61,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "review",
+          "line": 18
+        },
+        {
+          "name": "main",
+          "line": 56
+        }
+      ],
+      "imports": [
+        "argparse",
+        "hashlib",
+        "io",
+        "json",
+        "pathlib",
+        "tools.review_navigation_nearest",
+        "tools.review_navigation_rotation",
+        "unicorn",
+        "unicorn.arm64_const",
+        "wlre.services.world.astar_cache",
+        "wlre.services.world.navigation_database",
+        "zipfile"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_funnel_apply.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_funnel_apply.py",
+    "source_sha256": "c1a9f0354261dd3d4331aa4af178c73519a0e97bb42fa33e0baaabfa69688c7e",
+    "source_lines": 97,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "oracle",
+          "line": 14
+        },
+        {
+          "name": "main",
+          "line": 91
+        }
+      ],
+      "imports": [
+        "argparse",
+        "json",
+        "struct",
+        "tools.review_navigation_funnel_wrapper",
+        "tools.review_navigation_parts",
+        "unicorn",
+        "unicorn.arm64_const"
+      ],
+      "existing_test_candidates": [
+        "tests/test_review_navigation_rotation.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_funnel_wrapper.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_funnel_wrapper.py",
+    "source_sha256": "9f9f27384fcd8491e17ce6ca3f729ae3042e0db8e7261d60fb787a1bf52c503b",
+    "source_lines": 104,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "oracle",
+          "line": 15
+        },
+        {
+          "name": "vectors",
+          "line": 89
+        },
+        {
+          "name": "main",
+          "line": 98
+        }
+      ],
+      "imports": [
+        "argparse",
+        "json",
+        "math",
+        "struct",
+        "tools.review_navigation_rotation",
+        "tools.review_navigation_unwrap",
+        "unicorn",
+        "unicorn.arm64_const"
+      ],
+      "existing_test_candidates": [
+        "tests/test_review_navigation_rotation.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_groups.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_groups.py",
+    "source_sha256": "062214daa465321efd9b9e36bdd8012896023b8e5df26bf72dda89ee7a86e681",
+    "source_lines": 224,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "validate_graph",
+          "line": 14
+        },
+        {
+          "name": "oracle",
+          "line": 26
+        },
+        {
+          "name": "vectors",
+          "line": 154
+        },
+        {
+          "name": "multiple_vectors",
+          "line": 180
+        },
+        {
+          "name": "main",
+          "line": 218
+        }
+      ],
+      "imports": [
+        "argparse",
+        "elftools.elf.elffile",
+        "io",
+        "json",
+        "random",
+        "struct",
+        "tools.review_navigation_areas",
+        "tools.review_navigation_rotation",
+        "unicorn",
+        "unicorn.arm64_const"
+      ],
+      "existing_test_candidates": [
+        "tests/test_review_navigation_diagnostic_limits.py",
+        "tests/test_review_navigation_rotation.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_initialization.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_initialization.py",
+    "source_sha256": "bf1d1e8d42892d67c2ed9def2ad05081669be680f5e41c1c46de2b08d35bd86d",
+    "source_lines": 32,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "vectors",
+          "line": 12
+        },
+        {
+          "name": "main",
+          "line": 24
+        }
+      ],
+      "imports": [
+        "argparse",
+        "json",
+        "tools.review_navigation_bbtree",
+        "tools.review_navigation_groups",
+        "tools.review_navigation_vertices"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_lua_batch.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_lua_batch.py",
+    "source_sha256": "93ab2bba67be047acb44ed3e18fffcff602c7f3ab768b0918d0e143d46addfe4",
+    "source_lines": 72,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "selection",
+          "line": 24
+        },
+        {
+          "name": "audit",
+          "line": 37
+        },
+        {
+          "name": "main",
+          "line": 65
+        }
+      ],
+      "imports": [
+        "argparse",
+        "hashlib",
+        "json",
+        "pathlib",
+        "re",
+        "tools.review_navigation_awake_writes",
+        "wlre.services.world.official_lua_codec"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_lua_bootstrap.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_lua_bootstrap.py",
+    "source_sha256": "3ac47fa594f3d9f39da10da8532ea60848bdc197798e65e63308706b013c81c8",
+    "source_lines": 75,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "review",
+          "line": 12
+        },
+        {
+          "name": "main",
+          "line": 70
+        }
+      ],
+      "imports": [
+        "argparse",
+        "capstone",
+        "elftools.elf.elffile",
+        "hashlib",
+        "io",
+        "json",
+        "pathlib",
+        "struct",
+        "tools.review_navigation_rotation",
+        "wlre.services.world.official_lua_codec"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_lua_motion.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_lua_motion.py",
+    "source_sha256": "c42b27d7dfe6d8d1635d47ec41f73e97929631c1c67b52c3cb6af96cdd6d1f73",
+    "source_lines": 116,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "oracle",
+          "line": 18
+        },
+        {
+          "name": "main",
+          "line": 94
+        }
+      ],
+      "imports": [
+        "argparse",
+        "ctypes",
+        "ctypes.util",
+        "hashlib",
+        "json",
+        "pathlib",
+        "tools.review_navigation_corner_following",
+        "tools.review_navigation_player_points"
+      ],
+      "existing_test_candidates": [
+        "tests/test_navigation_lua_motion.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_m12050.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_m12050.py",
+    "source_sha256": "6b7e318db628d19d0e426870e3d4350f84da35ba199e082b3aed0b0c9f8d103d",
+    "source_lines": 67,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "review",
+          "line": 14
+        }
+      ],
+      "imports": [
+        "argparse",
+        "collections",
+        "json",
+        "math",
+        "pathlib",
+        "tools.review_navigation_corner_following",
+        "tools.review_navigation_funnel_apply",
+        "wlre.services.world.navigation_database",
+        "wlre.services.world.navigation_preview",
+        "wlre.services.world.navigation_surface_3d"
+      ],
+      "existing_test_candidates": [
+        "tests/test_navigation_postprocess_endpoints.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_m12050_nearest.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_m12050_nearest.py",
+    "source_sha256": "671c58a93d30600c497b9018e5a8673f6fc31eaa267d852c21fd0a56a31c796d",
+    "source_lines": 116,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "check_components",
+          "line": 17
+        },
+        {
+          "name": "capacity_controls",
+          "line": 36
+        },
+        {
+          "name": "review",
+          "line": 52
+        }
+      ],
+      "imports": [
+        "argparse",
+        "hashlib",
+        "io",
+        "json",
+        "math",
+        "pathlib",
+        "time",
+        "tools.review_navigation_bbtree",
+        "tools.review_navigation_corner_following",
+        "tools.review_navigation_groups",
+        "tools.review_navigation_nearest",
+        "tools.review_navigation_outer",
+        "wlre.services.world.navigation_database",
+        "zipfile"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_m12050_postprocess.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_m12050_postprocess.py",
+    "source_sha256": "5b2636dd91eee23aae4b7f8d2da9cabf4bdec656c4cfb7f75c72db9091e0833b",
+    "source_lines": 93,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "endpoint_assessment",
+          "line": 13
+        },
+        {
+          "name": "validate_report",
+          "line": 24
+        },
+        {
+          "name": "review",
+          "line": 45
+        }
+      ],
+      "imports": [
+        "argparse",
+        "json",
+        "math",
+        "pathlib",
+        "tools.review_navigation_corner_following",
+        "tools.review_navigation_m12050_prepare",
+        "tools.review_navigation_path_pipeline",
+        "tools.review_navigation_player_points",
+        "tools.review_navigation_rotation",
+        "wlre.services.world.navigation_database",
+        "wlre.services.world.navigation_surface_3d"
+      ],
+      "existing_test_candidates": [
+        "tests/test_navigation_postprocess_endpoints.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_m12050_prepare.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_m12050_prepare.py",
+    "source_sha256": "ee97baaea17438cd3dd4edd4d78288d9eb0265b5c53de94918d1a889b3ec4d61",
+    "source_lines": 84,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "trace_empty_mode",
+          "line": 14
+        },
+        {
+          "name": "review",
+          "line": 36
+        }
+      ],
+      "imports": [
+        "argparse",
+        "hashlib",
+        "io",
+        "json",
+        "pathlib",
+        "time",
+        "tools.review_navigation_corner_following",
+        "tools.review_navigation_nearest",
+        "tools.review_navigation_prepare",
+        "unicorn",
+        "wlre.services.world.navigation_database",
+        "zipfile"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_m12050_search.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_m12050_search.py",
+    "source_sha256": "9de6a2fa45d98493cadcba6df06f8cb37df392683aabdc3faa6525596aaab93d",
+    "source_lines": 63,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "capacity_controls",
+          "line": 12
+        },
+        {
+          "name": "review",
+          "line": 29
+        }
+      ],
+      "imports": [
+        "argparse",
+        "json",
+        "pathlib",
+        "time",
+        "tools.review_navigation_corner_following",
+        "tools.review_navigation_search",
+        "tools.review_navigation_vertices",
+        "wlre.services.world.navigation_database"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_minimap_chain.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_minimap_chain.py",
+    "source_sha256": "91b79d1436c8dec326ba04a91e93fc4349cda535bc83fb5459f734f159850afc",
+    "source_lines": 80,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "local_to_packet",
+          "line": 33
+        },
+        {
+          "name": "review",
+          "line": 45
+        },
+        {
+          "name": "main",
+          "line": 72
+        }
+      ],
+      "imports": [
+        "argparse",
+        "hashlib",
+        "json",
+        "math",
+        "pathlib",
+        "tools.review_navigation_awake_writes",
+        "wlre.services.world.official_lua_codec"
+      ],
+      "existing_test_candidates": [
+        "tests/test_navigation_click_pixels.py",
+        "tests/test_navigation_minimap_chain.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_mode_matrix.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_mode_matrix.py",
+    "source_sha256": "23e479c9870d97fdded0a9e902b94e894889942ffe119953a00d8a1d9b98c463",
+    "source_lines": 108,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "reference_graph",
+          "line": 15
+        },
+        {
+          "name": "audit_model",
+          "line": 30
+        },
+        {
+          "name": "explain_forbidden",
+          "line": 65
+        },
+        {
+          "name": "main",
+          "line": 79
+        }
+      ],
+      "imports": [
+        "argparse",
+        "collections",
+        "itertools",
+        "json",
+        "pathlib",
+        "tools.navigation_same_geometry_control",
+        "types",
+        "wlre.services.world.catalog_identity",
+        "wlre.services.world.navigation",
+        "wlre.services.world.navigation_database",
+        "wlre.services.world.navigation_preview"
+      ],
+      "existing_test_candidates": [
+        "tests/test_navigation_mode_matrix.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_modifier_chain.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_modifier_chain.py",
+    "source_sha256": "d61830d6ae29748da97e03de8786dcb62fc7e7282745126a8448387f3d974daa",
+    "source_lines": 37,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "oracle",
+          "line": 10
+        }
+      ],
+      "imports": [
+        "struct",
+        "tools.review_navigation_modifier_registration",
+        "unicorn",
+        "unicorn.arm64_const"
+      ],
+      "existing_test_candidates": [
+        "tests/test_review_navigation_rotation.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_modifier_order.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_modifier_order.py",
+    "source_sha256": "b27904628ef5a035014b87b7a35c236894aea7ed9630699cfcf717e09bc8bc8e",
+    "source_lines": 38,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "run",
+          "line": 9
+        },
+        {
+          "name": "main",
+          "line": 32
+        }
+      ],
+      "imports": [
+        "argparse",
+        "json",
+        "struct",
+        "tools.review_navigation_rotation",
+        "tools.review_navigation_vertices"
+      ],
+      "existing_test_candidates": [
+        "tests/test_review_navigation_rotation.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_modifier_registration.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_modifier_registration.py",
+    "source_sha256": "0c5a4f1ce708bdbb900085ee9be6348bd42c89b5905823599185216d9623c84e",
+    "source_lines": 82,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "validate_order",
+          "line": 14
+        },
+        {
+          "name": "oracle",
+          "line": 18
+        },
+        {
+          "name": "main",
+          "line": 76
+        }
+      ],
+      "imports": [
+        "argparse",
+        "json",
+        "struct",
+        "tools.review_navigation_modifier_order",
+        "tools.review_navigation_rotation",
+        "unicorn",
+        "unicorn.arm64_const"
+      ],
+      "existing_test_candidates": [
+        "tests/test_review_navigation_rotation.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_motion_matrix.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_motion_matrix.py",
+    "source_sha256": "b3d1b93277d3b84383037ca58b15d3f7931781100838ed6a88c62004084e94b4",
+    "source_lines": 140,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "motion",
+          "line": 23
+        },
+        {
+          "name": "departure_sample",
+          "line": 48
+        },
+        {
+          "name": "audit",
+          "line": 64
+        },
+        {
+          "name": "main",
+          "line": 113
+        }
+      ],
+      "imports": [
+        "argparse",
+        "collections",
+        "itertools",
+        "json",
+        "math",
+        "pathlib",
+        "tools.navigation_same_geometry_control",
+        "tools.review_navigation_corner_following",
+        "tools.review_navigation_mode_matrix",
+        "wlre.services.world.catalog_identity",
+        "wlre.services.world.navigation",
+        "wlre.services.world.navigation_database",
+        "wlre.services.world.navigation_funnel",
+        "wlre.services.world.navigation_motion_safety",
+        "wlre.services.world.navigation_preview"
+      ],
+      "existing_test_candidates": [
+        "tests/test_navigation_motion_matrix.py",
+        "tests/test_navigation_motion_safety.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_movement_guard.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_movement_guard.py",
+    "source_sha256": "b353f6f73a0c40f94e80fcb917169e1c9998fa303119cc1fa48af75e88e0a06c",
+    "source_lines": 38,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "main",
+          "line": 12
+        }
+      ],
+      "imports": [
+        "argparse",
+        "json",
+        "pathlib",
+        "unittest.mock",
+        "wlre.core.state",
+        "wlre.network.wire",
+        "wlre.services.world.movement",
+        "wlre.services.world.navigation",
+        "wlre.services.world.navigation_database"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_nearest.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_nearest.py",
+    "source_sha256": "fa16d6316b993df368cdf8a91a8d61afad4b3d8e2b8467e6520ed39eef7963dd",
+    "source_lines": 187,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "validate_query",
+          "line": 15
+        },
+        {
+          "name": "oracle",
+          "line": 30
+        },
+        {
+          "name": "reference_triangle",
+          "line": 127
+        },
+        {
+          "name": "vectors",
+          "line": 147
+        },
+        {
+          "name": "main",
+          "line": 181
+        }
+      ],
+      "imports": [
+        "argparse",
+        "json",
+        "math",
+        "struct",
+        "tools.review_navigation_bbtree",
+        "tools.review_navigation_vertices",
+        "unicorn.arm64_const"
+      ],
+      "existing_test_candidates": [
+        "tests/test_review_navigation_diagnostic_limits.py",
+        "tests/test_review_navigation_rotation.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_outer.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_outer.py",
+    "source_sha256": "e626abe53e3ab900eb1205f9845c1fde88bc5e258a56660bfe6c4e71225de90b",
+    "source_lines": 88,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "compare",
+          "line": 15
+        },
+        {
+          "name": "synthetic",
+          "line": 33
+        },
+        {
+          "name": "official",
+          "line": 53
+        },
+        {
+          "name": "main",
+          "line": 82
+        }
+      ],
+      "imports": [
+        "argparse",
+        "hashlib",
+        "io",
+        "json",
+        "pathlib",
+        "tools.review_navigation_nearest",
+        "wlre.services.world.astar_cache",
+        "wlre.services.world.navigation_database",
+        "zipfile"
+      ],
+      "existing_test_candidates": [
+        "tests/test_review_navigation_rotation.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_parts.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_parts.py",
+    "source_sha256": "3e438e10ea889042b3dd4c37055a2e82cca52201125cc141026b5cadb5b10617",
+    "source_lines": 87,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "oracle",
+          "line": 14
+        },
+        {
+          "name": "main",
+          "line": 81
+        }
+      ],
+      "imports": [
+        "argparse",
+        "json",
+        "math",
+        "struct",
+        "tools.review_navigation_portals",
+        "tools.review_navigation_rotation",
+        "unicorn",
+        "unicorn.arm64_const"
+      ],
+      "existing_test_candidates": [
+        "tests/test_review_navigation_rotation.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_path_pipeline.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_path_pipeline.py",
+    "source_sha256": "b9234a2a4f56a04721bdd37ae7acb046b5f23bdebe9cedd1aa37b9ea41daa77d",
+    "source_lines": 112,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "oracle",
+          "line": 21
+        },
+        {
+          "name": "official",
+          "line": 68
+        },
+        {
+          "name": "synthetic",
+          "line": 93
+        },
+        {
+          "name": "main",
+          "line": 106
+        }
+      ],
+      "imports": [
+        "argparse",
+        "hashlib",
+        "io",
+        "json",
+        "pathlib",
+        "struct",
+        "tools.review_navigation_funnel_apply",
+        "tools.review_navigation_modifier_chain",
+        "tools.review_navigation_parts",
+        "tools.review_navigation_player_points",
+        "tools.review_navigation_prepare",
+        "tools.review_navigation_rotation",
+        "wlre.services.world.astar_cache",
+        "wlre.services.world.navigation_database",
+        "zipfile"
+      ],
+      "existing_test_candidates": [
+        "tests/test_review_navigation_rotation.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_path_state.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_path_state.py",
+    "source_sha256": "ac1efcf7e2f9719527344610754d3f59c6653119c239153824d0d8ea1fcd9ea1",
+    "source_lines": 121,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "validate_fixture",
+          "line": 12
+        },
+        {
+          "name": "oracle",
+          "line": 29
+        },
+        {
+          "name": "vectors",
+          "line": 98
+        },
+        {
+          "name": "main",
+          "line": 115
+        }
+      ],
+      "imports": [
+        "argparse",
+        "json",
+        "random",
+        "struct",
+        "tools.review_navigation_vertices",
+        "unicorn.arm64_const"
+      ],
+      "existing_test_candidates": [
+        "tests/test_review_navigation_rotation.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_player_points.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_player_points.py",
+    "source_sha256": "cf79b82609e498d8f1228669035a14db535537364cae8c98202f42651bf0fda5",
+    "source_lines": 93,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "oracle",
+          "line": 17
+        },
+        {
+          "name": "main",
+          "line": 84
+        }
+      ],
+      "imports": [
+        "argparse",
+        "ctypes",
+        "ctypes.util",
+        "hashlib",
+        "json",
+        "math",
+        "pathlib"
+      ],
+      "existing_test_candidates": [
+        "tests/test_review_navigation_rotation.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_player_settings.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_player_settings.py",
+    "source_sha256": "ec6df15e3d823a6d9c3b198589d006aad709600b61b7b1fe0c739020f66c3f49",
+    "source_lines": 69,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "review",
+          "line": 20
+        },
+        {
+          "name": "main",
+          "line": 64
+        }
+      ],
+      "imports": [
+        "argparse",
+        "hashlib",
+        "json",
+        "pathlib",
+        "re",
+        "tools.review_navigation_awake_writes",
+        "wlre.services.world.official_lua_codec"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  }
+]
