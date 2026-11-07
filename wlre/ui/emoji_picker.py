@@ -63,7 +63,7 @@ class EmojiPicker(tk.Toplevel):
         self.canvas.itemconfigure(self._window, width=width)
         if columns != self._columns:
             for column in range(self._columns):
-                self.grid_frame.columnconfigure(column, weight=0)
+                self.grid_frame.columnconfigure(column, weight=0, uniform='', minsize=0)
             for column in range(columns):
                 self.grid_frame.columnconfigure(column, weight=1, uniform='emoji')
             for position, button in enumerate(self.buttons):
