@@ -137,3 +137,7 @@ protocol_compatibility=unverified、can_send_packets=false。因此可確認
 桌面原 PR #72 已由使用者合併，這些追加成果使用新獨立分支
 `codex/seedless-navigation-preview`，不再推送已合併 PR 的分支。Android
 仍更新原草稿 #71，source lock 對應新的桌面提交。均不合併、不發布。
+
+### 單視窗啟動整合備註
+
+以上線上冷啟動數據屬於原 PR #74 head `4c645501`。合入單視窗啟動後，桌面驗收工具已改為監測實際準備入口，等待資源準備及官方檢查完成；線上任一階段失敗會明確回報。本次僅補跑離線回歸，沒有重做線上下載或官方服驗收；既有歷史數據不代表新整合版的線上結果。Android 流程未更動。

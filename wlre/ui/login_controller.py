@@ -26,16 +26,22 @@ class LoginController:
 
 
     def show_login(self):
+        self._update_login_version_status()
         self.restore_remembered_password()
         if self.login_window is not None and self.login_window.winfo_exists():
+            # The hidden login view is built before background preparation.
+            # Reload newly verified official server data before showing it.
+            self.refresh_server_lines()
             self.login_window.deiconify()
+            self._fit_login_height()
             self.login_window.lift()
             self.login_window.focus_set()
             return
         window=tk.Toplevel(self.root)
         self.login_window=window
         window.title('飄流Re:LaLa  =By赤寧= · 登入／選角')
-        configure_dialog(window,900,580)
+        # Leave room for the version-policy label without clipping footer text.
+        configure_dialog(window,900,620)
         window.resizable(False,False)
         window.protocol('WM_DELETE_WINDOW',self.close_login)
         self.login_tab=ttk.Frame(window,padding=12)
@@ -53,7 +59,13 @@ class LoginController:
         ttk.Button(connection_tools,text='新增',command=self.new_saved_login).pack(side='right')
         ttk.Button(connection_tools,text='版本檢測',command=self.reopen_version_check).pack(side='right',padx=(0,7))
         self.refresh_saved_accounts()
-        ttk.Label(self.login_tab,text=server_lines.status_label(),wraplength=820).pack(fill='x',padx=8,pady=3)
+        self.login_version_label = ttk.Label(
+            self.login_tab, textvariable=self._login_version_status,
+            wraplength=820, justify='left', style='Muted.TLabel')
+        self.login_version_label.pack(fill='x')
+        self.server_list_status_label = ttk.Label(
+            self.login_tab, text=server_lines.status_label(), wraplength=820)
+        self.server_list_status_label.pack(fill='x', padx=8)
         login=LabelFrame(self.login_tab,text='帳號登入',padding=8)
         login.pack(fill='x')
         for col in range(4):login.columnconfigure(col,weight=1)
@@ -88,13 +100,26 @@ class LoginController:
         ttk.Label(self.login_tab,text='選角後等待世界資料同步完成，將自動開啟主頁。',style='Muted.TLabel').pack(anchor='w')
         self.update_role_choices(self.snapshot.get('roles',[]))
         self._set_login_gate_button()
+        self._fit_login_height()
         window.lift()
         window.focus_set()
+
+
+    def _fit_login_height(self):
+        # Main's official-server status and the gate policy can wrap after
+        # background preparation. Keep 620 as the minimum, not a clipping cap.
+        window = self.login_window
+        window.update_idletasks()
+        height = max(620, window.winfo_reqheight())
+        if height > window.winfo_height():
+            configure_dialog(window, 900, height)
 
 
     def refresh_server_lines(self):
         try:self.line_catalog=server_lines.load()
         except (OSError,ValueError,TypeError):self.line_catalog=[]
+        if hasattr(self, 'server_list_status_label'):
+            self.server_list_status_label.configure(text=server_lines.status_label())
         choices={server_lines.CUSTOM:None}
         for row in self.line_catalog:choices[row['name']]=dict(row)
         try:
@@ -115,7 +140,10 @@ class LoginController:
 
     def sync_server_menus(self):
         line=self.line_choices.get(self.server_line.get())
-        if line is None:line=server_lines.for_endpoint(self.line_catalog,self.host.get(),int(self.port.get()))
+        if line is None:
+            try:port = int(self.port.get())
+            except (ValueError, TypeError):port = None
+            line=server_lines.for_endpoint(self.line_catalog,self.host.get(),port)
         group=self.line_group(line)
         self.server_group.set(group)
         groups=['地球','水星']

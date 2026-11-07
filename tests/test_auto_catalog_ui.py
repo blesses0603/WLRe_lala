@@ -1,4 +1,4 @@
-"""Login gate displays Launcher receipt but cannot start resource downloads."""
+"""Shared startup prepares resources, but only official checks grant entry."""
 import inspect
 import unittest
 from unittest.mock import Mock, patch
@@ -40,16 +40,23 @@ class LauncherResourceUiTests(unittest.TestCase):
         self.assertIn('Launcher 官方來源已驗證', c._launcher_catalog_status)
         self.assertNotIn('1275_DataCatalog', c._launcher_catalog_status)
 
-    def test_version_ui_does_not_download_or_extract(self):
+    def test_version_ui_delegates_preparation_to_verified_service(self):
         source = inspect.getsource(VersionGateController)
         self.assertNotIn('run_auto_catalog(', source)
         self.assertNotIn('lala-catalog-auto-prepare', source)
         self.assertNotIn('_start_auto_catalog', source)
-        self.assertIn('read_launcher_status()', source)
+        self.assertIn('prepare_on_launch(progress=progress.report)', source)
+        from wlre.ui.version_gate_controller import _launcher_status_text
+        self.assertIn('read_launcher_status()', inspect.getsource(_launcher_status_text))
 
-    def test_main_version_check_only_starts_remote_version_worker(self):
+    def test_main_version_check_starts_one_shared_startup_worker(self):
         c = Mock()
+        import threading
         c._closing = False
+        c._startup_exit_requested = threading.Event()
+        c._startup_prepared = threading.Event()
+        c._version_worker_done = threading.Event()
+        c._version_worker_done.set()
         c.login_window = None
         c._version_gate_generation = 0
         c.version_gate_text = Mock()

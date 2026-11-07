@@ -141,7 +141,7 @@ python -m unittest tests.test_unity_textasset tests.test_eve_v115 tests.test_cat
 3. 在每次背景執行的總下載上限（預設 64 MiB／32 檔，含兩個 Package）內下載／重用 Bundle，逐個核對官方大小、MD5 與 CRC；校驗失敗則拒絕解析。
 4. 使用 Nuitka 已隨附的 UnityPy 解包 TextAsset，依已審核的 Eve v115、ItemData、Smith、Scenes 格式產生四項來源索引，並通過資料形狀、長度與筆數檢查。SHA-256 在經過來源驗證後自動計算，**不需玩家自己提供 Hash**。
 5. 所有四項成功才以 ZIP 格式寫入使用者私有資料夾 `LOCALAPPDATA\WLRE_LaLa\official_sync\derived_catalogs\<catalog_key>\candidate.zip`。ZIP 包含四項衍生來源與 `candidate.json`，有版號、來源雜湊、筆數與明確 `approved=false`。覆寫採同資料夾暫存、讀回驗證與原子替換，不寫 GitHub 或遊戲資源目錄。
-6. **Launcher** 於啟動主程式前執行資源準備：原始碼版由 `wlre.launcher`（`run_client.bat`／`.command`）呼叫；Nuitka Windows／macOS 版由 `WLRE_Client.main` 直接呼叫同一 `launcher_catalog.prepare_on_launch`。將唯讀結果寫入 `LOCALAPPDATA/WLRE_LaLa/official_sync/launcher_catalog_status.json`，不依賴 Tk 與登入畫面下載。`VersionGateController` 僅讀取該狀態供展示，每次按「重新查詢官方版本」**不會重新下載 Bundle**。
+6. **單一啟動視窗**：原始碼、直接 GUI 與 Nuitka 入口共用 App。`VersionGateController` 的首次背景工作呼叫 `launcher_catalog.prepare_on_launch`，在同一視窗顯示進度，再獨立執行官方登入檢查。唯讀結果仍寫入 `LOCALAPPDATA/WLRE_LaLa/official_sync/launcher_catalog_status.json`，不可當作登入授權。初始資源準備每個 App 只執行一次；後續重查仍須完整核對官方版本、內容與 Runtime，不保證完全無下載。詳見 [啟動視窗](LAUNCHER_PRESENTATION.md)。
 
 開發者若要單獨檢查自動流程（無須 --bindings）：
 
@@ -160,7 +160,7 @@ py -m tools.plan_official_catalog --download --parse
 - `WLRE_Client.py`：編譯版自身即啟動器，不依賴其他 Python；進入 GUI 前呼叫同一個資源服務。`--self-test`／`--smoke-test-gui` 不接觸官方 CDN。
 - `wlre/services/world/launcher_catalog.py`：單一資源準備入口、私人只讀候選收據、錯誤隔離。收據不能授權遊戲登入或封包。
 - `wlre/ui/version_gate_controller.py`：官方版本相容性與登入安全閘門，以及 Launcher 收據顯示，**不執行 Bundle 下載與解包**。
-- **Launcher 進度畫面（PR #56）**：原始碼版 `wlre.launcher` 會啟動 `launcher_catalog --progress`，Nuitka EXE／APP 則在同一程序呼叫 `wlre.launcher_progress.run_with_progress(prepare_on_launch)`。使用既有 Tkinter，資源作業放在獨立執行緒，進度透過 Queue 在 GUI 主執行緒顯示；完成／失敗後自動關閉，才開啟 LaLa 正式主畫面。
+- **Launcher 進度畫面**：一般桌面入口已改為上述單一啟動視窗；獨立 `launcher_catalog --progress` 仍可供診斷。資源作業在背景執行緒完成，主執行緒以固定容量快照顯示最新進度並保留失敗結果。深藍／青色 Canvas 指示條不受原生 ttk 顏色影響。
 - 進度事件由實際業務流程發出：官方版本、DataPackage／MainPackage Manifest、Bundle 定位、同步總量、**已完成 MD5／CRC 校驗的 Bundle 筆數／總數**、NPC／商店／製作／場景解包、候選 ZIP 寫入與快取命中。校驗單檔完成才增加計數，未估算下載速度或虛構百分比；下載時如果官方回應較慢，顯示不定進度條。
 - **限制**：原始碼版首次安裝 Pillow／UnityPy 的 Python 私人環境屬進度畫面出現前的準備，CLI 仍會顯示簡短提示；大量下載須等待完成，暫不提供中途略過與可恢復的使用者中斷。官方 CDN 斷線時以不具授權效果的失敗結果繼續原有版本檢查；沒有螢幕的 Linux 環境以純文字階段訊息降級。正式 EXE／APP 與實際 Bundle 仍需個別驗收。
 

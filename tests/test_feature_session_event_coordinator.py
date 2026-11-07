@@ -3,7 +3,7 @@ import queue
 import unittest
 from collections import deque
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from wlre.ui.gui import App
 from wlre.ui.session_event_coordinator import SessionEventCoordinator
@@ -20,7 +20,7 @@ class SessionEventCoordinatorTests(unittest.TestCase):
         app = SimpleNamespace(
             events=events, live_active=True, hide_all_features=Mock(),
             password=Mock(), update_role_choices=Mock(),
-            show_login=Mock(), _set_login_gate_button=Mock(),
+            show_login=Mock(), hide_version_check=Mock(), _set_login_gate_button=Mock(),
             start_version_check=Mock(), send=Mock(), status=Mock())
         App._poll_once(app)
         self.assertFalse(app.live_active)
@@ -28,10 +28,47 @@ class SessionEventCoordinatorTests(unittest.TestCase):
         app.password.set.assert_called_once_with('')
         self.assertEqual(app.update_role_choices.call_count, 2)
         app.update_role_choices.assert_called_with([])
+        app.hide_version_check.assert_called_once_with()
         app.show_login.assert_called_once_with()
         app._set_login_gate_button.assert_called_once_with()
-        app.start_version_check.assert_called_once_with()
+        app.start_version_check.assert_not_called()
         app.send.assert_not_called()
+
+    def test_connect_worker_finally_restores_login_for_every_end_without_popup(self):
+        for outcome in ('manual_disconnect', 'remote_disconnect', 'failed_connect'):
+            with self.subTest(outcome=outcome):
+                app = SimpleNamespace(
+                    assert_ui_thread=Mock(), can_login_after_version_check=Mock(return_value=True),
+                    profile={'verification_endpoint': {'host': 'example.invalid', 'port': 1}},
+                    worker=None, account=Mock(get=Mock(return_value='fixture')),
+                    password=Mock(get=Mock(return_value='fixture')), port=Mock(get=Mock(return_value='16988')),
+                    host=Mock(get=Mock(return_value='example.invalid')),
+                    activate_account_settings=Mock(), save_saved_login=Mock(return_value=True),
+                    hide_all_features=Mock(), update_role_choices=Mock(), connection_monitor=Mock(),
+                    connection_status=Mock(), status=Mock(), connect_button=Mock(),
+                    chat_panel=Mock(), _background_logs=deque(), log=Mock(),
+                    efficiency_panel=Mock(), companion_panel=Mock(), expedition_panel=Mock(),
+                    benefits_panel=Mock(), other_features_panel=Mock(), instance_panel=Mock(),
+                    overview_panel=Mock(), background=Mock(return_value=True),
+                    hide_version_check=Mock(), show_login=Mock(), _set_login_gate_button=Mock(),
+                    start_version_check=Mock(), send=Mock())
+                App.connect(app)
+                work = app.background.call_args.args[0]
+                with patch('wlre.ui.gui.run_client') as client:
+                    if outcome == 'failed_connect':
+                        client.side_effect = OSError('offline fixture')
+                        with self.assertRaises(OSError):
+                            work()
+                    else:
+                        work()
+                    # Account verification remains independent on every connect.
+                    self.assertIs(client.call_args.kwargs['verify_first'], True)
+                App._poll_once(app)
+                self.assertFalse(app.live_active)
+                app.hide_version_check.assert_called_once_with()
+                app.show_login.assert_called_once_with()
+                app.start_version_check.assert_not_called()
+                app.send.assert_not_called()
 
     def test_last_state_passed_to_render_without_writing_game_state(self):
         events = queue.Queue()

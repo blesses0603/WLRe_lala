@@ -1,7 +1,7 @@
-"""Launcher-owned official resource preparation, never the login view.
+"""Official resource preparation before login, shared by every desktop entry.
 
-Both the source-code bootstrapper and the compiled desktop entry point call
-this service BEFORE starting Tk. Official catalog reports are informational and cannot
+App runs this service in the startup window's background worker; the standalone
+CLI remains available. Official catalog reports are informational and cannot
 approve game versions, login, navigation or network packet sending.
 """
 from __future__ import annotations
@@ -97,7 +97,7 @@ def _store_status(report, *, root=None):
 
 @update_diagnostics('root', injected=('runner',))
 def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
-    """Synchronously verify official resources before Tk starts.
+    """Synchronously verify official resources; desktop callers use a worker.
 
     Failure is reported without blocking LaLa's own official login check.
     Callers must not treat any return value or the private receipt as approval.

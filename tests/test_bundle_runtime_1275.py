@@ -105,12 +105,12 @@ class VerifiedBundleRuntimeTests(unittest.TestCase):
             'wlre.services.world.doors_1275.SOURCE_SHA256',
             hashlib.sha256(self.raw['Eve']).hexdigest()))
         stack.enter_context(patch(
-            'wlre.services.world.eve_v115.derive_eve_index',
-            side_effect=lambda raw, kind: json.dumps({
+            'wlre.services.world.eve_v115.derive_eve_indexes',
+            side_effect=lambda raw: {kind: json.dumps({
                 'record_count': (10975 if kind == 'EventData.NewNpc' else 1634),
                 'scenes': self.scenes if kind == 'EventData.NewNpc'
                           else {'10000': [{'index': 1, 'form_kind': 1}]},
-            }).encode()))
+            }).encode() for kind in ('EventData.NewNpc', 'EventData.NewInteract')}))
         stack.enter_context(patch(
             'wlre.services.world.itemdata_v1.parse_itemdata',
             return_value=self.items))

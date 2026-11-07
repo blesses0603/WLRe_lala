@@ -392,6 +392,8 @@ class App(LoginController, AccountController,
         self.status.set('正在中斷連線…')
 
     def close(self):
+        if self._closing or self.defer_close_for_startup():
+            return
         self._closing=True
         self.stop_event.set();self.password.set('');self.diagnostics.close();self.root.destroy()
 

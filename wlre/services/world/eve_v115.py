@@ -114,7 +114,7 @@ def _skip_battle(r):
     r.skip(1)
 
 
-def _scene(r, source):
+def _scene(r, sources):
     r.skip(2)  # map model ID
     if r.u16() != 115:
         raise EveDecodeError('Unsupported Eve scene format, expected 115')
@@ -124,8 +124,8 @@ def _scene(r, source):
         ('convey', None), ('interact', _interact), ('battle', _skip_battle),
         ('lead_event', _skip_event), ('lead_group', _skip_group),
     )
-    selected = 'npc' if source == 'EventData.NewNpc' else 'interact'
-    result = []
+    selected = {'npc': 'EventData.NewNpc', 'interact': 'EventData.NewInteract'}
+    result = {source: [] for source in sources}
     counts = []
     scene_start = r.pos - 4
     section_offsets = []
@@ -156,8 +156,9 @@ def _scene(r, source):
                         if row['index'] in seen:
                             raise EveDecodeError('Duplicate event index in scene')
                         seen.add(row['index'])
-                        if kind == selected:
-                            result.append(row)
+                        source = selected[kind]
+                        if source in result:
+                            result[source].append(row)
                 except EveDecodeError as exc:
                     raise EveDecodeError(
                         f'{kind} 第 {record_index + 1}/{count} 筆'
@@ -194,19 +195,19 @@ def _scene(r, source):
     return result
 
 
-@diagnosed('eve-v115')
-def derive_eve_index(raw: bytes, source: str) -> bytes:
-    """Produce the schema-v1 UTF-8 JSON accepted by the NPC/shop adapters."""
+def _derive_eve_indexes(raw, sources):
+    """Validate every scene once and retain only the requested index rows."""
     if type(raw) is not bytes or not 12 <= len(raw) <= 16 * 1024 * 1024:
         raise EveDecodeError('Missing or oversized Eve source')
-    if source not in ('EventData.NewNpc', 'EventData.NewInteract'):
+    if any(source not in ('EventData.NewNpc', 'EventData.NewInteract')
+           for source in sources):
         raise EveDecodeError('Unknown requested Eve index')
     count = struct.unpack_from('<I', raw, 8)[0]
     if not 0 < count <= MAX_SCENES or 12 + 12 * count > len(raw):
         raise EveDecodeError('Eve header/scene count invalid')
     scenes = {}
     segments = []
-    records = 0
+    records = {source: 0 for source in sources}
     for idx in range(count):
         checkpoint(offset=12 + 12 * idx, field='scene_header', record=idx + 1)
         scene_id, model, offset, size = struct.unpack_from('<HHII', raw, 12 + 12 * idx)
@@ -221,19 +222,40 @@ def derive_eve_index(raw: bytes, source: str) -> bytes:
             raise EveDecodeError('Eve scene segments overlap')
         checkpoint(offset=start, field='scene', record=i + 1)
         try:
-            row = _scene(Reader(raw, start, end), source)
+            rows = _scene(Reader(raw, start, end), sources)
         except EveDecodeError as exc:
             # Report only numeric scene ID and bounded binary offset.
             # Never expose game payloads or arbitrary filesystem paths.
             raise EveDecodeError(
                 f'場景 {scene}（偏移 {start}，長度 {end-start}）：{exc}') from exc
-        records += len(row)
-        if records > MAX_RECORDS:
-            raise EveDecodeError('Eve selected index exceeds record limit')
-        scenes[scene] = row
+        for source in sources:
+            records[source] += len(rows[source])
+            if records[source] > MAX_RECORDS:
+                raise EveDecodeError('Eve selected index exceeds record limit')
+        scenes[scene] = rows
     # Stable deterministic serialization, independent from source ordering.
-    document = {'schema_version': 1, 'source': source,
-                'record_count': records,
-                'scenes': dict(sorted(scenes.items(), key=lambda kv: int(kv[0])))}
-    return json.dumps(document, ensure_ascii=True, sort_keys=True,
-                      separators=(',', ':')).encode('utf-8')
+    documents = {}
+    ordered = sorted(scenes.items(), key=lambda kv: int(kv[0]))
+    for source in sources:
+        document = {'schema_version': 1, 'source': source,
+                    'record_count': records[source],
+                    'scenes': {scene: rows[source] for scene, rows in ordered}}
+        documents[source] = json.dumps(document, ensure_ascii=True, sort_keys=True,
+                                       separators=(',', ':')).encode('utf-8')
+    return documents
+
+
+@diagnosed('eve-v115')
+def derive_eve_index(raw: bytes, source: str) -> bytes:
+    """Produce the schema-v1 UTF-8 JSON accepted by the NPC/shop adapters."""
+    return _derive_eve_indexes(raw, (source,))[source]
+
+
+@diagnosed('eve-v115')
+def derive_eve_indexes(raw: bytes) -> dict[str, bytes]:
+    """Derive both indexes in one full validated pass, without caching inputs.
+
+    Each index retains its independent record limit and unchanged JSON format.
+    The caller still verifies the official Manifest and Bundle before parsing.
+    """
+    return _derive_eve_indexes(raw, ('EventData.NewNpc', 'EventData.NewInteract'))

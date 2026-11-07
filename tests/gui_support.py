@@ -27,14 +27,18 @@ def isolate_gui_background_checks(case):
                 setattr(case, key, None)
         gc.collect()
 
+    preparation = patch('wlre.ui.version_gate_controller.prepare_on_launch',
+                        return_value={'status': 'skipped'})
     official = patch('wlre.ui.version_gate_controller.run_prelogin_check',
         return_value={'status': 'unverified', 'blocked': True,
                       'message': '離線 GUI 測試，尚未驗證官方版本',
                       'remote': {'status': 'unverified', 'packages': {}}})
     release_check = patch('wlre.ui.version_gate_controller.check_lala_release',
                           side_effect=OSError('offline GUI fixture'))
+    preparation.start()
     official.start()
     release_check.start()
+    register(preparation.stop)
     register(official.stop)
     register(release_check.stop)
     # Join workers while their offline patches are still active.

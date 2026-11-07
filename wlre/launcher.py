@@ -78,17 +78,10 @@ def main():
             if probe.returncode:
                 subprocess.run([str(python),'-m','pip','install','-r',str(root/'requirements-ui.txt')],check=True)
                 subprocess.run([str(python),'-c',"from PIL import Image,ImageTk,features; assert hasattr(Image,'Resampling') and features.check('webp')"],check=True)
-    # Launcher owns official Bundle preparation before UI. Python users
-    # also get the pinned decoder in a private venv, with no system pip edits.
+    # Source users still get the pinned decoder in a private venv. App owns
+    # resource preparation and official verification in one continuous window.
     if '--navigation' not in sys.argv and '--self-test' not in sys.argv:
         python = ensure_extractor_environment(python, root)
-        try:
-            subprocess.run([str(python), '-m',
-                            'wlre.services.world.launcher_catalog', '--progress'], cwd=root,
-                           check=False)
-        except OSError:
-            print('Launcher 資源候選準備無法啟動；登入限制維持。',
-                  file=sys.stderr)
     return subprocess.run([str(python),*arguments],cwd=root).returncode
 
 

@@ -99,6 +99,53 @@ class DynamicBundleRuntimeTests(unittest.TestCase):
         return dict(sync_root=self.root, observe=lambda: deepcopy(self.snapshot),
                     retrieve=lambda spec, cache_root: self.manifests[spec.package])
 
+    def test_runtime_derives_both_eve_indexes_with_one_validated_scene_pass(self):
+        from wlre.services.world import eve_v115
+        with patch.object(eve_v115, '_scene', wraps=eve_v115._scene) as scene:
+            runtime = dynamic.prepare_dynamic_runtime(**self.kwargs())
+        self.assertEqual(runtime.record_counts['npc'], 1)
+        self.assertEqual(runtime.record_counts['shops'], 1)
+        self.assertEqual(scene.call_count, 1)
+        with patch.object(eve_v115, 'derive_eve_indexes',
+                          side_effect=AssertionError('database must supply both indexes')):
+            cached = dynamic.prepare_dynamic_runtime(**self.kwargs())
+        self.assertEqual(cached.record_counts, runtime.record_counts)
+
+    def test_eve_snapshot_repair_preserves_separate_database_features(self):
+        from wlre.services.world import eve_v115
+        first = dynamic.prepare_dynamic_runtime(**self.kwargs())
+        database = self.root / 'derived_catalogs' / 'resource_inventory.sqlite3'
+        for feature in ('npc', 'interactions'):
+            with self.subTest(feature=feature):
+                with closing(sqlite3.connect(database)) as db, db:
+                    db.execute('UPDATE normalized_snapshots SET data=? WHERE feature=?',
+                               (b'corrupt derived index', feature))
+                with patch.object(eve_v115, '_scene', wraps=eve_v115._scene) as scene:
+                    repaired = dynamic.prepare_dynamic_runtime(**self.kwargs())
+                self.assertEqual(repaired.record_counts, first.record_counts)
+                self.assertEqual(scene.call_count, 1)
+                with closing(sqlite3.connect(database)) as db:
+                    rows = db.execute('SELECT feature,schema_id FROM normalized_snapshots '
+                                      "WHERE feature IN ('npc','interactions') ORDER BY feature").fetchall()
+                    self.assertEqual(rows, [('interactions', 'runtime-v1-dynamic'),
+                                            ('npc', 'runtime-v1-dynamic')])
+                    self.assertEqual(db.execute('SELECT count(*) FROM normalized_history '
+                        "WHERE feature=? AND status='repaired_derived'", (feature,)).fetchone(), (1,))
+
+    def test_eve_combined_failure_keeps_individual_snapshot_failure_history(self):
+        from wlre.services.world import eve_v115
+        self.raw['Eve'] = eve_fixture(interact_count=2)
+        with patch.object(eve_v115, 'MAX_RECORDS', 1):
+            with self.assertRaises(ValueError):
+                dynamic.prepare_dynamic_runtime(**self.kwargs())
+        database = self.root / 'derived_catalogs' / 'resource_inventory.sqlite3'
+        with closing(sqlite3.connect(database)) as db:
+            self.assertEqual(db.execute('SELECT feature FROM normalized_snapshots').fetchall(),
+                             [('npc',)])
+            self.assertEqual(db.execute('SELECT feature,status FROM normalized_history '
+                                        'ORDER BY id').fetchall(),
+                             [('npc', 'imported'), ('interactions', 'parse_failed')])
+
     def test_smallmap_publication_is_bound_to_same_runtime_and_failure_clears_it(self):
         from wlre.services.world.smallmap_database import import_images, PREFIX
         from wlre.services.world.smallmaps import SmallMaps
