@@ -51,11 +51,11 @@ def _launcher_status_text():
     receipt = read_launcher_status()
     code = None if receipt is None else receipt['status']
     status = {
-        'verified_official': 'Launcher 官方來源已驗證',
-        'downloaded_unparsed': 'Launcher 已下載資料，尚未驗證解析',
-        'error': 'Launcher 官方資源準備未完成；正式 Bundle 仍獨立校驗',
-        'preview': 'Launcher 僅預覽下載計畫',
-    }.get(code, '尚無 Launcher 官方資源同步紀錄')
+        'verified_official': '官方資源來源已驗證',
+        'downloaded_unparsed': '官方原始資源已保存；各類解析結果另列',
+        'error': '資源收集未完成；正式 Runtime 結果另列',
+        'preview': '僅預覽資源收集計畫',
+    }.get(code, '尚無官方資源收集紀錄')
     if receipt and receipt.get('failure_feature') and receipt.get('failure_stage'):
         feature = {'npc': 'NPC', 'shops': '商店', 'crafting': '製作',
                    'scenes': '場景', 'items': '物品'}[receipt['failure_feature']]
@@ -76,9 +76,11 @@ def _launcher_status_text():
             done = sum(state == '已解析' for state in processing.values())
             pending = [name for name, state in processing.items()
                        if state != '已解析']
-            status += f'｜資料解析 {done}/{len(processing)}'
+            status += f'｜收集階段解析 {done}/{len(processing)}'
             if pending:
                 status += '；待處理：' + '、'.join(pending)
+        elif code == 'downloaded_unparsed':
+            status += '｜尚無各類解析驗證紀錄'
         # This number is a display-only derived candidate, NOT evidence
         # that the missing pinned formal indexes are available.
     return status
@@ -113,6 +115,13 @@ class VersionGateController:
         self._version_worker_done = threading.Event()
         self._version_worker_done.set()
         self._startup_progress = _ProgressMailbox()
+        self._official_progress = _ProgressMailbox()
+        self._startup_started_at = None
+        self._startup_stage_started_at = None
+        self._startup_finished_at = None
+        self._startup_elapsed_signature = None
+        self._startup_stage_key = None
+        self._startup_elapsed = tk.StringVar(value="準備開始；不以動畫推估完成比例")
         self._startup_phase = 'preparing'
         self._startup_progress_update = None
         self._startup_failure = None
@@ -174,6 +183,10 @@ class VersionGateController:
         footer = ttk.Frame(shell)
         footer.pack(side="bottom", fill="x")
         ttk.Separator(footer, orient="horizontal").pack(fill="x", pady=(6, 9))
+        self._version_elapsed_label = ttk.Label(
+            footer, textvariable=self._startup_elapsed, style="Muted.TLabel",
+            justify="left")
+        self._version_elapsed_label.pack(anchor="w", fill="x", pady=(0, 5))
         self._version_progress = CyanProgress(footer, tk)
         self._version_progress.canvas.pack_configure(pady=(0, 8))
         self._version_footer_hint = ttk.Label(
@@ -307,6 +320,7 @@ class VersionGateController:
             value_label.configure(wraplength=max(240, width - label_width - 130))
         self._version_release_label.configure(wraplength=max(300, width - 108))
         self._version_footer_hint.configure(wraplength=max(300, width - 65))
+        self._version_elapsed_label.configure(wraplength=max(300, width - 65))
         self._schedule_version_fit()
 
     def _schedule_version_fit(self):
@@ -402,33 +416,36 @@ class VersionGateController:
                 status_text = "無法完整驗證；請檢查各資源包的錯誤原因"
         db_status = {'same': '資料庫版本符合官方', 'different': '資料庫版本與官方不同',
                      'unverified': '資料庫版本未確認'}.get(result.get('database_comparison'))
-        self._version_remote.set(status_text + (('｜' + db_status) if db_status else '') + "｜" + self._launcher_catalog_status)
+        self._version_remote.set(
+            "正式 Runtime／登入驗證：" + status_text + (('｜' + db_status) if db_status else '')
+            + "\n資源收集紀錄：" + self._launcher_catalog_status)
         if hasattr(self, '_version_retry_button'):
             self._version_retry_button.configure(
                 state="disabled" if self.version_gate_state == "checking" else "normal")
         if self.version_gate_state == "checking":
             preparing = self._startup_phase == 'preparing'
-            self._version_heading.set("正在準備 LaLa 官方資源…" if preparing else
-                                      "正在向官方來源查詢版本…")
-            self._version_main.set("等待資源準備完成" if preparing else "查詢中…")
-            self._version_data.set("等待資源準備完成" if preparing else "查詢中…")
+            update = self._startup_progress_update
+            self._version_heading.set("正在收集與整理官方資源…" if preparing else
+                                      ((update[0] + "…") if update else "正在進行正式登入驗證…"))
+            self._version_main.set("等待資源收集完成" if preparing else "等待正式驗證結果")
+            self._version_data.set("等待資源收集完成" if preparing else "等待正式驗證結果")
+            self._version_path.set("等待正式驗證結果")
             self._version_remote.set("正在準備並校驗官方資源" if preparing else
                                      "正在檢查官方線上來源")
-            update = self._startup_progress_update if preparing else None
             self._version_progress.set_counts(update[2] if update else None)
             if update:
                 self._version_remote.set(update[0] + (
                     '｜' + self._startup_failure if self._startup_failure else ''))
             self._version_footer_hint.configure(text=(
-                "1 / 2 · 資源準備不代表可以登入；完成後仍會獨立驗證官方版本。" if preparing else
-                "2 / 2 · 正在核對官方版本、資料庫內容與 Runtime，不需要帳號或密碼。"))
+                "1 / 2 · 資源收集與解析摘要不代表 Runtime 已授權；正式驗證完成前不能登入。" if preparing else
+                "2 / 2 · 正式核對官方版本、Runtime 與資料庫實際內容；完成前不能登入。"))
             self._version_continue_button.configure(
                 text="資源準備中" if preparing else "檢查中", state="disabled")
             return
 
-        self._version_progress.stop()
+        VersionGateController._finish_startup_presentation(self)
         if hasattr(self, '_version_footer_hint'):
-            self._version_footer_hint.configure(text="資源準備與官方版本檢查分別驗證；只有完整驗證通過才能登入。")
+            self._version_footer_hint.configure(text="以上方正式登入驗證結果為準；資源收集與解析摘要不授予登入權限。")
         if self.version_gate_state == "blocked":
             # Official versions may MATCH while mandatory, release-pinned
             # full data is still absent. Don't mislabel that as a CDN update.
@@ -528,7 +545,17 @@ class VersionGateController:
         self.version_gate_state = "checking"
         self._version_gate_result = None
         self._startup_progress.take()  # Discard an earlier generation's display.
+        self._official_progress.take()
         self._startup_progress_update = None
+        self._startup_started_at = time.monotonic()
+        self._startup_stage_started_at = self._startup_started_at
+        self._startup_finished_at = None
+        self._startup_elapsed_signature = None
+        self._startup_stage_key = None
+        bar = getattr(self, '_version_progress', None)
+        if bar is not None:
+            bar.reset()
+        self._update_startup_elapsed()
         self._startup_phase = 'official' if self._startup_prepared.is_set() else 'preparing'
         self.version_gate_text.set(
             "正在向官方來源確認資源版本與完整 Runtime…" if self._startup_prepared.is_set() else
@@ -540,6 +567,7 @@ class VersionGateController:
         official_messages = self._version_gate_messages
         prepared = self._startup_prepared
         progress = self._startup_progress
+        official_progress = self._official_progress
         exiting = self._startup_exit_requested
         done = self._version_worker_done
         done.clear()
@@ -552,17 +580,17 @@ class VersionGateController:
                     try:
                         receipt = prepare_on_launch(progress=progress.report)
                         if not isinstance(receipt, dict) or receipt.get('status') == 'error':
-                            status = 'Launcher 官方資源準備未完成；正式 Bundle 仍獨立校驗'
+                            status = '資源收集未完成；正式 Runtime 結果另列'
                         else:
                             status = _launcher_status_text()
                     except Exception:
-                        status = 'Launcher 資源準備發生例外；官方版本仍需獨立驗證'
+                        status = '資源收集發生例外；正式 Runtime 結果另列'
                     progress.finish(status)
                     prepared.set()
                 if exiting.is_set():
                     return
                 try:
-                    result = run_prelogin_check()
+                    result = run_prelogin_check(progress=official_progress.report)
                 except Exception:
                     result = {"blocked": True, "status": "unverified",
                               "message": "版本檢測程式發生例外，已禁止登入；請重新查詢或回報開發者。",
@@ -583,23 +611,63 @@ class VersionGateController:
 
     def _drain_startup_progress(self):
         update, failure, terminal = self._startup_progress.take()
+        official_update, _, _ = self._official_progress.take()
+        if self._closing or self._startup_exit_requested.is_set() or self.version_gate_state != 'checking':
+            return
         if failure is not None:
             self._startup_failure = failure
-        if update is not None:
-            self._startup_progress_update = update
         if terminal is not None:
             self._launcher_catalog_status = terminal[0]
             if self._startup_failure:
-                self._launcher_catalog_status += '｜' + self._startup_failure
+                self._launcher_catalog_status += '｜收集階段：' + self._startup_failure
             self._startup_phase = 'official'
-        if self._closing or self._startup_exit_requested.is_set() or self.version_gate_state != 'checking':
-            return
-        if terminal is not None:
-            self.version_gate_text.set("資源準備階段已結束，正在獨立核對官方版本、資料庫內容與 Runtime…")
-        elif update is not None:
+            self._startup_progress_update = None
+        if official_update is not None:
+            self._startup_phase = 'official'
+            update = official_update
+        elif self._startup_phase != 'preparing':
+            update = None  # Late collection messages cannot replace the formal phase.
+        if update is not None:
+            self._startup_progress_update = update
+            if update[0] != self._startup_stage_key:
+                self._startup_stage_key = update[0]
+                self._startup_stage_started_at = time.monotonic()
+        if update is not None:
             self.version_gate_text.set(update[1])
+        elif terminal is not None:
+            self.version_gate_text.set("資源收集階段已結束，正在獨立核對官方版本、Runtime 與資料庫實際內容…")
         if update is not None or terminal is not None:
             self._render_version_window()
+
+    def _update_startup_elapsed(self):
+        """Use the existing UI poll; at most one text change per second, no timer."""
+        if not hasattr(self, '_startup_elapsed') or self._startup_started_at is None:
+            return
+        finished = self._startup_finished_at
+        now = time.monotonic() if finished is None else finished
+        total = max(0, int(now - self._startup_started_at))
+        stage = max(0, int(now - (self._startup_stage_started_at or self._startup_started_at)))
+        if finished is not None:
+            state = 'complete' if self.version_gate_state == 'ready' else 'blocked'
+            text = ('本次正式檢查完成' if state == 'complete' else '本次正式檢查未通過') + f' · 共用 {total} 秒'
+            signature = state, total
+        else:
+            closing = self._startup_exit_requested.is_set()
+            text = (f'安全結束中 · 已用 {total} 秒' if closing else
+                    f'已用 {total} 秒 · 目前階段 {stage} 秒（不估算完成比例）')
+            signature = closing, total, stage
+        if signature != self._startup_elapsed_signature:
+            self._startup_elapsed_signature = signature
+            self._startup_elapsed.set(text)
+
+    def _finish_startup_presentation(self):
+        if getattr(self, '_startup_started_at', None) is not None and self._startup_finished_at is None:
+            self._startup_finished_at = time.monotonic()
+        bar = getattr(self, '_version_progress', None)
+        if bar is not None:
+            bar.finish()
+        if hasattr(self, '_startup_elapsed'):
+            VersionGateController._update_startup_elapsed(self)
 
     def defer_close_for_startup(self):
         """Keep the same responsive window until current writes safely finish."""
@@ -626,6 +694,7 @@ class VersionGateController:
                 generation, result = self._version_gate_messages.get_nowait()
             except queue.Empty:
                 self._drain_lala_update_messages()
+                self._update_startup_elapsed()
                 return
             if (generation != self._version_gate_generation or self._closing
                     or self._startup_exit_requested.is_set()):
@@ -644,6 +713,7 @@ class VersionGateController:
             self._version_gate_checked = time.monotonic()
             self.version_gate_state = (
                 "ready" if _is_verified_login_result(result) else "blocked")
+            self._finish_startup_presentation()
             self.version_gate_text.set(
                 result.get("message") or "官方版本無法完整驗證；禁止登入，請重新查詢。")
             self._set_login_gate_button()

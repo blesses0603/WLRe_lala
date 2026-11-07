@@ -4,7 +4,7 @@ from gui_support import isolate_gui_background_checks
 import os
 import tkinter as tk
 import unittest
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 from tkinter import ttk
 
 from wlre.ui.gui import App
@@ -74,7 +74,8 @@ class PreloginVersionWindowTests(unittest.TestCase):
             self.assertTrue(self.app._version_continue_button.instate(['disabled']))
             self.assertEqual(self.app.login_window.state(), 'withdrawn')
             return {'status': 'verified_official'}
-        def official():
+        def official(*, progress):
+            progress('official_metadata', {})
             self.app.drain_version_checks()
             stages.append(self.app._version_heading.get())
             self.assertEqual(self.app._startup_phase, 'official')
@@ -89,9 +90,9 @@ class PreloginVersionWindowTests(unittest.TestCase):
             thread.call_args.kwargs['target']()
             self.app.drain_version_checks()
         resource.assert_called_once()
-        check.assert_called_once_with()
-        self.assertIn('準備', stages[0])
-        self.assertIn('查詢版本', stages[1])
+        check.assert_called_once_with(progress=ANY)
+        self.assertIn('收集', stages[0])
+        self.assertIn('官方版本查詢', stages[1])
         self.assertIs(self.app.version_window, original_window)
         self.assertEqual(initial_windows,
                          [w for w in self.root.winfo_children() if isinstance(w, tk.Toplevel)])
@@ -320,10 +321,64 @@ class PreloginVersionWindowTests(unittest.TestCase):
         self.assertIsNone(progress._timer)
         self.assertTrue(self.app._version_continue_button.instate(['disabled']))
         self.app.version_gate_state = 'checking'
+        progress.reset()  # Only a new attempt may release the terminal latch.
         self.app._render_version_window()
         self.assertIsNotNone(progress._timer)
         progress.canvas.destroy()
         self.assertIsNone(progress._timer)
+
+    def test_formal_result_is_separate_from_collection_summary_and_stops_animation(self):
+        import time
+        self.app._launcher_catalog_status = '官方原始資源已保存；各類解析結果另列｜收集階段解析 7/7'
+        self.app._startup_started_at = time.monotonic() - 27
+        self.app._startup_stage_started_at = self.app._startup_started_at
+        for phase, title in (('official_metadata', '官方版本查詢'),
+                             ('official_runtime', '正式 Runtime 驗證'),
+                             ('official_database', '資料庫內容比對')):
+            self.app._official_progress.report(phase, {})
+            self.app.drain_version_checks()
+            self.assertIn(title, self.app._version_heading.get())
+            self.assertIn('已用 27 秒', self.app._startup_elapsed.get())
+            self.assertIsNotNone(self.app._version_progress._timer)
+        self.deliver(official_result())
+        self.assertIn('正式 Runtime／登入驗證：', self.app._version_remote.get())
+        self.assertIn('\n資源收集紀錄：', self.app._version_remote.get())
+        self.assertIn('7/7', self.app._version_remote.get())
+        self.assertIn('完成 · 共用 27 秒', self.app._startup_elapsed.get())
+        progress = self.app._version_progress
+        self.assertTrue(progress._finished)
+        self.assertIsNone(progress._timer)
+        for _ in range(5):
+            self.app._official_progress.report('official_runtime', {})
+            self.app.drain_version_checks()
+            self.app._render_version_window()
+            progress.set_counts(None)
+        self.assertIsNone(progress._timer)
+        self.assertTrue(progress._finished)
+
+    def test_progress_timer_has_bounded_rate_and_zero_terminal_ticks(self):
+        import time
+        progress = self.app._version_progress
+        progress.stop()
+        with patch.object(progress.canvas, 'after', wraps=progress.canvas.after) as after:
+            progress.reset()
+            deadline = time.perf_counter() + 1.05
+            while time.perf_counter() < deadline:
+                self.root.update()
+                time.sleep(.004)
+            active_calls = after.call_count
+            self.assertGreaterEqual(active_calls, 2)
+            self.assertLessEqual(active_calls, 28)  # One 40 ms loop, never duplicate timers.
+            self.deliver(official_result('1275', '1262', 'blocked'))
+            offset = progress._offset
+            terminal_calls = after.call_count
+            deadline = time.perf_counter() + .25
+            while time.perf_counter() < deadline:
+                self.root.update()
+                time.sleep(.004)
+            self.assertEqual(after.call_count, terminal_calls)
+            self.assertEqual(progress._offset, offset)
+            self.assertIsNone(progress._timer)
 
     def test_version_screen_before_account_fields(self):
         self.assertTrue(self.app.version_window.winfo_ismapped())
@@ -478,7 +533,13 @@ class PreloginVersionWindowTests(unittest.TestCase):
         self.assertFalse(any(isinstance(w, __import__("tkinter").ttk.Scrollbar)
                              for w in widgets))
         self.assertGreaterEqual(window.winfo_height(), min(590, window.winfo_screenheight() - 24))
-        self.assertLessEqual(window.winfo_height(), min(710, window.winfo_screenheight() - 24))
+        # 710 is the initial size; truthful phase/elapsed text may grow it to
+        # the content request, still bounded by the existing screen margin.
+        self.assertLessEqual(window.winfo_height(), window.winfo_screenheight() - 48)
+        self.assertTrue(self.app._version_elapsed_label.winfo_ismapped())
+        self.assertLessEqual(
+            self.app._version_elapsed_label.winfo_rooty() + self.app._version_elapsed_label.winfo_height(),
+            window.winfo_rooty() + window.winfo_height())
         self.assertTrue(window.resizable()[0])
         self.assertTrue(window.resizable()[1])
         self.assertTrue(self.app._version_release_panel.winfo_ismapped())

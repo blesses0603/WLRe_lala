@@ -87,6 +87,44 @@ class LauncherPresentationTests(unittest.TestCase):
         bar._tick()
         self.assertEqual(canvas.after.call_count, 2)
 
+    def test_terminal_progress_is_latched_until_explicit_retry_and_destroy_is_final(self):
+        tk = Mock()
+        canvas = tk.Canvas.return_value
+        canvas.winfo_width.return_value = 300
+        canvas.after.return_value = 'pending'
+        bar = _CyanProgress(object(), tk)
+        self.assertEqual(canvas.after.call_count, 1)
+        bar.finish()
+        for _ in range(100):
+            bar.set_counts(None)
+            bar.set_counts((8, 24))
+            bar._tick()
+        self.assertIsNone(bar._timer)
+        self.assertFalse(bar._running)
+        self.assertEqual(canvas.after.call_count, 1)
+        bar.reset()
+        self.assertEqual(canvas.after.call_count, 2)
+        bar._on_destroy()
+        bar.reset()
+        bar.set_counts(None)
+        bar._tick()
+        self.assertTrue(bar._destroyed)
+        self.assertIsNone(bar._timer)
+        self.assertEqual(canvas.after.call_count, 2)
+
+    def test_formal_phase_messages_are_whitelisted_and_never_fake_item_totals(self):
+        mailbox = _ProgressMailbox()
+        for phase, title in (('official_metadata', '官方版本查詢'),
+                             ('official_runtime', '正式 Runtime 驗證'),
+                             ('official_database', '資料庫內容比對')):
+            mailbox.report(phase, {'completed': 7, 'total': 7, 'path': 'secret'})
+            update, failure, terminal = mailbox.take()
+            self.assertEqual(update[0], title)
+            self.assertIsNone(update[2])
+            self.assertNotIn('secret', update[1])
+            self.assertNotIn('%', update[1])
+            self.assertIsNone(terminal)
+
     @unittest.skipUnless(os.name == 'nt' or bool(os.environ.get('DISPLAY')),
                          'Requires an active desktop / Xvfb')
     def test_real_tk_colors_resize_safe_close_failure_and_burst(self):

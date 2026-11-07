@@ -151,10 +151,12 @@ def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
                 progress('runtime_identity_unavailable', {})
     if real_launcher_run:
         try:
-            from wlre.services.world.dynamic_bundle_runtime import prepare_dynamic_runtime
+            from wlre.services.world.dynamic_bundle_runtime import sync_dynamic_runtime_sources
             if progress is not None:
                 progress('runtime_bundle_plan', {})
-            prepare_dynamic_runtime(sync=True)
+            # Prepare the exact same bounded sources, but do not construct a
+            # full runtime only to discard it before the independent login gate.
+            sync_dynamic_runtime_sources()
             if progress is not None:
                 progress('runtime_bundle_ready', {})
         except (OSError, ValueError, RuntimeError):

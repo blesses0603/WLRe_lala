@@ -157,20 +157,13 @@ def parse_runtime_recipes(raw, items):
     return {r['item_id']: r for r in checked if counts[r['item_id']] == 1}, checked
 
 
-@update_diagnostics('sync_root', injected=('observe', 'retrieve', 'execute'))
-def prepare_dynamic_runtime(*, sync=False, sync_root=None, observe=None,
-                            retrieve=None, execute=None,
-                            max_download_bytes=32 * 1024 * 1024,
-                            max_downloads=24, max_image_download_bytes=64*1024*1024,
-                            max_image_downloads=4, max_emoji_download_bytes=32*1024*1024,
-                            max_emoji_downloads=8):
-    """Official observation -> verified manifests/Bundles -> complete runtime.
-
-    Verification is performed on every load, including cache hits. Downloading
-    is bounded and only allowed by the launcher's explicit sync=True call.
-    Publishing happens after parsing AND a second live version observation.
-    No packet permission or local compatibility declaration is changed.
-    """
+def _prepare_runtime_sources(*, sync=False, sync_root=None, observe=None,
+                             retrieve=None, execute=None,
+                             max_download_bytes=32 * 1024 * 1024,
+                             max_downloads=24, max_image_download_bytes=64*1024*1024,
+                             max_image_downloads=4, max_emoji_download_bytes=32*1024*1024,
+                             max_emoji_downloads=8):
+    """Discover verified sources and optionally synchronize bounded downloads."""
     from pathlib import Path
     from wlre.storage.paths import data_root
     from wlre.services.official_resource_sync import observe_official_versions, validate_snapshot
@@ -178,7 +171,7 @@ def prepare_dynamic_runtime(*, sync=False, sync_root=None, observe=None,
     from wlre.services.official_incremental_sync import build_update_plan, execute_update_plan
     from wlre.services.world.catalog_identity import identity_from_verified_manifests
     from wlre.services.world.bundle_runtime_1275 import (
-        load_verified_bundle_runtime, _REQUIRED_TABLES, _ASSET_ROOT,
+        _REQUIRED_TABLES, _ASSET_ROOT,
         _PORTAL_TABLES, _OPTIONAL_ROUTE_TABLES, _DIAGNOSTIC_TABLES)
     observe = observe_official_versions if observe is None else observe
     retrieve = fetch_official_manifest if retrieve is None else retrieve
@@ -263,18 +256,71 @@ def prepare_dynamic_runtime(*, sync=False, sync_root=None, observe=None,
             load_inputs(root,identity.data_ver,download=True)
         except (OSError,ValueError,RuntimeError,ImportError) as error:
             combat_source_error = str(error)[:200]
+    return root, before, manifests, identity, observe, combat_source_error
+
+
+def _confirm_runtime_sources(before, manifests, identity, observe):
+    from wlre.services.official_resource_sync import validate_snapshot
+    from wlre.services.world.catalog_identity import identity_from_verified_manifests
+    after = validate_snapshot(observe())
+    if any(before[k] != after[k] for k in ('data_ver', 'exe_version', 'packages')):
+        raise DynamicRuntimeUnavailable('Official versions changed during runtime load')
+    # Re-read manifest bytes after synchronization/parsing to catch replacement.
+    if identity_from_verified_manifests(after, manifests) != identity:
+        raise DynamicRuntimeUnavailable('Official manifests changed during runtime load')
+
+
+@update_diagnostics('sync_root', injected=('observe', 'retrieve', 'execute'))
+def sync_dynamic_runtime_sources(*, sync_root=None, observe=None, retrieve=None,
+                                 execute=None, max_download_bytes=32 * 1024 * 1024,
+                                 max_downloads=24, max_image_download_bytes=64*1024*1024,
+                                 max_image_downloads=4, max_emoji_download_bytes=32*1024*1024,
+                                 max_emoji_downloads=8):
+    """Synchronize verified source files without building/discarding a runtime.
+
+    Official versions and manifest bytes are checked again after synchronization.
+    Pre-login still independently loads and verifies the complete runtime and
+    database. This result is informational, never a login authorization token.
+    """
+    _, before, manifests, identity, observe, _ = _prepare_runtime_sources(
+        sync=True, sync_root=sync_root, observe=observe, retrieve=retrieve,
+        execute=execute, max_download_bytes=max_download_bytes,
+        max_downloads=max_downloads, max_image_download_bytes=max_image_download_bytes,
+        max_image_downloads=max_image_downloads,
+        max_emoji_download_bytes=max_emoji_download_bytes,
+        max_emoji_downloads=max_emoji_downloads)
+    _confirm_runtime_sources(before, manifests, identity, observe)
+    return {'catalog_key': identity.key, 'assets_ready': False, 'can_send_packets': False}
+
+
+@update_diagnostics('sync_root', injected=('observe', 'retrieve', 'execute'))
+def prepare_dynamic_runtime(*, sync=False, sync_root=None, observe=None,
+                            retrieve=None, execute=None,
+                            max_download_bytes=32 * 1024 * 1024,
+                            max_downloads=24, max_image_download_bytes=64*1024*1024,
+                            max_image_downloads=4, max_emoji_download_bytes=32*1024*1024,
+                            max_emoji_downloads=8):
+    """Independently verify official sources and build the complete runtime.
+
+    Verification runs on every load, including SQLite hits. The standalone
+    --sync path retains bounded downloading; desktop preparation uses the
+    source-only service and leaves this complete load to the pre-login gate.
+    """
+    root, before, manifests, identity, observe, combat_source_error = _prepare_runtime_sources(
+        sync=sync, sync_root=sync_root, observe=observe, retrieve=retrieve,
+        execute=execute, max_download_bytes=max_download_bytes,
+        max_downloads=max_downloads, max_image_download_bytes=max_image_download_bytes,
+        max_image_downloads=max_image_downloads,
+        max_emoji_download_bytes=max_emoji_download_bytes,
+        max_emoji_downloads=max_emoji_downloads)
+    from wlre.services.world.bundle_runtime_1275 import load_verified_bundle_runtime
     runtime = load_verified_bundle_runtime(sync_root=root,
                         _verified_context=(before, manifests, identity))
     if combat_source_error is not None and hasattr(runtime,'combat_catalog'):
         from dataclasses import replace
         runtime=replace(runtime,combat_catalog=None,
             combat_catalog_status='官方戰鬥來源同步失敗：'+combat_source_error)
-    after = validate_snapshot(observe())
-    if any(before[k] != after[k] for k in ('data_ver', 'exe_version', 'packages')):
-        raise DynamicRuntimeUnavailable('Official versions changed during runtime load')
-    # Re-read manifest bytes after parsing to catch replacement during load.
-    if identity_from_verified_manifests(after, manifests) != identity:
-        raise DynamicRuntimeUnavailable('Official manifests changed during runtime load')
+    _confirm_runtime_sources(before, manifests, identity, observe)
     return runtime
 
 

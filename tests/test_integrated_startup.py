@@ -1,7 +1,7 @@
 """All desktop entries share resource preparation and fail-closed login checks."""
 import threading
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import ANY, Mock, patch
 
 from wlre.ui.gui import App
 from wlre.ui.version_gate_controller import VersionGateController
@@ -80,7 +80,7 @@ class IntegratedStartupTests(unittest.TestCase):
         calls = []
         self.prepare.side_effect = lambda **kw: calls.append('prepare') or {
             'status': 'verified_official', 'assets_ready': True, 'can_send_packets': True}
-        self.check.side_effect = lambda: calls.append('official') or blocked_result()
+        self.check.side_effect = lambda **kw: calls.append('official') or blocked_result()
         worker = self.begin()
         self.assertEqual(self.app._startup_phase, 'preparing')
         self.assertFalse(self.app._version_gate_entry_approved)
@@ -100,7 +100,7 @@ class IntegratedStartupTests(unittest.TestCase):
         self.assertEqual(self.app._version_gate_generation, 1)
         worker()
         self.prepare.assert_called_once()
-        self.check.assert_called_once_with()
+        self.check.assert_called_once_with(progress=ANY)
 
     def test_every_completed_retry_rechecks_official_but_preparation_is_once_per_app(self):
         self.begin()()
@@ -118,7 +118,7 @@ class IntegratedStartupTests(unittest.TestCase):
         self.prepare.side_effect = RuntimeError('C:/private/token')
         self.begin()()
         self.app.drain_version_checks()
-        self.check.assert_called_once_with()
+        self.check.assert_called_once_with(progress=ANY)
         self.assertEqual(self.app.version_gate_state, 'blocked')
         self.assertIn('例外', self.app._launcher_catalog_status)
         self.assertNotIn('private', self.app._launcher_catalog_status)
@@ -169,7 +169,7 @@ class IntegratedStartupTests(unittest.TestCase):
                 progress('bundle_item', {'completed': i, 'total': 100})
             return {'status': 'downloaded_unparsed'}
         self.prepare.side_effect = preparation
-        def official():
+        def official(**kwargs):
             # Simulate the Tk drain at the preparation/official boundary.
             self.app.drain_version_checks()
             self.assertEqual(self.app._startup_phase, 'official')
@@ -195,6 +195,77 @@ class IntegratedStartupTests(unittest.TestCase):
         self.app.drain_version_checks()
         self.assertEqual(self.app.version_gate_state, 'blocked')
         self.assertFalse(self.app._version_gate_entry_approved)
+
+    def test_elapsed_uses_existing_poll_only_and_updates_at_most_once_per_second(self):
+        self.app._startup_elapsed = Mock()
+        with patch('wlre.ui.version_gate_controller.time.monotonic', return_value=100.0):
+            self.begin()
+        self.assertEqual(self.app._startup_elapsed.set.call_count, 1)
+        with patch('wlre.ui.version_gate_controller.time.monotonic', return_value=100.9):
+            for _ in range(200):
+                self.app.drain_version_checks()
+        self.assertEqual(self.app._startup_elapsed.set.call_count, 1)
+        with patch('wlre.ui.version_gate_controller.time.monotonic', return_value=101.1):
+            for _ in range(200):
+                self.app.drain_version_checks()
+        self.assertEqual(self.app._startup_elapsed.set.call_count, 2)
+        self.assertIn('已用 1 秒', self.app._startup_elapsed.set.call_args.args[0])
+        self.app.root.after.assert_not_called()
+        self.assertEqual(self.app._version_gate_checked, 0)
+        self.assertFalse(self.app._version_gate_entry_approved)
+
+    def test_formal_phase_and_elapsed_are_not_collection_approval(self):
+        with patch('wlre.ui.version_gate_controller.time.monotonic', return_value=100.0):
+            self.begin()
+        for phase, title, elapsed in (('official_metadata', '官方版本查詢', 2),
+                                      ('official_runtime', '正式 Runtime 驗證', 10),
+                                      ('official_database', '資料庫內容比對', 27)):
+            with patch('wlre.ui.version_gate_controller.time.monotonic', return_value=100.0 + elapsed):
+                self.app._official_progress.report(phase, {})
+                self.app.drain_version_checks()
+            self.assertEqual(self.app._startup_phase, 'official')
+            self.assertEqual(self.app._startup_progress_update[0], title)
+            self.assertIn(f'已用 {elapsed} 秒', self.app._startup_elapsed.get())
+            self.assertEqual(self.app.version_gate_state, 'checking')
+            self.assertFalse(self.app._version_gate_entry_approved)
+        self.app._startup_progress.report('bundle_item', {'completed': 7, 'total': 7})
+        self.app.drain_version_checks()
+        self.assertEqual(self.app._startup_progress_update[0], '資料庫內容比對')
+
+    def test_terminal_elapsed_freezes_and_retry_resets_without_repreparation(self):
+        self.check.return_value = verified_result()
+        self.app._version_progress = Mock()
+        with patch('wlre.ui.version_gate_controller.time.monotonic', return_value=100.0):
+            self.begin()()
+        with patch('wlre.ui.version_gate_controller.time.monotonic', return_value=127.5):
+            self.app.drain_version_checks()
+        self.assertIn('完成 · 共用 27 秒', self.app._startup_elapsed.get())
+        checked = self.app._version_gate_checked
+        self.app._version_progress.finish.assert_called_once()
+        with patch('wlre.ui.version_gate_controller.time.monotonic', return_value=300.0):
+            self.app._official_progress.report('official_runtime', {})
+            self.app.drain_version_checks()
+            self.assertIn('完成 · 共用 27 秒', self.app._startup_elapsed.get())
+            self.assertEqual(self.app._version_gate_checked, checked)
+            self.begin()()
+            self.assertIn('已用 0 秒', self.app._startup_elapsed.get())
+        self.prepare.assert_called_once()
+        self.assertEqual(self.check.call_count, 2)
+        self.assertEqual(self.app._version_progress.reset.call_count, 2)
+
+    def test_error_freezes_elapsed_and_finishes_progress(self):
+        self.app._version_progress = Mock()
+        self.check.side_effect = OSError('private error')
+        with patch('wlre.ui.version_gate_controller.time.monotonic', return_value=100.0):
+            self.begin()()
+        with patch('wlre.ui.version_gate_controller.time.monotonic', return_value=102.0):
+            self.app.drain_version_checks()
+        self.app._version_progress.finish.assert_called_once()
+        self.assertEqual(self.app.version_gate_state, 'blocked')
+        self.assertIn('未通過 · 共用 2 秒', self.app._startup_elapsed.get())
+        with patch('wlre.ui.version_gate_controller.time.monotonic', return_value=200.0):
+            self.app.drain_version_checks()
+        self.assertIn('未通過 · 共用 2 秒', self.app._startup_elapsed.get())
 
     def test_failed_thread_start_fails_closed_and_can_retry(self):
         with patch('wlre.ui.version_gate_controller.threading.Thread') as thread:
@@ -245,7 +316,7 @@ class IntegratedStartupTests(unittest.TestCase):
 
     def test_close_during_official_check_waits_but_ignores_late_success(self):
         entered, release = threading.Event(), threading.Event()
-        def official():
+        def official(**kwargs):
             entered.set()
             if not release.wait(3):
                 raise RuntimeError('test timed out')

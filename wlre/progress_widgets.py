@@ -20,11 +20,15 @@ class CyanProgress:
         self._offset = 0
         self._timer = None
         self._running = False
+        self._finished = False
+        self._destroyed = False
         self.canvas.bind('<Configure>', lambda event: self._draw())
-        self.canvas.bind('<Destroy>', lambda event: self.stop(), add='+')
+        self.canvas.bind('<Destroy>', self._on_destroy, add='+')
         self.set_counts(None)
 
     def _draw(self):
+        if self._destroyed:
+            return
         width = max(1, self.canvas.winfo_width())
         if self._counts is None:
             span = max(24, width * .18)
@@ -43,6 +47,8 @@ class CyanProgress:
             self._timer = self.canvas.after(40, self._tick)
 
     def set_counts(self, counts):
+        if self._finished or self._destroyed:
+            return
         self._counts = counts
         if counts is not None:
             self.stop()
@@ -56,3 +62,19 @@ class CyanProgress:
         if self._timer is not None:
             self.canvas.after_cancel(self._timer)
             self._timer = None
+
+    def finish(self):
+        """Latch the terminal state; late progress cannot restart animation."""
+        self._finished = True
+        self.stop()
+
+    def reset(self):
+        """Only a new explicit check may leave the terminal state."""
+        if self._destroyed:
+            return
+        self._finished = False
+        self.set_counts(None)
+
+    def _on_destroy(self, event=None):
+        self._destroyed = True
+        self.finish()

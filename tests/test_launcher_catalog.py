@@ -19,11 +19,14 @@ class LauncherCatalogTests(unittest.TestCase):
                          side_effect=ValueError('offline fixture'))
         identity.start()
         self.addCleanup(identity.stop)
-        dynamic = patch('wlre.services.world.dynamic_bundle_runtime.prepare_dynamic_runtime')
+        dynamic = patch('wlre.services.world.dynamic_bundle_runtime.sync_dynamic_runtime_sources')
         self.dynamic_prepare = dynamic.start()
         from types import SimpleNamespace
         self.dynamic_prepare.return_value = SimpleNamespace(source_sha256={})
         self.addCleanup(dynamic.stop)
+        self.full_prepare = self.enterContext(patch(
+            'wlre.services.world.dynamic_bundle_runtime.prepare_dynamic_runtime',
+            side_effect=AssertionError('Launcher must not build a discarded runtime')))
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
@@ -118,7 +121,8 @@ class LauncherCatalogTests(unittest.TestCase):
              patch('wlre.services.world.resource_gap_diagnostics.save_report'):
             result = prepare_on_launch(environ={})
         pinned_sync.assert_not_called()
-        self.dynamic_prepare.assert_called_once_with(sync=True)
+        self.dynamic_prepare.assert_called_once_with()
+        self.full_prepare.assert_not_called()
         self.assertEqual(automatic.call_count, 2)
         automatic.assert_any_call(download=True, parse=False)
         self.assertEqual(result['status'], 'downloaded_unparsed')

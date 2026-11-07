@@ -24,6 +24,9 @@ FEATURE_LABELS = {
 }
 STEP_LABELS = {
     'official_version': '檢查官方版本',
+    'official_metadata': '正在查詢官方最新版本識別值',
+    'official_runtime': '正在完整驗證官方 Runtime 與來源內容',
+    'official_database': '正在逐項核對資料庫與已驗證 Runtime 的實際內容',
     'official_revision': '已比對官方版本變化，準備增量資源',
     'official_revision_unavailable': '本次版本紀錄無法保存，保留資源校驗結果',
     'manifest': '讀取並驗證 Manifest',
@@ -53,7 +56,7 @@ STEP_LABELS = {
     'runtime_identity_verified': '官方版本與資源清單已核對',
     'runtime_identity_unavailable': '官方版本資訊暫不可用，繼續獨立驗證',
     'runtime_bundle_plan': '核對當次官方版本所需的 Bundle',
-    'runtime_bundle_ready': '官方 Runtime Bundle 已下載並完成完整性校驗',
+    'runtime_bundle_ready': '官方 Runtime 來源已同步，接著由正式檢查驗證',
     'runtime_bundle_unavailable': '官方 Runtime Bundle 尚未補齊或驗證，將繼續官方資源資料流程',
 }
 _BG = '#101927'
@@ -143,6 +146,13 @@ def progress_message(phase, details=None):
 
 
 def _format_stage(phase):
+    official_stages = {
+        'official_metadata': '官方版本查詢',
+        'official_runtime': '正式 Runtime 驗證',
+        'official_database': '資料庫內容比對',
+    }
+    if phase in official_stages:
+        return official_stages[phase]
     if phase.startswith('server_list_'):
         return '同步官方伺服器清單'
     if phase.startswith('runtime_identity_'):
@@ -358,7 +368,7 @@ def run_with_progress(task):
         if terminal is not None:
             state['done'] = True
             state['result'] = terminal[0]
-            progress.stop()
+            progress.finish()
         schedule_fit()
         if state['done']:
             receipt = state['result'] or {}
