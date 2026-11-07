@@ -238,7 +238,10 @@ class ChatPanel(ttk.Frame):
     def show_emoji_picker(self):
         if self.emoji_picker and self.emoji_picker.winfo_exists():self.emoji_picker.lift();return
         from wlre.ui.emoji_picker import EmojiPicker
-        self.emoji_picker = EmojiPicker(self, self.emojis, self.insert_emoji)
+        try:
+            self.emoji_picker = EmojiPicker(self, self.emojis, self.insert_emoji)
+        except ValueError as error:
+            self.status.set(str(error))
 
     def insert_emoji(self,token):
         self.entry.insert('insert',token);self.entry.focus_set()
