@@ -1,3 +1,4 @@
+from contextlib import closing
 import hashlib
 import json
 from pathlib import Path
@@ -42,22 +43,22 @@ class NavigationDatabaseTests(unittest.TestCase):
 
     def test_transaction_rolls_back_failed_activation(self):
         self.put()
-        with sqlite3.connect(self.db) as db:
+        with closing(sqlite3.connect(self.db)) as db, db:
             db.execute("CREATE TRIGGER reject_activation BEFORE INSERT ON navigation_active BEGIN SELECT RAISE(ABORT,'test'); END")
         with self.assertRaises(sqlite3.IntegrityError):self.put('b'*64)
-        with sqlite3.connect(self.db) as db:
+        with closing(sqlite3.connect(self.db)) as db, db:
             self.assertEqual(db.execute('SELECT COUNT(*) FROM navigation_snapshots').fetchone()[0],1)
         self.assertIsNotNone(database.load_cache(self.db,self.version,10001))
 
     def test_corrupt_normalized_or_raw_cache_rejected(self):
         for field,value in (('geometry','{}'),('raw',b'bad')):
             self.put()
-            with sqlite3.connect(self.db) as db:db.execute(f'UPDATE navigation_snapshots SET {field}=?',(value,))
+            with closing(sqlite3.connect(self.db)) as db, db:db.execute(f'UPDATE navigation_snapshots SET {field}=?',(value,))
             with self.assertRaises(ValueError):database.load_cache(self.db,self.version,10001)
 
     def test_unknown_schema_not_replaced(self):
         self.put()
-        with sqlite3.connect(self.db) as db:db.execute('UPDATE navigation_schema SET version=99')
+        with closing(sqlite3.connect(self.db)) as db, db:db.execute('UPDATE navigation_schema SET version=99')
         with self.assertRaises(ValueError):self.put()
         with self.assertRaises(ValueError):database.load_cache(self.db,self.version,10001)
 

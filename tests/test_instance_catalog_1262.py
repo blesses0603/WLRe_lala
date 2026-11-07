@@ -1,3 +1,4 @@
+from contextlib import closing
 """Current catalog integrity, cold startup, atomic repair and selection tests."""
 import struct
 import sqlite3
@@ -91,12 +92,12 @@ class CurrentInstanceCatalog(unittest.TestCase):
                     parser or (lambda:build_catalog(source,key,'1286_2026_10_29_13_42_37_94')))
             original=load()
             self.assertEqual(load(parser=Mock(side_effect=AssertionError('database hit'))),original)
-            with sqlite3.connect(path) as db:db.execute('UPDATE normalized_snapshots SET data=?',(b'broken',))
+            with closing(sqlite3.connect(path)) as db, db:db.execute('UPDATE normalized_snapshots SET data=?',(b'broken',))
             self.assertEqual(load(),original)
             bad={**raw,'DungeonData_C':b'unknown layout'}
             with self.assertRaises(ValueError):load('b'*64,bad)
             self.assertEqual(load(),original)
-            with sqlite3.connect(path) as db:
+            with closing(sqlite3.connect(path)) as db, db:
                 self.assertEqual(db.execute("SELECT count(*) FROM normalized_history WHERE status='repaired_derived'").fetchone()[0],1)
 
     def test_packet_builder_refuses_ambiguous_id_requires_variant(self):

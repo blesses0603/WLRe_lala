@@ -1,3 +1,4 @@
+from contextlib import closing
 from copy import deepcopy
 import hashlib
 import io
@@ -54,7 +55,7 @@ class OfficialServerListTests(unittest.TestCase):
     def test_changed_list_preserves_old_snapshot(self):
         self.sync(); self.sync(body('1.1.1.1'))
         self.assertEqual(read_cached_server_list(database=self.db)['rows'][0]['host'], '1.1.1.1')
-        with sqlite3.connect(self.db) as db:
+        with closing(sqlite3.connect(self.db)) as db, db:
             self.assertEqual(db.execute("SELECT count(*) FROM normalized_snapshots WHERE feature='server_list'").fetchone()[0], 2)
 
     def test_bad_update_preserves_usable_version_and_failed_source(self):
@@ -63,7 +64,7 @@ class OfficialServerListTests(unittest.TestCase):
         cached = read_cached_server_list(database=self.db)
         self.assertEqual(cached['rows'][0]['host'], '8.8.8.8')
         self.assertEqual(cached['status'], 'cached_after_refresh_failure')
-        with sqlite3.connect(self.db) as db:
+        with closing(sqlite3.connect(self.db)) as db, db:
             self.assertEqual(db.execute('SELECT data FROM normalized_raw WHERE sha256=?',
                                         (hashlib.sha256(b'not JSON').hexdigest(),)).fetchone()[0], b'not JSON')
 
@@ -83,7 +84,7 @@ class OfficialServerListTests(unittest.TestCase):
 
     def test_corrupt_snapshot_never_returns_seed_data(self):
         self.sync()
-        with sqlite3.connect(self.db) as db: db.execute('UPDATE normalized_snapshots SET data=?', (b'bad',))
+        with closing(sqlite3.connect(self.db)) as db, db: db.execute('UPDATE normalized_snapshots SET data=?', (b'bad',))
         with self.assertRaises(ValueError): read_cached_server_list(database=self.db)
 
     def test_corrupt_database_reports_value_error(self):

@@ -1,3 +1,4 @@
+from contextlib import closing
 import io
 import sqlite3
 import tempfile
@@ -21,11 +22,11 @@ class OfficialImageDatabase(unittest.TestCase):
     def test_atomic_snapshot_hit_and_corrupt_derived_repair(self):
         images=self.load();original=images.png(123)
         self.load();self.assertEqual(self.decode.call_count,1)
-        with sqlite3.connect(self.path) as db:db.execute('UPDATE map_images SET png=?',(b'broken',))
+        with closing(sqlite3.connect(self.path)) as db, db:db.execute('UPDATE map_images SET png=?',(b'broken',))
         with self.assertRaises(ValueError):images.png(123)
         repaired=self.load();self.assertEqual(repaired.png(123),original)
         self.assertEqual(self.decode.call_count,2)
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             self.assertEqual(db.execute('SELECT png FROM image_history').fetchone()[0],b'broken')
     def test_failed_new_import_and_source_change_keep_previous(self):
         images=self.load();old=images.png(123)
@@ -35,7 +36,7 @@ class OfficialImageDatabase(unittest.TestCase):
         with self.assertRaises(ValueError):self.load('b',decode=broken)
         with self.assertRaises(ValueError):self.load(inputs={'verified':'changed'})
         self.assertEqual(images.png(123),old)
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             self.assertEqual(db.execute('SELECT catalog_key FROM image_versions').fetchall(),[('a',)])
             self.assertEqual(db.execute("SELECT count(*) FROM image_attempts WHERE status='failed'").fetchone()[0],2)
     def test_missing_duplicate_wrong_dimensions_refused(self):
@@ -88,9 +89,9 @@ class OfficialImageDatabase(unittest.TestCase):
 
     def test_newer_database_schema_is_never_downgraded(self):
         self.load()
-        with sqlite3.connect(self.path) as db:db.execute('UPDATE image_schema SET version=2')
+        with closing(sqlite3.connect(self.path)) as db, db:db.execute('UPDATE image_schema SET version=2')
         with self.assertRaises(ValueError):self.load()
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             self.assertEqual(db.execute('SELECT version FROM image_schema').fetchall(),[(2,)])
             self.assertEqual(db.execute('SELECT count(*) FROM map_images').fetchone()[0],1)
 
@@ -100,7 +101,7 @@ class OfficialImageDatabase(unittest.TestCase):
             import_images(self.path,'b',{'verified':'next'},self.paths,self.decode,
                           verify_sources=Mock(side_effect=ValueError('source changed')))
         self.assertEqual(old.png(123),before)
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             self.assertEqual(db.execute('SELECT catalog_key FROM image_versions').fetchall(),[('a',)])
 
     def test_explicit_historical_zip_is_not_default_authority(self):

@@ -1,3 +1,4 @@
+from contextlib import closing
 import sqlite3,tempfile,unittest
 from pathlib import Path
 from unittest.mock import patch,Mock
@@ -20,7 +21,7 @@ class EmojiDatabaseTests(unittest.TestCase):
         old=self.load()
         with self.assertRaisesRegex(ValueError,'未知'):
             self.load('b'*64,RAW+b'unknown')
-        with sqlite3.connect(self.db) as db:
+        with closing(sqlite3.connect(self.db)) as db, db:
             self.assertEqual(db.execute('select count(*) from normalized_snapshots').fetchone()[0],1)
             self.assertEqual(db.execute("select count(*) from normalized_history where status='parse_failed'").fetchone()[0],1)
         self.assertEqual(self.load(),old)
@@ -29,20 +30,20 @@ class EmojiDatabaseTests(unittest.TestCase):
         self.load()
         for rows in (sprites()[:1],sprites()+sprites()[:1],[('Emoji_001_1',Image.new('RGBA',(513,1))) ]):
             with self.assertRaises(ValueError):self.load('b'*64,decode=lambda:iter(rows))
-        with sqlite3.connect(self.db) as db:self.assertEqual(db.execute('select count(*) from normalized_snapshots').fetchone()[0],1)
+        with closing(sqlite3.connect(self.db)) as db, db:self.assertEqual(db.execute('select count(*) from normalized_snapshots').fetchone()[0],1)
     def test_corrupt_derived_snapshot_repaired_and_archived(self):
         old=self.load()
-        with sqlite3.connect(self.db) as db:db.execute("update normalized_snapshots set data=?",(b'broken',))
+        with closing(sqlite3.connect(self.db)) as db, db:db.execute("update normalized_snapshots set data=?",(b'broken',))
         self.assertEqual(self.load(),old)
-        with sqlite3.connect(self.db) as db:self.assertEqual(db.execute("select count(*) from normalized_history where status='repaired_derived'").fetchone()[0],1)
+        with closing(sqlite3.connect(self.db)) as db, db:self.assertEqual(db.execute("select count(*) from normalized_history where status='repaired_derived'").fetchone()[0],1)
     def test_source_change_during_import_prevents_publication(self):
         with self.assertRaises(ValueError):
             import_catalog(self.db,'a'*64,{'EmojiData_C':RAW},lambda:iter(sprites()),Mock(side_effect=ValueError('changed')))
-        with sqlite3.connect(self.db) as db:self.assertEqual(db.execute('select count(*) from normalized_snapshots').fetchone()[0],0)
+        with closing(sqlite3.connect(self.db)) as db, db:self.assertEqual(db.execute('select count(*) from normalized_snapshots').fetchone()[0],0)
     def test_immutable_identity_and_unknown_schema_rejected(self):
         self.load()
         with self.assertRaises(ValueError):self.load(raw=RAW+b'x')
-        with sqlite3.connect(self.db) as db:db.execute('update normalized_schema set version=999')
+        with closing(sqlite3.connect(self.db)) as db, db:db.execute('update normalized_schema set version=999')
         with self.assertRaises(ValueError):self.load()
     def test_cold_start_invalidation_and_copy_isolation(self):
         runtime=SimpleNamespace(emoji_catalog=None)

@@ -28,7 +28,9 @@ class ServerAccountSettings(unittest.TestCase):
                 old=store._hash([row['host'],row['port'],'fixture',row['id']])
                 value=defaults();value['field_heal']=bool(index)
                 store.save(old,value,directory);file=store.settings_file(old,directory)
-                os.utime(file,ns=(1000000000+index,1000000000+index));originals[file]=file.read_bytes()
+                # Distinguishable on Windows filesystems too; 1 ns rounds away.
+                timestamp=1_000_000_000*(index+1)
+                os.utime(file,ns=(timestamp,timestamp));originals[file]=file.read_bytes()
             first,second=lines[:2];key=store.identity(first['host'],first['port'],'fixture',first['id'])
             legacy=store.legacy_identities(first['host'],first['port'],'fixture',first['id'])
             self.assertTrue(store.load(key,directory,legacy)['field_heal'])
