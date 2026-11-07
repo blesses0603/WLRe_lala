@@ -4,7 +4,7 @@ using System.Collections.Frozen;
 namespace Lala.Core.Resources;
 
 internal enum BundleChange { FirstBaseline, Added, Modified, Unchanged }
-internal enum BundleAcquisition { Cache, ScriptedDownload }
+internal enum BundleAcquisition { Cache, UntrustedSourceDownload }
 
 internal sealed record BundleSourceSpec
 {

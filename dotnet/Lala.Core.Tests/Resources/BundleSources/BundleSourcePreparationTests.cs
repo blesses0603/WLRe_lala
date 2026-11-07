@@ -7,20 +7,20 @@ namespace Lala.Core.Tests.Resources;
 
 public sealed class BundleSourcePreparationTests
 {
-    private sealed class Script : IScriptedResourceSource
+    private sealed class Script : IResourceSource
     {
         internal readonly List<string> Requests = [];
         internal readonly List<TrackingStream> Streams = [];
         internal int Observations;
         internal Func<int, OfficialVersionSnapshot> Observe = _ => BundleSourceFixtures.Snapshot();
         internal Func<string, int, byte[], byte[]> Mutate = (_, _, bytes) => bytes;
-        internal Func<string, ScriptedResourceResponse, ScriptedResourceResponse> Response = (_, response) => response;
+        internal Func<string, ResourceResponse, ResourceResponse> Response = (_, response) => response;
         internal Func<string, Task>? BeforeOpen;
         internal Action? DuringRead;
         internal int ChunkSize = 7;
         internal byte[] Data = BundleSourceFixtures.Bytes("data-valid"), Main = BundleSourceFixtures.Bytes("main-valid");
         public ValueTask<OfficialVersionSnapshot> ObserveAsync(CancellationToken token) => ValueTask.FromResult(Observe(++Observations));
-        public async ValueTask<ScriptedResourceResponse> OpenAsync(string url, CancellationToken token)
+        public async ValueTask<ResourceResponse> OpenAsync(string url, CancellationToken token)
         {
             Requests.Add(url);
             if (BeforeOpen is not null) await BeforeOpen(url);
@@ -67,7 +67,7 @@ public sealed class BundleSourcePreparationTests
     {
         var script = new Script(); var result = await new BundleSourcePreparation().PrepareAsync(script);
         Assert.Equal("required bundle sources verified; no runtime candidate built", result.Status);
-        Assert.Equal("scripted input; official provenance unavailable", result.Provenance);
+        Assert.Equal("source observations; official provenance unavailable", result.Provenance);
         Assert.Equal(4, result.DownloadCount); Assert.Equal(170, result.DownloadBytes); Assert.Equal(4, script.Observations);
         Assert.Equal(new[] { "dep-a.bundle", "dep-b.bundle", "root-a.bundle", "root-b.bundle" }, result.Sources.Select(x => x.Spec.Name));
         Assert.All(script.Streams, x => Assert.True(x.Disposed));

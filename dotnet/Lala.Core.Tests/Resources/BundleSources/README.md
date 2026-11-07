@@ -75,7 +75,7 @@ and identity-checked before any required bundle can be acquired. Dependency
 order and complete-set semantics above are preserved. Whole-index deltas compare
 resolved dependency names, tags, encryption, Unity CRC and file identity.
 
-`BundleSourcePreparation` connects an **internal scripted** version/response seam
+`BundleSourcePreparation` connects an **internal untrusted** version/response seam
 to both manifests, the required plan, bounded streamed acquisition, length/MD5/
 little-endian CRC32 checks, and immutable owned-byte source handles. A handle
 opens only the already-verified private byte snapshot, never a cache filename.
@@ -135,3 +135,7 @@ Independent static review identified and resolved the final-observation and
 unsafe portable filesystem-adapter issues. Focused Release verification passed **350 Resources tests**, including **81 new
 BundleSource tests** (37 retained parser/plan cases and 44 contract tests). The
 integrating task owns the full combined Core regression.
+
+The neutral `IResourceSource` / `ResourceResponse` seam now also has an uninstalled
+HTTP adapter; see `../Http/README.md`. Existing scripted fixtures still make no
+network requests. Neither implementation confers provenance or admission.

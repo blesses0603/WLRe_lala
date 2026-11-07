@@ -4,14 +4,16 @@ using System.Text;
 
 namespace Lala.Core.Resources;
 
-// This entire seam is internal. There is deliberately no HTTP implementation or production authority
-// factory. An injected script and matching checksums establish byte integrity, NOT official provenance.
-internal interface IScriptedResourceSource
+// Internal acquisition seam. Implementations and checksums establish observations and byte
+// integrity, NOT official provenance. No production authority factory or startup registration.
+internal interface IResourceSource
 {
+    // Optional origin binding only, never proof of provenance. Scripts have no bound host.
+    string? SelectedHost => null;
     ValueTask<OfficialVersionSnapshot> ObserveAsync(CancellationToken cancellationToken);
-    ValueTask<ScriptedResourceResponse> OpenAsync(string exactUrl, CancellationToken cancellationToken);
+    ValueTask<ResourceResponse> OpenAsync(string exactUrl, CancellationToken cancellationToken);
 }
-internal sealed record ScriptedResourceResponse(string FinalUrl, int Status, string? ContentLength, Stream Body) : IDisposable
+internal sealed record ResourceResponse(string FinalUrl, int Status, string? ContentLength, Stream Body) : IDisposable
 {
     public void Dispose() => Body.Dispose();
 }
@@ -55,7 +57,7 @@ internal sealed record BundleSourceBudget(int MaximumDownloads = 24, long Maximu
 internal sealed class RequiredBundleSources
 {
     internal string Status => "required bundle sources verified; no runtime candidate built";
-    internal string Provenance => "scripted input; official provenance unavailable";
+    internal string Provenance => "source observations; official provenance unavailable";
     internal string ManifestContentIdentity { get; }
     internal long Attempt { get; }
     internal object Owner { get; }
@@ -75,7 +77,7 @@ internal sealed class RequiredBundleSources
     }
 }
 
-/// <summary>Connected, offline-only preparation. Does not consume or issue resource/session admission.</summary>
+/// <summary>Uninstalled resource preparation. Does not consume or issue resource/session admission.</summary>
 internal sealed class BundleSourcePreparation
 {
     // Independent fail-closed cap on all owned sources, including cache hits. Download budgets below
@@ -92,7 +94,7 @@ internal sealed class BundleSourcePreparation
             if (_attempt != attempt) throw new BundleSourceException(BundleSourceFailure.StaleAttempt, "Resource preparation attempt was replaced");
     }
 
-    internal async Task<RequiredBundleSources> PrepareAsync(IScriptedResourceSource source,
+    internal async Task<RequiredBundleSources> PrepareAsync(IResourceSource source,
         IBundleSourceCacheReader? cache = null, BundleSourceBudget? budget = null,
         string host = OfficialResourceOrigin.DefaultHost, YooAssetManifest? previous = null,
         CancellationToken cancellationToken = default)
@@ -101,6 +103,8 @@ internal sealed class BundleSourcePreparation
         cancellationToken.ThrowIfCancellationRequested();
         budget ??= new(); budget.Validate();
         host = OfficialResourceOrigin.SelectHost(host);
+        if (source.SelectedHost is { } selected && selected != host)
+            throw new BundleSourceException(BundleSourceFailure.ResponseSource, "Source host differs from preparation host");
         long attempt; lock (_gate) { attempt = _attempt = checked(_attempt + 1); }
         Check(attempt, cancellationToken);
         var before = await source.ObserveAsync(cancellationToken).ConfigureAwait(false);
@@ -149,7 +153,7 @@ internal sealed class BundleSourcePreparation
             else
             {
                 bytes = await FetchAsync(source, spec.Url(host), spec.Size, spec.Size, attempt, cancellationToken).ConfigureAwait(false);
-                handles.Add(VerifiedBundleSource.Verify(spec, bytes, BundleAcquisition.ScriptedDownload, cancellationToken));
+                handles.Add(VerifiedBundleSource.Verify(spec, bytes, BundleAcquisition.UntrustedSourceDownload, cancellationToken));
             }
             Check(attempt, cancellationToken);
         }
@@ -170,8 +174,8 @@ internal sealed class BundleSourcePreparation
     }
 
     // Reobserve AFTER extraction/table decoding. Preparing owned bytes alone does not establish
-    // that even the scripted source remained stable while the structural candidate was built.
-    internal async Task ConfirmUnchangedAsync(IScriptedResourceSource source, RequiredBundleSources prepared,
+    // that the observed source remained stable while the structural candidate was built.
+    internal async Task ConfirmUnchangedAsync(IResourceSource source, RequiredBundleSources prepared,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -201,14 +205,14 @@ internal sealed class BundleSourcePreparation
         lock (_gate) { EnsureCurrent(prepared, token); return result; }
     }
 
-    private async Task CheckVersionsAsync(IScriptedResourceSource source, OfficialVersionSnapshot before, long attempt, CancellationToken token)
+    private async Task CheckVersionsAsync(IResourceSource source, OfficialVersionSnapshot before, long attempt, CancellationToken token)
     {
         Check(attempt, token);
         var after = await source.ObserveAsync(token).ConfigureAwait(false);
         Check(attempt, token);
         if (!before.HasSameIdentity(after)) throw new BundleSourceException(BundleSourceFailure.VersionsChanged, "Observed versions changed during preparation");
     }
-    private async Task<IReadOnlyList<YooAssetManifest>> ReadManifestsAsync(IScriptedResourceSource source,
+    private async Task<IReadOnlyList<YooAssetManifest>> ReadManifestsAsync(IResourceSource source,
         OfficialVersionSnapshot snapshot, string host, long attempt, CancellationToken token)
     {
         var result = new List<YooAssetManifest>();
@@ -229,7 +233,7 @@ internal sealed class BundleSourcePreparation
         }
         return result.AsReadOnly();
     }
-    private async Task<byte[]> FetchAsync(IScriptedResourceSource source, string url, long maximum, long? exact, long attempt, CancellationToken token)
+    private async Task<byte[]> FetchAsync(IResourceSource source, string url, long maximum, long? exact, long attempt, CancellationToken token)
     {
         Check(attempt, token);
         using var response = await source.OpenAsync(url, token).ConfigureAwait(false);

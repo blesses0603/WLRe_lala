@@ -1023,7 +1023,9 @@
     "scope": "runtime",
     "status": "partially_migrated",
     "target_files": [
-      "dotnet/Lala.Core/Resources/OfficialVersionSnapshot.cs"
+      "dotnet/Lala.Core/Resources/OfficialVersionSnapshot.cs",
+      "dotnet/Lala.Core/Resources/Http/HttpOfficialResourceSource.cs",
+      "dotnet/Lala.Core/Resources/Http/RawOfficialVersionParser.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -1085,10 +1087,12 @@
       "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
     },
     "migrated_scope": [
-      "Bounded snapshot shape/identity parsing and comparison, cancellable pure checks."
+      "Bounded snapshot shape/identity parsing and comparison, cancellable pure checks.",
+      "HTTP slice verification passed 86 focused tests and 687 impacted Resources tests, with 44 original Python regressions. Its 44 retained actual-Python raw-parser vectors and five CRLF-only source pins regenerated identically; independent review found no confirmed blocker. All transport tests use owned fake handlers, including full ten-table preparation and post-decode reobservation. These counts overlap and are not additive new coverage or live HTTP/TLS acceptance.",
+      "observe_official_versions now has an uninstalled internal HTTP implementation: parse ResourcePath_PC.dat then both exact package version endpoints, require complete manifest revisions and create the bounded snapshot with assets_ready=false. One selected host is bound to preparation; fetch/parse failure never falls back to cached metadata. This identical Python module mapping applies to the shared Core subset, not an Android host callsite."
     ],
     "outstanding_scope": [
-      "Persistence, source synchronization, fetch/parser adapters and runtime activation remain."
+      "read_snapshot/save_snapshot, path ownership, persistence, startup registration and production source synchronization/runtime activation remain unported. Adapter tests use fake handlers only; origin label, timestamps, matching versions/checksums and SourceStability observations do not prove publisher provenance or grant admission/readiness."
     ]
   },
   {

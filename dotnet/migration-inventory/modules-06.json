@@ -603,7 +603,8 @@
     "status": "partially_migrated",
     "target_files": [
       "dotnet/Lala.Core/Resources/BundleSources/BundleSourcePlan.cs",
-      "dotnet/Lala.Core/Resources/BundleSources/BundleSourcePreparation.cs"
+      "dotnet/Lala.Core/Resources/BundleSources/BundleSourcePreparation.cs",
+      "dotnet/Lala.Core/Resources/Http/HttpOfficialResourceSource.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -673,12 +674,14 @@
       "live_server_acceptance": "not_run"
     },
     "migrated_scope": [
-      "Partial BundleSpec/spec_from_manifest validation and fetch/verification behavior through internal injected response/cache streams only. Safe bundle names, package/version/output-style metadata, 256-MiB per-bundle metadata cap and exact URL construction precede acquisition. Response URL/status checks precede Content-Length/body reads; at-most-64-KiB chunks and a one-byte overflow probe reject excess/truncated content. Owned private bytes are verified by exact length, MD5 and little-endian CRC32; returned handles never reopen a filename.",
+      "Partial BundleSpec/spec_from_manifest validation and fetch/verification behavior through the internal IResourceSource seam and injected cache streams. Safe bundle names, package/version/output-style metadata, 256-MiB per-bundle metadata cap and exact URL construction precede acquisition. Response URL/status checks precede Content-Length/body reads; at-most-64-KiB chunks and a one-byte overflow probe reject excess/truncated content. Owned private bytes are verified by exact length, MD5 and little-endian CRC32; returned handles never reopen a filename.",
       "Cache candidates are checked during planning and acquisition. Initial corruption is a miss; a planned hit that changes is a hard failure, not an implicit extra download. Every opened stream is disposed on success/failure/cancellation/stale attempts. An independent 32-MiB total owned-source bound includes cache hits.",
-      "Combined source-preparation evidence: 37 retained actual-Python manifest/plan cases plus 44 contracts, totaling 81 new focused tests. The 350-test Resources pass includes existing tests; these are not 350 new cases. Six CRLF-only source hashes, complete manifest fields, exact plan order and synthetic byte checksums are retained. Invalid cases use typed failures rather than claiming exact Python exception text; no newer full Core receipt is implied."
+      "Combined source-preparation evidence: 37 retained actual-Python manifest/plan cases plus 44 contracts, totaling 81 new focused tests. The 350-test Resources pass includes existing tests; these are not 350 new cases. Six CRLF-only source hashes, complete manifest fields, exact plan order and synthetic byte checksums are retained. Invalid cases use typed failures rather than claiming exact Python exception text; no newer full Core receipt is implied.",
+      "HTTP slice verification passed 86 focused tests and 687 impacted Resources tests, with 44 original Python regressions. Its 44 retained actual-Python raw-parser vectors and five CRLF-only source pins regenerated identically; independent review found no confirmed blocker. All transport tests use owned fake handlers, including full ten-table preparation and post-decode reobservation. These counts overlap and are not additive new coverage or live HTTP/TLS acceptance.",
+      "The uninstalled HTTP adapter now supplies constrained bundle streams with no redirect/retry, a 20-second full-body lifetime, strict ASCII Content-Length, bounded reads and response/timeout ownership. Existing exact size/MD5/little-endian CRC checks, 24-download/32-MiB quotas and retained-source cap still apply. Cache acquisition remains injected streams only; matching bytes are not publisher signatures."
     ],
     "outstanding_scope": [
-      "No production HTTPS source, TLS/provenance receipt, filesystem cache acquisition adapter, paths/cache receipts, previous-version content reuse, atomic publication or persisted writes. Only the injected cache-stream seam exists; safe cancellable regular-file opening and anchored no-follow writes remain future platform work. Checksums do not authorize extraction/runtime/login or packet sending."
+      "Production registration/live TLS evidence, trusted source receipts, filesystem cache acquisition/paths, cache receipts, previous-version reuse, atomic publication and persisted writes remain absent. Safe cancellable regular-file opening and anchored no-follow writes remain platform work. The adapter is not an installation or source-authority service; checksums do not authorize runtime/login or packet sending."
     ]
   },
   {
@@ -867,7 +870,8 @@
     "target_files": [
       "dotnet/Lala.Core/Resources/BundleSources/YooAssetManifest.cs",
       "dotnet/Lala.Core/Resources/BundleSources/BundleSourcePreparation.cs",
-      "dotnet/Lala.Core/Resources/BundleSources/OfflineBundleRuntimePreparation.cs"
+      "dotnet/Lala.Core/Resources/BundleSources/OfflineBundleRuntimePreparation.cs",
+      "dotnet/Lala.Core/Resources/Http/HttpOfficialResourceSource.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -963,13 +967,15 @@
       "live_server_acceptance": "not_run"
     },
     "migrated_scope": [
-      "Partial manifest retrieval/identity checks use an internal scripted source for DataPackage and MainPackage. Exact response location/status precede length/body checks; eight ASCII hex hash bytes, bounded manifest bytes and little-endian CRC32 must match before actual binary parsing and header/package/version/output-style checks. Both complete manifests and versions are reread at the end, rejecting same-version byte replacement as well as version changes.",
+      "Partial manifest retrieval/identity checks use the internal IResourceSource seam for DataPackage and MainPackage. Exact response location/status precede length/body checks; eight ASCII hex hash bytes, bounded manifest bytes and little-endian CRC32 must match before actual binary parsing and header/package/version/output-style checks. Both complete manifests and versions are reread at the end, rejecting same-version byte replacement as well as version changes.",
       "Manifest-content identity matches the existing canonical ManifestIdentity structure using actual parsed fields, not the observation-only CatalogKey. The existing ManifestIdentity API is unchanged; owned bytes and attempt checks prevent stale result reuse.",
       "Combined source-preparation evidence: 37 retained actual-Python manifest/plan cases plus 44 contracts, totaling 81 new focused tests. The 350-test Resources pass includes existing tests; these are not 350 new cases. Six CRLF-only source hashes, complete manifest fields, exact plan order and synthetic byte checksums are retained. Invalid cases use typed failures rather than claiming exact Python exception text; no newer full Core receipt is implied.",
-      "After decoding, versions are freshly observed, both complete manifest hash/byte responses are reread and compared, then versions are observed again. Same-owner/attempt checks and a final generation-lock return prevent invalidated/superseded late results. Returned data is only a historical scripted-source observation, not continuing server stability or official provenance."
+      "After decoding, versions are freshly observed, both complete manifest hash/byte responses are reread and compared, then versions are observed again. Same-owner/attempt checks and a final generation-lock return prevent invalidated/superseded late results. Returned data is only a historical source observation, not continuing server stability or official provenance.",
+      "HTTP slice verification passed 86 focused tests and 687 impacted Resources tests, with 44 original Python regressions. Its 44 retained actual-Python raw-parser vectors and five CRLF-only source pins regenerated identically; independent review found no confirmed blocker. All transport tests use owned fake handlers, including full ten-table preparation and post-decode reobservation. These counts overlap and are not additive new coverage or live HTTP/TLS acceptance.",
+      "The uninstalled HTTP adapter now supplies exact manifest/hash streams through IResourceSource with normal TLS configuration, no redirects/retries/cache fallback, 20-second header-plus-body lifetimes, 16-KiB headers, eight-byte hash and 8-MiB manifest bounds, strict ASCII Content-Length and owned disposal. Existing CRC/header/package/version/identity checks and final full-manifest reobservations remain unchanged."
     ],
     "outstanding_scope": [
-      "Production HTTPS/origin authentication, trusted source/freshness receipts, cached-manifest receipt reads/writes, atomic persistence and public provenance issuance remain unported. The scripted source and matching CRC/hash values do not establish official manifest authenticity or runtime admission. No filesystem root/cache publication or production source is supplied. The native extractor is connected only through the separate scripted offline flow."
+      "Production startup registration, live network/TLS validation, trusted origin/freshness receipts, cached-manifest receipt reads/writes, atomic persistence and provenance issuance remain absent. The uninstalled adapter and matching CRC/hash values do not establish authenticity or runtime admission. No filesystem cache adapter/publication is supplied; fake-handler tests compose native extraction and required decoders without granting authority."
     ]
   },
   {
@@ -983,7 +989,9 @@
     "scope": "runtime",
     "status": "partially_migrated",
     "target_files": [
-      "dotnet/Lala.Core/Resources/OfficialVersionSnapshot.cs"
+      "dotnet/Lala.Core/Resources/OfficialVersionSnapshot.cs",
+      "dotnet/Lala.Core/Resources/Http/HttpOfficialResourceSource.cs",
+      "dotnet/Lala.Core/Resources/Http/RawOfficialVersionParser.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -1041,10 +1049,12 @@
       "live_server_acceptance": "not_run"
     },
     "migrated_scope": [
-      "Bounded snapshot shape/identity parsing and comparison, cancellable pure checks."
+      "Bounded snapshot shape/identity parsing and comparison, cancellable pure checks.",
+      "HTTP slice verification passed 86 focused tests and 687 impacted Resources tests, with 44 original Python regressions. Its 44 retained actual-Python raw-parser vectors and five CRLF-only source pins regenerated identically; independent review found no confirmed blocker. All transport tests use owned fake handlers, including full ten-table preparation and post-decode reobservation. These counts overlap and are not additive new coverage or live HTTP/TLS acceptance.",
+      "observe_official_versions now has an uninstalled internal HTTP implementation: parse ResourcePath_PC.dat then both exact package version endpoints, require complete manifest revisions and create the bounded snapshot with assets_ready=false. One selected host is bound to preparation; fetch/parse failure never falls back to cached metadata. This identical Python module mapping applies to the shared Core subset, not an Android host callsite."
     ],
     "outstanding_scope": [
-      "Persistence, source synchronization, fetch/parser adapters and runtime activation remain."
+      "read_snapshot/save_snapshot, path ownership, persistence, startup registration and production source synchronization/runtime activation remain unported. Adapter tests use fake handlers only; origin label, timestamps, matching versions/checksums and SourceStability observations do not prove publisher provenance or grant admission/readiness."
     ]
   },
   {
@@ -1141,7 +1151,8 @@
     "scope": "runtime",
     "status": "partially_migrated",
     "target_files": [
-      "dotnet/Lala.Core/Resources/ResourceValidation.cs"
+      "dotnet/Lala.Core/Resources/ResourceValidation.cs",
+      "dotnet/Lala.Core/Resources/Http/HttpOfficialResourceSource.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -1166,10 +1177,12 @@
       "live_server_acceptance": "not_run"
     },
     "migrated_scope": [
-      "Exact approved host/default selection, no environment reads or automatic fallback."
+      "Exact approved host/default selection, no environment reads or automatic fallback.",
+      "HTTP slice verification passed 86 focused tests and 687 impacted Resources tests, with 44 original Python regressions. Its 44 retained actual-Python raw-parser vectors and five CRLF-only source pins regenerated identically; independent review found no confirmed blocker. All transport tests use owned fake handlers, including full ten-table preparation and post-decode reobservation. These counts overlap and are not additive new coverage or live HTTP/TLS acceptance.",
+      "Selected approved host is now bound to the uninstalled HTTP source and checked against the preparation host before observation. Original URL text must stay on that one HTTPS origin; no environment reads, arbitrary preconfigured client, host fallback, credentials, cookies or automatic redirect/decompression. Normal TLS validation is configured, not replaced by an accept-all callback."
     ],
     "outstanding_scope": [
-      "Actual HTTPS fetch/origin receipts and network validation not included."
+      "Python environment-driven selection remains deliberately absent. The adapter is unregistered and only fake-handler tested; actual network/TLS acceptance, trusted origin/freshness receipts, source-authority issuance and runtime installation remain unestablished."
     ]
   },
   {
@@ -1183,7 +1196,9 @@
     "scope": "runtime",
     "status": "partially_migrated",
     "target_files": [
-      "dotnet/Lala.Core/Resources/ResourceCompatibility.cs"
+      "dotnet/Lala.Core/Resources/ResourceCompatibility.cs",
+      "dotnet/Lala.Core/Resources/Http/HttpOfficialResourceSource.cs",
+      "dotnet/Lala.Core/Resources/Http/RawOfficialVersionParser.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -1280,10 +1295,13 @@
       "live_server_acceptance": "not_run"
     },
     "migrated_scope": [
-      "Pure revision and exact Manifest comparison from check_official_versions."
+      "Pure revision and exact Manifest comparison from check_official_versions.",
+      "HTTP slice verification passed 86 focused tests and 687 impacted Resources tests, with 44 original Python regressions. Its 44 retained actual-Python raw-parser vectors and five CRLF-only source pins regenerated identically; independent review found no confirmed blocker. All transport tests use owned fake handlers, including full ten-table preparation and post-decode reobservation. These counts overlap and are not additive new coverage or live HTTP/TLS acceptance.",
+      "Bounded raw parse_version and parse_resource_path/_decode_resource_map subsets now parse UTF-8/BOM package text or selected JSON keys and UTF-8/BOM/UTF-16 resource maps with source-compatible latest-supported selection, exact data-version shapes and the final-array trailing-comma exception. Single-member gzip uses exact framing/CRC/ISIZE and one-byte compressed reads; compressed/inflated input caps are 16 KiB. Fixtures compare returned selections or rejection, not decorated diagnostics/exception text.",
+      "HTTP validate_source/fetch_bytes-related behavior constrains original URLs, numeric version cache-busters and at most three same-host/exact-path manual redirects. Only 400/403/404 receive one canonical query-free retry. Linked 12-second version timeouts cover headers and the full body; bounded headers, strict ASCII Content-Length and typed redacted failure categories intentionally narrow behavior. The adapter implements observe_official_versions flow, not the broader UI checker: HTTP 200 invalid bodies reject without InvalidResourceBody retry."
     ],
     "outstanding_scope": [
-      "Official version fetching remains Python."
+      "Broader check_official_game_resources/check_official_versions reports and UI workflow, source diagnostic decorators and exact public exception text remain unmapped. JSON-depth/HTTP-header safety restrictions and typed APIs are explicit differences; no arbitrary Python input parity. No startup registration, real HTTP/TLS evidence, persisted snapshots, trusted origin/freshness credentials or runtime/resource admission."
     ]
   },
   {
@@ -2359,7 +2377,8 @@
       "dotnet/Lala.Core/World/Eve/EveDoorProjection.cs",
       "dotnet/Lala.Core/World/Eve/EveDoorCp950.cs",
       "dotnet/Lala.Core/Resources/BundleSources/OfflineBundleRuntimePreparation.cs",
-      "dotnet/Lala.Core/Catalogs/OfflineRuntimePortalObservations.cs"
+      "dotnet/Lala.Core/Catalogs/OfflineRuntimePortalObservations.cs",
+      "dotnet/Lala.Core/Resources/Http/HttpOfficialResourceSource.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -2451,16 +2470,17 @@
       "Construction preserves combined-then-per-feature full-Eve fallback, public ItemData version policy/fixed 1296 pin and ordered rows, shop forms 2/3 kind-3 database-kind-2/item references, Talk/Text/recipes/scenes, separate door projection, then nonempty scene/talk/text checks, expedition/career/NPC and strict names. No invented Eve-NPC-to-expedition-NPC join or convey route validation. Existing immutable raw parsers retain field coverage; new fixtures focus on stage/error order, relationships, hashes and linked values.",
       "RequiredTablesStructurallyComplete reports only successful local construction. SourceKind remains supplied_offline_tables; provenance/runtime-admitted/assets-ready/send flags remain false. Every required source is copied, cancellation/error returns no candidate, and returned candidates cannot be mutated by later input changes. Optional catalogs including SkillData, portals, images, daily/guild/Ark/combat/instances remain unavailable.",
       "The 3338585 slice passed 1,102 focused Release tests (166 candidate and 936 door), then 11,247 impacted Catalogs + World.Eve tests, with no skips, using the process-only 3-GiB heap cap. Candidate evidence retains 157 exact-Python runtime-AST/binding vectors and four source pins; door evidence is separate. Independent source/security review approved, all three generators reproduced byte-identical artifacts and 53 related Python tests passed. These focused/impacted receipts are not full runtime, platform or official-source acceptance.",
-      "Internal OfflineBundleRuntimePreparation now connects the actual scripted source preparer, owned VerifiedBundleSource handles, native UnityTextAssetExtractor and all ten structural table decoders, without replacement decoder callbacks. Each asset uses only its exact manifest root plus listed complete dependency set, not recursive traversal or the union of all selected roots. Every table is extracted before raw decoding; original cache/source mutation cannot change owned bytes.",
-      "After decoding, versions are freshly observed, both complete manifest hash/byte responses are reread and compared, then versions are observed again. Same-owner/attempt checks and a final generation-lock return prevent invalidated/superseded late results. Returned data is only a historical scripted-source observation, not continuing server stability or official provenance.",
+      "Internal OfflineBundleRuntimePreparation now connects the actual source preparer through IResourceSource, owned VerifiedBundleSource handles, native UnityTextAssetExtractor and all ten structural table decoders, without replacement decoder callbacks. Each asset uses only its exact manifest root plus listed complete dependency set, not recursive traversal or the union of all selected roots. Every table is extracted before raw decoding; original cache/source mutation cannot change owned bytes.",
+      "After decoding, versions are freshly observed, both complete manifest hash/byte responses are reread and compared, then versions are observed again. Same-owner/attempt checks and a final generation-lock return prevent invalidated/superseded late results. Returned data is only a historical source observation, not continuing server stability or official provenance.",
       "A separate 32-MiB aggregate extracted-table ownership cap supplements 16-MiB per-table and 32-MiB acquired-source limits. This may reject source-valid large tables and is an explicit safety restriction. Missing/duplicate paths, late table errors, cancellation and stale attempts return no partial candidate. External PPtrs reject because this orchestrator does not infer an allowlist from dependency names.",
       "100 focused Release passes comprise 19 new owned-flow contracts plus 81 existing BundleSource cases, with no skips, using the process-only 3-GiB cap. Ten genuine original UnityPy 1.25.4 writer/LZ4HC bundles plus evidence (11 files) regenerated identically; original ten payload hashes are pinned to the retained candidate fixture. Independent source/security review approved. This is orchestration evidence, not real-game/CDN/runtime admission or a new aggregate count.",
       "The 3445831 candidate now attaches immutable PortalObservations derived only from its owned Eve/ScenesData rows. It invokes bounded event-only Bind with absent StageMap/EveLinks immediately after doors and before nonempty required-table checks, then coverage after remaining required-table checks. The default expansion budget is fixed at the candidate API and charged before shared transfer arrays. Optional extra input keys cannot inject portal evidence; StageMapData_C, EveDoorLinks and DoorLinkData_C remain explicitly unavailable and coverage AllSourcesAvailable is false.",
-      "Candidate portal integration passed 36 focused tests (14 actual-Python vectors, three new contracts and 19 existing owned-flow contracts) plus 5,657 impacted tests. Independent review approved deterministic fixtures, source order, exact event-only observations, ownership, immutable prior results after late failures/cancellation/supersession and a separately labeled source-valid amplification rejection. These receipts do not establish admission, optional-resource acquisition or a new aggregate count."
+      "Candidate portal integration passed 36 focused tests (14 actual-Python vectors, three new contracts and 19 existing owned-flow contracts) plus 5,657 impacted tests. Independent review approved deterministic fixtures, source order, exact event-only observations, ownership, immutable prior results after late failures/cancellation/supersession and a separately labeled source-valid amplification rejection. These receipts do not establish admission, optional-resource acquisition or a new aggregate count.",
+      "IResourceSource replaces the scripted-only seam name without granting trust; its optional SelectedHost is bound to the selected preparation host. HttpOfficialResourceSource can supply the existing owned extraction/ten-table flow but is unregistered and exercised only with fake handlers. SourceStability now says observed versions and manifest bytes reobserved after decoding; official provenance, database/static admission, runtime installation, assets-ready and send authority remain unavailable/false."
     ],
     "outstanding_scope": [
-      "The scripted owned-byte flow is connected, but no production HTTPS/filesystem source, official-origin/freshness credential, database-byte admission, static 1275 runtime hash/audited-count/recipe-count gates, persisted receipts, cache publication, optional catalogs or production runtime installation/current globals/activation is supplied. SourceStability is historical scripted reobservation; OfficialProvenance, DatabaseAdmission, RuntimeInstallation and Static1275Admission remain unavailable. No AccountSession, resource confirmation, login, command, Android/AOT or actual-game acceptance.",
-      "Event-only reconciliation and missing-optional coverage are attached to the ten-table candidate and the scripted owned-source flow. Standalone optional-portal parsers/bindings/conflicts/coverage now exist, but real optional-source acquisition/verification/binding and optional catalog activation remain unavailable through this flow. Source-compatible claims can coexist with conflict issues and never grant travel authority. Caller maps/package labels/content hashes do not override existing pins or grant admission."
+      "The owned-byte flow and uninstalled HTTP adapter are connected in fake-handler tests, but no production registration/live TLS evidence, filesystem source, official-origin/freshness credential, database-byte admission, static 1275 runtime hash/audited-count/recipe-count gates, persisted receipts, cache publication, optional catalogs or production runtime installation/current globals/activation is supplied. SourceStability is historical source reobservation; OfficialProvenance, DatabaseAdmission, RuntimeInstallation and Static1275Admission remain unavailable. No AccountSession, resource confirmation, login, command, Android/AOT or actual-game acceptance.",
+      "Event-only reconciliation and missing-optional coverage are attached to the ten-table candidate and the owned-source flow. Standalone optional-portal parsers/bindings/conflicts/coverage now exist, but real optional-source acquisition/verification/binding and optional catalog activation remain unavailable through this flow. Source-compatible claims can coexist with conflict issues and never grant travel authority. Caller maps/package labels/content hashes do not override existing pins or grant admission."
     ]
   },
   {

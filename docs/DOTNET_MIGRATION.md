@@ -53,7 +53,7 @@ The first C# increment is an executable offline foundation, not a replacement La
 | Source / new capability | Current scope | Not established |
 | --- | --- | --- |
 | `wlre/network/wire.py` → `Lala.Core/Protocol/Wire.cs` | `ported_offline`: packet primitives, strict strings, framing/XOR and incremental decoding have Python golden-vector parity. | Parser diagnostics `read_checkpoint` integration is still outstanding; no formal-server acceptance. |
-| `wlre/network/protocol.py` → `CandidateCommands.cs` | `partially_migrated`: login/select-role/walk/attack/skill/item **byte builders** only; synthetic Python-generated vectors. | Live login/transport, server event decoding and full command dispatch are not implemented by this subset. A builder is not permission or readiness to send. |
+| `wlre/network/protocol.py` → `CandidateCommands.cs` | `partially_migrated`: login/select-role/walk/attack/skill/item **byte builders** only; synthetic Python-generated vectors. | Live login/transport, full command dispatch and server acceptance are not implemented by these builders. Separately evidenced receive decoders and scripted handshake guards do not grant authentication. A builder is not permission or readiness to send. |
 | `wlre/network/resource_safety.py` → `ResourceSafetyPolicy.cs` | `partially_migrated`: `AllowsDuringHold` policy only. | Remaining routing and full resource/version lifecycle integration. |
 | `wlre/services/battle/combat.py` → `CombatRules.cs` / `BattleDisplayRules.cs` | `partially_migrated`: `normal_skill`, `effect_text` and the later pure `unit_label` / `attack_lines` slice; 576 focused tests include 450 earlier rules tests and 126 display tests. | Live catalog loading/activation, observer/UI wiring, complete auto-battle and live acceptance remain. |
 | New `AccountSession` | Offline session generations, version-match confirmation and latched holds with subset tests. | Complete authentication, credential persistence, socket ownership, reconnection or parity with the original session lifecycle. |
@@ -400,6 +400,31 @@ real-network throughput or device/server acceptance is established. A receive re
 hold continues accepting receipts and is not Android's terminal `ResourceHeld` result.
 See [receive-attempt scope and verification](../dotnet/Lala.Core.Tests/Sessions/Receive/README.md).
 
+`ScriptedHandshake` is a separate internal offline coordinator for verification kind 0,
+formal kind 2, role selection, heartbeat and ordered world ACKs. It uses already-decoded
+events and synthetic write receipts, not sockets or the receive pump. It requires exact
+completed login writes, matching phase/kind responses, a unique current unlocked role,
+completed selection, both later initialization observations and completed C12-1 then
+C3-2 writes. This deliberately strengthens Python's player-plus-initial-data condition;
+early observations reject rather than being saved. No role ID is inferred from a slot.
+
+Receipts bind attempt, connection leg, unique operation, complete byte count and SHA-256.
+Wrong, stale, partial, uncertain or replayed receipts retire without retry. Cancellation,
+hold and end-input revoke pending writes synchronously; late receipts cannot revive them.
+All inputs serialize, and no new event is accepted while a write is pending. A future
+transport must own two separate connection legs/decoders, buffer and serialize events,
+and map EOF/timeouts/malformed data to end-input. This coordinator has no frame parser
+or timers, and local write completion would still not be server confirmation.
+
+It retains no credentials or raw packet; its private pending digest clears on retirement
+or completion. Disposing a returned owned wire buffer clears that buffer, not external
+caller copies or credential strings. **86 focused** and **2,884 impacted Sessions/Protocol
+tests** pass; seven synthetic actual-Python wire vectors regenerate identically.
+Independent review verified guards, reduced credential copying and owned-wire parity.
+Completion is `ScriptedComplete`, never a production authenticated session. No readiness
+boolean, admission/installation hook, AccountSession/ReceiveAttempt integration or Android
+`onActive` callback is added. See [offline handshake boundary](dotnet/offline-handshake.md).
+
 Inventory allocation now returns read-only candidates; reservation validation returns
 a hypothetical immutable snapshot only after checking the entire batch. Slot ordering,
 exclusions, duplicate aggregation, serial identity and source numeric quirks are
@@ -647,7 +672,7 @@ No runtime/store/network/session/UI/Android integration, ten-table completeness,
 extraction/downloads, official-resource positive acceptance or command authority is
 established. See [source-adapter scope and evidence](../dotnet/Lala.Core.Tests/Catalogs/SourceAdapters/README.md).
 
-`BundleSourcePreparation` now connects internal scripted version/response inputs to
+`BundleSourcePreparation` now connects the internal `IResourceSource` seam to
 actual DataPackage and MainPackage YooAsset 2.2.5 binary parsing, the ten exact
 DataPackage runtime paths and owned verified bundle bytes. Both manifests must pass
 identity checks before acquisition. Required paths are `Assets/ResourcesBuild/Data/`
@@ -679,7 +704,9 @@ disposed on success, failure, cancellation and stale attempts. Production filesy
 cache acquisition, persisted receipts, previous-version reuse and atomic publication
 remain deferred; this slice accepts no filesystem root, writes nothing and creates
 no partial files. A future platform adapter needs safe cancellable regular-file opens
-and anchored no-follow writes. There is no production HTTPS/provenance implementation.
+and anchored no-follow writes. An uninstalled HTTP adapter is now separately evidenced
+below; no production registration, live-network acceptance or provenance credential is
+established.
 
 Focused Resources verification passed **350 tests**, including **81 new tests**:
 37 retained actual-Python parser/plan vectors and 44 contracts. Six source hashes,
@@ -692,6 +719,45 @@ below connects this preparer to the native extractor and ten-table decoder. No r
 freshness/admission credential, `AssetsReady` value, login or packet authority is supplied. The later integrated source-preparation receipt is
 recorded below, separately from newer raw-table work. See
 [bundle-source scope and evidence](../dotnet/Lala.Core.Tests/Resources/BundleSources/README.md).
+
+`HttpOfficialResourceSource` adds an internal, **uninstalled** implementation of the
+neutral `IResourceSource` seam. It owns a narrowly configured client/handler with normal
+TLS validation and no credentials, cookies, automatic redirects or decompression. Its
+single approved host is bound to preparation before observation; there is no environment
+read, arbitrary preconfigured client or host fallback. Original URLs must use that exact
+HTTPS origin with no explicit port, userinfo, fragment, percent encoding, backslash or
+whitespace. Paths and bundle names are constrained before URI normalization.
+
+Version requests allow numeric cache-busters and at most three same-host/exact-path
+manual redirects. Only 400/403/404 permit one canonical query-free retry. Manifests and
+bundles never redirect or retry; failures do not fall back to cached metadata. The workflow
+follows `observe_official_versions`, not the broader UI checker: HTTP 200 invalid bodies
+reject without its `InvalidResourceBody` retry. Raw package/resource-map parsing retains
+selected JSON fields, BOM/UTF-16 handling, latest executable selection and the final-array
+comma exception. Single-member gzip verifies exact framing, CRC and ISIZE, using one-byte
+compressed reads to expose extra members/trailing data. Typed failures and extra JSON-depth/
+HTTP-header limits are explicit differences; decorator diagnostics and exact Python error
+messages are not claimed.
+
+Headers and version bodies are bounded to **16 KiB**, hash bodies to **eight bytes**,
+manifests to **8 MiB**, and resource streams to the existing **32-MiB** retained-source
+limit. Strict ASCII Content-Length is checked against actual bytes. Linked **12-second
+version / 20-second resource** timeouts cover headers and the entire body lifetime;
+caller cancellation stays cancellation. Returned streams own responses and timeout sources,
+and failures dispose them. Stable exception categories do not expose URLs, headers,
+remote body text or inner transport errors. Existing size/CRC/MD5 and 24-download/32-MiB
+preparation quotas remain unchanged.
+
+**86 focused HTTP tests**, **687 impacted Resources tests** and **44 original Python
+regressions** pass. The **44 actual-Python raw-parser vectors** and five CRLF-only source
+pins regenerate identically; independent review found no confirmed blocker. These are
+overlapping counts, not additive new coverage. Fake-handler tests compose manifests,
+owned bundles, native Unity extraction, all ten decoders and post-decode reobservation,
+including changed versions/manifests, cancellation and disposal failures. No live HTTP,
+TLS-network/device/server acceptance or production startup registration is tested.
+`SourceStability` now says “observed versions and manifest bytes reobserved after decoding”;
+checksums and fresh observations still issue no official provenance, readiness, database
+admission or packet permission. See [HTTP scope and evidence](../dotnet/Lala.Core.Tests/Resources/Http/README.md).
 
 `UnityTextAssetExtractor` adds a separate internal offline byte decoder over owned
 `VerifiedBundleSource` handles. It supports UnityFS 6/7/8, compression 0/2/3
@@ -819,7 +885,7 @@ Eve/adventure hashes, audited counts and the static recipe-count gate are not im
 by it. `RequiredTablesStructurallyComplete` means only local construction succeeded;
 provenance, runtime-admitted, assets-ready and send flags remain false. Fresh official
 source provenance/freshness, database-byte admission and runtime installation remain
-missing. The newer scripted flow below connects owned extraction-to-table decoding
+missing. The newer owned flow below connects extraction-to-table decoding
 and post-decode reobservation without supplying those credentials. Optional SkillData,
 portal metadata, images, daily/guild/Ark/combat and other catalogs remain unavailable.
 The candidate now includes bounded event-only reconciliation and missing-optional
@@ -852,12 +918,13 @@ manifest dependencies do not invent an allowlist.
 After successful decoding, the flow observes versions, rereads both complete manifest
 hash/byte responses, compares original parsed content and observes versions again.
 Owner/attempt checks and a final generation-lock return reject late superseded or
-invalidated operations. The result is a historical scripted observation, not a
+invalidated operations. The result is a historical source observation, not a
 promise of future server stability. Cache streams are not reopened for extraction;
 all bytes are owned and errors/cancellation return no partial result or mutation of
 an earlier candidate. Official provenance, database admission, static 1275 admission
-and runtime installation remain explicitly unavailable. There is still no production
-HTTP/filesystem source, cache publication, database receipt or AccountSession change.
+and runtime installation remain explicitly unavailable. The newer uninstalled HTTP
+adapter uses this same flow in fake-handler tests; production registration, filesystem
+cache acquisition/publication, database receipt and AccountSession integration remain absent.
 
 **100 focused Release passes** comprise **19 new flow contracts plus 81 existing
 BundleSource cases**. Genuine owned UnityPy 1.25.4 / LZ4HC fixtures cover split roots,
@@ -962,12 +1029,63 @@ mutation during supply. Zero/negative version IDs are not invented rejection rul
 AST cases include **15 structural matches**, exact query-check prefixes and compact
 boundary recipes. The oracle uses an inert scripted connection, not SQLite. Parsed
 JSON equality remains checked, but no independently reachable hash-matched negative
-case is claimed without a SHA collision. Independent review approved. Filesystem
-preflight, SQLite opens/transactions/storage-class validation, real query isolation,
-schema-aware loading and production storage remain unported. A future reader must
-reject non-BLOB values rather than coerce them. `HasVerifiedProvenance`,
-`ProvesDatabaseTransaction`, `RuntimeAdmitted`, `AssetsReady` and `CanSendPackets`
-remain false. See [database-match scope and evidence](../dotnet/Lala.Core.Tests/Resources/DatabaseMatch/README.md).
+case is claimed without a SHA collision. Independent review approved. The newer
+read-only reader below supplies a bounded transaction snapshot, but filesystem/provider
+selection, production integration and binary-schema loading remain separate gaps.
+For this matcher, `HasVerifiedProvenance`, `ProvesDatabaseTransaction`, `RuntimeAdmitted`,
+`AssetsReady` and `CanSendPackets` remain false. See
+[database-match scope and evidence](../dotnet/Lala.Core.Tests/Resources/DatabaseMatch/README.md).
+
+`RuntimeDatabaseSnapshotReader` now accepts a **closed, exclusively supplied, read-only
+SQLite-compatible `DbConnection`**, opens it and issues explicit deferred `BEGIN`,
+reads the active identity and all ten exact required rows, captures detached bytes,
+then `ROLLBACK`s and disposes the connection. It never commits, discovers a provider,
+selects a user database, repairs schemas or writes resource data. The supplying adapter
+must configure read-only mode and exclusive ownership: generic `DbConnection` cannot
+prove filesystem restrictions, honest SQLite execution or isolation. Core adds no provider
+or native dependency. Tests use the existing Microsoft.Data.Sqlite 10.0.14 package with
+`Mode=ReadOnly`, pooling disabled and newly created temporary databases.
+
+Queries explicitly use `main`, require the four ordinary source-schema tables with
+positive root pages and reject views/virtual tables/ambiguity. At most two active-join
+or required-row results are requested; duplicate results reject rather than choosing
+one. All exact `.bytes` lookups are parameterized against the same active Int64 ID.
+Storage classes must be integer/text/blob as appropriate. UTF-8/UTF-16le/UTF-16be database
+encoding controls text-byte validation, including embedded NUL, alongside character
+bounds. `CASE` projections prevent oversized values entering the managed projection.
+A strictly typed `GetValue` byte array is checked for exact nonempty bounded length,
+then copied in at-most-64-KiB chunks. No stream API fallback or retry occurs. Retained
+payload limits are **160 MiB temporary + 160 MiB detached + at most 16 MiB current
+provider value**, not peak RSS; provider/native buffers, caller internals and dead arrays
+awaiting GC are outside that bound.
+
+Every command requests a **five-second timeout**, but async execution/cancellation and
+timeout latency remain provider-dependent. Uncancelled cleanup attempts rollback even
+when a failed `BEGIN` may have executed. Primary exception type, instance and stack are
+preserved, with immutable secondary cleanup failures; failed reading, cancellation,
+rollback or disposal returns no observation. `CompletedSingleReadTransaction` means
+commands and cleanup completed under the provider contract, not a durable certificate.
+The detached matcher's `ProvesDatabaseTransaction` stays false; all provenance, runtime
+admission, readiness and send flags remain false. The APIs are not installed into
+AccountSession or the owned source/runtime flow.
+
+**86 focused** and **2,104 impacted tests** pass with a clean Release build and
+independent final review. **52 actual-Python cases** execute unchanged complete source
+AST against real temporary SQLite files, separately retaining Python outcomes and
+reader capture/match expectations. Ten intentional stricter rejections are labeled;
+exact SQL and source short-circuit query order are not claimed. Real-provider tests
+check read-only enforcement, unchanged bytes and WAL concurrent-writer coherence;
+fault tests cover provider mutation, late cancellation and all cleanup stages.
+
+A real `CASE`-column regression initially hit a native SIGSEGV in the provider's
+null-buffer `GetBytes` length probe. Reviewed package source shows its `GetStream`
+origin-metadata path is unsuitable for these expression columns. The bounded `GetValue`
+contract avoids that path; tests reject any `GetBytes`/`GetStream` call. This resolved
+reader regression is unrelated to the historical Python busy-wait assertion failures,
+for which no timing fix is claimed. Filesystem/symlink preflight, production database
+selection, other read/write APIs, binary table schema loading, official provenance,
+admission, static1275/runtime installation and Android/device acceptance remain open.
+See [read-only snapshot scope and evidence](../dotnet/Lala.Core.Tests/Resources/DatabaseRead/README.md).
 
 Eve v115 parsing now validates all eleven scene sections before exposing immutable
 NPC/interaction indexes. Versions, offsets, record/scene limits, skipped layouts,
@@ -1036,9 +1154,13 @@ acceptance follows from these offline suites.
 | `6e44908` optional portal parsers/bindings/coverage | `OfflineBoundaryPortalTests.cs`, `BoundaryPortalPythonVectors.cs` and `generate_boundary_portal_vectors.py` under `Lala.Core.Tests/World/Eve` | 100 focused passes (95 actual-Python vectors plus five contracts) and 5,621 impacted passes; deterministic source/fixture pins and independent review. Typed safety budgets, source-compatible repeated-conflict behavior and diagnostic gaps remain explicit. |
 | `7d04773` owned database structural matcher | `RuntimeDatabaseStructuralMatcherTests.cs`, `DatabaseMatchPythonVectors.cs`, fixture evidence and `README.md` under `Lala.Core.Tests/Resources/DatabaseMatch` | 140 focused passes and 2,018 impacted passes; 128 actual-Python AST cases include 15 matches. Independent review approved; scripted query traces and supplied snapshots do not prove real database transactions, source authority or admission. |
 | `3445831` event-only candidate observations | `CandidatePortalIntegrationTests.cs`, `CandidatePortalOracleCases.cs` and retained fixture generator under `Lala.Core.Tests/Catalogs/RuntimeCandidate`; owned-flow integration assertions | 36 focused passes include 14 actual-Python vectors, three new contracts and 19 existing flow contracts; 5,657 impacted passes. Independent review approved. Candidate budget is fixed; optional metadata stays missing and all authority flags remain false. |
+| `850b7af` isolated scripted handshake | `ScriptedHandshakeTests.cs`, seven `python-vectors.json` rows under `Lala.Core.Tests/Sessions/Handshake`, and `docs/dotnet/offline-handshake.md` | 86 focused and 2,884 impacted passes; deterministic actual-Python wire vectors and independent review. Strict synthetic phase/receipt ordering is not Python lifecycle parity, production login or transport ownership. |
+| `6d61601` uninstalled HTTP source/raw parsers | `HttpResourceSourceTests.cs`, `HttpPythonVectors.cs`, generator and `README.md` under `Lala.Core.Tests/Resources/Http` | 86 focused and 687 impacted Resources passes; 44 retained actual-Python parser vectors, five source pins and 44 original Python passes. Independent review and fake-handler full-flow checks do not establish live HTTP/TLS, official provenance or admission. |
+| `3848459` read-only transactional snapshot | `RuntimeDatabaseSnapshotReaderTests.cs`, `DatabaseReadPythonParityTests.cs`, fixture evidence and `README.md` under `Lala.Core.Tests/Resources/DatabaseRead` | 86 focused and 2,104 impacted passes; 52 real-SQLite Python cases distinguish original results and ten stricter capture rejections. Final review approved bounded GetValue provider regression, WAL coherence and failure/cleanup guards. Caller-configured read-only/exclusive provider contract is not provenance or admission. |
 
 Inventory status remains partial for the subset modules below. Desktop `network/client.py`
-(internal receive only), `battle_commands.py`
+(internal receive and isolated scripted handshake), `network/commands.py`
+(select-role guards only), `battle_commands.py`
 (pure action/round planning), `storage/ark_questions.py` (explicit offline store),
 `services/ark_first_answer.py` (strict arithmetic), `services/ark_candidates.py` (pure
 reviewed resolver), `services/ark_candidate_data.py` (text-free reviewed index),
@@ -1055,8 +1177,8 @@ to partially migrated. `services/world/smith_candidate.py` is ported offline for
 three pure functions within the documented typed API. `services/world/catalog_adapters.py`
 is also ported offline for its bounded validation/composition surface; runtime
 integration and official-source acceptance remain separate. The summary is now
-555 not migrated, 137 partially migrated and 4 ported offline. Android inventory and
-reservation entries share identical source hashes and receive the same bounded evidence. Android network-client, combat-resource, battle-command,
+554 not migrated, 138 partially migrated and 4 ported offline. Android inventory and
+reservation entries share identical source hashes and receive the same bounded evidence. Android network-client/commands/protocol, combat-resource, battle-command,
 combat/display, Eve, expedition-data, preview, Smith-candidate, instance-catalog,
 ItemData and catalog-adapter hashes differ, so they stay unreconciled. The baseline has
 no Android `storage/ark_questions.py`, `services/ark_first_answer.py`, `services/ark_candidates.py`,
@@ -1081,6 +1203,14 @@ source-diagnostic and runtime gaps are documented per module.
 persistence or command activation, and none of these slices establishes full migration
 or full runtime acceptance. Current combined verification is recorded below.
 
+The new raw-version/HTTP mappings remain partial in `official_version.py`,
+`official_source.py`, `official_manifest_sync.py` and `official_bundle_download.py`;
+the source-preparation/runtime modules retain all admission and installation gaps.
+`resource_database.py` expands only its partial read-only transaction subset; its
+Android hash differs and is not mirrored.
+`official_resource_sync.py` has an identical Android hash and receives only the shared
+Core observation subset, not an Android host callsite. The other HTTP/handshake source
+hashes differ (or no matching Android module exists), so they are not mirrored.
 
 ### Integrated verification for published commit `9e0a04f`
 
@@ -1271,7 +1401,7 @@ The integrated tree through `daf4953`, published as `231f894` with the same fina
 Release tests**, with **zero failures or skips**, under a process-only **3 GiB** heap
 budget. The build reports **zero warnings/errors**. This is a local process-capped
 result, not a standard-setting local pass; the completed standard-setting remote
-.NET receipt and pending Python workflow are recorded below. The prior
+.NET receipt and failed Python workflow results are recorded below. The prior
 **39,255** receipt excludes the extractor. No unique cause for the earlier standard
 host terminations is claimed fixed, and repository/CI GC policy is unchanged.
 
@@ -1352,9 +1482,9 @@ These observations and the successful newer Python run do not establish a unique
 cause or fix for the two earlier 8.0.17 timing failures. Existing assertions and
 production behavior remain unchanged.
 
-### Integrated optional-portal/database-matcher verification through `3445831` (8.0.19 candidate)
+### Integrated verification for published commit `22c569a` (8.0.19)
 
-The tree including `6e44908`, `7d04773` and `3445831` passes **40,832 Core Release
+The tree including `6e44908`, `7d04773` and `3445831`, published as `22c569a`, passes **40,832 Core Release
 tests**, with **zero failures/skips** and **zero build warnings/errors**, under the
 process-only `DOTNET_GCHeapHardLimit=0xC0000000` (**3 GiB**). This is a local capped
 aggregate, not a standard-setting local pass or a new remote CI result. The published
@@ -1364,9 +1494,39 @@ Final local checks pass **59/59 lifecycle tests**, Desktop Release with **zero
 warnings/errors** and **9 offline self-tests**. The retained Python suite runs
 **2,273 tests** with **216 existing skips**; strict repository audit passes with
 **293 checked links**. Repository GC policy, Python timing assertions and production
-SQLite behavior remain unchanged. No 8.0.19 remote CI pass is claimed yet.
+SQLite behavior remain unchanged. The published remote receipts follow below.
 
 Candidate event-only observations and supplied database matches remain separate from
 official provenance, real transaction coherence, admission or runtime installation.
 Optional portal sources remain unavailable through the owned candidate flow, and
 actual-game/device/live acceptance is not established. `IsCompleteState` remains false.
+
+Published `22c569a` [.NET CI run 42419400476](https://github.com/blesses0603/WLRe_lala/actions/runs/42419400476)
+and [Python CI run 42419400467](https://github.com/blesses0603/WLRe_lala/actions/runs/42419400467)
+are both green. Windows, macOS and Linux each pass **40,832 Core tests**, **59 lifecycle
+tests** and **9 Desktop self-tests**; the Android validation APK job passes. These
+published-commit receipts exclude the newer `850b7af` handshake and `6d61601` HTTP
+slices and the later read-only database reader. They do not change the capped settings
+of the local aggregate, resolve historical SQLite timing failures or establish live/resource/runtime acceptance.
+
+
+### Integrated handshake/HTTP/database-reader verification through `3848459` (8.0.20 candidate)
+
+The integrated tree includes `850b7af`, `6d61601` and `3848459` and passes **41,090
+Core Release tests**, with **zero failures/skips** and **zero build warnings/errors**,
+under the process-only `DOTNET_GCHeapHardLimit=0xC0000000` (**3 GiB**). This is a local
+capped aggregate, not a standard-setting local pass or a new remote CI result. Both
+handshake and database-reader embedded fixture resource entries were preserved during
+integration. Repository/CI GC and test execution policies remain unchanged.
+
+The retained Python suite runs **2,273 tests** with **216 existing skips**, and strict
+repository audit passes with **297 checked links**. Final lifecycle **59/59**, Desktop
+Release **zero warnings/errors** and **9 offline self-tests** also pass. The published
+8.0.19 results above exclude this newer combined slice; no 8.0.20 remote CI result is
+claimed yet.
+
+The scripted handshake, uninstalled HTTP adapter and caller-configured read-only
+transaction reader remain separate from production account transport, trusted source
+provenance, resource admission and runtime installation. The resolved reader provider
+regression does not fix or change the historical Python SQLite timing threshold.
+Android/device/live acceptance remains open; `IsCompleteState` remains false.

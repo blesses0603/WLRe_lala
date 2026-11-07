@@ -15,7 +15,7 @@ namespace Lala.Core.Tests.Resources;
 
 public sealed class OfflineBundleRuntimePreparationTests
 {
-    private sealed class Script : IScriptedResourceSource
+    private sealed class Script : IResourceSource
     {
         internal readonly Dictionary<string, byte[]> Bundles;
         internal byte[] Data;
@@ -40,7 +40,7 @@ public sealed class OfflineBundleRuntimePreparationTests
             if (BeforeObserve is not null) await BeforeObserve(count);
             token.ThrowIfCancellationRequested(); return Observe(count);
         }
-        public ValueTask<ScriptedResourceResponse> OpenAsync(string exactUrl, CancellationToken token)
+        public ValueTask<ResourceResponse> OpenAsync(string exactUrl, CancellationToken token)
         {
             token.ThrowIfCancellationRequested(); Requests.Add(exactUrl);
             string name = exactUrl[(exactUrl.LastIndexOf('/') + 1)..];
@@ -54,7 +54,7 @@ public sealed class OfflineBundleRuntimePreparationTests
                 _ => Bundles.TryGetValue(name, out var raw) ? raw : throw new InvalidOperationException("Unexpected scripted target")
             };
             var stream = new TrackingStream(bytes, () => DuringRead?.Invoke(name)); Streams.Add(stream);
-            return ValueTask.FromResult(new ScriptedResourceResponse(exactUrl, 200,
+            return ValueTask.FromResult(new ResourceResponse(exactUrl, 200,
                 bytes.Length.ToString(CultureInfo.InvariantCulture), stream));
         }
     }

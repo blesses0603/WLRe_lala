@@ -1,0 +1,63 @@
+{
+  "case_count": 52,
+  "checks": [
+    "Full source executed once for every case",
+    "All original Python booleans verified",
+    "Persisted SQLite encoding verified through a separate read-only connection for every case",
+    "Temporary database content unchanged after every read-only source call",
+    "Temporary directories and SQLite files removed after each case",
+    "Compact operation recipes; 16 MiB boundary values are not embedded in JSON"
+  ],
+  "controlled_import": "Only bundle_runtime_1275._REQUIRED_TABLES is supplied from its source literal; no function statements or globals are ported.",
+  "excluded": [
+    "official manifest authenticity",
+    "binary table schema validity",
+    "runtime activation",
+    "C# execution",
+    "provider dishonest-behavior emulation",
+    "concurrent writer interleavings"
+  ],
+  "fixture": {
+    "compressed_bytes": 5073,
+    "compressed_sha256": "e6d7cd27910303b359e84cd001ebaff0bff1e3a468f0d4a9fb73fe8f9c8248d5",
+    "decoded_bytes": 33295,
+    "decoded_sha256": "9621006efa7c7def73e9954355331435f7d2fd2919b2da4b8d4cdce2a50a5cac",
+    "name": "database-read.json.gz"
+  },
+  "generator_sha256": "5b30e53f3803ad3c332656ec49c33b1961a30eeb1dd02c098bbfeb04a4ecedbc",
+  "intentional_reader_stricter_cases": [
+    "active-id-text",
+    "active-id-real",
+    "duplicate-sync-state",
+    "duplicate-versions",
+    "duplicate-version-identities",
+    "duplicate-required-first",
+    "duplicate-required-last",
+    "view-resources",
+    "view-version-identities",
+    "schema-table-wrong-case"
+  ],
+  "oracle": "Unchanged complete database_matches_runtime AST; actual pathlib and stdlib sqlite3 temporary files, read-only URI and transaction; real OfficialCatalogIdentity.",
+  "python_matching_cases": 16,
+  "reader_capture_cases": 15,
+  "reader_expectations": "Explicit C# reader contract expectations, not outputs of the Python function or proof of parity. reader_matches requires successful capture and the actual Python matching result.",
+  "reader_matching_cases": 6,
+  "schema_version": 1,
+  "source_line_endings": "CRLF normalized to LF only; bare CR is preserved",
+  "source_sha256": {
+    "wlre/services/official_resource_sync.py": "d1ea4177c5935df451dd2c991ae700a8f46ce848c016f4c79be07759d9709aae",
+    "wlre/services/world/bundle_runtime_1275.py": "ab44be1c49d6d6f0c51e5bcde1479ca600d44e4ec343fdeecf2c80377c61564e",
+    "wlre/services/world/catalog_identity.py": "a620f441f2f7c497316db47f7f77560f04f2e5d5773f8d292285c6988a9724f3",
+    "wlre/services/world/resource_database.py": "45c2203971c7224dd08932d1c8c2cb901c1332841ca036eee40bed4a843732be"
+  },
+  "synthetic_input": {
+    "compressed_sha256": "2bbc575b94d9f87208a53cc0222b75e3f5004ccae4bf52ad95c00a04f5ac9e96",
+    "decoded_sha256": "882783975613d870062cbcfa8b63e639e81d49edf3c7c675e0da4b9818a35c85",
+    "path": "dotnet/Lala.Core.Tests/Resources/DatabaseMatch/Fixtures/database-match.json.gz"
+  },
+  "verified_database_encodings": [
+    "UTF-16be",
+    "UTF-16le",
+    "UTF-8"
+  ]
+}

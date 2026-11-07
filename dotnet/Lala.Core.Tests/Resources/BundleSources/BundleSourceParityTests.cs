@@ -58,10 +58,10 @@ public sealed class BundleSourceParityTests
         {
             var spec = new BundleSourceSpec(row.Text("data_ver"), parsed, parsed.Bundles.Single(x => x.Name == payload.Text("name")));
             byte[] body = Convert.FromBase64String(payload.Text("base64"));
-            var handle = VerifiedBundleSource.Verify(spec, body, BundleAcquisition.ScriptedDownload);
+            var handle = VerifiedBundleSource.Verify(spec, body, BundleAcquisition.UntrustedSourceDownload);
             Assert.Equal(payload.Text("sha256"), handle.Sha256); Assert.Equal(payload.Text("md5"), spec.Md5); Assert.Equal(payload.Text("crc32_le"), spec.Crc32Le);
             body[0] ^= 1;
-            Assert.Equal(BundleSourceFailure.Checksum, Assert.Throws<BundleSourceException>(() => VerifiedBundleSource.Verify(spec, body, BundleAcquisition.ScriptedDownload)).Failure);
+            Assert.Equal(BundleSourceFailure.Checksum, Assert.Throws<BundleSourceException>(() => VerifiedBundleSource.Verify(spec, body, BundleAcquisition.UntrustedSourceDownload)).Failure);
         }
     }
 }

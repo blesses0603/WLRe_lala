@@ -103,7 +103,8 @@ that total. Evidence is ordinary JSON and does not embed the enlarged raw payloa
 
 `OfflineBundleRuntimePreparation` is internal and calls the real source preparer,
 native UnityFS extractor, and ten-table decoder. There is no replacement-decoder
-callback and no production HTTP or filesystem implementation.
+callback or filesystem implementation. An internal HTTP acquisition adapter is
+available but uninstalled; see `../Http/README.md`. This test suite uses scripts.
 
 The source preparer reads both actual manifest bodies, checks their versions and
 hash receipts, builds the required aggregate plan, verifies every selected bundle's
@@ -125,7 +126,7 @@ After successful raw decoding, the flow performs a fresh version observation,
 rereads both complete manifest `.hash`/`.bytes` responses, compares them to the
 original parsed contents, and observes versions again. This extends the existing
 preparer checks across decoding rather than pretending a pre-decoding observation
-covered later work. The additional trailing observation protects the scripted
+covered later work. The additional trailing observation protects the observed
 manifest reread interval. Neither a caller's digest claim nor the metadata-only
 CatalogKey substitutes for these actual bytes. At the final return, the same
 preparation owner/attempt is checked under its generation lock. A superseded or

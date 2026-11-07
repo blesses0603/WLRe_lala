@@ -3,7 +3,7 @@ using Lala.Core.Catalogs;
 
 namespace Lala.Core.Resources;
 
-/// <summary>Historical structural result from a scripted in-memory source. No official origin,
+/// <summary>Historical structural result from untrusted source observations. No official origin,
 /// database admission or runtime installation is established by checksums or reobservation.</summary>
 internal sealed class OfflinePreparedRuntimeCandidate
 {
@@ -13,7 +13,7 @@ internal sealed class OfflinePreparedRuntimeCandidate
     internal int DownloadCount { get; }
     internal long DownloadBytes { get; }
     internal ImmutableArray<string> ExtractedTables { get; }
-    internal string SourceStability => "scripted versions and manifest bytes reobserved after decoding";
+    internal string SourceStability => "observed versions and manifest bytes reobserved after decoding";
     internal string OfficialProvenance => "unavailable";
     internal string DatabaseAdmission => "unavailable";
     internal string RuntimeInstallation => "unavailable";
@@ -26,9 +26,9 @@ internal sealed class OfflinePreparedRuntimeCandidate
     }
 }
 
-/// <summary>Actual offline composition of source preparation, native bounded extraction and all ten
+/// <summary>Uninstalled composition of source preparation, native bounded extraction and all ten
 /// required table decoders. No injected parser/decompressor, filesystem, HTTP implementation or
-/// callback can replace those checks. The only source implementation is an internal scripted seam.</summary>
+/// callback can replace those checks. The internal source seam cannot grant authority.</summary>
 internal sealed class OfflineBundleRuntimePreparation
 {
     // Conservative aggregate ownership bound in addition to the existing 16 MiB per-table limit.
@@ -37,7 +37,7 @@ internal sealed class OfflineBundleRuntimePreparation
     private readonly BundleSourcePreparation _preparation = new();
     internal void Invalidate() => _preparation.Invalidate();
 
-    internal async Task<OfflinePreparedRuntimeCandidate> PrepareAsync(IScriptedResourceSource source,
+    internal async Task<OfflinePreparedRuntimeCandidate> PrepareAsync(IResourceSource source,
         IBundleSourceCacheReader? cache = null, BundleSourceBudget? budget = null,
         string host = OfficialResourceOrigin.DefaultHost, YooAssetManifest? previous = null,
         CancellationToken cancellationToken = default)

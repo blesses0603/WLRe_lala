@@ -1,0 +1,30 @@
+[
+  {
+    "name": "verification",
+    "wire": "696B8EAD92AAADADACAFA3DED4C3D9C5C8D9C4CEF2D8DEC8DFA0CBCCC6C8F2DDCCDEDEDAC2DFC9"
+  },
+  {
+    "name": "formal",
+    "wire": "696B8EAD92AAAFADACAFA3DED4C3D9C5C8D9C4CEF2D8DEC8DFA0CBCCC6C8F2DDCCDEDEDAC2DFC9"
+  },
+  {
+    "name": "role1",
+    "wire": "696BAEAD92AFAC"
+  },
+  {
+    "name": "role2",
+    "wire": "696BAEAD92AFAF"
+  },
+  {
+    "name": "heartbeat",
+    "wire": "696BAFAD92A8"
+  },
+  {
+    "name": "map_ack",
+    "wire": "696BAFADA1AC"
+  },
+  {
+    "name": "appear_ack",
+    "wire": "696BAFADAEAF"
+  }
+]
