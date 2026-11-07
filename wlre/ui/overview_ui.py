@@ -3,6 +3,7 @@ import time
 import tkinter as tk
 from tkinter import ttk, font as tkfont
 from wlre.ui.halo_button import HaloButton
+from wlre.ui.portrait_rows import PortraitRows
 from wlre.ui.button_art import settings_button, bag_button, recovery_button
 from wlre.ui.function_icons import action_icon_photo
 from wlre.core.efficiency import rates, progress, forecast
@@ -133,10 +134,16 @@ class OverviewPanel(ttk.Frame):
     def __init__(self,parent,app):
         super().__init__(parent);self.app=app;self.values={};self.signature=None
         self.labels={};self.full_values={};self.cards={}
+        self._owns_portrait_provider = getattr(app, 'portrait_provider', None) is None
+        if self._owns_portrait_provider:
+            from wlre.services.world.character_portraits import PortraitProvider
+            self.portrait_provider = PortraitProvider()
+        else:
+            self.portrait_provider = app.portrait_provider
         for column in range(6):
             self.columnconfigure(column,weight=1,uniform='overview')
         layout=(
-            ('role','角色與夥伴',None,3,0,0,3,100),
+            ('role','角色與夥伴',None,3,0,0,3,124),
             ('activity','目前活動',None,3,0,3,3,100),
             ('ai','自動戰鬥',None,3,1,0,2,100),
             ('roaming','自動徘徊',None,3,1,2,2,100),
@@ -168,10 +175,14 @@ class OverviewPanel(ttk.Frame):
                     command=self.toggle_flows,padding=(3,2))
                 self.flow_button.pack(side='left',padx=(4,0))
             value=tk.StringVar();self.values[key]=value
-            label=ttk.Label(frame,textvariable=value,justify='left',anchor='w')
-            label.grid(row=1,column=0,columnspan=2,sticky='nsew',pady=(2,0))
-            self.labels[key]=(label,lines)
-            label.bind('<Configure>',lambda e,k=key:self.fit_value(k))
+            if key == 'role':
+                self.portrait_rows = PortraitRows(frame)
+                self.portrait_rows.grid(row=1,column=0,columnspan=2,sticky='nsew',pady=(2,0))
+            else:
+                label=ttk.Label(frame,textvariable=value,justify='left',anchor='w')
+                label.grid(row=1,column=0,columnspan=2,sticky='nsew',pady=(2,0))
+                self.labels[key]=(label,lines)
+                label.bind('<Configure>',lambda e,k=key:self.fit_value(k))
             if key in ('ai','roaming','expedition'):
                 if key=='ai':
                     self.ai_settings_button=settings_button(tools,self.open_ai_settings,text='AI設定')
@@ -205,7 +216,8 @@ class OverviewPanel(ttk.Frame):
                     ttk.Button(tools, text='配點', width=4, command=app.open_attributes,
                                padding=(3,2)).pack(side='left', padx=(6,0))
             self.actions[key]=button
-        self.after(1000,self.tick)
+        self.tick_job = self.after(1000,self.tick)
+        self.bind('<Destroy>', self._destroyed, add='+')
 
     def toggle_flows(self):
         enabled=self.app.snapshot.get('automation',{}).get('enabled',True)
@@ -261,12 +273,17 @@ class OverviewPanel(ttk.Frame):
         for key,section in (('ai','auto_battle'),('roaming','roaming'),('expedition','expedition')):
             self.actions[key].set_active(self.app.live_active and state.get(section,{}).get('enabled',False))
         values=summarize(getattr(self,'state',{}),self.app.live_active,self.app.ai_settings.get('party_guard',{}))
+        self.portrait_rows.render_state(state, values['role'], self.app.live_active,
+                                  getattr(self.app, 'portrait_provider', None) or self.portrait_provider)
         if values!=self.signature:
             self.signature=values
             self.full_values=values
             for key in values:self.fit_value(key)
 
     def fit_value(self,key):
+        if key == 'role':
+            self.values[key].set(self.full_values.get(key, '等待同步'))
+            return
         label,limit=self.labels[key]
         text=self.full_values.get(key,'等待同步')
         font=tkfont.nametofont('TkDefaultFont',root=self)
@@ -299,4 +316,11 @@ class OverviewPanel(ttk.Frame):
     def tick(self):
         if self.winfo_exists():
             if self.winfo_ismapped():self.refresh()
-            self.after(1000,self.tick)
+            self.tick_job = self.after(1000,self.tick)
+
+    def _destroyed(self, event):
+        if event.widget is self and self.tick_job is not None:
+            self.after_cancel(self.tick_job)
+            self.tick_job = None
+            if self._owns_portrait_provider:
+                self.portrait_provider.close()

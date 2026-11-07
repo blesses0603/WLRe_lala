@@ -27,12 +27,19 @@ class DocumentationAndReleaseAudit(unittest.TestCase):
             self.skipTest("Git index unavailable, e.g. a source-only export")
         self.assertEqual(duplicates, [])
 
-    def test_dev_readme_does_not_impersonate_unpublished_release(self):
+    def test_release_readme_matches_version_and_preserves_validation_limits(self):
         version = audit_repository.application_version(ROOT)
         self.assertRegex(version, r"^\d+\.\d+\.\d+$")
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         changelog = (ROOT / "版本歷史.md").read_text(encoding="utf-8")
-        self.assertIn(f"v{version} 開發版", readme)
+        self.assertEqual(readme.splitlines()[0], f"# WLRe:LaLa | v{version}")
+        release_summary = readme.split("\n\n", 2)[1]
+        self.assertIn(f"v{version} 桌面發行", release_summary)
+        self.assertIn("成功後發布", release_summary)
+        self.assertIn("正式服完整端到端", release_summary)
+        self.assertIn("仍未完成", release_summary)
+        self.assertIn("官方導航預覽不授權正式移動", release_summary)
+        self.assertIn("macOS Intel CI 不驗證 GUI", release_summary)
         self.assertIn(f"## v{version} ", changelog)
         self.assertIn("v0.6.0", readme)
         self.assertIn("v0.5.3", changelog)

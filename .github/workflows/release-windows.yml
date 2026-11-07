@@ -76,7 +76,7 @@ jobs:
       - name: Check version tag
         run: python -m tools.build.release_nuitka --tag "$env:RELEASE_TAG" --check-tag
       - name: Install test dependencies
-        run: python -m pip install -r requirements-ui.txt
+        run: python -m pip install -r requirements-ui.txt -r requirements-extractor.txt
       - name: Run tests
         run: python -m unittest discover -s tests -q
       # Match the PR cache namespace; never reuse objects across architectures.
