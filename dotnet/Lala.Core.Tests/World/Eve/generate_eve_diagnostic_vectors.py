@@ -58,18 +58,32 @@ public static class EveDiagnosticPythonVectors
     public const string DiagnosticsSourceSha256 = "''' + source_hashes['Diagnostics'] + '''";
     public static IEnumerable<object[]> Cases()
     {
+        int observationIndex = 0;
+        foreach (var original in EvePythonVectors.Cases())
+            yield return new object[] { original[0], original[1], original[2], observationIndex++ };
+        if (observationIndex != VectorCount)
+            throw new InvalidDataException("Eve diagnostic corpus no longer matches the payload fixtures.");
+    }
+
+    public static JsonElement ReadExpected(int fixtureIndex, int rowIndex, int observationIndex)
+    {
+        var original = EvePythonVectors.ReadCase(fixtureIndex, rowIndex);
+        var observation = Observations.Value[observationIndex];
+        if (observation.GetProperty("name").GetString() != original.GetProperty("name").GetString() ||
+            observation.GetProperty("source").GetString() != original.GetProperty("source").GetString())
+            throw new InvalidDataException("Eve diagnostic corpus no longer matches the payload fixtures.");
+        return observation.GetProperty("expected");
+    }
+
+    private static readonly Lazy<JsonElement> Observations = new(ReadObservations);
+    private static JsonElement ReadObservations()
+    {
         using var document = JsonDocument.Parse(GzipJson.DecodeResource(
             "Lala.Core.Tests.Diagnostics.Parsing.Fixtures.eve-v115-observations.json.gz",
             "''' + hashlib.sha256(compressed).hexdigest() + '''", "''' + hashlib.sha256(payload).hexdigest() + '''"));
-        using var expected = document.RootElement.EnumerateArray();
-        foreach (var original in EvePythonVectors.Cases())
-        {
-            if (!expected.MoveNext() || expected.Current.GetProperty("name").GetString() != (string)original[0] ||
-                expected.Current.GetProperty("source").GetString() != ((JsonElement)original[1]).GetProperty("source").GetString())
-                throw new InvalidDataException("Eve diagnostic corpus no longer matches the payload fixtures.");
-            yield return new object[] { original[0], original[1], expected.Current.GetProperty("expected").Clone() };
-        }
-        if (expected.MoveNext()) throw new InvalidDataException("Unmatched Eve diagnostic observation.");
+        if (document.RootElement.GetArrayLength() != VectorCount)
+            throw new InvalidDataException("Unmatched Eve diagnostic observation.");
+        return document.RootElement.Clone();
     }
 }
 ''', encoding='utf-8', newline='\n')

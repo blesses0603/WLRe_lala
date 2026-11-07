@@ -224,7 +224,22 @@ for number, rows in enumerate(parts, 1):
     compressed_hash = hashlib.sha256(compressed).hexdigest()
     decoded_hash = hashlib.sha256(payload.encode('utf-8')).hexdigest()
     methods.append(f'    private static string Part{number:03}() => Lala.Core.Tests.TestSupport.GzipJson.DecodeResource("Lala.Core.Tests.World.Eve.Fixtures.{filename}", "{compressed_hash}", "{decoded_hash}");')
-    main += f'        using (var part = JsonDocument.Parse(Part{number:03}()))\n            foreach (var row in part.RootElement.EnumerateArray()) yield return new object[] {{ row.GetProperty("name").GetString()!, row.Clone() }};\n'
-main += '    }\n' + '\n'.join(methods) + '\n}\n'
+    # Only small identifiers enter xUnit discovery/results; fixture JSON stays private.
+    for row_index, row in enumerate(rows):
+        assert len(row['name']) <= 80
+        main += f'        yield return new object[] {{ {json.dumps(row["name"])}, {number - 1}, {row_index} }};\n'
+main += '''    }
+    public static JsonElement ReadCase(int fixtureIndex, int rowIndex) => Fixtures[fixtureIndex].Value[rowIndex];
+
+    // One detached, immutable document per verified resource, loaded only when a test needs it.
+    private static readonly Lazy<JsonElement>[] Fixtures =
+    [
+''' + ''.join(f'        new(() => ReadFixture(Part{number:03})),\n' for number in range(1, len(parts) + 1)) + '''    ];
+    private static JsonElement ReadFixture(Func<string> read)
+    {
+        using var document = JsonDocument.Parse(read());
+        return document.RootElement.Clone();
+    }
+''' + '\n'.join(methods) + '\n}\n'
 (output_dir / 'EvePythonVectors.cs').write_text(main, encoding='utf-8', newline='\n')
 print(f'{len(cases)} vectors, {len(parts)} deterministic gzip resources. Current bytes {source_hash}; CRLF bytes {crlf_hash}')

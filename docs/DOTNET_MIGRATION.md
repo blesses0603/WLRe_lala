@@ -435,6 +435,64 @@ slice. Observer/UI wiring, full auto-battle, catalog activation and live accepta
 remain gaps. Existing received-event wire types do not imply arbitrary Python scalar
 parity. See [battle display evidence](../dotnet/Lala.Core.Tests/Battle/BattleDisplayREADME.md).
 
+`NormalAttackCatalogParser` now ports only `normal_attack_catalog.py`'s `parse_npcs`
+and `build_catalog`. Public APIs retain fixed reviewed NPC and ItemData SHA-256 pins,
+with ItemData verified/parsed before NPCs in source order. Strict UTF-16LE validation,
+record/count/ID/trailing-byte bounds and the source NPC field positions are preserved.
+Immutable output carries normal-attack, item-kind, catchability and catch-net facts;
+net bonuses use `special == 140` and the first signed Int32 attribute minus 100 without
+overflow. These snapshots are data, not capture or attack permission.
+
+The 810 actual-Python vectors cover layout, public-pin rejection, error ordering and
+NPC diagnostics. Synthetic layouts substitute Python digest pins only inside restored
+test contexts; C# public entrypoints reject every synthetic fixture. Only internal
+test helpers bypass digest gates. No actual official-resource success is established.
+The 825 focused Release tests pass, with 24 retained Python passes and one existing
+asset-dependent skip; independent review approved this slice.
+
+NPC decorator/read diagnostics include safe input digests, record counts, checkpoints
+and failure annotations. All 235 NPC truncations preserve exact source wording. Only
+247 inherited ItemData truncations before NPC parsing map narrowly to the established
+`Catalog record truncated` label; other error messages remain exact, with the public
+C# exception type used in diagnostic labels. Shared parsers/readers are unchanged.
+`build_catalog` has no source decorator, and its nested ItemData observation remains
+absent. `_source`/`CurrentNormalData`, resource retrieval, runtime activation and complete
+parser diagnostics remain gaps. The separate combat-catalog follow-on below reuses
+this parser. See [normal-attack catalog scope and evidence](../dotnet/Lala.Core.Tests/Catalogs/NormalAttack/README.md).
+
+`CombatCatalogParser` now adds the pure constants scanner and catalog assembly from
+`combat_catalog.py`, reusing the existing SkillData, ItemData and normal-NPC parsers.
+Five fixed reviewed public pins cover those three binary inputs and both clear Lua
+texts. Strict UTF-8 hashing preserves exact BOM/newline/Unicode bytes and rejects
+invalid surrogates. The bounded scanner is not a Lua interpreter: first matches,
+enum rules, nested braces and duplicate matrix writes retain the source semantics.
+No Lua is executed or decrypted.
+
+Assembly preserves the source stage order, required nonempty names and unique
+nonzero skill keys. Immutable results retain all 71 skill fields, five NPC skill slots,
+complete item details including attribute effects, 15 character definitions and a
+5-by-5 element matrix. Explicit `ToKnowledgeSnapshot` creates the existing unverified
+offline DTO; fields absent from that DTO remain in the full parsed catalog. Projection
+rejects out-of-range character values and nonfinite weights rather than wrapping or
+defaulting. Raw constants retain BigInteger values and source float-overflow behavior.
+
+The 195 actual-Python vectors preserve raw results, errors and diagnostics while
+recording typed differences separately. Focused verification passed 2,869 tests,
+including 208 new tests; retained Python passed 20 with one existing private-asset
+skip. Independent review found no correctness or source-gate blocker. Synthetic pins
+are patched only inside restored test contexts; public entrypoints reject synthetic
+assets. No official-resource successful parse or runtime acceptance is established.
+
+Inherited SkillData public size-before-hash ordering and its English fingerprint
+error differ from Python's hash-first order and Chinese label. Short SkillData
+layouts, ItemData truncation labels and value-free enum/float/numeric-limit errors
+are separately documented differences. Constants and the overall builder have no
+source decorator. NPC diagnostics and secondary reread checkpoints in a diagnosed
+parent are retained; nested ItemData/SkillData observations remain missing. The shared
+parsers are unchanged. `load_verified_catalog`, network/files, normalized caches,
+resource activation, UI/session wiring and commands remain gaps. See
+[combat catalog scope and evidence](../dotnet/Lala.Core.Tests/Catalogs/Combat/README.md).
+
 Eve v115 parsing now validates all eleven scene sections before exposing immutable
 NPC/interaction indexes. Versions, offsets, record/scene limits, skipped layouts,
 truncations and cancellation are checked. The 2,143 exact Python cases are separate
@@ -462,7 +520,8 @@ the three duplicate-scene hardening cases remain explicit differences, and error
 labels use the existing C# exception type. Nested/concurrent sessions, exception
 identity, input ownership and cancellation have directed contracts. Success outside
 a diagnostic session stays quiet; failure retains a safe observation without keeping
-input bytes or exception messages. Filesystem persistence, default paths, other parser
+input bytes or exception messages. Normal-NPC instrumentation is now separately listed
+above; filesystem persistence, default paths, nested ItemData/SkillData/remaining parser
 instrumentation and runtime catalog activation remain unimplemented.
 
 ### Latest incremental verification evidence
@@ -483,18 +542,21 @@ acceptance follows from these offline suites.
 | `5c9e0ea` reviewed Ark candidates | `ArkCandidateParityTests.cs`, `ArkCandidateContractTests.cs` and `README.md` under `Lala.Core.Tests/Social/Ark/Candidates` | 4,921 focused Release tests passed: 4,865 synthetic resolver cases, 42 index cases and additional source/data/contracts; 11 retained Python tests passed. All 200 real text-free rows, seven metadata/digest fields and 16 annotations are checked separately from synthetic positive matches. No full-suite or official-text-match claim is made for this newer increment. |
 | `17c7903` + `ced277a` battle planning | `BattleCommandParityTests.cs`, `BattleCommandContractTests.cs` and `BattleCommandREADME.md` under `Lala.Core.Tests/Battle` | 2,705 focused passed: 976 new planner tests plus 1,729 existing candidates; 956 Python observations distinguish 949 exact cases from seven explicit typed rejections. Retained Python regressions: 19 passed. No updated integrated full-suite count is claimed. |
 | `6ca75e5` battle display | `BattleDisplayParityTests.cs`, `BattleDisplayContractTests.cs` and `BattleDisplayREADME.md` under `Lala.Core.Tests/Battle` | 576 focused passed: 126 new display tests plus 450 existing CombatRules tests; 116 Python cases, 12 labels and 155 attack lines. No full-suite or runtime/UI acceptance claim. |
+| `fe585ca` normal-attack catalog subset | `NormalAttackCatalogTests.cs`, `NormalAttackPythonVectors.cs` and `README.md` under `Lala.Core.Tests/Catalogs/NormalAttack` | 825 focused Release tests passed against 810 actual-Python vectors. Retained Python: 24 passed, one existing asset-dependent skip. Exactly 247 inherited ItemData truncation labels are mapped; 235 NPC truncations retain exact wording. No official-resource success or new combined full-run claim. |
+| `4215512` combat constants/catalog assembly | `CombatCatalogTests.cs`, `CombatCatalogPythonVectors.cs` and `README.md` under `Lala.Core.Tests/Catalogs/Combat` | 2,869 focused Catalogs/knowledge tests passed, including 208 new tests and 195 actual-Python vectors. Retained Python: 20 passed, one existing private-asset skip. Explicit inherited gate/error and nested-diagnostic gaps remain; no official-resource success or updated combined full-suite result is claimed. |
 
 Inventory status remains partial for these modules. Desktop `battle_commands.py`
 (pure action/round planning), `storage/ark_questions.py` (explicit offline store),
 `services/ark_first_answer.py` (strict arithmetic), `services/ark_candidates.py` (pure
-reviewed resolver) and `services/ark_candidate_data.py` (text-free reviewed index) move
-from not migrated to partially migrated; the summary is now 584 not migrated, 110
-partially migrated and 2 ported offline. Android inventory and reservation entries share identical source hashes and
-receive the same bounded evidence. Android combat-resource, battle-command, combat/display
+reviewed resolver), `services/ark_candidate_data.py` (text-free reviewed index) and
+`services/world/normal_attack_catalog.py` (offline parse/build subset) move from not
+migrated to partially migrated; the summary is now 583 not migrated, 111 partially
+migrated and 2 ported offline. Android inventory and reservation entries share identical
+source hashes and receive the same bounded evidence. Android combat-resource, battle-command, combat/display
 and Eve hashes differ, so they stay unreconciled; the baseline has no Android
-`storage/ark_questions.py`, `services/ark_first_answer.py`, `services/ark_candidates.py`
-or `services/ark_candidate_data.py` entry. `IsCompleteState` remains false. The offline
-store, arithmetic solver and reviewed resolver do not establish Ark runtime
+`storage/ark_questions.py`, `services/ark_first_answer.py`, `services/ark_candidates.py`,
+`services/ark_candidate_data.py` or `services/world/normal_attack_catalog.py` entry.
+`IsCompleteState` remains false. The offline store, arithmetic solver and reviewed resolver do not establish Ark runtime
 persistence or command activation, and none of these slices establishes full migration
 or full runtime acceptance. Current combined verification is recorded below.
 
@@ -513,14 +575,24 @@ Windows, macOS and Linux each passed 28,865 Core tests and 59 lifecycle tests, b
 Desktop with zero warnings/errors and passed all nine offline inspector checks.
 The Android validation APK build succeeded. These receipts apply to `9e0a04f`, not
 the newer reviewed-candidate, battle-planning or display increments; their focused
-evidence is listed above. The subsequent integrated tree through `ced277a` passes
+evidence is listed above.
+
+### Integrated verification for published commit `796d96d`
+
+The subsequent integrated tree through `ced277a`, published as `796d96d`, passes
 **34,888 Core Release tests**, with zero failures/skips. Android lifecycle passes
 **59/59**; Desktop Release has zero warnings/errors and **9** offline self-test checks
 pass. Retained Python runs **2,273** tests with **216** existing platform/headless
-skips, and strict repository audit passes. These newer local results await their own
-remote cross-platform CI; the NPC catalog parser is not part of this tree.
-CI builds and offline tests do not establish installation, device, official-text or
-live-server acceptance.
+skips, and strict repository audit passes.
+
+Remote [.NET CI run 42405102704](https://github.com/blesses0603/WLRe_lala/actions/runs/42405102704)
+and [Python CI run 42405102776](https://github.com/blesses0603/WLRe_lala/actions/runs/42405102776)
+are both green for `796d96d`. Windows, macOS and Linux each pass 34,888 Core tests,
+59 lifecycle tests, Desktop builds with zero warnings/errors and nine offline self-test
+checks. The Android validation APK build also succeeds. These receipts exclude the
+newer `fe585ca` normal-attack/NPC and `4215512` combat-catalog increments. The newer combined local verification is recorded below; these remote receipts
+apply only to the published commit. CI builds and offline tests do not establish installation,
+device, official-resource success or live-server acceptance.
 
 The final Ark storage review adds nine corruption/schema regressions: contradictory
 registered candidate/attempt evidence fails closed, all identity predicates explicitly
@@ -537,3 +609,29 @@ LF and CRLF. Android source, AccountSession and connection/lifecycle public APIs
 unchanged by this increment. The strict arithmetic helper and reviewed candidate
 intents remain separate from sending or confirming answers. `IsCompleteState` stays
 false; the migration remains a Draft and is not ready to replace the Python client.
+
+### Integrated normal/NPC and combat catalogs (8.0.15 candidate)
+
+The integrated tree through `74f925e` passes **35,923 Core Release tests** with zero
+failures/skips under the standard command, without GC or execution-policy overrides.
+Lifecycle remains **59/59**, Desktop builds with zero warnings/errors and its **9**
+offline checks pass. Retained Python runs **2,273** tests with **216** existing skips.
+Remote CI for this candidate is pending publication.
+
+Earlier aggregate runs were terminated (diagnostic exit 137, about 4.3 GiB peak
+testhost RSS). Test-only changes keep NPC/EVE JSON out of theory display names and
+resolve bounded scalar indices at execution. All 2,146 EVE cases per theory and all
+52 EVE gzip resources remain unchanged. A temporary process-only 2 GiB diagnostic
+run exposed seven OutOfMemory exceptions in the combat-action contract fixture
+loader, which reparsed a 7,109,103-byte corpus for 19 tests. It now caches only the
+detached 5,281-byte baseline row and gives each test a fresh deep clone. Added
+index/isolation checks preserve coverage; independent review and deterministic
+generator replay passed. No production behavior, test expectations, GC settings,
+parallelism, size limits, CI policy or fixtures were relaxed. The final standard
+full-suite run passes; no claim is made that every earlier termination has a
+uniquely established cause.
+
+This increment does not implement runtime catalog installation or official-source
+positive acceptance. ItemData/SkillData automatic diagnostics and the documented
+legacy SkillData admission-order differences remain outstanding. Android and
+AccountSession are unchanged, and `IsCompleteState` remains false.

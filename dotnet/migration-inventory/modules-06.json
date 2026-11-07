@@ -1263,7 +1263,9 @@
       "dotnet/Lala.Core/Diagnostics/Parsing/ParserDiagnosticModels.cs",
       "dotnet/Lala.Core/Diagnostics/Parsing/ParserDiagnosticRun.cs",
       "dotnet/Lala.Core/Diagnostics/Parsing/ParserDiagnostics.cs",
-      "dotnet/Lala.Core/World/Eve/EveV115Parser.cs"
+      "dotnet/Lala.Core/World/Eve/EveV115Parser.cs",
+      "dotnet/Lala.Core/Catalogs/NormalAttackCatalogParser.cs",
+      "dotnet/Lala.Core/Catalogs/CombatCatalogParser.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -1362,10 +1364,12 @@
     },
     "migrated_scope": [
       "Bounded privacy-safe in-memory sessions/checkpoints, input digests, baseline validation/comparison and exact report JSON; 509 synthetic Python cases plus safety/concurrency contracts. Explicit metadata/depth admission and cancellation protections are documented deltas.",
-      "Automatic diagnostics on Eve typed Parse and serialized Derive entrypoints, including source-equivalent scene/header checkpoints, raw-input digests, nested-session behavior and lazy failure association without an active session; 2,146 actual-Python decorator observations plus cancellation/privacy/concurrency contracts. Error type labels use EveDecodeException; three duplicate-scene cases retain the documented fail-closed delta."
+      "Automatic diagnostics on Eve typed Parse and serialized Derive entrypoints, including source-equivalent scene/header checkpoints, raw-input digests, nested-session behavior and lazy failure association without an active session; 2,146 actual-Python decorator observations plus cancellation/privacy/concurrency contracts. Error type labels use EveDecodeException; three duplicate-scene cases retain the documented fail-closed delta.",
+      "NormalAttackCatalogParser now reuses optional source-equivalent NPC decorator/read diagnostics within its 810-vector corpus, retaining digest/count/checkpoint/error behavior and privacy/cancellation contracts. build_catalog itself has no source decorator, and its nested ItemData observation is not yet instrumented.",
+      "CombatCatalogParser reuses supported NPC diagnostics and preserves secondary NPC reread checkpoints in enclosing diagnosed calls; three real-Python regressions verify parent failure locations after names, keys or constants fail. It does not invent aggregate constants/builder events or supply missing ItemData/SkillData decorators."
     ],
     "outstanding_scope": [
-      "Filesystem/atomic persistence, default paths, registry/signature binding, traceback-local inference, instrumentation of other parsers and runtime catalog integration remain. Eve instrumentation alone does not activate resources; reports never authorize assets or commands."
+      "Filesystem/atomic persistence, default paths, registry/signature binding, traceback-local inference, ItemData/SkillData/remaining parser instrumentation and runtime catalog integration remain. Eve and normal-NPC observations do not activate resources; reports never authorize assets or commands."
     ]
   },
   {
@@ -2732,7 +2736,9 @@
     "scope": "runtime",
     "status": "partially_migrated",
     "target_files": [
-      "dotnet/Lala.Core/Catalogs/SkillDataParser.cs"
+      "dotnet/Lala.Core/Catalogs/SkillDataParser.cs",
+      "dotnet/Lala.Core/Catalogs/CombatCatalogConstants.cs",
+      "dotnet/Lala.Core/Catalogs/CombatCatalogParser.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -2789,10 +2795,15 @@
       "live_server_acceptance": "not_run"
     },
     "migrated_scope": [
-      "SKILL_FIELDS and parse_skills: all 71 fields, strict source fingerprint and layout validation."
+      "SKILL_FIELDS and parse_skills: all 71 fields, strict source fingerprint and layout validation.",
+      "Pure _block/_enum/parse_constants and build_catalog with five fixed public reviewed SHA-256 pins for ItemData, NPC, SkillData and the two clear Lua texts. Strict exact UTF-8 hashing performs no BOM/newline/Unicode normalization; bounded literal scanning preserves first matches, source enum rules, nested braces and last-write-wins matrices without executing Lua.",
+      "Source assembly order preserves item hash, NPC validation/reread, item/skill parsing, all required names, nonzero-key uniqueness and constants. Immutable results retain all 71 skill fields, five NPC skills, full item detail/attribute-effect records, 15 characters and the complete 5-by-5 element matrix. Character integers remain BigInteger and raw weights preserve source overflow behavior.",
+      "Explicit checked ToKnowledgeSnapshot creates the existing unverified offline CombatResourceCatalog. Item name/special/effect fields stay in the full catalog but are intentionally absent from its narrower DTO; out-of-range characters and nonfinite weights reject projection. 195 actual-Python vectors, 208 new tests and 2,869 focused Catalogs/knowledge tests passed; retained Python: 20 passed, one existing private-asset skip."
     ],
     "outstanding_scope": [
-      "NPC/Lua decoding, name/key lookup, element matrices, full catalog construction and loader/cache orchestration remain Python."
+      "load_verified_catalog, downloads/network/files, Lua execution/decryption, normalized caches, verified runtime activation and UI/session/command integration remain. Synthetic pins are substituted only in restored test contexts; public gates reject synthetic assets. No actual official-resource success or runtime provenance is established.",
+      "Reused ItemDataParser and SkillDataParser source decorators remain absent. Constants/build_catalog have no source decorator; only supported NPC and enclosing-parent diagnostics are compared, with secondary NPC reread checkpoints preserved. This is not full diagnostic parity.",
+      "Inherited SkillDataParser public size-before-hash order and English fingerprint error differ from Python hash-first/Chinese error; short layout record rejection and inherited ItemData truncation labels are explicit narrow deltas. Unknown enum/invalid float/4300-digit-limit errors are value-free, and projection ranges are deliberate typed limits rather than arbitrary Python-object parity."
     ]
   }
 ]

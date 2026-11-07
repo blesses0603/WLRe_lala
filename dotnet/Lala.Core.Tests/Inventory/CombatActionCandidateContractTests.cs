@@ -7,7 +7,23 @@ namespace Lala.Core.Tests.Inventory;
 
 public sealed class CombatActionCandidateContractTests
 {
-    private static JsonNode Baseline => CombatActionCandidatePythonVectors.Read()["cases"]![0]!;
+    // Detach the one required row so the cached template cannot retain the full corpus.
+    private static readonly Lazy<JsonNode> BaselineTemplate = new(() =>
+        CombatActionCandidatePythonVectors.Read()["cases"]![0]!.DeepClone());
+    private static JsonNode Baseline => BaselineTemplate.Value.DeepClone();
+
+    [Fact]
+    public void BaselineCopiesAreDetachedAndNestedMutationsCannotLeakBetweenTests()
+    {
+        var first = Baseline;
+        var second = Baseline;
+        var expected = second.ToJsonString();
+        Assert.Null(first.Parent);Assert.Null(second.Parent);
+        Assert.NotSame(first,second);Assert.NotSame(first["actor"],second["actor"]);
+        first["actor"]!.AsObject().Clear();
+        Assert.Equal(expected,second.ToJsonString());
+        Assert.Equal(expected,Baseline.ToJsonString());
+    }
 
     [Fact]
     public void RepeatedCallsAndLaterImportedObservationsCannotAlterEarlierCandidateHistory()

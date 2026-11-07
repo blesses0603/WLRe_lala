@@ -13,8 +13,10 @@ public sealed class EveV115Tests
 {
     [Theory]
     [MemberData(nameof(EvePythonVectors.Cases), MemberType = typeof(EvePythonVectors), DisableDiscoveryEnumeration = true)]
-    public void Retained_python_exact_documents_and_failure_messages(string name, JsonElement row)
+    public void Retained_python_exact_documents_and_failure_messages(string name, int fixtureIndex, int rowIndex)
     {
+        var row = EvePythonVectors.ReadCase(fixtureIndex, rowIndex);
+        Assert.Equal(name, row.GetProperty("name").GetString());
         byte[] raw = Raw(row);
         string? source = row.GetProperty("source").GetString();
         if (row.GetProperty("divergence").GetBoolean())
@@ -48,6 +50,26 @@ public sealed class EveV115Tests
         Assert.Equal(source is null or EveV115Parser.NpcSource, result.IncludesNpcs);
         Assert.Equal(source is null or EveV115Parser.InteractionSource, result.IncludesInteractions);
         EveV115Indexes Parse() => source is null ? EveV115Parser.Parse(raw) : EveV115Parser.Parse(raw, source);
+    }
+
+    [Fact]
+    public void Theory_data_keeps_all_cases_as_bounded_identifiers_instead_of_payloads()
+    {
+        var cases = EvePythonVectors.Cases().ToArray();
+        Assert.Equal(EvePythonVectors.VectorCount, cases.Length);
+        var identities = new HashSet<(int Fixture, int Row)>();
+        foreach (var identifiers in cases)
+        {
+            Assert.Equal(3, identifiers.Length);
+            var name = Assert.IsType<string>(identifiers[0]);
+            Assert.InRange(name.Length, 1, 80);
+            int fixtureIndex = Assert.IsType<int>(identifiers[1]);
+            int rowIndex = Assert.IsType<int>(identifiers[2]);
+            Assert.InRange(fixtureIndex, 0, EvePythonVectors.ResourceCount - 1);
+            Assert.True(identities.Add((fixtureIndex, rowIndex)));
+            Assert.Equal(name, EvePythonVectors.ReadCase(fixtureIndex, rowIndex).GetProperty("name").GetString());
+        }
+        Assert.Equal(EvePythonVectors.ResourceCount, identities.Select(identity => identity.Fixture).Distinct().Count());
     }
 
     [Fact]
@@ -171,7 +193,7 @@ public sealed class EveV115Tests
 
     private static byte[] Fixture(string name)
     {
-        var row = (JsonElement)EvePythonVectors.Cases().First(row => (string)row[0] == name)[1];
-        return Raw(row);
+        var identifiers = EvePythonVectors.Cases().First(row => (string)row[0] == name);
+        return Raw(EvePythonVectors.ReadCase((int)identifiers[1], (int)identifiers[2]));
     }
 }

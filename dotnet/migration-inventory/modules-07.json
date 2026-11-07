@@ -1142,7 +1142,7 @@
       "Binary ItemData reader, legacy base fields, reviewed digest-pinned 1296 fields and validation."
     ],
     "outstanding_scope": [
-      "Runtime loader/activation and official-resource successful parse acceptance not run."
+      "Runtime loader/activation and official-resource successful parse acceptance not run. Parser diagnostic instrumentation, including the nested ItemData observation when NormalAttackCatalogParser builds a catalog, remains absent; the existing shared reader truncation label is unchanged."
     ]
   },
   {
@@ -1939,8 +1939,10 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Catalogs/NormalAttackCatalogParser.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1973,11 +1975,20 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Offline parse_npcs/build_catalog subset with fixed public reviewed NPC and ItemData SHA-256 pins and source-order ItemData-before-NPC validation. Strict UTF-16LE text, bounded 203-byte NPC fields, zero/duplicate/count/trailing-byte rejection and immutable normal-attack, item-kind, catchability and catch-net snapshots. Catch nets use special 140 and the first signed Int32 attribute minus 100 without overflow.",
+      "Source NPC diagnosed/read-checkpoint observations with input digests, counts, safe failure annotations and nested-call behavior. 810 actual-Python vectors and 825 focused Release tests; 24 retained Python tests passed with one existing asset-dependent skip. Synthetic layout pins are patched only inside restored Python test contexts; C# public entrypoints reject every synthetic input.",
+      "Truncation evidence distinguishes exactly 247 inherited pre-NPC ItemData failures mapped narrowly from ItemData record truncated to the existing Catalog record truncated label, and 235 NPC truncations compared with exact source wording. Other rejection messages remain exact; established C# exception type labels replace Python ValueError/ItemDataDecodeError labels."
+    ],
+    "outstanding_scope": [
+      "_source/CurrentNormalData, resource retrieval, verified runtime/catalog activation, command/capture authority, UI/session integration and actual official-resource successful parsing remain unimplemented or unverified. Public hashes/layout gates cannot be supplied or bypassed by callers; internal layout helpers are test-only.",
+      "Nested ItemData diagnostics remain absent because shared ItemDataParser instrumentation is outside this increment; build_catalog has no source decorator. Shared parsers/readers are unchanged. No full-module, complete diagnostics, device or live acceptance claim; the separate pure combat catalog assembler now reuses this parser, without adding runtime activation or source-asset acceptance."
+    ]
   },
   {
     "id": "desktop:wlre/services/world/npc_1275_eve.py",

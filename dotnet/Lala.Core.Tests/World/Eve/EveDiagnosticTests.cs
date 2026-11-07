@@ -19,8 +19,11 @@ public sealed class EveDiagnosticTests
 
     [Theory]
     [MemberData(nameof(EveDiagnosticPythonVectors.Cases), MemberType = typeof(EveDiagnosticPythonVectors), DisableDiscoveryEnumeration = true)]
-    public void Direct_typed_and_serialized_calls_match_actual_python_decorators(string name, JsonElement row, JsonElement expected)
+    public void Direct_typed_and_serialized_calls_match_actual_python_decorators(string name, int fixtureIndex, int rowIndex, int observationIndex)
     {
+        var row = EvePythonVectors.ReadCase(fixtureIndex, rowIndex);
+        Assert.Equal(name, row.GetProperty("name").GetString());
+        var expected = EveDiagnosticPythonVectors.ReadExpected(fixtureIndex, rowIndex, observationIndex);
         var raw = Raw(row);
         string? source = row.GetProperty("source").GetString();
         foreach (bool serialized in new[] { false, true })
@@ -67,7 +70,19 @@ public sealed class EveDiagnosticTests
     public void Observations_are_tied_to_the_current_retained_sources_and_full_corpus()
     {
         Assert.Equal(EvePythonVectors.VectorCount, EveDiagnosticPythonVectors.VectorCount);
-        Assert.Equal(EveDiagnosticPythonVectors.VectorCount, EveDiagnosticPythonVectors.Cases().Count());
+        var cases = EveDiagnosticPythonVectors.Cases().ToArray();
+        Assert.Equal(EveDiagnosticPythonVectors.VectorCount, cases.Length);
+        for (int index = 0; index < cases.Length; index++)
+        {
+            var identifiers = cases[index];
+            Assert.Equal(4, identifiers.Length);
+            Assert.InRange(Assert.IsType<string>(identifiers[0]).Length, 1, 80);
+            int fixtureIndex = Assert.IsType<int>(identifiers[1]);
+            int rowIndex = Assert.IsType<int>(identifiers[2]);
+            Assert.Equal(index, Assert.IsType<int>(identifiers[3]));
+            // Preserve the full name/source/count alignment check without passing JSON to xUnit.
+            _ = EveDiagnosticPythonVectors.ReadExpected(fixtureIndex, rowIndex, index);
+        }
         foreach (var (path, expected) in new[]
         {
             ("wlre/services/world/eve_v115.py", EveDiagnosticPythonVectors.EveSourceSha256),
@@ -301,5 +316,9 @@ public sealed class EveDiagnosticTests
         Array.Resize(ref raw, raw.Length + row.GetProperty("zero_padding").GetInt32());
         return raw;
     }
-    private static byte[] Fixture(string name) => Raw((JsonElement)EvePythonVectors.Cases().First(row => (string)row[0] == name)[1]);
+    private static byte[] Fixture(string name)
+    {
+        var identifiers = EvePythonVectors.Cases().First(row => (string)row[0] == name);
+        return Raw(EvePythonVectors.ReadCase((int)identifiers[1], (int)identifiers[2]));
+    }
 }

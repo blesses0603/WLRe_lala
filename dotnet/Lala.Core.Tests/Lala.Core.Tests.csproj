@@ -8,4 +8,6 @@
 <ItemGroup><EmbeddedResource Include="Storage/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.Storage.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
 <ItemGroup><EmbeddedResource Include="Social/Ark/Candidates/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.Social.Ark.Candidates.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
 <ItemGroup><EmbeddedResource Include="Battle/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.Battle.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Catalogs/NormalAttack/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.Catalogs.NormalAttack.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Catalogs/Combat/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.Catalogs.Combat.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
 </Project>
