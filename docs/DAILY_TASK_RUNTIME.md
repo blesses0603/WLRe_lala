@@ -101,3 +101,38 @@ C124-3 僅用於原版拍照後的完成通知；本版不會在沒有實際動�
 本次新增真實 scheduler 回歸：不經人工開題命令，驗證 C191-6 → S191-11 → 查題與選項換序 → C191-7 → S191-12／S191-10／S124 確認，要求與答案各送一次。另驗證未知題只要求一次、閱讀無逾時、問答獨立開關、舊設定相容及達標／暫停條件。
 
 前提交 6290d13 的 Linux／macOS CI 成功；Windows 跑完 1,612 項後有 3 項測試清理錯誤，原因是測試以 sqlite3 Connection 的交易 context manager 當成關閉連線，導致 WinError 32。本次修正問答題庫 2 項與既有組織測試 1 項，明確關閉測試連線，寫入測試仍保留交易提交。應用程式 QuestionStore 原有 finally.close 不受此問題影響；本提交三平台 CI 尚待驗證。
+
+### 首次遇題：有限的精確算式求解（本機候選，未發布）
+
+首次題目現在可在完整符合白名單算式時，精確計算並唯一匹配當前
+數字選項。支援整數加減序列、兩數加法、兩數乘除，以及明確的
+「乘上…再除以…」模板；使用 Fraction，不使用 eval、浮點猜值、AI、
+網頁搜尋結果或文字 ID 相鄰關係猜答案。一般知識題、混合／含糊語句、
+除以零、非整數結果、無匹配或多個數值相同選項，都保留人工選答。
+
+計算結果明確標示「尚待伺服器確認」，不是官方正解表或已確認答案。
+仍經過原有方舟／全域／問答開關、角色／版本／週期檢查，以及單次送答
+與逾時停止規則。只有 S191-12 確認答對才寫入確認題庫；若計算結果被
+伺服器判錯，該題在同角色、同版本、同內容下隔離，不再自動計算重答。
+手動選擇另一個答案出錯不會被冒記為計算答案出錯。
+
+來源調查（2026-11-07）：官方 ResourcePath_PC.dat 指向 DataVer 1.3.23。
+已下載官方 LuaScriptPathList.txt，並核對 StarArk.lua、UIStarArk.lua、
+Protocols_191.lua、ArkData.lua、QuestionScoreData.lua 的官方 MD5 全部相符。
+這些目前下載到的 Lua 檔為二進位，未完成解碼，不能據此宣稱完整正解表
+存在或不存在，也未把檔名中的 QuestionScore 當作答案來源。
+既有程式 S191-11 解析的是題目與四個選項，S191-12 才確認結果。
+文字庫中的算式題是加入精確求解的依據，不把舊版文字庫當成本次 Runtime
+來源，也不內嵌官方題目／答案全文。全部題目首次必中仍未達成。
+
+官方來源：
+- https://wlreftpsrc.chinesegamer.net/WLN/TW/ResourcePath_PC.dat
+- https://wlreftpsrc.chinesegamer.net/WLN/TW/1.3.23/LuaScripts/LuaScriptPathList.txt
+
+Android main 348163c32d3b20a2d0d380a639691b7b072c0e09 尚無桌面版的
+star_ark、ark_catalog、ark_questions 模組。本次沒有移植 Android 方舟功能。
+未連線正式遊戲、未操作角色、未建立安裝包、未合併或發布。
+
+驗證：本機完整 unittest 1,645 項（1,480 通過、165 因缺顯示等平台條件跳過）；
+Python compileall、git diff --check、strict-git repository audit 與 --self-test 通過。
+Windows／macOS CI、原生 GUI／正式服及打包未驗證。

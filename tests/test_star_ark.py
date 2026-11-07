@@ -278,6 +278,49 @@ class StarArkTests(unittest.TestCase):
         self.assertEqual(ark.tick(self.state,True,5),[])
         self.assertIn('衝突',self.state.star_ark['question_store_status'])
 
+    def arithmetic_question(self):
+        self.catalog['texts'].update({20:'3乘上4=？',21:'3',22:'12',23:'7',24:'0'})
+        self.open_question((24,21,23,22))
+
+    def test_first_arithmetic_answer_sends_once_and_is_not_stored_as_confirmed(self):
+        from wlre.storage.ark_questions import QuestionStore
+        self.arithmetic_question()
+        q=self.state.star_ark['question']
+        self.assertEqual(q['known_answer'],22)
+        self.assertIn('尚待伺服器確認',q['answer_source'])
+        self.assertEqual(QuestionStore(self.question_db).observe((True,'a'*64),1,q),(None,'unknown'))
+        self.state.star_ark['enabled']=True
+        self.assertEqual(ark.tick(self.state,True,2),[Packet(191,7,b'\x04')])
+        self.assertEqual(ark.tick(self.state,True,3),[])
+        self.feed(Packet(191,12,b'\x01\x04'))
+        self.assertEqual(QuestionStore(self.question_db).observe((True,'a'*64),1,q),(22,'confirmed'))
+
+    def test_first_arithmetic_answer_respects_pause_and_switch(self):
+        self.arithmetic_question()
+        self.assertEqual(ark.tick(self.state,True,2),[])
+        self.state.star_ark.update(enabled=True,questions_enabled=False)
+        self.assertEqual(ark.tick(self.state,True,3),[])
+        self.state.star_ark['questions_enabled']=True
+        self.state.automation['enabled']=False
+        self.assertEqual(ark.tick(self.state,True,4),[])
+
+    def test_rejected_computed_answer_is_quarantined_across_encounters(self):
+        self.arithmetic_question();self.state.star_ark['enabled']=True
+        ark.tick(self.state,True,2)
+        self.feed(Packet(191,12,b'\x00\x01'))
+        q=self.state.star_ark['question'];p=self.state.star_ark['pending']
+        ark._remember_question(self.state,p,q)
+        self.assertIsNone(q['known_answer'])
+        self.assertIn('衝突',self.state.star_ark['question_store_status'])
+
+    def test_manual_different_wrong_answer_does_not_quarantine_calculation(self):
+        self.arithmetic_question()
+        ark.command(self.state,dict(action='answer',index=1),True,2)
+        self.feed(Packet(191,12,b'\x00\x01'))
+        q=self.state.star_ark['question'];p=self.state.star_ark['pending']
+        ark._remember_question(self.state,p,q)
+        self.assertEqual(q['known_answer'],22)
+
     def test_scheduler_requests_question_then_sends_known_answer_without_manual_commands(self):
         from wlre.network.service_scheduler import advance_services
         self.confirm_question();self.feed(events(3,3))
