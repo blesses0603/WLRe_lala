@@ -2995,3 +2995,51 @@ character collision/clearance/grounding and device behavior. The grouped-state
 construction still does not prove full official client startup. Three legacy
 seeds, house enter/exit-only scope and formal movement guards remain. Local
 commits only; no push, merge, release, login or movement packets.
+
+## Phase 72 — full M12050 search through player point callback
+
+`tools/review_navigation_m12050_postprocess.py` reuses all 16 pinned Phase 71
+fixtures. The full 844-node native Prepare/search runs before compacting its
+exact selected corridor for native registration/sorting, StartEnd Apply and
+Funnel Apply in guarded modifier VMs. Original graph node IDs, XYZ, failures and
+requested/prepared/final endpoints remain in the report. The relocated large
+search trace buffer is used when replaying StartEnd; default layouts are intact.
+Pinned MoveController source then processes the point list on host Lua 5.4 with
+modeled managed-list bindings. This is offline composition, not client execution.
+
+Both hosts produce identical reports apart from timing (desktop 83.16 s,
+Android Python 81.25 s). Thirteen successful searches yield two profiles each:
+all 13 split-at-every-portal paths satisfy the 3-D surface checks, including the
+player list with the modeled original start restored. Eleven unsplit paths have
+1–4 rejected segments; the two single-node cases pass. Three empty/unwalkable
+failures produce no modifier or player candidates. The disconnected control
+corrects the end by 99.0153126 world units, the outside-vertex case by 16.4268079,
+and the far target by 31.5049194. No output claims arrival, even if requested and
+corrected endpoints coincide. Ordinary probes deliberately start/end 2 units
+above/below the surface. Sea has no eligible nodes in this graph; sky here means
+only the selected travel-tag mask, not verified flying physics.
+
+The report validator checks coverage, preservation of the prepared destination,
+split-profile 3-D containment and denied authority/unknown arrival. Four altered
+report controls (off-surface segment, claimed arrival, modified Y, failure with
+candidates) are rejected. Related suites pass desktop 129 / Android 128; the
+existing 12-case small-graph native pipeline regression also passes.
+
+Reproduce with the same-version external inputs (never packaged game binaries):
+
+```sh
+LOCALAPPDATA=/workspace/.localappdata PYTHONPATH=/tmp/loader-research:. \
+/workspace/.venv-desktop/bin/python -B -m tools.review_navigation_m12050_postprocess \
+  --libil2cpp /workspace/validation/official-client/libil2cpp.so \
+  --libunity /workspace/validation/official-client/libunity.so \
+  --move-source /workspace/validation/official-lua-1.3.23/decoded/MoveController.lua \
+  --cache /workspace/validation/navigation-1296/M12050-astar-cache.zip \
+  --output /workspace/validation/phase72-desktop.json
+```
+
+Still unverified: actual runtime search/modifier overrides and callbacks, actor
+transform at callback time, collider radius/height, physics obstacle response,
+terrain grounding and device/server behavior. Point-surface containment cannot
+prove these. No production movement, planar fallback or authority guard changed;
+three legacy navigation seeds remain, houses retain enter/exit-only scope. No
+push, merge, release, login or movement packets.

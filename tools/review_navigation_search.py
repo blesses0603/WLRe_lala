@@ -65,6 +65,7 @@ def oracle(path,*,_state=None,_existing_state=None,capacity=256):
         pn_base,node_base,edges_base=0x6201000,0x6242000,0x6283000
         lookup_base,trace_ref_base,trace_vec_base,heap_base=0x6384000,0x6388000,0x638c000,0x6391000
 
+    state['trace_vec_base']=trace_vec_base
     from unicorn import UC_HOOK_CODE
     from unicorn.arm64_const import UC_ARM64_REG_X0,UC_ARM64_REG_X1,UC_ARM64_REG_X2,UC_ARM64_REG_LR,UC_ARM64_REG_PC
     ranges=[(0x2833638,0x283393c),(0x2e9a6b0,0x2e9a7b8),

@@ -33,13 +33,13 @@ def trace_empty_mode(path,limit=1000000):
     return dict(**result,budget=limit,instructions=instructions[0],vertex_calls=vertex_calls[0],can_send_packets=False)
 
 
-def review(path,cache):
+def review(path,cache,*,evaluator=None):
     started=time.monotonic();raw=Path(cache).read_bytes()
     if len(raw)>32*1024*1024 or hashlib.sha256(raw).hexdigest()!=REVIEWED_MODELS[12050]:raise ValueError('Unreviewed official cache')
     with zipfile.ZipFile(io.BytesIO(raw)) as z:settings=json.loads(z.read('graph0.json'))
     decoded=load_cache(database_path(),CATALOG,12050);tile=decoded['mesh']['tiles'][0]
     if len(tile['triangles'])!=844 or settings['nearestSearchOnlyXZ']:raise ValueError('Unexpected graph profile')
-    call=oracle(path,capacity=1024)
+    call=evaluator if evaluator is not None else oracle(path,capacity=1024)
     base=dict(vertices=tile['vertices_a_int3'],faces=tile['triangles'],
         connections=[[[n,c] for n,c,e in row] for row in decoded['connections']],
         flags=[f for p,f in tile['node_metadata']],penalties=[p for p,f in tile['node_metadata']],

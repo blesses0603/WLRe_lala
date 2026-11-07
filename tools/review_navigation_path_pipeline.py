@@ -18,8 +18,8 @@ from tools.review_navigation_modifier_chain import oracle as chain_oracle
 from tools.review_navigation_rotation import IL2CPP_SHA,UNITY_SHA
 
 
-def oracle(il2cpp,unity,*,move_source=None):
-    search_state={};prepare=prepare_oracle(il2cpp,_state=search_state);parts=parts_oracle(il2cpp)
+def oracle(il2cpp,unity,*,move_source=None,capacity=256):
+    search_state={};prepare=prepare_oracle(il2cpp,_state=search_state,capacity=capacity);parts=parts_oracle(il2cpp)
     apply=apply_oracle(il2cpp,unity);chain=chain_oracle(il2cpp)
     if move_source is not None:
         from tools.review_navigation_player_points import oracle as player_oracle
@@ -29,26 +29,38 @@ def oracle(il2cpp,unity,*,move_source=None):
         result=prepare(vertices,faces,[[[t,c] for t,c,e in row] for row in connections],flags,penalties,start_point,end_point,tag_mask,**settings)
         if result['status']!='complete_prepared_search':return dict(search=result,can_send_packets=False)
         if len(result['path_nodes'])>127:raise ValueError('Research funnel portal bound exceeded; no truncation')
-        corridor=parts(vertices,faces,connections,result['path_nodes'],result['endpoint_modified_path'])
+        original_route=list(result['path_nodes'])
+        if capacity==1024:
+            # Compact only AFTER complete native Prepare/search. These VMs run
+            # modifiers on the exact selected corridor, never a truncated search.
+            mapping={node:i for i,node in enumerate(original_route)}
+            used=sorted({v for node in original_route for v in faces[node]});remap={v:i for i,v in enumerate(used)}
+            modifier_vertices=[vertices[v] for v in used]
+            modifier_faces=[[remap[v] for v in faces[node]] for node in original_route]
+            modifier_connections=[[(mapping[n],cost,edge) for n,cost,edge in connections[node] if n in mapping] for node in original_route]
+            modifier_route=list(range(len(original_route)))
+        else:
+            modifier_vertices,modifier_faces,modifier_connections,modifier_route=vertices,faces,connections,original_route
+        corridor=parts(modifier_vertices,modifier_faces,modifier_connections,modifier_route,result['endpoint_modified_path'])
         left=corridor['left'];right=corridor['right']
         candidates=[]
         for split in (False,True):
             def start_end(previous):
                 u=search_state['vm'];vectors=result['vector_path']
                 u.mem_write(0x600a018,struct.pack('<I',len(vectors)))
-                u.mem_write(0x600d020,b''.join(struct.pack('<3f',*p) for p in vectors))
+                u.mem_write(search_state['trace_vec_base']+0x20,b''.join(struct.pack('<3f',*p) for p in vectors))
                 search_state['execute'](0x24d26f0,(0x600f100,0x6008000,0),instruction_limit=500000)
                 count=struct.unpack('<I',u.mem_read(0x600a018,4))[0]
                 if not 2<=count<=256:raise ValueError('Invalid replayed StartEnd count')
-                modified=[list(struct.unpack('<3f',u.mem_read(0x600d020+i*12,12))) for i in range(count)]
+                modified=[list(struct.unpack('<3f',u.mem_read(search_state['trace_vec_base']+0x20+i*12,12))) for i in range(count)]
                 if modified!=result['endpoint_modified_path']:raise ValueError('Dispatched StartEnd differs')
                 return modified
-            def apply_funnel(modified):return apply(vertices,faces,connections,result['path_nodes'],modified,split=split)
+            def apply_funnel(modified):return apply(modifier_vertices,modifier_faces,modifier_connections,modifier_route,modified,split=split)
             dispatched=chain(start_end,apply_funnel)
             output=dispatched['funnel_apply']['funnel']
             if player is not None:output['player_callback']=player(output['vector_path'])
             candidates.append(dict(profile=dict(start_end_modes=[3,3],unwrap=True,split_at_every_portal=split),funnel=output,modifier_chain=dispatched))
-        return dict(search=result,portals=corridor,candidates=candidates,can_send_packets=False,
+        return dict(search=result,source_graph_nodes=len(faces),modifier_original_nodes=original_route,portals=corridor,candidates=candidates,can_send_packets=False,
                     scope='Native calculations composed across bounded VMs; native single-navmesh part boundary and two explicit modifier profiles, cached-delegate registration and dispatch with native VM bridges, not full player runtime')
     return run
 
