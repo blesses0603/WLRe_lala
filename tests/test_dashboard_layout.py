@@ -195,6 +195,10 @@ class DashboardLayout(unittest.TestCase):
         resources=ResourceView(self.app)
         try:check(resources.window)
         finally:resources.window.destroy()
+        from wlre.ui.skill_view import SkillView
+        skills=SkillView(self.app)
+        try:check(skills.window)
+        finally:skills.window.destroy()
         settings=SettingsEditor(self.app)
         try:
             for page in settings.tabs.tabs():

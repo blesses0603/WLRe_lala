@@ -10,7 +10,7 @@ class FeatureWindowOwnership(unittest.TestCase):
     def test_app_public_windows_use_controller(self):
         for name in ('open_feature', 'hide_feature', 'hide_all_features',
                      'open_instances', 'hide_instances', 'open_resources',
-                     'open_attributes'):
+                     'open_attributes', 'open_skills'):
             with self.subTest(name=name):
                 self.assertIs(getattr(App, name),
                               getattr(FeatureWindowController, name))

@@ -213,6 +213,9 @@ class OverviewPanel(ttk.Frame):
                             ttk.Button(tools,text=text,width=4,command=callback,padding=(3,2)))
                 button.pack(side='left')
                 if key=='role':
+                    self.skill_button=ttk.Button(tools, text='特技', width=4, command=app.open_skills,
+                                                padding=(3,2))
+                    self.skill_button.pack(side='left', padx=(6,0))
                     ttk.Button(tools, text='配點', width=4, command=app.open_attributes,
                                padding=(3,2)).pack(side='left', padx=(6,0))
             self.actions[key]=button
