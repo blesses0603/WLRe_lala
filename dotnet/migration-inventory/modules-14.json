@@ -647,7 +647,9 @@
       "dotnet/Lala.Core/Battle/EfficiencyRules.cs",
       "dotnet/Lala.Core/Battle/EfficiencyTracker.cs",
       "dotnet/Lala.Core/Battle/EfficiencyReducer.cs",
-      "dotnet/Lala.Core/Battle/EfficiencyReceiveReducer.cs"
+      "dotnet/Lala.Core/Battle/EfficiencyReceiveReducer.cs",
+      "dotnet/Lala.Core/Battle/EfficiencyKnowledgeProjector.cs",
+      "dotnet/Lala.Core/State/ServiceStateCoordinator.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -714,11 +716,12 @@
     },
     "migrated_scope": [
       "Offline EXP curves/progress, rates/forecast and complete battle evidence tracking with immutable snapshots, confirmed/inferred flags and bounded history.",
-      "Atomic immutable snapshot reduction reuses tracker calculations; typed receive adapter uses explicit timing and updated caller-supplied knowledge. Six Python packet sequences cover 92 additional checkpoints."
+      "Atomic immutable snapshot reduction reuses tracker calculations; typed receive adapter uses explicit timing and updated caller-supplied knowledge. Six Python packet sequences cover 92 additional checkpoints.",
+      "Distinct self/follow:0 subjects and UInt16 companion slots, Int64 labels and sample degree, explicit updated-knowledge/post-local identity projection; eleven receive sequences / 166 checkpoints.",
+      "Source-ordered post-local shop, efficiency, guild actions and Ark receive composition with atomic publication; 26 real State.apply scenarios / 1,414 checkpoints / 38 event kinds."
     ],
     "outstanding_scope": [
-      "Knowledge projector and valid-wire companion slot-zero / Int64 level-degree model gaps remain explicit; no narrowing or dropped values claimed as complete integration.",
-      "Shared coordinator ordering, catalog naming, runtime and UI acceptance remain."
+      "Runtime and UI acceptance remain; explicit NPC display names do not establish catalog provenance."
     ]
   },
   {

@@ -217,8 +217,8 @@ The mixed service coordinator now includes crafting and the bounded bag/companio
 apply_live slices, in source order. Shared stackability and companion attributes
 remain consistent across projections, with distinct before-observers, before-live
 and after-live bag evidence. Thirteen additional State.apply scenarios cover 524
-checkpoints. Complete player/battle knowledge, equipment, other omitted observers
-and transport remain outstanding; the coordinator still reports incomplete State.
+checkpoints. Later increments add player/battle knowledge and all remaining observer
+positions; transport and complete State remain outstanding.
 
 Party and tent receive snapshots are also available independently. Party preserves
 ordered team merges, current-role queries and explicit request expiry without
@@ -258,24 +258,73 @@ allocation completion and current gear retained independently of historical layo
 Guild-action receive state now ports defaults, apply_actions and reset_day with
 explicit already-reduced guild plus post-local player/gold context. Forty-six Python
 sequences cover 2,370 historical snapshots. Pending evidence never authorizes a
-request. The scheduler-position non-sending tick prefix, planning, spending and
-shared coordinator wiring remain unported; no scheduler call is inferred from receive.
+request. Receive observations now join the shared coordinator. The scheduler-position
+non-sending tick prefix, planning and spending remain unported; no scheduler call is
+inferred from receive.
 
 NPC shop evidence now has a bounded immutable 96-event observation history and
 offline classifier, with 50 Python histories / 1,152 snapshots and 1,228 classifications.
 It preserves uncertain outcomes and never treats the S27 gold field as an authoritative
-balance. Post-local coordinator wiring and a genuine historical order descriptor
-producer remain separate gates; correlation is not payment settlement or permission.
+balance. Observations now join the post-local flow, while a genuine historical order
+descriptor producer remains a separate gate; correlation is not payment settlement
+or permission.
 
 Efficiency now supports detached immutable staging and a typed receive adapter with
-explicit timing. Original tracker calculations remain unchanged. Knowledge projection
-is deliberately not guessed: valid companion slot zero and Int64 level/degree values
-require model expansion before shared integration. Runtime/device acceptance remains
-outstanding, and no test-policy change was made for local resource-pressure retries.
+explicit timing. Original tracker calculations remain unchanged. Knowledge projection now requires current player/companion evidence and post-local
+identity explicitly. Self and companion slot zero are distinct, UInt16 companion
+subjects are preserved, and Int64 level/degree values are validated before curve
+lookup rather than narrowed. Eleven Python receive sequences cover 166 checkpoints.
+The shared observer is now integrated; runtime/device acceptance remains outstanding.
+No test-policy change was made for local resource-pressure retries.
 
 Ark defaults and receive transitions now expose immutable state plus identity-bound
 Observe/Confirm/Reject memory intents. The 371 retained-Python sequences cover 3,494
 snapshots and 48 helper-boundary intents using the actual caught storage-failure path.
 Default deferred composition is separately tested and does not claim storage failed.
 No intent was persisted or accepted as a correct answer. Successful persistence,
-candidate/solver completion, post-local coordinator wiring and execution remain gaps.
+candidate/solver completion and execution remain gaps. The post-local coordinator now
+requires explicit runtime reads when source branches consume them; missing input is
+not mislabeled as an observed unavailable runtime.
+
+All eighteen State.apply observer positions now have bounded receive composition,
+including shop, efficiency, guild actions and Ark after tent. Twenty-six additional
+real-State.apply sequences cover 1,414 checkpoints and 38 event kinds. One atomic
+publication owns every current projection; even a final Ark failure leaves the old
+snapshot and packet count intact. IsCompleteState deliberately stays false: storage
+completion, scheduler/commands, remaining State fields and transport are not inferred
+from receiving packets, and these tests do not establish complete gameplay parity.
+
+Inventory allocation now returns read-only candidates; reservation validation returns
+a hypothetical immutable snapshot only after checking the entire batch. Slot ordering,
+exclusions, duplicate aggregation, serial identity and source numeric quirks are
+retained in 153 Python sequences / 2,032 snapshots. Neither a successful candidate
+nor a proposed hold authorizes or installs a live resource acquisition.
+
+Five combat-resource helpers now derive learned evidence, weapon groups, target
+validity, healing effects and field context from explicit current mappings and known
+snapshots. Companion skill insertion order is retained across overwrite/remove/re-add
+and S15 replacement; imported ambiguous order is rejected rather than guessed. The
+1,070 Python cases include 20 receive histories. Field equipment resolution returns
+a replacement player snapshot; it does not secretly mutate prior publications or
+infer health. Skill reasons/rows and action candidates remain separate work.
+
+Eve v115 parsing now validates all eleven scene sections before exposing immutable
+NPC/interaction indexes. Versions, offsets, record/scene limits, skipped layouts,
+truncations and cancellation are checked. The 2,143 exact Python cases are separate
+from three deliberate duplicate-scene hardening cases: C# rejects ambiguous IDs
+instead of retaining the Python overwrite/count inconsistency. No event execution,
+resource activation or retired navigation source is introduced.
+
+The new large Eve fixture family uses deterministic embedded gzip resources rather
+than C# byte literals. Compressed and decoded SHA-256 plus byte limits are checked
+before JSON consumption, with stable explicit cross-platform manifest names. Old
+byte-array fixture APIs and generator output remain unchanged. Every original
+synthetic payload and case is retained; missing/corrupt resources fail explicitly.
+
+Parser diagnostics now support bounded in-memory runs/checkpoints, input size/digests,
+validated prior-baseline comparison and exact report JSON. The 509 real-Python cases
+plus concurrency/cancellation/privacy contracts retain source deduplication and
+failure precedence without storing payloads, decoded text, exception messages or
+filesystem paths. Metadata/depth admission caps and cancellation protection are
+explicit safety differences. Reports cannot enable assets or commands. Filesystem
+persistence, default paths and automatic parser instrumentation remain unimplemented.

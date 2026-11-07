@@ -135,7 +135,7 @@ public sealed class ServiceKnowledgeAllocationParityTests
             Assert.Contains(kind, covered);
     }
 
-    private static void Check(JsonNode expected, ServiceStateSnapshot state, double at, string label)
+    internal static void Check(JsonNode expected, ServiceStateSnapshot state, double at, string label)
     {
         ServiceSocialInstanceParityTests.Check(expected, state, at, label);
         Equal(expected["knowledge"], CombatKnowledgeParityTests.Project(state.PlayerKnowledge, state.Companions,

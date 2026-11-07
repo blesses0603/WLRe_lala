@@ -54,7 +54,8 @@
     "status": "partially_migrated",
     "target_files": [
       "dotnet/Lala.Core/Inventory/BagReceiveSnapshot.cs",
-      "dotnet/Lala.Core/Inventory/BagReceiveReducer.cs"
+      "dotnet/Lala.Core/Inventory/BagReceiveReducer.cs",
+      "dotnet/Lala.Core/Inventory/InventoryPlanning.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -95,10 +96,11 @@
       "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
     },
     "migrated_scope": [
-      "Pure bag receive transitions and item-use-result observation, preserving metadata/order, count/reliability and server stackability."
+      "Pure bag receive transitions and item-use-result observation, preserving metadata/order, count/reliability and server stackability.",
+      "Pure source-compatible Allocate and immutable reservation candidates with explicit display names; 153 retained-Python sequences / 2,032 snapshots."
     ],
     "outstanding_scope": [
-      "Equipment/skill action helpers, execution, session integration and actual resource acceptance remain."
+      "Live resource acquisition/consumption, reservation lifecycle helpers and runtime action integration remain."
     ]
   },
   {
@@ -314,7 +316,8 @@
     "status": "partially_migrated",
     "target_files": [
       "dotnet/Lala.Core/Inventory/BagReceiveReducer.cs",
-      "dotnet/Lala.Core/Inventory/BagReceiveSnapshot.cs"
+      "dotnet/Lala.Core/Inventory/BagReceiveSnapshot.cs",
+      "dotnet/Lala.Core/Inventory/InventoryPlanning.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -383,10 +386,11 @@
       "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
     },
     "migrated_scope": [
-      "Receive refresh/deduction/availability projections with identity uncertainty and held counts."
+      "Receive refresh/deduction/availability projections with identity uncertainty and held counts.",
+      "Pure acquire validation and hypothetical immutable reservation accounting: complete-batch validation, identity checks, duplicate aggregation and hold order."
     ],
     "outstanding_scope": [
-      "Reservation acquisition/release and complete cross-service orchestration remain."
+      "Release/uncertain/checkpoint/restore helpers and runtime action integration remain; proposals are not live holds."
     ]
   },
   {

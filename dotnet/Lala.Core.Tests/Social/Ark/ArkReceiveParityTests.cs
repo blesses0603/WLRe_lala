@@ -188,7 +188,7 @@ public sealed class ArkReceiveParityTests
         return node;
     }
 
-    private static JsonNode ProjectIntent(ArkQuestionMemoryIntent intent)
+    internal static JsonNode ProjectIntent(ArkQuestionMemoryIntent intent)
     {
         var node = Node(intent)!;
         node["token"] = Token(intent.Token);

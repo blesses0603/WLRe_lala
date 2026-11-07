@@ -899,7 +899,8 @@
     "status": "partially_migrated",
     "target_files": [
       "dotnet/Lala.Core/World/Shop/NpcShopEvidence.cs",
-      "dotnet/Lala.Core/World/Shop/NpcShopEvidenceSnapshot.cs"
+      "dotnet/Lala.Core/World/Shop/NpcShopEvidenceSnapshot.cs",
+      "dotnet/Lala.Core/State/ServiceStateCoordinator.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -937,10 +938,11 @@
       "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
     },
     "migrated_scope": [
-      "Immutable 96-event observation history and exact offline classification, preserving uncertainty and S27 gold non-authority; 50 Python histories / 1,152 snapshots plus 1,228 classifications."
+      "Immutable 96-event observation history and exact offline classification, preserving uncertainty and S27 gold non-authority; 50 Python histories / 1,152 snapshots plus 1,228 classifications.",
+      "Source-ordered post-local shop, efficiency, guild actions and Ark receive composition with atomic publication; 26 real State.apply scenarios / 1,414 checkpoints / 38 event kinds."
     ],
     "outstanding_scope": [
-      "Post-local coordinator wiring and a genuinely recorded historical order descriptor producer remain; offline correlation never proves payment settlement or authorizes a command."
+      "A genuinely recorded historical order descriptor producer remains; offline correlation never proves payment settlement or authorizes a command."
     ]
   },
   {

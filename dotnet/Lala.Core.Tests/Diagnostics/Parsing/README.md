@@ -1,0 +1,36 @@
+# In-memory parser diagnostics
+
+Offline port of `wlre/services/parser_diagnostics.py`. These files do not instrument or enable existing parsers automatically. They do not access user files, resource directories, a network, a catalog activation API, or a session/command dispatcher.
+
+## Explicit API
+
+- `ParserDiagnostics.BeginSession()` returns an `IDisposable` scope with `Run`. Nested scopes share the same run; use LIFO disposal in the creating execution context. Independent async contexts have independent runs, while child tasks can share the enclosing run safely.
+- `ParserDiagnostics.Run(definition, inputs, parse, summarize, ...)` synchronously calls a parser exactly once and returns the identical result or rethrows the original exception instance. It does not accept asynchronous parser work as a supported usage. `ParserDiagnosticDefinition` and all field/coverage/input names must be code-owned labels, never values derived from payloads, exception messages, credentials or filesystem paths.
+- Pass borrowed byte arguments as `ParserDiagnosticInput(name, memory)`. The run retains only immutable size/SHA-256 summaries. Input hashing is lazy on failure outside sessions; successful nested parsers are not summarized. Input memory must remain stable until the synchronous parser call returns.
+- `Checkpoint(...)` / `ReadCheckpoint(...)` retain validated numeric positions and ASCII code-owned labels. `GetFailure(exception)` returns a safe observation via a weak exception association. Neither the exception nor its message/stack/locals is stored by diagnostics. No traceback-local scanning is attempted.
+- `sourceVariant` admits only the two source EventData labels. `assetName` admits a bare ASCII `.bytes` filename, never a path. The optional manifest-package callback is used only for `.parse_manifest`, accepting `MainPackage` or `DataPackage`.
+- Supply a typed `ParserResultSummary` for migrated parser models. `FromSourceValue` preserves Python list, tuple and dict count precedence (including booleans not being integers, negative/large integer counts, and rejection statuses). Source count summaries are observations, not validation decisions. A byte-array result with no byte inputs receives the source `textasset` fallback digest.
+- `RecordIdentity` and `RecordCoverage` accept display observations only. An identity or previous success never permits another layout or enables assets/packets.
+- `Run.BuildReports(priorBaselineBytes, checkedAtUtc, cancellationToken)` produces immutable latest-report and last-success byte documents. Each output is independently empty if its serialized length exceeds 256 KiB. JSON matches Python's sorted ASCII default-spaced encoding exactly. Callers decide whether/how to persist these outputs; they must not mistake an empty output for a successfully written file.
+
+## Retained source behavior
+
+128 events maximum; deduplication by parser/variant/input digests; an earlier failure is sticky; successful events are evicted before failures; stable first-insertion ordering; last eight unique accepted identities in reports; failed and not-available coverage precedence; nested swallowed failures; profile/field truncation; Int64 general checkpoint limit but arbitrary nonnegative requested/available read sizes; result-count quirks; pre-session baseline comparisons before any current successes update the baseline; inclusive 2^31 baseline record-count limit; exact baseline field/key/digest validation; 16 baseline inputs maximum; success-only baseline updates, even when a resulting count/profile makes that new baseline row invalid on a later read. Reports always say `assets_ready: false` and `can_send_packets: false`.
+
+Malformed/oversized baselines are ignored, invalid rows filtered, and duplicate JSON keys use their last value while preserving initial insertion order. The standard CPython 4,300-digit JSON integer cap, Python-compatible UTF-8/16/32 BOM and zero-byte detection, whitespace, and ignored NaN/Infinity metadata are covered. No ignored top-level metadata or invalid row is copied into output.
+
+## Explicit safety deltas and remaining gaps
+
+- In addition to the source event/output limits, this API accepts at most 16 byte inputs, 128 unique identities and 128 coverage labels. Beyond those identity/coverage bounds new labels are ignored; existing coverage can still change to failed. Python's identity/coverage collections have no admission bound. Coverage is restricted to `passed`, `failed`, `not_available`; parser IDs to 120 ASCII code-owned characters. These are deliberate safe admission constraints.
+- Baseline JSON nesting is capped at 64; invalid Unicode decoding is rejected. Output is built as an immutable snapshot rather than retaining mutable comparison fields on the run after repeated saves. Python can retain stale comparison fields when manually saving the same run more than once.
+- Cancellation is propagated without creating parser/layout failure evidence. Hashing checks cancellation in 64 KiB chunks; report iteration and serialization are also cancellable. Optional summary/label/hash instrumentation errors do not replace an otherwise successful parser result or its original exception. Python's decorator does not offer these .NET-specific protections.
+- Filesystem persistence, atomic file replacement/fsync, default directory discovery, update decorators, environment/download/injection gating, a public parser registry, source automatic signature binding, traceback-local inference, and automatic instrumentation of existing Core parsers are deferred. No transport, AccountSession, lifecycle, UI, Android, or coordinator integration is part of this increment.
+- Binary input ownership remains the parser caller's responsibility. This diagnostics module does not relax any parser size/version/layout budget.
+
+## Verification
+
+`generate_parser_diagnostics_vectors.py` imports the unchanged Python module and uses only synthetic values in temporary test directories. It freezes the timestamp and captures source report serialization. A binary embedded gzip corpus stays below the 500 KB per-part limit; its tiny C# wrapper checks both compressed and decoded hashes through the shared GzipJson loader. The fixture records a SHA-256 of source bytes with only CRLF byte pairs normalized, verified by a test.
+
+Run `dotnet test Lala.Core.Tests/Lala.Core.Tests.csproj -c Release --filter FullyQualifiedName~Diagnostics.Parsing` from `dotnet`, then the complete Core suite. Additional tests cover exception/result identity, absence of source content, weak failure association behavior, nesting, concurrent isolated/shared contexts, cancellation, immutable snapshots, whitelisted variants, exact byte limits and additional admission bounds.
+
+Validated on this isolated increment (base `349fda1` plus shared embedded-gzip fixture infrastructure): **520/520 focused diagnostics tests**, **19,811/19,811 complete Core tests**, and **14/14 existing Python diagnostics regression tests**. The 509 differential fixtures occupy one 114,623-byte gzip part. This is offline/synthetic parity and API safety verification, not a claim of filesystem wiring, live-resource acceptance, complete parser instrumentation, or runtime authorization.

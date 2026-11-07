@@ -65,8 +65,8 @@ reset, detecting nested snapshot mutation. Contract tests additionally cover
 injected clocks, confirmed/inferred evidence, unknown slots, detached input
 collections, and immutable output dictionaries.
 
-This verifies shared-core offline behavior only. Protocol-to-event integration,
-UI presentation, live session acceptance and cross-platform device testing remain
+This verifies shared-core offline behavior only. Full service composition, UI
+presentation, live session acceptance and cross-platform device testing remain
 outside this increment.
 
 ## Immutable receive foundation
@@ -103,30 +103,57 @@ role/name **after** `dispatch_local`. It does not invoke those reducers, infer
 readiness, select a role, or manufacture an empty player/companion projection.
 No coordinator has been changed or marked complete by this increment.
 
-### Explicit knowledge model gates
+### Explicit current-knowledge projection
 
-There is deliberately no automatic `PlayerKnowledgeSnapshot` /
-`CompanionReceiveSnapshot` projector yet. Two existing efficiency input-model
-limits must be resolved before general service composition:
+`EfficiencyKnowledgeProjector.Project(updatedPlayer, updatedCompanions,
+postLocalPlayer, npcNames)` requires the complete current player/companion
+knowledge snapshots. Both snapshots and their required nested values are
+validated, never defaulted to empty. `postLocalPlayer` may be null when local
+identity is unknown. Its role and name are used after local dispatch, not copied
+from a pre-local role context or from a stale role-list entry.
 
-- `EfficiencySubject` reserves slot 0 for the player and accepts companion slots
-  1..255. The real S15-8 decoder reads an unrestricted byte slot: slot 0 is valid
-  decoded data. Retained `set_companion` stores it under knowledge key `"0"`, and
-  `efficiency._row` creates a distinct `"follow:0"` row. The explicit 1..255 check
-  in Python applies to **battle participants**, not row identity. The current
-  typed subject cannot represent this distinction. Eligible S8 companion EXP
-  outside 1..255 is rejected by the adapter, never aliased to self or narrowed.
-- Confirmed efficiency level/degree use `int?`, while current knowledge stores
-  signed 64-bit S8 values. Valid S8-1 payload `2301ffffffff00000000` decodes level
-  4,294,967,295; `2701ffffffff00000000` decodes degree 4,294,967,295. Retained
-  `apply_live` and efficiency preserve these exact labels. Negative signed S8
-  values can likewise fall below Int32. Do not cast, clamp, omit, or silently
-  replace that evidence when adding the future projector.
+The projector copies only the evidence efficiency consumes:
 
-Any future projector must use current companion stat overrides over original
-S15 fields, complete companion membership, post-live player stats, and post-local
-player identity/name. Optional catalog names remain explicit presentation inputs.
-These gates are not permission to substitute a partial knowledge snapshot.
+- Player EXP, level, and degree come from current `PlayerKnowledgeSnapshot.Stats`.
+  Missing keys remain null. Readiness does not filter confirmed observations.
+- Every current companion dictionary entry is retained, including slot 0 and
+  NPC identity 0. EXP/level/degree overrides take precedence over original S15
+  values, including zero and negative overrides. Missing overrides use the S15
+  fields. The original S15 name remains the confirmed name.
+- Companion names follow the existing tracker priority: confirmed name,
+  explicitly supplied NPC-name lookup, then slot fallback. The optional lookup
+  is read and detached during projection, not retained or implicitly loaded.
+- An empty explicitly supplied companion snapshot means no currently known
+  companions. The projector does not manufacture emptiness, claim readiness, or
+  decide whether a partial caller snapshot is complete.
+
+Two previously documented representation gaps are now corrected:
+
+- `default(EfficiencySubject)` and `EfficiencySubject.Player` remain self.
+  `Companion(0)` is a distinct value/key with text `follow:0`, never an alias for
+  self. Companion subjects accept the UInt16 S8 slot domain 0..65535; unknown
+  slots cannot create rows without knowledge. Real S15-8 index 0 can create a
+  row and receive EXP. Proven battle participants **still** require 1..255,
+  exactly as Python does. A slot-zero EXP update can be dirty and sampled even
+  though its missing EXP does not invalidate the baseline as a participant.
+- `EfficiencyStats` and row level, degree, confirmed labels, and sample degree
+  retain signed Int64 evidence. Valid S8-1 payload `2301ffffffff00000000` records
+  level 4,294,967,295; `2701ffffffff00000000` records that degree. Their negative
+  forms also survive. No cast/clamp/drop substitutes another label. Companion
+  curve inference can still supply an explicitly flagged inferred label while
+  the separate confirmed label retains the original wide value.
+
+Existing Int32 curve helper signatures remain available. Int64 overloads reject
+unsupported domains before narrowing/indexing the fixed curve cache. Unknown
+curve values remain unknown; the wider labels do not extend the curve domain.
+Existing numeric calls continue to compile, while consumers explicitly storing
+row/knowledge label properties in `int?` must now preserve them as `long?`.
+
+The projector is a read-only adapter, not a new authoritative knowledge store.
+Production coordination must retain each actual receive reducer's returned
+snapshots, dispatch local state once, then project and observe efficiency using
+the post-local identity. No shared coordinator, session, or transport is changed
+by this increment.
 
 ### Additional verification
 
@@ -136,20 +163,28 @@ dotnet test dotnet/Lala.Core.Tests/Lala.Core.Tests.csproj -c Release --filter Fu
 ```
 
 Every original observer sequence now also runs through the immutable reducer,
-including repeated snapshot rechecks after later transitions. Six additional
-retained-decoder / `apply_live` / efficiency sequences provide 92 checkpoints
-for the receive adapter, including malformed packets, wrong ownership/filters,
-star Int64 extremes, refresh identity/name/removal, role zero/absence/reset,
-nonfinite times, and completion boundaries. They supply the full resulting
-knowledge explicitly; they do not claim C# knowledge projector/coordinator parity.
+including repeated snapshot rechecks after later transitions. Eleven additional
+retained-decoder / `apply_live` / efficiency sequences provide 166 checkpoints.
+Six retain the original explicit-knowledge receive-adapter coverage. Five also
+run retained `dispatch_local` and compare the actual C# receive/local slices plus
+knowledge projector before efficiency observation. Coverage includes slot zero,
+unknown UInt16 slots, wide S8 labels and sample degree, buffered overrides,
+same/different NPC replacement, post-local role/name changes, malformed packets,
+wrong ownership/filters, star Int64 extremes, refresh removal, nonfinite times,
+and completion boundaries. Both projected knowledge and efficiency snapshots
+are rechecked after subsequent events. This focused harness is not a production
+service coordinator or a claim that all service observers are composed.
 Fixture time is explicit and the retained Python fallback is patched to a fixed
 value, never measured from the host. New fixtures use the existing deterministic
 gzip **byte-literal** helper and byte-only CRLF-normalized source SHA-256 checks.
 Contract tests cover detached branching, thrown clocks after candidate role
 reset, invalid typed payloads, subject range rejection, input validation, lazy
-clocks, and nested publication immutability.
+clocks, and nested publication immutability. Projector contracts also cover
+Int64 extrema, source-limited participants, distinct self/slot-zero identities,
+unknown slots, confirmed versus inferred wide labels, override precedence,
+readiness-independent observations, nullable identity, catalog detachment,
+complete membership, and strict rejection of missing required snapshots.
 
-Remaining gates: fix the two knowledge representations, add source-accurate
-projection and integrated service observer-order/rollback tests, and then verify
-real resources, runtime sessions, platforms/devices and official-server behavior.
+Remaining gates: integrated service observer-order/rollback tests, real resources,
+runtime sessions, platforms/devices and official-server behavior.
 This receive foundation does no game I/O or command transmission.

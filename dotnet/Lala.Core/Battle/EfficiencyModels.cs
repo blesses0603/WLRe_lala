@@ -8,17 +8,18 @@ namespace Lala.Core.Battle;
 /// <summary>Local player, or a confirmed companion slot. Never a remote battle-unit ID.</summary>
 public readonly record struct EfficiencySubject
 {
+    private readonly bool isCompanion;
     public int Slot { get; }
-    public bool IsPlayer => Slot == 0;
+    public bool IsPlayer => !isCompanion;
     public static EfficiencySubject Player => default;
-    private EfficiencySubject(int slot) => Slot = slot;
-    public static EfficiencySubject Companion(int slot) => slot is >= 1 and <= 255
+    private EfficiencySubject(int slot) { Slot = slot; isCompanion = true; }
+    public static EfficiencySubject Companion(int slot) => slot is >= 0 and <= ushort.MaxValue
         ? new(slot) : throw new ArgumentOutOfRangeException(nameof(slot));
     public override string ToString() => IsPlayer ? "self" : "follow:" + Slot.ToString(CultureInfo.InvariantCulture);
 }
 
 /// <summary>Confirmed knowledge, not curve-derived labels. Null means no new evidence.</summary>
-public sealed record EfficiencyStats(long? Experience = null, int? Level = null, int? Degree = null, string? Name = null);
+public sealed record EfficiencyStats(long? Experience = null, long? Level = null, long? Degree = null, string? Name = null);
 public sealed record EfficiencyCompanion(uint? NpcId, EfficiencyStats Stats, string? CatalogName = null);
 
 /// <summary>Detached immutable knowledge after the event's ordinary state reducers have run.</summary>
@@ -77,10 +78,10 @@ public sealed record EfficiencyRowSnapshot
     public uint Identity { get; init; }
     public string Name { get; init; } = "";
     public long? Experience { get; init; }
-    public int? Level { get; init; }
-    public int? Degree { get; init; }
-    public int? ConfirmedLevel { get; init; }
-    public int? ConfirmedDegree { get; init; }
+    public long? Level { get; init; }
+    public long? Degree { get; init; }
+    public long? ConfirmedLevel { get; init; }
+    public long? ConfirmedDegree { get; init; }
     public bool LevelInferred { get; init; }
     public bool DegreeInferred { get; init; }
     public long? LastTotal { get; init; }
@@ -90,7 +91,7 @@ public sealed record EfficiencyRowSnapshot
     public ImmutableArray<EfficiencyHistorySample> History { get; init; } = [];
     public double? FirstTime { get; init; }
     public double? LastTime { get; init; }
-    public int? SampleDegree { get; init; }
+    public long? SampleDegree { get; init; }
 }
 
 public sealed class EfficiencySnapshot

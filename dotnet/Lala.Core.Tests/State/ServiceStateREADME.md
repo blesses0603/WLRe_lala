@@ -7,7 +7,7 @@ connection/session adapter, service scheduler, or automatic game client.
 
 ## Source order and shared evidence
 
-The complete order from `State.apply` is exposed by `ObserverOrder`, including gaps:
+The complete order from `State.apply` is exposed by `ObserverOrder`, including bounded receive stages:
 
 1. `apply_daily_tasks`: composed, including role-list and world-player resets.
 2. `apply_cube`: composed, with explicit observation time and pre-local player.
@@ -23,16 +23,16 @@ The complete order from `State.apply` is exposed by `ObserverOrder`, including g
 12. `apply_instances`: composed, receive observers with pre-local role and explicit non-authorizing catalog map declarations.
 13. `dispatch_local`: composed through the existing `LocalStateCoordinator`.
 14. `apply_tent`: composed after local dispatch, using post-local role/scene.
-15. `observe_shop_evidence`: **not composed**.
-16. `observe_efficiency`: **not composed**.
-17. `apply_actions`: **not composed**; guild sign-in/donation state absent.
-18. `apply_ark`: **not composed**.
+15. `observe_shop_evidence`: composed with the current bag, post-local gold and updated count. No order descriptor or settlement is created.
+16. `observe_efficiency`: composed through the immutable reducer, using complete updated player/companion knowledge and post-local role/name.
+17. `apply_actions`: composed with updated guild and post-local player/gold. The separate `tick` prefix does not run here.
+18. `apply_ark`: composed with updated daily generation and post-local role, explicit runtime observations, and unexecuted identity-bound memory intents.
 
-Efficiency's existing mutable tracker still needs a transactional snapshot
-import/restore contract before it can join this coordinator; post-live knowledge
-is now available. It is not run with fabricated empty knowledge. Crafting and
-all bounded apply_live receive slices are integrated; action and runtime catalog
-helpers remain outside this coordinator.
+All eighteen source observer positions now have bounded receive composition.
+This is not full-State parity: action helpers, scheduler-only observation prefixes,
+persistence, catalog activation and other retained State APIs remain separate.
+Efficiency uses immutable reduction, never a mutable tracker or fabricated empty
+knowledge. See [post-local integration evidence](ServicePostLocalREADME.md).
 
 The observation's new packet count is calculated before the supported observers.
 All pre-local observers share the old player and phase. Local dispatch advances its
@@ -80,8 +80,9 @@ before local dispatch records a new attribute. Snapshot imports reject inconsist
 projections rather than guessing. `BeforeObserversBag`, `BeforeLiveBag` (after
 storage), and `AfterLiveBag` record three distinct immutable stages.
 
-Player/battle knowledge and equipment now flow through apply_live; remaining
-post-local observers still prevent full-State parity. Raw S8 values and injected NPC mappings
+Player/battle knowledge and equipment flow through apply_live, and the post-local
+observers consume these exact results. Composing their bounded receive subsets
+does not complete full-State parity. Raw S8 values and injected NPC mappings
 are not verified catalogs or action authority. The common dispatcher requires
 explicit CraftingScheduleContext for layout-dependent schedule records.
 All service actions, scheduling, lifecycle/disconnect policy, persistence, live
@@ -151,3 +152,12 @@ unverified skill-key and item-fit mappings. Omitted means unknown, never reuse.
 `Observation.AfterLivePlayerKnowledge` and `AllocationContext` retain the exact
 knowledge projection and widened `BigInteger` stats used by allocation before
 local S8 writes. Raw session attributes are never allocation evidence.
+
+## Post-local observer integration
+
+See [mixed post-local evidence](ServicePostLocalREADME.md) for source-order,
+identity, persistence-intent and rollback boundaries. The composite now owns
+`ShopEvidence`, `Efficiency`, `GuildActions`, and `Ark`. `Observation` retains the
+exact shop context, projected efficiency knowledge, guild-action context, consumed
+Ark runtime context and at most one unexecuted Ark memory intent for that packet.
+Later publications never silently carry or execute a prior packet's intent.

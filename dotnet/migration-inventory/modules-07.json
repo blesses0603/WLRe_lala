@@ -509,8 +509,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/World/Eve/EveV115Parser.cs",
+      "dotnet/Lala.Core/World/Eve/EveV115Indexes.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -580,11 +583,17 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Strict bounded cancellable Eve v115 eleven-section validation and immutable NPC/interaction index derivation, including exact JSON APIs; 2,143 exact Python cases and three separately documented duplicate-scene fail-closed cases."
+    ],
+    "outstanding_scope": [
+      "Parser-diagnostics/runtime catalog wiring, actual resource activation and device/server acceptance remain. Duplicate scene IDs intentionally reject the retained Python overwrite/count inconsistency rather than claim parity."
+    ]
   },
   {
     "id": "desktop:wlre/services/world/event_portals.py",

@@ -115,13 +115,13 @@ public sealed class EfficiencyReducerTests
     }
 
     [Theory]
-    [InlineData(0)]
-    [InlineData(256)]
-    [InlineData(65535)]
+    [InlineData(-1)]
+    [InlineData(65536)]
+    [InlineData(int.MaxValue)]
     public void UnrepresentableCompanionDoesNotAliasPlayerOrPartiallyPublish(int slot)
     {
         var before = Pending();
-        var value = new AttributeSetEvent(2, $"follow:{slot}", 4, (ushort)slot, 36, "exp", 1, 22, 0);
+        var value = new AttributeSetEvent(2, $"follow:{slot}", 4, null, 36, "exp", 1, 22, 0);
         Assert.Throws<ArgumentException>(() => EfficiencyReceiveReducer.Apply(before, Knowledge(), value, 20, true));
         Assert.True(before.Pending);
         Assert.False(before.Offline);

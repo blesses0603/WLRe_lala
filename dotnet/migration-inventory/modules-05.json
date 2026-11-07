@@ -2089,7 +2089,8 @@
       "dotnet/Lala.Core/Inventory/CompanionReceiveReducer.cs",
       "dotnet/Lala.Core/Inventory/CompanionReceiveSnapshot.cs",
       "dotnet/Lala.Core/Inventory/CombatKnowledgeReceiveReducer.cs",
-      "dotnet/Lala.Core/Inventory/CombatKnowledgeSnapshot.cs"
+      "dotnet/Lala.Core/Inventory/CombatKnowledgeSnapshot.cs",
+      "dotnet/Lala.Core/Inventory/CombatResourceKnowledge.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -2181,10 +2182,11 @@
     "migrated_scope": [
       "Bag and companion receive slice, including roster append/add/delete/active and buffered S8 attributes;77 Python sequences1616 snapshots.",
       "Remaining apply_live receive knowledge: player stats/skills, equipment resolution and bounded deferred queues, companion/battle appearance and profile stat observations; 40 Python sequences / 1,646 checkpoints.",
-      "The receive apply_live slices are composed into ServiceStateCoordinator, including every-event equipment resolution and shared battle/companion projections."
+      "The receive apply_live slices are composed into ServiceStateCoordinator, including every-event equipment resolution and shared battle/companion projections.",
+      "Pure learned, weapon_group, target_valid, heal_effects and field_context helpers with explicit current catalog and replacement player equipment; 1,070 Python cases including 20 companion S15/S8 order histories."
     ],
     "outstanding_scope": [
-      "Learned/weapon/skill/target/field helpers, command construction, resource/catalog activation and live acceptance remain."
+      "Skill-reason/row helpers, learned/best-skill/food command candidates, resource/catalog activation and live acceptance remain."
     ]
   },
   {

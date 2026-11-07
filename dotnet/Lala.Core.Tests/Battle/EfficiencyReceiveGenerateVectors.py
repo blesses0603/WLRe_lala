@@ -1,7 +1,8 @@
 """Retained decoder + apply_live + efficiency observer; explicit offline times only.
 
-Knowledge is captured after apply_live and supplied whole to C#. This is adapter parity,
-not automatic C# knowledge composition or the complete State.apply coordinator.
+Six sequences supply captured post-live knowledge; five also run dispatch_local and
+verify C# receive/local slices plus the projector. This is not the complete State.apply
+coordinator. Only explicit synthetic packets and recorded timestamps are used.
 """
 import copy
 import hashlib
@@ -20,9 +21,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'TestSupport'))
 from gzip_json_fixture import csharp_gzip_json
 from wlre.core import efficiency
 from wlre.core.state import State
+from wlre.core.state_events import dispatch_local
 from wlre.network.protocol import decode
 from wlre.network.wire import Packet, ProtocolError
 from wlre.services.items.combat_resources import apply_live
+from wlre.services.world.obstacle_scope import affects_navigation
 
 
 def pack(fmt, *values): return struct.pack('<' + fmt, *values)
@@ -30,6 +33,15 @@ def attr(value, kind=36, parameter=0): return pack('BBII', kind, 2 if value < 0 
 def unit(pid=71, master=0, slot=0):
     return (pack('BBIHIBBIHIHBBBBHHBBII', 0, 4, pid, slot, master, 1, 1, 500, 100, 400, 50,
         15, 1, 0, 0, 0, 0, 0, 0, 0, 0) + b'\x00' + bytes(54))
+def item():
+    return pack('HBBIHddBBHBHI',0,0,0,0,0,0,0,0,0,0,0,0,0)+bytes(15)
+def companion(index=0, npc=8000, total=10000, level=12, degree=0, name=''):
+    encoded=name.encode('utf-16-le')
+    return (pack('BHiBiHHHHHHBBBH',index,npc,total,level,300,50,10,11,12,13,14,0,100,1,0)
+        + bytes([len(encoded)])+encoded+bytes(25)+item()*9+pack('BBBBHBH',0,0,degree,0,0,0,0))
+def world(role=71, name='After local'):
+    encoded=name.encode('utf-16-le')
+    return pack('IBHHHBBBIIBB',role,1,101,8,9,2,3,4,5,6,7,0)+b'\x00'+bytes([len(encoded)])+encoded+bytes(9)+pack('H',10)
 def safe(value):
     if isinstance(value, float) and not math.isfinite(value):
         return 'nan' if math.isnan(value) else 'inf' if value > 0 else '-inf'
@@ -40,8 +52,9 @@ def safe(value):
 
 SCENARIOS = []
 class Scenario:
-    def __init__(self, name):
-        self.name = name; self.state = State(); self.steps = []
+    def __init__(self, name, compose=False):
+        self.name = name; self.state = State(); self.steps = []; self.compose = compose
+        if compose: return
         self.state.player = dict(role_id=71, name='Offline fixture')
         self.state.knowledge['player']['stats'] = dict(exp=20000, level=15, degree=0)
         self.state.knowledge['companions'] = {
@@ -52,6 +65,7 @@ class Scenario:
         try:
             event = decode(Packet(main, sub, payload), self.state.player.get('role_id'))
             apply_live(self.state, event)
+            if self.compose: dispatch_local(self.state,event,affects_navigation=affects_navigation)
             event['_observed_at'] = when
             if offline is not None: event['_offline'] = offline
             # Python evaluates event.get's fallback eagerly. Do not consult a wall clock.
@@ -68,7 +82,7 @@ class Scenario:
             row['degree_inferred'] = row.get('degree_inferred', False)
             row['sample_degree'] = row.get('sample_degree')
         self.steps.append(dict(main=main, sub=sub, hex=payload.hex(), when=when, offline=offline,
-            error=error, knowledge=knowledge, expected=expected))
+            error=error, project_knowledge=self.compose, knowledge=knowledge, expected=expected))
         return self
     def start(self, when, *units): return self.packet(11, 250, b'\x01\x02'+pack('B',len(units))+b''.join(units), when)
     def exp(self, total, when, slot=2, human=4, parameter=0):
@@ -125,9 +139,52 @@ for main,sub,payload in [(8,2,pack('BH',4,2)+attr(10110)),(11,250,b'\x01\x02\x01
     s.packet(main,sub,payload+b'\xff',23)
 s.end(30).finish()
 
+s = Scenario('projected_slot_zero_distinct_identity_samples_and_replacement',compose=True)
+s.packet(3,1,world()).packet(15,8,companion()).packet(15,8,companion(2,8002))
+for total,when in [(10000,10),(10100,30)]:
+    s.start(when-2,unit(),unit(8000,71,0)).exp(total,when-1,slot=0).end(when)
+s.start(40,unit(),unit(8000,71,0)).end(50) # Slot zero is not a proven participant.
+s.exp(10500,55,slot=0).packet(15,8,companion(total=0),56) # Same identity replays S8.
+s.packet(15,8,companion(npc=9000,total=30,level=2),57) # New identity drops old S8.
+s.exp(10600,58,slot=0).exp(7,59,slot=256).exp(8,60,slot=65535)
+s.packet(15,2,pack('IBB',71,0,0),61).packet(255,255,when=62).finish()
+
+s = Scenario('projected_int64_player_labels_and_sample_degree',compose=True)
+s.packet(3,1,world())
+for kind in [35,39]:
+    for number in [0xffffffff,-0xffffffff,0,1]:
+        s.packet(8,1,attr(number,kind=kind),when=len(s.steps))
+for degree,total,when in [(0xffffffff,10000,20),(-0xffffffff,10100,30),(0,10200,40)]:
+    s.start(when-3,unit()).packet(8,1,attr(degree,kind=39),when-2).exp(total,when-1,slot=None).end(when)
+s.packet(5,47,pack('BBq',1,0,2**63-1)+bytes(30),50).finish()
+
+s = Scenario('projected_companion_override_buffer_and_confirmation',compose=True)
+s.packet(3,1,world()).packet(8,2,pack('BH',4,0)+attr(0xffffffff,kind=39),1)
+s.packet(8,2,pack('BH',4,0)+attr(-0xffffffff,kind=35),2).packet(15,8,companion(total=30),3)
+s.start(4,unit(),unit(8000,71,0)).end(5)
+s.packet(15,8,companion(total=40,level=4),6)
+s.packet(8,2,pack('BH',4,0)+attr(0,kind=39),7)
+s.packet(8,2,pack('BH',4,0)+attr(0xffffffff,kind=35),8)
+s.packet(15,8,companion(npc=9000,total=50,level=5,name='New NPC'),9)
+s.packet(255,255,when=10).finish()
+
+s = Scenario('projected_unknown_and_zero_role_keep_knowledge_until_local_identity',compose=True)
+s.packet(8,1,attr(345),0).packet(15,8,companion(),1)
+s.packet(3,1,world(0,'Zero'),2).packet(8,1,attr(0xffffffff,kind=35),3)
+s.packet(3,1,world(71,'First'),4).packet(3,1,world(72,'Second'),5)
+s.packet(3,1,world(71,'Returned'),float('nan')).packet(255,255,when=6).finish()
+
+s = Scenario('projected_malformed_packets_preserve_prior_knowledge',compose=True)
+s.packet(3,1,world()).packet(15,8,companion()).start(1,unit(),unit(8000,71,0)).exp(123,2,slot=0)
+for main,sub,payload in [(15,8,companion(npc=9000)),(8,1,attr(0xffffffff,kind=35)),(3,1,world(72,'Replacement'))]:
+    for cut in [1,len(payload)//2,len(payload)-1]: s.packet(main,sub,payload[:cut],3)
+s.end(4).finish()
+
 sources=['wlre/core/efficiency.py','wlre/core/event_log.py','wlre/core/state.py',
     'wlre/core/state_ownership.py','wlre/network/protocol.py','wlre/network/layouts.py',
-    'wlre/network/live_data.py','wlre/network/wire.py','wlre/services/items/combat_resources.py']
+    'wlre/network/live_data.py','wlre/network/wire.py','wlre/services/items/combat_resources.py',
+    'wlre/core/state_events.py','wlre/core/state_world_events.py','wlre/core/state_battle_events.py',
+    'wlre/core/state_session_events.py']
 # Only normalize byte CRLF; preserve every other byte, including BOMs.
 provenance={p:hashlib.sha256((ROOT/p).read_bytes().replace(b'\r\n',b'\n')).hexdigest() for p in sources}
 lines=['// Generated by EfficiencyReceiveGenerateVectors.py. Synthetic offline data only.',

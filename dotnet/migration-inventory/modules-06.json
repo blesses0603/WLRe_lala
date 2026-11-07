@@ -11,7 +11,8 @@
     "status": "partially_migrated",
     "target_files": [
       "dotnet/Lala.Core/Inventory/BagReceiveSnapshot.cs",
-      "dotnet/Lala.Core/Inventory/BagReceiveReducer.cs"
+      "dotnet/Lala.Core/Inventory/BagReceiveReducer.cs",
+      "dotnet/Lala.Core/Inventory/InventoryPlanning.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -47,10 +48,11 @@
       "live_server_acceptance": "not_run"
     },
     "migrated_scope": [
-      "Pure bag receive transitions and item-use-result observation, preserving metadata/order, count/reliability and server stackability."
+      "Pure bag receive transitions and item-use-result observation, preserving metadata/order, count/reliability and server stackability.",
+      "Pure source-compatible Allocate and immutable reservation candidates with explicit display names; 153 retained-Python sequences / 2,032 snapshots."
     ],
     "outstanding_scope": [
-      "Equipment/skill action helpers, execution, session integration and actual resource acceptance remain."
+      "Live resource acquisition/consumption, reservation lifecycle helpers and runtime action integration remain."
     ]
   },
   {
@@ -304,7 +306,8 @@
     "status": "partially_migrated",
     "target_files": [
       "dotnet/Lala.Core/Inventory/BagReceiveReducer.cs",
-      "dotnet/Lala.Core/Inventory/BagReceiveSnapshot.cs"
+      "dotnet/Lala.Core/Inventory/BagReceiveSnapshot.cs",
+      "dotnet/Lala.Core/Inventory/InventoryPlanning.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -368,10 +371,11 @@
       "live_server_acceptance": "not_run"
     },
     "migrated_scope": [
-      "Receive refresh/deduction/availability projections with identity uncertainty and held counts."
+      "Receive refresh/deduction/availability projections with identity uncertainty and held counts.",
+      "Pure acquire validation and hypothetical immutable reservation accounting: complete-batch validation, identity checks, duplicate aggregation and hold order."
     ],
     "outstanding_scope": [
-      "Reservation acquisition/release and complete cross-service orchestration remain."
+      "Release/uncertain/checkpoint/restore helpers and runtime action integration remain; proposals are not live holds."
     ]
   },
   {
@@ -1251,8 +1255,12 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.parser_diagnostics",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Diagnostics/Parsing/ParserDiagnosticModels.cs",
+      "dotnet/Lala.Core/Diagnostics/Parsing/ParserDiagnosticRun.cs",
+      "dotnet/Lala.Core/Diagnostics/Parsing/ParserDiagnostics.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1343,11 +1351,17 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Bounded privacy-safe in-memory sessions/checkpoints, input digests, baseline validation/comparison and exact report JSON; 509 synthetic Python cases plus safety/concurrency contracts. Explicit metadata/depth admission and cancellation protections are documented deltas."
+    ],
+    "outstanding_scope": [
+      "Filesystem/atomic persistence, default paths, registry/signature binding, traceback-local inference and automatic parser/runtime instrumentation remain. Reports never authorize assets or commands."
+    ]
   },
   {
     "id": "desktop:wlre/services/resource_compatibility.py",
@@ -1611,7 +1625,8 @@
     "target_files": [
       "dotnet/Lala.Core/Social/GuildActionsDecoder.cs",
       "dotnet/Lala.Core/Social/GuildActionsReceiveReducer.cs",
-      "dotnet/Lala.Core/Social/GuildActionsReceiveSnapshot.cs"
+      "dotnet/Lala.Core/Social/GuildActionsReceiveSnapshot.cs",
+      "dotnet/Lala.Core/State/ServiceStateCoordinator.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -1690,10 +1705,11 @@
     },
     "migrated_scope": [
       "Receive-only guild-action decoder wired to ServerProtocol.",
-      "Receive-only defaults, apply_actions and reset_day with explicit post-local player/gold context; 46 Python sequences / 2,370 historical snapshots."
+      "Receive-only defaults, apply_actions and reset_day with explicit post-local player/gold context; 46 Python sequences / 2,370 historical snapshots.",
+      "Source-ordered post-local shop, efficiency, guild actions and Ark receive composition with atomic publication; 26 real State.apply scenarios / 1,414 checkpoints / 38 event kinds."
     ],
     "outstanding_scope": [
-      "Coordinator wiring, scheduler-position non-sending tick confirmation/timeout/catalog display, plans/quotes/requests, spending, retries and live acceptance remain."
+      "Scheduler-position non-sending tick confirmation/timeout/catalog display, plans/quotes/requests, spending, retries and live acceptance remain."
     ]
   },
   {
@@ -1711,7 +1727,8 @@
       "dotnet/Lala.Core/Social/Ark/ArkEvents.cs",
       "dotnet/Lala.Core/Social/Ark/ArkReceiveContext.cs",
       "dotnet/Lala.Core/Social/Ark/ArkReceiveReducer.cs",
-      "dotnet/Lala.Core/Social/Ark/ArkReceiveSnapshot.cs"
+      "dotnet/Lala.Core/Social/Ark/ArkReceiveSnapshot.cs",
+      "dotnet/Lala.Core/State/ServiceStateCoordinator.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -1837,10 +1854,11 @@
     },
     "migrated_scope": [
       "Receive-only immutable observations and common dispatcher integration; exact Python field/error/prefix/tail parity.",
-      "Bounded immutable defaults/apply_ark receive transitions and identity-bound memory intents; 371 Python sequences / 3,494 snapshots / 48 intents. Deferred composition is distinct from actual unavailable-store failure."
+      "Bounded immutable defaults/apply_ark receive transitions and identity-bound memory intents; 371 Python sequences / 3,494 snapshots / 48 intents. Deferred composition is distinct from actual unavailable-store failure.",
+      "Source-ordered post-local shop, efficiency, guild actions and Ark receive composition with atomic publication; 26 real State.apply scenarios / 1,414 checkpoints / 38 event kinds."
     ],
     "outstanding_scope": [
-      "Post-local coordinator wiring, successful persistence/candidate/solver outcomes and validated completion remain.",
+      "Successful persistence/candidate/solver outcomes and validated completion remain; emitted intents are not executed or saved.",
       "Planning/begin/tick/commands, runtime catalog loading, UI and live acceptance remain."
     ]
   },

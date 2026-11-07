@@ -9,8 +9,10 @@ using Lala.Core.Inventory;
 using Lala.Core.Instances;
 using Lala.Core.Protocol;
 using Lala.Core.Social;
+using Lala.Core.Social.Ark;
 using Lala.Core.World;
 using Lala.Core.World.Tent;
+using Lala.Core.World.Shop;
 
 namespace Lala.Core.State;
 
@@ -31,6 +33,14 @@ public sealed record ServiceObservationInputs(double ObservedAt)
     /// <summary>Per-observation, unverified skill-key/item-fit mappings. Omitted means
     /// unknown; these declarations neither activate catalogs nor authorize any action.</summary>
     public CombatKnowledgeCatalog? KnowledgeCatalog { get; init; }
+    /// <summary>Optional observed NPC labels for efficiency display only; never loaded or verified.</summary>
+    public ImmutableDictionary<uint, string>? NpcNames { get; init; }
+    /// <summary>A completed runtime read, required only when a bound pending Ark question
+    /// consumes it. Null means no read supplied, distinct from an observed Absent runtime.</summary>
+    public ArkRuntimeObservation? ArkRuntime { get; init; }
+    /// <summary>Optional second runtime read at question-text loading; omission reuses ArkRuntime.</summary>
+    public ArkRuntimeObservation? ArkQuestionRuntime { get; init; }
+    public ArkQuestionMemoryAvailability ArkMemoryAvailability { get; init; } = ArkQuestionMemoryAvailability.Deferred;
     public bool ResourceHeld { get; init; } = true;
 }
 
@@ -53,11 +63,18 @@ public sealed record ServiceObservationEvidence(string EventType, ServiceLocalEv
     public required PlayerKnowledgeSnapshot AfterLivePlayerKnowledge { get; init; }
     /// <summary>Exact updated knowledge stats supplied before local S8 dispatch.</summary>
     public required AttributeAllocationContext AllocationContext { get; init; }
+    public required NpcShopObservationContext ShopContext { get; init; }
+    public required EfficiencyKnowledgeSnapshot EfficiencyKnowledge { get; init; }
+    public required GuildActionsReceiveContext GuildActionsContext { get; init; }
+    /// <summary>Null unless this observation consumed a runtime read. Does not mean unavailable.</summary>
+    public ArkReceiveContext? ArkContext { get; init; }
+    /// <summary>Identity-bound output only, never executed, saved, or replayed automatically.</summary>
+    public ArkQuestionMemoryIntent? ArkMemoryIntent { get; init; }
 }
 public sealed record ServiceObserverCoverage(string SourceFunction, bool Composed);
 
 /// <summary>Bounded publication, deliberately not a full Python State replacement. Each domain
-/// is immutable. See ServiceStateCoordinator.ObserverOrder for the explicitly omitted stages.
+/// is immutable. See ServiceStateCoordinator.ObserverOrder for the composed receive stages.
 /// Shared stackability maps must agree when both supplied; an absent map inherits the other.
 /// Companion S8 buffers carry source insertion order. Import them explicitly alongside any
 /// local follow:* attributes, or omit local to derive those values from the ordered buffers.</summary>
@@ -70,7 +87,9 @@ public sealed class ServiceStateSnapshot
         ServiceObservationEvidence? observation = null, CraftingReceiveSnapshot? crafting = null,
         BagReceiveSnapshot? bag = null, CompanionReceiveSnapshot? companions = null,
         PartyEventSnapshot? party = null, InstanceReceiveSnapshot? instances = null, TentReceiveSnapshot? tent = null,
-        PlayerKnowledgeSnapshot? playerKnowledge = null, AttributeAllocationSnapshot? attributeAllocation = null)
+        PlayerKnowledgeSnapshot? playerKnowledge = null, AttributeAllocationSnapshot? attributeAllocation = null,
+        NpcShopEvidenceSnapshot? shopEvidence = null, EfficiencySnapshot? efficiency = null,
+        GuildActionsReceiveSnapshot? guildActions = null, ArkReceiveSnapshot? ark = null)
     {
         Companions = companions ?? CompanionReceiveSnapshot.Empty;
         var attributes = CompanionAttributes(Companions);
@@ -98,6 +117,10 @@ public sealed class ServiceStateSnapshot
         Tent = tent ?? TentReceiveSnapshot.Empty;
         PlayerKnowledge = playerKnowledge ?? PlayerKnowledgeSnapshot.Empty;
         AttributeAllocation = attributeAllocation ?? AttributeAllocationSnapshot.Empty;
+        ShopEvidence = shopEvidence ?? NpcShopEvidenceSnapshot.Empty;
+        Efficiency = efficiency ?? EfficiencySnapshot.Empty;
+        GuildActions = guildActions ?? GuildActionsReceiveSnapshot.Empty;
+        Ark = ark ?? ArkReceiveSnapshot.Empty;
         Observation = observation;
     }
 
@@ -117,6 +140,10 @@ public sealed class ServiceStateSnapshot
     public TentReceiveSnapshot Tent { get; }
     public PlayerKnowledgeSnapshot PlayerKnowledge { get; }
     public AttributeAllocationSnapshot AttributeAllocation { get; }
+    public NpcShopEvidenceSnapshot ShopEvidence { get; }
+    public EfficiencySnapshot Efficiency { get; }
+    public GuildActionsReceiveSnapshot GuildActions { get; }
+    public ArkReceiveSnapshot Ark { get; }
     public ServiceObservationEvidence? Observation { get; }
 
     private static bool SameMap<TKey, TValue>(ImmutableDictionary<TKey, TValue> left,
@@ -134,22 +161,22 @@ public sealed class ServiceStateSnapshot
 }
 
 /// <summary>Single-writer offline composition of the supported State.apply receive observers.
-/// Source order is preserved, with explicit gaps. Decode, validation and all reductions stage
-/// privately; only a fully successful observation publishes one new snapshot and packet count.
+/// Source observer order is preserved; non-receive paths remain outside this boundary.
+/// Decode, validation and all reductions stage privately; only a fully successful observation publishes one new snapshot and packet count.
 /// This transactional failure behavior is deliberately stronger than Python/LocalStateCoordinator
 /// for malformed hand-built events. It does not invent deduplication or session/role resets.
 /// No AccountSession, lifecycle, transport, commands, clocks, callbacks or resource loading.</summary>
 public sealed class ServiceStateCoordinator
 {
-    // Full retained State.apply order, not merely the stages implemented by this coordinator.
+    // Full retained State.apply entry order; composing a receive subset does not port its action helpers.
     public static ImmutableArray<ServiceObserverCoverage> ObserverOrder { get; } =
     [
         new("apply_daily_tasks", true), new("apply_cube", true), new("apply_recovery", true),
         new("apply_guild", true), new("apply_activity", true), new("apply_crafting", true),
         new("apply_storage", true), new("apply_live", true), new("apply_points_event", true),
         new("apply_party", true), new("apply_expedition", true), new("apply_instances", true),
-        new("dispatch_local", true), new("apply_tent", true), new("observe_shop_evidence", false),
-        new("observe_efficiency", false), new("apply_actions", false), new("apply_ark", false)
+        new("dispatch_local", true), new("apply_tent", true), new("observe_shop_evidence", true),
+        new("observe_efficiency", true), new("apply_actions", true), new("apply_ark", true)
     ];
 
     /// <summary>Composed receive-only apply_live slices, not command/learned-skill helpers,
@@ -263,13 +290,40 @@ public sealed class ServiceStateCoordinator
         // The same per-observation world catalog is consumed; no previous catalog is retained.
         var tent = TentReceiveReducer.Apply(state.Tent, observation, local.Player?.RoleId,
             local.Player?.Scene, inputs.WorldCatalog);
+        // The remaining State.apply observers all consume genuine post-local evidence.
+        var shopContext = new NpcShopObservationContext(local.PacketCount, bag, local.Session.Gold);
+        var shop = NpcShopEvidence.Observe(state.ShopEvidence, observation, shopContext);
+        var efficiencyKnowledge = EfficiencyKnowledgeProjector.Project(knowledge.Player, companions,
+            local.Player, inputs.NpcNames);
+        var efficiency = EfficiencyReceiveReducer.Apply(state.Efficiency, efficiencyKnowledge, observation, inputs.ObservedAt);
+        var guildActionsContext = new GuildActionsReceiveContext(local.Player?.RoleId, guild, local.Session.Gold);
+        var guildActions = GuildActionsReceiveReducer.Apply(state.GuildActions, observation, guildActionsContext);
+        // Only the source question-current branch reads runtime. Missing input must not
+        // masquerade as an actual unavailable catalog and freeze imported pending state.
+        var readsArkRuntime = observation is ArkQuestionEvent or ArkAnswerResultEvent &&
+            state.Ark.Role is not (null or 0) && state.Ark.Role == local.Player?.RoleId &&
+            state.Ark.Pending is { Kind: "question" };
+        if (readsArkRuntime && inputs.ArkRuntime is null)
+            throw new InvalidOperationException("A completed Ark runtime observation is required for this pending question receipt.");
+        // Absent is an inert placeholder only on branches that provably do not read
+        // runtime; those branches expose no ArkContext and do not claim unavailability.
+        var arkContext = new ArkReceiveContext(local.Player?.RoleId, daily.Generation,
+            inputs.ArkRuntime ?? ArkRuntimeObservation.Absent)
+        {
+            QuestionRuntime = inputs.ArkQuestionRuntime, MemoryAvailability = inputs.ArkMemoryAvailability
+        };
+        var ark = ArkReceiveReducer.Apply(state.Ark, observation, arkContext);
         var after = new ServiceLocalEvidence(local.Phase, local.Player, local.PacketCount);
         var next = new ServiceStateSnapshot(local, daily, cube, recovery, guild, activities, storage,
             expedition, new(observation.Type, before, after, inputs)
             {
                 BeforeObserversBag = state.Bag, BeforeLiveBag = beforeLiveBag, AfterLiveBag = bag,
-                AfterLivePlayerKnowledge = knowledge.Player, AllocationContext = allocationContext
-            }, crafting, bag, companions, party, instances, tent, knowledge.Player, allocation);
+                AfterLivePlayerKnowledge = knowledge.Player, AllocationContext = allocationContext,
+                ShopContext = shopContext, EfficiencyKnowledge = efficiencyKnowledge,
+                GuildActionsContext = guildActionsContext, ArkContext = readsArkRuntime ? arkContext : null,
+                ArkMemoryIntent = ark.MemoryIntent
+            }, crafting, bag, companions, party, instances, tent, knowledge.Player, allocation,
+            shop, efficiency, guildActions, ark.State);
         state = next;
         return next;
     }

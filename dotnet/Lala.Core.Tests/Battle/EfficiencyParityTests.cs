@@ -66,7 +66,7 @@ public sealed class EfficiencyParityTests
             int.Parse(entry.Name, CultureInfo.InvariantCulture), new(U32(entry.Value, "npc_id"), Stats(entry.Value.GetProperty("stats"))))),
         value.GetProperty("name").GetString()!);
 
-    private static EfficiencyStats Stats(JsonElement value) => new(I64(value, "exp"), I32(value, "level"), I32(value, "degree"),
+    private static EfficiencyStats Stats(JsonElement value) => new(I64(value, "exp"), I64(value, "level"), I64(value, "degree"),
         value.TryGetProperty("name", out var name) ? name.GetString() : null);
 
     private static EfficiencySubject Subject(string value) => value == "self" ? EfficiencySubject.Player
@@ -108,8 +108,8 @@ public sealed class EfficiencyParityTests
             Assert.Equal(U32(wanted, "identity"), row.Identity);
             Assert.Equal(wanted.GetProperty("name").GetString(), row.Name);
             Assert.Equal(I64(wanted, "exp"), row.Experience);
-            Assert.Equal(I32(wanted, "level"), row.Level);
-            Assert.Equal(I32(wanted, "degree"), row.Degree);
+            Assert.Equal(I64(wanted, "level"), row.Level);
+            Assert.Equal(I64(wanted, "degree"), row.Degree);
             Assert.Equal(wanted.GetProperty("level_inferred").GetBoolean(), row.LevelInferred);
             Assert.Equal(wanted.GetProperty("degree_inferred").GetBoolean(), row.DegreeInferred);
             Assert.Equal(I64(wanted, "last_total"), row.LastTotal);
@@ -118,7 +118,7 @@ public sealed class EfficiencyParityTests
             Assert.Equal(wanted.GetProperty("count").GetInt64(), row.Count);
             Number(Floating(wanted.GetProperty("first_time")), row.FirstTime);
             Number(Floating(wanted.GetProperty("last_time")), row.LastTime);
-            Assert.Equal(I32(wanted, "sample_degree"), row.SampleDegree);
+            Assert.Equal(I64(wanted, "sample_degree"), row.SampleDegree);
             var history = wanted.GetProperty("history").EnumerateArray().ToArray();
             Assert.Equal(history.Length, row.History.Length);
             for (int i = 0; i < history.Length; i++)

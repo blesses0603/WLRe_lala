@@ -83,11 +83,16 @@ public static class CompanionReceiveReducer
         var exists = state.Companions.TryGetValue(index, out var previous);
         if (exists && previous!.Data.NpcId != data.NpcId) state = state with { Attributes = state.Attributes.Remove(index) };
         var skills = ImmutableDictionary.CreateBuilder<uint, CompanionLearnedSkill>();
+        var order = ImmutableArray.CreateBuilder<uint>();
         var mapping = npcSkills?.TryGetValue(data.NpcId, out var ids) == true && !ids.IsDefault ? ids : [];
         for (var i = 0; i < Math.Min(mapping.Length, data.SkillSlots.Length); i++)
             if (mapping[i] != 0 && data.SkillSlots[i].Level > 0)
+            {
+                if (!skills.ContainsKey(mapping[i])) order.Add(mapping[i]);
                 skills[mapping[i]] = new(data.SkillSlots[i].Level, data.SkillSlots[i].Exp, "S15技能槽＋NpcData");
-        var profile = new CompanionProfileSnapshot(data, skills.ToImmutable(), ImmutableDictionary<string, long>.Empty);
+            }
+        var profile = new CompanionProfileSnapshot(data, skills.ToImmutable(), ImmutableDictionary<string, long>.Empty)
+            { SkillOrder = order.ToImmutable() };
         foreach (var attribute in state.Attributes.GetValueOrDefault(index, [])) profile = ApplyAttribute(profile, attribute, 0);
         return state with
         {
@@ -104,6 +109,8 @@ public static class CompanionReceiveReducer
             return profile with
             {
                 RemovedSkillIds = attribute.Value <= 0 ? removed.Add(attribute.Parameter) : removed,
+                SkillOrder = attribute.Value <= 0 ? profile.SkillOrder.Remove(attribute.Parameter) :
+                    profile.Skills.ContainsKey(attribute.Parameter) ? profile.SkillOrder : profile.SkillOrder.Add(attribute.Parameter),
                 Skills = attribute.Value > 0 ? profile.Skills.SetItem(attribute.Parameter, new(attribute.Value, 0, $"S8-{sub}")) :
                     profile.Skills.Remove(attribute.Parameter)
             };

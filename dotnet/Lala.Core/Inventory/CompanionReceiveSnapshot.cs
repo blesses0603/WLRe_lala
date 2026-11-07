@@ -16,6 +16,8 @@ public sealed record CompanionProfileSnapshot(CompanionSnapshot Data,
     /// <summary>Current sparse/full equipment after remaining apply_live receive branches.
     /// Null uses Data.Equips; a fresh S15 profile clears this override automatically.</summary>
     public ImmutableArray<KnowledgeEquipment>? EquipmentOverrides { get; init; }
+    /// <summary>Source insertion order, including S8 replacements/removal/re-addition.</summary>
+    public ImmutableArray<uint> SkillOrder { get; init; } = [];
     public bool Ready => true;
     public override string ToString() => nameof(CompanionProfileSnapshot);
 }

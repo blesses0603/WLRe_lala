@@ -234,8 +234,8 @@ public sealed class EfficiencyContractTests
 
     [Theory]
     [InlineData(-1)]
-    [InlineData(0)]
-    [InlineData(256)]
+    [InlineData(65536)]
+    [InlineData(int.MaxValue)]
     public void InvalidCompanionSlotsAreRejectedAtTypedInputBoundary(int slot) =>
         Assert.Throws<ArgumentOutOfRangeException>(() => EfficiencySubject.Companion(slot));
 

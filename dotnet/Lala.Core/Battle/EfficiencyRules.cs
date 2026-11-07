@@ -11,7 +11,12 @@ public static class EfficiencyRules
         { [0] = "未轉生", [1] = "一轉", [2] = "二轉星脈" }.ToFrozenDictionary();
     private static readonly long[,] Totals = BuildTotals();
 
-    public static int? MaximumLevel(int? degree) => degree switch { 0 => 199, 1 => 190, 2 => 100, _ => null };
+    public static int? MaximumLevel(int? degree) => MaximumLevel((long?)degree);
+    public static int? MaximumLevel(long? degree) => degree switch { 0 => 199, 1 => 190, 2 => 100, _ => null };
+
+    /// <summary>Keep full received evidence; narrow only after validating the supported curve domain.</summary>
+    public static long? Need(long level, long degree) => level is >= 1 and <= 400 && degree is >= 0 and <= 2
+        ? Need((int)level, (int)degree) : null;
 
     /// <summary>Returns null outside the supported integer level/degree domain.</summary>
     public static long? Need(int level, int degree)
@@ -28,15 +33,17 @@ public static class EfficiencyRules
     }
 
     /// <summary>Level-one origin, matching EXP_Monitor. Cache is fixed-size and private.</summary>
-    public static long? Cumulative(int level, int degree) => level is >= 1 and <= 400 && degree is >= 0 and <= 2
-        ? Totals[degree, level] : null;
+    public static long? Cumulative(int level, int degree) => Cumulative((long)level, degree);
+    public static long? Cumulative(long level, long degree) => level is >= 1 and <= 400 && degree is >= 0 and <= 2
+        ? Totals[(int)degree, (int)level] : null;
 
-    public static EfficiencyProgress Progress(long? total, int? level, int? degree)
+    public static EfficiencyProgress Progress(long? total, int? level, int? degree) => Progress(total, (long?)level, degree);
+    public static EfficiencyProgress Progress(long? total, long? level, long? degree)
     {
         int? maximum = MaximumLevel(degree);
         if (total is null || maximum is null || level is null || level < 1 || level > maximum)
             return EfficiencyProgress.Unknown;
-        long baseline = Totals[degree!.Value, level.Value];
+        long baseline = Totals[(int)degree!.Value, (int)level.Value];
         if (level == maximum)
             return total >= baseline ? new(0, 100, degree == 1 ? 0 : null) : EfficiencyProgress.Unknown;
         long required = Need(level.Value + 1, degree.Value)!.Value;

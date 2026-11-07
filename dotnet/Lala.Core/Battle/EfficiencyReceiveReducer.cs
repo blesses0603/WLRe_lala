@@ -55,8 +55,8 @@ public static class EfficiencyReceiveReducer
         const string prefix = "follow:";
         if (!attribute.Entity.StartsWith(prefix, StringComparison.Ordinal)) return new EfficiencyRefresh();
         if (!int.TryParse(attribute.Entity.AsSpan(prefix.Length), NumberStyles.None,
-            CultureInfo.InvariantCulture, out var slot) || slot is < 1 or > 255)
-            throw new ArgumentException("Efficiency companion subjects currently require slots 1..255.", nameof(attribute));
+            CultureInfo.InvariantCulture, out var slot) || slot is < 0 or > ushort.MaxValue)
+            throw new ArgumentException("Efficiency companion subjects require a UInt16 slot.", nameof(attribute));
         return new EfficiencyAttributeSet(EfficiencySubject.Companion(slot), 36, attribute.Value, HumanKind: 4);
     }
 }

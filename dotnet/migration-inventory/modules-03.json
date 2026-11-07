@@ -1084,7 +1084,9 @@
       "dotnet/Lala.Core/Battle/EfficiencyRules.cs",
       "dotnet/Lala.Core/Battle/EfficiencyTracker.cs",
       "dotnet/Lala.Core/Battle/EfficiencyReducer.cs",
-      "dotnet/Lala.Core/Battle/EfficiencyReceiveReducer.cs"
+      "dotnet/Lala.Core/Battle/EfficiencyReceiveReducer.cs",
+      "dotnet/Lala.Core/Battle/EfficiencyKnowledgeProjector.cs",
+      "dotnet/Lala.Core/State/ServiceStateCoordinator.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -1146,11 +1148,12 @@
     },
     "migrated_scope": [
       "Offline EXP curves/progress, rates/forecast and complete battle evidence tracking with immutable snapshots, confirmed/inferred flags and bounded history.",
-      "Atomic immutable snapshot reduction reuses tracker calculations; typed receive adapter uses explicit timing and updated caller-supplied knowledge. Six Python packet sequences cover 92 additional checkpoints."
+      "Atomic immutable snapshot reduction reuses tracker calculations; typed receive adapter uses explicit timing and updated caller-supplied knowledge. Six Python packet sequences cover 92 additional checkpoints.",
+      "Distinct self/follow:0 subjects and UInt16 companion slots, Int64 labels and sample degree, explicit updated-knowledge/post-local identity projection; eleven receive sequences / 166 checkpoints.",
+      "Source-ordered post-local shop, efficiency, guild actions and Ark receive composition with atomic publication; 26 real State.apply scenarios / 1,414 checkpoints / 38 event kinds."
     ],
     "outstanding_scope": [
-      "Knowledge projector and valid-wire companion slot-zero / Int64 level-degree model gaps remain explicit; no narrowing or dropped values claimed as complete integration.",
-      "Shared coordinator ordering, catalog naming, runtime and UI acceptance remain."
+      "Runtime and UI acceptance remain; explicit NPC display names do not establish catalog provenance."
     ]
   },
   {
@@ -1430,10 +1433,11 @@
       "Bounded owner-thread service observer composition before local dispatch;14 real State.apply sequences698 checkpoints36event kinds; atomic rollback intentionally stronger than Python.",
       "Crafting and bounded bag/companion observers now composed, with shared stackability and ordered S8 buffers;13 mixed State.apply scenarios524 checkpoints.",
       "Party and instances now run before local dispatch; tent runs afterward. Twenty-two mixed Python sequences cover 679 checkpoints.",
-      "Player/equipment/battle knowledge now feeds allocation before local dispatch, preserving returned shared projections; 26 mixed Python sequences cover 1,064 checkpoints."
+      "Player/equipment/battle knowledge now feeds allocation before local dispatch, preserving returned shared projections; 26 mixed Python sequences cover 1,064 checkpoints.",
+      "Source-ordered post-local shop, efficiency, guild actions and Ark receive composition with atomic publication; 26 real State.apply scenarios / 1,414 checkpoints / 38 event kinds."
     ],
     "outstanding_scope": [
-      "Post-local shop evidence, efficiency, guild actions and Ark observers, complete State fields and live-session/transport wiring remain."
+      "All eighteen observer positions have bounded receive composition, not complete State/module parity. Persistence completion, command/tick scheduling, remaining fields and live-session/transport wiring remain."
     ]
   },
   {
