@@ -45,8 +45,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Catalogs/DailyTaskDataParser.cs",
+      "dotnet/Lala.Core/Catalogs/DailyTaskCatalogBinder.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -71,11 +74,17 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Immutable task/reward layout parsing and name/item/group/condition binding; planning-definition projection remains a non-authorizing preview. 1362 Python-derived vectors and boundary/immutability tests."
+    ],
+    "outstanding_scope": [
+      "No verified catalog loading, extraction/activation, diagnostic decorators or live-session integration."
+    ]
   },
   {
     "id": "desktop:wlre/services/world/daily_task_catalog.py",
@@ -86,8 +95,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Catalogs/DailyTaskDataParser.cs",
+      "dotnet/Lala.Core/Catalogs/DailyTaskCatalogBinder.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -120,11 +132,17 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Immutable task/reward layout parsing and name/item/group/condition binding; planning-definition projection remains a non-authorizing preview. 1362 Python-derived vectors and boundary/immutability tests."
+    ],
+    "outstanding_scope": [
+      "No verified catalog loading, extraction/activation, diagnostic decorators or live-session integration."
+    ]
   },
   {
     "id": "desktop:wlre/services/world/display_position.py",

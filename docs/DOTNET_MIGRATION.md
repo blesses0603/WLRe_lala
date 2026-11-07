@@ -163,3 +163,28 @@ strict Ark flags and permissive source-defined tent fields, ignored nonempty
 acknowledgements, empty snapshots and S65-13 geometry fallback. Synthetic Python
 parity covers 2,261 cases and 16,598 prefix outcomes; service reducers/planners,
 commands and live activation are still outstanding.
+
+Daily-task task/reward table parsing and metadata binding are available as an
+immutable offline preview. Missing groups, duplicate slots, names, item references
+and condition goals follow the retained Python contracts. Projection into planner
+definitions does not supply a verified identity or create `DailyCatalogInput`;
+resource extraction, verified activation and live execution remain outstanding.
+
+## Receive-state increment
+
+- Storage/recovery: immutable counts, first garage identity, insertion-ordered
+  reservation deductions, unknown potion baselines and latched reliability.
+  Receipt-only events do not infer resource credit, debit or completed transfers.
+  Python parity: 147 sequences / 3,634 snapshots and count queries.
+- Guild: receive roster/profile/membership/self-leave/disband state. Python retains
+  stale rosters across role changes; readiness must not authorize actions. Member
+  presentation order remains outside this snapshot contract. Python parity:
+  26 sequences / 2,183 snapshots.
+- Expedition: defaults, receive application and injected-clock deadlines preserve
+  signed attributes, ordinal slots, revision changes and pending rejection
+  uncertainty. Start acknowledgements and result clearing do not confirm a claim.
+  Python parity: 63 sequences / 4,537 steps.
+
+These are immutable domain reducers, not complete service observers or a live
+session adapter. Transfers, recovery execution, expedition automation/confirmation,
+guild actions, account lifecycle and formal-server acceptance remain outstanding.

@@ -221,7 +221,8 @@
     "status": "partially_migrated",
     "target_files": [
       "dotnet/Lala.Core/Inventory/RecoveryDecoder.cs",
-      "dotnet/Lala.Core/Inventory/InventoryEvents.cs"
+      "dotnet/Lala.Core/Inventory/InventoryEvents.cs",
+      "dotnet/Lala.Core/Inventory/RecoveryReducer.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -275,10 +276,11 @@
       "live_server_acceptance": "not_run"
     },
     "migrated_scope": [
-      "Receive-only recovery decoder and bottle kind mapping."
+      "Receive-only recovery decoder and bottle kind mapping.",
+      "Pure absolute/known-delta potion balances; receipt-only messages never infer resource credit/debit."
     ],
     "outstanding_scope": [
-      "Recovery reducers, consumption planning, sends and live acceptance remain."
+      "Recovery execution/planning, item mutation orchestration and lifecycle integration remain."
     ]
   },
   {
@@ -366,7 +368,9 @@
     "status": "partially_migrated",
     "target_files": [
       "dotnet/Lala.Core/Inventory/StorageDecoder.cs",
-      "dotnet/Lala.Core/Inventory/InventoryEvents.cs"
+      "dotnet/Lala.Core/Inventory/InventoryEvents.cs",
+      "dotnet/Lala.Core/Inventory/RoomStorageSnapshot.cs",
+      "dotnet/Lala.Core/Inventory/RoomStorageReducer.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -417,10 +421,11 @@
       "live_server_acceptance": "not_run"
     },
     "migrated_scope": [
-      "Receive-only storage decoder with exact item records and dispatcher parity."
+      "Receive-only storage decoder with exact item records and dispatcher parity.",
+      "Immutable receive storage counts, first-row identity, ordered reservations, readiness/reliability and session-local stackability; storage/recovery jointly147 Python sequences3634 snapshots."
     ],
     "outstanding_scope": [
-      "Storage reducers, transfer planning, reservations, sends and live acceptance remain."
+      "Transfer orchestration, reservation acquisition, account/session integration and liveacceptance remain."
     ]
   },
   {
@@ -1533,7 +1538,9 @@
     "scope": "runtime",
     "status": "partially_migrated",
     "target_files": [
-      "dotnet/Lala.Core/Social/GuildDecoder.cs"
+      "dotnet/Lala.Core/Social/GuildDecoder.cs",
+      "dotnet/Lala.Core/Social/GuildEventSnapshot.cs",
+      "dotnet/Lala.Core/Social/GuildEventReducer.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -1566,10 +1573,11 @@
       "live_server_acceptance": "not_run"
     },
     "migrated_scope": [
-      "Receive-only guild decoder wired to ServerProtocol, immutable records."
+      "Receive-only guild decoder wired to ServerProtocol, immutable records.",
+      "Immutable receive roster/profile/add/remove/self-leave/disband state;26 Python sequences2183 snapshots."
     ],
     "outstanding_scope": [
-      "Guild state reducers and outgoing operations remain."
+      "Guild actions and lifecycle invalidation remain; source retains stale rosters across role updates. Readiness is not authority. Presentation order not established."
     ]
   },
   {

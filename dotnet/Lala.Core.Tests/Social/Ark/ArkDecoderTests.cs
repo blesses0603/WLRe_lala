@@ -55,6 +55,8 @@ public sealed class ArkDecoderTests
         if (outcome["error"] is { } error)
         {
             Assert.Equal(error.GetValue<string>(), Assert.Throws<ProtocolException>(() => Decode(vector, data)).Message);
+            Assert.Equal(error.GetValue<string>(), Assert.Throws<ProtocolException>(() =>
+                ServerProtocol.Decode(new Packet(vector["main"]!.GetValue<int>(), vector["sub"]!.GetValue<int>(), data))).Message);
             return;
         }
         var result = Decode(vector, data);
