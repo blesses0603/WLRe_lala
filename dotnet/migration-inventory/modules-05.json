@@ -1987,8 +1987,12 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.items",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Inventory/BagReceiveReducer.cs",
+      "dotnet/Lala.Core/Inventory/CompanionReceiveReducer.cs",
+      "dotnet/Lala.Core/Inventory/CompanionReceiveSnapshot.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -2071,11 +2075,17 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Bag and companion receive slice, including roster append/add/delete/active and buffered S8 attributes;77 Python sequences1616 snapshots."
+    ],
+    "outstanding_scope": [
+      "Player knowledge, equipment/deferred updates, battle knowledge, learned commands and full apply_live remain."
+    ]
   },
   {
     "id": "desktop:wlre/services/items/crafting.py",
@@ -2090,7 +2100,9 @@
     "target_files": [
       "dotnet/Lala.Core/Inventory/CraftingDecoder.cs",
       "dotnet/Lala.Core/Inventory/CraftingScheduleContext.cs",
-      "dotnet/Lala.Core/Inventory/InventoryEvents.cs"
+      "dotnet/Lala.Core/Inventory/InventoryEvents.cs",
+      "dotnet/Lala.Core/Inventory/CraftingReceiveSnapshot.cs",
+      "dotnet/Lala.Core/Inventory/CraftingReducer.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -2207,10 +2219,11 @@
       "live_server_acceptance": "not_run"
     },
     "migrated_scope": [
-      "Receive-only crafting/schedule/furniture decoder with explicit schedule layout context and dispatcher precedence."
+      "Receive-only crafting/schedule/furniture decoder with explicit schedule layout context and dispatcher precedence.",
+      "Receive crafting and furniture defaults/apply/compaction/elapsed with explicit role/time, preserved insertion order and pending uncertainty;140 Python sequences5225 snapshots."
     ],
     "outstanding_scope": [
-      "Crafting reducers, planning, reservations, resource activation and execution remain."
+      "Service composition, recipe/tool planning, runtime authorization, reservations/material confirmation, output tracking, quick-completion, timeouts, automation/disconnect and live execution remain."
     ]
   },
   {

@@ -51,8 +51,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.items",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Inventory/BagReceiveSnapshot.cs",
+      "dotnet/Lala.Core/Inventory/BagReceiveReducer.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -81,8 +84,8 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
     },
@@ -90,7 +93,13 @@
       "desktop_source": "wlre/services/items/inventory.py",
       "identical_source": true,
       "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
-    }
+    },
+    "migrated_scope": [
+      "Pure bag receive transitions and item-use-result observation, preserving metadata/order, count/reliability and server stackability."
+    ],
+    "outstanding_scope": [
+      "Equipment/skill action helpers, execution, session integration and actual resource acceptance remain."
+    ]
   },
   {
     "id": "android:wlre/services/items/maintenance.py",
@@ -302,8 +311,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.items",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Inventory/BagReceiveReducer.cs",
+      "dotnet/Lala.Core/Inventory/BagReceiveSnapshot.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -360,8 +372,8 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
     },
@@ -369,7 +381,13 @@
       "desktop_source": "wlre/services/items/reservations.py",
       "identical_source": true,
       "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
-    }
+    },
+    "migrated_scope": [
+      "Receive refresh/deduction/availability projections with identity uncertainty and held counts."
+    ],
+    "outstanding_scope": [
+      "Reservation acquisition/release and complete cross-service orchestration remain."
+    ]
   },
   {
     "id": "android:wlre/services/items/room_storage.py",

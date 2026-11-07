@@ -188,3 +188,27 @@ resource extraction, verified activation and live execution remain outstanding.
 These are immutable domain reducers, not complete service observers or a live
 session adapter. Transfers, recovery execution, expedition automation/confirmation,
 guild actions, account lifecycle and formal-server acceptance remain outstanding.
+
+## Offline service composition and live-data receive slices
+
+`ServiceStateCoordinator` composes daily tasks, time cube, recovery, guild,
+activities, storage and expedition before local world/battle/session dispatch in
+source order. Inputs bind to the exact current snapshot, resource holds default
+on, and published state is immutable. Typed reduction failure rolls back the
+entire observation/count, intentionally stronger than Python's partial mutation.
+Fourteen real Python State.apply sequences cover 698 checkpoints and 36 event
+kinds. The omitted observer list is explicit; this is not complete State parity.
+
+Separate bag/companion receive reducers preserve slot metadata/order, inventory
+reliability, identity-sensitive reservation observations, unknown baselines,
+companion append/reuse and buffered S8 attributes. Seventy-seven Python sequences
+cover 1,616 snapshots. Player/battle knowledge, equipment/deferred updates,
+learned-command helpers and full shared-session wiring remain outstanding.
+These functions neither acquire reservations nor perform resource-consuming acts.
+
+Crafting/furniture receive snapshots now preserve queue and furniture insertion
+order, ownership, readiness, sparse tool rows, compaction, error receipts and
+pending uncertainty. Elapsed-time queries use an explicit timestamp and never
+claim completion. Python parity covers 140 sequences / 5,225 snapshots. This
+slice does not yet compose into ServiceStateCoordinator or implement recipe/tool
+planning, material confirmations, output tracking, timeouts or automatic execution.

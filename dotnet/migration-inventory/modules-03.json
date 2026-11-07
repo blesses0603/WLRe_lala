@@ -1209,8 +1209,10 @@
     "target_project": "Lala.Core",
     "target_subsystem": "State.inventory_updates",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Inventory/BagReceiveReducer.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1230,11 +1232,17 @@
     },
     "acceptance_profile": "state",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Receive add-item rules with exact preferred-slot/order/stack semantics."
+    ],
+    "outstanding_scope": [
+      "Other global State mutation and full service integration remain."
+    ]
   },
   {
     "id": "desktop:wlre/core/maintenance.py",
@@ -1280,8 +1288,10 @@
     "target_project": "Lala.Core",
     "target_subsystem": "State.state",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/State/ServiceStateCoordinator.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1408,11 +1418,17 @@
     },
     "acceptance_profile": "state",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Bounded owner-thread service observer composition before local dispatch;14 real State.apply sequences698 checkpoints36event kinds; atomic rollback intentionally stronger than Python."
+    ],
+    "outstanding_scope": [
+      "Not completeState: crafting/live, points, party, instances, tent/shop/efficiency/guild-actions/ark and live-session wiring remain omitted."
+    ]
   },
   {
     "id": "desktop:wlre/core/state_battle_events.py",
