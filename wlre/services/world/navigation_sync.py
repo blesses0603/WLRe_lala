@@ -1,7 +1,8 @@
 """On-demand complete-bundle extraction, bounded to one reviewed model."""
 import hashlib
+import threading
 from pathlib import Path
-from wlre.services.world.navigation_database import REVIEWED_MODELS, import_cache, record_failure, database_path
+from wlre.services.world.navigation_database import REVIEWED_MODELS, import_cache, record_failure, database_path, load_cache
 
 MAX_BYTES=32*1024*1024
 MAX_FILES=2
@@ -11,7 +12,23 @@ REVIEWED_CACHE_NAMES={10082: '11082', 15012: '15011'}
 REVIEWED_DEPENDENCY_MODELS={15012: 15011}
 
 
-def sync_model(identity,model,*,root=None,fetch=None,manifest=None,observe=None):
+# Fixed-size locks also coalesce a preview-window request with automatic sync.
+_MODEL_LOCKS = tuple(threading.Lock() for _ in range(16))
+
+
+def sync_model(identity,model,*,root=None,fetch=None,manifest=None,observe=None,cancelled=None):
+    lock = _MODEL_LOCKS[hash((identity.key, model)) % len(_MODEL_LOCKS)]
+    while not lock.acquire(timeout=0.1):
+        if cancelled is not None and cancelled():
+            raise ValueError('導航同步已取消。')
+    try:
+        return _sync_model(identity, model, root=root, fetch=fetch, manifest=manifest,
+                           observe=observe, cancelled=cancelled)
+    finally:
+        lock.release()
+
+
+def _sync_model(identity,model,*,root=None,fetch=None,manifest=None,observe=None,cancelled=None):
     from wlre.storage.paths import data_root
     from wlre.services.official_manifest_sync import fetch_official_manifest, ManifestSpec
     from wlre.services.official_bundle_download import fetch_bundle, spec_from_manifest, _verified_file
@@ -24,13 +41,21 @@ def sync_model(identity,model,*,root=None,fetch=None,manifest=None,observe=None)
     database=database_path(root);version=identity.key
     observe=observe or observe_official_versions
     fetch=fetch or fetch_bundle
+    def check_cancelled():
+        if cancelled is not None and cancelled():
+            raise ValueError('導航同步已取消。')
     expected={p.name:p.full_version for p in identity.packages}
     def check_version():
+        check_cancelled()
         current=validate_snapshot(observe())
         if current['data_ver']!=identity.data_ver or current['exe_version']!=identity.exe_version or current['packages']!=expected:
             raise ValueError('Official navigation version changed; refresh runtime')
     try:
         check_version()
+        cached = load_cache(database, version, model)
+        if cached is not None:
+            check_cancelled()
+            return cached
         revision=next(p for p in identity.packages if p.name=='MainPackage')
         manifest=manifest or fetch_official_manifest(ManifestSpec(identity.data_ver,'MainPackage',revision.full_version),cache_root=root/'manifests')
         if (manifest.spec.data_ver!=identity.data_ver or manifest.spec.package_version!=revision.full_version
@@ -50,12 +75,15 @@ def sync_model(identity,model,*,root=None,fetch=None,manifest=None,observe=None)
             raise ValueError('Navigation download exceeds 32 MiB / 2 bundle budget')
         paths=[]
         for spec in specs:
+            check_cancelled()
             path=fetch(spec,cache_root=root/'bundles')
             if not _verified_file(path,spec):raise ValueError('Navigation bundle verification failed')
             paths.append(path)
+        check_cancelled()
         raw,pointer=extract_cache(paths,model)
         check_version()
         provenance={'identity':identity.as_dict(),'bundles':[dict(name=s.name,md5=s.file_hash,crc=s.file_crc,size=s.file_size) for s in specs], 'pointer':pointer}
+        check_cancelled()
         return import_cache(database,version,model,raw,provenance)
     except (OSError,ValueError,RuntimeError,ImportError) as error:
         record_failure(database,version,model,error)

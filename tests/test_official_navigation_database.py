@@ -170,5 +170,27 @@ class NavigationSyncTests(unittest.TestCase):
                 sync_model(identity,10001,root=self.root,fetch=fetch,manifest=manifest,observe=Mock(side_effect=[snapshot,changed]))
         self.assertIsNone(database.load_cache(self.db,identity.key,10001))
 
+        # A cancelled in-flight read must not fetch the second bundle or publish.
+        import threading
+        cancelled = threading.Event()
+        def cancel_after_fetch(*args, **kwargs):
+            cancelled.set()
+            return manifest_file
+        fetch.reset_mock(); fetch.side_effect = cancel_after_fetch
+        with patch('wlre.services.official_bundle_download._verified_file', return_value=True), patch('wlre.services.world.navigation_sync.extract_cache') as extract:
+            with self.assertRaisesRegex(ValueError, '取消'):
+                sync_model(identity,10001,root=self.root,fetch=fetch,manifest=manifest,
+                           observe=lambda:snapshot,cancelled=cancelled.is_set)
+        self.assertEqual(fetch.call_count, 1)
+        extract.assert_not_called()
+        self.assertIsNone(database.load_cache(self.db,identity.key,10001))
+
+        # A later manual/preview request revalidates the same persisted cache.
+        fetch.reset_mock(); fetch.side_effect = None
+        with patch('wlre.services.official_bundle_download._verified_file', return_value=True), patch('wlre.services.world.navigation_sync.extract_cache', return_value=(self.raw, {})):
+            sync_model(identity,10001,root=self.root,fetch=fetch,manifest=manifest,observe=lambda:snapshot)
+            sync_model(identity,10001,root=self.root,fetch=fetch,manifest=manifest,observe=lambda:snapshot)
+        self.assertEqual(fetch.call_count, 2)
+
 
 if __name__=='__main__':unittest.main()

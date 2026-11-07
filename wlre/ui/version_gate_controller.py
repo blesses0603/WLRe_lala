@@ -554,7 +554,8 @@ class VersionGateController(BackgroundVersionController):
             return
         # Serialize cache-writing work. Rapid clicks cannot start duplicate
         # preparation or race runtime activation. A completed retry always
-        # makes a fresh official check, never reuses the launcher receipt.
+        # synchronizes current sources before its independent official check.
+        # Preparation receipts cannot replace verification or skip recovery.
         if not self._version_worker_done.is_set():
             return
         if (self.login_window is not None and self.login_window.winfo_exists()
@@ -569,6 +570,8 @@ class VersionGateController(BackgroundVersionController):
         self._startup_progress.take()  # Discard an earlier generation's display.
         self._official_progress.take()
         self._startup_progress_update = None
+        self._startup_failure = None
+        self._startup_prepared.clear()  # Completion belongs to this full attempt.
         self._startup_started_at = time.monotonic()
         self._startup_stage_started_at = self._startup_started_at
         self._startup_finished_at = None
@@ -578,10 +581,9 @@ class VersionGateController(BackgroundVersionController):
         if bar is not None:
             bar.reset()
         self._update_startup_elapsed()
-        self._startup_phase = 'official' if self._startup_prepared.is_set() else 'preparing'
+        self._startup_phase = 'preparing'
         self.version_gate_text.set(
-            "正在向官方來源確認資源版本與完整 Runtime…" if self._startup_prepared.is_set() else
-            "正在準備並校驗 LaLa 官方資源，完成後將獨立檢查登入條件…")
+            "正在同步並校驗目前官方資源，完成後將獨立檢查登入條件…")
         self._set_login_gate_button()
         self._render_version_window()
         # GitHub is independent: an outage never changes the game login gate.
@@ -598,17 +600,20 @@ class VersionGateController(BackgroundVersionController):
             # Capture only thread-safe data, never App/Tk objects. A non-daemon
             # worker and deferred close keep cache writes alive until completed.
             try:
-                if not prepared.is_set():
-                    try:
-                        receipt = prepare_on_launch(progress=progress.report)
-                        if not isinstance(receipt, dict) or receipt.get('status') == 'error':
-                            status = '資源收集未完成；正式 Runtime 結果另列'
-                        else:
-                            status = _launcher_status_text()
-                    except Exception:
-                        status = '資源收集發生例外；正式 Runtime 結果另列'
-                    progress.finish(status)
-                    prepared.set()
+                # Every explicit full retry must repair missing/new-version
+                # sources, including after offline or partial preparation.
+                # prepare_on_launch is source-only; the complete Runtime is
+                # constructed exactly once by the independent gate below.
+                try:
+                    receipt = prepare_on_launch(progress=progress.report)
+                    if not isinstance(receipt, dict) or receipt.get('status') == 'error':
+                        status = '資源收集未完成；正式 Runtime 結果另列'
+                    else:
+                        status = _launcher_status_text()
+                except Exception:
+                    status = '資源收集發生例外；正式 Runtime 結果另列'
+                progress.finish(status)
+                prepared.set()
                 if exiting.is_set():
                     return
                 try:

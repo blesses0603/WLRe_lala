@@ -87,7 +87,9 @@ def check(workspace,platform,online=False):
             deadline=time.monotonic()+(420 if online else 30)
             def exercise():
                 try:
-                    app.show_main();root.update_idletasks()
+                    app.show_main()
+                    from wlre.ui.window_layout import wait_for_widget_mapping
+                    wait_for_widget_mapping(app.overview_panel)
                     observations['dashboard_mapped']=bool(app.overview_panel.winfo_ismapped())
                     dialogs=[]
                     def preview(*args, **kwargs):

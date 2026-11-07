@@ -123,6 +123,10 @@ class LoginController:
 
 
     def refresh_server_lines(self):
+        current = (self.host.get().strip(), self.port.get())
+        was_official = (self._selected_line_id and self._line_endpoint == current and
+            any(row['id'] == self._selected_line_id and
+                (row['host'], str(row['port'])) == current for row in self.line_catalog))
         try:self.line_catalog=server_lines.load()
         except (OSError,ValueError,TypeError):self.line_catalog=[]
         if hasattr(self, 'server_list_status_label'):
@@ -137,6 +141,13 @@ class LoginController:
                     if label not in choices:choices[label]=candidate
         except (OSError,ValueError):pass
         self.line_choices=choices
+        if was_official and not any(row['id'] == self._selected_line_id for row in self.line_catalog):
+            # A removed/replaced official ID is not the same destination merely
+            # because its display name was reused. Keep the address explicit.
+            self._selected_line_id = 0
+            self._line_endpoint = None
+            self.server_line.set(server_lines.CUSTOM)
+            self._clear_endpoint_credentials('原官方分流已移除或身分變更；請重新選擇目的地並輸入登入資料。')
         self.sync_server_menus()
 
 
@@ -145,12 +156,55 @@ class LoginController:
         return {1:'地球',2:'水星'}.get(line['id']//100,'自訂') if line else '自訂'
 
 
+    def _clear_endpoint_credentials(self, message):
+        # Forget only the current form binding, never delete another saved
+        # account. A refreshed official endpoint must not inherit its secrets.
+        self._memory_restoring = True
+        try:
+            self.account.set('')
+            self.password.set('')
+            self.remember_account.set(False)
+            self.remember_password.set(False)
+            self._login_memory_key = None
+            self._loaded_identity = None
+            self._password_autofilled = False
+        finally:
+            self._memory_restoring = False
+        self._set_saved_account_label('目的地已變更，請重新輸入')
+        self.status.set(message)
+
+
     def sync_server_menus(self):
-        line=self.line_choices.get(self.server_line.get())
+        current = (self.host.get().strip(), self.port.get())
+        line = None
+        if self._selected_line_id and self._line_endpoint == current:
+            line = next((row for row in self.line_catalog
+                         if row['id'] == self._selected_line_id), None)
+            if line is None:
+                line = next((row for row in self.line_choices.values() if row and
+                    row['id'] == self._selected_line_id and
+                    (row['host'], str(row['port'])) == current), None)
+            if line is not None:
+                target = (line['host'], str(line['port']))
+                if target != current:
+                    self._clear_endpoint_credentials(
+                        '官方分流目的地已更新；已清除本次登入資料，請確認新目的地後重新輸入。')
+                    self._memory_restoring = True
+                    try:
+                        self.host.set(target[0]); self.port.set(target[1])
+                    finally:
+                        self._memory_restoring = False
+                self._line_endpoint = target
+                self.server_line.set(line['name'])
         if line is None:
             try:port = int(self.port.get())
             except (ValueError, TypeError):port = None
             line=server_lines.for_endpoint(self.line_catalog,self.host.get(),port)
+            # Labels are presentation only. Never use a stale matching name to
+            # display one endpoint while connect() uses another one.
+            self._selected_line_id = line['id'] if line else 0
+            self._line_endpoint = (line['host'], str(line['port'])) if line else None
+            self.server_line.set(line['name'] if line else server_lines.CUSTOM)
         group=self.line_group(line)
         self.server_group.set(group)
         groups=['地球','水星']
@@ -189,6 +243,8 @@ class LoginController:
         line=self.line_choices.get(self.server_line.get())
         self._selected_line_id=line['id'] if line else 0
         if line:
+            if (self.host.get().strip(), self.port.get()) != (line['host'], str(line['port'])):
+                self._clear_endpoint_credentials('登入目的地已變更；請重新輸入登入資料。')
             self._memory_restoring=True
             try:
                 self.host.set(line['host']);self.port.set(str(line['port']))
@@ -210,7 +266,21 @@ class LoginController:
         if self._loaded_identity and current!=self._loaded_identity:
             if self._password_autofilled:self.password.set('')
             self._password_autofilled=False;self._login_memory_key=None
-            if hasattr(self,'saved_account_choice'):self.saved_account_choice.set('未儲存的新帳號')
+            self._set_saved_account_label('未儲存的新帳號')
+
+
+    def _set_saved_account_label(self, label):
+        # Login variables outlive a closed/rebuilt login window. Credential
+        # invalidation must still complete without touching its destroyed widget.
+        choice = getattr(self, 'saved_account_choice', None)
+        if choice is None:
+            return
+        try:
+            if choice.winfo_exists():
+                choice.set(label)
+        except tk.TclError:
+            # The widget or Tcl application may be torn down during shutdown.
+            pass
 
 
     def refresh_saved_accounts(self):

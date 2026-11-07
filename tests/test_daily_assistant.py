@@ -189,6 +189,11 @@ class DailyAssistantTests(unittest.TestCase):
         self.state.player['role_id'] = 1
         data = self.state.star_ark
         token = (True, 'v')
+        catalog = {'fights': {1: {'agent': 0, 'awards': [{'kind': 6, 'id': 8, 'value': 1}]}}}
+        catalog_patch = patch.object(star_ark, 'runtime_catalog', return_value=(catalog, token, ''))
+        catalog_patch.start()
+        self.addCleanup(catalog_patch.stop)
+        self.state.daily_tasks['catalog_token'] = token
         data.update(ready=True, role=1, catalog_token=token, events_ready=True, planet=1)
         self.state.daily_tasks.update(ready=True, groups_ready=True, catalog_ready=True, rows=[
             dict(cycle=1, index=1, condition_kind=9, condition_params=[1], progress=0, goal=1)])

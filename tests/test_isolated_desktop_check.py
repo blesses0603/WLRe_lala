@@ -68,7 +68,7 @@ class IsolatedDesktopCheckTests(unittest.TestCase):
                 self._version_worker_done = threading.Event()
                 self.version_gate_state = 'checking'
                 self._version_gate_result = None
-                self.overview_panel = SimpleNamespace(winfo_ismapped=lambda: True)
+                self.overview_panel = SimpleNamespace(winfo_ismapped=lambda: True, update_idletasks=lambda: None)
                 self.snapshot = {}
                 self.show_time = None
                 apps.append(self)

@@ -178,7 +178,9 @@ def apply_daily_tasks(state,event):
         key='daily_progress' if event['cycle']==1 else 'weekly_progress'
         if event['count']<data[key][event['task_id']-1]:
             if data['pending']:data['uncertain']=True
-            data.update(ready=False,groups_ready=False,pending=None,status='進度已重置，等待完整任務同步')
+            data.update(ready=False,groups_ready=False,groups_ahead=False,awaiting_groups=False,
+                        pending=None,handled=[],generation=data['generation']+1,
+                        status='進度已重置，等待完整任務同步')
         else:data[key][event['task_id']-1]=event['count']
     elif kind=='daily_task_error':
         data.update(enabled=False,pending=None,status='伺服器拒絕，已停止自動領獎：'+event['message'])
@@ -188,7 +190,9 @@ def apply_daily_tasks(state,event):
             pending['notice']=True
     elif kind=='daily_task_unknown_update':
         if data['pending']:data['uncertain']=True
-        data.update(ready=False,pending=None,status='未知的任務更新格式，等待重新登入同步')
+        data.update(ready=False,groups_ready=False,groups_ahead=False,awaiting_groups=False,
+                    pending=None,handled=[],generation=data['generation']+1,
+                    status='未知的任務更新格式，等待重新登入同步')
 
 
 def _has_flag(flag, task_id):
@@ -278,6 +282,32 @@ def slots_needed(awards):
     return needed
 
 
+def _item_totals(bag):
+    """Use only verified S23 slot counts, never inferred stackability."""
+    if bag.get('ready') is not True or bag.get('reliable') is not True:
+        return None
+    totals = {}
+    for item in bag['items'].values():
+        sid, count = item.get('item_id'), item.get('count')
+        if (type(sid) is not int or not 1 <= sid <= 65535
+                or type(count) is not int or not 1 <= count <= 255):
+            return None
+        totals[sid] = totals.get(sid, 0) + count
+    return totals
+
+
+def _items_received(bag, pending):
+    expected = pending['item_rewards']
+    if not expected:
+        return True
+    before = pending['item_before']
+    after = _item_totals(bag)
+    return (before is not None and after is not None
+            and bag.get('revision', 0) > pending['bag_revision']
+            and all(after.get(sid, 0) - before.get(sid, 0) >= count
+                    for sid, count in expected.items()))
+
+
 def candidates(data,catalog):
     result=[]
     for row in task_rows(data,catalog):
@@ -328,9 +358,16 @@ def begin(state,candidate,token,now):
     slots=slots_needed(candidate['awards'])
     issue=bag_claim_problem(state.inventory,required_slots=slots)
     if issue:raise ProtocolError(issue)
+    item_rewards={}
+    for award in candidate['awards']:
+        if award['kind'] in (10,11):
+            sid=award['id'];item_rewards[sid]=item_rewards.get(sid,0)+award['value']
+    item_before=_item_totals(state.inventory)
+    if item_rewards and item_before is None:raise ProtocolError('背包物品數量尚未確認')
     d['handled'].append(key)
     d['pending']={**candidate,'token':token,'role':state.player['role_id'],'generation':d['generation'],
-                  'due':now+20,'notice':False,'slots':slots,'bag_revision':state.inventory['revision']}
+                  'due':now+20,'notice':False,'slots':slots,'bag_revision':state.inventory['revision'],
+                  'item_rewards':item_rewards,'item_before':item_before}
     d['status']='已要求領取任務獎勵' if candidate['kind']=='task' else '已要求領取活躍寶箱'
     if candidate['kind']=='task':return [Packet(124,1,Writer().u16(candidate['index']).build())]
     return [Packet(124,2,Writer().u8(candidate['cycle']).build())]
@@ -371,7 +408,7 @@ def tick(state,world_acknowledged,now=None):
         else:
             marked=(received(d,p) if p['kind']=='task' else
                     all(chest_received(d,dict(kind=k,mark=m)) for k,m in p['flags']))
-            bag_ok=not p['slots'] or (state.inventory.get('reliable') and state.inventory.get('revision',0)>p['bag_revision'])
+            bag_ok=_items_received(state.inventory,p)
             if marked and p['notice'] and bag_ok:
                 d.update(pending=None,status='伺服器已確認領取標記與獎勵通知')
             elif now>=p['due']:

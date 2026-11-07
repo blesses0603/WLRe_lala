@@ -1,5 +1,6 @@
 """Regression coverage for resource contracts and compatible preference migration."""
 import json
+import shutil
 import os
 from pathlib import Path
 import tempfile
@@ -28,7 +29,7 @@ class ArchitectureRegressionTests(unittest.TestCase):
             for name in REQUIRED_RESOURCES:
                 if name in SOURCE_MANIFEST: continue
                 target=root/name;target.parent.mkdir(parents=True,exist_ok=True)
-                target.symlink_to(RESOURCE_ROOT/name)
+                shutil.copyfile(RESOURCE_ROOT/name,target)
             (root/'broken.png').write_bytes(b'not an image')
             with self.assertRaises(OSError):validate_resources(root)
 

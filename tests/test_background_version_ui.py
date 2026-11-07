@@ -63,7 +63,7 @@ class BackgroundVersionUiTests(unittest.TestCase):
         self.assertIn('僅識別，非內容驗證', self.app._background_status.get())
         self.assertIn('5 分鐘', self.app._background_status.get())
         self.assertIn('非推播', self.app._background_status.get())
-        self.assertIn('11:10:00 UTC', self.app._background_status.get())
+        self.assertIn('19:10:00 UTC+8', self.app._background_status.get())
         with patch('wlre.ui.background_version_controller.time.monotonic', return_value=301.0), \
              patch('wlre.ui.version_gate_controller.messagebox'), \
              patch.object(self.app, 'start_version_check') as check, \
@@ -142,7 +142,7 @@ class BackgroundVersionUiTests(unittest.TestCase):
         self.deliver(replace(self.result(status='unverified'), checked_at_utc='2026-11-07T11:20:00+00:00'))
         self.assertEqual(self.app._observer_last_success, successful)
         self.assertEqual(self.app._observer_state, 'unknown')
-        self.assertIn('11:10:00 UTC', self.app._background_status.get())
+        self.assertIn('19:10:00 UTC+8', self.app._background_status.get())
         self.assertIn('未知', self.app._background_status.get())
         self.assertIn('退避', self.app._background_status.get())
 

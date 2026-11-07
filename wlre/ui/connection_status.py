@@ -1,5 +1,6 @@
 """Keep transport status independent of the last character snapshot."""
 import time
+from wlre.ui.display_time import clock_text
 from wlre.network.connection_health import QUIET_AFTER
 
 REASONS = {'server_closed':'伺服器已關閉連線','network_error':'網路錯誤，連線已結束',
@@ -21,6 +22,6 @@ class ConnectionStatus:
         if not running: return '連線作業已停止，等待結束原因'
         age=max(0,value['age']+self.clock()-self.received)
         stamp=value.get('last_received_at')
-        last=time.strftime('%H:%M:%S',time.localtime(stamp)) if stamp is not None else '尚無回應'
+        last=clock_text(stamp) if stamp is not None else '尚無回應'
         title=('連線待確認' if age>=QUIET_AFTER else '伺服器有回應' if stamp is not None else '等待伺服器回應')
         return f'{title}｜最後 {last}（{int(age)} 秒前）' if stamp is not None else f'{title}｜尚未收到資料 {int(age)} 秒'

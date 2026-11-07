@@ -624,8 +624,20 @@ class PreloginVersionWindowTests(unittest.TestCase):
             self.app._version_alert_panel.winfo_rooty()
             + self.app._version_alert_panel.winfo_height(),
             self.app._version_resource_panel.winfo_rooty())
-        self.assertGreater(
-            self.app._version_alert_panel.winfo_height(), 55)
+        # Native font/theme metrics vary. Prove the entire requested text is
+        # visible rather than requiring an arbitrary Linux pixel minimum.
+        panel = self.app._version_alert_panel
+        heading = self.app._version_alert_heading_label
+        message = self.app._version_alert_message_label
+        self.assertGreater(panel.winfo_height(), 0)
+        for label in (heading, message):
+            self.assertTrue(label.winfo_ismapped())
+            self.assertGreaterEqual(label.winfo_height(), label.winfo_reqheight())
+            self.assertGreaterEqual(label.winfo_rooty(), panel.winfo_rooty())
+            self.assertLessEqual(label.winfo_rooty() + label.winfo_height(),
+                                 panel.winfo_rooty() + panel.winfo_height())
+        self.assertLessEqual(heading.winfo_rooty() + heading.winfo_height(),
+                             message.winfo_rooty())
 
     def test_three_sections_and_buttons_keep_separate_vertical_space(self):
         self.deliver(official_result("1275", "1275", "blocked"))
@@ -769,9 +781,9 @@ class PreloginVersionWindowTests(unittest.TestCase):
                                       '2026-11-07T11:05:00+00:00'))
         self.assertIn('官方 未知', self.app._version_data.get())
         self.assertIn('資料庫 未知', self.app._version_main.get())
-        self.assertIn('11:00:00 UTC', self.app._background_status.get())
+        self.assertIn('19:00:00 UTC+8', self.app._background_status.get())
         self.assertIn('查詢失敗', self.app._background_status.get())
-        self.assertNotIn('11:05:00 UTC', self.app._background_status.get())
+        self.assertNotIn('19:05:00 UTC+8', self.app._background_status.get())
         self.assertTrue(self.app._version_continue_button.instate(['disabled']))
 
     def test_late_matching_recovery_and_release_rerender_cannot_resume_animation(self):

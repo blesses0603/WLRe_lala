@@ -1,4 +1,4 @@
-"""離線將既有 DataPackage/MainPackage Manifest 分類成私人 JSON 索引。
+r"""離線將既有 DataPackage/MainPackage Manifest 分類成私人 JSON 索引。
 
 範例：
 py -m tools.classify_existing_resources --data DataPackage_1275.zip ^

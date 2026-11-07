@@ -179,13 +179,20 @@ class BackgroundVersionObserverTests(unittest.TestCase):
         self.assertIsNone(got.database)
         self.assertFalse(self.path.exists())
 
-    def test_corrupt_or_symlink_database_is_unverified(self):
+    def test_corrupt_database_is_unverified(self):
         self.path.write_bytes(b'not sqlite')
         self.assertEqual(self.observe().status, 'unverified')
+
+    def test_symlink_database_is_unverified(self):
         self.path.unlink()
         target = self.root / 'target.sqlite3'
         target.write_bytes(b'unchanged')
-        self.path.symlink_to(target)
+        try:
+            self.path.symlink_to(target)
+        except OSError as exc:
+            if getattr(exc, 'winerror', None) == 1314:
+                self.skipTest('Windows account lacks symbolic-link creation privilege')
+            raise
         self.assertEqual(self.observe().status, 'unverified')
         self.assertEqual(target.read_bytes(), b'unchanged')
 

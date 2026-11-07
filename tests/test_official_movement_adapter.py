@@ -1,3 +1,4 @@
+from contextlib import closing
 import copy
 import hashlib
 from pathlib import Path
@@ -149,7 +150,7 @@ class OfficialMovementAdapterTests(unittest.TestCase):
                 result=adapter.route(None,10001,(10,990),(20,980))
                 self.assertTrue(adapter.validate_route(result))
                 import sqlite3
-                with sqlite3.connect(database.database_path(root)) as db:
+                with closing(sqlite3.connect(database.database_path(root))) as db, db:
                     db.execute('UPDATE navigation_snapshots SET raw=?',(b'corrupt',))
                 with self.assertRaisesRegex(ValueError,'integrity'):
                     adapter.route(None,10001,(10,990),(20,980))

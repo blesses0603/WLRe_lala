@@ -104,17 +104,58 @@ class IntegratedStartupTests(unittest.TestCase):
         self.prepare.assert_called_once()
         self.check.assert_called_once_with(progress=ANY)
 
-    def test_every_completed_retry_rechecks_official_but_preparation_is_once_per_app(self):
+    def test_every_full_retry_syncs_sources_then_rechecks_official(self):
         self.begin()()
         self.app.drain_version_checks()
         self.begin()()
         self.app.drain_version_checks()
-        self.prepare.assert_called_once()
+        self.assertEqual(self.prepare.call_count, 2)
         self.assertEqual(self.check.call_count, 2)
         other = StartupHarness()
         self.begin(other)()
-        self.assertEqual(self.prepare.call_count, 2)
+        self.assertEqual(self.prepare.call_count, 3)
         self.assertEqual(self.check.call_count, 3)
+
+    def test_failed_preparation_exception_error_and_partial_result_are_retried(self):
+        for failed in (OSError('offline private path'), {'status': 'error'},
+                       {'status': 'downloaded_unparsed'}, None):
+            with self.subTest(failed=type(failed).__name__):
+                self.app = StartupHarness()
+                self.prepare.reset_mock()
+                self.check.reset_mock()
+                self.prepare.side_effect = [failed, {'status': 'verified_official'}]
+                self.check.side_effect = [blocked_result(), verified_result()]
+                self.begin()()
+                self.app.drain_version_checks()
+                self.assertEqual(self.app.version_gate_state, 'blocked')
+                self.assertTrue(self.app._startup_prepared.is_set())
+                second = self.begin()
+                self.assertFalse(self.app._startup_prepared.is_set())
+                self.assertEqual(self.app._startup_phase, 'preparing')
+                second()
+                self.app.drain_version_checks()
+                self.assertEqual(self.prepare.call_count, 2)
+                self.assertEqual(self.check.call_count, 2)
+                self.assertEqual(self.app.version_gate_state, 'ready')
+                self.assertFalse(self.app._version_gate_entry_approved)
+
+    def test_full_retry_discards_old_source_failure_and_counts(self):
+        def fail(*, progress):
+            progress('extract_failed', {'feature': 'npc', 'stage': 'Eve 二進位事件'})
+            return {'status': 'error'}
+        self.prepare.side_effect = fail
+        self.begin()()
+        self.app.drain_version_checks()
+        self.assertIn('Eve', self.app._startup_failure)
+        self.prepare.side_effect = None
+        self.prepare.return_value = {'status': 'verified_official'}
+        self.check.return_value = verified_result()
+        next_worker = self.begin()
+        self.assertIsNone(self.app._startup_failure)
+        self.assertIsNone(self.app._startup_progress_update)
+        next_worker()
+        self.app.drain_version_checks()
+        self.assertNotIn('Eve', self.app._launcher_catalog_status)
 
     def test_resource_exception_still_runs_official_check_and_hides_private_error(self):
         self.prepare.side_effect = RuntimeError('C:/private/token')
@@ -148,7 +189,7 @@ class IntegratedStartupTests(unittest.TestCase):
         self.begin()()
         self.app.drain_version_checks()
         self.assertEqual(self.app.version_gate_state, 'ready')
-        self.prepare.assert_called_once()
+        self.assertEqual(self.prepare.call_count, 2)
 
     def test_progress_is_coalesced_and_cannot_approve_login(self):
         self.begin()  # Keep the manual worker pending while testing its mailbox.
@@ -234,7 +275,7 @@ class IntegratedStartupTests(unittest.TestCase):
         self.app.drain_version_checks()
         self.assertEqual(self.app._startup_progress_update[0], '資料庫內容比對')
 
-    def test_terminal_elapsed_freezes_and_retry_resets_without_repreparation(self):
+    def test_terminal_elapsed_freezes_and_full_retry_restarts_source_progress(self):
         self.check.return_value = verified_result()
         self.app._version_progress = Mock()
         with patch('wlre.ui.version_gate_controller.time.monotonic', return_value=100.0):
@@ -251,7 +292,7 @@ class IntegratedStartupTests(unittest.TestCase):
             self.assertEqual(self.app._version_gate_checked, checked)
             self.begin()()
             self.assertIn('已用 0 秒', self.app._startup_elapsed.get())
-        self.prepare.assert_called_once()
+        self.assertEqual(self.prepare.call_count, 2)
         self.assertEqual(self.check.call_count, 2)
         self.assertEqual(self.app._version_progress.reset.call_count, 2)
 

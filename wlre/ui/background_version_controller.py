@@ -5,6 +5,7 @@ Identifier observations may refresh separate evidence, never content validation.
 A bad observation revokes entry and latches the current session's separate hold.
 """
 from datetime import datetime, timezone
+from wlre.ui.display_time import DISPLAY_TIMEZONE
 import os
 import math
 import queue
@@ -32,7 +33,7 @@ def _observation_time(value):
         stamp = datetime.fromisoformat(value.replace('Z', '+00:00'))
         if stamp.tzinfo is None:
             return '尚無'
-        return stamp.astimezone(timezone.utc).strftime('%m-%d %H:%M:%S UTC')
+        return stamp.astimezone(DISPLAY_TIMEZONE).strftime('%m-%d %H:%M:%S UTC+8')
     except (AttributeError, TypeError, ValueError):
         return '尚無'
 

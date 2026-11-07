@@ -70,6 +70,8 @@ class App(LoginController, AccountController,
         self._settings_key=None
         self.snapshot={}
         self.navigation_windows=[]
+        from wlre.services.world.navigation_autosync import NavigationAutoSync
+        self.navigation_sync = NavigationAutoSync()
         self.resource_windows=[]
         self.attribute_window=None
         self.role_map={}
@@ -147,6 +149,22 @@ class App(LoginController, AccountController,
             self.root, lambda: self.snapshot, suggested_scene=self.home_map.selected_id)
         self.navigation_windows.append(viewer)
         return viewer
+
+    def poll_navigation_sync(self, retry=False):
+        if not hasattr(self, 'navigation_sync'):
+            return
+        enabled = (self.live_active and not self.stop_event.is_set()
+                   and not self._session_resource_hold.is_set()
+                   and self.snapshot.get('phase') == 'world_ready')
+        value = self.navigation_sync.update(self.snapshot, enabled=enabled, retry=retry)
+        self.home_map.navigation_status.set(value['message'])
+
+    def request_navigation_sync(self):
+        self.poll_navigation_sync(retry=True)
+
+    def cancel_navigation_sync(self):
+        self.navigation_sync.cancel()
+        self.poll_navigation_sync()
 
     def write(self, text):
         if self.entered_world and self.background_window():
@@ -376,6 +394,7 @@ class App(LoginController, AccountController,
         failed=False
         try:
             App._poll_once(self)
+            App.poll_navigation_sync(self)
         except Exception as exc:
             failed=True
             if hasattr(self,'_pending_display'):self._pending_display=None
@@ -396,6 +415,7 @@ class App(LoginController, AccountController,
 
     def stop(self):
         self.stop_event.set()
+        if hasattr(self, 'navigation_sync'):self.navigation_sync.cancel()
         self.status.set('正在中斷連線…')
 
     def close(self):
@@ -405,6 +425,7 @@ class App(LoginController, AccountController,
         if self.defer_close_for_startup():
             return
         self._closing=True
+        if hasattr(self, 'navigation_sync'):self.navigation_sync.close()
         self.stop_event.set();self.password.set('');self.diagnostics.close();self.root.destroy()
 
 

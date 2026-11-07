@@ -1,4 +1,5 @@
 from pathlib import Path
+from contextlib import closing
 import hashlib
 import sqlite3
 import tempfile
@@ -29,7 +30,7 @@ class RetiredNavigationSeedTests(unittest.TestCase):
     def test_legacy_navigation_is_not_loaded_even_from_existing_valid_user_db(self):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d);database=root/'user.sqlite3';raw=b'{}';digest=hashlib.sha256(raw).hexdigest()
-            with sqlite3.connect(database) as db:
+            with closing(sqlite3.connect(database)) as db, db:
                 db.execute('CREATE TABLE bundled_active(name TEXT PRIMARY KEY,sha256 TEXT)')
                 db.execute('CREATE TABLE bundled_resources(name TEXT,sha256 TEXT,data BLOB)')
                 for name in RETIRED_NAVIGATION:

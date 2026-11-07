@@ -89,6 +89,15 @@ def command(state, value, world_acknowledged, now=None):
     return []
 
 
+def _catalog_token(value):
+    """Normalize only the official token's JSON tuple/list representation."""
+    if (not isinstance(value, (tuple, list)) or len(value) != 2
+            or type(value[0]) is not bool or not isinstance(value[1], str)
+            or not value[1]):
+        return None
+    return tuple(value)
+
+
 def _availability(state, service, subtype):
     """Use existing read-only guards plus observed quotes, never fetch a catalog."""
     data = state.get(service, {})
@@ -137,8 +146,24 @@ def _availability(state, service, subtype):
                     elif kind == 1 and not state.get('auto_battle', {}).get('enabled'):
                         reasons.append('請先啟用並設定自動戰鬥')
                     else:
-                        # Coverage only: the scheduler still validates the
-                        # current catalog, rewards and bag capacity before send.
+                        # Read only the already activated official catalog.
+                        # Cached rows/quotes cannot prove current reward safety.
+                        catalog, token, note = star_ark.runtime_catalog()
+                        current = _catalog_token(token)
+                        if not catalog:
+                            reasons.append(note or '等待同版方舟資料')
+                            continue
+                        if (current is None
+                                or _catalog_token(data.get('catalog_token')) != current
+                                or _catalog_token(state.get('daily_tasks', {}).get('catalog_token')) != current):
+                            reasons.append('等待同版方舟與每日任務資料')
+                            continue
+                        try:
+                            if kind == 1:
+                                star_ark.fight_rewards(snapshot, event, catalog)
+                        except ProtocolError as exc:
+                            reasons.append(str(exc))
+                            continue
                         return ''
                 return '；'.join(dict.fromkeys(reasons)) or '等待支援且已啟用的方舟事件；交付與商人需手動處理'
             quote = data.get('quote') or {}
@@ -158,7 +183,7 @@ def _availability(state, service, subtype):
 
 
 def view(state_dict):
-    """Project a detached snapshot; never read catalogs or mutate live state.
+    """Project a detached snapshot; only inspect active catalogs, never fetch them.
 
     Classifications describe automation coverage, not proof of task completion.
     Unknown conditions and unsupported actions remain manual.
