@@ -3,7 +3,6 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import sqlite3
 import tempfile
-import time
 import unittest
 from contextlib import closing
 
@@ -302,20 +301,29 @@ class QuestionStoreTests(unittest.TestCase):
                                                 allow_unregistered=1)
         self.assertFalse(self.path.exists())
 
-    def test_busy_database_fails_closed_with_bounded_wait(self):
+    def test_database_lock_wait_uses_bounded_sqlite_timeout(self):
+        with self.store._connection() as db:
+            timeout_ms = db.execute('PRAGMA busy_timeout').fetchone()[0]
+        # SQLite bounds its busy-handler wait, not host scheduling or disk I/O.
+        # Verify the effective policy without timing the shared CI runner.
+        self.assertGreater(timeout_ms, 0)
+        self.assertLessEqual(timeout_ms, 250)
+
+    def test_busy_database_fails_closed_and_recovers(self):
         self.store.observe(self.token, 1, self.question)
         with closing(sqlite3.connect(self.path)) as blocker:
             blocker.execute('BEGIN IMMEDIATE')
-            start = time.monotonic()
             try:
                 with self.assertRaisesRegex(sqlite3.OperationalError, 'locked'):
                     self.record()
-                self.assertLess(time.monotonic() - start, 1.0)
             finally:
                 blocker.rollback()
         self.assertEqual(self.store.observe(self.token, 1, self.question), (None, 'unknown'))
         with closing(sqlite3.connect(self.path)) as db:
             self.assertEqual(db.execute('SELECT count(*) FROM candidates').fetchone(), (0,))
+            self.assertEqual(db.execute('SELECT count(*) FROM candidate_attempts').fetchone(), (0,))
+        self.assertEqual(self.record(), 'candidate')
+        self.assertEqual(self.store.observe(self.token, 1, self.question), (None, 'unknown'))
 
     def test_concurrent_candidate_conflicts_are_not_lost(self):
         with ThreadPoolExecutor(max_workers=2) as executor:
