@@ -2517,3 +2517,68 @@ click, showing the full map and pointer/target marker, then travel and stopping.
 That could constrain target selection but cannot by itself prove internal path,
 per-frame physics, runtime parameters or exact UI-coordinate conversion.
 All three navigation seeds and movement guards remain; no push/merge/release.
+
+### Phase 64: click exists in the recording; conditional pixel calibration
+
+Correction to Phase 63's evidence request: the parent reviewer located the click
+in the existing video. No new recording is needed. The supplied review says:
+962x572 video, click feedback at 1.066667 s, cursor tip (759,410) +/-2 screen
+pixels, visible map drawing region approximately begins at (675,182), route
+marker appears at 1.233 s. This workspace received those measurements as text,
+not the original frame. Do not claim independent image registration.
+
+The same-catalog Bangkok image was loaded read-only and PNG/pixel hashes checked
+by ImageCatalog. It is 1024x1024; PNG SHA-256 is
+8451d7a98f5dcda8e3f8b0b9fd4565b698f2f0d1ec39ddabf8d7f9650e88c5c0.
+The pinned UIMain source has area-map scales 0.8 and 0.55 (43-51).
+_UpdateAreaMapScaleSetting (792-806) applies the scale, enables scrolling in
+expanded mode and positions the background using _GetRawImage_AreaMap_Offset;
+unexpanded mode resets local position. Neither source constant alone establishes
+screen pixels per texture pixel: Canvas/camera/video scaling also matters.
+The visible clipping rectangle is not necessarily the full texture origin.
+
+For an independently verified axis-aligned uniform screen transform, let (L,T)
+be the full texture origin and s be screen pixels per texture pixel. Then:
+
+    target_x = 6 * ((click_x - L) / s - 12)
+    target_y = 6 * ((click_y - T) / s - 12)
+
+`tools.review_navigation_click_pixels.target_bounds` propagates supplied closed
+intervals for click/origin/scale and rejects invalid calibration. It does not
+estimate scale or origin from the observed stopping point. Tests compare it to
+the separate local-coordinate conversion and verify interval containment.
+
+The CLI checks the pinned catalog and image, then runs explicitly illustrative
+sensitivities with fixed full origin (675,182). These are NOT measured calibration,
+a target confidence interval, or recovered clicks:
+
+| Assumed screen px/texel | Conditional target | Offline result |
+| --- | --- | --- |
+| 0.25 | (1944,5400) | Preview rejects nonwalkable target |
+| 0.275 | (1760.73,4902.55) | Four-point corridor; modeled stop 70.49-77.66 units from observed stop |
+| 0.30 | (1608,4488) | Different five-point corridor; modeled stop 464.01-468.94 units away |
+
+The 0.275 case has max spatial corner residual 8.53-11.96 units over fixed
+30/60/120 FPS models. It is not a better calibrated target. No parameter fitting,
+nearest-walkable substitution, collision claim or production movement occurred.
+The rejection at 0.25 does not prove that scale is impossible in the actual UI.
+
+At the illustrative 0.275 scale, one screen pixel is 21.82 packet-coordinate
+units; click +/-2 pixels gives +/-43.64 per axis. Origin +/-2 adds another
++/-43.64 per axis. A 1% scale change causes roughly 18 units of x and 50 units of
+y change at this click. Unknown cropping has no measured bound yet. Thus the
+provided origin plus cursor alone cannot give a defensible target interval.
+
+Next use the EXISTING 1.066667 s frame: register at least two well-separated
+static map landmarks with the verified texture to solve scale/translation, then
+check a third independent landmark and record residuals. Prefer landmarks spread
+in both axes; reject the uniform model if anisotropy/rotation is observed. Use
+texture buildings/road junctions, not the moving player, target flag, route dots,
+or final stopping point as calibration controls. A full-resolution frame or
+independently measured landmark correspondences is the minimum missing input;
+no credentials, new recording or game operation is needed. Only after this step
+can interval routes be described as image-supported target candidates.
+
+Both hosts produce identical conditional reports. Related suites: desktop 108,
+Android 107 passed. All work remains offline; no device/runtime verification,
+movement authority change, seed removal, push, merge or release.
