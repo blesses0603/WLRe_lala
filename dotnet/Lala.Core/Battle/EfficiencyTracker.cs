@@ -22,6 +22,22 @@ public sealed class EfficiencyTracker
     public EfficiencyTracker(Func<double>? monotonicSeconds = null) =>
         this.monotonicSeconds = monotonicSeconds ?? (() => (double)Stopwatch.GetTimestamp() / Stopwatch.Frequency);
 
+    // Private staging owner for the immutable reducer. Rows/history are immutable values;
+    // only the mutable containers and scalar state must be copied from the publication.
+    internal EfficiencyTracker(EfficiencySnapshot snapshot, Func<double> monotonicSeconds)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        ArgumentNullException.ThrowIfNull(monotonicSeconds);
+        this.monotonicSeconds = monotonicSeconds;
+        roleId = snapshot.RoleId;
+        pending = snapshot.Pending;
+        offline = snapshot.Offline;
+        battles = snapshot.Battles;
+        foreach (var (subject, row) in snapshot.Rows) rows.Add(subject, row);
+        dirty.AddRange(snapshot.Dirty);
+        participants.UnionWith(snapshot.Participants);
+    }
+
     public EfficiencySnapshot Snapshot => new(roleId, rows, pending, dirty, participants, battles, offline);
 
     public void Reset()

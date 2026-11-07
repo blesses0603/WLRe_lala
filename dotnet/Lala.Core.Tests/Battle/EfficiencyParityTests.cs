@@ -42,20 +42,25 @@ public sealed class EfficiencyParityTests
         Assert.NotEmpty(name);
         using var document = JsonDocument.Parse(json);
         var tracker = new EfficiencyTracker(() => 1234.5);
+        var reduced = EfficiencySnapshot.Empty;
         var snapshots = new List<(EfficiencySnapshot Snapshot, JsonElement Expected)>();
         foreach (var step in document.RootElement.EnumerateArray())
         {
-            if (step.GetProperty("reset").GetBoolean()) tracker.Reset();
+            if (step.GetProperty("reset").GetBoolean()) { tracker.Reset(); reduced = EfficiencySnapshot.Empty; }
             var state = tracker.Observe(Knowledge(step.GetProperty("knowledge")), Event(step.GetProperty("event")));
+            reduced = EfficiencyReducer.Apply(reduced, Knowledge(step.GetProperty("knowledge")),
+                Event(step.GetProperty("event")), () => 1234.5);
             AssertSnapshot(step.GetProperty("expected"), state);
+            AssertSnapshot(step.GetProperty("expected"), reduced);
             snapshots.Add((state, step.GetProperty("expected")));
+            snapshots.Add((reduced, step.GetProperty("expected")));
         }
         // Later observations must not mutate a published snapshot or nested history.
         tracker.Reset();
         foreach (var (snapshot, expected) in snapshots) AssertSnapshot(expected, snapshot);
     }
 
-    private static EfficiencyKnowledgeSnapshot Knowledge(JsonElement value) => new(
+    internal static EfficiencyKnowledgeSnapshot Knowledge(JsonElement value) => new(
         U32(value, "role_id"), Stats(value.GetProperty("stats")),
         value.GetProperty("companions").EnumerateObject().Select(entry => new KeyValuePair<int, EfficiencyCompanion>(
             int.Parse(entry.Name, CultureInfo.InvariantCulture), new(U32(entry.Value, "npc_id"), Stats(entry.Value.GetProperty("stats"))))),
@@ -86,7 +91,7 @@ public sealed class EfficiencyParityTests
         };
     }
 
-    private static void AssertSnapshot(JsonElement expected, EfficiencySnapshot actual)
+    internal static void AssertSnapshot(JsonElement expected, EfficiencySnapshot actual)
     {
         Assert.Equal(U32(expected, "role_id"), actual.RoleId);
         Assert.Equal(expected.GetProperty("pending").GetBoolean(), actual.Pending);

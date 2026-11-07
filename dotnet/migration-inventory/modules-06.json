@@ -1609,7 +1609,9 @@
     "scope": "runtime",
     "status": "partially_migrated",
     "target_files": [
-      "dotnet/Lala.Core/Social/GuildActionsDecoder.cs"
+      "dotnet/Lala.Core/Social/GuildActionsDecoder.cs",
+      "dotnet/Lala.Core/Social/GuildActionsReceiveReducer.cs",
+      "dotnet/Lala.Core/Social/GuildActionsReceiveSnapshot.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -1687,10 +1689,11 @@
       "live_server_acceptance": "not_run"
     },
     "migrated_scope": [
-      "Receive-only guild-action decoder wired to ServerProtocol."
+      "Receive-only guild-action decoder wired to ServerProtocol.",
+      "Receive-only defaults, apply_actions and reset_day with explicit post-local player/gold context; 46 Python sequences / 2,370 historical snapshots."
     ],
     "outstanding_scope": [
-      "Sign/donate candidate commands, automation and state lifecycle remain."
+      "Coordinator wiring, scheduler-position non-sending tick confirmation/timeout/catalog display, plans/quotes/requests, spending, retries and live acceptance remain."
     ]
   },
   {
@@ -1705,7 +1708,10 @@
     "status": "partially_migrated",
     "target_files": [
       "dotnet/Lala.Core/Social/Ark/ArkDecoder.cs",
-      "dotnet/Lala.Core/Social/Ark/ArkEvents.cs"
+      "dotnet/Lala.Core/Social/Ark/ArkEvents.cs",
+      "dotnet/Lala.Core/Social/Ark/ArkReceiveContext.cs",
+      "dotnet/Lala.Core/Social/Ark/ArkReceiveReducer.cs",
+      "dotnet/Lala.Core/Social/Ark/ArkReceiveSnapshot.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -1830,10 +1836,12 @@
       "live_server_acceptance": "not_run"
     },
     "migrated_scope": [
-      "Receive-only immutable observations and common dispatcher integration; exact Python field/error/prefix/tail parity."
+      "Receive-only immutable observations and common dispatcher integration; exact Python field/error/prefix/tail parity.",
+      "Bounded immutable defaults/apply_ark receive transitions and identity-bound memory intents; 371 Python sequences / 3,494 snapshots / 48 intents. Deferred composition is distinct from actual unavailable-store failure."
     ],
     "outstanding_scope": [
-      "No service reducers, planners, command sends, runtime catalog loading, UI or live acceptance."
+      "Post-local coordinator wiring, successful persistence/candidate/solver outcomes and validated completion remain.",
+      "Planning/begin/tick/commands, runtime catalog loading, UI and live acceptance remain."
     ]
   },
   {

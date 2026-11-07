@@ -23,10 +23,10 @@ public sealed class ServiceInventoryContractTests
         new(2, "follow:1", human, 1, kind, "synthetic", 1, value, 0);
 
     [Fact]
-    public void LiveReceiveSlicesRemainExplicitlyPartialAndNonAuthorizing()
+    public void LiveReceiveSlicesRemainExplicitAndNonAuthorizing()
     {
-        Assert.Equal(new[] { "bag", "companions" }, ServiceStateCoordinator.LiveReceiveSlices);
-        Assert.False(ServiceStateCoordinator.ObserverOrder.Single(row => row.SourceFunction == "apply_live").Composed);
+        Assert.Equal(new[] { "bag", "companions", "combat_knowledge" }, ServiceStateCoordinator.LiveReceiveSlices);
+        Assert.True(ServiceStateCoordinator.ObserverOrder.Single(row => row.SourceFunction == "apply_live").Composed);
         Assert.True(ServiceStateCoordinator.ObserverOrder.Single(row => row.SourceFunction == "apply_crafting").Composed);
         var state = new ServiceStateCoordinator();
         var snapshot = state.Apply(new InitialDataCompleteEvent(), Context(state));

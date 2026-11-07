@@ -95,6 +95,9 @@ public sealed record EfficiencyRowSnapshot
 
 public sealed class EfficiencySnapshot
 {
+    public static EfficiencySnapshot Empty { get; } = new(null,
+        new Dictionary<EfficiencySubject, EfficiencyRowSnapshot>(), false, [], [], 0, false);
+
     public uint? RoleId { get; }
     public IReadOnlyDictionary<EfficiencySubject, EfficiencyRowSnapshot> Rows { get; }
     public bool Pending { get; }

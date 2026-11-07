@@ -3,11 +3,14 @@ using System.Globalization;
 using System.Numerics;
 using Lala.Core.Activities;
 using Lala.Core.Automation;
+using Lala.Core.Battle;
 using Lala.Core.Expedition;
 using Lala.Core.Inventory;
+using Lala.Core.Instances;
 using Lala.Core.Protocol;
 using Lala.Core.Social;
 using Lala.Core.World;
+using Lala.Core.World.Tent;
 
 namespace Lala.Core.State;
 
@@ -18,10 +21,16 @@ namespace Lala.Core.State;
 public sealed record ServiceObservationInputs(double ObservedAt)
 {
     public WorldSceneCatalog? WorldCatalog { get; init; }
+    /// <summary>Caller-declared kind=1 instance map IDs, not verified provenance or
+    /// permission to enter. Defaults to empty and is never inferred from WorldCatalog.</summary>
+    public ImmutableHashSet<ushort> DeclaredMainCatalogMapIds { get; init; } = ImmutableHashSet<ushort>.Empty;
     public DailyCatalogInput DailyCatalog { get; init; } = new(null, null);
     public CraftingScheduleContext? CraftingSchedules { get; init; }
     public ImmutableDictionary<ushort, bool>? ItemStackRules { get; init; }
     public ImmutableDictionary<uint, ImmutableArray<uint>>? NpcSkills { get; init; }
+    /// <summary>Per-observation, unverified skill-key/item-fit mappings. Omitted means
+    /// unknown; these declarations neither activate catalogs nor authorize any action.</summary>
+    public CombatKnowledgeCatalog? KnowledgeCatalog { get; init; }
     public bool ResourceHeld { get; init; } = true;
 }
 
@@ -41,6 +50,9 @@ public sealed record ServiceObservationEvidence(string EventType, ServiceLocalEv
     // apply_storage can add session stackability evidence before apply_live runs.
     public required BagReceiveSnapshot BeforeLiveBag { get; init; }
     public required BagReceiveSnapshot AfterLiveBag { get; init; }
+    public required PlayerKnowledgeSnapshot AfterLivePlayerKnowledge { get; init; }
+    /// <summary>Exact updated knowledge stats supplied before local S8 dispatch.</summary>
+    public required AttributeAllocationContext AllocationContext { get; init; }
 }
 public sealed record ServiceObserverCoverage(string SourceFunction, bool Composed);
 
@@ -56,7 +68,9 @@ public sealed class ServiceStateSnapshot
         GuildEventSnapshot? guild = null, ImmutableHashSet<ActivityKind>? activities = null,
         StorageReceiveSnapshot? storage = null, ExpeditionReceiveSnapshot? expedition = null,
         ServiceObservationEvidence? observation = null, CraftingReceiveSnapshot? crafting = null,
-        BagReceiveSnapshot? bag = null, CompanionReceiveSnapshot? companions = null)
+        BagReceiveSnapshot? bag = null, CompanionReceiveSnapshot? companions = null,
+        PartyEventSnapshot? party = null, InstanceReceiveSnapshot? instances = null, TentReceiveSnapshot? tent = null,
+        PlayerKnowledgeSnapshot? playerKnowledge = null, AttributeAllocationSnapshot? attributeAllocation = null)
     {
         Companions = companions ?? CompanionReceiveSnapshot.Empty;
         var attributes = CompanionAttributes(Companions);
@@ -79,6 +93,11 @@ public sealed class ServiceStateSnapshot
         if (!ReferenceEquals(Bag.ServerStackable, rules)) Bag = Bag with { ServerStackable = rules };
         Crafting = crafting ?? CraftingReceiveSnapshot.Empty;
         Expedition = expedition ?? ExpeditionReceiveSnapshot.Empty;
+        Party = party ?? PartyEventSnapshot.Empty;
+        Instances = instances ?? InstanceReceiveSnapshot.Empty;
+        Tent = tent ?? TentReceiveSnapshot.Empty;
+        PlayerKnowledge = playerKnowledge ?? PlayerKnowledgeSnapshot.Empty;
+        AttributeAllocation = attributeAllocation ?? AttributeAllocationSnapshot.Empty;
         Observation = observation;
     }
 
@@ -93,6 +112,11 @@ public sealed class ServiceStateSnapshot
     public CraftingReceiveSnapshot Crafting { get; }
     public BagReceiveSnapshot Bag { get; }
     public CompanionReceiveSnapshot Companions { get; }
+    public PartyEventSnapshot Party { get; }
+    public InstanceReceiveSnapshot Instances { get; }
+    public TentReceiveSnapshot Tent { get; }
+    public PlayerKnowledgeSnapshot PlayerKnowledge { get; }
+    public AttributeAllocationSnapshot AttributeAllocation { get; }
     public ServiceObservationEvidence? Observation { get; }
 
     private static bool SameMap<TKey, TValue>(ImmutableDictionary<TKey, TValue> left,
@@ -122,15 +146,15 @@ public sealed class ServiceStateCoordinator
     [
         new("apply_daily_tasks", true), new("apply_cube", true), new("apply_recovery", true),
         new("apply_guild", true), new("apply_activity", true), new("apply_crafting", true),
-        new("apply_storage", true), new("apply_live", false), new("apply_points_event", false),
-        new("apply_party", false), new("apply_expedition", true), new("apply_instances", false),
-        new("dispatch_local", true), new("apply_tent", false), new("observe_shop_evidence", false),
+        new("apply_storage", true), new("apply_live", true), new("apply_points_event", true),
+        new("apply_party", true), new("apply_expedition", true), new("apply_instances", true),
+        new("dispatch_local", true), new("apply_tent", true), new("observe_shop_evidence", false),
         new("observe_efficiency", false), new("apply_actions", false), new("apply_ark", false)
     ];
 
-    /// <summary>apply_live is intentionally not marked complete above. Only these
-    /// receive slices run at that stage; player/battle knowledge and equipment are omitted.</summary>
-    public static ImmutableArray<string> LiveReceiveSlices { get; } = ["bag", "companions"];
+    /// <summary>Composed receive-only apply_live slices, not command/learned-skill helpers,
+    /// runtime catalog activation or a claim of complete combat_resources migration.</summary>
+    public static ImmutableArray<string> LiveReceiveSlices { get; } = ["bag", "companions", "combat_knowledge"];
 
     private readonly Thread writer = Thread.CurrentThread;
     private ServiceStateSnapshot state;
@@ -166,6 +190,7 @@ public sealed class ServiceStateCoordinator
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(context.Inputs);
         ArgumentNullException.ThrowIfNull(context.Inputs.DailyCatalog);
+        ArgumentNullException.ThrowIfNull(context.Inputs.DeclaredMainCatalogMapIds);
         if (!ReferenceEquals(context.Basis, state))
             throw new InvalidOperationException("Observation inputs must be bound to the current service snapshot.");
         if (!double.IsFinite(context.Inputs.ObservedAt))
@@ -202,30 +227,49 @@ public sealed class ServiceStateCoordinator
         var bag = ReferenceEquals(state.Bag.ServerStackable, storage.ServerStackable) ? state.Bag :
             state.Bag with { ServerStackable = storage.ServerStackable };
         var beforeLiveBag = bag;
+        // Python resolves pending player equipment before apply_inventory can return.
+        // Remaining knowledge writes are disjoint from the bag/companion branches; retain
+        // all three results, then run each existing slice exactly once.
+        var knowledge = CombatKnowledgeReceiveReducer.Apply(state.PlayerKnowledge, state.Companions,
+            state.Local.Battle, observation, before.Player?.RoleId, inputs.KnowledgeCatalog);
         bag = BagReceiveReducer.Apply(bag, observation, inputs.ItemStackRules);
-        var companions = CompanionReceiveReducer.ApplyBeforeLocal(state.Companions, observation,
+        var companions = CompanionReceiveReducer.ApplyBeforeLocal(knowledge.Companions, observation,
             before.Player?.RoleId, inputs.NpcSkills);
-        // Only bag and companion receive slices of apply_live are composed. Player/battle
-        // knowledge, equipment, apply_points_event and apply_party remain omitted.
+        // apply_points_event sees this packet's updated knowledge, never raw local S8
+        // buffers (which have not been dispatched yet). Widen without narrowing/clamping.
+        var allocationContext = new AttributeAllocationContext
+        {
+            PlayerStats = knowledge.Player.Stats.ToImmutableDictionary(pair => pair.Key,
+                pair => new BigInteger(pair.Value), StringComparer.Ordinal)
+        };
+        var allocation = AttributeAllocationReducer.Apply(state.AttributeAllocation, observation, allocationContext);
+        var party = PartyEventReducer.Apply(state.Party, observation, inputs.ObservedAt, before.Player?.RoleId);
         var expedition = ExpeditionReceiveReducer.Apply(state.Expedition, observation, inputs.ObservedAt);
-        // apply_instances is not composed.
+        var instances = InstanceReceiveReducer.Apply(state.Instances, observation, new()
+        {
+            OwnRoleId = before.Player?.RoleId, DeclaredMainCatalogMapIds = inputs.DeclaredMainCatalogMapIds
+        }, inputs.ObservedAt);
         // apply_live clears the shared S8 slot buffer on companion deletion/reassignment.
         // Preserve every other entity, and let dispatch_local write the current S8 value once.
         var attributes = state.Local.Session.Attributes;
         foreach (var index in state.Companions.Attributes.Keys.Except(companions.Attributes.Keys))
             attributes = attributes.Remove(string.Create(CultureInfo.InvariantCulture, $"follow:{index}"));
-        var stagedBase = ReferenceEquals(attributes, state.Local.Session.Attributes) ? state.Local :
-            new LocalStateSnapshot(state.Local.Session with { Attributes = attributes }, state.Local.World, state.Local.Battle);
+        var stagedBase = new LocalStateSnapshot(state.Local.Session with { Attributes = attributes },
+            state.Local.World, knowledge.Battle);
         var stagedLocal = new LocalStateCoordinator(stagedBase, inputs.WorldCatalog);
         var local = stagedLocal.Apply(observation);
         companions = CompanionReceiveReducer.ObserveLocalAttribute(companions, observation);
-        // No post-local observers are composed yet; see the complete ObserverOrder above.
+        // Tent observes the new role/scene, including world-player resets and position changes.
+        // The same per-observation world catalog is consumed; no previous catalog is retained.
+        var tent = TentReceiveReducer.Apply(state.Tent, observation, local.Player?.RoleId,
+            local.Player?.Scene, inputs.WorldCatalog);
         var after = new ServiceLocalEvidence(local.Phase, local.Player, local.PacketCount);
         var next = new ServiceStateSnapshot(local, daily, cube, recovery, guild, activities, storage,
             expedition, new(observation.Type, before, after, inputs)
             {
-                BeforeObserversBag = state.Bag, BeforeLiveBag = beforeLiveBag, AfterLiveBag = bag
-            }, crafting, bag, companions);
+                BeforeObserversBag = state.Bag, BeforeLiveBag = beforeLiveBag, AfterLiveBag = bag,
+                AfterLivePlayerKnowledge = knowledge.Player, AllocationContext = allocationContext
+            }, crafting, bag, companions, party, instances, tent, knowledge.Player, allocation);
         state = next;
         return next;
     }

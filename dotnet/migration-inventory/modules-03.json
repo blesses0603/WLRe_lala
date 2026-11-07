@@ -1082,7 +1082,9 @@
     "target_files": [
       "dotnet/Lala.Core/Battle/EfficiencyModels.cs",
       "dotnet/Lala.Core/Battle/EfficiencyRules.cs",
-      "dotnet/Lala.Core/Battle/EfficiencyTracker.cs"
+      "dotnet/Lala.Core/Battle/EfficiencyTracker.cs",
+      "dotnet/Lala.Core/Battle/EfficiencyReducer.cs",
+      "dotnet/Lala.Core/Battle/EfficiencyReceiveReducer.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -1143,11 +1145,12 @@
       "live_server_acceptance": "not_run"
     },
     "migrated_scope": [
-      "Offline EXP curves/progress, rates/forecast and complete battle evidence tracking with immutable snapshots, confirmed/inferred flags and bounded history."
+      "Offline EXP curves/progress, rates/forecast and complete battle evidence tracking with immutable snapshots, confirmed/inferred flags and bounded history.",
+      "Atomic immutable snapshot reduction reuses tracker calculations; typed receive adapter uses explicit timing and updated caller-supplied knowledge. Six Python packet sequences cover 92 additional checkpoints."
     ],
     "outstanding_scope": [
-      "Typed input domain: degrees0-2/curve levels1-400, signed64 input EXP and BigInteger gains.",
-      "Network/knowledge event adapters, NPC naming catalog and UI integration remain."
+      "Knowledge projector and valid-wire companion slot-zero / Int64 level-degree model gaps remain explicit; no narrowing or dropped values claimed as complete integration.",
+      "Shared coordinator ordering, catalog naming, runtime and UI acceptance remain."
     ]
   },
   {
@@ -1425,10 +1428,12 @@
     },
     "migrated_scope": [
       "Bounded owner-thread service observer composition before local dispatch;14 real State.apply sequences698 checkpoints36event kinds; atomic rollback intentionally stronger than Python.",
-      "Crafting and bounded bag/companion observers now composed, with shared stackability and ordered S8 buffers;13 mixed State.apply scenarios524 checkpoints."
+      "Crafting and bounded bag/companion observers now composed, with shared stackability and ordered S8 buffers;13 mixed State.apply scenarios524 checkpoints.",
+      "Party and instances now run before local dispatch; tent runs afterward. Twenty-two mixed Python sequences cover 679 checkpoints.",
+      "Player/equipment/battle knowledge now feeds allocation before local dispatch, preserving returned shared projections; 26 mixed Python sequences cover 1,064 checkpoints."
     ],
     "outstanding_scope": [
-      "Incomplete apply_live player/battle knowledge/equipment, points, party, instances, tent/shop/efficiency/guildactions/ark and live-session wiring remain."
+      "Post-local shop evidence, efficiency, guild actions and Ark observers, complete State fields and live-session/transport wiring remain."
     ]
   },
   {

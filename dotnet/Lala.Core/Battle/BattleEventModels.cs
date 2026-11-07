@@ -41,6 +41,10 @@ public sealed record BattleUnitState
     }
 
     public BattleUnit Layout { get; }
+    /// <summary>Current S11-252 appearance; Layout retains the originally received unit.
+    /// A new unit record clears this overlay. Sparse appearance never changes HP/SP.</summary>
+    public ImmutableArray<EquipmentAppearance>? EquipmentOverrides { get; internal init; }
+    public ImmutableArray<EquipmentAppearance> Equips => EquipmentOverrides ?? Layout.Equips;
     public BattleSlot Slot => new(Layout.Col, Layout.Row);
     public uint Hp { get; internal init; }
     public uint Sp { get; internal init; }

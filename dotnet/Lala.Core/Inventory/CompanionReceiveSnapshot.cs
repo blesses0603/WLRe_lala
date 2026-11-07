@@ -13,6 +13,9 @@ public sealed record CompanionProfileSnapshot(CompanionSnapshot Data,
     ImmutableDictionary<string, long> StatOverrides,
     ImmutableArray<uint>? RemovedSkillIds = null)
 {
+    /// <summary>Current sparse/full equipment after remaining apply_live receive branches.
+    /// Null uses Data.Equips; a fresh S15 profile clears this override automatically.</summary>
+    public ImmutableArray<KnowledgeEquipment>? EquipmentOverrides { get; init; }
     public bool Ready => true;
     public override string ToString() => nameof(CompanionProfileSnapshot);
 }

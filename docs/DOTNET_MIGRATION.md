@@ -224,8 +224,8 @@ Party and tent receive snapshots are also available independently. Party preserv
 ordered team merges, current-role queries and explicit request expiry without
 inventing readiness or stale-event rejection. Tent receives use post-world role
 and scene, separating visibility from deployment and preserving uncertain pending
-evidence. Neither performs commands or runs timers. Their common-coordinator
-composition and full lifecycle/command integration remain outstanding.
+evidence. Neither performs commands or runs timers. They now join the common coordinator;
+full lifecycle/command integration remains outstanding.
 
 Dungeon/cooperative receive state now includes the six existing creation/room-flow/
 standby/start/entry/reward observers. Typed observations preserve uncertain pending
@@ -240,3 +240,42 @@ Large Automation/Ark/Tent decoder fixtures now use deterministic gzip byte array
 All original JSON payload bytes and cases are retained; compiled-payload hashes and
 regeneration match. This frees about 3.46 MiB in the C# user-string heap and reduces
 the test assembly without changing production logic or skipping verification.
+
+Party and instance observers are now composed before local dispatch; tent follows
+it. Explicit instance map declarations default empty and do not establish catalog
+provenance. Twenty-two mixed State.apply scenarios cover 679 checkpoints and 50
+event kinds. Attribute allocation also has an independent receive reducer, requiring
+post-apply_live player stats and a server acknowledgement; it now joins the shared
+receive workflow, while actual allocation commands remain outstanding.
+
+The remaining player/companion/battle knowledge receive slice now preserves current
+gear separately from original received layouts, bounded deferred equipment evidence,
+player stats/skills, and exact identity matching. Forty Python sequences cover
+1,646 checkpoints. Its replacement projections are now wired before allocation and local dispatch.
+Twenty-six mixed State.apply scenarios verify 1,064 checkpoints, including same-packet
+allocation completion and current gear retained independently of historical layouts.
+
+Guild-action receive state now ports defaults, apply_actions and reset_day with
+explicit already-reduced guild plus post-local player/gold context. Forty-six Python
+sequences cover 2,370 historical snapshots. Pending evidence never authorizes a
+request. The scheduler-position non-sending tick prefix, planning, spending and
+shared coordinator wiring remain unported; no scheduler call is inferred from receive.
+
+NPC shop evidence now has a bounded immutable 96-event observation history and
+offline classifier, with 50 Python histories / 1,152 snapshots and 1,228 classifications.
+It preserves uncertain outcomes and never treats the S27 gold field as an authoritative
+balance. Post-local coordinator wiring and a genuine historical order descriptor
+producer remain separate gates; correlation is not payment settlement or permission.
+
+Efficiency now supports detached immutable staging and a typed receive adapter with
+explicit timing. Original tracker calculations remain unchanged. Knowledge projection
+is deliberately not guessed: valid companion slot zero and Int64 level/degree values
+require model expansion before shared integration. Runtime/device acceptance remains
+outstanding, and no test-policy change was made for local resource-pressure retries.
+
+Ark defaults and receive transitions now expose immutable state plus identity-bound
+Observe/Confirm/Reject memory intents. The 371 retained-Python sequences cover 3,494
+snapshots and 48 helper-boundary intents using the actual caught storage-failure path.
+Default deferred composition is separately tested and does not claim storage failed.
+No intent was persisted or accepted as a correct answer. Successful persistence,
+candidate/solver completion, post-local coordinator wiring and execution remain gaps.

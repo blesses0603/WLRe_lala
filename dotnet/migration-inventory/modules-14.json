@@ -645,7 +645,9 @@
     "target_files": [
       "dotnet/Lala.Core/Battle/EfficiencyModels.cs",
       "dotnet/Lala.Core/Battle/EfficiencyRules.cs",
-      "dotnet/Lala.Core/Battle/EfficiencyTracker.cs"
+      "dotnet/Lala.Core/Battle/EfficiencyTracker.cs",
+      "dotnet/Lala.Core/Battle/EfficiencyReducer.cs",
+      "dotnet/Lala.Core/Battle/EfficiencyReceiveReducer.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -711,11 +713,12 @@
       "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
     },
     "migrated_scope": [
-      "Offline EXP curves/progress, rates/forecast and complete battle evidence tracking with immutable snapshots, confirmed/inferred flags and bounded history."
+      "Offline EXP curves/progress, rates/forecast and complete battle evidence tracking with immutable snapshots, confirmed/inferred flags and bounded history.",
+      "Atomic immutable snapshot reduction reuses tracker calculations; typed receive adapter uses explicit timing and updated caller-supplied knowledge. Six Python packet sequences cover 92 additional checkpoints."
     ],
     "outstanding_scope": [
-      "Typed input domain: degrees0-2/curve levels1-400, signed64 input EXP and BigInteger gains.",
-      "Network/knowledge event adapters, NPC naming catalog and UI integration remain."
+      "Knowledge projector and valid-wire companion slot-zero / Int64 level-degree model gaps remain explicit; no narrowing or dropped values claimed as complete integration.",
+      "Shared coordinator ordering, catalog naming, runtime and UI acceptance remain."
     ]
   },
   {

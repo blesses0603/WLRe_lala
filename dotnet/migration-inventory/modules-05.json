@@ -155,8 +155,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.battle",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Battle/AttributeAllocationReducer.cs",
+      "dotnet/Lala.Core/Battle/AttributeAllocationSnapshot.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -200,11 +203,18 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Receive-only defaults and apply_event: acknowledgement plus exact updated player-stat expectations; 80 Python sequences / 2,098 snapshots and 120 malformed observations.",
+      "Receive observer now composed after updated player knowledge and before local dispatch; raw S8 buffer is not used as the stat source."
+    ],
+    "outstanding_scope": [
+      "Allocation validation/construction, begin, expiry, command routing and live acceptance remain."
+    ]
   },
   {
     "id": "desktop:wlre/services/battle/auto_battle.py",
@@ -2077,7 +2087,9 @@
     "target_files": [
       "dotnet/Lala.Core/Inventory/BagReceiveReducer.cs",
       "dotnet/Lala.Core/Inventory/CompanionReceiveReducer.cs",
-      "dotnet/Lala.Core/Inventory/CompanionReceiveSnapshot.cs"
+      "dotnet/Lala.Core/Inventory/CompanionReceiveSnapshot.cs",
+      "dotnet/Lala.Core/Inventory/CombatKnowledgeReceiveReducer.cs",
+      "dotnet/Lala.Core/Inventory/CombatKnowledgeSnapshot.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -2167,10 +2179,12 @@
       "live_server_acceptance": "not_run"
     },
     "migrated_scope": [
-      "Bag and companion receive slice, including roster append/add/delete/active and buffered S8 attributes;77 Python sequences1616 snapshots."
+      "Bag and companion receive slice, including roster append/add/delete/active and buffered S8 attributes;77 Python sequences1616 snapshots.",
+      "Remaining apply_live receive knowledge: player stats/skills, equipment resolution and bounded deferred queues, companion/battle appearance and profile stat observations; 40 Python sequences / 1,646 checkpoints.",
+      "The receive apply_live slices are composed into ServiceStateCoordinator, including every-event equipment resolution and shared battle/companion projections."
     ],
     "outstanding_scope": [
-      "Player knowledge, equipment/deferred updates, battle knowledge, learned commands and full apply_live remain."
+      "Learned/weapon/skill/target/field helpers, command construction, resource/catalog activation and live acceptance remain."
     ]
   },
   {

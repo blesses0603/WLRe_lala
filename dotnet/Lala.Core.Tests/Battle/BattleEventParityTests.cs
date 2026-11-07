@@ -88,6 +88,7 @@ public sealed class BattleEventParityTests
         foreach (var unit in state.Units)
         {
             var value = JsonSerializer.SerializeToNode(unit.Layout, Options)!.AsObject();
+            value["equips"] = JsonSerializer.SerializeToNode(unit.Equips, Options);
             value["hp"] = unit.Hp;
             value["sp"] = unit.Sp;
             if (unit.Attributes.Count != 0)

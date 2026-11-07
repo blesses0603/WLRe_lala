@@ -189,7 +189,7 @@ public sealed class LiveInventoryParityTests
             {
                 ["ready"] = profile.Ready, ["index"] = profile.Data.Index, ["npc_id"] = profile.Data.NpcId,
                 ["skills"] = skills, ["server_skill_slots"] = JsonSerializer.SerializeToNode(profile.Data.SkillSlots, Options),
-                ["stats"] = stats, ["equips"] = JsonSerializer.SerializeToNode(profile.Data.Equips, Options)
+                ["stats"] = stats, ["equips"] = profile.EquipmentOverrides is { } equipment ? CombatKnowledgeParityTests.Equipment(equipment) : JsonSerializer.SerializeToNode(profile.Data.Equips, Options)
             };
             if (profile.RemovedSkillIds is { } removed)
                 projected["removed_skill_ids"] = new JsonArray([.. removed.Select(id => (JsonNode)JsonValue.Create(Key(id))!)]);

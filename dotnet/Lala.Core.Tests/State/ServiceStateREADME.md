@@ -16,22 +16,23 @@ The complete order from `State.apply` is exposed by `ObserverOrder`, including g
 5. `apply_activity`: composed through the existing `ActivityLocks` reducer.
 6. `apply_crafting`: composed, receive crafting/furniture with explicit role/time.
 7. `apply_storage`: composed, including its separate observed server-stackability map.
-8. `apply_live`: **partially composed**, bag and companion receive slices only. Player/battle knowledge and equipment remain absent; ObserverOrder deliberately does not mark this stage complete.
-9. `apply_points_event`: **not composed**; attribute allocation absent.
-10. `apply_party`: **not composed**; party membership/requests absent.
+8. `apply_live`: composed receive slices: bag, companions, player/battle knowledge and current equipment. Command/learned-skill helpers remain outside this stage.
+9. `apply_points_event`: composed, using updated player knowledge stats before local dispatch. Only already-imported pending allocations can change.
+10. `apply_party`: composed, receive membership/requests with pre-local role; expiry is not scheduled.
 11. `apply_expedition`: composed, receive state and explicit deadlines only.
-12. `apply_instances`: **not composed**; instance receive/service state absent.
+12. `apply_instances`: composed, receive observers with pre-local role and explicit non-authorizing catalog map declarations.
 13. `dispatch_local`: composed through the existing `LocalStateCoordinator`.
-14. `apply_tent`: **not composed**.
+14. `apply_tent`: composed after local dispatch, using post-local role/scene.
 15. `observe_shop_evidence`: **not composed**.
 16. `observe_efficiency`: **not composed**.
 17. `apply_actions`: **not composed**; guild sign-in/donation state absent.
 18. `apply_ark`: **not composed**.
 
-Efficiency's existing mutable tracker needs post-live knowledge and a transactional
-snapshot import/restore contract before it can join this coordinator. It is not run
-with fabricated empty knowledge. Crafting and bounded bag/companion receive work are now integrated; complete
-apply_live remains outstanding.
+Efficiency's existing mutable tracker still needs a transactional snapshot
+import/restore contract before it can join this coordinator; post-live knowledge
+is now available. It is not run with fabricated empty knowledge. Crafting and
+all bounded apply_live receive slices are integrated; action and runtime catalog
+helpers remain outside this coordinator.
 
 The observation's new packet count is calculated before the supported observers.
 All pre-local observers share the old player and phase. Local dispatch advances its
@@ -50,7 +51,7 @@ player, never an account ID, external bag, or caller-guessed role.
 - Time must be finite and explicit. Recorded clock regression is accepted as in the
   source. No clock, network, filesystem, callbacks or resource loading is invoked.
 - World scene catalog is per observation. Omitted means unknown, not reuse of an old
-  catalog. Missing daily, schedule, item-stack and NPC-skill inputs remain unknown. `ResourceHeld`
+  catalog. Missing daily, schedule, item-stack, NPC-skill and combat-knowledge inputs remain unknown. `ResourceHeld`
   defaults to true. These inputs are caller evidence, not resource verification,
   admission, catalog activation, or action authorization.
 - Daily catalog evidence is retained for inspection only. Bag evidence comes from the owned snapshot, never an external contradictory RewardBag. Receive observers do
@@ -79,8 +80,8 @@ before local dispatch records a new attribute. Snapshot imports reject inconsist
 projections rather than guessing. `BeforeObserversBag`, `BeforeLiveBag` (after
 storage), and `AfterLiveBag` record three distinct immutable stages.
 
-Omitted apply_live branches still update player/battle knowledge and equipment,
-so full-State parity is not established. Raw S8 values and injected NPC mappings
+Player/battle knowledge and equipment now flow through apply_live; remaining
+post-local observers still prevent full-State parity. Raw S8 values and injected NPC mappings
 are not verified catalogs or action authority. The common dispatcher requires
 explicit CraftingScheduleContext for layout-dependent schedule records.
 All service actions, scheduling, lifecycle/disconnect policy, persistence, live
@@ -130,3 +131,23 @@ bag/reservations, crafting/furniture and companion buffers, with historical
 immutability, stage-specific bag evidence, explicit layout selection, context
 changes, malformed packets and atomic rollback. Source hashes in both oracles
 normalize CRLF byte pairs only; all other source bytes remain significant.
+
+Party, instance and tent composition adds 22 real State.apply scenarios, 679
+checkpoints and 50 event kinds. It preserves the old-role/new-role boundary and
+uses empty instance map declarations by default. No expiry, timer, request or
+send is scheduled. See `ServiceSocialInstanceREADME.md` for the exact contract.
+
+## Combat knowledge and allocation integration
+
+See [mixed knowledge/allocation evidence](ServiceKnowledgeAllocationREADME.md).
+The composite owns `PlayerKnowledge` and `AttributeAllocation`. Player equipment
+resolution runs before the inventory early-return equivalent. Each existing bag
+and companion slice runs once. All returned companion and battle projections
+flow forward, including S11 equipment overlays. Local dispatch consumes that
+returned battle state, preserving equipment through later local events.
+
+`ServiceObservationInputs.KnowledgeCatalog` supplies per-observation, explicitly
+unverified skill-key and item-fit mappings. Omitted means unknown, never reuse.
+`Observation.AfterLivePlayerKnowledge` and `AllocationContext` retain the exact
+knowledge projection and widened `BigInteger` stats used by allocation before
+local S8 writes. Raw session attributes are never allocation evidence.

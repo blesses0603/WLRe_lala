@@ -7,7 +7,7 @@ namespace Lala.Core.World.Tent;
 /// Supply the player's role/scene AFTER applying the world event, matching state.py's
 /// dispatch order. CurrentCatalog is explicit runtime-stage evidence, never activated here.
 /// Decode before Apply; malformed bytes cannot partly change an immutable prior snapshot.
-/// This projection is not installed in AccountSession or any service coordinator.</summary>
+/// The service coordinator supplies post-local role/scene; AccountSession integration remains absent.</summary>
 public static class TentReceiveReducer
 {
     public static TentReceiveSnapshot Apply(TentReceiveSnapshot state, ServerEvent observation,

@@ -319,8 +319,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.battle",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Battle/AttributeAllocationReducer.cs",
+      "dotnet/Lala.Core/Battle/AttributeAllocationSnapshot.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -365,8 +368,8 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
     },
@@ -374,7 +377,14 @@
       "desktop_source": "wlre/services/battle/attribute_points.py",
       "identical_source": true,
       "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
-    }
+    },
+    "migrated_scope": [
+      "Receive-only defaults and apply_event: acknowledgement plus exact updated player-stat expectations; 80 Python sequences / 2,098 snapshots and 120 malformed observations.",
+      "Receive observer now composed after updated player knowledge and before local dispatch; raw S8 buffer is not used as the stat source."
+    ],
+    "outstanding_scope": [
+      "Allocation validation/construction, begin, expiry, command routing and live acceptance remain."
+    ]
   },
   {
     "id": "android:wlre/services/battle/auto_battle.py",
