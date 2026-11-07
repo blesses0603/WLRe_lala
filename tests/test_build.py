@@ -18,7 +18,7 @@ class BuildPlan(unittest.TestCase):
         from wlre.storage.resource_seed_manifest import SOURCE_MANIFEST
         expected={p for p in expected if not (p.parent.name=='resources' and p.name in SOURCE_MANIFEST)}
         self.assertEqual(set(files),expected)
-        self.assertTrue(any(p.name=='resource_catalog_seed.sqlite3' for p in files))
+        self.assertFalse(any(p.name=='resource_catalog_seed.sqlite3' for p in files))
         self.assertFalse(any(p.name in SOURCE_MANIFEST for p in files))
         self.assertFalse(any(p.suffix in ('.py','.pyc') for p in files))
     def test_direct_entry_and_shared_icon(self):

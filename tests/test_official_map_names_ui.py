@@ -1,30 +1,31 @@
-"""Navigation labels refresh without selecting a different numeric map/model."""
+"""Compatibility entry follows official scene mapping without legacy readers."""
 import os
 from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock,patch
 
 @unittest.skipUnless(os.environ.get('DISPLAY') or os.name=='nt','Requires Tk display')
 class OfficialMapNamesUITests(unittest.TestCase):
-    def test_open_window_updates_names_and_clears_failed_choices(self):
+    def test_open_window_updates_official_mapping_and_clears_failed_source(self):
         import tkinter as tk
         from wlre.ui.navigation_gui import NavigationWindow
         root=tk.Tk();self.addCleanup(root.destroy)
         errors=[];root.report_callback_exception=lambda *args:errors.append(args)
-        first=SimpleNamespace(revision=1296,stages={10000:{'name_id':1,'model_id':10000}},texts={1:'first'})
-        second=SimpleNamespace(revision=1296,stages=first.stages,texts={1:'renamed'})
-        with patch('wlre.services.world.runtime_1275.active_runtime',return_value=first),patch('wlre.services.world.dynamic_bundle_runtime.current_catalog_token',return_value=('first',)):
-            page=NavigationWindow(root);root.update()
-            self.assertEqual(tuple(page.logical_map_choices['values']),('first(10000)',))
-            page.scene.set('first(10000)')
-            page.logical_map.set('first(10000)')
-        with patch('wlre.services.world.runtime_1275.active_runtime',return_value=second),patch('wlre.services.world.dynamic_bundle_runtime.current_catalog_token',return_value=('second',)):
-            page.refresh_names()
-            self.assertEqual(page.scene.get(),'renamed(10000)')
-            self.assertEqual(page.logical_map.get(),'renamed(10000)')
-        with patch('wlre.services.world.runtime_1275.active_runtime',side_effect=ValueError('failed')),patch('wlre.services.world.dynamic_bundle_runtime.current_catalog_token',return_value=('failed',)):
-            page.refresh_names()
-            self.assertFalse(page.logical_map_choices['values'])
-            self.assertEqual(page.logical_map.get(),'未知地圖(10000)')
-            self.assertEqual(page.scene.get(),'未命名場景(10000)')
+        first=SimpleNamespace(stages={10011:{'model_id':10001}},catalog_identity=SimpleNamespace(key='first'),
+                              smallmaps=SimpleNamespace(catalog_key='first',models={10001}))
+        second=SimpleNamespace(stages={10011:{'model_id':12050}},catalog_identity=SimpleNamespace(key='second'),
+                               smallmaps=SimpleNamespace(catalog_key='second',models={12050}))
+        callback=Mock()
+        with patch('wlre.storage.bundled_database.load_bundled_bytes',side_effect=AssertionError('legacy read')) as legacy:
+            with patch('wlre.ui.official_navigation_preview.current_runtime',return_value=first):
+                page=NavigationWindow(root,10011,on_route=callback);root.update();page.window.after_cancel(page.timer);page.poll()
+                self.assertIn('模型 M10001',page.mapping.get())
+                self.assertEqual(page.fields[0].get(),'10011')
+            with patch('wlre.ui.official_navigation_preview.current_runtime',return_value=second):
+                page.window.after_cancel(page.timer);page.poll();self.assertIn('模型 M12050',page.mapping.get())
+                self.assertEqual(page.fields[0].get(),'10011')
+            with patch('wlre.ui.official_navigation_preview.current_runtime',return_value=None):
+                page.window.after_cancel(page.timer);page.poll();self.assertIn('請先完成官方資料同步',page.mapping.get())
+            legacy.assert_not_called();callback.assert_not_called()
+            page.close()
         self.assertFalse(errors,errors)

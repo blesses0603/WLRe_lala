@@ -63,6 +63,7 @@ class App(LoginController, AccountController,
         self.theme=install_theme(root)
         self.events,self.commands=DisplayQueue(),queue.Queue()
         self.stop_event=threading.Event()
+        self._session_resource_hold=threading.Event()
         self.worker=None
         self.live_active=False
         self.profile=None
@@ -76,6 +77,8 @@ class App(LoginController, AccountController,
         self.last_movement_check=None
         self.initialize_login()
         self.initialize_version_gate()
+        root.bind('<Destroy>', lambda event: self.close_background_observer()
+                  if event.widget is root else None, add='+')
         self.connection_monitor=ConnectionStatus()
         self.connection_status=tk.StringVar(value='尚未連線')
         self.status=tk.StringVar(value='載入設定中…')
@@ -220,6 +223,9 @@ class App(LoginController, AccountController,
         except (OSError,ValueError,KeyError,TypeError) as exc:
             messagebox.showerror('帳號設定','設定無法載入，未覆寫原檔。'+str(exc),parent=self.dialog_parent());return
         if not self.save_saved_login():return
+        # Local settings/storage may have taken time while an observation
+        # completed. Consume it before clearing credentials or starting work.
+        if not self.can_login_after_version_check():return
         self.password.set('')
         self.entered_world=False
         self.hide_all_features()
@@ -243,11 +249,14 @@ class App(LoginController, AccountController,
         self.instance_panel.render({}, live=False)
         self.overview_panel.update_state({})
         self.live_active=True
+        self._session_resource_hold=threading.Event()
+        resource_safety_hold=self._session_resource_hold
         def work():
             try:
                 run_client(host,port,profile,bridge.receive,
                            account=account,password=password,verify_first=True,duration=None,
                            stop_event=stop_event,commands=commands,
+                           resource_safety_hold=resource_safety_hold,
                            on_state=bridge.snapshot,snapshot_interval=0.1,tcp_keepalive=True)
             finally:
                 bridge.finished()
@@ -362,6 +371,8 @@ class App(LoginController, AccountController,
         # Legacy event-loop tests use minimal App surrogates without version state.
         if hasattr(self, '_version_gate_messages'):
             VersionGateController.drain_version_checks(self)
+        if hasattr(self, '_background_messages'):
+            self.poll_background_versions()
         failed=False
         try:
             App._poll_once(self)
@@ -388,7 +399,10 @@ class App(LoginController, AccountController,
         self.status.set('正在中斷連線…')
 
     def close(self):
-        if self._closing or self.defer_close_for_startup():
+        if self._closing:
+            return
+        self.close_background_observer()
+        if self.defer_close_for_startup():
             return
         self._closing=True
         self.stop_event.set();self.password.set('');self.diagnostics.close();self.root.destroy()

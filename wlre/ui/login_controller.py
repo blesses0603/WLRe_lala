@@ -26,6 +26,9 @@ class LoginController:
 
 
     def show_login(self):
+        if getattr(self, '_observer_alarm', False):
+            self.show_version_check()
+            return
         self._update_login_version_status()
         self.restore_remembered_password()
         if self.login_window is not None and self.login_window.winfo_exists():
@@ -63,6 +66,10 @@ class LoginController:
             self.login_tab, textvariable=self._login_version_status,
             wraplength=820, justify='left', style='Muted.TLabel')
         self.login_version_label.pack(fill='x')
+        self.login_observer_label = ttk.Label(
+            self.login_tab, textvariable=self._background_summary,
+            wraplength=820, justify='left', style='Muted.TLabel')
+        self.login_observer_label.pack(fill='x')
         self.server_list_status_label = ttk.Label(
             self.login_tab, text=server_lines.status_label(), wraplength=820)
         self.server_list_status_label.pack(fill='x', padx=8)
@@ -342,5 +349,7 @@ class LoginController:
         self.root.deiconify()
         self.root.lift()
         self.root.focus_set()
+        if getattr(self, '_observer_alarm', False):
+            self.show_version_check()
 
 

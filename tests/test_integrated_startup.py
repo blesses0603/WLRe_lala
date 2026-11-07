@@ -3,6 +3,7 @@ import threading
 import unittest
 from unittest.mock import ANY, Mock, patch
 
+from test_background_version_observer import identity
 from wlre.ui.gui import App
 from wlre.ui.version_gate_controller import VersionGateController
 
@@ -23,6 +24,7 @@ def blocked_result():
 
 def verified_result():
     return {'blocked': False, 'status': 'version_identifiers_match',
+            'runtime_identity': identity(),
             'message': '官方版本已驗證', 'remote': {
                 'status': 'same_resources', 'packages': {
                     name: {'comparison': 'same'}

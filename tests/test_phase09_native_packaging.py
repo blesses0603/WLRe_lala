@@ -52,8 +52,8 @@ class NativeArchitectureTests(unittest.TestCase):
         # Paths vary by host but each build plan uses the exact same shipped assets.
         self.assertEqual(resource_targets(windows), resource_targets(mac_arm))
         self.assertEqual(resource_targets(mac_arm), resource_targets(mac_intel))
-        for target in ('wlre/resources/resource_catalog_seed.sqlite3',
-                       'wlre/resources/assets/exp_background.png'):
+        self.assertNotIn('wlre/resources/resource_catalog_seed.sqlite3', resource_targets(windows))
+        for target in ('wlre/resources/assets/exp_background.png',):
             self.assertIn(target, resource_targets(windows))
 
 

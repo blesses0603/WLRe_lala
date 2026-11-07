@@ -15,7 +15,6 @@ class SeedOnlyRuntimeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             package=Path(folder)/'wlre';root=package/'resources';root.mkdir(parents=True)
             shutil.copytree(RESOURCE_ROOT/'assets',root/'assets')
-            build_seed(RESOURCE_ROOT,root/SEED_NAME)
             with patch.object(defaults,'RESOURCE_ROOT',root),patch.object(server_lines,'RESOURCE_ROOT',root),patch.object(resource_compatibility,'RESOURCE_ROOT',root):
                 self.assertTrue(defaults.load_default_profile()['game_endpoint'])
                 # The seed no longer supplies a server list; cold offline startup
@@ -24,7 +23,7 @@ class SeedOnlyRuntimeTests(unittest.TestCase):
                 self.assertEqual(resource_compatibility.load_supported_resources()['schema_version'],1)
             validate_resources(root)
             files=data_files(package,compact=True)
-            self.assertIn(root/SEED_NAME,files)
+            self.assertNotIn(root/SEED_NAME,files)
             self.assertFalse(any(p.suffix in ('.json','.zip','.gz') for p in files))
 
     def test_fresh_process_import_and_selftest_with_only_database_and_images(self):
@@ -37,7 +36,6 @@ class SeedOnlyRuntimeTests(unittest.TestCase):
                 shutil.copy2(source,target)
             root=base/'wlre'/'resources';root.mkdir()
             shutil.copytree(RESOURCE_ROOT/'assets',root/'assets')
-            build_seed(RESOURCE_ROOT,root/SEED_NAME)
             shutil.copy2(RESOURCE_ROOT.parent.parent/'WLRE_Client.py',base/'WLRE_Client.py')
             env=dict(os.environ,LOCALAPPDATA=str(base/'new_user'),WLRE_DISABLE_AUTO_CATALOG='1')
             commands=[['WLRE_Client.py','--self-test'],['-c','from wlre.ui.gui import App;from wlre.storage.defaults import load_default_profile;from wlre.storage.server_lines import load;assert load()==[];assert load_default_profile()']]
@@ -47,15 +45,11 @@ class SeedOnlyRuntimeTests(unittest.TestCase):
                 result=subprocess.run([sys.executable,*args],cwd=base,env=env,capture_output=True,text=True,timeout=60)
                 self.assertEqual(result.returncode,0,result.stdout+result.stderr)
 
-    def test_policy_row_rejects_self_rehashed_modified_settings(self):
-        import hashlib,sqlite3
-        from contextlib import closing
-        from wlre.storage.full_resource_seed import read_config
+    def test_retired_seed_is_excluded_even_if_left_in_an_existing_checkout(self):
         with tempfile.TemporaryDirectory() as directory:
-            root=Path(directory);seed=build_seed(RESOURCE_ROOT,root/SEED_NAME)
-            name='lala_supported_resources.json';raw=b'{"schema_version":999}'
-            digest=hashlib.sha256(raw).hexdigest()
-            with closing(sqlite3.connect(seed)) as db,db:
-                db.execute('INSERT INTO bundled_resources VALUES (?,?,?)',(name,digest,raw))
-                db.execute('UPDATE bundled_active SET sha256=? WHERE name=?',(digest,name))
-            with self.assertRaises(ValueError):read_config(name,root=root)
+            root=Path(directory)/'wlre/resources';root.mkdir(parents=True)
+            shutil.copytree(RESOURCE_ROOT/'assets',root/'assets')
+            old=root/SEED_NAME;old.write_bytes(b'preserved old install seed')
+            validate_resources(root)
+            self.assertNotIn(old,data_files(root.parent,compact=True))
+            self.assertEqual(old.read_bytes(),b'preserved old install seed')

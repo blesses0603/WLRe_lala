@@ -12,7 +12,7 @@ class OfficialNavigationNoSeedTests(unittest.TestCase):
         state.confirm_location(10001,10,10,'S3-1');movement=Movement()
         with patch('wlre.storage.bundled_database.load_bundled_bytes',side_effect=AssertionError('seed read')) as read:
             for action in (lambda:movement.start(state,20,20,0),lambda:Roaming().start(state,movement)):
-                with self.assertRaisesRegex(ProtocolError,'官方導航僅供預覽'):action()
+                with self.assertRaisesRegex(ValueError,'官方 Runtime 尚未就緒'):action()
             read.assert_not_called()
         self.assertFalse(movement.active)
         self.assertEqual(movement.tick(state,1),[])

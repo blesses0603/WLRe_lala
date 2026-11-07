@@ -1,7 +1,9 @@
 """Dedicated version-check window must use official server results exclusively."""
 
 from gui_support import isolate_gui_background_checks
+from test_background_version_observer import identity
 import os
+import time
 import tkinter as tk
 import unittest
 from unittest.mock import ANY, patch
@@ -18,6 +20,7 @@ _UNPATCHED_START_VERSION_CHECK = VersionGateController.start_version_check
 def official_result(main="1262", data="1262", status="version_identifiers_match"):
     versions = {"MainPackage": main, "DataPackage": data}
     return {
+        "runtime_identity": identity(),
         "blocked": status == "blocked",
         "status": status,
         "message": "官方更新，請等待 LaLa 更新" if status == "blocked" else "官方線上版本檢測結果",
@@ -56,9 +59,27 @@ class PreloginVersionWindowTests(unittest.TestCase):
 
     def deliver(self, data, generation=1):
         self.app._version_gate_generation = generation
-        self.app._version_gate_messages.put((generation, data))
+        self.app._version_gate_messages.put((generation, data, time.monotonic()))
         self.app.drain_version_checks()
         self.root.update_idletasks()
+
+    def test_late_startup_timer_while_live_uses_nonmodal_notice(self):
+        self.app.live_active = True
+        errors = []
+        self.root.report_callback_exception = lambda *args: errors.append(args)
+        with (patch('wlre.ui.version_gate_controller.messagebox.showinfo',
+                    side_effect=AssertionError('Timer must not open a modal')) as modal,
+              patch('wlre.ui.version_gate_controller.prepare_on_launch') as prepare,
+              patch('wlre.ui.version_gate_controller.run_prelogin_check') as verify):
+            self.root.after(0, lambda: _UNPATCHED_START_VERSION_CHECK(self.app))
+            self.root.update()
+        modal.assert_not_called()
+        prepare.assert_not_called()
+        verify.assert_not_called()
+        self.assertEqual(errors, [])
+        self.assertTrue(self.app.live_active)
+        self.assertIn('先安全中斷', self.app.version_gate_text.get())
+        self.assertTrue(self.app._version_retry_button.instate(['disabled']))
 
     def test_direct_app_uses_same_window_for_preparation_official_check_and_login(self):
         original_window = self.app.version_window
@@ -159,7 +180,7 @@ class PreloginVersionWindowTests(unittest.TestCase):
         import time
         self.deliver(official_result())
         self.app.continue_to_login()
-        self.app._version_gate_checked = time.monotonic() - 301
+        self.app._observer_fresh_at = time.monotonic() - 301
         self.app.live_active = True
         self.app.start_version_check.reset_mock()
         self.app.events.put(('session_finished', None))
@@ -167,18 +188,17 @@ class PreloginVersionWindowTests(unittest.TestCase):
         self.app.start_version_check.assert_not_called()
         self.assertEqual(self.app.version_window.state(), 'withdrawn')
         self.assertFalse(self.app.connect_button.instate(['disabled']))
-        with (patch('wlre.ui.version_gate_controller.threading.Thread'),
-              patch.object(self.app, 'start_version_check',
-                           side_effect=lambda: _UNPATCHED_START_VERSION_CHECK(self.app)),
-              patch.object(self.app, 'start_lala_release_check'),
+        with (patch('wlre.ui.background_version_controller.threading.Thread') as thread,
               patch('wlre.ui.version_gate_controller.messagebox.showinfo'),
               patch('wlre.ui.gui.run_client') as client):
             self.app.connect()
         client.assert_not_called()
-        self.assertEqual(self.app.login_window.state(), 'withdrawn')
-        self.assertNotEqual(self.app.version_window.state(), 'withdrawn')
-        self.assertFalse(self.app._version_gate_entry_approved)
-        self.assertEqual(self.app.version_gate_state, 'checking')
+        self.assertEqual(thread.call_args.kwargs['name'], 'background-version-observer')
+        self.assertNotEqual(self.app.login_window.state(), 'withdrawn')
+        self.assertEqual(self.app.version_window.state(), 'withdrawn')
+        self.assertTrue(self.app._version_gate_entry_approved)
+        self.assertEqual(self.app.version_gate_state, 'ready')
+        self.app.start_version_check.assert_not_called()
 
     def test_inconsistent_result_never_gains_approval_after_disconnect(self):
         self.deliver(official_result())
@@ -255,9 +275,9 @@ class PreloginVersionWindowTests(unittest.TestCase):
         for label in self.app.login_tab.winfo_children():
             if isinstance(label, ttk.Label):
                 self.assertGreaterEqual(label.winfo_height(), label.winfo_reqheight())
-        self.assertIn('最多沿用 5 分鐘', self.app._login_version_status.get())
+        self.assertIn('版本識別最多沿用 5 分鐘', self.app._login_version_status.get())
         self.assertIn('非即時監測', self.app._login_version_status.get())
-        self.app._version_gate_checked = time.monotonic() - 301
+        self.app._observer_fresh_at = time.monotonic() - 301
         self.app.show_login()
         self.assertIn('已過期', self.app._login_version_status.get())
         self.app._version_gate_result['remote']['status'] = 'unverified'
@@ -392,15 +412,14 @@ class PreloginVersionWindowTests(unittest.TestCase):
     def test_matching_current_database_allows_login_without_protocol_acceptance(self):
         remote={'status':'resources_changed','resource_path':'1.3.22.1',
                 'official_exe_version':'1.3.0','newer_official_client':False,
-                'packages':{'DataPackage':{'remote':'1286_full','comparison':'newer'},
-                            'MainPackage':{'remote':'1284_full','comparison':'newer'}}}
+                'packages':{row['name']:{'remote':row['full_version'],'comparison':'newer'}
+                            for row in identity()['packages']}}
         result={'status':'database_matches_official','blocked':False,
                 'login_allowed':True,'database_verified':True,'database_comparison':'same',
                 'dynamic_runtime':'verified','data_compatibility':'compatible',
                 'protocol_compatibility':'unverified','remote':remote,
                 'baseline_label':'DataPackage 1286／MainPackage 1284',
-                'runtime_identity':{'data_ver':'1.3.22.1','exe_version':'1.3.0',
-                    'packages':[{'name':p,'full_version':v['remote']} for p,v in remote['packages'].items()]}}
+                'runtime_identity':identity()}
         self.deliver(result)
         self.assertEqual(self.app.version_gate_state,'ready')
         self.assertFalse(self.app._version_continue_button.instate(['disabled']))
@@ -518,6 +537,7 @@ class PreloginVersionWindowTests(unittest.TestCase):
 
     def test_responsive_version_window_has_no_scrollbars_or_blank_canvas(self):
         self.deliver(official_result("1275", "1275", "blocked"))
+        wait_for_widget_mapping(self.app._lala_download_button)
         self.root.update()
         window = self.app.version_window
         widgets = []
@@ -682,12 +702,94 @@ class PreloginVersionWindowTests(unittest.TestCase):
 
     def test_stale_background_result_cannot_override_newer_check(self):
         self.app._version_gate_generation = 2
-        self.app._version_gate_messages.put((1, official_result("1275", "1262", "blocked")))
-        self.app._version_gate_messages.put((2, official_result(status="unverified")))
+        self.app._version_gate_messages.put((1, official_result("1275", "1262", "blocked"), time.monotonic()))
+        self.app._version_gate_messages.put((2, official_result(status="unverified"), time.monotonic()))
         self.app.drain_version_checks()
         self.assertEqual(self.app.version_gate_state, "blocked")
         self.assertTrue(self.app._version_continue_button.instate(["disabled"]))
         self.assertEqual(self.app.version_gate_text.get(), "官方線上版本檢測結果")
+
+    def observe(self, result):
+        token = self.app._background_schedule.begin(force=True)
+        self.assertIsNotNone(token)
+        import time
+        self.app._background_messages.put((token, result, time.monotonic()))
+        self.app.poll_background_versions()
+        self.root.update()
+
+    def test_live_observer_alarm_shows_true_comparison_and_safe_controls(self):
+        from dataclasses import replace
+        from wlre.services.background_version_observer import ObservationResult
+        self.deliver(official_result())
+        self.app.continue_to_login()
+        self.app.live_active = True
+        anchor = self.app._observer_anchor
+        changed = replace(anchor, data_package='1297_2026_11_07_13_34_19_13')
+        self.observe(ObservationResult('identifiers_differ', 'observed', changed, anchor,
+                                      '2026-11-07T11:00:00+00:00'))
+        self.assertNotEqual(self.app.version_window.state(), 'withdrawn')
+        self.assertEqual(self.app.login_window.state(), 'withdrawn')
+        self.assertTrue(self.app._session_resource_hold.is_set())
+        self.assertTrue(self.app._version_retry_button.instate(['disabled']))
+        self.assertTrue(self.app._version_continue_button.instate(['disabled']))
+        self.assertFalse(self.app._observer_disconnect_button.instate(['disabled']))
+        self.assertFalse(self.app._observer_retry_button.instate(['disabled']))
+        self.assertIsNone(self.app._version_progress._timer)
+        self.assertIn('官方 1297_', self.app._version_data.get())
+        self.assertIn('資料庫 1296_', self.app._version_data.get())
+        self.assertIn('1.3.0', self.app._version_path.get())
+        self.assertIn('1.3.22.1', self.app._version_path.get())
+        self.assertIn('連線保持', self.app.version_gate_text.get())
+        window_bottom = self.app.version_window.winfo_rooty() + self.app.version_window.winfo_height()
+        for widget in (self.app._background_label, self.app._observer_retry_button,
+                       self.app._observer_disconnect_button, self.app._version_continue_button,
+                       self.app._version_release_panel):
+            self.assertTrue(widget.winfo_ismapped())
+            self.assertLessEqual(widget.winfo_rooty() + widget.winfo_height(), window_bottom)
+        self.assertLessEqual(self.app._version_release_panel.winfo_rooty() + self.app._version_release_panel.winfo_height(),
+                             self.app._version_elapsed_label.winfo_rooty())
+        self.app._observer_disconnect_button.invoke()
+        self.assertTrue(self.app.stop_event.is_set())
+        self.assertTrue(self.app._session_resource_hold.is_set())
+        self.app.events.put(('session_finished', None))
+        App._poll_once(self.app)
+        self.root.update()
+        self.assertFalse(self.app.live_active)
+        self.assertFalse(self.app._version_retry_button.instate(['disabled']))
+        self.assertTrue(self.app._observer_disconnect_button.instate(['disabled']))
+        self.assertNotEqual(self.app.version_window.state(), 'withdrawn')
+
+    def test_unknown_observation_does_not_display_old_success_as_current(self):
+        from wlre.services.background_version_observer import ObservationResult
+        self.deliver(official_result())
+        anchor = self.app._observer_anchor
+        self.observe(ObservationResult('identifiers_match', 'observed', anchor, anchor,
+                                      '2026-11-07T11:00:00+00:00'))
+        self.observe(ObservationResult('unverified', 'official_unavailable', None, None,
+                                      '2026-11-07T11:05:00+00:00'))
+        self.assertIn('官方 未知', self.app._version_data.get())
+        self.assertIn('資料庫 未知', self.app._version_main.get())
+        self.assertIn('11:00:00 UTC', self.app._background_status.get())
+        self.assertIn('查詢失敗', self.app._background_status.get())
+        self.assertNotIn('11:05:00 UTC', self.app._background_status.get())
+        self.assertTrue(self.app._version_continue_button.instate(['disabled']))
+
+    def test_late_matching_recovery_and_release_rerender_cannot_resume_animation(self):
+        from wlre.services.background_version_observer import ObservationResult
+        self.deliver(official_result())
+        anchor = self.app._observer_anchor
+        self.observe(ObservationResult('unverified', 'official_unavailable', None, None,
+                                      '2026-11-07T11:00:00+00:00'))
+        self.observe(ObservationResult('identifiers_match', 'observed', anchor, anchor,
+                                      '2026-11-07T11:05:00+00:00'))
+        for _ in range(100):
+            self.app._render_version_window()
+            self.app.drain_version_checks()
+        self.assertIsNone(self.app._version_progress._timer)
+        self.assertTrue(self.app._observer_requires_full_check)
+        self.assertTrue(self.app._version_continue_button.instate(['disabled']))
+        self.assertIn('先前異常', self.app._background_status.get())
+
 
 
 if __name__ == "__main__":

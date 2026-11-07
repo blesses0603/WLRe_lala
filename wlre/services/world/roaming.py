@@ -1,4 +1,5 @@
 """AutoPlay.lua AutoWalk/ReAutoWalk four offsets, native order and no dwell."""
+import math
 from wlre.core.state_ownership import writes
 from wlre.services.coordination import reason as coordination_reason
 from wlre.network.wire import ProtocolError
@@ -32,10 +33,26 @@ class Roaming:
         if state.activities:raise ProtocolError('目前'+ '、'.join(state.activities)+'中，不能啟動徘徊')
         self.center=origin(state);self.scene=state.player['scene'];self.role_id=state.player['role_id']
         self.converter=self.converter or getattr(movement,'converter',None)
-        if self.converter is None:
-            raise ProtocolError('官方導航僅供預覽，尚未驗證徘徊；不使用歷史離線資料。')
+        from wlre.services.world.official_movement import OfficialMovementAdapter
+        if self.converter is None:self.converter=OfficialMovementAdapter()
+        elif isinstance(self.converter,OfficialMovementAdapter):
+            self.converter=OfficialMovementAdapter(runtime_getter=self.converter.runtime_getter,root=self.converter.repository.root)
         self.converter.mapping(self.scene)
+        if isinstance(self.converter,OfficialMovementAdapter):
+            # Prove all four legs and the repeating closure before enabling.
+            nx,nz=self.converter.to_navigation(self.scene,*self.center)
+            goals=[tuple(round(v) for v in self.converter.to_packet(self.scene,nx+dx*1000,nz+dz*1000)) for dx,dz in OFFSETS]
+            previous=self.center
+            for goal in goals+[goals[0]]:
+                route=self.converter.route(None,self.scene,previous,goal,navigation_state=state.navigation)
+                self.converter.validate_route(route)
+                if route['length']>8000:raise ProtocolError('四點徘徊路徑超出8世界單位上限')
+                if any(math.hypot(x-self.center[0],y-self.center[1])>300 for x,y in route['packet_points_xy_float']):
+                    raise ProtocolError('四點徘徊路徑離開中心3世界單位範圍')
+                previous=goal
+            movement.converter=self.converter;movement.repository=self.converter
         movement.stop(state,'切換為原版四點徘徊')
+        if isinstance(self.converter,OfficialMovementAdapter):movement.execution_interrupted=False
         self.enabled=True;self.sticky=False;self.manual=False
         self.await_battle_end=bool(state.battle.get('active') or state.event_flow.get('blocked'))
         state.roaming={'enabled':True,'status':'ready','reason':'依 Lua 四點順序循環',
@@ -97,6 +114,8 @@ class Roaming:
         if pause:
             movement.stop(state,pause)
             self.status(state,'paused_event',pause);return
+        if getattr(movement,'execution_interrupted',False):
+            self.sticky=True;self.status(state,'blocked','移動中斷，需重新啟動徘徊：'+str((state.local_movement or {}).get('reason','')));return
         if movement.active:
             self.status(state,'manual' if self.manual else 'moving','抵達後接續下一點');return
         if self.manual:
@@ -104,12 +123,17 @@ class Roaming:
                 self.status(state,'paused_event','手動移動中斷，等待位置確認');return
             self.recenter(state,movement,'手動移動完成，以目前位置作為新中心')
         dx,dz=OFFSETS[self.current_path]
-        nx,nz=self.converter.to_navigation(self.scene,*self.center)
-        x,y=self.converter.to_packet(self.scene,nx+dx*1000,nz+dz*1000)
-        point=self.current_path+1;self.current_path=(self.current_path+1)%4
-        try:movement.start(state,round(x),round(y),now)
+        point=self.current_path+1
+        try:
+            nx,nz=self.converter.to_navigation(self.scene,*self.center)
+            x,y=self.converter.to_packet(self.scene,nx+dx*1000,nz+dz*1000)
+            from wlre.services.world.official_movement import OfficialMovementAdapter
+            if isinstance(self.converter,OfficialMovementAdapter):
+                movement.start(state,round(x),round(y),now,bounds=(*self.center,300),max_distance=8000)
+            else:movement.start(state,round(x),round(y),now)
         except (ValueError,OSError,KeyError) as exc:
             self.sticky=True;self.status(state,'blocked','原版第'+str(point)+'點不可達：'+str(exc));return
+        self.current_path=(self.current_path+1)%4
         self.status(state,'moving','依原版順序前往第'+str(point)+'點',
             target={'scene':self.scene,'x':round(x),'y':round(y)},next_point=self.current_path+1,
             goals_started=state.roaming['goals_started']+1)

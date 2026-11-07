@@ -17,6 +17,9 @@ class DashboardLayout:
         self.status.grid(row=1,column=0,columnspan=1,sticky='ew',pady=(3,0))
         self.connection=ttk.Label(header,textvariable=app.connection_status,style='Muted.TLabel',anchor='e',width=43)
         self.connection.grid(row=1,column=1,columnspan=2,sticky='e',pady=(3,0))
+        self.version_observer=ttk.Label(header,textvariable=app._background_summary,
+                                        style='Muted.TLabel',width=1)
+        self.version_observer.grid(row=2,column=0,columnspan=3,sticky='ew',pady=(3,0))
         self.content=ttk.Frame(self.body)
         self.content.pack(fill='both',expand=True)
         self.content.columnconfigure(0,weight=1,minsize=870)

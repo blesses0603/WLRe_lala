@@ -76,6 +76,7 @@ class LauncherResourceUiTests(unittest.TestCase):
         c = Mock()
         import threading
         c._closing = False
+        c.live_active = False
         c._startup_exit_requested = threading.Event()
         c._startup_prepared = threading.Event()
         c._version_worker_done = threading.Event()

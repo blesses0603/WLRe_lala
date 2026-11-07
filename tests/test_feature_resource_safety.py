@@ -1,27 +1,23 @@
 """P5 fail-closed resource contracts when only 1275 runtime evidence exists.
 
-Logical resource names remain required database entries after source removal.
+Retired navigation is excluded from runtime and packaged data.
 Official runtime authorization remains independent from bundled storage.
 """
 import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from wlre.resource_manifest import REQUIRED_RESOURCES
+from wlre.resource_manifest import REQUIRED_RESOURCES,data_files
+from wlre.paths import RESOURCE_ROOT
 from wlre.services.world.npc_catalog import NPCIndex
 from wlre.services.world.portals import Portals
 
 
 class ResourceSafetyContract(unittest.TestCase):
-    def test_legacy_logical_entries_remain_required_in_database(self):
-        names = set(REQUIRED_RESOURCES)
-        self.assertEqual(len(names), len(REQUIRED_RESOURCES))
-        self.assertNotIn('portals.json', names)
-        for name in (
-            'navigation_data.zip',
-        ):
-            with self.subTest(resource=name):
-                self.assertIn(name, names)
+    def test_retired_navigation_is_not_required_or_shipped(self):
+        from wlre.storage.resource_seed_manifest import RETIRED_NAVIGATION
+        self.assertFalse(set(REQUIRED_RESOURCES) & RETIRED_NAVIGATION)
+        self.assertFalse({p.name for p in data_files(RESOURCE_ROOT.parent,compact=True)} & RETIRED_NAVIGATION)
 
     def test_1275_npc_index_uses_verified_runtime_not_1262_fallback(self):
         scenes = {'10000': [{'index': 3, 'npc_id': 321,

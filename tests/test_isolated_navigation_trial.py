@@ -26,3 +26,14 @@ class IsolationTests(unittest.TestCase):
 
     def test_existing_workspace_refused_before_copy(self):
         with self.assertRaisesRegex(ValueError,'new isolated'):prepare(self.root,self.root)
+
+    def test_current_seed_free_checkout_prepares_without_recreating_seed(self):
+        snapshot=self.root/'snapshot_input';snapshot.mkdir()
+        for name in ('current-identity.json','current-stages.json'):
+            (snapshot/name).write_text('{}')
+        target=self.root/'fresh'
+        record=prepare(target,snapshot)
+        self.assertIsNone(record['seed_sha256'])
+        self.assertFalse((target/'source/wlre/resources'/SEED).exists())
+        self.assertFalse((target/'quarantine'/SEED).exists())
+        with self.assertRaisesRegex(ValueError,'no quarantined seed'):restore(target)

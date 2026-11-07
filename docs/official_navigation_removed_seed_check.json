@@ -1,0 +1,38 @@
+{
+  "models": 558,
+  "scenes": 795,
+  "samples": 2385,
+  "results": {
+    "preview": 1636,
+    "safe_stop_no_pair": 749
+  },
+  "legacy_accesses": 0,
+  "seed_absent": true,
+  "wrong_version_rejections": 558,
+  "can_send_packets": false,
+  "gui_verified": false,
+  "source_commit": "2d523e65d219ae925727b5013e76348ff64b4fef",
+  "seed_was_already_absent": true,
+  "legacy_guard_control": "rejected",
+  "app_self_test": "passed",
+  "gui_cold_start": "blocked_no_display",
+  "gui_blocker": "Tk could not open DISPLAY; isolated dummy Xorg could not create Unix listening sockets. Actual App entry attempted, not a GUI pass.",
+  "tested_source_sha256": {
+    "wlre/services/world/navigation_database.py": "be862b96472bd0e5b291b3bcd1078d1828a6244e4d44a4cd0339b182b9ffbdcc",
+    "wlre/services/world/navigation_preview.py": "bc92f14ee1f4d1efe29cce68eff6261373c80b394707122bb1af97ccd6fe27f6",
+    "wlre/storage/full_resource_seed.py": "331399ec72f6ae91715e582a70bc051fcce3e73fb34451a1b12599e58b3e07e6",
+    "wlre/storage/bundled_database.py": "808962ee2ead8f113370402308b41bf8bc7e0bbe331e6422ff43d8431795e678"
+  },
+  "subsequent_integrated_gui_check": {
+    "source_commit": "d4f2c3e",
+    "environment": "isolated cloud Xvfb TCP display, Tk 8.6",
+    "test": "test_retired_seed_cold_application.RetiredSeedColdApplicationTests.test_real_offline_cold_entry_without_navigation_seed",
+    "result": "passed",
+    "tests": 1,
+    "skipped": 0,
+    "duration_seconds": 1.281,
+    "actual_game_login": false,
+    "legacy_navigation_reads": 0,
+    "scope": "Fresh source and private data, actual App entry, completed startup checks, dashboard mapped, official preview safely stops without Runtime. Earlier no-display result above remains historical."
+  }
+}

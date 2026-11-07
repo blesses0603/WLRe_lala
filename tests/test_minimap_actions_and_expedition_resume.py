@@ -32,7 +32,10 @@ class Var:
 
 class MinimapActionTests(unittest.TestCase):
     def setUp(self):
-        self.converter=Coordinates()
+        # Synthetic historical converter fixture, never shipped navigation bytes.
+        self.converter=Coordinates.__new__(Coordinates)
+        self.converter.stages={'12170':dict(model_id=12170,map_width=10000,map_height=10000,small_offset_x=0,small_offset_y=0,offset_y=10000)}
+        self.converter.origins={'M12170':[0,0,0]}
         stage=deepcopy(self.converter.stages['12170'])
         self.runtime=SimpleNamespace(revision=1286,catalog_identity=SimpleNamespace(key='a'*64),
                                      stages={12170:stage})
@@ -123,9 +126,10 @@ class MinimapActionTests(unittest.TestCase):
             self.assertEqual(self.logic.movement.tick(self.state,.2),[])
         self.assertFalse(self.logic.movement.active)
 
-    def test_database_mesh_for_current_scene_supports_a_geometric_route(self):
+    def test_synthetic_mesh_supports_route_but_retired_database_is_unavailable(self):
         from wlre.services.world.navigation import Repository
-        repo=Repository()
+        with self.assertRaisesRegex(FileNotFoundError,'已退役'):Repository()
+        repo=self.logic.movement.repository
         mesh=repo.load('M12170')
         source=next(face for face,neighbors in mesh.adjacency.items() if neighbors)
         target=next(iter(mesh.adjacency[source]))

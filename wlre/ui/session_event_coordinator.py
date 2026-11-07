@@ -70,6 +70,9 @@ class SessionEventCoordinator:
                 if event_kind=='command_rejected' and event.get('command_type')=='guild_actions':
                     self.other_features_panel.guild_panel.status.set(event['error'])
                 if event_kind.startswith('chat_'):continue
+                if event_kind=='resource_safety_hold':
+                    status_override='版本識別尚未確認：本次連線的新資料依賴操作已安全暫停，請中斷後完整檢查。'
+                    self.write(status_override)
                 if event_kind=='connection_closed':status_override='連線已關閉'
                 for line in local_event_lines(event,context):self.write(line)
         if hasattr(self,'diagnostics'):
@@ -90,13 +93,16 @@ class SessionEventCoordinator:
             self.live_active=False
             self.password.set('')
             self.update_role_choices([])
-            self.hide_version_check()
-            self.show_login()
+            if getattr(self, '_observer_requires_full_check', False):
+                self.show_version_check()
+            else:
+                self.hide_version_check()
+                self.show_login()
             # Do not restore a stale role list when reopening after disconnect.
             self.update_role_choices([])
-            # Return directly to account entry. Keep only the existing gate
-            # result/approval: the Login action enforces its 300-second age
-            # and run_client still independently verifies the account.
+            # Normal completion returns to account entry. Login requires the
+            # startup full gate plus fresh three-way identifiers; an observer
+            # alarm instead stays in the gate. Account verification is separate.
             self._set_login_gate_button()
         elif latest and self.live_active and latest.get('phase')=='world_ready' and latest.get('player'):
             if not self.entered_world:self.show_main()
