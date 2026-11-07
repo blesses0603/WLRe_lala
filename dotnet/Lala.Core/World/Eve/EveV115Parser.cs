@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.Collections.Immutable;
 using System.Globalization;
+using Lala.Core.Diagnostics.Parsing;
 
 namespace Lala.Core.World.Eve;
 
@@ -29,20 +30,37 @@ public static class EveV115Parser
     public const int SectionOffsetBytes = 44;
     private static readonly string[] SectionNames =
         ["npc", "door", "mine", "goods", "event", "group", "convey", "interact", "battle", "lead_event", "lead_group"];
+    private static readonly ParserDiagnosticDefinition SingleDiagnostic =
+        new("wlre.services.world.eve_v115.derive_eve_index", EveDecodeException.Schema);
+    private static readonly ParserDiagnosticDefinition BothDiagnostic =
+        new("wlre.services.world.eve_v115.derive_eve_indexes", EveDecodeException.Schema);
 
+    // Typed Parse and serialized Derive observe the same source operation. A single source
+    // returns bytes (Python count = null); both sources return a two-entry dictionary (count = 2).
+    // This diagnostic summary is deliberately not the number of NPC/interaction rows.
     public static EveV115Indexes Parse(ReadOnlySpan<byte> raw, CancellationToken cancellationToken = default) =>
-        ParseCore(raw, null, cancellationToken);
+        ParseDiagnosed(raw, null, static indexes => indexes, cancellationToken);
     public static EveV115Indexes Parse(ReadOnlySpan<byte> raw, string source, CancellationToken cancellationToken = default) =>
-        ParseCore(raw, source ?? "", cancellationToken);
+        ParseDiagnosed(raw, source ?? "", static indexes => indexes, cancellationToken);
     public static ImmutableArray<byte> DeriveIndex(ReadOnlySpan<byte> raw, string source, CancellationToken cancellationToken = default) =>
-        Parse(raw, source, cancellationToken).ToJsonUtf8(source, cancellationToken);
+        ParseDiagnosed(raw, source ?? "", indexes => indexes.ToJsonUtf8(source!, cancellationToken), cancellationToken);
     public static ImmutableDictionary<string, ImmutableArray<byte>> DeriveIndexes(ReadOnlySpan<byte> raw,
-        CancellationToken cancellationToken = default)
-    {
-        var indexes = Parse(raw, cancellationToken);
-        return ImmutableDictionary<string, ImmutableArray<byte>>.Empty
+        CancellationToken cancellationToken = default) =>
+        ParseDiagnosed(raw, null, indexes => ImmutableDictionary<string, ImmutableArray<byte>>.Empty
             .Add(NpcSource, indexes.ToJsonUtf8(NpcSource, cancellationToken))
-            .Add(InteractionSource, indexes.ToJsonUtf8(InteractionSource, cancellationToken));
+            .Add(InteractionSource, indexes.ToJsonUtf8(InteractionSource, cancellationToken)), cancellationToken);
+
+    private static T ParseDiagnosed<T>(ReadOnlySpan<byte> raw, string? source,
+        Func<EveV115Indexes, T> project, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        // Retain the original byte/selection guards before allocation. The parser and digest
+        // share one private snapshot; rejected inputs are hashed lazily without a large copy.
+        ReadOnlySpan<byte> bytes = raw.Length is >= 12 and <= MaxSourceBytes && source is (null or NpcSource or InteractionSource)
+            ? raw.ToArray() : raw;
+        return ParserDiagnostics.RunWithRaw(source is null ? BothDiagnostic : SingleDiagnostic, bytes,
+            data => project(ParseCore(data, source, token)),
+            _ => new(source is null ? 2 : null), source, token);
     }
 
     private static EveV115Indexes ParseCore(ReadOnlySpan<byte> raw, string? source, CancellationToken token)
@@ -50,10 +68,8 @@ public static class EveV115Parser
         token.ThrowIfCancellationRequested();
         if (raw.Length is < 12 or > MaxSourceBytes) throw new EveDecodeException("Missing or oversized Eve source");
         if (source is not (null or NpcSource or InteractionSource)) throw new EveDecodeException("Unknown requested Eve index");
-        // Snapshot caller-owned input before validating headers or offsets. Bound before allocating.
-        byte[] bytes = raw.ToArray();
-        token.ThrowIfCancellationRequested();
-        uint count = BinaryPrimitives.ReadUInt32LittleEndian(bytes.AsSpan(8));
+        var bytes = raw;
+        uint count = BinaryPrimitives.ReadUInt32LittleEndian(bytes[8..]);
         if (count is 0 or > MaxScenes || 12 + 12 * count > bytes.Length)
             throw new EveDecodeException("Eve header/scene count invalid");
         var segments = new Segment[count];
@@ -62,7 +78,8 @@ public static class EveV115Parser
         {
             token.ThrowIfCancellationRequested();
             int position = 12 + 12 * index;
-            var header = bytes.AsSpan(position, 12);
+            ParserDiagnostics.Checkpoint(offset: position, field: "scene_header", record: index + 1);
+            var header = bytes.Slice(position, 12);
             ushort id = BinaryPrimitives.ReadUInt16LittleEndian(header);
             uint offset = BinaryPrimitives.ReadUInt32LittleEndian(header[4..]);
             uint size = BinaryPrimitives.ReadUInt32LittleEndian(header[8..]);
@@ -82,6 +99,7 @@ public static class EveV115Parser
             var segment = segments[index];
             if (index > 0 && segments[index - 1].Offset + segments[index - 1].Size > segment.Offset)
                 throw new EveDecodeException("Eve scene segments overlap", new(segment.Offset));
+            ParserDiagnostics.Checkpoint(offset: segment.Offset, field: "scene", record: index + 1);
             var reader = new Reader(bytes, segment, token);
             EveSceneIndexes scene;
             try { scene = ReadScene(ref reader, npcs, interactions); }
@@ -240,9 +258,9 @@ public static class EveV115Parser
     private static string F(FormattableString value) => value.ToString(CultureInfo.InvariantCulture);
     private readonly record struct Segment(ushort Id, int Offset, int Size);
 
-    private ref struct Reader(byte[] data, Segment segment, CancellationToken token)
+    private ref struct Reader(ReadOnlySpan<byte> data, Segment segment, CancellationToken token)
     {
-        private readonly byte[] data = data;
+        private readonly ReadOnlySpan<byte> data = data;
         private readonly Segment segment = segment;
         private readonly CancellationToken token = token;
         private int position = segment.Offset;
@@ -256,9 +274,10 @@ public static class EveV115Parser
         public ReadOnlySpan<byte> Take(int length)
         {
             token.ThrowIfCancellationRequested();
+            ParserDiagnostics.ReadCheckpoint(position, length, Remaining);
             if (length < 0 || length > Remaining)
                 throw new EveDecodeException("Eve record exceeds verified scene limits", new(position, SceneId, Section, Record, length, Remaining));
-            var value = data.AsSpan(position, length);
+            var value = data.Slice(position, length);
             position += length;
             return value;
         }
@@ -272,7 +291,7 @@ public static class EveV115Parser
             for (int offset = position; offset < segment.Offset + segment.Size; offset += 4096)
             {
                 token.ThrowIfCancellationRequested();
-                if (data.AsSpan(offset, Math.Min(4096, segment.Offset + segment.Size - offset)).ContainsAnyExcept((byte)0)) return false;
+                if (data.Slice(offset, Math.Min(4096, segment.Offset + segment.Size - offset)).ContainsAnyExcept((byte)0)) return false;
             }
             return true;
         }

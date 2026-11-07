@@ -12,7 +12,8 @@
     "target_files": [
       "dotnet/Lala.Core/Inventory/BagReceiveSnapshot.cs",
       "dotnet/Lala.Core/Inventory/BagReceiveReducer.cs",
-      "dotnet/Lala.Core/Inventory/InventoryPlanning.cs"
+      "dotnet/Lala.Core/Inventory/InventoryPlanning.cs",
+      "dotnet/Lala.Core/Inventory/InventoryReservationPlanning.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -52,7 +53,7 @@
       "Pure source-compatible Allocate and immutable reservation candidates with explicit display names; 153 retained-Python sequences / 2,032 snapshots."
     ],
     "outstanding_scope": [
-      "Live resource acquisition/consumption, reservation lifecycle helpers and runtime action integration remain."
+      "Live resource acquisition/consumption, reservation proposal installation and runtime action integration remain. Pure reservation lifecycle proposals are implemented separately; they do not mutate the live bag or confirm an operation."
     ]
   },
   {
@@ -307,7 +308,8 @@
     "target_files": [
       "dotnet/Lala.Core/Inventory/BagReceiveReducer.cs",
       "dotnet/Lala.Core/Inventory/BagReceiveSnapshot.cs",
-      "dotnet/Lala.Core/Inventory/InventoryPlanning.cs"
+      "dotnet/Lala.Core/Inventory/InventoryPlanning.cs",
+      "dotnet/Lala.Core/Inventory/InventoryReservationPlanning.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -372,10 +374,11 @@
     },
     "migrated_scope": [
       "Receive refresh/deduction/availability projections with identity uncertainty and held counts.",
-      "Pure acquire validation and hypothetical immutable reservation accounting: complete-batch validation, identity checks, duplicate aggregation and hold order."
+      "Pure acquire validation and hypothetical immutable reservation accounting: complete-batch validation, identity checks, duplicate aggregation and hold order.",
+      "Pure identity/locked/slot queries and hypothetical release/uncertain/restore snapshots with immutable five-field checkpoints; 68 real-Python sequences / 1,381 snapshots and 23 lock-query inputs. Release preserves ordered per-row clamping; restore does not revalidate item identity, restore bag state or repair reliability. Existing receive/allocation code shares the same helpers."
     ],
     "outstanding_scope": [
-      "Release/uncertain/checkpoint/restore helpers and runtime action integration remain; proposals are not live holds."
+      "Runtime reservation lifecycle, proposal installation, definitive confirmation for live release and action integration remain. Successful proposals do not acquire/release live holds or establish that uncertain operations are safe; restore accepts complete typed checkpoints, not arbitrary Python dictionary patches."
     ]
   },
   {
@@ -1259,7 +1262,8 @@
     "target_files": [
       "dotnet/Lala.Core/Diagnostics/Parsing/ParserDiagnosticModels.cs",
       "dotnet/Lala.Core/Diagnostics/Parsing/ParserDiagnosticRun.cs",
-      "dotnet/Lala.Core/Diagnostics/Parsing/ParserDiagnostics.cs"
+      "dotnet/Lala.Core/Diagnostics/Parsing/ParserDiagnostics.cs",
+      "dotnet/Lala.Core/World/Eve/EveV115Parser.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -1357,10 +1361,11 @@
       "live_server_acceptance": "not_run"
     },
     "migrated_scope": [
-      "Bounded privacy-safe in-memory sessions/checkpoints, input digests, baseline validation/comparison and exact report JSON; 509 synthetic Python cases plus safety/concurrency contracts. Explicit metadata/depth admission and cancellation protections are documented deltas."
+      "Bounded privacy-safe in-memory sessions/checkpoints, input digests, baseline validation/comparison and exact report JSON; 509 synthetic Python cases plus safety/concurrency contracts. Explicit metadata/depth admission and cancellation protections are documented deltas.",
+      "Automatic diagnostics on Eve typed Parse and serialized Derive entrypoints, including source-equivalent scene/header checkpoints, raw-input digests, nested-session behavior and lazy failure association without an active session; 2,146 actual-Python decorator observations plus cancellation/privacy/concurrency contracts. Error type labels use EveDecodeException; three duplicate-scene cases retain the documented fail-closed delta."
     ],
     "outstanding_scope": [
-      "Filesystem/atomic persistence, default paths, registry/signature binding, traceback-local inference and automatic parser/runtime instrumentation remain. Reports never authorize assets or commands."
+      "Filesystem/atomic persistence, default paths, registry/signature binding, traceback-local inference, instrumentation of other parsers and runtime catalog integration remain. Eve instrumentation alone does not activate resources; reports never authorize assets or commands."
     ]
   },
   {
@@ -1858,7 +1863,7 @@
       "Source-ordered post-local shop, efficiency, guild actions and Ark receive composition with atomic publication; 26 real State.apply scenarios / 1,414 checkpoints / 38 event kinds."
     ],
     "outstanding_scope": [
-      "Successful persistence/candidate/solver outcomes and validated completion remain; emitted intents are not executed or saved.",
+      "Runtime persistence, reviewed-candidate matching, solver-to-runtime outcomes and validated completion remain; emitted receive intents are not executed or saved. Separate explicit offline ArkQuestionStore and strict ArkArithmeticSolver APIs exist, but neither is connected to this receive pipeline or current-session validation.",
       "Planning/begin/tick/commands, runtime catalog loading, UI and live acceptance remain."
     ]
   },

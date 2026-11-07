@@ -55,7 +55,8 @@
     "target_files": [
       "dotnet/Lala.Core/Inventory/BagReceiveSnapshot.cs",
       "dotnet/Lala.Core/Inventory/BagReceiveReducer.cs",
-      "dotnet/Lala.Core/Inventory/InventoryPlanning.cs"
+      "dotnet/Lala.Core/Inventory/InventoryPlanning.cs",
+      "dotnet/Lala.Core/Inventory/InventoryReservationPlanning.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -100,7 +101,7 @@
       "Pure source-compatible Allocate and immutable reservation candidates with explicit display names; 153 retained-Python sequences / 2,032 snapshots."
     ],
     "outstanding_scope": [
-      "Live resource acquisition/consumption, reservation lifecycle helpers and runtime action integration remain."
+      "Live resource acquisition/consumption, reservation proposal installation and runtime action integration remain. Pure reservation lifecycle proposals are implemented separately; they do not mutate the live bag or confirm an operation."
     ]
   },
   {
@@ -317,7 +318,8 @@
     "target_files": [
       "dotnet/Lala.Core/Inventory/BagReceiveReducer.cs",
       "dotnet/Lala.Core/Inventory/BagReceiveSnapshot.cs",
-      "dotnet/Lala.Core/Inventory/InventoryPlanning.cs"
+      "dotnet/Lala.Core/Inventory/InventoryPlanning.cs",
+      "dotnet/Lala.Core/Inventory/InventoryReservationPlanning.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -387,10 +389,11 @@
     },
     "migrated_scope": [
       "Receive refresh/deduction/availability projections with identity uncertainty and held counts.",
-      "Pure acquire validation and hypothetical immutable reservation accounting: complete-batch validation, identity checks, duplicate aggregation and hold order."
+      "Pure acquire validation and hypothetical immutable reservation accounting: complete-batch validation, identity checks, duplicate aggregation and hold order.",
+      "Pure identity/locked/slot queries and hypothetical release/uncertain/restore snapshots with immutable five-field checkpoints; 68 real-Python sequences / 1,381 snapshots and 23 lock-query inputs. Release preserves ordered per-row clamping; restore does not revalidate item identity, restore bag state or repair reliability. Existing receive/allocation code shares the same helpers."
     ],
     "outstanding_scope": [
-      "Release/uncertain/checkpoint/restore helpers and runtime action integration remain; proposals are not live holds."
+      "Runtime reservation lifecycle, proposal installation, definitive confirmation for live release and action integration remain. Successful proposals do not acquire/release live holds or establish that uncertain operations are safe; restore accepts complete typed checkpoints, not arbitrary Python dictionary patches."
     ]
   },
   {

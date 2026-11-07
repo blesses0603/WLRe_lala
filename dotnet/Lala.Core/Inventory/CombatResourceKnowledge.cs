@@ -7,6 +7,8 @@ public sealed record CombatResourceAttribute(int Kind, long Value);
 public sealed record CombatResourceItem(int? Kind = null, int FitType = 0, uint SkillLink = 0)
 {
     public ImmutableArray<CombatResourceAttribute> Attributes { get; init; } = [];
+    /// <summary>Explicit source item restrict mask, used only by offline candidates.</summary>
+    public long Restrict { get; init; }
 }
 public sealed record CombatResourceNpc
 {
@@ -38,6 +40,8 @@ public sealed record CombatResourceCatalog
     public ImmutableDictionary<uint, CombatResourceNpc> Npcs { get; init; } = ImmutableDictionary<uint, CombatResourceNpc>.Empty;
     public ImmutableDictionary<uint, CombatResourceSkill> Skills { get; init; } = ImmutableDictionary<uint, CombatResourceSkill>.Empty;
     public ImmutableArray<CombatResourceCharacter> Characters { get; init; } = [];
+    /// <summary>Explicit finite source element weights. Missing rows/cells use source weight 1.</summary>
+    public ImmutableDictionary<long, ImmutableDictionary<long, double>> ElementWeights { get; init; } = ImmutableDictionary<long, ImmutableDictionary<long, double>>.Empty;
     internal CombatKnowledgeCatalog EquipmentCatalog() => new()
     {
         SkillKeys = SkillKeys,
@@ -54,6 +58,7 @@ public sealed record CombatResourceActor
     public ushort? NpcIndex { get; init; }
     public int Col { get; init; }
     public int Row { get; init; }
+    public uint ChangeBodyId { get; init; }
     public int? Sex { get; init; }
     public int? Head { get; init; }
     public string? Name { get; init; }
@@ -62,6 +67,7 @@ public sealed record CombatResourceActor
     public ImmutableArray<KnowledgeEquipment> Equips { get; init; } = [];
     public ImmutableDictionary<string, long> Stats { get; init; } = ImmutableDictionary<string, long>.Empty;
     public ImmutableDictionary<string, bool> Statuses { get; init; } = ImmutableDictionary<string, bool>.Empty;
+    public long? Element => Stats.TryGetValue("element", out var value) ? value : null;
     public long? Hp => Stats.TryGetValue("hp", out var value) ? value : null;
     public long? Sp => Stats.TryGetValue("sp", out var value) ? value : null;
     public override string ToString() => nameof(CombatResourceActor);
@@ -79,7 +85,7 @@ public sealed record FieldCombatContext(PlayerKnowledgeSnapshot Player, Immutabl
 
 /// <summary>Pure combat_resources helpers. No commands, reservations, live activation,
 /// sending, scheduler, or shared session state. Every catalog is explicitly supplied.</summary>
-public static class CombatResourceKnowledge
+public static partial class CombatResourceKnowledge
 {
     private static readonly ImmutableHashSet<ushort> BrokenWeapons = ImmutableHashSet.Create<ushort>(
         10062, 11098, 12069, 13064, 15051, 14063, 17066, 18062, 19055, 20039,
@@ -225,9 +231,12 @@ public static class CombatResourceKnowledge
             if (data.NpcId != companions.ActiveNpcId) continue;
             if (data.Index is null) throw new ArgumentException("Field companion requires a source slot index.", nameof(companions));
             var stats = CompanionStats(data).SetItems(profile.StatOverrides);
-            units.Add(new() { Pid = data.NpcId, MasterId = localPlayer?.RoleId, NpcIndex = data.Index,
+            if (profile.EquipmentOverrides is null) RequireArray(data.Equips, "Companion equips");
+            var companionActor = new CombatResourceActor { Pid = data.NpcId, MasterId = localPlayer?.RoleId, NpcIndex = data.Index,
                 Col = 2, Row = 1, Name = data.Name ?? catalog.Npcs.GetValueOrDefault(data.NpcId)?.Name ?? "出戰夥伴",
-                Equips = profile.EquipmentOverrides ?? [.. data.Equips.Select(KnowledgeEquipment.FromItem)], Stats = stats });
+                Equips = profile.EquipmentOverrides ?? [.. data.Equips.Select(KnowledgeEquipment.FromItem)], Stats = stats };
+            Validate(companionActor);
+            units.Add(companionActor);
             break;
         }
         return new(player, units.ToImmutable());

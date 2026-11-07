@@ -38,7 +38,8 @@ Nothing in these results grants catalog, skill-use, account, or transport author
   order maps, or required missing skill fields are rejected. Arbitrary malformed
   Python object/type coercion is not a supported C# input surface.
 
-Not included: `skill_reasons`, `skill_rows`, `learned_command`, `best_skill_command`,
+The initial five-helper slice did not include `skill_reasons` or `skill_rows`; the
+read-only follow-on below adds them. Not included: `learned_command`, `best_skill_command`,
 `food_command`, action generation, reservations, schedulers, live catalog loading,
 shared coordinator integration, or account/transport/UI behavior.
 
@@ -70,3 +71,49 @@ regressions **15/15**. Fixture regeneration is byte-for-byte stable. One concurr
 initial test compilation was killed with compiler exit 137; isolated compilation
 with a temporary 2 GiB GC heap bound succeeded. The full test-runtime run used
 standard settings. No checked-in build policy was changed.
+
+## Read-only skill validation and display rows follow-on
+
+`CombatResourceKnowledge.SkillReasons` and `SkillRows` additionally port the
+source's early gates, ordered diagnostic reasons, weapon/appearance constraints,
+SP and HP cost checks, silence/taunt status restrictions, current player inventory
+sufficiency, and ordinal category/SP/ID display sorting. Both take an explicit
+`BagReceiveSnapshot` and `InventoryPlanningContext`. They call the existing pure
+`InventoryPlanning.Allocate`; they do **not** acquire/install reservations, produce
+commands, mutate the bag, or reinterpret successful validation as authorization.
+Companions skip player item costs. The source's `UseFailed` flag is not invented
+as a skill-cost gate; it belongs to other command paths.
+
+Missing catalog rows and missing learned evidence retain the original early
+reasons. Missing required fields in a reached catalog branch reject the malformed
+import. Passive/life and no-target early exits do not demand fields that Python
+never reads. Display rows preserve missing SP as null while using the source's
+99999 sort sentinel, an empty catalog name as empty, and source-order learned
+collisions before the final ordinal category/numeric sort.
+
+HP consumption diagnostics preserve Python's unbounded integer multiplication,
+correctly rounded binary64 true division, and ceiling comparison. A direct cast
+of the integer product to double before division is not equivalent: at HP
+9007199254740894 and 100%, Python's cost reaches HP, but the double-rounded
+calculation incorrectly falls one short. The port rounds an exact rational to a
+53-bit ties-to-even significand before applying the binary exponent and ceiling.
+It does not infer HP or change the original observed value.
+
+The follow-on oracle executes **928** real Python cases, including full Int64 and
+2^53 HP boundaries, adversarial double-rounding cases, all status fight-way values,
+companion identity/item-cost skipping, locked/held inventory sufficiency, and row
+sorting/fallbacks. `generate_combat_skill_validation_vectors.py` writes separately
+bounded deterministic gzip byte fixtures and hashes all source dependencies with
+byte-only CRLF normalization. The follow-on also rejects malformed default/null-row
+equipment arrays in imported active companion field projections, matching the
+existing player-side boundary without changing valid reducer-produced inputs.
+
+Commands (`learned_command`, `best_skill_command`, `food_command`), live actions,
+reservation acquisition, shared coordinator integration, schedulers, runtime
+catalog activation, and account/UI behavior remain outside this slice.
+
+Verified follow-on (base plus verified pure allocator): combined skill-focused
+Release suite **2,029/2,029**, full Core Release regression **21,487/21,487**.
+Compilation and tests used standard settings with no GC heap override. The new
+928-vector corpus regenerates byte-for-byte, and every generated fixture file is
+at most 92,231 bytes. No source/debugging retry was needed for this follow-on.

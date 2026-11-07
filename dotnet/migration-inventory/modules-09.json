@@ -101,8 +101,12 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Storage.ark_questions",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Storage/ArkQuestionIdentity.cs",
+      "dotnet/Lala.Core/Storage/ArkQuestionStore.cs",
+      "dotnet/Lala.Core/Storage/ArkQuestionStore.Schema.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -148,11 +152,20 @@
     },
     "acceptance_profile": "storage",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Explicit synchronous SQLite storage through a caller-supplied new closed DbConnection per operation: canonical catalog/role/question identity, observation, reviewed candidate recording, durable once-only claims, attempts, caller-supplied confirmation evidence, rejection and permanent conflict quarantine.",
+      "BEGIN IMMEDIATE transactions, additive schema v0/v1/v2 migration, bounded reads, rollback/cancellation and stricter schema/persisted-evidence validation. 104 real-Python identity vectors, 149 scenarios / 1,402 operations and three Python-created v0/v1/v2 database images; 326 new offline tests."
+    ],
+    "outstanding_scope": [
+      "Production provider selection/initialization and native packaging, private paths/permissions/backups, host scheduling/cancellation, session/generation/catalog revalidation and receive-intent execution remain. SQLite dependencies are test-only; no actual user database or live runtime was used.",
+      "Reviewed candidate catalog/matching, solver-to-storage/runtime integration, verified server receipt handling, commands/answer sending, UI/Android lifecycle and device/server acceptance remain. The separate arithmetic solver is not wired here. Confirm records caller evidence without authenticating it; content identity and durable claims never grant action authority.",
+      "Corrupt schemas/evidence deliberately reject rather than reproduce permissive Python reads. Cooperative cancellation cannot guarantee interruption of in-flight provider calls; the test Microsoft provider may wait up to its one-second command timeout rather than Python's 250-ms connection timeout. Uncertain commit failures propagate without automatic retries."
+    ]
   },
   {
     "id": "desktop:wlre/storage/atomic.py",

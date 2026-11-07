@@ -202,9 +202,10 @@ kinds. The omitted observer list is explicit; this is not complete State parity.
 Separate bag/companion receive reducers preserve slot metadata/order, inventory
 reliability, identity-sensitive reservation observations, unknown baselines,
 companion append/reuse and buffered S8 attributes. Seventy-seven Python sequences
-cover 1,616 snapshots. Player/battle knowledge, equipment/deferred updates,
-learned-command helpers and full shared-session wiring remain outstanding.
-These functions neither acquire reservations nor perform resource-consuming acts.
+cover 1,616 snapshots. Later receive increments below add player/battle knowledge
+and equipment/deferred updates; separate pure helper/candidate slices are also documented below. Live
+resource use and full shared-session wiring remain outstanding. These receive
+functions neither acquire reservations nor perform resource-consuming acts.
 
 Crafting/furniture receive snapshots now preserve queue and furniture insertion
 order, ownership, readiness, sparse tool rows, compaction, error receipts and
@@ -281,10 +282,50 @@ Ark defaults and receive transitions now expose immutable state plus identity-bo
 Observe/Confirm/Reject memory intents. The 371 retained-Python sequences cover 3,494
 snapshots and 48 helper-boundary intents using the actual caught storage-failure path.
 Default deferred composition is separately tested and does not claim storage failed.
-No intent was persisted or accepted as a correct answer. Successful persistence,
-candidate/solver completion and execution remain gaps. The post-local coordinator now
-requires explicit runtime reads when source branches consume them; missing input is
-not mislabeled as an observed unavailable runtime.
+No receive intent is persisted or accepted as a correct answer. A separate explicit
+offline store and strict arithmetic solver are now available below; runtime persistence,
+reviewed-candidate matching, solver-to-runtime completion and execution remain gaps.
+The post-local coordinator requires explicit runtime reads
+when source branches consume them; missing input is not mislabeled as an observed
+unavailable runtime.
+
+`ArkQuestionStore` now implements an explicit offline SQLite evidence boundary using
+a caller-supplied factory for a new closed `DbConnection` per operation. It recomputes
+the full catalog/role/question identity and supports observation, reviewed candidates,
+durable once-only claims, attempts, caller-supplied confirmation, rejection and permanent
+conflict quarantine. Transactions reserve the writer before schema/evidence reads and
+commit only after the complete operation. Compatible Python v0/v1/v2 databases migrate
+to v2; unknown/corrupt schemas or contradictory persisted evidence reject without reset.
+This stricter validation is an intentional difference from permissive Python reads.
+
+The source oracle supplies 104 identity vectors, 149 scenarios / 1,402 operations and
+three Python-created database images. Rollback, cancellation, bounded lock contention,
+competing writers and retained quarantine have contract tests. Microsoft SQLite packages
+are test-only; Core does not select or initialize a provider, choose paths, execute receive
+intents or validate a live session/generation. Hosts must schedule synchronous I/O off
+the UI thread. Cancellation is cooperative; the test provider's one-second command
+timeout differs from Python's 250-ms connection timeout. Uncertain commit failures do
+not synthesize success or trigger automatic retries. `Confirm` records explicit caller
+evidence without authenticating a server receipt. Production provider/native packaging,
+private paths and lifecycle, reviewed-candidate matching, solver-to-runtime integration,
+command sending and runtime/device acceptance remain open. See
+[Ark storage boundaries and evidence](../dotnet/Lala.Core.Tests/Storage/README.md).
+
+`ArkArithmeticSolver.Solve` separately ports only the strict arithmetic in
+`wlre/services/ark_first_answer.py`. The whole question must match the retained grammar;
+bounded integer/rational evaluation never rounds, and exactly one option label must
+match numerically. Python-compatible label stripping includes all 29 whitespace
+characters. Unsupported, fractional, zero-divisor and ambiguous results return null.
+The 304 actual-Python cases and 32 source/boundary/contracts cover these behaviors.
+Option IDs remain uint and raw labels have a 256-code-point limit; over-limit labels
+and a larger Python option ID are explicitly recorded typed differences, not parity.
+
+The solver reads an immutable question and returns an option ID or null. It does not
+consult the separate reviewed candidate catalog, guess an answer, authenticate source
+provenance, confirm an answer, execute storage intents or wire into receive/scheduler
+behavior. Known answers, selected options and readiness do not grant it authority.
+Reviewed candidate catalog/matching, solver-to-runtime integration and answer execution
+remain separate gaps. See [strict arithmetic scope and evidence](../dotnet/Lala.Core.Tests/Social/Ark/Arithmetic/README.md).
 
 All eighteen State.apply observer positions now have bounded receive composition,
 including shop, efficiency, guild actions and Ark after tent. Twenty-six additional
@@ -300,13 +341,44 @@ exclusions, duplicate aggregation, serial identity and source numeric quirks are
 retained in 153 Python sequences / 2,032 snapshots. Neither a successful candidate
 nor a proposed hold authorizes or installs a live resource acquisition.
 
+Reservation identity/lock/slot queries and release/uncertain/checkpoint/restore now
+also have pure immutable proposals. Sixty-eight real-Python sequences cover 1,381
+snapshots and 23 lock-query inputs, including repeated proposals, receive composition
+and retained checkpoint history. Checkpoints contain exactly five reservation fields;
+restore does not restore bag items/readiness, revalidate identity, repair counts or
+clear errors. Release retains source per-row clamping and unknown-owner behavior.
+No proposal installs or releases a live hold, and uncertain operations do not become
+safe because a hypothetical release succeeds. Runtime lifecycle integration remains
+outstanding; arbitrary Python dictionary restore patches are not a typed API.
+
 Five combat-resource helpers now derive learned evidence, weapon groups, target
 validity, healing effects and field context from explicit current mappings and known
 snapshots. Companion skill insertion order is retained across overwrite/remove/re-add
 and S15 replacement; imported ambiguous order is rejected rather than guessed. The
 1,070 Python cases include 20 receive histories. Field equipment resolution returns
 a replacement player snapshot; it does not secretly mutate prior publications or
-infer health. Skill reasons/rows and action candidates remain separate work.
+infer health.
+
+Read-only skill reasons and display rows now preserve early exits, ordered cost/
+weapon/appearance/status diagnostics, explicit inventory sufficiency and ordinal
+category/SP/ID sorting. The 928 real-Python cases include exact HP-cost rounding
+near 2^53 and Int64 limits. Missing SP remains unknown; companion skill validation
+skips player item costs. Validation neither acquires reservations nor grants skill-use
+authority. See [skill validation evidence](../dotnet/Lala.Core.Tests/Inventory/CombatResourceREADME.md).
+
+Learned, best-skill and food selection now return detached offline candidate intents.
+All 1,709 Python observations remain in the corpus: 1,649 supported cases match exactly,
+while 60 unsupported food-resource imports have explicit typed rejection rather than
+source-parity claims. Food accepts only `hp`/`sp`; nine additional rejection contracts
+cover this boundary. Supported cases preserve learned chains, source-key/target order,
+ProtocolError-only fallback, food restrictions, exact numeric ties and proposed item
+costs. The only `battle_commands.action_command` branch included is normal attack
+as the best-skill fallback; other action modes, ownership enumeration, capture checks
+and round planning remain outstanding. Normal fallback requires known actor/local-role
+wire identities rather than inventing IDs. No candidate constructs/sends packets,
+installs holds or consumes items. Helper/candidate coordinator and scheduler wiring,
+verified catalog activation and account/UI/live acceptance remain gaps. See
+[action-candidate boundaries and evidence](../dotnet/Lala.Core.Tests/Inventory/CombatActionCandidatesREADME.md).
 
 Eve v115 parsing now validates all eleven scene sections before exposing immutable
 NPC/interaction indexes. Versions, offsets, record/scene limits, skipped layouts,
@@ -326,5 +398,69 @@ validated prior-baseline comparison and exact report JSON. The 509 real-Python c
 plus concurrency/cancellation/privacy contracts retain source deduplication and
 failure precedence without storing payloads, decoded text, exception messages or
 filesystem paths. Metadata/depth admission caps and cancellation protection are
-explicit safety differences. Reports cannot enable assets or commands. Filesystem
-persistence, default paths and automatic parser instrumentation remain unimplemented.
+explicit safety differences. Reports cannot enable assets or commands.
+
+Eve typed Parse and serialized Derive entrypoints now automatically use this
+in-memory diagnostics layer. The 2,146 actual-Python decorator observations cover
+parser names, result counts, variants, raw-input digests and scene/header checkpoints;
+the three duplicate-scene hardening cases remain explicit differences, and error
+labels use the existing C# exception type. Nested/concurrent sessions, exception
+identity, input ownership and cancellation have directed contracts. Success outside
+a diagnostic session stays quiet; failure retains a safe observation without keeping
+input bytes or exception messages. Filesystem persistence, default paths, other parser
+instrumentation and runtime catalog activation remain unimplemented.
+
+### Latest incremental verification evidence
+
+The following are historical slice-specific test receipts, not a combined current
+main-branch result or complete module acceptance. This documentation-only update did
+not run C# builds or tests, and no platform, live-server or production-storage
+acceptance follows from these offline suites.
+
+| Integrated commit | Evidence | Historical verification |
+| --- | --- | --- |
+| `9f13d37` reservation proposals | `ReservationPlanningParityTests.cs`, `ReservationPlanningContractTests.cs` and generated reservation fixtures under `Lala.Core.Tests/Inventory` | 349 focused tests and 19,541 full Core tests on the isolated earlier-base slice; 68 sequences / 1,381 snapshots. |
+| `6b382c2` skill reasons/rows | `CombatSkillValidationParityTests.cs`, `CombatSkillValidationContractTests.cs` and `CombatResourceREADME.md` under `Lala.Core.Tests/Inventory` | 2,029 combined skill-focused tests and 21,487 full Core tests on that slice; 928 new oracle cases. |
+| `d8a5ad1` Eve diagnostic wiring | `Lala.Core.Tests/World/Eve/EveDiagnosticTests.cs` and `EveDiagnosticPythonVectors.cs` | 4,848 focused tests and 26,463 full Core tests on the isolated `654118a` base before the subsequent two-test hotfix; 2,146 source diagnostic observations and 26 Python regressions. |
+| `974b249` combat action candidates + `a7bea51` hp/sp boundary | `CombatActionCandidateParityTests.cs`, `CombatActionCandidateContractTests.cs` and `CombatActionCandidatesREADME.md` under `Lala.Core.Tests/Inventory` | Final boundary-focused suite: 1,729 passed, including 1,649 supported exact matches, 60 explicit typed rejections and nine new rejection contracts. All 1,709 Python observations remain. The earlier 26,027 full Core pass predates this boundary correction; 19 retained Python regressions were reported separately. No updated unified full-suite result is claimed. |
+| `c4489f8` explicit Ark storage | `ArkQuestionStorageParityTests.cs`, `ArkQuestionStorageContractTests.cs` and `README.md` under `Lala.Core.Tests/Storage` | 362 focused tests (326 new) and 24,633 full Core tests on isolated base `654118a` plus storage; 104 identity vectors, 149 scenarios / 1,402 operations, three Python-created databases and 36 Python regressions. |
+| `1863c3b` strict Ark arithmetic | `ArkArithmeticParityTests.cs`, `ArkArithmeticContractTests.cs` and `README.md` under `Lala.Core.Tests/Social/Ark/Arithmetic` | 336 focused Release tests passed: 304 retained-Python cases plus 32 source/boundary/contracts. Five original Python tests passed. No full Core run is claimed for this increment. |
+
+Inventory status remains partial for these modules. Desktop `battle_commands.py`
+(normal fallback), `storage/ark_questions.py` (explicit offline store) and
+`services/ark_first_answer.py` (strict arithmetic) move from not migrated to partially
+migrated; the summary is now 586 not migrated, 108 partially migrated and 2 ported
+offline. Android inventory and reservation entries share identical source hashes and
+receive the same bounded evidence. Android combat-resource, battle-command and Eve
+hashes differ, so they stay unreconciled; the baseline has no Android
+`storage/ark_questions.py` or `services/ark_first_answer.py` entry. `IsCompleteState`
+remains false. The offline store and arithmetic solver do not establish Ark runtime
+persistence or command activation, and none of these slices establishes full migration
+or full runtime acceptance. Current combined verification is recorded below.
+
+
+### Integrated verification for the next PR increment
+
+The integrated tree after `f939c4f` passes **28,865 Core Release tests**, with no
+failures or skips, using standard build/test settings. Android lifecycle remains
+**59/59**; Desktop Release builds with zero warnings/errors and its offline inspector
+passes **9 checks**. The retained Python suite runs **2,273 tests**, with **216**
+existing platform/headless skips. Strict repository audit and whitespace checks pass.
+These local receipts do not replace the pending remote cross-platform CI or device
+and official-server acceptance.
+
+The final Ark storage review adds nine corruption/schema regressions: contradictory
+registered candidate/attempt evidence fails closed, all identity predicates explicitly
+use BINARY comparison, and trigger-owner matching follows SQLite's case-insensitive
+identifier semantics. Nonquarantined and already-quarantined cases, unregistered
+attempts, all three identity columns and all three trigger owners are covered.
+The focused Storage suite is **371/371** (335 storage-specific plus 36 existing named
+matches), and independent source review approved the fixes. Core has no database
+provider dependency: Microsoft.Data.Sqlite is test-only; production connection/path,
+current-session validation and memory-intent execution remain host integration gaps.
+
+All changed generated C# fixtures retain the existing 500,000-byte limit under both
+LF and CRLF. Android source, AccountSession and connection/lifecycle public APIs are
+unchanged by this increment. The strict arithmetic helper and reviewed candidate
+intents remain separate from sending or confirming answers. `IsCompleteState` stays
+false; the migration remains a Draft and is not ready to replace the Python client.

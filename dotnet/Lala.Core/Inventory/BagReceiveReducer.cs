@@ -87,7 +87,7 @@ public static class BagReceiveReducer
                     }
                     row = row with { Remaining = 0 };
                 }
-                else if (row.Identity != new StorageReservationIdentity(item.ItemId, item.OriginalRecord.Serial, item.OriginalRecord.SerialVersion))
+                else if (row.Identity != InventoryReservationPlanning.Identity(item))
                 {
                     row = row with { Uncertain = true };
                     fresh = Fail(fresh, "保留物品序號已變更，請重新登入同步");
@@ -199,9 +199,7 @@ public static class BagReceiveReducer
     public static BigInteger Available(BagReceiveSnapshot state, ushort index)
     {
         ArgumentNullException.ThrowIfNull(state);
-        if (state.AlchemySlots?.Contains(index) == true || state.ExpeditionSlots?.Contains(index) == true ||
-            state.MaintenanceSlots?.Contains(index) == true || state.Holds.Any(group => group.Rows.Any(row =>
-                row.Index == index && (row.Exclusive || row.Uncertain)))) return 0;
+        if (InventoryReservationPlanning.Locked(state, index)) return 0;
         var count = index <= byte.MaxValue ? state.Items.GetValueOrDefault((byte)index)?.Count ?? 0 : 0;
         return BigInteger.Max(0, count - state.Reserved.GetValueOrDefault(index));
     }

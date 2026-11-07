@@ -8,8 +8,10 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.ark_first_answer",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Social/Ark/ArkArithmeticSolver.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -28,11 +30,19 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Standalone pure strict arithmetic solve on the immutable question snapshot: exact whole-question grammar, bounded sum/product/division expressions, integer-only rational results, Python Unicode label stripping and one unique numeric option match. 304 retained-Python differential cases plus 32 source/boundary/contracts; 336 focused Release tests and five original Python tests passed.",
+      "Explicit typed boundaries retain uint option IDs and cap raw labels at 256 Unicode code points. Four over-limit label cases and an option ID above uint are recorded separately as deliberate deltas, not source-parity claims. Missing/default snapshots return null; unrelated known-answer/candidate/readiness fields are ignored and inputs remain unchanged."
+    ],
+    "outstanding_scope": [
+      "Reviewed candidate catalog/matching is a separate unported module; this solver does not guess, consult knowledge, verify question provenance or produce a server-confirmed answer. Returned option IDs never authorize an action.",
+      "Solver-to-receive/runtime integration, confirmation, memory-intent/storage execution, commands, answer sending, session/generation checks, scheduling and platform/live acceptance remain. No new full Core suite result is claimed for this increment."
+    ]
   },
   {
     "id": "desktop:wlre/services/background_version_observer.py",
@@ -301,8 +311,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.battle",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Inventory/CombatResourceActionCandidates.cs",
+      "dotnet/Lala.Core/Battle/CombatRules.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -342,11 +355,17 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Only action_command(..., 'normal', ...) as the pure best-skill fallback: source target selection and CombatRules.NormalSkill with an explicitly supplied normal catalog. Covered within the retained 1,709-observation Python corpus: 1,649 supported exact matches and 60 unsupported food-resource imports with explicit typed rejection. Results are offline intents, not outbound packets."
+    ],
+    "outstanding_scope": [
+      "Other action modes, owned_units/ownership enumeration, catch_allowed, plan_round, reservation installation, command dispatch and runtime/live acceptance remain. Normal fallback requires known actor/local-role wire identities; no synthetic identity is invented."
+    ]
   },
   {
     "id": "desktop:wlre/services/battle/combat.py",
@@ -2090,7 +2109,9 @@
       "dotnet/Lala.Core/Inventory/CompanionReceiveSnapshot.cs",
       "dotnet/Lala.Core/Inventory/CombatKnowledgeReceiveReducer.cs",
       "dotnet/Lala.Core/Inventory/CombatKnowledgeSnapshot.cs",
-      "dotnet/Lala.Core/Inventory/CombatResourceKnowledge.cs"
+      "dotnet/Lala.Core/Inventory/CombatResourceKnowledge.cs",
+      "dotnet/Lala.Core/Inventory/CombatResourceSkillValidation.cs",
+      "dotnet/Lala.Core/Inventory/CombatResourceActionCandidates.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -2183,10 +2204,12 @@
       "Bag and companion receive slice, including roster append/add/delete/active and buffered S8 attributes;77 Python sequences1616 snapshots.",
       "Remaining apply_live receive knowledge: player stats/skills, equipment resolution and bounded deferred queues, companion/battle appearance and profile stat observations; 40 Python sequences / 1,646 checkpoints.",
       "The receive apply_live slices are composed into ServiceStateCoordinator, including every-event equipment resolution and shared battle/companion projections.",
-      "Pure learned, weapon_group, target_valid, heal_effects and field_context helpers with explicit current catalog and replacement player equipment; 1,070 Python cases including 20 companion S15/S8 order histories."
+      "Pure learned, weapon_group, target_valid, heal_effects and field_context helpers with explicit current catalog and replacement player equipment; 1,070 Python cases including 20 companion S15/S8 order histories.",
+      "Read-only skill_reasons and skill_rows with ordered early/diagnostic gates, weapon/appearance/status constraints, exact Python HP-cost rounding, explicit bag sufficiency and category/SP/ID display sorting; 928 real-Python cases. Validation does not acquire reservations or authorize skill use.",
+      "Pure learned_command, best_skill_command and food_command candidate intents, including only the normal action fallback: learned-chain limits, source-key/target ordering, known ATK/MATK preference, food restrictions, allocation proposals and exact numeric ties. All 1,709 Python observations are retained: 1,649 supported cases match exactly; 60 unsupported food-resource imports are explicitly rejected at the typed boundary, not claimed as source parity. Food supports only hp/sp. Nine additional rejection contracts cover this boundary; inputs and retained candidates remain immutable."
     ],
     "outstanding_scope": [
-      "Skill-reason/row helpers, learned/best-skill/food command candidates, resource/catalog activation and live acceptance remain."
+      "Live resource acquisition/consumption, reservation installation, candidate execution and helper/candidate shared-coordinator or scheduler integration remain. Explicit caller catalogs are unverified; resource/catalog activation, account/transport/UI behavior and live acceptance are not established."
     ]
   },
   {

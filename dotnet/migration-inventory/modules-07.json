@@ -512,7 +512,8 @@
     "status": "partially_migrated",
     "target_files": [
       "dotnet/Lala.Core/World/Eve/EveV115Parser.cs",
-      "dotnet/Lala.Core/World/Eve/EveV115Indexes.cs"
+      "dotnet/Lala.Core/World/Eve/EveV115Indexes.cs",
+      "dotnet/Lala.Core/Diagnostics/Parsing/ParserDiagnostics.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -589,10 +590,11 @@
       "live_server_acceptance": "not_run"
     },
     "migrated_scope": [
-      "Strict bounded cancellable Eve v115 eleven-section validation and immutable NPC/interaction index derivation, including exact JSON APIs; 2,143 exact Python cases and three separately documented duplicate-scene fail-closed cases."
+      "Strict bounded cancellable Eve v115 eleven-section validation and immutable NPC/interaction index derivation, including exact JSON APIs; 2,143 exact Python cases and three separately documented duplicate-scene fail-closed cases.",
+      "All typed Parse and serialized Derive entrypoints automatically emit privacy-safe in-memory diagnostics with matching source parser names, counts, variants, raw digests and scene/header checkpoints; 2,146 retained-Python diagnostic observations. No-session success stays quiet, failure keeps the public exception, and cancellation is not a layout failure."
     ],
     "outstanding_scope": [
-      "Parser-diagnostics/runtime catalog wiring, actual resource activation and device/server acceptance remain. Duplicate scene IDs intentionally reject the retained Python overwrite/count inconsistency rather than claim parity."
+      "Runtime catalog wiring, actual resource activation, diagnostic persistence and device/server acceptance remain. Duplicate scene IDs intentionally reject the retained Python overwrite/count inconsistency; error type labels name the public C# exception rather than claiming byte-identical Python type names."
     ]
   },
   {

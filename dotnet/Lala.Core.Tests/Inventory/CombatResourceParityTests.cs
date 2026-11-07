@@ -95,15 +95,16 @@ public sealed class CombatResourceParityTests
         if (value.Key is { } key) result["key"] = key;
         return result;
     }
-    private static CombatResourceActor Actor(JsonNode? data) => new()
+    internal static CombatResourceActor Actor(JsonNode? data) => new()
     {
         Pid = U(data,"pid"), MasterId = U(data,"master_id"), NpcIndex = (ushort?)L(data,"npc_index"),
         Col = (int)(L(data,"col") ?? 0), Row = (int)(L(data,"row") ?? 0), Sex = (int?)L(data,"sex"), Head = (int?)L(data,"head"),
         Name = S(data,"name"), Exited = data?["exited"]?.GetValue<bool>() ?? false, IsFly = data?["is_fly"]?.GetValue<bool>() ?? false,
         Equips = [.. (data?["equips"]?.AsArray() ?? []).Select(Equip)],
-        Stats = Stats(data).Where(p => p.Key is "hp" or "sp" or "max_hp" or "max_sp").ToImmutableDictionary()
+        Stats = Stats(data).Where(p => p.Key is "hp" or "sp" or "max_hp" or "max_sp").ToImmutableDictionary(),
+        Statuses = (data?["statuses"]?.AsObject() ?? []).ToImmutableDictionary(p => p.Key,p => p.Value!.GetValue<bool>())
     };
-    private static PlayerKnowledgeSnapshot Player(JsonNode? p) => new()
+    internal static PlayerKnowledgeSnapshot Player(JsonNode? p) => new()
     {
         Skills = (p?["skills"]?.AsObject() ?? []).ToImmutableDictionary(v => uint.Parse(v.Key), v => new PlayerSkillEvidence(L(v.Value,"level") ?? 0, U(v.Value,"exp") ?? 0, S(v.Value,"source")!, (ushort?)L(v.Value,"key"))),
         SkillOrder = [.. (p?["skills"]?.AsObject() ?? []).Select(v => uint.Parse(v.Key))],
@@ -116,7 +117,7 @@ public sealed class CombatResourceParityTests
             DeferredEquipUpdates = p?["deferred_equip_updates"] is { } deferred ? [.. deferred.AsArray().Select(Event)] : null
         }
     };
-    private static CompanionReceiveSnapshot Companions(JsonNode? profiles, JsonNode? active)
+    internal static CompanionReceiveSnapshot Companions(JsonNode? profiles, JsonNode? active)
     {
         var result = ImmutableDictionary.CreateBuilder<ushort, CompanionProfileSnapshot>();
         foreach (var (key,p) in profiles?.AsObject() ?? [])

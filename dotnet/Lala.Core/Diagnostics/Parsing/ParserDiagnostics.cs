@@ -89,6 +89,25 @@ public static class ParserDiagnostics
         ArgumentNullException.ThrowIfNull(definition);
         ArgumentNullException.ThrowIfNull(inputs);
         ArgumentNullException.ThrowIfNull(parse);
+        return RunCore(definition, inputs, _ => parse(), DigestInputs, summarize,
+            sourceVariant, assetName, manifestPackage, cancellationToken);
+    }
+
+    // Span entrypoints can reject oversized inputs without first copying them into memory.
+    // Synchronous only: neither the span nor the callback enters an observation or escapes this call.
+    internal static T RunWithRaw<T>(ParserDiagnosticDefinition definition, ReadOnlySpan<byte> raw,
+        Func<ReadOnlySpan<byte>, T> parse, Func<T, ParserResultSummary> summarize,
+        string? sourceVariant, CancellationToken cancellationToken) =>
+        RunCore<ReadOnlySpan<byte>, T>(definition, raw, parse,
+            static (bytes, token) => ImmutableDictionary<string, ParserInputDigest>.Empty.Add("raw", Digest(bytes, token)),
+            summarize, sourceVariant, null, null, cancellationToken);
+
+    private static T RunCore<TInput, T>(ParserDiagnosticDefinition definition, TInput input,
+        Func<TInput, T> parse,
+        Func<TInput, CancellationToken, ImmutableDictionary<string, ParserInputDigest>> digestInputs,
+        Func<T, ParserResultSummary>? summarize, string? sourceVariant, string? assetName,
+        Func<T, string?>? manifestPackage, CancellationToken cancellationToken) where TInput : allows ref struct
+    {
         cancellationToken.ThrowIfCancellationRequested();
         var run = CurrentRun.Value;
         var parent = CurrentCursor.Value;
@@ -99,14 +118,14 @@ public static class ParserDiagnostics
         try
         {
             T result;
-            try { result = parse(); }
+            try { result = parse(input); }
             catch (OperationCanceledException) { throw; }
             catch (Exception error)
             {
                 // An instrumentation failure must not replace the parser's original exception.
                 try
                 {
-                    var digests = DigestInputs(inputs, CancellationToken.None);
+                    var digests = digestInputs(input, CancellationToken.None);
                     string errorType = error.GetType().Name;
                     if (!DiagnosticLabels.Name(errorType)) errorType = "Exception";
                     var observation = new ParserDiagnosticEvent(definition, digests, true, variant,
@@ -124,7 +143,7 @@ public static class ParserDiagnostics
                 {
                     var summary = summarize?.Invoke(result) ?? (result is State.StateValue value
                         ? ParserResultSummary.FromSourceValue(value) : new ParserResultSummary());
-                    var digests = DigestInputs(inputs, cancellationToken);
+                    var digests = digestInputs(input, cancellationToken);
                     if (result is byte[] bytes && digests.Count == 0)
                         digests = digests.Add("textasset", Digest(bytes, cancellationToken));
                     var state = cursor.Snapshot();

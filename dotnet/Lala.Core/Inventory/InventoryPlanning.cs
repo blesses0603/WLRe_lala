@@ -100,14 +100,14 @@ public static class InventoryPlanning
             if (indexError is not null) return Fail(indexError.Message, indexError.Type);
             var countError = ReadKey(value, "count", out var rawCount);
             if (countError is not null) return Fail(countError.Message, countError.Type);
-            var hasIndex = Index(rawIndex!, out var index);
+            var hasIndex = InventoryReservationPlanning.TryIndex(rawIndex!, out var index);
             var item = hasIndex && index <= byte.MaxValue ? state.Items.GetValueOrDefault((byte)index) : null;
             if (!Integer(rawCount!, out var count) || count <= 0) return Fail("背包保留數量必須為正整數");
             if (hasIndex && state.AlchemySlots?.Contains(index) == true) return Fail("此格仍等待煉金材料扣除回覆");
             if (item is null || value.MapValue.TryGetValue("item_id", out var requestedItem) && !ItemEquals(requestedItem, item.ItemId))
                 return Fail("包包物品已變更");
             var previous = priorRows.FirstOrDefault(row => row.Index == index);
-            if (previous is not null && previous.Identity != Identity(item)) return Fail("包包格位序號已變更");
+            if (previous is not null && previous.Identity != InventoryReservationPlanning.Identity(item)) return Fail("包包格位序號已變更");
             if (state.Holds.Any(group => group.Owner != owner && group.Rows.Any(row => row.Index == index)))
                 return Fail("此格仍等待其他功能確認");
             if (BagReceiveReducer.Available(state, index) < combined.GetValueOrDefault(index) + count)
@@ -130,20 +130,13 @@ public static class InventoryPlanning
                 // even when this call's exclusive argument differs.
                 rows[rowPosition] = row with { Count = row.Count + count, Remaining = row.Remaining + count };
             }
-            else rows.Add(new(index, Identity(item), count, count, item.Count, exclusive, false));
+            else rows.Add(new(index, InventoryReservationPlanning.Identity(item), count, count, item.Count, exclusive, false));
             reserved = reserved.SetItem(index, reserved.GetValueOrDefault(index) + count);
         }
         var group = new StorageReservationGroup(owner, rows.ToImmutable());
         var holds = ownerPosition < 0 ? state.Holds.Add(group) : state.Holds.SetItem(ownerPosition, group);
         var proposed = state with { Holds = holds, Reserved = reserved };
-        var slots = rows.Select(row => row.Index).Distinct().ToImmutableArray();
-        proposed = owner switch
-        {
-            "alchemy" => proposed with { AlchemySlots = slots },
-            "expedition" => proposed with { ExpeditionSlots = slots },
-            "maintenance" => proposed with { MaintenanceSlots = slots },
-            _ => proposed
-        };
+        proposed = InventoryReservationPlanning.ProjectSlots(proposed, owner);
         return new(state, proposed, null);
     }
 
@@ -158,9 +151,6 @@ public static class InventoryPlanning
             ("index", StateValue.Scalar(row.Index)), ("count", StateValue.Scalar(row.Count)),
             ("item_id", StateValue.Scalar(row.ItemId))))], owner, exclusive);
     }
-
-    private static StorageReservationIdentity Identity(BagItemSnapshot item) =>
-        new(item.ItemId, item.OriginalRecord.Serial, item.OriginalRecord.SerialVersion);
 
     private static InventoryPlanningError? ReadKey(StateValue row, string key, out StateValue? value)
     {
@@ -182,19 +172,6 @@ public static class InventoryPlanning
         null => "NoneType", bool => "bool", float or double => "float", decimal => "decimal.Decimal", char => "str", _ => "int"
     };
 
-    private static bool Index(StateValue value, out ushort index)
-    {
-        index = 0;
-        if (Integer(value, out var number) && number >= 0 && number <= ushort.MaxValue)
-        {
-            index = (ushort)number; return true;
-        }
-        if (value.Kind == StateValueKind.Scalar && value.ScalarValue is string text &&
-            ushort.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out index))
-            return text == index.ToString(CultureInfo.InvariantCulture);
-        return false;
-    }
-
     private static bool ItemEquals(StateValue value, ushort item) => Integer(value, out var number) ? number == item :
         value.Kind == StateValueKind.Scalar && value.ScalarValue switch
         {
@@ -203,7 +180,7 @@ public static class InventoryPlanning
             _ => false
         };
 
-    private static bool Integer(StateValue value, out BigInteger number)
+    internal static bool Integer(StateValue value, out BigInteger number)
     {
         number = default;
         if (value.Kind != StateValueKind.Scalar) return false;
