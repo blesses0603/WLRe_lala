@@ -78,17 +78,17 @@ def smoke_test_gui():
     self_test()
     import tkinter as tk
     from wlre.ui.gui import App
+    from wlre.ui.window_layout import wait_for_widget_mapping
     root = tk.Tk()
     errors = []
     root.report_callback_exception = lambda *args: errors.append(args)
     try:
         app = App(root)
         app.show_main()
-        # In unattended macOS runners Cocoa's full event pump can block
-        # on hidden Toplevel transitions. This entry-point smoke check needs
-        # initial widget geometry, not an unbounded live event loop.
-        # Windows/Linux unit tests exercise real Map/Configure callbacks.
-        root.update_idletasks()
+        # Windows needs native Map/Configure events after deiconify, whereas
+        # an unbounded full update can stall on unattended Cocoa runners.
+        # Wait for the actual dashboard without running startup/network timers.
+        wait_for_widget_mapping(app.overview_panel)
         if errors:
             raise RuntimeError('GUI callback failed: ' + str(errors))
         if not app.overview_panel.winfo_ismapped():
@@ -116,11 +116,8 @@ def main():
         if os.name=='nt':
             import ctypes
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('WLRE.Client.ByChiNing')
-        # Native EXE / macOS APP is its own launcher. Prepare verified
-        # private candidates BEFORE importing Tk, never in login callbacks.
-        from wlre.services.world.launcher_catalog import prepare_on_launch
-        from wlre.launcher_progress import run_with_progress
-        run_with_progress(prepare_on_launch)
+        # Native and direct/source GUI entry points share App's single startup
+        # window. Resource preparation never replaces official login checks.
         from wlre.ui.gui import main as run_gui
         run_gui()
         return 0

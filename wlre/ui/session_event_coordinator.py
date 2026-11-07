@@ -90,11 +90,14 @@ class SessionEventCoordinator:
             self.live_active=False
             self.password.set('')
             self.update_role_choices([])
+            self.hide_version_check()
             self.show_login()
             # Do not restore a stale role list when reopening after disconnect.
             self.update_role_choices([])
+            # Return directly to account entry. Keep only the existing gate
+            # result/approval: the Login action enforces its 300-second age
+            # and run_client still independently verifies the account.
             self._set_login_gate_button()
-            self.start_version_check()
         elif latest and self.live_active and latest.get('phase')=='world_ready' and latest.get('player'):
             if not self.entered_world:self.show_main()
         if hasattr(self.events,'take_dropped'):

@@ -3,10 +3,11 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import sqlite3
 import tempfile
+import time
 import unittest
 from contextlib import closing
 
-from wlre.storage.ark_questions import QuestionStore
+from wlre.storage.ark_questions import QuestionStore, fingerprint
 
 
 class QuestionStoreTests(unittest.TestCase):
@@ -84,6 +85,268 @@ class QuestionStoreTests(unittest.TestCase):
         with self.assertRaises(ValueError): self.store.observe(self.token, 1, self.question)
         with closing(sqlite3.connect(self.path)) as db:
             self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], 99)
+
+
+    def record(self, answer=22, **metadata):
+        return self.store.record_candidate(self.token, 1, self.question, answer,
+            metadata.get('source', 'reviewed-local'), metadata.get('revision', 'r1'))
+
+    def test_candidates_are_durable_but_never_server_confirmed(self):
+        self.assertEqual(self.record(), 'candidate')
+        self.assertEqual(QuestionStore(self.path).observe(self.token, 1, self.question),
+                         (None, 'unknown'))
+        with closing(sqlite3.connect(self.path)) as db:
+            self.assertEqual(db.execute('SELECT answer,source FROM questions').fetchone(),
+                             (None, 'observed'))
+            self.assertEqual(db.execute('SELECT answer,source,revision,rejected FROM candidates').fetchone(),
+                             (22, 'reviewed-local', 'r1', 0))
+            self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], 2)
+
+    def test_fingerprint_and_candidate_ignore_only_option_order(self):
+        question = {**self.question, 'options': [24, 21, 23, 22], 'labels': ['丁', '甲', '丙', '乙']}
+        self.assertEqual(fingerprint(question), fingerprint(self.question))
+        self.record()
+        self.assertEqual(self.store.record_candidate(self.token, 1, question, 22, 'reviewed', 'r2'),
+                         'candidate')
+        self.assertEqual(self.store.record_candidate(self.token, 1, question, 23, 'reviewed', 'r3'),
+                         'conflict')
+        self.assertEqual(self.record(), 'conflict')
+        self.assertEqual(self.store.confirm(self.token, 1, question, 22), 'conflict')
+
+    def test_matching_server_and_candidate_in_both_orders(self):
+        for server_first in (True, False):
+            with self.subTest(server_first=server_first):
+                self.store = QuestionStore(self.path.with_name(str(server_first) + '.sqlite3'))
+                if server_first:
+                    self.store.confirm(self.token, 1, self.question, 22)
+                    self.assertEqual(self.record(), 'confirmed')
+                else:
+                    self.record()
+                    self.assertEqual(self.store.confirm(self.token, 1, self.question, 22), 'confirmed')
+                self.assertEqual(self.store.observe(self.token, 1, self.question), (22, 'confirmed'))
+
+    def test_mismatching_server_and_candidate_in_both_orders(self):
+        for server_first in (True, False):
+            with self.subTest(server_first=server_first):
+                self.store = QuestionStore(self.path.with_name(str(server_first) + '.sqlite3'))
+                if server_first:
+                    self.store.confirm(self.token, 1, self.question, 23)
+                    self.assertEqual(self.record(), 'conflict')
+                else:
+                    self.record()
+                    self.assertEqual(self.store.confirm(self.token, 1, self.question, 23), 'conflict')
+                self.assertEqual(self.record(), 'conflict')
+                self.assertEqual(self.store.observe(self.token, 1, self.question), (None, 'conflict'))
+
+    def test_candidate_wrong_result_is_tagged_and_permanent(self):
+        self.record()
+        self.store.reject(self.token, 1, self.question, 21)
+        self.assertEqual(self.record(), 'candidate')
+        self.store.reject(self.token, 1, self.question, 22, candidate=True)
+        self.assertEqual(self.record(), 'conflict')
+        self.assertEqual(self.store.confirm(self.token, 1, self.question, 22), 'conflict')
+        with closing(sqlite3.connect(self.path)) as db:
+            self.assertEqual(db.execute('SELECT rejected FROM candidates').fetchone(), (1,))
+
+    def test_quarantine_without_previous_observation_is_permanent(self):
+        self.assertEqual(self.store.quarantine(self.token, 1, self.question), 'conflict')
+        self.assertEqual(self.record(), 'conflict')
+        self.assertEqual(self.store.confirm(self.token, 1, self.question, 22), 'conflict')
+
+    def test_invalid_candidate_metadata_and_answers_never_write(self):
+        for field in ('source', 'revision'):
+            for value in (None, True, 1, '', ' ', 'x\n', 'x\x00y', 'x' * 1025):
+                with self.subTest(field=field, value=value), self.assertRaises(ValueError):
+                    self.record(**{field: value})
+        with self.assertRaises(ValueError): self.record(source='server_confirmed')
+        for answer in (True, 99):
+            with self.assertRaises(ValueError): self.record(answer)
+        self.assertFalse(self.path.exists())
+
+    def test_concurrent_candidate_claim_is_once_only(self):
+        self.record()
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            results = list(executor.map(lambda _: QuestionStore(self.path).claim_candidate(
+                self.token, 1, self.question, 22), range(2)))
+        self.assertEqual(sorted(results), [False, True])
+        self.assertEqual(self.record(), 'pending')
+        reopened = QuestionStore(self.path)
+        self.assertFalse(reopened.claim_candidate(self.token, 1, self.question, 22))
+        self.assertEqual(reopened.record_candidate(self.token, 1, self.question, 22,
+                                                  'reviewed-local', 'r2'), 'pending')
+
+    def test_claim_requires_matching_recorded_nonrejected_candidate(self):
+        self.assertFalse(self.store.claim_candidate(self.token, 1, self.question, 22))
+        self.record()
+        self.assertFalse(self.store.claim_candidate(self.token, 1, self.question, 23))
+        self.assertFalse(self.store.claim_candidate(self.token, 2, self.question, 22))
+        self.assertFalse(self.store.claim_candidate((True, 'b' * 64), 1, self.question, 22))
+        self.store.reject(self.token, 1, self.question, 22, candidate=True)
+        self.assertFalse(self.store.claim_candidate(self.token, 1, self.question, 22))
+
+    def test_matching_confirmation_resolves_pending_claim(self):
+        self.record()
+        self.assertTrue(self.store.claim_candidate(self.token, 1, self.question, 22))
+        self.assertEqual(self.store.confirm(self.token, 1, self.question, 22), 'confirmed')
+        self.assertEqual(self.record(), 'confirmed')
+        with closing(sqlite3.connect(self.path)) as db:
+            self.assertEqual(db.execute('SELECT count(*) FROM candidate_attempts').fetchone(), (0,))
+
+    def test_candidate_rejection_resolves_pending_and_quarantines(self):
+        self.record()
+        self.assertTrue(self.store.claim_candidate(self.token, 1, self.question, 22))
+        self.store.reject(self.token, 1, self.question, 21)
+        self.assertEqual(self.record(), 'pending')
+        self.store.reject(self.token, 1, self.question, 22, candidate=True)
+        self.assertEqual(self.record(), 'conflict')
+        self.assertFalse(self.store.claim_candidate(self.token, 1, self.question, 22))
+        with closing(sqlite3.connect(self.path)) as db:
+            self.assertEqual(db.execute('SELECT count(*) FROM candidate_attempts').fetchone(), (0,))
+            self.assertEqual(db.execute('SELECT rejected FROM candidates').fetchone(), (1,))
+
+    def test_conflicting_candidate_evidence_overrides_pending_status(self):
+        self.record()
+        self.assertTrue(self.store.claim_candidate(self.token, 1, self.question, 22))
+        self.assertEqual(self.record(23, source='other-review', revision='r2'), 'conflict')
+        self.assertEqual(self.record(), 'conflict')
+        self.assertFalse(self.store.claim_candidate(self.token, 1, self.question, 22))
+        self.assertEqual(self.store.confirm(self.token, 1, self.question, 22), 'conflict')
+
+    def test_additive_attempt_table_is_created_for_existing_v2_database(self):
+        self.record()
+        with closing(sqlite3.connect(self.path)) as db:
+            db.execute('DROP TABLE candidate_attempts')
+            db.commit()
+        self.assertTrue(QuestionStore(self.path).claim_candidate(self.token, 1, self.question, 22))
+        self.assertEqual(self.record(), 'pending')
+
+    def test_manual_candidate_attempt_persists_across_restart(self):
+        self.record()
+        self.assertTrue(self.store.record_candidate_attempt(self.token, 1, self.question, 22))
+        reopened = QuestionStore(self.path)
+        self.assertEqual(reopened.record_candidate(self.token, 1, self.question, 22,
+                                                  'reviewed-local', 'r1'), 'pending')
+        self.assertFalse(reopened.claim_candidate(self.token, 1, self.question, 22))
+        self.assertEqual(reopened.observe(self.token, 1, self.question), (None, 'unknown'))
+
+    def test_manual_candidate_attempt_is_idempotent_with_automatic_claim(self):
+        self.record()
+        self.assertTrue(self.store.claim_candidate(self.token, 1, self.question, 22))
+        for _ in range(2):
+            self.assertTrue(self.store.record_candidate_attempt(self.token, 1, self.question, 22))
+            self.assertEqual(self.record(), 'pending')
+        with closing(sqlite3.connect(self.path)) as db:
+            self.assertEqual(db.execute('SELECT answer FROM candidate_attempts').fetchall(), [(22,)])
+
+    def test_unmatched_manual_choices_do_not_claim_candidate(self):
+        self.assertFalse(self.store.record_candidate_attempt(self.token, 1, self.question, 22))
+        self.record()
+        self.assertFalse(self.store.record_candidate_attempt(self.token, 1, self.question, 23))
+        self.assertFalse(self.store.record_candidate_attempt(self.token, 2, self.question, 22))
+        self.assertEqual(self.record(), 'candidate')
+        with closing(sqlite3.connect(self.path)) as db:
+            self.assertEqual(db.execute('SELECT count(*) FROM candidate_attempts').fetchone(), (0,))
+
+    def test_manual_attempt_preserves_rejection_and_quarantine(self):
+        self.record()
+        self.store.reject(self.token, 1, self.question, 22, candidate=True)
+        self.assertTrue(self.store.record_candidate_attempt(self.token, 1, self.question, 22))
+        self.assertEqual(self.record(), 'conflict')
+        self.assertEqual(self.store.observe(self.token, 1, self.question), (None, 'conflict'))
+        with closing(sqlite3.connect(self.path)) as db:
+            self.assertEqual(db.execute('SELECT rejected FROM candidates').fetchone(), (1,))
+            self.assertEqual(db.execute('SELECT answer FROM candidate_attempts').fetchone(), (22,))
+
+    def test_manual_candidate_attempt_database_errors_propagate(self):
+        self.record()
+        with closing(sqlite3.connect(self.path)) as blocker:
+            blocker.execute('BEGIN IMMEDIATE')
+            try:
+                with self.assertRaisesRegex(sqlite3.OperationalError, 'locked'):
+                    self.store.record_candidate_attempt(self.token, 1, self.question, 22)
+            finally:
+                blocker.rollback()
+        self.assertEqual(self.record(), 'candidate')
+
+    def test_unregistered_manual_candidate_attempt_survives_restart(self):
+        self.assertTrue(self.store.record_candidate_attempt(
+            self.token, 1, self.question, 22, allow_unregistered=True))
+        reopened = QuestionStore(self.path)
+        self.assertEqual(reopened.record_candidate(self.token, 1, self.question, 22,
+                                                  'reviewed-local', 'r1'), 'pending')
+        self.assertFalse(reopened.claim_candidate(self.token, 1, self.question, 22))
+        self.assertEqual(reopened.observe(self.token, 1, self.question), (None, 'unknown'))
+
+    def test_unregistered_attempt_preserves_conflicting_candidate_and_claim(self):
+        self.record()
+        self.assertTrue(self.store.claim_candidate(self.token, 1, self.question, 22))
+        self.assertTrue(self.store.record_candidate_attempt(
+            self.token, 1, self.question, 23, allow_unregistered=True))
+        self.assertEqual(self.record(), 'conflict')
+        with closing(sqlite3.connect(self.path)) as db:
+            self.assertEqual(db.execute('SELECT answer FROM candidates').fetchone(), (22,))
+            self.assertEqual(db.execute('SELECT answer FROM candidate_attempts').fetchone(), (22,))
+
+    def test_unregistered_attempt_conflicting_with_later_candidate_is_quarantined(self):
+        self.assertTrue(self.store.record_candidate_attempt(
+            self.token, 1, self.question, 23, allow_unregistered=True))
+        self.assertEqual(self.record(), 'conflict')
+        self.assertEqual(self.store.observe(self.token, 1, self.question), (None, 'conflict'))
+
+    def test_unregistered_attempt_validates_answer_and_flag_before_writing(self):
+        with self.assertRaises(ValueError):
+            self.store.record_candidate_attempt(self.token, 1, self.question, 99,
+                                                allow_unregistered=True)
+        with self.assertRaises(ValueError):
+            self.store.record_candidate_attempt(self.token, 1, self.question, 22,
+                                                allow_unregistered=1)
+        self.assertFalse(self.path.exists())
+
+    def test_busy_database_fails_closed_with_bounded_wait(self):
+        self.store.observe(self.token, 1, self.question)
+        with closing(sqlite3.connect(self.path)) as blocker:
+            blocker.execute('BEGIN IMMEDIATE')
+            start = time.monotonic()
+            try:
+                with self.assertRaisesRegex(sqlite3.OperationalError, 'locked'):
+                    self.record()
+                self.assertLess(time.monotonic() - start, 1.0)
+            finally:
+                blocker.rollback()
+        self.assertEqual(self.store.observe(self.token, 1, self.question), (None, 'unknown'))
+        with closing(sqlite3.connect(self.path)) as db:
+            self.assertEqual(db.execute('SELECT count(*) FROM candidates').fetchone(), (0,))
+
+    def test_concurrent_candidate_conflicts_are_not_lost(self):
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            results = list(executor.map(lambda answer: QuestionStore(self.path).record_candidate(
+                self.token, 1, self.question, answer, 'reviewed', 'r1'), (22, 23)))
+        self.assertIn('conflict', results)
+        self.assertEqual(self.record(), 'conflict')
+
+    def test_concurrent_candidate_and_server_conflict_is_not_lost(self):
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            futures = [executor.submit(self.record), executor.submit(
+                QuestionStore(self.path).confirm, self.token, 1, self.question, 23)]
+            results = [future.result() for future in futures]
+        self.assertIn('conflict', results)
+        self.assertEqual(self.store.observe(self.token, 1, self.question), (None, 'conflict'))
+
+    def test_old_schema_migration_preserves_confirmed_evidence(self):
+        for version in (0, 1):
+            with self.subTest(version=version):
+                path = self.path.with_name('v' + str(version) + '.sqlite3')
+                store = QuestionStore(path)
+                store.confirm(self.token, 1, self.question, 22)
+                with closing(sqlite3.connect(path)) as db:
+                    db.execute('DROP TABLE candidates')
+                    db.execute('PRAGMA user_version=' + str(version))
+                    db.commit()
+                self.assertEqual(store.observe(self.token, 1, self.question), (22, 'confirmed'))
+                self.assertEqual(store.record_candidate(self.token, 1, self.question, 22,
+                                                       'reviewed', 'r1'), 'confirmed')
+                with closing(sqlite3.connect(path)) as db:
+                    self.assertEqual(db.execute('PRAGMA user_version').fetchone(), (2,))
 
 
 if __name__ == '__main__': unittest.main()

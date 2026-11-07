@@ -3,11 +3,9 @@
 from wlre.services.parser_diagnostics import diagnosed, checkpoint
 from wlre.storage.paths import data_root as user_data_root
 import hashlib
-import json
 import struct
 
 from wlre.network.wire import Reader, ProtocolError
-from wlre.paths import RESOURCE_ROOT
 
 
 def data_root():

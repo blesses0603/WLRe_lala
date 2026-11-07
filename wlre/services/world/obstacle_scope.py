@@ -1,7 +1,6 @@
 """Room.IsInHouseScene checks FurSysSceneNum, not all current scenes."""
 from wlre.paths import RESOURCE_ROOT
 from functools import lru_cache
-import json
 
 # Lua/Common/Define.lua FurSysSceneNum, checked by Room.IsInHouseScene.
 HOUSE_SCENES=frozenset((10299,10298,10000))

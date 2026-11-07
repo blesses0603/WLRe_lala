@@ -6,11 +6,9 @@ Never infer an option from names, map positions or generic TextData IDs.
 """
 import gzip
 import io
-import hashlib
 import json
 from pathlib import Path
 
-from wlre.paths import RESOURCE_ROOT
 
 NAME = 'npc_interact_1262.json.gz'
 EXPECTED_SHA256 = '37bba3db9ec06cc4838bec99a2fb16d6b49f7064edcfc46e59bf30ac08888592'

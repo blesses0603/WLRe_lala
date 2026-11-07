@@ -19,11 +19,14 @@ class LauncherCatalogTests(unittest.TestCase):
                          side_effect=ValueError('offline fixture'))
         identity.start()
         self.addCleanup(identity.stop)
-        dynamic = patch('wlre.services.world.dynamic_bundle_runtime.prepare_dynamic_runtime')
+        dynamic = patch('wlre.services.world.dynamic_bundle_runtime.sync_dynamic_runtime_sources')
         self.dynamic_prepare = dynamic.start()
         from types import SimpleNamespace
         self.dynamic_prepare.return_value = SimpleNamespace(source_sha256={})
         self.addCleanup(dynamic.stop)
+        self.full_prepare = self.enterContext(patch(
+            'wlre.services.world.dynamic_bundle_runtime.prepare_dynamic_runtime',
+            side_effect=AssertionError('Launcher must not build a discarded runtime')))
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
@@ -118,7 +121,8 @@ class LauncherCatalogTests(unittest.TestCase):
              patch('wlre.services.world.resource_gap_diagnostics.save_report'):
             result = prepare_on_launch(environ={})
         pinned_sync.assert_not_called()
-        self.dynamic_prepare.assert_called_once_with(sync=True)
+        self.dynamic_prepare.assert_called_once_with()
+        self.full_prepare.assert_not_called()
         self.assertEqual(automatic.call_count, 2)
         automatic.assert_any_call(download=True, parse=False)
         self.assertEqual(result['status'], 'downloaded_unparsed')
@@ -203,25 +207,26 @@ class LauncherCatalogTests(unittest.TestCase):
             path.write_bytes(content)
             self.assertIsNone(read_launcher_status(root=self.root))
 
-    def test_launcher_source_runs_preparation_before_gui(self):
+    def test_launcher_source_opens_shared_startup_gui_without_second_window(self):
         with patch.object(launcher, 'ensure_extractor_environment',
                           side_effect=lambda python, root: python):
             # PIL is present in CI (this case exercises that normal branch).
             with patch.object(launcher.subprocess, 'run',
                               side_effect=[Mock(returncode=0), Mock(returncode=0)]) as run:
                 self.assertEqual(launcher.main(), 0)
-        self.assertIn('wlre.services.world.launcher_catalog',
-                      run.call_args_list[0].args[0])
-        self.assertIn('--progress', run.call_args_list[0].args[0])
-        self.assertEqual(run.call_args_list[1].args[0][1:],
-                         ['-m', 'wlre.ui.gui'])
+        run.assert_called_once()
+        self.assertEqual(run.call_args.args[0][1:], ['-m', 'wlre.ui.gui'])
 
-    def test_native_entry_invokes_same_service_before_tk(self):
-        # A compiled EXE must not spawn a private Python launcher.
-        import inspect
-        source = inspect.getsource(WLRE_Client.main)
-        self.assertLess(source.index('run_with_progress(prepare_on_launch)'),
-                        source.index('from wlre.ui.gui import main as run_gui'))
+    def test_native_entry_uses_same_app_startup_without_separate_splash(self):
+        with patch('sys.argv', ['WLRE_Client']), \
+             patch('wlre.ui.gui.main') as run_gui, \
+             patch('wlre.services.world.launcher_catalog.prepare_on_launch') as prepare, \
+             patch('wlre.launcher_progress.run_with_progress') as splash, \
+             patch('wlre.storage.paths.error_log_file', return_value=self.root / 'error.log'):
+            self.assertEqual(WLRE_Client.main(), 0)
+        run_gui.assert_called_once_with()
+        prepare.assert_not_called()
+        splash.assert_not_called()
 
     def test_progress_relay_keeps_unapproved_status(self):
         events = []

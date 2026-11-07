@@ -4,11 +4,12 @@ from gui_support import isolate_gui_background_checks
 import os
 import tkinter as tk
 import unittest
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 from tkinter import ttk
 
 from wlre.ui.gui import App
 from wlre.ui.version_gate_controller import VersionGateController
+from wlre.ui.window_layout import wait_for_widget_mapping
 
 
 _UNPATCHED_START_VERSION_CHECK = VersionGateController.start_version_check
@@ -44,7 +45,7 @@ class PreloginVersionWindowTests(unittest.TestCase):
         self.patcher = patch.object(VersionGateController, "start_version_check")
         self.patcher.start()
         self.app = App(self.root)
-        self.root.update_idletasks()
+        wait_for_widget_mapping(self.app.version_window)
 
     def tearDown(self):
         self.patcher.stop()
@@ -58,6 +59,326 @@ class PreloginVersionWindowTests(unittest.TestCase):
         self.app._version_gate_messages.put((generation, data))
         self.app.drain_version_checks()
         self.root.update_idletasks()
+
+    def test_direct_app_uses_same_window_for_preparation_official_check_and_login(self):
+        original_window = self.app.version_window
+        initial_windows = [w for w in self.root.winfo_children() if isinstance(w, tk.Toplevel)]
+        stages = []
+        def prepare(*, progress):
+            progress('bundle_item', {'completed': 8, 'total': 24})
+            self.app.drain_version_checks()
+            self.root.update_idletasks()
+            stages.append(self.app._version_heading.get())
+            self.assertIn('8 / 24', self.app.version_gate_text.get())
+            self.assertEqual(self.app._version_progress._counts, (8, 24))
+            self.assertTrue(self.app._version_continue_button.instate(['disabled']))
+            self.assertEqual(self.app.login_window.state(), 'withdrawn')
+            return {'status': 'verified_official'}
+        def official(*, progress):
+            progress('official_metadata', {})
+            self.app.drain_version_checks()
+            stages.append(self.app._version_heading.get())
+            self.assertEqual(self.app._startup_phase, 'official')
+            self.assertIsNone(self.app._version_progress._counts)
+            self.assertEqual(self.app.login_window.state(), 'withdrawn')
+            return official_result()
+        with (patch('wlre.ui.version_gate_controller.prepare_on_launch', side_effect=prepare) as resource,
+              patch('wlre.ui.version_gate_controller.run_prelogin_check', side_effect=official) as check,
+              patch('wlre.ui.version_gate_controller.threading.Thread') as thread,
+              patch.object(self.app, 'start_lala_release_check')):
+            _UNPATCHED_START_VERSION_CHECK(self.app)
+            thread.call_args.kwargs['target']()
+            self.app.drain_version_checks()
+        resource.assert_called_once()
+        check.assert_called_once_with(progress=ANY)
+        self.assertIn('收集', stages[0])
+        self.assertIn('官方版本查詢', stages[1])
+        self.assertIs(self.app.version_window, original_window)
+        self.assertEqual(initial_windows,
+                         [w for w in self.root.winfo_children() if isinstance(w, tk.Toplevel)])
+        self.assertEqual(self.app.version_gate_state, 'ready')
+        self.assertEqual(self.app.login_window.state(), 'withdrawn')
+        self.assertFalse(self.app._version_retry_button.instate(['disabled']))
+        self.app.continue_to_login()
+        self.assertEqual(original_window.state(), 'withdrawn')
+        self.assertTrue(self.app._version_gate_entry_approved)
+
+    def test_safe_close_keeps_window_responsive_and_blocks_all_entry(self):
+        import threading
+        entered, release = threading.Event(), threading.Event()
+        def prepare(**kwargs):
+            entered.set()
+            release.wait(3)
+            return {'status': 'verified_official'}
+        with (patch('wlre.ui.version_gate_controller.prepare_on_launch', side_effect=prepare),
+              patch('wlre.ui.version_gate_controller.run_prelogin_check') as check,
+              patch.object(self.app, 'start_lala_release_check')):
+            try:
+                _UNPATCHED_START_VERSION_CHECK(self.app)
+                self.assertTrue(entered.wait(2))
+                self.app.close()
+                self.root.update_idletasks()
+                self.assertTrue(self.app.version_window.winfo_ismapped())
+                self.assertFalse(self.app._closing)
+                self.assertIn('安全結束', self.app._version_heading.get())
+                self.assertTrue(self.app._version_retry_button.instate(['disabled']))
+                self.assertTrue(self.app._version_continue_button.instate(['disabled']))
+                self.assertFalse(self.app.can_login_after_version_check())
+                self.assertEqual(self.app.login_window.state(), 'withdrawn')
+            finally:
+                release.set()
+                self.assertTrue(self.app._version_worker_done.wait(3))
+            check.assert_not_called()
+            with patch.object(self.root, 'destroy') as destroy:
+                self.app._finish_startup_close()
+                destroy.assert_called_once()
+                self.assertTrue(self.app._closing)
+
+    def test_session_end_returns_account_login_without_automatic_version_popup(self):
+        # All connection outcomes converge on the same session_finished event.
+        for outcome in ('manual_disconnect', 'remote_disconnect', 'failed_connect'):
+            with self.subTest(outcome=outcome):
+                self.deliver(official_result())
+                self.app.continue_to_login()
+                self.app.live_active = True
+                self.app.login_window.withdraw()
+                self.app.start_version_check.reset_mock()
+                self.app.events.put(('session_finished', None))
+                App._poll_once(self.app)
+                wait_for_widget_mapping(self.app.login_window)
+                self.assertFalse(self.app.live_active)
+                self.assertEqual(self.app.version_window.state(), 'withdrawn')
+                self.assertTrue(self.app.login_window.winfo_ismapped())
+                self.app.start_version_check.assert_not_called()
+                self.assertTrue(self.app._version_gate_entry_approved)
+                self.assertTrue(self.app.can_login_after_version_check())
+                self.assertFalse(self.app.connect_button.instate(['disabled']))
+                self.assertEqual(self.app.role_map, {})
+
+    def test_expired_relogin_checks_on_login_click_not_on_disconnect(self):
+        import time
+        self.deliver(official_result())
+        self.app.continue_to_login()
+        self.app._version_gate_checked = time.monotonic() - 301
+        self.app.live_active = True
+        self.app.start_version_check.reset_mock()
+        self.app.events.put(('session_finished', None))
+        App._poll_once(self.app)
+        self.app.start_version_check.assert_not_called()
+        self.assertEqual(self.app.version_window.state(), 'withdrawn')
+        self.assertFalse(self.app.connect_button.instate(['disabled']))
+        with (patch('wlre.ui.version_gate_controller.threading.Thread'),
+              patch.object(self.app, 'start_version_check',
+                           side_effect=lambda: _UNPATCHED_START_VERSION_CHECK(self.app)),
+              patch.object(self.app, 'start_lala_release_check'),
+              patch('wlre.ui.version_gate_controller.messagebox.showinfo'),
+              patch('wlre.ui.gui.run_client') as client):
+            self.app.connect()
+        client.assert_not_called()
+        self.assertEqual(self.app.login_window.state(), 'withdrawn')
+        self.assertNotEqual(self.app.version_window.state(), 'withdrawn')
+        self.assertFalse(self.app._version_gate_entry_approved)
+        self.assertEqual(self.app.version_gate_state, 'checking')
+
+    def test_inconsistent_result_never_gains_approval_after_disconnect(self):
+        self.deliver(official_result())
+        self.app.continue_to_login()
+        self.app._version_gate_result['remote']['status'] = 'unverified'
+        self.app.live_active = True
+        self.app.start_version_check.reset_mock()
+        self.app.events.put(('session_finished', None))
+        App._poll_once(self.app)
+        self.assertEqual(self.app.version_window.state(), 'withdrawn')
+        self.app.start_version_check.assert_not_called()
+        self.assertTrue(self.app.connect_button.instate(['disabled']))
+        with (patch('wlre.ui.version_gate_controller.messagebox.showwarning'),
+              patch('wlre.ui.gui.run_client') as client):
+            self.app.connect()
+        client.assert_not_called()
+        self.assertNotEqual(self.app.version_window.state(), 'withdrawn')
+
+    def test_runtime_row_label_is_not_forced_into_narrow_character_width(self):
+        self.root.update_idletasks()
+        label = self.app._version_resource_labels[3]
+        self.assertEqual(label.cget('text'), '目前 Runtime 資源版本')
+        self.assertIn(str(label.cget('width')), ('', '0'))
+        self.assertGreaterEqual(label.winfo_width(), label.winfo_reqwidth())
+
+    def test_login_reloads_official_server_database_after_startup_preparation(self):
+        row = {'id': 101, 'name': '官方測試｜1線 (101)',
+               'host': '8.8.8.8', 'port': 16988}
+        self.app.line_catalog = []
+        self.app.host.set(row['host'])
+        self.app.port.set(str(row['port']))
+        self.app.server_list_status_label.configure(text='先前尚無官方清單')
+        with (patch('wlre.ui.login_controller.server_lines.load', return_value=[row]) as load,
+              patch('wlre.ui.login_controller.server_lines.status_label',
+                    return_value='官方伺服器清單 · 已更新')):
+            self.app.show_login()
+        load.assert_called()
+        self.assertEqual(self.app.line_catalog, [row])
+        self.assertEqual(self.app.line_choices[row['name']], row)
+        self.assertEqual(self.app.server_list_status_label.cget('text'),
+                         '官方伺服器清單 · 已更新')
+        self.assertEqual(self.app.server_group.get(), '地球')
+        self.assertEqual(self.app.line_display.get(), '1線')
+        self.assertFalse(self.app._version_gate_entry_approved)
+        self.assertTrue(self.app.connect_button.instate(['disabled']))
+
+    def test_server_database_refresh_preserves_manual_login_fields(self):
+        from wlre.storage import server_lines
+        row = {'id': 101, 'name': '官方測試｜1線 (101)',
+               'host': '8.8.8.8', 'port': 16988}
+        self.app.host.set('manual.example.invalid')
+        self.app.account.set('offline-fixture')
+        self.app.password.set('offline-fixture')
+        self.app.server_line.set(server_lines.CUSTOM)
+        with (patch('wlre.ui.login_controller.server_lines.load', return_value=[row]),
+              patch('wlre.ui.login_controller.login_memory.save') as save):
+            for port in ('12345', ''):
+                with self.subTest(port=port):
+                    self.app.port.set(port)
+                    self.app.show_login()
+                    self.assertEqual(self.app.host.get(), 'manual.example.invalid')
+                    self.assertEqual(self.app.port.get(), port)
+                    self.assertEqual(self.app.account.get(), 'offline-fixture')
+                    self.assertEqual(self.app.password.get(), 'offline-fixture')
+                    self.assertEqual(self.app.server_group.get(), '自訂')
+        save.assert_not_called()
+
+    def test_login_status_explains_fresh_expired_and_invalid_results(self):
+        import time
+        self.deliver(official_result())
+        self.app.continue_to_login()
+        wait_for_widget_mapping(self.app.login_version_label)
+        self.assertTrue(self.app.login_version_label.winfo_ismapped())
+        for label in self.app.login_tab.winfo_children():
+            if isinstance(label, ttk.Label):
+                self.assertGreaterEqual(label.winfo_height(), label.winfo_reqheight())
+        self.assertIn('最多沿用 5 分鐘', self.app._login_version_status.get())
+        self.assertIn('非即時監測', self.app._login_version_status.get())
+        self.app._version_gate_checked = time.monotonic() - 301
+        self.app.show_login()
+        self.assertIn('已過期', self.app._login_version_status.get())
+        self.app._version_gate_result['remote']['status'] = 'unverified'
+        self.app._set_login_gate_button()
+        self.assertIn('資料不一致', self.app._login_version_status.get())
+        self.assertTrue(self.app.connect_button.instate(['disabled']))
+
+    def test_network_check_error_cannot_connect_even_with_previous_approval(self):
+        self.deliver(official_result())
+        self.app.continue_to_login()
+        with (patch('wlre.ui.version_gate_controller.run_prelogin_check',
+                    side_effect=OSError('offline fixture')),
+              patch('wlre.ui.version_gate_controller.threading.Thread') as thread,
+              patch.object(self.app, 'start_lala_release_check')):
+            _UNPATCHED_START_VERSION_CHECK(self.app)
+            thread.call_args.kwargs['target']()
+        self.app.drain_version_checks()
+        self.assertEqual(self.app.version_gate_state, 'blocked')
+        self.assertFalse(self.app._version_gate_entry_approved)
+        self.assertIn('版本尚未確認', self.app._login_version_status.get())
+        with (patch('wlre.ui.version_gate_controller.messagebox.showinfo'),
+              patch('wlre.ui.gui.run_client') as client):
+            self.app.connect()
+        client.assert_not_called()
+
+    def test_verified_unexpired_login_reaches_account_verification(self):
+        # Explicit offline fixture: do not rely on pre-migration seeded state.
+        self.app.set_profile({
+            'rx_xor': 0, 'tx_xor': 0, 'platform': 3, 'language': 0,
+            'verification_endpoint': {'host': 'example.invalid', 'port': 16988},
+            'game_endpoint': {'host': 'example.invalid', 'port': 16988}})
+        self.deliver(official_result())
+        self.app.continue_to_login()
+        self.app.account.set('offline-fixture')
+        self.app.password.set('offline-fixture')
+        with (patch.object(self.app, 'activate_account_settings'),
+              patch.object(self.app, 'save_saved_login', return_value=True),
+              patch.object(self.app, 'background', return_value=True) as background,
+              patch('wlre.ui.gui.run_client') as client):
+            self.app.connect()
+            background.assert_called_once()
+            background.call_args.args[0]()
+        client.assert_called_once()
+        self.assertIs(client.call_args.kwargs['verify_first'], True)
+        self.assertEqual(self.app.version_window.state(), 'withdrawn')
+
+    def test_shared_cyan_bar_stops_restarts_and_cleans_up(self):
+        from wlre.progress_widgets import ACCENT, TRACK, CyanProgress
+        progress = self.app._version_progress
+        self.assertIsInstance(progress, CyanProgress)
+        self.app.version_gate_state = 'checking'
+        self.app._render_version_window()
+        timer = progress._timer
+        self.assertIsNotNone(timer)
+        self.app._render_version_window()
+        self.assertEqual(progress._timer, timer)
+        self.root.update_idletasks()
+        self.assertEqual(progress.canvas.cget('background'), TRACK)
+        self.assertEqual(progress.canvas.itemcget(progress._fill, 'fill'), ACCENT)
+        self.deliver(official_result('1275', '1262', 'blocked'))
+        self.assertIsNone(progress._timer)
+        self.assertTrue(self.app._version_continue_button.instate(['disabled']))
+        self.app.version_gate_state = 'checking'
+        progress.reset()  # Only a new attempt may release the terminal latch.
+        self.app._render_version_window()
+        self.assertIsNotNone(progress._timer)
+        progress.canvas.destroy()
+        self.assertIsNone(progress._timer)
+
+    def test_formal_result_is_separate_from_collection_summary_and_stops_animation(self):
+        import time
+        self.app._launcher_catalog_status = '官方原始資源已保存；各類解析結果另列｜收集階段解析 7/7'
+        self.app._startup_started_at = time.monotonic() - 27
+        self.app._startup_stage_started_at = self.app._startup_started_at
+        for phase, title in (('official_metadata', '官方版本查詢'),
+                             ('official_runtime', '正式 Runtime 驗證'),
+                             ('official_database', '資料庫內容比對')):
+            self.app._official_progress.report(phase, {})
+            self.app.drain_version_checks()
+            self.assertIn(title, self.app._version_heading.get())
+            self.assertIn('已用 27 秒', self.app._startup_elapsed.get())
+            self.assertIsNotNone(self.app._version_progress._timer)
+        self.deliver(official_result())
+        self.assertIn('正式 Runtime／登入驗證：', self.app._version_remote.get())
+        self.assertIn('\n資源收集紀錄：', self.app._version_remote.get())
+        self.assertIn('7/7', self.app._version_remote.get())
+        self.assertIn('完成 · 共用 27 秒', self.app._startup_elapsed.get())
+        progress = self.app._version_progress
+        self.assertTrue(progress._finished)
+        self.assertIsNone(progress._timer)
+        for _ in range(5):
+            self.app._official_progress.report('official_runtime', {})
+            self.app.drain_version_checks()
+            self.app._render_version_window()
+            progress.set_counts(None)
+        self.assertIsNone(progress._timer)
+        self.assertTrue(progress._finished)
+
+    def test_progress_timer_has_bounded_rate_and_zero_terminal_ticks(self):
+        import time
+        progress = self.app._version_progress
+        progress.stop()
+        with patch.object(progress.canvas, 'after', wraps=progress.canvas.after) as after:
+            progress.reset()
+            deadline = time.perf_counter() + 1.05
+            while time.perf_counter() < deadline:
+                self.root.update()
+                time.sleep(.004)
+            active_calls = after.call_count
+            self.assertGreaterEqual(active_calls, 2)
+            self.assertLessEqual(active_calls, 28)  # One 40 ms loop, never duplicate timers.
+            self.deliver(official_result('1275', '1262', 'blocked'))
+            offset = progress._offset
+            terminal_calls = after.call_count
+            deadline = time.perf_counter() + .25
+            while time.perf_counter() < deadline:
+                self.root.update()
+                time.sleep(.004)
+            self.assertEqual(after.call_count, terminal_calls)
+            self.assertEqual(progress._offset, offset)
+            self.assertIsNone(progress._timer)
 
     def test_version_screen_before_account_fields(self):
         self.assertTrue(self.app.version_window.winfo_ismapped())
@@ -207,11 +528,18 @@ class PreloginVersionWindowTests(unittest.TestCase):
                 collect(child)
 
         collect(window)
-        self.assertFalse(any(isinstance(w, tk.Canvas) for w in widgets))
+        self.assertEqual([w for w in widgets if isinstance(w, tk.Canvas)],
+                         [self.app._version_progress.canvas])
         self.assertFalse(any(isinstance(w, __import__("tkinter").ttk.Scrollbar)
                              for w in widgets))
         self.assertGreaterEqual(window.winfo_height(), min(590, window.winfo_screenheight() - 24))
-        self.assertLessEqual(window.winfo_height(), min(710, window.winfo_screenheight() - 24))
+        # 710 is the initial size; truthful phase/elapsed text may grow it to
+        # the content request, still bounded by the existing screen margin.
+        self.assertLessEqual(window.winfo_height(), window.winfo_screenheight() - 48)
+        self.assertTrue(self.app._version_elapsed_label.winfo_ismapped())
+        self.assertLessEqual(
+            self.app._version_elapsed_label.winfo_rooty() + self.app._version_elapsed_label.winfo_height(),
+            window.winfo_rooty() + window.winfo_height())
         self.assertTrue(window.resizable()[0])
         self.assertTrue(window.resizable()[1])
         self.assertTrue(self.app._version_release_panel.winfo_ismapped())
@@ -291,7 +619,7 @@ class PreloginVersionWindowTests(unittest.TestCase):
         alert = self.app._version_alert_panel
         resource = self.app._version_resource_panel
         release = self.app._version_release_panel
-        progress = self.app._version_progress
+        progress = self.app._version_progress.canvas
         button = self.app._version_continue_button
         self.assertLessEqual(
             alert.winfo_rooty() + alert.winfo_height(),
@@ -341,7 +669,7 @@ class PreloginVersionWindowTests(unittest.TestCase):
         release = self.app._version_release_panel
         self.assertTrue(release.winfo_ismapped())
         self.assertLessEqual(release.winfo_rooty() + release.winfo_height(),
-                             self.app._version_progress.winfo_rooty())
+                             self.app._version_progress.canvas.winfo_rooty())
         self.assertGreater(window.winfo_height(), 590)
 
     def test_reopen_revokes_previous_approval(self):

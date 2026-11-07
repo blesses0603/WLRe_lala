@@ -1,7 +1,7 @@
-"""Launcher-owned official resource preparation, never the login view.
+"""Official resource preparation before login, shared by every desktop entry.
 
-Both the source-code bootstrapper and the compiled desktop entry point call
-this service BEFORE starting Tk. Official catalog reports are informational and cannot
+App runs this service in the startup window's background worker; the standalone
+CLI remains available. Official catalog reports are informational and cannot
 approve game versions, login, navigation or network packet sending.
 """
 from __future__ import annotations
@@ -97,7 +97,7 @@ def _store_status(report, *, root=None):
 
 @update_diagnostics('root', injected=('runner',))
 def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
-    """Synchronously verify official resources before Tk starts.
+    """Synchronously verify official resources; desktop callers use a worker.
 
     Failure is reported without blocking LaLa's own official login check.
     Callers must not treat any return value or the private receipt as approval.
@@ -151,10 +151,12 @@ def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
                 progress('runtime_identity_unavailable', {})
     if real_launcher_run:
         try:
-            from wlre.services.world.dynamic_bundle_runtime import prepare_dynamic_runtime
+            from wlre.services.world.dynamic_bundle_runtime import sync_dynamic_runtime_sources
             if progress is not None:
                 progress('runtime_bundle_plan', {})
-            prepare_dynamic_runtime(sync=True)
+            # Prepare the exact same bounded sources, but do not construct a
+            # full runtime only to discard it before the independent login gate.
+            sync_dynamic_runtime_sources()
             if progress is not None:
                 progress('runtime_bundle_ready', {})
         except (OSError, ValueError, RuntimeError):

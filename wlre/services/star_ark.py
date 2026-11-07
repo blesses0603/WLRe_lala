@@ -8,6 +8,8 @@ import sqlite3
 from wlre.network.wire import Packet,Reader,Writer,ProtocolError
 from wlre.storage.ark_questions import QuestionStore,identity as question_identity
 from wlre.services.ark_first_answer import solve as solve_first_answer
+from wlre.services.ark_candidates import resolve as resolve_candidate, Decision
+from wlre.services import ark_candidate_data
 
 
 def defaults():
@@ -16,7 +18,7 @@ def defaults():
         starcoin=dict(ready=False,reliable=False,amount=None,revision=0),
         budget=120,hours=1,reserved=0,confirmed=0,settings_revision=0,catalog_token=None,
         rows=[],quote=None,question=None,answers={},attempted=[],generation=0,
-        question_store_status='題庫會保存伺服器確認答對的答案',
+        question_store_status='已審核候選仍可能答錯；伺服器確認答案另行保存',
         status='等待星之方舟與每日任務同步')
 
 
@@ -140,44 +142,90 @@ def _question_current(state,p):
             and p['daily_generation']==state.daily_tasks['generation'])
 
 
+def _candidate_decision(p,q):
+    from wlre.services.world.dynamic_bundle_runtime import current_runtime,current_catalog_token
+    runtime=current_runtime();identity=getattr(runtime,'catalog_identity',None)
+    catalog=getattr(runtime,'ark_catalog',None)
+    if (current_catalog_token()!=p['token'] or getattr(identity,'key',None)!=p['token'][1]
+            or not isinstance(catalog,dict)):
+        return Decision(None,'version_mismatch','官方資料身分已變更')
+    texts=catalog.get('texts',{})
+    if (texts.get(q['question'])!=q['text']
+            or any(texts.get(i)!=label for i,label in zip(q['options'],q['labels']))):
+        return Decision(None,'changed','目前官方文字與已收題目不一致')
+    decision=resolve_candidate(q,identity)
+    if current_catalog_token()!=p['token']:
+        return Decision(None,'version_mismatch','官方資料身分已變更')
+    return decision
+
+
 def _remember_question(state,p,q,correct=None):
-    """A failed private cache must never break the game receive loop."""
+    """Separate reviewed candidates from server evidence; all faults fail closed."""
     d=state.star_ark
     try:
         key=question_identity(p['token'],p['role'],q)[2]
         store=QuestionStore()
         if correct is None:
             answer,status=store.observe(p['token'],p['role'],q)
+            q.update(known_answer=None,answer_source='',answer_kind='',candidate_reason='')
+            decision=_candidate_decision(p,q)
+            q['candidate_reason']=decision.reason
+            if status!='conflict':
+                if decision.status in ('quarantined','changed','version_mismatch'):
+                    answer=None;status=decision.status
+                elif decision.status=='candidate':
+                    status=store.record_candidate(p['token'],p['role'],q,decision.answer,
+                        decision.source,decision.revision)
+                    answer=decision.answer if status in ('candidate','confirmed') else None
+                    q['candidate_revision']=decision.revision
+                    q['candidate_source']=decision.source
+                elif status=='unknown':
+                    answer=solve_first_answer(q)
+                    if answer is not None:status='computed'
             q['known_answer']=answer
-            q['answer_source']='永久題庫（伺服器已確認）' if answer is not None else ''
-            if status=='unknown':
-                answer=solve_first_answer(q)
-                if answer is not None:
-                    q['known_answer']=answer
-                    q['answer_source']='精確算式計算（尚待伺服器確認）'
-                    status='computed'
+            q['answer_kind']={'confirmed':'server_confirmed','candidate':'reviewed_candidate',
+                              'computed':'computed'}.get(status,'')
+            q['answer_source']={
+                'confirmed':'永久題庫（伺服器已確認）',
+                'candidate':'星舟候選庫（1296內容核對；未經伺服器確認，可能答錯）',
+                'computed':'精確算式計算（尚待伺服器確認）',
+            }.get(status,'')
+            if status=='candidate' and decision.source=='user_reviewed':
+                q['answer_source']='使用者覆核候選（未經伺服器確認，可能答錯）'
         elif correct:
             answer=q['options'][q['selected']-1]
             status=store.confirm(p['token'],p['role'],q,answer)
-            if status=='confirmed':d['answers'][key]=answer
-            else:d['answers'].pop(key,None)
+            if status=='confirmed':
+                d['answers'][key]=answer
+                q.update(known_answer=answer,answer_kind='server_confirmed',
+                         answer_source='永久題庫（伺服器已確認）')
+            else:
+                d['answers'].pop(key,None)
+                q.update(known_answer=None,answer_kind='',answer_source='')
         else:
             answer=q['options'][q['selected']-1]
-            store.reject(p['token'],p['role'],q,answer,
-                candidate=(q.get('answer_source')=='精確算式計算（尚待伺服器確認）'
-                           and answer==q.get('known_answer')))
+            rejected_candidate=(q.get('selected_candidate',False) or (q.get('answer_kind') in ('computed','reviewed_candidate')
+                                and answer==q.get('known_answer')))
+            store.reject(p['token'],p['role'],q,answer,candidate=rejected_candidate)
             d['answers'].pop(key,None)
-            status='wrong'
+            q.update(known_answer=None,answer_kind='',answer_source='')
+            status='wrong_candidate' if rejected_candidate else 'wrong'
         d['question_store_status']={
             'confirmed':'已保存伺服器確認答案；相同角色與版本可跨登入重用',
-            'unknown':'已收錄題目；無確認答案且不屬於可精確計算題型，請人工選答',
+            'pending':'此候選先前已送出但結果未確認，停止自動重送；請人工處理',
+            'unknown':'無已確認答案或適用候選，請人工選答',
             'computed':'首次遇題：已精確計算並唯一匹配選項，尚待伺服器確認',
+            'candidate':'首次遇題：使用已審核候選，仍可能答錯；尚待伺服器確認',
+            'quarantined':'此題有爭議，已隔離候選，請人工選答：'+decision.reason if correct is None else '',
+            'changed':'題目或選項資料不符，停止自動選答',
+            'version_mismatch':'候選資料版本不符，請人工選答',
             'conflict':'答案紀錄衝突，已停止此題自動選答',
             'wrong':'此次回答錯誤；不由錯誤回覆推測答案',
+            'wrong_candidate':'此次候選回答錯誤，已隔離；不推測或重試其他答案',
         }[status]
-    except (OSError,sqlite3.Error,ValueError,KeyError,TypeError):
-        q['known_answer']=None;q['answer_source']=''
-        d['question_store_status']='永久題庫無法讀寫，請人工選答；本次答案未保存'
+    except (OSError,sqlite3.Error,ValueError,KeyError,TypeError,AttributeError):
+        q.update(known_answer=None,answer_source='',answer_kind='')
+        d['question_store_status']='題庫無法讀寫或驗證，請人工選答；本次答案未保存'
 
 
 def apply_ark(state,event):
@@ -264,7 +312,7 @@ def apply_ark(state,event):
         d['question']={**event,'selected':None,'text':texts[event['question']],
                        'labels':[texts[i] for i in event['options']]};p['due']=None
         _remember_question(state,p,d['question'])
-        d['status']='等待選擇問答答案；沒有已確認答案時不猜題'
+        d['status']='已載入題目；自動作答依題庫狀態及問答開關判定'
     elif kind=='ark_answer_result' and p and p['kind']=='question':
         q=d['question']
         if not q or q['selected'] is None or p['result']:freeze(d,'收到無法對應的問答結果')
@@ -407,6 +455,14 @@ def command(state,value,world_acknowledged,now=None):
                 or p['token']!=runtime_catalog()[1] or p['role']!=state.player.get('role_id')
                 or p['daily_generation']!=state.daily_tasks['generation']):raise ProtocolError('沒有可回覆的當前方舟問答')
         if type(index) is not int or not 1<=index<=4 or q['selected'] is not None:raise ProtocolError('答案索引無效或已送出')
+        q['selected_candidate']=False
+        try:
+            if any(row[0]==q['question'] and row[1]==q['options'][index-1]
+                   for row in ark_candidate_data.QUESTIONS):
+                q['selected_candidate']=QuestionStore().record_candidate_attempt(
+                    p['token'],p['role'],q,q['options'][index-1],allow_unregistered=True)
+        except (OSError,ValueError,sqlite3.Error) as exc:
+            raise ProtocolError('候選送出紀錄無法保存，未送出答案；請檢查儲存狀態') from exc
         q['selected']=index;p['due']=now+20;d['status']='已送出答案，等待結果與事件完成';return [Packet(191,7,bytes([index]))]
     event=None
     if action in ('fight','question'):
@@ -448,12 +504,22 @@ def tick(state,world_acknowledged,now=None):
             d.update(pending=None,question=None,status='伺服器已確認方舟事件完成；每日進度另以 S124 為準')
         elif p['due'] is not None and now>=p['due']:freeze(d,'方舟操作逾時，結果不明')
         elif (p['kind']=='question' and d['question'] and d['question']['selected'] is None
+              and world_acknowledged and not d['uncertain']
               and d['enabled'] and d['questions_enabled'] and state.automation['enabled']):
             q=d['question']
             if q.get('known_answer') is not None:
                 _remember_question(state,p,q)
                 answer=q.get('known_answer')
                 if answer in q['options']:
+                    if q.get('answer_kind')=='reviewed_candidate':
+                        try:
+                            claimed=QuestionStore().claim_candidate(p['token'],p['role'],q,answer)
+                        except (OSError,sqlite3.Error,ValueError,KeyError,TypeError):
+                            claimed=False
+                        if not claimed:
+                            q.update(known_answer=None,answer_kind='',answer_source='')
+                            d['question_store_status']='候選送答未能取得唯一紀錄，停止自動重送；請人工處理'
+                            return []
                     packets=command(state,dict(action='answer',index=q['options'].index(answer)+1),world_acknowledged,now)
                     d['status']='已依'+q.get('answer_source','確認答案')+'送出答案，等待伺服器結果與事件完成'
                     return packets
@@ -471,7 +537,7 @@ def tick(state,world_acknowledged,now=None):
             definition=catalog['fights'].get(row['id'],{}) if row['kind']==1 else {}
             d['rows'].append({**row,'name':definition.get('name',f'事件 {row["id"]}'),
                 'execution':('主線僅供檢視' if row['main'] else
-                    {1:'沿用已啟用的自動戰鬥',2:'交付物品尚未自動代做',3:'已知答案可自動回覆；未知答案需選擇',4:'商人購買尚未自動代做'}[row['kind']])})
+                    {1:'沿用已啟用的自動戰鬥',2:'交付物品尚未自動代做',3:'已確認或已審核候選可自動回覆；其餘請選擇',4:'商人購買尚未自動代做'}[row['kind']])})
     if not world_acknowledged or not d['enabled'] or not state.automation['enabled']:return []
     issue=problem(state)
     if issue:d['status']=issue;return []

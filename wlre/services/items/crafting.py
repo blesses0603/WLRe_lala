@@ -2,8 +2,7 @@
 from wlre.core.state_ownership import writes
 from wlre.services.items import reservations
 from wlre.services.coordination import reason as coordination_reason
-from wlre.paths import RESOURCE_ROOT
-import copy,json,time
+import copy,time
 from wlre.network.wire import Packet, Reader, Writer, ProtocolError
 from wlre.services.items.combat_resources import item_name, available
 

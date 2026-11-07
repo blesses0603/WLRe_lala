@@ -2,7 +2,6 @@
 from collections import deque
 from datetime import datetime
 import tkinter as tk
-from wlre.ui.window_layout import configure_dialog
 from tkinter import ttk
 from wlre.ui.theme import group
 from wlre.services.social.chat import CHANNELS, chat_packet, plain_text
@@ -238,20 +237,11 @@ class ChatPanel(ttk.Frame):
 
     def show_emoji_picker(self):
         if self.emoji_picker and self.emoji_picker.winfo_exists():self.emoji_picker.lift();return
-        w=self.emoji_picker=tk.Toplevel(self);w.title('遊戲表情');configure_dialog(w,600,480);w.resizable(False,False)
-        box=ttk.Frame(w,padding=8);box.pack(fill='both',expand=True)
-        bottom=ttk.Frame(box);bottom.pack(side='bottom',fill='x');grid=ttk.Frame(box);grid.pack(fill='both',expand=True)
-        rows=[int(k) for k,v in self.emojis.catalog.items() if v.get('show_in_list',True) and v.get('available',True)];self.emoji_page=0
-        label=tk.StringVar();ttk.Label(bottom,textvariable=label).pack(side='left')
-        def refresh(delta=0):
-            self.emoji_page=max(0,min(self.emoji_page+delta,max(0,(len(rows)-1)//32)))
-            for child in grid.winfo_children():child.destroy()
-            for i,index in enumerate(rows[self.emoji_page*32:(self.emoji_page+1)*32]):
-                token=f'[Emoji{index}]';picture=self.emojis.get(token,32)
-                button=ttk.Button(grid,text=str(index),image=picture,compound='top',width=4,command=lambda t=token:self.insert_emoji(t));button.grid(row=i//8,column=i%8,padx=2,pady=2)
-            label.set(f'{self.emoji_page+1}/{max(1,(len(rows)+31)//32)} · 點選插入輸入框' if rows else '官方表情尚未就緒；聊天仍可使用文字')
-        ttk.Button(bottom,text='上一頁',command=lambda:refresh(-1)).pack(side='right');ttk.Button(bottom,text='下一頁',command=lambda:refresh(1)).pack(side='right')
-        refresh()
+        from wlre.ui.emoji_picker import EmojiPicker
+        try:
+            self.emoji_picker = EmojiPicker(self, self.emojis, self.insert_emoji)
+        except ValueError as error:
+            self.status.set(str(error))
 
     def insert_emoji(self,token):
         self.entry.insert('insert',token);self.entry.focus_set()

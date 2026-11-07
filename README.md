@@ -261,7 +261,7 @@ py -m tools.resources.install_npc_text_1262 "WLRE_1262_NPC_繁中資料索引包
 
 > **UnityFS 解包器（PR #56，v0.6.1 開發候選）**：原生 Windows／macOS 建置流程已加入 `requirements-extractor.txt`（固定 UnityPy 版本），預計隨 EXE／APP 一併封裝，使用者不需另外安裝 Python/UnityPy。新建置自檢 `--self-test-unityfs` 會核對內建模組及 LZ4／Brotli。**正式打包產物與真實官方 Bundle 解包仍須分別驗收**；相關程式已合併 main，但尚未發布正式 Release。
 
-> **Launcher 自動資源候選（同一 Draft PR）**：LaLa 的原始碼版啟動器及 Nuitka 正式入口共用資源準備服務，**先顯示 Launcher 資源準備進度視窗，再開啟主程式**，並讀取官方版本與兩包 Manifest，依精確 AssetPath 下載／校驗必要 Bundle、解包並把新版候選資料存入個人快取；**不需自行建立 bindings.json**。登入前版本視窗僅顯示 Launcher 的唯讀狀態，不會再次下載。沒有網路、官方更動未知格式或超過下載額度時安全停止。新生成的 SHA 僅作完整性校驗，不代表正式版本已核准，未知新版仍不會自動解除登入封鎖。Launcher 會以真實事件顯示 Manifest 驗證、必要 Bundle 完成筆數、四類資料解包及候選快取狀態，不顯示猜測百分比。開發者也可使用 `python -m tools.plan_official_catalog --download --parse` 單獨執行；正式 EXE 仍需打包與真實 Bundle 驗收。
+> **單一啟動與版本檢查視窗（開發中）**：原始碼啟動器、直接 GUI 與 Nuitka 入口共用同一視窗。先在背景執行既有官方資源準備，再獨立核對官方版本、資料庫內容與 Runtime，通過並確認後才進入登入。深藍／青色進度條只顯示實際階段與數量，不猜測總百分比。每個 App 的初始資源準備只執行一次；後續版本重查仍完整驗證。斷線後直接回帳號頁，不自動彈版檢；登入仍受上次完整驗證結果與原有 300 秒有效期限制，過期或不一致須重查。資源收據不能授權登入。詳見 [啟動進度與版本視窗](docs/LAUNCHER_PRESENTATION.md)；正式 EXE 與真實官方資源仍須另行驗收。
 
 **更新成品**：先關閉舊版；若 Releases 已提供新版，請下載對應平台的完整壓縮檔，**解壓至新資料夾**後再執行 Windows `WLRe_LaLa.exe` 或 macOS App。資料夾版不可只複製 EXE，也不建議覆蓋舊版執行目錄。
 

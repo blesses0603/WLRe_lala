@@ -42,7 +42,15 @@ def configured_sources(environ=None):
     return {"ResourcePath_PC.dat": RESOURCE_MAP_URL}
 
 
-def _run_dynamic_check(remote):
+def _report_progress(progress, phase):
+    if callable(progress):
+        try:
+            progress(phase, {})
+        except Exception:
+            pass  # Display-only callbacks cannot change the verification verdict.
+
+
+def _run_dynamic_check(remote, *, progress=None):
     """Permit login when current official runtime and database content agree."""
     from wlre.services.world.catalog_runtime import official_package_versions
     from wlre.services.world.dynamic_bundle_runtime import activate_for_official, invalidate_runtime
@@ -71,6 +79,7 @@ def _run_dynamic_check(remote):
                   status="runtime_unavailable",
                   message="官方版本已確認（"+support+"）；目前版本的完整 Runtime 未通過驗證，禁止登入。")
     try:
+        _report_progress(progress, 'official_runtime')
         runtime=activate_for_official(remote)
         identity=runtime.catalog_identity.as_dict()
         if compare_database_identity(remote,identity)!='same':
@@ -88,6 +97,7 @@ def _run_dynamic_check(remote):
     from wlre.services.world.resource_database import read_active_database_identity, database_matches_runtime
     database=data_root()/'official_sync'/'derived_catalogs'/'resource_inventory.sqlite3'
     try:
+        _report_progress(progress, 'official_database')
         stored=read_active_database_identity(database)
         result['database_comparison']=compare_database_identity(remote,stored)
         if database_matches_runtime(database,runtime):
@@ -102,10 +112,11 @@ def _run_dynamic_check(remote):
     return result
 
 
-def run_prelogin_check(sources=None, *, checker=None):
+def run_prelogin_check(sources=None, *, checker=None, progress=None):
     """Use verified current manifests/runtime in production; fixtures are explicit."""
+    _report_progress(progress, 'official_metadata')
     if checker is None and sources is None:
-        return _run_dynamic_check(check_official_game_resources())
+        return _run_dynamic_check(check_official_game_resources(), progress=progress)
     remote=checker(sources or {}) if checker is not None else check_official_versions(sources)
     packages=remote.get('packages',{})
     changed=(remote.get('status')=='resources_changed' or

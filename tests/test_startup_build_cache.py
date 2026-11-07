@@ -78,5 +78,5 @@ class StartupSerialization(unittest.TestCase):
             self.assertEqual(lock.call_args.kwargs['timeout'],300)
             self.assertIn('install',run.call_args_list[1].args[0])
             self.assertTrue(run.call_args_list[2].kwargs['check'])
-            self.assertIn('wlre.services.world.launcher_catalog', run.call_args_list[3].args[0])
-            self.assertIn('--progress', run.call_args_list[3].args[0])
+            self.assertEqual(run.call_args_list[3].args[0][1:], ['-m', 'wlre.ui.gui'])
+            self.assertEqual(run.call_count, 4)

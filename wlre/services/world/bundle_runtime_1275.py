@@ -212,7 +212,8 @@ def load_verified_bundle_runtime(*, sync_root=None, _verified_context=None):
         parse_text_data, parse_catalog as parse_expedition,
         parse_npcs as parse_expedition_npcs,
         ADVENTURE_1275_SHA256, ADVENTURE_LEVEL_1275_SHA256)
-    from wlre.services.world.eve_v115 import derive_eve_index
+    from wlre.services.world.eve_v115 import (
+        EveDecodeError, derive_eve_index, derive_eve_indexes)
     from wlre.services.world.doors_1275 import (
         SOURCE_SHA256 as EVE_SHA256, parse_doors_1275)
     from wlre.services.instance_catalog import parse_stages
@@ -338,8 +339,23 @@ def load_verified_bundle_runtime(*, sync_root=None, _verified_context=None):
         eve = sources['Eve']
         if not dynamic and hashlib.sha256(eve).hexdigest() != EVE_SHA256:
             raise BundleRuntimeUnavailable('1275 Eve 來源 SHA-256 不符')
-        npc = stored('npc', ('Eve',), lambda: json.loads(derive_eve_index(eve, 'EventData.NewNpc')))
-        interacts = stored('interactions', ('Eve',), lambda: json.loads(derive_eve_index(eve, 'EventData.NewInteract')))
+        eve_indexes = None
+        combined_failed = False
+        def eve_index(source):
+            nonlocal eve_indexes, combined_failed
+            # Share only this load's parse work; verified SQLite hits stay lazy.
+            if eve_indexes is None and not combined_failed:
+                try:
+                    eve_indexes = derive_eve_indexes(eve)
+                except EveDecodeError:
+                    # Keep per-feature failures/imports when only one index
+                    # exceeds its limit. Never replace a rejected index.
+                    combined_failed = True
+            if combined_failed:
+                return json.loads(derive_eve_index(eve, source))
+            return json.loads(eve_indexes[source])
+        npc = stored('npc', ('Eve',), lambda: eve_index('EventData.NewNpc'))
+        interacts = stored('interactions', ('Eve',), lambda: eve_index('EventData.NewInteract'))
         if not dynamic and (npc.get('record_count') != 10975
                 or interacts.get('record_count') != 1634
                 or len(npc.get('scenes', {})) != 1262):

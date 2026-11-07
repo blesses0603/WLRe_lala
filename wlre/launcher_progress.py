@@ -2,14 +2,17 @@
 
 This window is created, updated and destroyed only on Tk's main thread.
 The resource worker never references the window. It sends bounded event data
-through a queue; completed/failed preparation never grants login permission.
+through a coalescing mailbox; completed/failed preparation never grants login permission.
 """
 from __future__ import annotations
 
 import os
-import queue
 import sys
 import threading
+
+from wlre.progress_widgets import (
+    ACCENT as _ACCENT, TRACK as _TRACK, CyanProgress as _CyanProgress,
+)
 
 STEPS = (
     'official_version', 'manifest', 'bundle_plan', 'bundle_sync',
@@ -21,6 +24,9 @@ FEATURE_LABELS = {
 }
 STEP_LABELS = {
     'official_version': '檢查官方版本',
+    'official_metadata': '正在查詢官方最新版本識別值',
+    'official_runtime': '正在完整驗證官方 Runtime 與來源內容',
+    'official_database': '正在逐項核對資料庫與已驗證 Runtime 的實際內容',
     'official_revision': '已比對官方版本變化，準備增量資源',
     'official_revision_unavailable': '本次版本紀錄無法保存，保留資源校驗結果',
     'manifest': '讀取並驗證 Manifest',
@@ -45,15 +51,20 @@ STEP_LABELS = {
     'download_ready': 'Bundle 同步完成',
     'verified_official': '官方資源資料已建立',
     'extract_failed': '官方資源資料解析失敗',
+    'server_list_ready': '官方伺服器清單已驗證並同步',
+    'server_list_unavailable': '官方伺服器清單暫不可用，登入仍須獨立驗證',
+    'runtime_identity_verified': '官方版本與資源清單已核對',
+    'runtime_identity_unavailable': '官方版本資訊暫不可用，繼續獨立驗證',
     'runtime_bundle_plan': '核對當次官方版本所需的 Bundle',
-    'runtime_bundle_ready': '官方 Runtime Bundle 已下載並完成完整性校驗',
+    'runtime_bundle_ready': '官方 Runtime 來源已同步，接著由正式檢查驗證',
     'runtime_bundle_unavailable': '官方 Runtime Bundle 尚未補齊或驗證，將繼續官方資源資料流程',
 }
 _BG = '#101927'
 _PANEL = '#172539'
 _FG = '#eef6ff'
 _MUTED = '#a6b9cc'
-_ACCENT = '#56c8e9'
+_WARNING = '#f0c674'
+_POLL_MS = 80
 
 
 def progress_message(phase, details=None):
@@ -86,7 +97,7 @@ def progress_message(phase, details=None):
         done, total = details.get('completed'), details.get('total')
         if (type(done) is int and type(total) is int
                 and 0 <= done <= total and total > 0):
-            message = f'已驗證整理 {done} / {total} 份官方資源（原始資料官方資源）'
+            message = f'已驗證整理 {done} / {total} 份官方資源'
             blockers = details.get('formal_blockers')
             if (phase == 'raw_rebuild_ready' and type(blockers) is list
                     and 0 < len(blockers) <= 8
@@ -135,6 +146,19 @@ def progress_message(phase, details=None):
 
 
 def _format_stage(phase):
+    official_stages = {
+        'official_metadata': '官方版本查詢',
+        'official_runtime': '正式 Runtime 驗證',
+        'official_database': '資料庫內容比對',
+    }
+    if phase in official_stages:
+        return official_stages[phase]
+    if phase.startswith('server_list_'):
+        return '同步官方伺服器清單'
+    if phase.startswith('runtime_identity_'):
+        return '核對官方版本'
+    if phase.startswith('runtime_bundle_'):
+        return '準備必要資源'
     if phase in ('raw_rebuild', 'raw_resource_item', 'raw_rebuild_ready',
                  'raw_rebuild_unavailable'):
         return '補建資源清單（官方資源不直接啟用）'
@@ -151,6 +175,58 @@ def _format_stage(phase):
     except ValueError:
         return '檢查中'
 
+
+
+def _progress_counts(phase, details):
+    """Only actual item counts authorize a determinate *stage* indicator."""
+    if phase not in ('bundle_item', 'raw_resource_item') or not isinstance(details, dict):
+        return None
+    done, total = details.get('completed'), details.get('total')
+    if type(done) is int and type(total) is int and 0 <= done <= total <= 1000000 and total > 0:
+        return done, total
+    return None
+
+
+class _ProgressMailbox:
+    """One display snapshot, sticky failure and terminal receipt, not a backlog.
+
+    Coalescing affects presentation only. The resource task still performs every
+    check. No Tk object is touched by the producer, and errors survive bursts.
+    """
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._latest = self._failure = self._terminal = None
+
+    def report(self, phase, details):
+        if phase not in STEP_LABELS:
+            return
+        update = (_format_stage(phase), progress_message(phase, details),
+                  _progress_counts(phase, details))
+        with self._lock:
+            self._latest = update
+            if phase == 'extract_failed':
+                self._failure = update[1]
+
+    def finish(self, result):
+        with self._lock:
+            self._terminal = (result,)
+
+    def take(self):
+        with self._lock:
+            snapshot = self._latest, self._failure, self._terminal
+            self._latest = self._failure = self._terminal = None
+        return snapshot
+
+
+
+def _ui_font(root):
+    from tkinter import font
+    available = set(font.families(root))
+    for candidate in ('Microsoft JhengHei UI', 'Microsoft JhengHei',
+                      'PingFang TC', 'Noto Sans CJK TC'):
+        if candidate in available:
+            return candidate
+    return font.nametofont('TkDefaultFont', root=root).actual('family')
 
 def _console_prepare(task):
     """Headless environments keep the same workflow without a window."""
@@ -173,7 +249,6 @@ def run_with_progress(task):
         return task() if os.environ.get('WLRE_DISABLE_AUTO_CATALOG') == '1' else _console_prepare(task)
     try:
         import tkinter as tk
-        from tkinter import ttk
         root = tk.Tk()
     except (ImportError, RuntimeError, OSError):
         return _console_prepare(task)
@@ -182,129 +257,145 @@ def run_with_progress(task):
             return _console_prepare(task)
         raise
 
-    messages = queue.Queue()
+    messages = _ProgressMailbox()
     state = {'result': None, 'done': False, 'last_error': None}
     root.title('飄流幻境 RE · LaLa Launcher')
     root.configure(bg=_BG)
     screen_w, screen_h = root.winfo_screenwidth(), root.winfo_screenheight()
-    width = min(640, max(480, screen_w - 36))
-    height = min(352, max(278, screen_h - 64))
+    scale = max(1.0, float(root.tk.call('tk', 'scaling')) / (96 / 72))
+    width = min(round(640 * scale), max(480, screen_w - 36))
+    height = min(round(376 * scale), max(300, screen_h - 64))
     root.geometry(f'{width}x{height}')
-    root.minsize(min(540, width), min(300, height))
+    min_width = min(round(540 * scale), width)
+    root.minsize(min_width, min(round(352 * scale), height))
     root.resizable(True, True)
     try:
         root.eval('tk::PlaceWindow . center')
     except tk.TclError:
         pass
 
+    family = _ui_font(root)
     shell = tk.Frame(root, bg=_BG, padx=28, pady=24)
     shell.pack(fill='both', expand=True)
-    tk.Label(shell, text='✦  WLRe : LaLa', font=('Arial', 20, 'bold'),
+    tk.Label(shell, text='✦  WLRe : LaLa', font=(family, 22, 'bold'),
              bg=_BG, fg=_FG, anchor='w').pack(fill='x')
     tk.Label(shell, text='正在準備官方資源與遊戲資料',
-             font=('Arial', 11), bg=_BG, fg=_MUTED, anchor='w').pack(
+             font=(family, 11), bg=_BG, fg=_MUTED, anchor='w').pack(
                  fill='x', pady=(6, 19))
     panel = tk.Frame(shell, bg=_PANEL, padx=18, pady=17)
     panel.pack(fill='x')
     stage = tk.StringVar(master=root, value='準備檢查')
     detail = tk.StringVar(master=root, value='正在初始化安全資源流程…')
-    tk.Label(panel, textvariable=stage, font=('Arial', 10, 'bold'),
-             bg=_PANEL, fg=_ACCENT, anchor='w').pack(fill='x')
+    stage_label = tk.Label(panel, textvariable=stage, font=(family, 12, 'bold'),
+             bg=_PANEL, fg=_ACCENT, anchor='w', justify='left',
+             wraplength=max(240, width - 115))
+    stage_label.pack(fill='x')
     detail_label = tk.Label(
-        panel, textvariable=detail, font=('Arial', 11),
+        panel, textvariable=detail, font=(family, 11),
         bg=_PANEL, fg=_FG, anchor='w', justify='left',
         wraplength=max(300, width - 115))
     detail_label.pack(fill='x', pady=(9, 14))
-    style = ttk.Style(root)
-    style.configure('LaLa.Launcher.Horizontal.TProgressbar',
-                    troughcolor='#293c50', background=_ACCENT,
-                    bordercolor='#293c50', lightcolor=_ACCENT,
-                    darkcolor=_ACCENT)
-    progress = ttk.Progressbar(panel, mode='indeterminate',
-                              style='LaLa.Launcher.Horizontal.TProgressbar')
-    progress.pack(fill='x')
-    progress.start(15)
-    footer = tk.StringVar(master=root, value='版本與資源先行驗證，登入權限仍由主程式判定。')
-    footer_label = tk.Label(shell, textvariable=footer, font=('Arial', 9),
+    count_text = tk.StringVar(master=root, value='處理中 · 目前階段尚無總量')
+    count_label = tk.Label(panel, textvariable=count_text, font=(family, 9),
+                           bg=_PANEL, fg=_MUTED, anchor='w', justify='left',
+                           wraplength=max(240, width - 115))
+    count_label.pack(fill='x')
+    progress = _CyanProgress(panel, tk)
+    footer = tk.StringVar(master=root, value='資源準備不代表已可登入；主程式仍會獨立驗證。')
+    footer_label = tk.Label(shell, textvariable=footer, font=(family, 9),
                             bg=_BG, fg=_MUTED, anchor='w', justify='left',
                             wraplength=max(300, width - 95))
     footer_label.pack(fill='x', pady=(16, 0))
 
+    fit_pending = [None]
+
+    def fit_content():
+        # Keep the guard while Tk settles wrapped-label geometry.
+        fit_pending[0] = 'running'
+        root.update_idletasks()
+        # Font scaling and multi-line stages must not pack the bar/footer away.
+        required = min(shell.winfo_reqheight(), max(300, screen_h - 64))
+        root.minsize(min_width, max(min(round(352 * scale), height), required))
+        if root.winfo_height() < required:
+            root.geometry(f'{root.winfo_width()}x{required}')
+        fit_pending[0] = None
+
+    def schedule_fit():
+        if fit_pending[0] is None:
+            fit_pending[0] = root.after_idle(fit_content)
+
+    last_width = [None]
+
     def resize_text(event):
-        if event.widget is root:
-            detail_label.configure(wraplength=max(300, event.width - 115))
-            footer_label.configure(wraplength=max(300, event.width - 95))
+        if event.widget is root and event.width != last_width[0]:
+            last_width[0] = event.width
+            count_label.configure(wraplength=max(240, event.width - 115))
+            stage_label.configure(wraplength=max(240, event.width - 115))
+            detail_label.configure(wraplength=max(240, event.width - 115))
+            footer_label.configure(wraplength=max(240, event.width - 95))
+            schedule_fit()
     root.bind('<Configure>', resize_text, add='+')
+    schedule_fit()
 
     # Closing the window does not abandon a write or leave an untracked
     # downloader modifying the user's private cache.
     root.protocol('WM_DELETE_WINDOW',
                   lambda: footer.set('正在安全完成目前的資源步驟；結束後會進入 LaLa。'))
 
-    def report(phase, info):
-        if phase in STEP_LABELS:
-            messages.put(('stage', phase, info))
-
     def worker():
         try:
-            result = task(progress=report)
-            messages.put(('done', result, None))
-        except Exception as exc:
-            messages.put(('error', None, type(exc).__name__))
+            result = task(progress=messages.report)
+        except Exception:
+            result = {'status': 'error', 'assets_ready': False,
+                      'can_send_packets': False}
+        messages.finish(result)
 
     thread = threading.Thread(target=worker, name='lala-launcher-resource',
                               daemon=True)
     thread.start()
 
     def pump():
-        while True:
-            try:
-                kind, arg, extra = messages.get_nowait()
-            except queue.Empty:
-                break
-            if kind == 'stage':
-                stage.set(_format_stage(arg))
-                detail.set(progress_message(arg, extra))
-                if arg == 'extract_failed':
-                    state['last_error'] = progress_message(arg, extra)
-                if arg in ('bundle_item', 'raw_resource_item') and isinstance(extra, dict):
-                    done, total = extra.get('completed'), extra.get('total')
-                    if (type(done) is int and type(total) is int
-                            and 0 <= done <= total and total > 0):
-                        progress.stop()
-                        progress.configure(mode='determinate', maximum=total, value=done)
-                elif progress.cget('mode') == 'determinate':
-                    progress.configure(mode='indeterminate')
-                    progress.start(15)
-            else:
-                state['done'] = True
-                state['result'] = arg if kind == 'done' else {
-                    'status': 'error', 'assets_ready': False,
-                    'can_send_packets': False}
-                if kind == 'error':
-                    detail.set('資源準備未完成，仍維持原有登入限制')
-                progress.stop()
-                break
+        update, failure, terminal = messages.take()
+        if failure is not None:
+            state['last_error'] = failure
+        if update is not None:
+            title, message, counts = update
+            stage.set(title)
+            detail.set(message)
+            progress.set_counts(counts)
+            count_text.set(f'本階段 {counts[0]} / {counts[1]} 份' if counts else
+                           '處理中 · 目前階段尚無總量')
+        if terminal is not None:
+            state['done'] = True
+            state['result'] = terminal[0]
+            progress.finish()
+        schedule_fit()
         if state['done']:
             receipt = state['result'] or {}
             if receipt.get('status') == 'verified_official':
-                stage.set('Launcher 資料準備已完成')
+                stage.set('資源準備完成')
+                count_text.set('準備開啟 LaLa')
                 detail.set('官方資源快取已建立或校驗完成，等待遊戲相容性審核。')
                 footer.set('現在開啟 LaLa 主程式，由官方版本安全檢查決定登入。')
                 root.after(700, root.quit)
             else:
-                stage.set('Launcher 將繼續開啟 LaLa')
+                stage.set('資源尚未完成 · 將開啟 LaLa')
+                stage_label.configure(fg=_WARNING)
+                count_text.set('主程式將再次檢查，尚未授予登入權限')
                 detail.set(state['last_error'] or
-                           '官方資源資源未完成；主程式仍會獨立檢查官方遊戲版本。')
+                           '官方資源準備未完成；主程式仍會獨立檢查官方遊戲版本。')
                 footer.set('官方資源資料未啟用；原有登入安全檢查仍有效。')
                 root.after(1100, root.quit)
         else:
-            root.after(80, pump)
+            root.after(_POLL_MS, pump)
 
-    root.after(80, pump)
+    root.after(_POLL_MS, pump)
     try:
         root.mainloop()
     finally:
+        progress.stop()
+        if fit_pending[0] is not None:
+            root.after_cancel(fit_pending[0])
         root.destroy()
         thread.join(timeout=1)
     return state['result']

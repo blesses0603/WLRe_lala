@@ -42,6 +42,40 @@ class RemoteGameVersionTests(unittest.TestCase):
     def test_source_is_official_resource_map(self):
         self.assertEqual(configured_sources(),{'ResourcePath_PC.dat':RESOURCE_MAP_URL})
 
+    def test_progress_names_real_stages_before_they_run(self):
+        events=[]
+        def progress(phase, details):
+            # Assertions must be outside this display-only callback, whose
+            # exceptions are intentionally isolated from verification.
+            events.append((phase,details,self.check.call_count,
+                           self.activate.call_count,self.read.call_count))
+        result=run_prelogin_check(progress=progress)
+        self.assertEqual(events,[('official_metadata',{},0,0,0),
+                                 ('official_runtime',{},1,0,0),
+                                 ('official_database',{},1,1,0)])
+        self.assertTrue(result['login_allowed'])
+
+    def test_progress_failure_cannot_change_verification_or_failure_verdict(self):
+        progress=Mock(side_effect=RuntimeError('display unavailable'))
+        self.assertTrue(run_prelogin_check(progress=progress)['login_allowed'])
+        self.matches.return_value=False
+        self.assertFalse(run_prelogin_check(progress=progress)['login_allowed'])
+        self.activate.side_effect=ValueError('invalid runtime')
+        progress.reset_mock()
+        self.assertFalse(run_prelogin_check(progress=progress)['login_allowed'])
+        self.assertEqual([call.args[0] for call in progress.call_args_list],
+                         ['official_metadata','official_runtime'])
+
+    def test_progress_with_injected_checker_keeps_historical_fixture_behavior(self):
+        remote={'status':'same_resources','packages':{
+            p:{'remote':'1275','comparison':'same'} for p in ('MainPackage','DataPackage')}}
+        events=[]
+        result=run_prelogin_check({},checker=lambda _:remote,
+                                 progress=lambda phase, details:events.append(phase))
+        self.assertEqual(result['status'],'version_identifiers_match')
+        self.assertEqual(events,['official_metadata'])
+        self.activate.assert_not_called()
+
     def test_independent_live_pair_matches_runtime_without_1275_rejection(self):
         with patch('wlre.services.world.runtime_1275.ready') as legacy:
             result=run_prelogin_check()
