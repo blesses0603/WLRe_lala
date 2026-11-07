@@ -2465,3 +2465,55 @@ No production movement was changed or enabled, no legacy data removed, and no
 new Windows/live-server test, push, merge or release occurred. Current safe
 progress is an independently reproduced source-following mechanism; complete
 runtime equivalence remains unproven.
+
+### Phase 63: confirmed minimap input; target and stopping position are distinct
+
+The user confirms the walking recording was initiated on the minimap. A new
+bounded, hash-pinned audit (`tools.review_navigation_minimap_chain`) verifies
+seven decoded official Lua sources against the pinned index and records source
+line evidence without including official source content in the repository.
+
+UIMain's MapMask handler (1151-1158) opens the area map. AreaMapBG's click handler
+(1362-1418) obtains RectTransform-local coordinates through
+ScreenPointToLocalPointInRectangle, converts them to world coordinates, performs
+Stage.GetFloorPosition, converts back through TransferMapPosition, and calls
+MoveToStage with its final argument true. For the same-stage branch,
+PlayerController (424-478) converts the target, queries the floor again, and
+passes EMoveSender.Player to RoleController. That final true argument is the
+bAutoWalk parameter; it does not select EMoveSender.AutoWalk. This is a verified
+static call chain, not a captured execution trace from the recording.
+
+For Bangkok's verified 6000 by 6000 dimensions and offsets 12, the area-map
+RectTransform-local point (u,v) maps to packet coordinates:
+
+    x = 3000 + 6*u
+    y = 3000 - 6*v
+
+These are local UI units, not screen pixels. The source preserves fractions.
+Screen-to-local conversion still depends on the rectangle, UI camera, scaling
+and panning at the actual click. The arithmetic inverse of the stopped position
+(-191.6667,-319.1667) is explicitly NOT an inferred original click. The click and
+requested target remain unknown. Floor raycasts and currentPath target marker
+updates also must not be confused with a recorded original requested target.
+
+Player's squared waypoint threshold is 0.16 world units: a 40-packet-unit radius,
+including the final point. The map completion callback calls Role.EndMove;
+that function clears navigation/target UI and calls a callback factory without
+invoking its returned closure. No direct transform snap is present in those
+completion functions; this does not exclude other callbacks or server changes.
+
+Both hosts reran all nine pinned Lua motion cases. Under the explicitly supplied
+four-point path and identity collision stub, Player cases retain maximum spatial
+distance 4.18 / 8.12 / 8.12 from the eight reviewed corner samples at fixed
+30 / 60 / 120 FPS. Their stopped coordinates still differ from the video.
+These conditional comparisons support an early-waypoint corner-cutting mechanism,
+not full trajectory equivalence; do not fit FPS or targets to force a match.
+
+Related suites pass desktop 105 / Android 104; both seven-source audits and nine
+Lua cases pass. No production movement, authority, legacy data or network behavior
+changed. No new Windows, Android-device or live-server validation occurred.
+The smallest additional visual evidence is a recording beginning before the map
+click, showing the full map and pointer/target marker, then travel and stopping.
+That could constrain target selection but cannot by itself prove internal path,
+per-frame physics, runtime parameters or exact UI-coordinate conversion.
+All three navigation seeds and movement guards remain; no push/merge/release.
