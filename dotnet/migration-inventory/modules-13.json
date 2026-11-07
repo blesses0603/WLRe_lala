@@ -1,0 +1,2027 @@
+[
+  {
+    "id": "android:p4a-recipes/lalawire/__init__.py",
+    "source_repository": "android",
+    "source_path": "p4a-recipes/lalawire/__init__.py",
+    "source_sha256": "e8b97767a4b65643c440a091ab417ccaa4a4c553fc25d99a7126807d7da85818",
+    "source_lines": 31,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.NativeDependencies",
+    "scope": "build_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "LalaWireRecipe",
+          "line": 17
+        }
+      ],
+      "imports": [
+        "importlib.util",
+        "pathlib",
+        "pythonforandroid.recipe"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:p4a-recipes/lalawire/setup.py",
+    "source_repository": "android",
+    "source_path": "p4a-recipes/lalawire/setup.py",
+    "source_sha256": "3042e10d880385b7d8d66b7c336e24ede5be369aba9f61ca1b98b9f610e5f7c9",
+    "source_lines": 8,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.NativeDependencies",
+    "scope": "build_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [],
+      "imports": [
+        "setuptools"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:p4a-recipes/lz4/__init__.py",
+    "source_repository": "android",
+    "source_path": "p4a-recipes/lz4/__init__.py",
+    "source_sha256": "a37db1e9aa0fdafdd438b9ab2add5dff7a01a3e4f9656cd6bf4428857eea5d4f",
+    "source_lines": 18,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.NativeDependencies",
+    "scope": "build_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "CodecRecipe",
+          "line": 5
+        }
+      ],
+      "imports": [
+        "pythonforandroid.recipe"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:p4a-recipes/tpk_ar/__init__.py",
+    "source_repository": "android",
+    "source_path": "p4a-recipes/tpk_ar/__init__.py",
+    "source_sha256": "4654401f489992392599337785d4e2a7107fc2c69beffc1a5954200718c9db7b",
+    "source_lines": 32,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.NativeDependencies",
+    "scope": "build_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "TpkArRecipe",
+          "line": 8
+        }
+      ],
+      "imports": [
+        "pathlib",
+        "pythonforandroid.recipe",
+        "shutil"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:p4a-recipes/unitypy/__init__.py",
+    "source_repository": "android",
+    "source_path": "p4a-recipes/unitypy/__init__.py",
+    "source_sha256": "574d1994bf8502ca1ae741d9c14169053f1c8ba872fe66d869fde557c4fd1707",
+    "source_lines": 24,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.NativeDependencies",
+    "scope": "build_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "UnityPyRecipe",
+          "line": 10
+        }
+      ],
+      "imports": [
+        "pathlib",
+        "pythonforandroid.recipe",
+        "shutil"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/__init__.py",
+    "source_repository": "android",
+    "source_path": "tools/__init__.py",
+    "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "source_lines": 0,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [],
+      "imports": [],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/android_archive_audit.py",
+    "source_repository": "android",
+    "source_path": "tools/android_archive_audit.py",
+    "source_sha256": "12560197fc202b6d9976430db23d9b7cd8067dd464017a411c7752b166a564bd",
+    "source_lines": 401,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_public_ca_bundle_path",
+          "line": 53
+        },
+        {
+          "name": "_validate_public_ca_bundle",
+          "line": 65
+        },
+        {
+          "name": "Limits",
+          "line": 87
+        },
+        {
+          "name": "_safe",
+          "line": 112
+        },
+        {
+          "name": "_nested_type",
+          "line": 145
+        },
+        {
+          "name": "_is_text",
+          "line": 154
+        },
+        {
+          "name": "_peek_scan",
+          "line": 159
+        },
+        {
+          "name": "_tar",
+          "line": 167
+        },
+        {
+          "name": "_zip_preflight",
+          "line": 206
+        },
+        {
+          "name": "_zip",
+          "line": 285
+        },
+        {
+          "name": "_payload",
+          "line": 312
+        },
+        {
+          "name": "audit_apk",
+          "line": 372
+        }
+      ],
+      "imports": [
+        "__future__",
+        "cryptography",
+        "dataclasses",
+        "io",
+        "pathlib",
+        "re",
+        "stat",
+        "struct",
+        "tarfile",
+        "tempfile",
+        "zipfile"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_phase06_security.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/android_build_cache.py",
+    "source_repository": "android",
+    "source_path": "tools/android_build_cache.py",
+    "source_sha256": "ede9866639296ff72f61f1f7a5d5af18c2f79f0d7208cba9da3d37552b944bb3",
+    "source_lines": 151,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "cache_key",
+          "line": 42
+        },
+        {
+          "name": "native_cache_key",
+          "line": 77
+        },
+        {
+          "name": "safe_third_party_paths",
+          "line": 121
+        },
+        {
+          "name": "main",
+          "line": 132
+        }
+      ],
+      "imports": [
+        "__future__",
+        "configparser",
+        "hashlib",
+        "importlib.metadata",
+        "json",
+        "os",
+        "pathlib",
+        "re"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_build_cache.py",
+        "tests/test_android_native_build_cache.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/android_core_incremental.py",
+    "source_repository": "android",
+    "source_path": "tools/android_core_incremental.py",
+    "source_sha256": "2287edc395ef6cdadfeb208e85713c43b6563ea6f89f78816f601cc5103bae4c",
+    "source_lines": 233,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_digest",
+          "line": 32
+        },
+        {
+          "name": "_json_digest",
+          "line": 36
+        },
+        {
+          "name": "_regular",
+          "line": 41
+        },
+        {
+          "name": "keys",
+          "line": 49
+        },
+        {
+          "name": "cache_folder",
+          "line": 99
+        },
+        {
+          "name": "_receipt",
+          "line": 105
+        },
+        {
+          "name": "plan",
+          "line": 130
+        },
+        {
+          "name": "prepare",
+          "line": 139
+        },
+        {
+          "name": "save",
+          "line": 164
+        },
+        {
+          "name": "main",
+          "line": 210
+        }
+      ],
+      "imports": [
+        "__future__",
+        "argparse",
+        "hashlib",
+        "json",
+        "os",
+        "pathlib",
+        "re",
+        "shutil",
+        "tools.android_build_cache",
+        "tools.android_native_cores",
+        "tools.android_native_wire"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_core_incremental.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/android_cython_wire.py",
+    "source_repository": "android",
+    "source_path": "tools/android_cython_wire.py",
+    "source_sha256": "3e5f875fd53a8b0183fe965958c9fb84c5e7f968bca87c2e2aae65c0483227d9",
+    "source_lines": 136,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "snapshot",
+          "line": 22
+        },
+        {
+          "name": "prepare_package",
+          "line": 70
+        },
+        {
+          "name": "probe_package",
+          "line": 78
+        },
+        {
+          "name": "host_smoke",
+          "line": 93
+        },
+        {
+          "name": "main",
+          "line": 120
+        }
+      ],
+      "imports": [
+        "argparse",
+        "json",
+        "os",
+        "pathlib",
+        "shutil",
+        "subprocess",
+        "sys",
+        "tempfile",
+        "wlre.network"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_cython_wire.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/android_diagnostic_redaction.py",
+    "source_repository": "android",
+    "source_path": "tools/android_diagnostic_redaction.py",
+    "source_sha256": "e5f00a7ee6aa5111e2c349ca2d566039ae228afbfc2cdecda184f1e2b7ceaa52",
+    "source_lines": 65,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "summarize_logcat",
+          "line": 26
+        },
+        {
+          "name": "summarize_services",
+          "line": 61
+        }
+      ],
+      "imports": [
+        "collections",
+        "re"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_phase08_security.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/android_hardening.py",
+    "source_repository": "android",
+    "source_path": "tools/android_hardening.py",
+    "source_sha256": "d4cb34ec11dee93441b1e34a5e1fc206a388d760a635595b9c3625badb80873b",
+    "source_lines": 259,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_sensitive_filename",
+          "line": 52
+        },
+        {
+          "name": "_spec_options",
+          "line": 60
+        },
+        {
+          "name": "check_configuration",
+          "line": 67
+        },
+        {
+          "name": "check_files",
+          "line": 86
+        },
+        {
+          "name": "inspect_apk",
+          "line": 121
+        },
+        {
+          "name": "check_apk",
+          "line": 206
+        },
+        {
+          "name": "report",
+          "line": 212
+        },
+        {
+          "name": "main",
+          "line": 246
+        }
+      ],
+      "imports": [
+        "android_archive_audit",
+        "configparser",
+        "pathlib",
+        "re",
+        "sys",
+        "tarfile",
+        "zipfile"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_hardening.py",
+        "tests/test_android_phase06_security.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/android_integrity.py",
+    "source_repository": "android",
+    "source_path": "tools/android_integrity.py",
+    "source_sha256": "80a54ec1777a50e4e5ed64d0afaf0d3fa037b8535f768fba03f3afcd61b6fde7",
+    "source_lines": 147,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "pin_stage",
+          "line": 26
+        },
+        {
+          "name": "verify_stage",
+          "line": 60
+        },
+        {
+          "name": "verify_compiled_guard",
+          "line": 77
+        },
+        {
+          "name": "report",
+          "line": 104
+        },
+        {
+          "name": "main",
+          "line": 127
+        }
+      ],
+      "imports": [
+        "__future__",
+        "argparse",
+        "os",
+        "pathlib",
+        "re",
+        "sys",
+        "tools.android_signing",
+        "zipfile"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_phase07_integrity.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/android_isolated_unittests.py",
+    "source_repository": "android",
+    "source_path": "tools/android_isolated_unittests.py",
+    "source_sha256": "c33456f6cc8a16a226c900102706dcf63cfcf34bed2ac7bce15428cf2cf231a3",
+    "source_lines": 61,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "main",
+          "line": 14
+        }
+      ],
+      "imports": [
+        "__future__",
+        "os",
+        "pathlib",
+        "subprocess",
+        "sys"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/android_native_cores.py",
+    "source_repository": "android",
+    "source_path": "tools/android_native_cores.py",
+    "source_sha256": "61fd8ed676676193ef51b7d69ff30f382915890da905247af2804ebddf738d13",
+    "source_lines": 333,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "shim",
+          "line": 44
+        },
+        {
+          "name": "_source_check",
+          "line": 59
+        },
+        {
+          "name": "stage",
+          "line": 75
+        },
+        {
+          "name": "_is_core_pyc",
+          "line": 121
+        },
+        {
+          "name": "_exact_shim",
+          "line": 132
+        },
+        {
+          "name": "verify_apk",
+          "line": 178
+        },
+        {
+          "name": "report_apk",
+          "line": 254
+        },
+        {
+          "name": "host_compile",
+          "line": 271
+        },
+        {
+          "name": "main",
+          "line": 303
+        }
+      ],
+      "imports": [
+        "__future__",
+        "argparse",
+        "ast",
+        "importlib.util",
+        "io",
+        "marshal",
+        "pathlib",
+        "re",
+        "shutil",
+        "subprocess",
+        "sys",
+        "tarfile",
+        "tempfile",
+        "tools.android_native_vault",
+        "tools.android_native_wire",
+        "types",
+        "zipfile"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_native_cores.py",
+        "tests/test_android_native_release_workflow.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/android_native_vault.py",
+    "source_repository": "android",
+    "source_path": "tools/android_native_vault.py",
+    "source_sha256": "0498d016c2b3715e9247276649bbacb2c2845c215acf26bb7ef43b1e78ce08d5",
+    "source_lines": 333,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "stage",
+          "line": 41
+        },
+        {
+          "name": "_native_candidate",
+          "line": 78
+        },
+        {
+          "name": "_vault_pyc",
+          "line": 83
+        },
+        {
+          "name": "_exact_shim",
+          "line": 91
+        },
+        {
+          "name": "verify_apk",
+          "line": 119
+        },
+        {
+          "name": "report_apk",
+          "line": 194
+        },
+        {
+          "name": "host_smoke",
+          "line": 212
+        },
+        {
+          "name": "main",
+          "line": 306
+        }
+      ],
+      "imports": [
+        "__future__",
+        "argparse",
+        "importlib.util",
+        "io",
+        "json",
+        "marshal",
+        "os",
+        "pathlib",
+        "re",
+        "shutil",
+        "subprocess",
+        "sys",
+        "tarfile",
+        "tempfile",
+        "tools.android_native_wire",
+        "types",
+        "zipfile"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_native_vault.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/android_native_wire.py",
+    "source_repository": "android",
+    "source_path": "tools/android_native_wire.py",
+    "source_sha256": "369d9b259b3e0263422ec8f6455765a5edf55b053220989aeafab0058a63a13c",
+    "source_lines": 381,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_under",
+          "line": 36
+        },
+        {
+          "name": "_assert_clean_source",
+          "line": 40
+        },
+        {
+          "name": "_copy_source",
+          "line": 49
+        },
+        {
+          "name": "stage",
+          "line": 61
+        },
+        {
+          "name": "_candidate",
+          "line": 125
+        },
+        {
+          "name": "_host_only_so_name",
+          "line": 130
+        },
+        {
+          "name": "_arm64_elf",
+          "line": 135
+        },
+        {
+          "name": "_is_wire_bytecode",
+          "line": 146
+        },
+        {
+          "name": "_is_exact_shim_bytecode",
+          "line": 154
+        },
+        {
+          "name": "verify_apk",
+          "line": 188
+        },
+        {
+          "name": "report_apk",
+          "line": 271
+        },
+        {
+          "name": "host_smoke",
+          "line": 293
+        },
+        {
+          "name": "main",
+          "line": 353
+        }
+      ],
+      "imports": [
+        "__future__",
+        "argparse",
+        "configparser",
+        "importlib.util",
+        "io",
+        "json",
+        "marshal",
+        "os",
+        "pathlib",
+        "re",
+        "shutil",
+        "struct",
+        "subprocess",
+        "sys",
+        "tarfile",
+        "tempfile",
+        "types",
+        "zipfile"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_native_vault.py",
+        "tests/test_android_native_wire.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/android_parity_audit.py",
+    "source_repository": "android",
+    "source_path": "tools/android_parity_audit.py",
+    "source_sha256": "0c420d3363c81690436adc3e5d6ae11b8af601a149da15c1e56edf76bf5dea7c",
+    "source_lines": 22,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "audit",
+          "line": 9
+        }
+      ],
+      "imports": [
+        "hashlib",
+        "json",
+        "pathlib"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/android_phase10_acceptance.py",
+    "source_repository": "android",
+    "source_path": "tools/android_phase10_acceptance.py",
+    "source_sha256": "2787f9060edd5e6506d46cc2671e333cb2fe501d6b4031769e44d6344302a185",
+    "source_lines": 238,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_sha",
+          "line": 38
+        },
+        {
+          "name": "_object_no_duplicates",
+          "line": 46
+        },
+        {
+          "name": "_checksums",
+          "line": 55
+        },
+        {
+          "name": "_run",
+          "line": 68
+        },
+        {
+          "name": "verify_artifact",
+          "line": 74
+        },
+        {
+          "name": "device_preflight",
+          "line": 193
+        },
+        {
+          "name": "main",
+          "line": 218
+        }
+      ],
+      "imports": [
+        "__future__",
+        "argparse",
+        "hashlib",
+        "json",
+        "pathlib",
+        "re",
+        "shutil",
+        "subprocess",
+        "sys",
+        "tools.android_release_gate",
+        "tools.android_signing",
+        "zipfile"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_phase10_acceptance.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/android_presplash.py",
+    "source_repository": "android",
+    "source_path": "tools/android_presplash.py",
+    "source_sha256": "8ba4fafc06542cebb6196d2ba8edfe659c306a0a310905148663c09e59843a80",
+    "source_lines": 127,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_draw_compact_splash",
+          "line": 25
+        },
+        {
+          "name": "validate_spec",
+          "line": 37
+        },
+        {
+          "name": "verify_apk",
+          "line": 63
+        },
+        {
+          "name": "report",
+          "line": 99
+        }
+      ],
+      "imports": [
+        "PIL",
+        "configparser",
+        "io",
+        "pathlib",
+        "re",
+        "sys",
+        "zipfile"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_presplash.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/android_release_gate.py",
+    "source_repository": "android",
+    "source_path": "tools/android_release_gate.py",
+    "source_sha256": "41ef04ae924e1d8fccf50f734ea866dfc48396a2e643363c9dce26be3b8ce40c",
+    "source_lines": 283,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_digest",
+          "line": 69
+        },
+        {
+          "name": "_locate_aapt",
+          "line": 77
+        },
+        {
+          "name": "_apk_metadata",
+          "line": 101
+        },
+        {
+          "name": "verify_release",
+          "line": 130
+        },
+        {
+          "name": "finalize_release",
+          "line": 237
+        },
+        {
+          "name": "main",
+          "line": 262
+        }
+      ],
+      "imports": [
+        "__future__",
+        "argparse",
+        "hashlib",
+        "json",
+        "os",
+        "pathlib",
+        "re",
+        "shutil",
+        "subprocess",
+        "sys",
+        "tools.android_release_version",
+        "tools.android_signing",
+        "zipfile"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_phase09_release.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/android_release_version.py",
+    "source_repository": "android",
+    "source_path": "tools/android_release_version.py",
+    "source_sha256": "753adc557b7d1c77b2fa4ec56bb16b78281efcf7065142c799961c3f0d41a345",
+    "source_lines": 78,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "read_python_version",
+          "line": 19
+        },
+        {
+          "name": "source_version",
+          "line": 31
+        },
+        {
+          "name": "resolve_version",
+          "line": 48
+        },
+        {
+          "name": "main",
+          "line": 62
+        }
+      ],
+      "imports": [
+        "__future__",
+        "ast",
+        "configparser",
+        "os",
+        "pathlib",
+        "re"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_native_release_workflow.py",
+        "tests/test_android_phase09_release.py",
+        "tests/test_android_release_version.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/android_resource_seed.py",
+    "source_repository": "android",
+    "source_path": "tools/android_resource_seed.py",
+    "source_sha256": "c79824ba67758db019bc24b567c94bc3be25ce1ff350237d01a486b192be6c17",
+    "source_lines": 57,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "restore",
+          "line": 18
+        }
+      ],
+      "imports": [
+        "argparse",
+        "hashlib",
+        "json",
+        "pathlib",
+        "shutil",
+        "sys",
+        "tempfile",
+        "urllib.request",
+        "wlre.storage.full_resource_seed"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/android_seed_apk_audit.py",
+    "source_repository": "android",
+    "source_path": "tools/android_seed_apk_audit.py",
+    "source_sha256": "4192717e747d3ed4b788ca4180fd119e9c085737bf9948e8f5b772f07fc3c89e",
+    "source_lines": 38,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "verify",
+          "line": 13
+        }
+      ],
+      "imports": [
+        "argparse",
+        "hashlib",
+        "json",
+        "pathlib",
+        "tarfile",
+        "zipfile"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_seed_apk.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/android_signing.py",
+    "source_repository": "android",
+    "source_path": "tools/android_signing.py",
+    "source_sha256": "183a4d92cfa15914e6644fb632c2488f45d0fc2abe25ad730822dbdca0dc6474",
+    "source_lines": 264,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_set_mode",
+          "line": 26
+        },
+        {
+          "name": "_fingerprint",
+          "line": 33
+        },
+        {
+          "name": "_configured_pin",
+          "line": 41
+        },
+        {
+          "name": "_keytool_fingerprint",
+          "line": 52
+        },
+        {
+          "name": "prepare",
+          "line": 59
+        },
+        {
+          "name": "resign_apk",
+          "line": 111
+        },
+        {
+          "name": "signing_info",
+          "line": 184
+        }
+      ],
+      "imports": [
+        "base64",
+        "binascii",
+        "os",
+        "pathlib",
+        "re",
+        "shutil",
+        "subprocess",
+        "sys",
+        "tempfile"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_signing.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/android_smoke.py",
+    "source_repository": "android",
+    "source_path": "tools/android_smoke.py",
+    "source_sha256": "a14abc30297f91c9cfa580c31dc5d7c77e1a1a6688f0185a935c3de5e89fa4a9",
+    "source_lines": 150,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "adb",
+          "line": 23
+        },
+        {
+          "name": "alive",
+          "line": 27
+        },
+        {
+          "name": "diagnostic_adb",
+          "line": 31
+        },
+        {
+          "name": "readiness_log",
+          "line": 50
+        },
+        {
+          "name": "wait_for_readiness",
+          "line": 70
+        },
+        {
+          "name": "collect_diagnostics",
+          "line": 88
+        },
+        {
+          "name": "main",
+          "line": 119
+        }
+      ],
+      "imports": [
+        "android_diagnostic_redaction",
+        "pathlib",
+        "subprocess",
+        "sys",
+        "time"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_smoke.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/audit_all_resource_database.py",
+    "source_repository": "android",
+    "source_path": "tools/audit_all_resource_database.py",
+    "source_sha256": "442c2c9023c1841c5901477482f15e0c7d7266b17137be4c71137821f4146542",
+    "source_lines": 102,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_recommendation",
+          "line": 27
+        },
+        {
+          "name": "audit",
+          "line": 35
+        },
+        {
+          "name": "main",
+          "line": 90
+        }
+      ],
+      "imports": [
+        "argparse",
+        "collections",
+        "contextlib",
+        "hashlib",
+        "json",
+        "pathlib",
+        "sqlite3",
+        "wlre.paths",
+        "wlre.storage.full_resource_seed",
+        "wlre.storage.paths"
+      ],
+      "existing_test_candidates": [
+        "tests/test_audit_all_resource_database.py",
+        "tests/test_full_resource_seed.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/audit_legacy_1262_database.py",
+    "source_repository": "android",
+    "source_path": "tools/audit_legacy_1262_database.py",
+    "source_sha256": "e015ebbdc822130c61b565e04a1fd4936f7a23437ad2d99b84fdb474582f467f",
+    "source_lines": 90,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "audit",
+          "line": 25
+        },
+        {
+          "name": "main",
+          "line": 78
+        }
+      ],
+      "imports": [
+        "argparse",
+        "hashlib",
+        "json",
+        "pathlib",
+        "sqlite3",
+        "wlre.paths",
+        "wlre.storage.full_resource_seed",
+        "wlre.storage.paths"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/audit_minimap_1275.py",
+    "source_repository": "android",
+    "source_path": "tools/audit_minimap_1275.py",
+    "source_sha256": "58cba3621e739db3e00d810aab7f03e2e1056e3a84c0ed3d71cdb00ec840dda0",
+    "source_lines": 140,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_read_csv",
+          "line": 29
+        },
+        {
+          "name": "audit",
+          "line": 36
+        },
+        {
+          "name": "main",
+          "line": 129
+        }
+      ],
+      "imports": [
+        "PIL",
+        "__future__",
+        "argparse",
+        "csv",
+        "io",
+        "json",
+        "pathlib",
+        "re",
+        "wlre.paths",
+        "wlre.services.world.bundle_runtime_1275",
+        "wlre.storage.full_resource_seed",
+        "zipfile"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/audit_official_maps.py",
+    "source_repository": "android",
+    "source_path": "tools/audit_official_maps.py",
+    "source_sha256": "6cef0c8610af694ba4c5ee4dd7385f6ba74372b72ba5ec19e17f8dab720442cb",
+    "source_lines": 153,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "map_assets",
+          "line": 17
+        },
+        {
+          "name": "audit",
+          "line": 29
+        },
+        {
+          "name": "main",
+          "line": 82
+        }
+      ],
+      "imports": [
+        "PIL",
+        "UnityPy",
+        "argparse",
+        "hashlib",
+        "io",
+        "json",
+        "pathlib",
+        "re",
+        "tools.resources.lala_manifest_full_index",
+        "wlre.paths",
+        "wlre.services.official_incremental_sync",
+        "wlre.services.official_manifest_sync",
+        "wlre.services.official_resource_sync",
+        "wlre.services.resource_compatibility",
+        "wlre.services.world.bundle_runtime_1275",
+        "wlre.services.world.unity_textasset",
+        "wlre.storage.full_resource_seed",
+        "zipfile"
+      ],
+      "existing_test_candidates": [
+        "tests/test_official_map_audit.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/audit_repository.py",
+    "source_repository": "android",
+    "source_path": "tools/audit_repository.py",
+    "source_sha256": "286224fd0999f29eaa52c8f271f50231139fbf3d859ae257e997e6be70755f96",
+    "source_lines": 113,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "markdown_files",
+          "line": 20
+        },
+        {
+          "name": "invalid_links",
+          "line": 30
+        },
+        {
+          "name": "duplicate_tracked_blobs",
+          "line": 54
+        },
+        {
+          "name": "application_version",
+          "line": 80
+        },
+        {
+          "name": "audit",
+          "line": 88
+        },
+        {
+          "name": "main",
+          "line": 102
+        }
+      ],
+      "imports": [
+        "argparse",
+        "collections",
+        "json",
+        "pathlib",
+        "re",
+        "shutil",
+        "subprocess"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/check_official_lua.py",
+    "source_repository": "android",
+    "source_path": "tools/check_official_lua.py",
+    "source_sha256": "b0b2da822ea1e40adaeade7c988a2002cfa3e903fb0a29ccbb7c19373b084ee1",
+    "source_lines": 39,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "main",
+          "line": 13
+        }
+      ],
+      "imports": [
+        "argparse",
+        "json",
+        "sys",
+        "wlre.services",
+        "wlre.services.official_lua_index"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/check_official_manifests.py",
+    "source_repository": "android",
+    "source_path": "tools/check_official_manifests.py",
+    "source_sha256": "a2cf4a10cb90ae10a29c9586ad9a71991e8d3a1ff4539e628a4c8a19afe43995",
+    "source_lines": 57,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "inspect_current_manifests",
+          "line": 17
+        },
+        {
+          "name": "main",
+          "line": 41
+        }
+      ],
+      "imports": [
+        "argparse",
+        "json",
+        "sys",
+        "wlre.services.official_manifest_sync",
+        "wlre.services.official_resource_sync"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/check_official_sync.py",
+    "source_repository": "android",
+    "source_path": "tools/check_official_sync.py",
+    "source_sha256": "ddb5a43b2eefa98eb07fb60cbba37415939f454b6c77b3f0178d4d3ed778feb6",
+    "source_lines": 33,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "main",
+          "line": 13
+        }
+      ],
+      "imports": [
+        "argparse",
+        "json",
+        "sys",
+        "wlre.services.official_resource_sync"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/check_official_version.py",
+    "source_repository": "android",
+    "source_path": "tools/check_official_version.py",
+    "source_sha256": "6a4651bbcbf903ede1a368ee2cbb2ddc5f13e1c14ef9be3af01a95c0fefbfcf7",
+    "source_lines": 27,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "main",
+          "line": 8
+        }
+      ],
+      "imports": [
+        "argparse",
+        "json",
+        "wlre.services.game_version_gate"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/classify_existing_resources.py",
+    "source_repository": "android",
+    "source_path": "tools/classify_existing_resources.py",
+    "source_sha256": "51b35a0d9d3594c92547436c795e59490998983c224e51d89b08fddaa0f9aa3b",
+    "source_lines": 72,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "main",
+          "line": 25
+        }
+      ],
+      "imports": [
+        "__future__",
+        "argparse",
+        "hashlib",
+        "json",
+        "pathlib",
+        "sys",
+        "tools.resources.lala_manifest_full_index",
+        "wlre.services.world.resource_classification"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/diagnose_lala_resources.py",
+    "source_repository": "android",
+    "source_path": "tools/diagnose_lala_resources.py",
+    "source_sha256": "d032ade17433a21eed19883e3ab04a8d3e2d03731ee0241c83bb5ef8266412e9",
+    "source_lines": 41,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "main",
+          "line": 15
+        }
+      ],
+      "imports": [
+        "__future__",
+        "argparse",
+        "json",
+        "wlre.services.world.resource_gap_diagnostics"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/plan_official_catalog.py",
+    "source_repository": "android",
+    "source_path": "tools/plan_official_catalog.py",
+    "source_sha256": "523caad61417f0770762d896be76332a57c6eea3e15652dcfbf70fc2f32f5609",
+    "source_lines": 123,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "load_bindings",
+          "line": 33
+        },
+        {
+          "name": "main",
+          "line": 68
+        }
+      ],
+      "imports": [
+        "UnityPy",
+        "__future__",
+        "argparse",
+        "json",
+        "pathlib",
+        "sys",
+        "tools.plan_official_incremental",
+        "wlre.services.official_incremental_sync",
+        "wlre.services.official_manifest_sync",
+        "wlre.services.official_resource_sync",
+        "wlre.services.world.auto_catalog",
+        "wlre.services.world.catalog_adapters",
+        "wlre.services.world.catalog_source_extractor",
+        "wlre.services.world.official_catalog_pipeline"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/plan_official_incremental.py",
+    "source_repository": "android",
+    "source_path": "tools/plan_official_incremental.py",
+    "source_sha256": "2e5e0beae9b25314c5312275532e99afcccc78ed8e3d2b8344924a633baf572f",
+    "source_lines": 178,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_require_private_path",
+          "line": 33
+        },
+        {
+          "name": "load_private_requirements",
+          "line": 41
+        },
+        {
+          "name": "plan_required_updates",
+          "line": 71
+        },
+        {
+          "name": "execute_plans",
+          "line": 93
+        },
+        {
+          "name": "private_report",
+          "line": 109
+        },
+        {
+          "name": "main",
+          "line": 148
+        }
+      ],
+      "imports": [
+        "argparse",
+        "json",
+        "os",
+        "pathlib",
+        "sys",
+        "tempfile",
+        "wlre.services.official_incremental_sync",
+        "wlre.services.official_manifest_sync",
+        "wlre.services.official_resource_sync"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/resources/__init__.py",
+    "source_repository": "android",
+    "source_path": "tools/resources/__init__.py",
+    "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "source_lines": 0,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [],
+      "imports": [],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  }
+]

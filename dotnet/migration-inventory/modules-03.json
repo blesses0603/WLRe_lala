@@ -1,0 +1,1934 @@
+[
+  {
+    "id": "desktop:tools/review_navigation_portals.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_portals.py",
+    "source_sha256": "e7751984b25b087d738b4e085849afd7596f2a0314f30ac21ea47ac578854fd0",
+    "source_lines": 88,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "validate_corridor",
+          "line": 13
+        },
+        {
+          "name": "oracle",
+          "line": 35
+        },
+        {
+          "name": "main",
+          "line": 82
+        }
+      ],
+      "imports": [
+        "argparse",
+        "json",
+        "struct",
+        "tools.review_navigation_rotation",
+        "tools.review_navigation_vertices",
+        "unicorn.arm64_const"
+      ],
+      "existing_test_candidates": [
+        "tests/test_review_navigation_rotation.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_prepare.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_prepare.py",
+    "source_sha256": "ab05c5413553989fc3401f39c60f20c923657fcdb1e39fa6de603efef61f5e68",
+    "source_lines": 157,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "validate_inputs",
+          "line": 17
+        },
+        {
+          "name": "oracle",
+          "line": 26
+        },
+        {
+          "name": "vectors",
+          "line": 98
+        },
+        {
+          "name": "official",
+          "line": 121
+        },
+        {
+          "name": "main",
+          "line": 151
+        }
+      ],
+      "imports": [
+        "argparse",
+        "hashlib",
+        "io",
+        "json",
+        "math",
+        "pathlib",
+        "struct",
+        "tools.review_navigation_groups",
+        "tools.review_navigation_nearest",
+        "tools.review_navigation_outer",
+        "tools.review_navigation_rotation",
+        "tools.review_navigation_search",
+        "unicorn.arm64_const",
+        "wlre.services.world.astar_cache",
+        "wlre.services.world.navigation_database",
+        "zipfile"
+      ],
+      "existing_test_candidates": [
+        "tests/test_review_navigation_diagnostic_limits.py",
+        "tests/test_review_navigation_rotation.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_registration.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_registration.py",
+    "source_sha256": "847905906eeacf6e504eb5d3d5c72c403ccb5375b51c0dda66cc6faac0ef5001",
+    "source_lines": 73,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "inspect",
+          "line": 21
+        },
+        {
+          "name": "main",
+          "line": 66
+        }
+      ],
+      "imports": [
+        "argparse",
+        "elftools.elf.elffile",
+        "io",
+        "json",
+        "struct",
+        "tools.review_navigation_rotation"
+      ],
+      "existing_test_candidates": [
+        "tests/test_review_navigation_rotation.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_rotation.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_rotation.py",
+    "source_sha256": "0175d93a4a13aa0b4d8b6c4a7fb188044caeed0d60b9dd7c2f8abdb6e63afe25",
+    "source_lines": 127,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "checked_bytes",
+          "line": 20
+        },
+        {
+          "name": "validate_vector",
+          "line": 28
+        },
+        {
+          "name": "from_to_oracle",
+          "line": 33
+        },
+        {
+          "name": "multiply_oracle",
+          "line": 63
+        },
+        {
+          "name": "reference_rotate",
+          "line": 80
+        },
+        {
+          "name": "vectors",
+          "line": 87
+        },
+        {
+          "name": "main",
+          "line": 119
+        }
+      ],
+      "imports": [
+        "argparse",
+        "elftools.elf.elffile",
+        "hashlib",
+        "io",
+        "json",
+        "math",
+        "pathlib",
+        "random",
+        "struct",
+        "unicorn",
+        "unicorn.arm64_const"
+      ],
+      "existing_test_candidates": [
+        "tests/test_review_navigation_rotation.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_scene_initialization.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_scene_initialization.py",
+    "source_sha256": "c2456974b1ea26d7bc8cac8f83c2fbf578849f42b1a932a8bc34090f02835761",
+    "source_lines": 45,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "inspect",
+          "line": 16
+        },
+        {
+          "name": "main",
+          "line": 40
+        }
+      ],
+      "imports": [
+        "argparse",
+        "capstone",
+        "elftools.elf.elffile",
+        "hashlib",
+        "io",
+        "json",
+        "pathlib",
+        "tools.review_navigation_rotation"
+      ],
+      "existing_test_candidates": [
+        "tests/test_review_navigation_rotation.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_scene_nearest.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_scene_nearest.py",
+    "source_sha256": "531a7efd975476d7d39b9d93b3ce96560076e21b7dff6efa16ecde321f2e42f9",
+    "source_lines": 77,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "review",
+          "line": 17
+        },
+        {
+          "name": "main",
+          "line": 70
+        }
+      ],
+      "imports": [
+        "argparse",
+        "hashlib",
+        "io",
+        "json",
+        "pathlib",
+        "tools.review_navigation_nearest",
+        "tools.review_navigation_outer",
+        "tools.review_navigation_scene_settings",
+        "wlre.services.world.astar_cache",
+        "wlre.services.world.navigation_database",
+        "zipfile"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_scene_paths.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_scene_paths.py",
+    "source_sha256": "010c4b3b549d8c7590db2b8c66e784136ad879b8796170f205ddcca816bd5de3",
+    "source_lines": 55,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "review",
+          "line": 16
+        },
+        {
+          "name": "main",
+          "line": 49
+        }
+      ],
+      "imports": [
+        "argparse",
+        "hashlib",
+        "io",
+        "json",
+        "pathlib",
+        "tools.review_navigation_path_pipeline",
+        "tools.review_navigation_scene_settings",
+        "wlre.services.world.astar_cache",
+        "wlre.services.world.navigation_database",
+        "zipfile"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_scene_settings.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_scene_settings.py",
+    "source_sha256": "228dbf772334fc73994ebe5432ca831fdf5c09c4208e7b8db737bee7f754d73e",
+    "source_lines": 86,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "profile",
+          "line": 14
+        },
+        {
+          "name": "inspect",
+          "line": 35
+        },
+        {
+          "name": "main",
+          "line": 81
+        }
+      ],
+      "imports": [
+        "UnityPy",
+        "argparse",
+        "hashlib",
+        "json",
+        "math",
+        "pathlib",
+        "wlre.services.official_bundle_download",
+        "wlre.services.official_manifest_sync",
+        "wlre.services.world.navigation_database",
+        "zlib"
+      ],
+      "existing_test_candidates": [
+        "tests/test_review_navigation_rotation.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_search.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_search.py",
+    "source_sha256": "3948599260e4334c4ac9256d0ab35a2fb2cec47585d586e97ac7a76c79c2bcd0",
+    "source_lines": 312,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "validate_graph",
+          "line": 15
+        },
+        {
+          "name": "oracle",
+          "line": 52
+        },
+        {
+          "name": "reference_costs",
+          "line": 200
+        },
+        {
+          "name": "compare",
+          "line": 222
+        },
+        {
+          "name": "vectors",
+          "line": 241
+        },
+        {
+          "name": "official",
+          "line": 275
+        },
+        {
+          "name": "main",
+          "line": 306
+        }
+      ],
+      "imports": [
+        "argparse",
+        "hashlib",
+        "json",
+        "math",
+        "pathlib",
+        "struct",
+        "tools.review_navigation_path_state",
+        "tools.review_navigation_rotation",
+        "tools.review_navigation_vertices",
+        "unicorn",
+        "unicorn.arm64_const",
+        "wlre.services.world.astar_cache",
+        "wlre.services.world.navigation_database"
+      ],
+      "existing_test_candidates": [
+        "tests/test_review_navigation_diagnostic_limits.py",
+        "tests/test_review_navigation_rotation.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_shadow_samples.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_shadow_samples.py",
+    "source_sha256": "56bf9bd7cccb0cde44ad67f0d87f23fa5c3d1fe99ea5372b7c20cafbe29cfb02",
+    "source_lines": 74,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "verify_disconnected",
+          "line": 16
+        },
+        {
+          "name": "main",
+          "line": 31
+        }
+      ],
+      "imports": [
+        "argparse",
+        "itertools",
+        "json",
+        "pathlib",
+        "tools.navigation_same_geometry_control",
+        "types",
+        "wlre.services.world.catalog_identity",
+        "wlre.services.world.navigation_database",
+        "wlre.services.world.navigation_preview",
+        "wlre.services.world.navigation_shadow"
+      ],
+      "existing_test_candidates": [
+        "tests/test_navigation_shadow.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_traversal.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_traversal.py",
+    "source_sha256": "273bd6b447cd10b003b4ab0b02013cb8b7424af918079f7e5bdbad68d69b0252",
+    "source_lines": 98,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "oracle",
+          "line": 13
+        },
+        {
+          "name": "vectors",
+          "line": 60
+        },
+        {
+          "name": "main",
+          "line": 92
+        }
+      ],
+      "imports": [
+        "argparse",
+        "elftools.elf.elffile",
+        "io",
+        "json",
+        "struct",
+        "tools.review_navigation_rotation",
+        "unicorn",
+        "unicorn.arm64_const"
+      ],
+      "existing_test_candidates": [
+        "tests/test_review_navigation_rotation.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_unwrap.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_unwrap.py",
+    "source_sha256": "10ff2e19e968356e7c723b2eb981b657131b0c11d8f46c2bf739fd1d710a65f4",
+    "source_lines": 108,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "validate_portals",
+          "line": 14
+        },
+        {
+          "name": "oracle",
+          "line": 21
+        },
+        {
+          "name": "compare_unfolding",
+          "line": 69
+        },
+        {
+          "name": "fixtures",
+          "line": 83
+        },
+        {
+          "name": "vectors",
+          "line": 94
+        },
+        {
+          "name": "main",
+          "line": 102
+        }
+      ],
+      "imports": [
+        "argparse",
+        "json",
+        "math",
+        "struct",
+        "tools.review_navigation_rotation",
+        "tools.review_navigation_vertices",
+        "unicorn",
+        "unicorn.arm64_const"
+      ],
+      "existing_test_candidates": [
+        "tests/test_review_navigation_rotation.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_vertices.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_vertices.py",
+    "source_sha256": "4c4808155f9de893484b52d03e62627c6905fe647213dec9f211cb72f01699ca",
+    "source_lines": 141,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "validate_inputs",
+          "line": 15
+        },
+        {
+          "name": "modeled_modf",
+          "line": 25
+        },
+        {
+          "name": "oracle",
+          "line": 36
+        },
+        {
+          "name": "vectors",
+          "line": 112
+        },
+        {
+          "name": "main",
+          "line": 135
+        }
+      ],
+      "imports": [
+        "argparse",
+        "elftools.elf.elffile",
+        "io",
+        "json",
+        "math",
+        "random",
+        "struct",
+        "tools.review_navigation_rotation",
+        "unicorn",
+        "unicorn.arm64_const"
+      ],
+      "existing_test_candidates": [
+        "tests/test_review_navigation_rotation.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/review_navigation_video_registration.py",
+    "source_repository": "desktop",
+    "source_path": "tools/review_navigation_video_registration.py",
+    "source_sha256": "0e845bd7a14f8e73b682d0ac8b8d3a500d374d9b6223a36489d195875e39877b",
+    "source_lines": 116,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "register",
+          "line": 12
+        },
+        {
+          "name": "compare_targets",
+          "line": 73
+        },
+        {
+          "name": "main",
+          "line": 101
+        }
+      ],
+      "imports": [
+        "argparse",
+        "cv2",
+        "hashlib",
+        "json",
+        "math",
+        "numpy",
+        "pathlib",
+        "tools.review_navigation_corner_following",
+        "wlre.services.world.catalog_identity",
+        "wlre.services.world.navigation",
+        "wlre.services.world.navigation_preview"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/reviewed_1275_handoff.py",
+    "source_repository": "desktop",
+    "source_path": "tools/reviewed_1275_handoff.py",
+    "source_sha256": "99456c53138dd9f34b505168f338807339a8f3f8e9c78e75204f41a477ca2957",
+    "source_lines": 9,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "main",
+          "line": 4
+        }
+      ],
+      "imports": [
+        "sys"
+      ],
+      "existing_test_candidates": [
+        "tests/test_formal_candidate_bridge.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/verify_official_local_bundles.py",
+    "source_repository": "desktop",
+    "source_path": "tools/verify_official_local_bundles.py",
+    "source_sha256": "4a880f84c5bc7bdd349075f0a0d918c19016535ab8944cdff11f310d8ad75f77",
+    "source_lines": 264,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "OfflineVerificationError",
+          "line": 24
+        },
+        {
+          "name": "inspect_manifest_zip",
+          "line": 28
+        },
+        {
+          "name": "required_bundle_set",
+          "line": 74
+        },
+        {
+          "name": "scan_game_yoo_bundle_cache",
+          "line": 122
+        },
+        {
+          "name": "verify_local",
+          "line": 156
+        },
+        {
+          "name": "main",
+          "line": 238
+        }
+      ],
+      "imports": [
+        "__future__",
+        "argparse",
+        "hashlib",
+        "json",
+        "pathlib",
+        "sys",
+        "tools.resources.lala_manifest_full_index",
+        "wlre.services.official_bundle_download",
+        "wlre.services.official_manifest_sync",
+        "wlre.services.world.auto_catalog",
+        "wlre.services.world.catalog_adapters",
+        "wlre.services.world.catalog_source_extractor",
+        "wlre.services.world.official_catalog_pipeline",
+        "zipfile",
+        "zlib"
+      ],
+      "existing_test_candidates": [
+        "tests/test_verify_official_local_bundles.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/__init__.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/__init__.py",
+    "source_sha256": "b47d5196ed532a11daf0983cedfabbe16ce360e68d4f3c1fb290acd227cbeac5",
+    "source_lines": 2,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Configuration",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [],
+      "imports": [],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/__main__.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/__main__.py",
+    "source_sha256": "8467c36e566374274c6c5db6f385984a4077d3e21c0a0b300b6202a6bfc8aef0",
+    "source_lines": 104,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Configuration",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "dump",
+          "line": 10
+        },
+        {
+          "name": "main",
+          "line": 14
+        }
+      ],
+      "imports": [
+        "argparse",
+        "getpass",
+        "json",
+        "pathlib",
+        "sys",
+        "wlre",
+        "wlre.network.client",
+        "wlre.services.world.dynamic_bundle_runtime",
+        "wlre.services.world.house_navigation",
+        "wlre.services.world.map_names",
+        "wlre.services.world.navigation_database",
+        "wlre.services.world.navigation_preview"
+      ],
+      "existing_test_candidates": [
+        "tests/test_official_navigation_no_seed.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/configuration.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/configuration.py",
+    "source_sha256": "75826709bf77b44a1f3ef88967383942d5f2824b4ffa014270ba869d6ce35459",
+    "source_lines": 217,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Configuration",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [],
+      "imports": [],
+      "existing_test_candidates": [
+        "tests/test_configuration_without_seed.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/core/__init__.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/core/__init__.py",
+    "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "source_lines": 0,
+    "target_project": "Lala.Core",
+    "target_subsystem": "State.__init__",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [],
+      "imports": [],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "state",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/core/activity.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/core/activity.py",
+    "source_sha256": "0142b49bc84535cc3a2b343d332e9cd126493326dd3e86838ec0494555da0a11",
+    "source_lines": 33,
+    "target_project": "Lala.Core",
+    "target_subsystem": "State.activity",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Activities/ActivityLocks.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "decode_activity",
+          "line": 4
+        },
+        {
+          "name": "apply_activity",
+          "line": 20
+        }
+      ],
+      "imports": [
+        "wlre.network.wire"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "state",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "200_synthetic_python_cases_plus_28_boundary_tests_passed",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "migrated_scope": [
+      "All recognized activity packet forms, role ownership, initial-list reset, geometry clearing and world-player reset as offline typed state."
+    ],
+    "outstanding_scope": [
+      "Connect to full session state and network event dispatcher; device and live acceptance not run."
+    ]
+  },
+  {
+    "id": "desktop:wlre/core/diagnostics.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/core/diagnostics.py",
+    "source_sha256": "1e73a92d5baf2b9616e035ff3da17ccab89b85da0142138b40b81086c52c63ae",
+    "source_lines": 255,
+    "target_project": "Lala.Core",
+    "target_subsystem": "State.diagnostics",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "safe_exception_location",
+          "line": 9
+        },
+        {
+          "name": "Diagnostics",
+          "line": 23
+        }
+      ],
+      "imports": [
+        "collections",
+        "logging",
+        "logging.handlers",
+        "os",
+        "pathlib",
+        "time",
+        "wlre.storage.paths"
+      ],
+      "existing_test_candidates": [
+        "tests/test_auto_battle_diagnostics.py",
+        "tests/test_connection_health.py",
+        "tests/test_coop_reward_lifecycle_v057.py",
+        "tests/test_health_25804_diagnostics.py",
+        "tests/test_optimizations.py",
+        "tests/test_postbattle_ai_lock_policy.py",
+        "tests/test_s51_packet_resilience.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "state",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/core/efficiency.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/core/efficiency.py",
+    "source_sha256": "96545a197e6293e40f1b2ec5aad09a3b4c7e55cfe92206bee7a04bee40c2d4d0",
+    "source_lines": 162,
+    "target_project": "Lala.Core",
+    "target_subsystem": "State.efficiency",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Battle/EfficiencyModels.cs",
+      "dotnet/Lala.Core/Battle/EfficiencyRules.cs",
+      "dotnet/Lala.Core/Battle/EfficiencyTracker.cs",
+      "dotnet/Lala.Core/Battle/EfficiencyReducer.cs",
+      "dotnet/Lala.Core/Battle/EfficiencyReceiveReducer.cs",
+      "dotnet/Lala.Core/Battle/EfficiencyKnowledgeProjector.cs",
+      "dotnet/Lala.Core/State/ServiceStateCoordinator.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "defaults",
+          "line": 8
+        },
+        {
+          "name": "need",
+          "line": 10
+        },
+        {
+          "name": "cumulative",
+          "line": 17
+        },
+        {
+          "name": "progress",
+          "line": 21
+        },
+        {
+          "name": "_row",
+          "line": 31
+        },
+        {
+          "name": "observe",
+          "line": 69
+        },
+        {
+          "name": "rates",
+          "line": 143
+        },
+        {
+          "name": "duration",
+          "line": 152
+        },
+        {
+          "name": "forecast",
+          "line": 157
+        }
+      ],
+      "imports": [
+        "functools",
+        "math",
+        "time",
+        "wlre.core.event_log",
+        "wlre.services.items.combat_resources"
+      ],
+      "existing_test_candidates": [
+        "tests/test_exp_efficiency_regression.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "state",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "migrated_scope": [
+      "Offline EXP curves/progress, rates/forecast and complete battle evidence tracking with immutable snapshots, confirmed/inferred flags and bounded history.",
+      "Atomic immutable snapshot reduction reuses tracker calculations; typed receive adapter uses explicit timing and updated caller-supplied knowledge. Six Python packet sequences cover 92 additional checkpoints.",
+      "Distinct self/follow:0 subjects and UInt16 companion slots, Int64 labels and sample degree, explicit updated-knowledge/post-local identity projection; eleven receive sequences / 166 checkpoints.",
+      "Source-ordered post-local shop, efficiency, guild actions and Ark receive composition with atomic publication; 26 real State.apply scenarios / 1,414 checkpoints / 38 event kinds."
+    ],
+    "outstanding_scope": [
+      "Runtime and UI acceptance remain; explicit NPC display names do not establish catalog provenance."
+    ]
+  },
+  {
+    "id": "desktop:wlre/core/event_log.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/core/event_log.py",
+    "source_sha256": "4c0a0a3f339522c5cd13e972502e2196b1ac93df9cc1e9e695d92a2a8ad5e244",
+    "source_lines": 110,
+    "target_project": "Lala.Core",
+    "target_subsystem": "State.event_log",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "chinese",
+          "line": 14
+        },
+        {
+          "name": "owned",
+          "line": 23
+        },
+        {
+          "name": "battle_local",
+          "line": 24
+        },
+        {
+          "name": "lines",
+          "line": 26
+        }
+      ],
+      "imports": [
+        "re",
+        "wlre.services.battle.auto_battle",
+        "wlre.services.battle.combat",
+        "wlre.services.battle.party",
+        "wlre.services.items.combat_resources",
+        "wlre.services.world.map_names",
+        "wlre.services.world.roaming"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "state",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/core/inventory_updates.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/core/inventory_updates.py",
+    "source_sha256": "f8cdaf28b510faa53b329a918eb5221ae564a3e6b1dfc416f9055d23425b9c73",
+    "source_lines": 47,
+    "target_project": "Lala.Core",
+    "target_subsystem": "State.inventory_updates",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Inventory/BagReceiveReducer.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "add_item",
+          "line": 6
+        }
+      ],
+      "imports": [
+        "copy",
+        "wlre.services.world.item_stack_rules"
+      ],
+      "existing_test_candidates": [
+        "tests/test_official_stack_rules.py",
+        "tests/test_room_storage_transfer.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "state",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "migrated_scope": [
+      "Receive add-item rules with exact preferred-slot/order/stack semantics."
+    ],
+    "outstanding_scope": [
+      "Other global State mutation and full service integration remain."
+    ]
+  },
+  {
+    "id": "desktop:wlre/core/maintenance.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/core/maintenance.py",
+    "source_sha256": "5ced64fc4310c584d78483a98b416b96565596244af8e2abc8ef680274490d2f",
+    "source_lines": 17,
+    "target_project": "Lala.Core",
+    "target_subsystem": "State.maintenance",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "PeriodicCleanup",
+          "line": 7
+        }
+      ],
+      "imports": [
+        "time"
+      ],
+      "existing_test_candidates": [
+        "tests/test_maintenance.py",
+        "tests/test_periodic_cleanup.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "state",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/core/state.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/core/state.py",
+    "source_sha256": "aa949245491636e2e44ce50c36ab5dc46911ae5194e969b62345389d6ce4333d",
+    "source_lines": 178,
+    "target_project": "Lala.Core",
+    "target_subsystem": "State.state",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/State/ServiceStateCoordinator.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "State",
+          "line": 33
+        }
+      ],
+      "imports": [
+        "contextlib",
+        "dataclasses",
+        "threading",
+        "wlre.core.activity",
+        "wlre.core.efficiency",
+        "wlre.core.state_events",
+        "wlre.core.state_ownership",
+        "wlre.services.battle.attribute_points",
+        "wlre.services.battle.party",
+        "wlre.services.daily_tasks",
+        "wlre.services.expedition",
+        "wlre.services.instances",
+        "wlre.services.items.alchemy",
+        "wlre.services.items.combat_resources",
+        "wlre.services.items.crafting",
+        "wlre.services.items.recovery",
+        "wlre.services.items.room_storage",
+        "wlre.services.social.guild",
+        "wlre.services.social.guild_actions",
+        "wlre.services.star_ark",
+        "wlre.services.time_cube",
+        "wlre.services.world.npc_shop_evidence",
+        "wlre.services.world.obstacle_scope",
+        "wlre.services.world.tent"
+      ],
+      "existing_test_candidates": [
+        "tests/test_auto_battle_diagnostics.py",
+        "tests/test_automatic_flows.py",
+        "tests/test_automation_integration.py",
+        "tests/test_boundary_portals.py",
+        "tests/test_bounded_official_locomotion.py",
+        "tests/test_compact_crafting.py",
+        "tests/test_companion_commands.py",
+        "tests/test_companion_sync_safety.py",
+        "tests/test_connection_health.py",
+        "tests/test_coop_chest_bag_snapshot_1275.py",
+        "tests/test_coop_reward_lifecycle_v057.py",
+        "tests/test_crafting_cupboard_execution.py",
+        "tests/test_crafting_cupboard_view.py",
+        "tests/test_daily_assistant.py",
+        "tests/test_daily_assistant_guard_safety.py",
+        "tests/test_daily_assistant_ui.py",
+        "tests/test_daily_task_runtime.py",
+        "tests/test_dashboard_layout.py",
+        "tests/test_dynamic_bundle_runtime.py",
+        "tests/test_dynamic_crafting_schedule.py",
+        "tests/test_event_convey_portals.py",
+        "tests/test_exp_efficiency_regression.py",
+        "tests/test_expedition.py",
+        "tests/test_expedition_service_modules.py",
+        "tests/test_feature_cooperative_render_ui.py",
+        "tests/test_feature_cooperative_rooms_ui.py",
+        "tests/test_feature_dungeon_ui.py",
+        "tests/test_gold_sync_v0515.py",
+        "tests/test_guild_actions.py",
+        "tests/test_guild_chat_safety.py",
+        "tests/test_health_25804_diagnostics.py",
+        "tests/test_house_navigation_context.py",
+        "tests/test_house_navigation_scope.py",
+        "tests/test_instance_actions.py",
+        "tests/test_instance_ai_lock_ui.py",
+        "tests/test_instance_automation_independence.py",
+        "tests/test_instance_coop_host_start_v052.py",
+        "tests/test_instance_creation.py",
+        "tests/test_instance_entry.py",
+        "tests/test_instance_improvements.py",
+        "tests/test_instance_protocol.py",
+        "tests/test_instance_rewards.py",
+        "tests/test_instance_room_flow.py",
+        "tests/test_instance_room_ui.py",
+        "tests/test_instance_standby.py",
+        "tests/test_instance_start.py",
+        "tests/test_instance_ui.py",
+        "tests/test_minimap_actions_and_expedition_resume.py",
+        "tests/test_movement_authority.py",
+        "tests/test_navigation_motion_safety.py",
+        "tests/test_navigation_preview_job.py",
+        "tests/test_network_command_envelope.py",
+        "tests/test_nonplanar_navigation_safety.py",
+        "tests/test_npc_approach.py",
+        "tests/test_npc_choice_v0511.py",
+        "tests/test_npc_dialogue_v058.py",
+        "tests/test_npc_shop_v0513.py",
+        "tests/test_official_alchemy_metadata.py",
+        "tests/test_official_combat_catalog.py",
+        "tests/test_official_navigation_no_seed.py",
+        "tests/test_optimized_ui.py",
+        "tests/test_overview.py",
+        "tests/test_overview_controls.py",
+        "tests/test_p3_remove_legacy_portals.py",
+        "tests/test_party_guard.py",
+        "tests/test_periodic_cleanup.py",
+        "tests/test_portal_event_evidence.py",
+        "tests/test_portal_links_1275.py",
+        "tests/test_position_cache.py",
+        "tests/test_post_battle_maintenance.py",
+        "tests/test_postbattle_ai_lock_policy.py",
+        "tests/test_redesigned_layout.py",
+        "tests/test_release.py",
+        "tests/test_resource_safety_hold.py",
+        "tests/test_room_storage_1262.py",
+        "tests/test_room_storage_transfer.py",
+        "tests/test_room_storage_ui.py",
+        "tests/test_runtime_consumer_refresh.py",
+        "tests/test_s51_packet_resilience.py",
+        "tests/test_sailing_door_identity.py",
+        "tests/test_shop_reconciliation_v0516.py",
+        "tests/test_stage_map_only_portals.py",
+        "tests/test_star_ark.py",
+        "tests/test_state_event_routing.py",
+        "tests/test_tent_1262.py",
+        "tests/test_time_cube.py",
+        "tests/test_verified_expedition_1275.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "state",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "migrated_scope": [
+      "Bounded owner-thread service observer composition before local dispatch;14 real State.apply sequences698 checkpoints36event kinds; atomic rollback intentionally stronger than Python.",
+      "Crafting and bounded bag/companion observers now composed, with shared stackability and ordered S8 buffers;13 mixed State.apply scenarios524 checkpoints.",
+      "Party and instances now run before local dispatch; tent runs afterward. Twenty-two mixed Python sequences cover 679 checkpoints.",
+      "Player/equipment/battle knowledge now feeds allocation before local dispatch, preserving returned shared projections; 26 mixed Python sequences cover 1,064 checkpoints.",
+      "Source-ordered post-local shop, efficiency, guild actions and Ark receive composition with atomic publication; 26 real State.apply scenarios / 1,414 checkpoints / 38 event kinds."
+    ],
+    "outstanding_scope": [
+      "All eighteen observer positions have bounded receive composition, not complete State/module parity. Persistence completion, command/tick scheduling, remaining fields and live-session/transport wiring remain."
+    ]
+  },
+  {
+    "id": "desktop:wlre/core/state_battle_events.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/core/state_battle_events.py",
+    "source_sha256": "f47424824d9a60e63d87aad293abefdc1b89f9a2b2fca90fb88ab7b7d057615e",
+    "source_lines": 52,
+    "target_project": "Lala.Core",
+    "target_subsystem": "State.state_battle_events",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Battle/BattleEventReducer.cs",
+      "dotnet/Lala.Core/Battle/BattleEventModels.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "apply_battle_event",
+          "line": 9
+        }
+      ],
+      "imports": [],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "state",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "migrated_scope": [
+      "Pure immutable battle reducer with 20 Python sequences / 602 checkpoints; ordered units, attributes and reports."
+    ],
+    "outstanding_scope": [
+      "No full State service observers, combat automation or live-session activation."
+    ]
+  },
+  {
+    "id": "desktop:wlre/core/state_events.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/core/state_events.py",
+    "source_sha256": "8209d2596e262760f9d6ec979062d0ecd76cedc6f1762d6eedfcd49a5638d3a9",
+    "source_lines": 21,
+    "target_project": "Lala.Core",
+    "target_subsystem": "State.state_events",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/State/LocalStateCoordinator.cs",
+      "dotnet/Lala.Core/State/LocalStatePublisher.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "dispatch_local",
+          "line": 14
+        }
+      ],
+      "imports": [
+        "wlre.core.state_battle_events",
+        "wlre.core.state_session_events",
+        "wlre.core.state_world_events"
+      ],
+      "existing_test_candidates": [
+        "tests/test_state_event_routing.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "state",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "migrated_scope": [
+      "Owner-thread offline composition of session/world/battle reducers and synchronous coalesced immutable publication; 283 Python checkpoints and 23 publication operations."
+    ],
+    "outstanding_scope": [
+      "No complete State.apply service observers, network dispatch, account lifecycle, timers or UI wiring."
+    ]
+  },
+  {
+    "id": "desktop:wlre/core/state_ownership.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/core/state_ownership.py",
+    "source_sha256": "1add414b04245cf654562bfccd684ccd538ec288a7657cdc2a4ae5ef0f23dddb",
+    "source_lines": 86,
+    "target_project": "Lala.Core",
+    "target_subsystem": "State.state_ownership",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/State/StateOwnership.cs",
+      "dotnet/Lala.Core/State/OwnedState.cs",
+      "dotnet/Lala.Core/State/StateValue.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "writes",
+          "line": 26
+        },
+        {
+          "name": "plain",
+          "line": 38
+        },
+        {
+          "name": "guarded",
+          "line": 45
+        },
+        {
+          "name": "OwnedDict",
+          "line": 52
+        },
+        {
+          "name": "OwnedList",
+          "line": 71
+        }
+      ],
+      "imports": [
+        "copy",
+        "functools",
+        "inspect"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "state",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "migrated_scope": [
+      "All 11 mutation scope grants, creator-thread ownership, nested scope restoration, guarded edits and immutable snapshots."
+    ],
+    "outstanding_scope": [
+      "Foundation uses closed scalars/string maps and current-root path handles, not a drop-in Python container replacement.",
+      "Numeric-key star_ark maps, ordered position-cache eviction, all State defaults/reducers and dispatcher integration remain."
+    ]
+  },
+  {
+    "id": "desktop:wlre/core/state_session_events.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/core/state_session_events.py",
+    "source_sha256": "6c13fe9cbb07202c8f736324f16075a7b4d7bf53dd5e353348d0c957e550eb03",
+    "source_lines": 89,
+    "target_project": "Lala.Core",
+    "target_subsystem": "State.state_session_events",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Sessions/SessionEventReducer.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "apply_session_event",
+          "line": 10
+        }
+      ],
+      "imports": [],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "state",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "migrated_scope": [
+      "Pure immutable session event reducer: phases, gold evidence, NPC/event gates, attribute namespaces and unknown count."
+    ],
+    "outstanding_scope": [
+      "Packet counting supplied by caller; not complete State, transport/session lifecycle or command authority."
+    ]
+  },
+  {
+    "id": "desktop:wlre/core/state_world_events.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/core/state_world_events.py",
+    "source_sha256": "25bb617abc4da259c8b590d7084f1fe22b53adb63b7ade07a3f0cf5b8dec788a",
+    "source_lines": 54,
+    "target_project": "Lala.Core",
+    "target_subsystem": "State.state_world_events",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/World/WorldEventReducer.cs",
+      "dotnet/Lala.Core/World/WorldEventModels.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "apply_world_event",
+          "line": 8
+        }
+      ],
+      "imports": [
+        "wlre.services.world.house_navigation"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "state",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "migrated_scope": [
+      "Pure immutable world reducer with position/house evidence, 68 Python sequences / 934 checkpoints and 288 scope cases."
+    ],
+    "outstanding_scope": [
+      "No resource activation, movement sending, full State observers or live navigation authority."
+    ]
+  },
+  {
+    "id": "desktop:wlre/features/__init__.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/features/__init__.py",
+    "source_sha256": "e09abcab8e59259019931d3f65896c8fe10437190fbcb1bfabd32072b927326c",
+    "source_lines": 1,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.Features.__init__.py",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [],
+      "imports": [],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/features/cooperative/__init__.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/features/cooperative/__init__.py",
+    "source_sha256": "920564f9985696dfea93acc7b13cfbb55e981e109825120796ed9c895b04ccd2",
+    "source_lines": 1,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.Features.cooperative",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [],
+      "imports": [],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/features/cooperative/buttons.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/features/cooperative/buttons.py",
+    "source_sha256": "fbe8558ea5f932e20b0f50f4a6c4b5eb1c7b41ebab33a7002586d3694fa5bd99",
+    "source_lines": 45,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.Features.cooperative",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "CooperativeActionsMixin",
+          "line": 4
+        }
+      ],
+      "imports": [],
+      "existing_test_candidates": [
+        "tests/test_feature_cooperative.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/features/cooperative/panel.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/features/cooperative/panel.py",
+    "source_sha256": "67447f64dff09e0bbf7d8cbd68128c1ae7544411df65751c7ee88a3444d69871",
+    "source_lines": 13,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.Features.cooperative",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "CooperativeModePage",
+          "line": 9
+        }
+      ],
+      "imports": [
+        "wlre.ui.instance_ui"
+      ],
+      "existing_test_candidates": [
+        "tests/test_feature_cooperative.py",
+        "tests/test_feature_cooperative_render_ui.py",
+        "tests/test_feature_cooperative_rooms_ui.py",
+        "tests/test_feature_dungeon_catalog.py",
+        "tests/test_feature_dungeon_ui.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/features/cooperative/rewards.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/features/cooperative/rewards.py",
+    "source_sha256": "b0220a42c39e6d89cf058712e57557cfd6ede44bc56e81ae85c76fc5c340875a",
+    "source_lines": 88,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.Features.cooperative",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "CooperativeRewardViewMixin",
+          "line": 8
+        }
+      ],
+      "imports": [
+        "wlre.services.instance_rewards"
+      ],
+      "existing_test_candidates": [
+        "tests/test_coop_chest_bag_snapshot_1275.py",
+        "tests/test_feature_cooperative_render.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/features/cooperative/rooms.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/features/cooperative/rooms.py",
+    "source_sha256": "1289266e81a4ecda46b340574b699fa0cc2fccbc6856b5db174848c74f139155",
+    "source_lines": 97,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.Features.cooperative",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "cooperative_headcount_status",
+          "line": 4
+        },
+        {
+          "name": "cooperative_count_selector",
+          "line": 28
+        },
+        {
+          "name": "cooperative_checked_count",
+          "line": 39
+        },
+        {
+          "name": "cooperative_create_fields",
+          "line": 50
+        },
+        {
+          "name": "cooperative_join_fields",
+          "line": 56
+        },
+        {
+          "name": "CooperativeRoomStatusMixin",
+          "line": 61
+        }
+      ],
+      "imports": [
+        "tkinter"
+      ],
+      "existing_test_candidates": [
+        "tests/test_feature_cooperative.py",
+        "tests/test_feature_cooperative_render.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/features/cooperative/widgets.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/features/cooperative/widgets.py",
+    "source_sha256": "63c2f113e0df5f1b8fe8d17dc49e4756ae9cfffbff8508207787a766fcb1c2c0",
+    "source_lines": 39,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.Features.cooperative",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "build_cooperative_widgets",
+          "line": 6
+        }
+      ],
+      "imports": [
+        "tkinter"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/features/dungeon/__init__.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/features/dungeon/__init__.py",
+    "source_sha256": "7293ab29b15add8d1ba10d864892648e12eb5dab57867b3d9173f1a0bebac03a",
+    "source_lines": 1,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.Features.dungeon",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [],
+      "imports": [],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  }
+]

@@ -1,0 +1,49 @@
+name: .NET migration verification
+on:
+  pull_request:
+    paths: ['dotnet/**', '.github/workflows/dotnet-migration.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Test common core
+        run: dotnet test dotnet/Lala.Core.Tests/Lala.Core.Tests.csproj -c Release
+      - name: Test Android connection lifecycle without a device
+        run: dotnet test dotnet/Lala.Android.Lifecycle.Tests/Lala.Android.Lifecycle.Tests.csproj -c Release
+      - name: Build Avalonia desktop
+        run: dotnet build dotnet/Lala.Desktop/Lala.Desktop.csproj -c Release
+      - name: Check offline inspector
+        run: dotnet run --project dotnet/Lala.Desktop/Lala.Desktop.csproj -c Release --no-build -- --self-test
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install Android workload
+        run: dotnet workload install android
+      - name: Build Avalonia Android
+        run: dotnet build dotnet/Lala.Android/Lala.Android.csproj -c Debug -p:EmbedAssembliesIntoApk=true
+      - name: Preserve Android validation APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: lala-android-lifecycle-debug
+          path: dotnet/Lala.Android/bin/Debug/net10.0-android36.0/*-Signed.apk
+          if-no-files-found: error
+          retention-days: 7

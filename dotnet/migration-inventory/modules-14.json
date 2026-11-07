@@ -1,0 +1,2253 @@
+[
+  {
+    "id": "android:tools/resources/collect_emoji_resources.py",
+    "source_repository": "android",
+    "source_path": "tools/resources/collect_emoji_resources.py",
+    "source_sha256": "70a625f62d265251fd24d70fac6c29b7584656f199a12f638775e8957271a8cd",
+    "source_lines": 62,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "manifest_bundles",
+          "line": 8
+        },
+        {
+          "name": "version",
+          "line": 29
+        },
+        {
+          "name": "collect",
+          "line": 33
+        },
+        {
+          "name": "main",
+          "line": 49
+        }
+      ],
+      "imports": [
+        "datetime",
+        "json",
+        "pathlib",
+        "re",
+        "struct",
+        "tkinter",
+        "zipfile"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/resources/collect_instance_bundles.py",
+    "source_repository": "android",
+    "source_path": "tools/resources/collect_instance_bundles.py",
+    "source_sha256": "c7ada7b1892b459a50c353f53bbebb6da58fbf5d78c92d22f33248fcc3261be1",
+    "source_lines": 81,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "collect",
+          "line": 25
+        },
+        {
+          "name": "main",
+          "line": 66
+        }
+      ],
+      "imports": [
+        "argparse",
+        "hashlib",
+        "json",
+        "pathlib",
+        "sys",
+        "zipfile"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/resources/import_npc_talks.py",
+    "source_repository": "android",
+    "source_path": "tools/resources/import_npc_talks.py",
+    "source_sha256": "bec05ec1f41a5a23d9e63cbe75f569fccbfd97493770c9917aae15c509961a6d",
+    "source_lines": 41,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "convert",
+          "line": 18
+        },
+        {
+          "name": "main",
+          "line": 31
+        }
+      ],
+      "imports": [
+        "argparse",
+        "gzip",
+        "json",
+        "pathlib",
+        "wlre.services.world.npc_talk"
+      ],
+      "existing_test_candidates": [
+        "tests/test_npc_talk_v058.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/resources/install_npc_text_1262.py",
+    "source_repository": "android",
+    "source_path": "tools/resources/install_npc_text_1262.py",
+    "source_sha256": "edbef502ad41e68f90e7b891c05a8b29f7690c476a5bf08404664207e0ff9fb1",
+    "source_lines": 5,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [],
+      "imports": [
+        "wlre.services.world.npc_asset_install"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/resources/lala_manifest_compare.py",
+    "source_repository": "android",
+    "source_path": "tools/resources/lala_manifest_compare.py",
+    "source_sha256": "4d3c88038abd87e8529b648c2824476392f503df3688788d18edf225d7255b5f",
+    "source_lines": 305,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "Member",
+          "line": 32
+        },
+        {
+          "name": "_stream_digest",
+          "line": 40
+        },
+        {
+          "name": "_zip_members",
+          "line": 62
+        },
+        {
+          "name": "_Libarchive",
+          "line": 85
+        },
+        {
+          "name": "_rar_members",
+          "line": 112
+        },
+        {
+          "name": "inspect_archive",
+          "line": 162
+        },
+        {
+          "name": "compare",
+          "line": 208
+        },
+        {
+          "name": "markdown_report",
+          "line": 233
+        },
+        {
+          "name": "main",
+          "line": 269
+        }
+      ],
+      "imports": [
+        "__future__",
+        "argparse",
+        "ctypes",
+        "ctypes.util",
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "json",
+        "os",
+        "pathlib",
+        "re",
+        "sys",
+        "zipfile",
+        "zlib"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/resources/lala_manifest_full_index.py",
+    "source_repository": "android",
+    "source_path": "tools/resources/lala_manifest_full_index.py",
+    "source_sha256": "390e00d96ebff7369ea28b4c295dd5ef6c99f35596b81be8992803af445089b1",
+    "source_lines": 394,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "ParseError",
+          "line": 34
+        },
+        {
+          "name": "validate_private_output",
+          "line": 38
+        },
+        {
+          "name": "Reader",
+          "line": 50
+        },
+        {
+          "name": "parse_manifest",
+          "line": 95
+        },
+        {
+          "name": "manifest_bytes_from_archive",
+          "line": 172
+        },
+        {
+          "name": "load_index",
+          "line": 228
+        },
+        {
+          "name": "bundle_fingerprint",
+          "line": 252
+        },
+        {
+          "name": "asset_fingerprint",
+          "line": 261
+        },
+        {
+          "name": "diff_records",
+          "line": 267
+        },
+        {
+          "name": "dependency_impact",
+          "line": 290
+        },
+        {
+          "name": "report_text",
+          "line": 315
+        },
+        {
+          "name": "main",
+          "line": 355
+        }
+      ],
+      "imports": [
+        "__future__",
+        "argparse",
+        "collections",
+        "ctypes",
+        "datetime",
+        "hashlib",
+        "json",
+        "lala_manifest_compare",
+        "pathlib",
+        "struct",
+        "sys",
+        "zipfile"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/resources/preview_1275.py",
+    "source_repository": "android",
+    "source_path": "tools/resources/preview_1275.py",
+    "source_sha256": "61fb1396b091e15a0e210446dbc5ac1e994d673a94e9e39194ba6b3be0231513",
+    "source_lines": 65,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_shop_key",
+          "line": 17
+        },
+        {
+          "name": "main",
+          "line": 27
+        }
+      ],
+      "imports": [
+        "__future__",
+        "argparse",
+        "json",
+        "pathlib",
+        "wlre.services.world.preview_1275"
+      ],
+      "existing_test_candidates": [
+        "tests/test_preview_1275.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/reviewed_1275_handoff.py",
+    "source_repository": "android",
+    "source_path": "tools/reviewed_1275_handoff.py",
+    "source_sha256": "99456c53138dd9f34b505168f338807339a8f3f8e9c78e75204f41a477ca2957",
+    "source_lines": 9,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "main",
+          "line": 4
+        }
+      ],
+      "imports": [
+        "sys"
+      ],
+      "existing_test_candidates": [
+        "tests/test_formal_candidate_bridge.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:tools/verify_official_local_bundles.py",
+    "source_repository": "android",
+    "source_path": "tools/verify_official_local_bundles.py",
+    "source_sha256": "4a880f84c5bc7bdd349075f0a0d918c19016535ab8944cdff11f310d8ad75f77",
+    "source_lines": 264,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "OfflineVerificationError",
+          "line": 24
+        },
+        {
+          "name": "inspect_manifest_zip",
+          "line": 28
+        },
+        {
+          "name": "required_bundle_set",
+          "line": 74
+        },
+        {
+          "name": "scan_game_yoo_bundle_cache",
+          "line": 122
+        },
+        {
+          "name": "verify_local",
+          "line": 156
+        },
+        {
+          "name": "main",
+          "line": 238
+        }
+      ],
+      "imports": [
+        "__future__",
+        "argparse",
+        "hashlib",
+        "json",
+        "pathlib",
+        "sys",
+        "tools.resources.lala_manifest_full_index",
+        "wlre.services.official_bundle_download",
+        "wlre.services.official_manifest_sync",
+        "wlre.services.world.auto_catalog",
+        "wlre.services.world.catalog_adapters",
+        "wlre.services.world.catalog_source_extractor",
+        "wlre.services.world.official_catalog_pipeline",
+        "zipfile",
+        "zlib"
+      ],
+      "existing_test_candidates": [
+        "tests/test_verify_official_local_bundles.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:wlre/__init__.py",
+    "source_repository": "android",
+    "source_path": "wlre/__init__.py",
+    "source_sha256": "c530bb40d777a4c28cdc55fa25dca53bc82042fc637b9c1e82c567ee9a26c424",
+    "source_lines": 2,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Configuration",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [],
+      "imports": [
+        "android_app.version"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "shared_core_reconciliation": {
+      "desktop_source": "wlre/__init__.py",
+      "identical_source": false,
+      "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
+    }
+  },
+  {
+    "id": "android:wlre/core/__init__.py",
+    "source_repository": "android",
+    "source_path": "wlre/core/__init__.py",
+    "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "source_lines": 0,
+    "target_project": "Lala.Core",
+    "target_subsystem": "State.__init__",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [],
+      "imports": [],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "state",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "shared_core_reconciliation": {
+      "desktop_source": "wlre/core/__init__.py",
+      "identical_source": true,
+      "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
+    }
+  },
+  {
+    "id": "android:wlre/core/activity.py",
+    "source_repository": "android",
+    "source_path": "wlre/core/activity.py",
+    "source_sha256": "0142b49bc84535cc3a2b343d332e9cd126493326dd3e86838ec0494555da0a11",
+    "source_lines": 33,
+    "target_project": "Lala.Core",
+    "target_subsystem": "State.activity",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Activities/ActivityLocks.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "decode_activity",
+          "line": 4
+        },
+        {
+          "name": "apply_activity",
+          "line": 20
+        }
+      ],
+      "imports": [
+        "wlre.network.wire"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "state",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "200_synthetic_python_cases_plus_28_boundary_tests_passed",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "shared_core_reconciliation": {
+      "desktop_source": "wlre/core/activity.py",
+      "identical_source": true,
+      "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
+    },
+    "migrated_scope": [
+      "All recognized activity packet forms, role ownership, initial-list reset, geometry clearing and world-player reset as offline typed state."
+    ],
+    "outstanding_scope": [
+      "Connect to full session state and network event dispatcher; device and live acceptance not run."
+    ]
+  },
+  {
+    "id": "android:wlre/core/diagnostics.py",
+    "source_repository": "android",
+    "source_path": "wlre/core/diagnostics.py",
+    "source_sha256": "1e73a92d5baf2b9616e035ff3da17ccab89b85da0142138b40b81086c52c63ae",
+    "source_lines": 255,
+    "target_project": "Lala.Core",
+    "target_subsystem": "State.diagnostics",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "safe_exception_location",
+          "line": 9
+        },
+        {
+          "name": "Diagnostics",
+          "line": 23
+        }
+      ],
+      "imports": [
+        "collections",
+        "logging",
+        "logging.handlers",
+        "os",
+        "pathlib",
+        "time",
+        "wlre.storage.paths"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_instance_runtime.py",
+        "tests/test_auto_battle_diagnostics.py",
+        "tests/test_health_25804_diagnostics.py",
+        "tests/test_optimizations.py",
+        "tests/test_postbattle_ai_lock_policy.py",
+        "tests/test_s51_packet_resilience.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "state",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "shared_core_reconciliation": {
+      "desktop_source": "wlre/core/diagnostics.py",
+      "identical_source": true,
+      "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
+    }
+  },
+  {
+    "id": "android:wlre/core/efficiency.py",
+    "source_repository": "android",
+    "source_path": "wlre/core/efficiency.py",
+    "source_sha256": "96545a197e6293e40f1b2ec5aad09a3b4c7e55cfe92206bee7a04bee40c2d4d0",
+    "source_lines": 162,
+    "target_project": "Lala.Core",
+    "target_subsystem": "State.efficiency",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Battle/EfficiencyModels.cs",
+      "dotnet/Lala.Core/Battle/EfficiencyRules.cs",
+      "dotnet/Lala.Core/Battle/EfficiencyTracker.cs",
+      "dotnet/Lala.Core/Battle/EfficiencyReducer.cs",
+      "dotnet/Lala.Core/Battle/EfficiencyReceiveReducer.cs",
+      "dotnet/Lala.Core/Battle/EfficiencyKnowledgeProjector.cs",
+      "dotnet/Lala.Core/State/ServiceStateCoordinator.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "defaults",
+          "line": 8
+        },
+        {
+          "name": "need",
+          "line": 10
+        },
+        {
+          "name": "cumulative",
+          "line": 17
+        },
+        {
+          "name": "progress",
+          "line": 21
+        },
+        {
+          "name": "_row",
+          "line": 31
+        },
+        {
+          "name": "observe",
+          "line": 69
+        },
+        {
+          "name": "rates",
+          "line": 143
+        },
+        {
+          "name": "duration",
+          "line": 152
+        },
+        {
+          "name": "forecast",
+          "line": 157
+        }
+      ],
+      "imports": [
+        "functools",
+        "math",
+        "time",
+        "wlre.core.event_log",
+        "wlre.services.items.combat_resources"
+      ],
+      "existing_test_candidates": [
+        "tests/test_exp_efficiency_regression.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "state",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "shared_core_reconciliation": {
+      "desktop_source": "wlre/core/efficiency.py",
+      "identical_source": true,
+      "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
+    },
+    "migrated_scope": [
+      "Offline EXP curves/progress, rates/forecast and complete battle evidence tracking with immutable snapshots, confirmed/inferred flags and bounded history.",
+      "Atomic immutable snapshot reduction reuses tracker calculations; typed receive adapter uses explicit timing and updated caller-supplied knowledge. Six Python packet sequences cover 92 additional checkpoints.",
+      "Distinct self/follow:0 subjects and UInt16 companion slots, Int64 labels and sample degree, explicit updated-knowledge/post-local identity projection; eleven receive sequences / 166 checkpoints.",
+      "Source-ordered post-local shop, efficiency, guild actions and Ark receive composition with atomic publication; 26 real State.apply scenarios / 1,414 checkpoints / 38 event kinds."
+    ],
+    "outstanding_scope": [
+      "Runtime and UI acceptance remain; explicit NPC display names do not establish catalog provenance."
+    ]
+  },
+  {
+    "id": "android:wlre/core/event_log.py",
+    "source_repository": "android",
+    "source_path": "wlre/core/event_log.py",
+    "source_sha256": "4c0a0a3f339522c5cd13e972502e2196b1ac93df9cc1e9e695d92a2a8ad5e244",
+    "source_lines": 110,
+    "target_project": "Lala.Core",
+    "target_subsystem": "State.event_log",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "chinese",
+          "line": 14
+        },
+        {
+          "name": "owned",
+          "line": 23
+        },
+        {
+          "name": "battle_local",
+          "line": 24
+        },
+        {
+          "name": "lines",
+          "line": 26
+        }
+      ],
+      "imports": [
+        "re",
+        "wlre.services.battle.auto_battle",
+        "wlre.services.battle.combat",
+        "wlre.services.battle.party",
+        "wlre.services.items.combat_resources",
+        "wlre.services.world.map_names",
+        "wlre.services.world.roaming"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "state",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "shared_core_reconciliation": {
+      "desktop_source": "wlre/core/event_log.py",
+      "identical_source": true,
+      "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
+    }
+  },
+  {
+    "id": "android:wlre/core/inventory_updates.py",
+    "source_repository": "android",
+    "source_path": "wlre/core/inventory_updates.py",
+    "source_sha256": "6cae4cd7c4d2a3a878af987f969696fa8e0fc0ce508cd5d5de543780e4287a03",
+    "source_lines": 48,
+    "target_project": "Lala.Core",
+    "target_subsystem": "State.inventory_updates",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "add_item",
+          "line": 7
+        }
+      ],
+      "imports": [
+        "copy",
+        "json",
+        "wlre.paths",
+        "wlre.storage.bundled_database"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_shared_reservations.py",
+        "tests/test_room_storage_transfer.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "state",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "shared_core_reconciliation": {
+      "desktop_source": "wlre/core/inventory_updates.py",
+      "identical_source": false,
+      "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
+    }
+  },
+  {
+    "id": "android:wlre/core/maintenance.py",
+    "source_repository": "android",
+    "source_path": "wlre/core/maintenance.py",
+    "source_sha256": "5ced64fc4310c584d78483a98b416b96565596244af8e2abc8ef680274490d2f",
+    "source_lines": 17,
+    "target_project": "Lala.Core",
+    "target_subsystem": "State.maintenance",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "PeriodicCleanup",
+          "line": 7
+        }
+      ],
+      "imports": [
+        "time"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "state",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "shared_core_reconciliation": {
+      "desktop_source": "wlre/core/maintenance.py",
+      "identical_source": true,
+      "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
+    }
+  },
+  {
+    "id": "android:wlre/core/state.py",
+    "source_repository": "android",
+    "source_path": "wlre/core/state.py",
+    "source_sha256": "ff71e4f4a36b9811e47c552dfa39a09538f6ecebc51542b6fe7e76eaa74965fb",
+    "source_lines": 169,
+    "target_project": "Lala.Core",
+    "target_subsystem": "State.state",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "State",
+          "line": 30
+        }
+      ],
+      "imports": [
+        "contextlib",
+        "dataclasses",
+        "threading",
+        "wlre.core.activity",
+        "wlre.core.efficiency",
+        "wlre.core.state_events",
+        "wlre.core.state_ownership",
+        "wlre.services.battle.attribute_points",
+        "wlre.services.battle.party",
+        "wlre.services.expedition",
+        "wlre.services.instances",
+        "wlre.services.items.alchemy",
+        "wlre.services.items.combat_resources",
+        "wlre.services.items.crafting",
+        "wlre.services.items.recovery",
+        "wlre.services.items.room_storage",
+        "wlre.services.social.guild",
+        "wlre.services.time_cube",
+        "wlre.services.world.npc_shop_evidence",
+        "wlre.services.world.obstacle_scope",
+        "wlre.services.world.tent"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_automation.py",
+        "tests/test_android_coordination.py",
+        "tests/test_android_crafting_reservations.py",
+        "tests/test_android_desktop_parity.py",
+        "tests/test_android_features.py",
+        "tests/test_android_instance_runtime.py",
+        "tests/test_android_latest_parity.py",
+        "tests/test_android_non_npc_parity_v0512.py",
+        "tests/test_android_overlay.py",
+        "tests/test_android_sessions.py",
+        "tests/test_android_shared_reservations.py",
+        "tests/test_auto_battle_diagnostics.py",
+        "tests/test_automatic_flows.py",
+        "tests/test_boundary_portals.py",
+        "tests/test_companion_commands.py",
+        "tests/test_companion_sync_safety.py",
+        "tests/test_crafting_cupboard_execution.py",
+        "tests/test_dynamic_bundle_runtime.py",
+        "tests/test_event_convey_portals.py",
+        "tests/test_exp_efficiency_regression.py",
+        "tests/test_expedition.py",
+        "tests/test_expedition_service_modules.py",
+        "tests/test_gold_sync_v0515.py",
+        "tests/test_health_25804_diagnostics.py",
+        "tests/test_instance_actions.py",
+        "tests/test_instance_coop_host_start_v052.py",
+        "tests/test_instance_creation.py",
+        "tests/test_instance_protocol.py",
+        "tests/test_instance_room_flow.py",
+        "tests/test_network_command_envelope.py",
+        "tests/test_npc_approach.py",
+        "tests/test_npc_choice_v0511.py",
+        "tests/test_npc_dialogue_v058.py",
+        "tests/test_npc_shop_v0513.py",
+        "tests/test_party_guard.py",
+        "tests/test_portal_event_evidence.py",
+        "tests/test_position_cache.py",
+        "tests/test_post_battle_maintenance.py",
+        "tests/test_postbattle_ai_lock_policy.py",
+        "tests/test_release.py",
+        "tests/test_room_storage_1262.py",
+        "tests/test_room_storage_transfer.py",
+        "tests/test_s51_packet_resilience.py",
+        "tests/test_sailing_door_identity.py",
+        "tests/test_shop_reconciliation_v0516.py",
+        "tests/test_stage_map_only_portals.py",
+        "tests/test_state_event_routing.py",
+        "tests/test_time_cube.py",
+        "tests/test_verified_expedition_1275.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "state",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "shared_core_reconciliation": {
+      "desktop_source": "wlre/core/state.py",
+      "identical_source": false,
+      "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
+    }
+  },
+  {
+    "id": "android:wlre/core/state_battle_events.py",
+    "source_repository": "android",
+    "source_path": "wlre/core/state_battle_events.py",
+    "source_sha256": "f47424824d9a60e63d87aad293abefdc1b89f9a2b2fca90fb88ab7b7d057615e",
+    "source_lines": 52,
+    "target_project": "Lala.Core",
+    "target_subsystem": "State.state_battle_events",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Battle/BattleEventReducer.cs",
+      "dotnet/Lala.Core/Battle/BattleEventModels.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "apply_battle_event",
+          "line": 9
+        }
+      ],
+      "imports": [],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "state",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "shared_core_reconciliation": {
+      "desktop_source": "wlre/core/state_battle_events.py",
+      "identical_source": true,
+      "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
+    },
+    "migrated_scope": [
+      "Pure immutable battle reducer with 20 Python sequences / 602 checkpoints; ordered units, attributes and reports."
+    ],
+    "outstanding_scope": [
+      "No full State service observers, combat automation or live-session activation."
+    ]
+  },
+  {
+    "id": "android:wlre/core/state_events.py",
+    "source_repository": "android",
+    "source_path": "wlre/core/state_events.py",
+    "source_sha256": "8209d2596e262760f9d6ec979062d0ecd76cedc6f1762d6eedfcd49a5638d3a9",
+    "source_lines": 21,
+    "target_project": "Lala.Core",
+    "target_subsystem": "State.state_events",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/State/LocalStateCoordinator.cs",
+      "dotnet/Lala.Core/State/LocalStatePublisher.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "dispatch_local",
+          "line": 14
+        }
+      ],
+      "imports": [
+        "wlre.core.state_battle_events",
+        "wlre.core.state_session_events",
+        "wlre.core.state_world_events"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_coordination.py",
+        "tests/test_state_event_routing.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "state",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "shared_core_reconciliation": {
+      "desktop_source": "wlre/core/state_events.py",
+      "identical_source": true,
+      "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
+    },
+    "migrated_scope": [
+      "Owner-thread offline composition of session/world/battle reducers and synchronous coalesced immutable publication; 283 Python checkpoints and 23 publication operations."
+    ],
+    "outstanding_scope": [
+      "No complete State.apply service observers, network dispatch, account lifecycle, timers or UI wiring."
+    ]
+  },
+  {
+    "id": "android:wlre/core/state_ownership.py",
+    "source_repository": "android",
+    "source_path": "wlre/core/state_ownership.py",
+    "source_sha256": "1add414b04245cf654562bfccd684ccd538ec288a7657cdc2a4ae5ef0f23dddb",
+    "source_lines": 86,
+    "target_project": "Lala.Core",
+    "target_subsystem": "State.state_ownership",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/State/StateOwnership.cs",
+      "dotnet/Lala.Core/State/OwnedState.cs",
+      "dotnet/Lala.Core/State/StateValue.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "writes",
+          "line": 26
+        },
+        {
+          "name": "plain",
+          "line": 38
+        },
+        {
+          "name": "guarded",
+          "line": 45
+        },
+        {
+          "name": "OwnedDict",
+          "line": 52
+        },
+        {
+          "name": "OwnedList",
+          "line": 71
+        }
+      ],
+      "imports": [
+        "copy",
+        "functools",
+        "inspect"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "state",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "shared_core_reconciliation": {
+      "desktop_source": "wlre/core/state_ownership.py",
+      "identical_source": true,
+      "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
+    },
+    "migrated_scope": [
+      "All 11 mutation scope grants, creator-thread ownership, nested scope restoration, guarded edits and immutable snapshots."
+    ],
+    "outstanding_scope": [
+      "Foundation uses closed scalars/string maps and current-root path handles, not a drop-in Python container replacement.",
+      "Numeric-key star_ark maps, ordered position-cache eviction, all State defaults/reducers and dispatcher integration remain."
+    ]
+  },
+  {
+    "id": "android:wlre/core/state_session_events.py",
+    "source_repository": "android",
+    "source_path": "wlre/core/state_session_events.py",
+    "source_sha256": "6c13fe9cbb07202c8f736324f16075a7b4d7bf53dd5e353348d0c957e550eb03",
+    "source_lines": 89,
+    "target_project": "Lala.Core",
+    "target_subsystem": "State.state_session_events",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Sessions/SessionEventReducer.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "apply_session_event",
+          "line": 10
+        }
+      ],
+      "imports": [],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "state",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "shared_core_reconciliation": {
+      "desktop_source": "wlre/core/state_session_events.py",
+      "identical_source": true,
+      "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
+    },
+    "migrated_scope": [
+      "Pure immutable session event reducer: phases, gold evidence, NPC/event gates, attribute namespaces and unknown count."
+    ],
+    "outstanding_scope": [
+      "Packet counting supplied by caller; not complete State, transport/session lifecycle or command authority."
+    ]
+  },
+  {
+    "id": "android:wlre/core/state_world_events.py",
+    "source_repository": "android",
+    "source_path": "wlre/core/state_world_events.py",
+    "source_sha256": "bd35dfc2b6a9050bc6d6cb4235099d39721e8c923b04283fda1698236b5b0171",
+    "source_lines": 51,
+    "target_project": "Lala.Core",
+    "target_subsystem": "State.state_world_events",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "apply_world_event",
+          "line": 8
+        }
+      ],
+      "imports": [],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "state",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "shared_core_reconciliation": {
+      "desktop_source": "wlre/core/state_world_events.py",
+      "identical_source": false,
+      "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
+    }
+  },
+  {
+    "id": "android:wlre/network/__init__.py",
+    "source_repository": "android",
+    "source_path": "wlre/network/__init__.py",
+    "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "source_lines": 0,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Protocol.__init__",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [],
+      "imports": [],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "protocol",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "shared_core_reconciliation": {
+      "desktop_source": "wlre/network/__init__.py",
+      "identical_source": true,
+      "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
+    }
+  },
+  {
+    "id": "android:wlre/network/automatic_flows.py",
+    "source_repository": "android",
+    "source_path": "wlre/network/automatic_flows.py",
+    "source_sha256": "d5582fe4587383403d94261909022d96f38dccc68fc590650e00c830b96f4998",
+    "source_lines": 195,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Protocol.automatic_flows",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "AutomaticFlows",
+          "line": 14
+        }
+      ],
+      "imports": [
+        "time",
+        "wlre.network.commands",
+        "wlre.network.wire",
+        "wlre.services.world.dynamic_bundle_runtime",
+        "wlre.services.world.npc_catalog"
+      ],
+      "existing_test_candidates": [
+        "tests/test_automatic_flows.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "protocol",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "shared_core_reconciliation": {
+      "desktop_source": "wlre/network/automatic_flows.py",
+      "identical_source": true,
+      "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
+    }
+  },
+  {
+    "id": "android:wlre/network/client.py",
+    "source_repository": "android",
+    "source_path": "wlre/network/client.py",
+    "source_sha256": "f6119fc5445b240bffc688070ae77966c87601c72d8357785eb00926dc930aaa",
+    "source_lines": 502,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Protocol.client",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "post_battle_trace",
+          "line": 41
+        },
+        {
+          "name": "coop_state_trace",
+          "line": 62
+        },
+        {
+          "name": "LoginRejected",
+          "line": 96
+        },
+        {
+          "name": "_send",
+          "line": 100
+        },
+        {
+          "name": "_send_command_packet",
+          "line": 105
+        },
+        {
+          "name": "verify_account",
+          "line": 119
+        },
+        {
+          "name": "SessionLogic",
+          "line": 144
+        },
+        {
+          "name": "run_client",
+          "line": 349
+        }
+      ],
+      "imports": [
+        "queue",
+        "socket",
+        "threading",
+        "time",
+        "wlre.core.maintenance",
+        "wlre.core.state",
+        "wlre.network.automatic_flows",
+        "wlre.network.command_envelope",
+        "wlre.network.commands",
+        "wlre.network.connection_health",
+        "wlre.network.instances",
+        "wlre.network.npc_dialogue",
+        "wlre.network.outbound_observations",
+        "wlre.network.protocol",
+        "wlre.network.service_scheduler",
+        "wlre.network.state_updates",
+        "wlre.network.wire",
+        "wlre.services.battle.attribute_points",
+        "wlre.services.battle.auto_battle",
+        "wlre.services.battle.party",
+        "wlre.services.expedition",
+        "wlre.services.instance_combat",
+        "wlre.services.instance_creation",
+        "wlre.services.instance_entry",
+        "wlre.services.instance_rewards",
+        "wlre.services.instance_room_flow",
+        "wlre.services.instance_standby",
+        "wlre.services.instance_start",
+        "wlre.services.items",
+        "wlre.services.items.alchemy",
+        "wlre.services.items.crafting",
+        "wlre.services.items.field_supply",
+        "wlre.services.items.post_battle_maintenance",
+        "wlre.services.items.room_storage_transfer",
+        "wlre.services.social.chat",
+        "wlre.services.time_cube",
+        "wlre.services.world.movement",
+        "wlre.services.world.portal_travel",
+        "wlre.services.world.roaming"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_coordination.py",
+        "tests/test_android_crafting_reservations.py",
+        "tests/test_android_instance_runtime.py",
+        "tests/test_android_non_npc_parity_v0512.py",
+        "tests/test_android_sessions.py",
+        "tests/test_android_shared_reservations.py",
+        "tests/test_automatic_flows.py",
+        "tests/test_companion_commands.py",
+        "tests/test_expedition.py",
+        "tests/test_health_25804_diagnostics.py",
+        "tests/test_instance_actions.py",
+        "tests/test_instance_coop_host_start_v052.py",
+        "tests/test_instance_creation.py",
+        "tests/test_instance_protocol.py",
+        "tests/test_instance_room_flow.py",
+        "tests/test_network_command_envelope.py",
+        "tests/test_npc_approach.py",
+        "tests/test_npc_choice_v0511.py",
+        "tests/test_party_guard.py",
+        "tests/test_post_battle_maintenance.py",
+        "tests/test_postbattle_ai_lock_policy.py",
+        "tests/test_release.py",
+        "tests/test_room_storage_transfer.py",
+        "tests/test_s51_packet_resilience.py",
+        "tests/test_state_updates.py",
+        "tests/test_time_cube.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "protocol",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "shared_core_reconciliation": {
+      "desktop_source": "wlre/network/client.py",
+      "identical_source": false,
+      "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
+    }
+  },
+  {
+    "id": "android:wlre/network/command_envelope.py",
+    "source_repository": "android",
+    "source_path": "wlre/network/command_envelope.py",
+    "source_sha256": "f984e7915a32262853e235d88e42ef5431b0218fc6f4ae9c735b6445d5aa3223",
+    "source_lines": 27,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Protocol.command_envelope",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "validate_command",
+          "line": 11
+        },
+        {
+          "name": "rejected_command_type",
+          "line": 20
+        }
+      ],
+      "imports": [
+        "collections.abc",
+        "wlre.network.wire"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_coordination.py",
+        "tests/test_network_command_envelope.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "protocol",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "shared_core_reconciliation": {
+      "desktop_source": "wlre/network/command_envelope.py",
+      "identical_source": true,
+      "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
+    }
+  },
+  {
+    "id": "android:wlre/network/commands.py",
+    "source_repository": "android",
+    "source_path": "wlre/network/commands.py",
+    "source_sha256": "c7228c42d8d0ce37915bb6a991bc708cc446d865f4e110d8e137f27c26bf96fc",
+    "source_lines": 296,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Protocol.commands",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "dispatch",
+          "line": 30
+        }
+      ],
+      "imports": [
+        "time",
+        "wlre.core.efficiency",
+        "wlre.network.instances",
+        "wlre.network.npc_dialogue",
+        "wlre.network.protocol",
+        "wlre.network.wire",
+        "wlre.services.battle.attribute_points",
+        "wlre.services.battle.battle_commands",
+        "wlre.services.battle.combat",
+        "wlre.services.battle.companions",
+        "wlre.services.battle.party",
+        "wlre.services.battle.party_guard",
+        "wlre.services.coordination",
+        "wlre.services.instance_creation",
+        "wlre.services.instance_entry",
+        "wlre.services.instance_rewards",
+        "wlre.services.instance_room_flow",
+        "wlre.services.instance_standby",
+        "wlre.services.instance_start",
+        "wlre.services.items",
+        "wlre.services.items.combat_resources",
+        "wlre.services.items.recovery",
+        "wlre.services.social.chat",
+        "wlre.services.time_cube",
+        "wlre.services.world.npc_approach",
+        "wlre.services.world.tent"
+      ],
+      "existing_test_candidates": [
+        "tests/test_automatic_flows.py",
+        "tests/test_gold_sync_v0515.py",
+        "tests/test_npc_approach.py",
+        "tests/test_npc_shop_v0513.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "protocol",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "shared_core_reconciliation": {
+      "desktop_source": "wlre/network/commands.py",
+      "identical_source": false,
+      "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
+    }
+  },
+  {
+    "id": "android:wlre/network/connection_health.py",
+    "source_repository": "android",
+    "source_path": "wlre/network/connection_health.py",
+    "source_sha256": "b395caa877f36c2e3097790ed49070d777564f337f3006f9b1903e0ee3efb856",
+    "source_lines": 63,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Protocol.connection_health",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Diagnostics/ConnectionHealth.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "configure_keepalive",
+          "line": 9
+        },
+        {
+          "name": "ConnectionHealth",
+          "line": 27
+        }
+      ],
+      "imports": [
+        "socket",
+        "time",
+        "wlre.core.diagnostics"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_instance_runtime.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "protocol",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "shared_core_reconciliation": {
+      "desktop_source": "wlre/network/connection_health.py",
+      "identical_source": true,
+      "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
+    },
+    "migrated_scope": [
+      "Injected-clock transport evidence, throttle, quiet and closed status."
+    ],
+    "outstanding_scope": [
+      "Socket keepalive setup and sanitized exception frame metadata not migrated.",
+      "Quiet remains uncertainty, never a logout decision."
+    ]
+  },
+  {
+    "id": "android:wlre/network/expedition.py",
+    "source_repository": "android",
+    "source_path": "wlre/network/expedition.py",
+    "source_sha256": "aab0dba290aa3d869dbd417f6065c2eba9e5dc19366ba8f29406a7181904134e",
+    "source_lines": 77,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Protocol.expedition",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Protocol/ExpeditionDecoder.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "outpost",
+          "line": 5
+        },
+        {
+          "name": "team",
+          "line": 19
+        },
+        {
+          "name": "decode_expedition",
+          "line": 25
+        }
+      ],
+      "imports": [
+        "wlre.network.wire"
+      ],
+      "existing_test_candidates": [
+        "tests/test_expedition.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "protocol",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "160_synthetic_packet_parity_plus_160_length_cases_and_immutability_passed",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "shared_core_reconciliation": {
+      "desktop_source": "wlre/network/expedition.py",
+      "identical_source": true,
+      "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
+    },
+    "migrated_scope": [
+      "All recognized S31 expedition/outpost packet variants, immutable typed events, strict lengths and documented opaque extensions."
+    ],
+    "outstanding_scope": [
+      "Connect decoder to network dispatcher and complete expedition state/service orchestration; device/live acceptance not run."
+    ]
+  },
+  {
+    "id": "android:wlre/network/instance_actions.py",
+    "source_repository": "android",
+    "source_path": "wlre/network/instance_actions.py",
+    "source_sha256": "a777b356fa9300adedbb9be85fc30241cbeb3481fdad4da70b5f4f7159f3f547",
+    "source_lines": 91,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Protocol.instance_actions",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_int",
+          "line": 13
+        },
+        {
+          "name": "_password",
+          "line": 19
+        },
+        {
+          "name": "_main_stage",
+          "line": 29
+        },
+        {
+          "name": "_coop_details",
+          "line": 37
+        },
+        {
+          "name": "create_main_room",
+          "line": 48
+        },
+        {
+          "name": "create_coop_room",
+          "line": 58
+        },
+        {
+          "name": "join_main_room",
+          "line": 68
+        },
+        {
+          "name": "join_coop_room",
+          "line": 79
+        },
+        {
+          "name": "leave_room",
+          "line": 86
+        }
+      ],
+      "imports": [
+        "wlre.network.wire",
+        "wlre.services.instance_browser"
+      ],
+      "existing_test_candidates": [
+        "tests/test_instance_actions.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "protocol",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "shared_core_reconciliation": {
+      "desktop_source": "wlre/network/instance_actions.py",
+      "identical_source": false,
+      "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
+    }
+  },
+  {
+    "id": "android:wlre/network/instances.py",
+    "source_repository": "android",
+    "source_path": "wlre/network/instances.py",
+    "source_sha256": "af441d0c7e940ff63f49b1459f4d8ad7a29a1927c713210d8a4d2b9b16188295",
+    "source_lines": 243,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Protocol.instances",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Instances/InstanceDecoder.cs",
+      "dotnet/Lala.Core/Instances/InstanceLayouts.cs",
+      "dotnet/Lala.Core/Instances/InstanceEvents.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "list_request",
+          "line": 10
+        },
+        {
+          "name": "member_request",
+          "line": 18
+        },
+        {
+          "name": "_main",
+          "line": 28
+        },
+        {
+          "name": "_coop",
+          "line": 147
+        },
+        {
+          "name": "decode_instances",
+          "line": 238
+        }
+      ],
+      "imports": [
+        "wlre.network.wire"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_instance_runtime.py",
+        "tests/test_instance_protocol.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "protocol",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "shared_core_reconciliation": {
+      "desktop_source": "wlre/network/instances.py",
+      "identical_source": true,
+      "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
+    },
+    "migrated_scope": [
+      "Complete inbound S85/S186 decode/layouts and typed ServerProtocol integration."
+    ],
+    "outstanding_scope": [
+      "Room/entry/reward services, sweep/challenge requests and state orchestration not included."
+    ]
+  },
+  {
+    "id": "android:wlre/network/layouts.py",
+    "source_repository": "android",
+    "source_path": "wlre/network/layouts.py",
+    "source_sha256": "ca5ce36f99ae1be11cc44dd9c5339635256b3d89ff7784539e573d3ee0e37d3d",
+    "source_lines": 46,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Protocol.layouts",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Protocol/ProtocolLayouts.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "role_list",
+          "line": 5
+        },
+        {
+          "name": "world_player",
+          "line": 24
+        },
+        {
+          "name": "battle_unit",
+          "line": 37
+        }
+      ],
+      "imports": [
+        "wlre.network.wire"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "protocol",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "shared_core_reconciliation": {
+      "desktop_source": "wlre/network/layouts.py",
+      "identical_source": true,
+      "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
+    },
+    "migrated_scope": [
+      "role_list, world_player, battle_unit, immutable records and strict packet wrappers."
+    ],
+    "outstanding_scope": [
+      "Live/session state integration and server acceptance not run."
+    ]
+  },
+  {
+    "id": "android:wlre/network/live_data.py",
+    "source_repository": "android",
+    "source_path": "wlre/network/live_data.py",
+    "source_sha256": "897e789ea33f02e2056d48e936c7856bbfb5e580d9a7d2ecb05048437416efd0",
+    "source_lines": 105,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Protocol.live_data",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Protocol/LiveDataProtocol.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "item_save",
+          "line": 5
+        },
+        {
+          "name": "companion",
+          "line": 20
+        },
+        {
+          "name": "player_info",
+          "line": 39
+        },
+        {
+          "name": "decode_live",
+          "line": 49
+        }
+      ],
+      "imports": [
+        "math",
+        "wlre.network.wire"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "protocol",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "shared_core_reconciliation": {
+      "desktop_source": "wlre/network/live_data.py",
+      "identical_source": true,
+      "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
+    },
+    "migrated_scope": [
+      "All item_save, companion, player_info and decode_live branches with immutable typed data and strict boundaries."
+    ],
+    "outstanding_scope": [
+      "Live network/event reducer/session integration and device/server acceptance not run."
+    ]
+  },
+  {
+    "id": "android:wlre/network/non_npc_diagnostics.py",
+    "source_repository": "android",
+    "source_path": "wlre/network/non_npc_diagnostics.py",
+    "source_sha256": "72026424767c5437ca6dad8c2f3c0a10748c54dbe48a52790d85466523ebbec7",
+    "source_lines": 3,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Protocol.non_npc_diagnostics",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [],
+      "imports": [
+        "wlre.network.client",
+        "wlre.network.service_scheduler"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_non_npc_parity_v0512.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "protocol",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "shared_core_reconciliation": {
+      "desktop_source": null,
+      "identical_source": false,
+      "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
+    }
+  },
+  {
+    "id": "android:wlre/network/npc_dialogue.py",
+    "source_repository": "android",
+    "source_path": "wlre/network/npc_dialogue.py",
+    "source_sha256": "a3d1d5d58c93afff515705e9e3a1398f0f358e7aafa604d64ee3775ed07ce9dc",
+    "source_lines": 205,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Protocol.npc_dialogue",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Protocol/ServerProtocol.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "decode_effect",
+          "line": 7
+        },
+        {
+          "name": "request_npc",
+          "line": 22
+        },
+        {
+          "name": "close_npc_choice",
+          "line": 67
+        },
+        {
+          "name": "choose_npc_option",
+          "line": 97
+        },
+        {
+          "name": "flush_npc_choice",
+          "line": 144
+        },
+        {
+          "name": "close_npc_shop",
+          "line": 165
+        },
+        {
+          "name": "advance_npc",
+          "line": 193
+        }
+      ],
+      "imports": [
+        "wlre.network.wire",
+        "wlre.services.battle.party",
+        "wlre.services.world.npc_catalog",
+        "wlre.services.world.npc_interact",
+        "wlre.services.world.npc_position",
+        "wlre.services.world.npc_shop",
+        "wlre.services.world.npc_talk"
+      ],
+      "existing_test_candidates": [
+        "tests/test_automatic_flows.py",
+        "tests/test_npc_approach.py",
+        "tests/test_npc_choice_v0511.py",
+        "tests/test_npc_dialogue_v058.py",
+        "tests/test_npc_shop_v0513.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "protocol",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "shared_core_reconciliation": {
+      "desktop_source": "wlre/network/npc_dialogue.py",
+      "identical_source": true,
+      "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
+    },
+    "migrated_scope": [
+      "Pure decode_effect 18-byte header, short-effect blocking semantics and opaque extension length."
+    ],
+    "outstanding_scope": [
+      "NPC request/choice/close commands, confirmations, state transitions and official catalog integration remain."
+    ]
+  },
+  {
+    "id": "android:wlre/network/outbound_observations.py",
+    "source_repository": "android",
+    "source_path": "wlre/network/outbound_observations.py",
+    "source_sha256": "51b10f62fbf6b929f47769ad8837b326e5d51ced59bbcc3ca3bfe0b8c5df51a8",
+    "source_lines": 36,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Protocol.outbound_observations",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "observed_outbound",
+          "line": 10
+        }
+      ],
+      "imports": [
+        "wlre.network.protocol",
+        "wlre.network.wire"
+      ],
+      "existing_test_candidates": [
+        "tests/test_network_command_envelope.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "protocol",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "shared_core_reconciliation": {
+      "desktop_source": "wlre/network/outbound_observations.py",
+      "identical_source": true,
+      "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
+    }
+  },
+  {
+    "id": "android:wlre/network/protocol.py",
+    "source_repository": "android",
+    "source_path": "wlre/network/protocol.py",
+    "source_sha256": "dcfd5dbe7b27939f9a8b00cb2cab5addc74fbfd279fd7133cbb17ee5e2225c65",
+    "source_lines": 239,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Protocol.protocol",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "login",
+          "line": 26
+        },
+        {
+          "name": "select_role",
+          "line": 40
+        },
+        {
+          "name": "walk",
+          "line": 46
+        },
+        {
+          "name": "attack",
+          "line": 50
+        },
+        {
+          "name": "cast_skill",
+          "line": 58
+        },
+        {
+          "name": "use_battle_item",
+          "line": 61
+        },
+        {
+          "name": "use_field_item",
+          "line": 64
+        },
+        {
+          "name": "decode",
+          "line": 68
+        },
+        {
+          "name": "decode_outbound_movement",
+          "line": 233
+        }
+      ],
+      "imports": [
+        "json",
+        "wlre.core.activity",
+        "wlre.network.expedition",
+        "wlre.network.instances",
+        "wlre.network.layouts",
+        "wlre.network.live_data",
+        "wlre.network.npc_dialogue",
+        "wlre.network.social_protocol",
+        "wlre.network.wire",
+        "wlre.paths",
+        "wlre.services.items.crafting",
+        "wlre.services.items.recovery",
+        "wlre.services.items.room_storage",
+        "wlre.services.social.chat",
+        "wlre.services.social.guild",
+        "wlre.services.time_cube",
+        "wlre.services.world.tent",
+        "wlre.storage.bundled_database"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_instance_runtime.py",
+        "tests/test_android_non_npc_parity_v0512.py",
+        "tests/test_android_overlay.py",
+        "tests/test_android_shared_reservations.py",
+        "tests/test_attribute_points.py",
+        "tests/test_automatic_flows.py",
+        "tests/test_companion_commands.py",
+        "tests/test_crafting_cupboard_execution.py",
+        "tests/test_expedition.py",
+        "tests/test_gold_sync_v0515.py",
+        "tests/test_instance_coop_host_start_v052.py",
+        "tests/test_instance_creation.py",
+        "tests/test_instance_protocol.py",
+        "tests/test_instance_room_flow.py",
+        "tests/test_npc_choice_v0511.py",
+        "tests/test_npc_dialogue_v058.py",
+        "tests/test_npc_shop_v0513.py",
+        "tests/test_post_battle_maintenance.py",
+        "tests/test_room_storage_1262.py",
+        "tests/test_room_storage_transfer.py",
+        "tests/test_s51_packet_resilience.py",
+        "tests/test_shop_reconciliation_v0516.py",
+        "tests/test_time_cube.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "protocol",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "shared_core_reconciliation": {
+      "desktop_source": "wlre/network/protocol.py",
+      "identical_source": false,
+      "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
+    }
+  },
+  {
+    "id": "android:wlre/network/service_scheduler.py",
+    "source_repository": "android",
+    "source_path": "wlre/network/service_scheduler.py",
+    "source_sha256": "7ca469b60cfdb02371e63520f8d5b1fee2feb70e394312765aa4c0ec5f158bb3",
+    "source_lines": 148,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Protocol.service_scheduler",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "auto_battle_status_event",
+          "line": 14
+        },
+        {
+          "name": "maintenance_trace_event",
+          "line": 32
+        },
+        {
+          "name": "advance_services",
+          "line": 49
+        }
+      ],
+      "imports": [
+        "time",
+        "wlre.network.protocol",
+        "wlre.network.state_updates",
+        "wlre.services.battle.party",
+        "wlre.services.instance_creation",
+        "wlre.services.instance_entry",
+        "wlre.services.instance_rewards",
+        "wlre.services.instance_room_flow",
+        "wlre.services.instance_standby",
+        "wlre.services.instance_start",
+        "wlre.services.time_cube",
+        "wlre.services.world.tent"
+      ],
+      "existing_test_candidates": [
+        "tests/test_auto_battle_diagnostics.py",
+        "tests/test_health_25804_diagnostics.py",
+        "tests/test_room_storage_transfer.py",
+        "tests/test_time_cube.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "protocol",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "shared_core_reconciliation": {
+      "desktop_source": "wlre/network/service_scheduler.py",
+      "identical_source": false,
+      "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
+    }
+  },
+  {
+    "id": "android:wlre/network/social_protocol.py",
+    "source_repository": "android",
+    "source_path": "wlre/network/social_protocol.py",
+    "source_sha256": "86b27482096a53d382308e7fe3be5f4eff6a69071c4c0e152972869a0d3bed36",
+    "source_lines": 48,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Protocol.social_protocol",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Protocol/SocialProtocol.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "decode_social",
+          "line": 5
+        }
+      ],
+      "imports": [
+        "wlre.network.wire"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "protocol",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "shared_core_reconciliation": {
+      "desktop_source": "wlre/network/social_protocol.py",
+      "identical_source": true,
+      "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
+    },
+    "migrated_scope": [
+      "All decode_social branches, immutable events, strict boundaries and private namecard discard."
+    ],
+    "outstanding_scope": [
+      "Social service state/commands and live dispatcher integration remain."
+    ]
+  }
+]
