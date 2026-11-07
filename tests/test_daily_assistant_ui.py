@@ -1,5 +1,6 @@
 """Offline Tk regressions: navigation is read-only; commands remain explicit."""
 import os
+import sys
 import tkinter as tk
 import unittest
 from copy import deepcopy
@@ -10,7 +11,7 @@ from wlre.core.state import State
 from wlre.services.daily_assistant import command
 
 
-@unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt', 'Requires Tk / Xvfb')
+@unittest.skipUnless(os.environ.get('DISPLAY') or os.name == 'nt' or sys.platform == 'darwin', 'Requires Tk / Xvfb')
 class DailyAssistantUITests(unittest.TestCase):
     def setUp(self):
         from wlre.ui.benefits_ui import BenefitsPanel

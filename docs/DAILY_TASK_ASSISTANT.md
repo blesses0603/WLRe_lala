@@ -48,8 +48,11 @@
 
 ### 本次離線驗證（2026-11-07）
 
-- 完整 unittest：2,083 項，1,874 通過、209 項因顯示／平台／資源條件跳過。
-- 新增 13 項後端回歸通過；7 項 Tk 回歸列入三平台 CI，本機無可用顯示伺服器。
+- 完整 unittest：2,084 項，1,875 通過、209 項因顯示／平台／資源條件跳過。
+- 新增 14 項後端回歸通過；7 項 Tk 回歸列入三平台 CI，本機無可用顯示伺服器。
 - Python compileall、git diff --check、strict-git repository audit、資源 self-test、
   UnityFS self-test、Windows／macOS arm64／macOS x64 build dry-run 通過。
 - 三平台 CI 的實際狀態以本 PR 最新提交為準；dry-run 不是安裝包建置或執行驗收。
+
+- 首輪 Linux 原生 Tk 跑出兩項舊分頁清單斷言，已更新為含每日助手；新助手 UI 測試亦明確允許 macOS 原生 Tk 執行。
+- 方舟事件分類補上未解鎖、已嘗試、主線與自動戰鬥未啟用的結構化阻擋判斷；仍以原服務送出前的完整檢查為準。

@@ -1,5 +1,6 @@
 """The assistant only configures existing services; it owns no success ledger."""
 import unittest
+import json
 from copy import deepcopy
 from unittest.mock import patch
 
@@ -181,6 +182,43 @@ class DailyAssistantTests(unittest.TestCase):
         self.assertIn('選擇答案', row['reason'])
         self.state.star_ark['question']['selected'] = 1
         self.assertEqual(assistant.view(self.state.snapshot())['rows'][0]['classification'], 'progress')
+
+    def test_exclusively_blocked_ark_events_are_not_automatic(self):
+        self.state.phase = 'world_ready'
+        self.state.initial_data_complete = True
+        self.state.player['role_id'] = 1
+        data = self.state.star_ark
+        token = (True, 'v')
+        data.update(ready=True, role=1, catalog_token=token, events_ready=True, planet=1)
+        self.state.daily_tasks.update(ready=True, groups_ready=True, catalog_ready=True, rows=[
+            dict(cycle=1, index=1, condition_kind=9, condition_params=[1], progress=0, goal=1)])
+        event = dict(index=1, id=1, kind=1, main=False, planet=1)
+        cases = [
+            (dict(event), False, [], True, '啟用並設定自動戰鬥'),
+            (dict(event, planet=2), True, [], True, '星球尚未開放'),
+            (dict(event), True, [(token, data['generation'], False, 1, 1)], True, '已要求執行'),
+            (dict(event, main=True), True, [], True, '主線事件'),
+            (dict(event), True, [], False, '等待方舟事件清單'),
+        ]
+        for row, battle, attempted, ready, reason in cases:
+            with self.subTest(reason=reason):
+                data.update(events={1: row}, attempted=attempted, events_ready=ready)
+                self.state.auto_battle['enabled'] = battle
+                before = self.state.snapshot()
+                result = assistant.view(before)['rows'][0]
+                self.assertEqual(result['classification'], 'blocked')
+                self.assertIn(reason, result['reason'])
+                self.assertEqual(self.state.snapshot(), before)
+                serialized = deepcopy(before)
+                serialized['star_ark'] = json.loads(json.dumps(before['star_ark']))
+                serialized_result = assistant.view(serialized)['rows'][0]
+                self.assertEqual(serialized_result['classification'], 'blocked')
+                self.assertIn(reason, serialized_result['reason'])
+        # A blocked fight must not hide a separately eligible question event.
+        data.update(events_ready=True, attempted=[], events={
+            1: event, 2: dict(index=2, id=2, kind=3, main=False, planet=1)})
+        self.state.auto_battle['enabled'] = False
+        self.assertEqual(assistant.view(self.state.snapshot())['rows'][0]['classification'], 'automatic')
 
     def test_role_and_server_day_resets_follow_service_ledgers_only(self):
         data = self.state.guild_actions

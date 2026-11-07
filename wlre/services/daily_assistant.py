@@ -117,11 +117,30 @@ def _availability(state, service, subtype):
             if not data.get('catalog_token'):
                 return '等待同版方舟資料'
             if subtype == 1:
-                events = [event for event in data.get('events', {}).values() if event.get('id')]
-                if not any(event.get('kind') == 1 and data.get('fights_enabled') or
-                           event.get('kind') == 3 and data.get('questions_enabled') for event in events):
-                    return '等待支援且已啟用的方舟事件；交付與商人需手動處理'
-                return ''
+                if not data.get('events_ready'):
+                    return '等待方舟事件清單'
+                reasons = []
+                for event in data.get('events', {}).values():
+                    if not event.get('id'):
+                        continue
+                    kind = event.get('kind')
+                    if not (kind == 1 and data.get('fights_enabled') or
+                            kind == 3 and data.get('questions_enabled')):
+                        continue
+                    if event['main']:
+                        reasons.append('主線事件僅供檢視，不自動推進主線')
+                    elif event['planet'] > min(data['planet'], 20):
+                        reasons.append('事件所在星球尚未開放')
+                    elif list(star_ark._event_key(data, event, data['catalog_token'])) in [
+                            list(attempt) for attempt in data['attempted']]:
+                        reasons.append('此事件已要求執行，等待新事件清單')
+                    elif kind == 1 and not state.get('auto_battle', {}).get('enabled'):
+                        reasons.append('請先啟用並設定自動戰鬥')
+                    else:
+                        # Coverage only: the scheduler still validates the
+                        # current catalog, rewards and bag capacity before send.
+                        return ''
+                return '；'.join(dict.fromkeys(reasons)) or '等待支援且已啟用的方舟事件；交付與商人需手動處理'
             quote = data.get('quote') or {}
             price = quote.get('price')
             currency = data.get('starcoin', {})
