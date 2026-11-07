@@ -66,3 +66,6 @@ class RoomHeadcount(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+from instance_runtime_fixtures import install as setUpModule

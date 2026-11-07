@@ -44,6 +44,7 @@ class NavigationWindow:
             try:self.scene.set(model_label(self.converter.mapping(suggested_scene)[1]))
             except NavigationError:self.background_image=None
         ttk.Button(toolbar,text='載入場景',command=self.load).pack(side='left',padx=5)
+        ttk.Button(toolbar,text='官方資料庫預覽',command=self.open_official_preview).pack(side='left',padx=5)
         ttk.Button(toolbar,text='縮放至全圖',command=self.fit).pack(side='left',padx=5)
         ttk.Button(toolbar,text='匯出預覽路徑',command=self.save).pack(side='left',padx=5)
         self.show_mesh=tk.BooleanVar(value=False)
@@ -55,7 +56,8 @@ class NavigationWindow:
         ttk.Checkbutton(mapping,text='使用遊戲封包 X/Y',variable=self.packet_mode,
                         command=lambda:self.load_mapped() if self.packet_mode.get() else self.load()).pack(side='left')
         ttk.Label(mapping,text='地圖').pack(side='left',padx=5)
-        ttk.Combobox(mapping,textvariable=self.logical_map,width=28,values=map_choices()).pack(side='left')
+        self.logical_map_choices=ttk.Combobox(mapping,textvariable=self.logical_map,width=28,values=map_choices())
+        self.logical_map_choices.pack(side='left')
         ttk.Button(mapping,text='依地圖表載入模型',command=self.load_mapped).pack(side='left',padx=5)
         ttk.Label(frame,text='724 份一般場景導航圖／39 個 StageScenes 尚無同類圖。ID 為資源 ID，與遊戲地圖 ID 的對應仍需核對。',wraplength=1030).pack(fill='x',pady=(8,2))
         ttk.Label(frame,text='勾選封包模式後，第二軸是遊戲 Y；其餘模式是導航 Int3 Z。高度欄仍用導航 Int3。路徑不會送出移動。',wraplength=1030).pack(fill='x')
@@ -78,7 +80,12 @@ class NavigationWindow:
         self.canvas.bind('<Button-5>',lambda e:self.zoom(e,1/1.2))
         self.window.after_idle(self.load)
 
+    def open_official_preview(self):
+        from wlre.ui.official_navigation_preview import OfficialNavigationPreview
+        return OfficialNavigationPreview(self.window,lambda:self.linked_state or {})
+
     def load(self):
+        self.refresh_names()
         self.mesh = None
         self.background_image = None
         self.background_projection = None
@@ -122,7 +129,22 @@ class NavigationWindow:
                     and nav.get('stale',False))
         except (ValueError,KeyError):return False
 
+    def refresh_names(self):
+        from wlre.services.world.dynamic_bundle_runtime import current_catalog_token
+        token=current_catalog_token()
+        if token==getattr(self,'_names_token',None):return
+        self._names_token=token
+        if hasattr(self,'repository') and hasattr(self,'scene'):
+            self.scene.configure(values=[r['display_name'] for r in self.repository.catalog])
+            try:self.scene.set(model_label(self.scene.get()))
+            except ValueError:pass
+        if hasattr(self,'logical_map_choices'):
+            self.logical_map_choices.configure(values=map_choices())
+            try:self.logical_map.set(map_label(self.logical_map.get()))
+            except ValueError:pass
+
     def update_live_state(self,state):
+        self.refresh_names()
         self.linked_state = state
         revision = state.get('navigation',{}).get('revision') if state else None
         if revision != self.linked_revision:

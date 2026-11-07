@@ -26,7 +26,8 @@ class InitialCatalogTests(unittest.TestCase):
             root = Path(temp)
             seed = build_seed(RESOURCE_ROOT, root / 'seed.sqlite3')
             with closing(sqlite3.connect(seed)) as db, db:
-                db.execute('UPDATE bundled_resources SET data=? WHERE name=?', (b'corrupt', NAMES[0]))
+                db.execute('INSERT INTO bundled_active VALUES (?,?)', ('unexpected', '0'*64))
+                db.execute('INSERT INTO bundled_resources VALUES (?,?,?)', ('unexpected', '0'*64, b'corrupt'))
             with self.assertRaises(ValueError):
                 verify_seed(seed)
 

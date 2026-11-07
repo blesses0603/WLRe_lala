@@ -198,6 +198,8 @@ class SessionIsolation(unittest.TestCase):
 class CraftingIntegration(unittest.TestCase):
     def setUp(self):
         from wlre.services.items.crafting import RECIPES,confirmed_unlocked
+        from crafting_fixtures import recipes
+        self.enterContext(patch.dict(RECIPES,recipes(),clear=True))
         self.recipe=next(r for r in RECIPES.values() if confirmed_unlocked(r) and r['materials'] and r['tool_id'])
         self.state=State(phase='world_ready');self.state.player={'role_id':1}
         self.state.crafting['ready']=True
@@ -242,3 +244,11 @@ class CraftingIntegration(unittest.TestCase):
         self.logic.crafting.tick(self.state,16)
         self.assertTrue(self.state.crafting['uncertain'])
         self.assertTrue(self.state.inventory['holds']['crafting'])
+
+from alchemy_runtime_fixtures import install as _previous_setUpModule
+
+
+def setUpModule():
+    from combat_runtime_fixtures import install
+    install()
+    _previous_setUpModule()

@@ -1,10 +1,8 @@
-"""SmallMap2D artwork and version-correct UIMain 1024-pixel projection.
+"""Current official SQLite artwork and reviewed 1024-pixel scene projection.
 
-All 550 bundled pixels were compared with official 1275 SmallMap2D PNGs and
-are identical. The image bytes may be reused, but its 1262 *scene mapping*
-must never be used while the verified 1275 runtime is selected.
+Default loading never reads a bundled ZIP. Explicit historical archives are
+still supported for offline inspection, without becoming current authority.
 """
-from wlre.paths import RESOURCE_ROOT
 import io
 import json
 from pathlib import Path
@@ -43,27 +41,49 @@ class Projection:
 
 class SmallMaps:
     def __init__(self,path=None,*,source_revision=None):
-        if source_revision is None and path is None:
-            from wlre.services.world.runtime_1275 import baseline_revision
-            source_revision = baseline_revision()
+        self._official = path is None
+        self._runtime = None
+        self._images = None
+        self.coordinates = None
+        self.supports_navigation = False
+        self.path = Path(path) if path is not None else None
+        if self._official:
+            from wlre.services.world.runtime_1275 import active_runtime, Runtime1275Unavailable
+            try:
+                self._runtime = active_runtime()
+            except Runtime1275Unavailable:
+                pass
+            self.source_revision = str(source_revision or getattr(self._runtime,'revision','unknown'))
+            self._images = getattr(self._runtime,'smallmaps',None)
+            self.entries = {model:'SmallMap2D_%s.png'%model for model in self._images.models} if self._images else {}
+            self.archive_entries = set(self.entries.values())
+            self.images = [{'name':entry[:-4],'entry':entry} for entry in self.entries.values()]
+            return
+        # Explicit historical archives remain a read-only compatibility API.
         self.source_revision = str(source_revision or '1262')
         self.supports_navigation = self.source_revision == '1262'
-        self.path=Path(path) if path else RESOURCE_ROOT.joinpath('smallmaps.zip')
-        self._database_archive = None
-        if path is None:
-            from wlre.storage.bundled_database import load_bundled_bytes
-            self._database_archive = load_bundled_bytes('smallmaps.zip', root=RESOURCE_ROOT)
-        self.coordinates=Coordinates() if self.supports_navigation else None
+        self.coordinates = Coordinates() if self.supports_navigation else None
         with self._open_archive() as z:
             self.images=json.loads(z.read('image_index.json'))
             self.archive_entries=set(z.namelist())
         self.entries={int(x['name'].rsplit('_',1)[1]):x.get('entry',x['name']+'.png') for x in self.images}
+
+    def _checked_images(self):
+        from wlre.services.world.runtime_1275 import active_runtime
+        runtime = active_runtime()
+        current = getattr(runtime,'smallmaps',None)
+        if (self._images is None or current is None or current.catalog_key != self._images.catalog_key
+                or getattr(getattr(runtime,'catalog_identity',None),'key',None) != self._images.catalog_key):
+            raise NavigationError('官方小地圖尚未同步或資料已更新，請重新載入。')
+        return self._images
 
     def _stage_1275(self, logical_map):
         """Only verified current-game scene geometry, never 1262 lookups."""
         from wlre.services.world.runtime_1275 import active_runtime
         scene = parse_map_id(logical_map)
         runtime = active_runtime()
+        if self._official:
+            self._checked_images()
         stages = getattr(runtime, 'stages', None)
         if (str(getattr(runtime, 'revision', None)) != self.source_revision
                 or not isinstance(stages, dict)):
@@ -83,7 +103,7 @@ class SmallMaps:
         return row, 'M' + str(model).zfill(5)
 
     def has_image(self, logical_map):
-        if self.source_revision != '1262':
+        if self._official or self.source_revision != '1262':
             try:
                 self._stage_1275(logical_map)
                 return True
@@ -95,39 +115,50 @@ class SmallMaps:
             return False
         return self.entries.get(parse_map_id(model)) in self.archive_entries
 
+    def png_bytes(self, model):
+        model = parse_map_id(model)
+        if self._official:
+            return self._checked_images().png(model)
+        if model not in self.entries:
+            return None
+        with self._open_archive() as z:
+            return z.read(self.entries[model])
+
     def image(self,model):
         from PIL import Image
-        model=parse_map_id(model)
-        if model not in self.entries:return None
-        with self._open_archive() as z:
-            blob=z.read(self.entries[model])
-        with Image.open(io.BytesIO(blob)) as im:return im.convert('RGBA')
+        blob = self.png_bytes(model)
+        if blob is None:
+            return None
+        with Image.open(io.BytesIO(blob)) as im:
+            return im.convert('RGBA')
 
     def _open_archive(self):
-        return zipfile.ZipFile(io.BytesIO(self._database_archive) if self._database_archive is not None else self.path)
+        if self._official:
+            raise NavigationError('官方小地圖使用版本化圖像資料庫，不讀舊 ZIP')
+        return zipfile.ZipFile(self.path)
 
     def projection(self,logical_map):
-        if self.source_revision != '1262':
+        if self._official or self.source_revision != '1262':
             stage, model = self._stage_1275(logical_map)
             height = 6992 if stage['map_height'] == 65535 else stage['map_height']
             origin=(0,0,0)
             self.supports_navigation=False
             from wlre.services.world.dynamic_bundle_runtime import current_runtime
             if current_runtime() is not None:
-                self.coordinates=self.coordinates or Coordinates()
                 try:
+                    self.coordinates=self.coordinates or Coordinates()
                     _matched,matched_model,origin=self.coordinates.mapping(logical_map)
                     if matched_model!=model:
                         raise NavigationError('導航模型與目前小地圖不同。')
                     self.supports_navigation=True
-                except NavigationError:
+                except (ValueError,OSError):
                     origin=(0,0,0)
             return Projection({**stage, 'offset_y': height}, origin), model
         stage,scene,origin=self.coordinates.mapping(logical_map)
         return Projection(stage,origin),scene
 
     def for_model(self,model,logical_map=None):
-        if self.source_revision != '1262':
+        if self._official or self.source_revision != '1262':
             raise NavigationError('1275 小地圖尚無經新版校驗的導航網格。')
         model=parse_map_id(model)
         if logical_map is not None:

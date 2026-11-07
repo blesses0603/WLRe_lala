@@ -26,7 +26,9 @@ class Official1275MinimapTests(unittest.TestCase):
             12050: stage(15129, width=7938, height=11772,
                          offset_x=165, offset_y=28),
         }
-        self.runtime = SimpleNamespace(revision=1275, stages=self.stages)
+        from smallmap_runtime_fixtures import attach
+        self.runtime = attach(SimpleNamespace(revision=1275, stages=self.stages),
+                              models=(10001,11139,15129))
         self.patch_runtime = patch('wlre.services.world.runtime_1275.active_runtime',
                                    return_value=self.runtime)
         self.patch_runtime.start()

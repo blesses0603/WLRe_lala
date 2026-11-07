@@ -7,6 +7,8 @@ def concurrent_writer(directory,index,barrier):
     from wlre.storage import login_memory
     from wlre.services.items.crafting_browser_model import Favorites
     from wlre.services.items.crafting import RECIPES
+    from crafting_fixtures import recipes
+    RECIPES.update(recipes())
     original=login_memory._read
     def slow_read(file):
         value=original(file);time.sleep(0.04);return value
@@ -54,6 +56,8 @@ class SharedFiles(unittest.TestCase):
     def test_stale_favorite_views_merge_distinct_changes(self):
         from wlre.services.items.crafting_browser_model import Favorites
         from wlre.services.items.crafting import RECIPES
+        from crafting_fixtures import recipes
+        self.enterContext(patch.dict(RECIPES,recipes(),clear=True))
         with tempfile.TemporaryDirectory() as directory:
             file=Path(directory)/'favorites.json';a=Favorites(file);b=Favorites(file)
             ids=list(RECIPES);a.toggle(int(ids[0]));b.toggle(int(ids[1]))

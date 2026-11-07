@@ -12,6 +12,9 @@ from wlre.core.state import State
 class CompactCrafting(unittest.TestCase):
     def setUp(self):
         isolate_gui_background_checks(self)
+        from crafting_fixtures import recipes
+        from wlre.services.items.crafting import RECIPES
+        self.enterContext(patch.dict(RECIPES,recipes(),clear=True))
         self.root=tk.Tk();self.app=App(self.root);self.errors=[]
         self.root.report_callback_exception=lambda *args:self.errors.append(args)
         self.app.show_main();self.app.open_feature('crafting');self.root.update()

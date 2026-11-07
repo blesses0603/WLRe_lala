@@ -87,5 +87,8 @@ class DungeonFeatureUI(unittest.TestCase):
         self.assertTrue(self.page.enter_button.instate(['disabled']))
 
 
+from instance_runtime_fixtures import install as setUpModule
+
+
 if __name__ == '__main__':
     unittest.main()

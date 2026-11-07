@@ -4,6 +4,8 @@ Keep original import APIs, singleton functions, cached team selection and
 server event/automation behavior; full scenarios remain in test_expedition.py.
 """
 import unittest
+from unittest.mock import patch
+from types import SimpleNamespace
 
 from wlre.services import expedition as legacy
 from wlre.services import expedition_data as legacy_data
@@ -60,9 +62,11 @@ class ExpeditionServiceModules(unittest.TestCase):
 
     def test_catalog_loader_has_same_implementation(self):
         self.assertIs(legacy.load_catalog, legacy_data.load_catalog)
-        catalog = data.load_catalog()
-        self.assertEqual(len(catalog['tasks']), 260)
-        self.assertEqual(len(catalog['levels']), 10)
+        fixture = {'tasks': {'1': {'name': 'synthetic'}}, 'levels': {'1': {'teams': 1}}}
+        with patch('wlre.services.world.dynamic_bundle_runtime.current_runtime', return_value=SimpleNamespace(expedition=fixture)):
+            catalog = data.load_catalog()
+        self.assertEqual(catalog, fixture)
+        self.assertIsNot(catalog, fixture)
 
 
 if __name__ == '__main__':

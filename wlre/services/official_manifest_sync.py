@@ -20,7 +20,8 @@ import zlib
 from wlre.storage.paths import data_root
 
 
-OFFICIAL_HOST = 'wlreftp.chinesegamer.net'
+from wlre.services.official_source import selected_host
+OFFICIAL_HOST = selected_host()
 BASE = 'https://' + OFFICIAL_HOST + '/WLN/TW'
 MAX_MANIFEST_BYTES = 8 * 1024 * 1024
 MAX_HASH_BYTES = 8

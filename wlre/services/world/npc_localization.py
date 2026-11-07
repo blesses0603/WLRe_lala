@@ -43,6 +43,9 @@ def _catalog(filename, expected_source, path=None):
 
 
 def load_text_data(path=None):
+    if path is None:
+        from wlre.services.world.runtime_1275 import active_runtime
+        return dict(active_runtime().texts)
     data=_catalog('npc_text_1262.json.gz','TextData_C',path)
     result={}
     for key,value in data.items():
@@ -55,6 +58,14 @@ def load_text_data(path=None):
 
 
 def load_battle_talk(path=None):
+    if path is None:
+        from copy import deepcopy
+        from wlre.services.world.runtime_1275 import active_runtime
+        runtime = active_runtime()
+        groups = getattr(runtime, 'battle_talk', None)
+        if groups is None:
+            raise ValueError(getattr(runtime, 'battle_talk_status', '戰鬥台詞尚未完成官方同步'))
+        return deepcopy(groups)
     data=_catalog('npc_battle_talk_1262.json.gz','NpcTalkData_C',path)
     result={}
     for key,entries in data.items():

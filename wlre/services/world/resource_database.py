@@ -363,11 +363,14 @@ def load_verified_tables(manifest,bundle_root,loader,root,identity,schemas):
             raise ValueError('Official Bundle integrity failed: '+table)
         binding=AssetBinding(asset,SourceContract('scenes',table,'stage-new-76-v1',
                             '0'*64,'DataPackage',manifest.spec.package_version))
-        raw=extract_textasset(binding,paths,loader=loader);parser(raw)
+        raw=extract_textasset(binding,paths,loader=loader)
         payloads['tables/'+table+'.bytes']=raw
     database=Path(root)/'derived_catalogs'/'resource_inventory.sqlite3'
     database.parent.mkdir(parents=True,exist_ok=True)
     record_inventory(database,identity.key,payloads,identity=identity)
     digests={name.split('/')[-1]:hashlib.sha256(raw).hexdigest() for name,raw in payloads.items()}
-    parsed=read_catalog_tables(database,identity.key,tuple(schemas),expected_digests=digests)
+    from wlre.storage.normalized_resources import load_parsed
+    parsed=load_parsed(database, identity.key, 'optional-' + '-'.join(sorted(schemas)),
+        'optional-tables-v1', {name.split('/')[-1]: raw for name, raw in payloads.items()},
+        lambda: read_catalog_tables(database,identity.key,tuple(schemas),expected_digests=digests))
     return parsed,digests

@@ -68,6 +68,8 @@ class CooperativeRoomDialogsUI(unittest.TestCase):
                 'type': 'instance_create', 'mode': 'coop',
                 'public': True, 'password': '',
                 'dungeon_id': record['id'],
+                'catalog_key': record['catalog_key'], 'catalog_id': record['id'],
+                'catalog_variant': record['variant'],
                 'player_count': record['min_members'],
                 'confirm_cost': True,
             })
@@ -116,3 +118,6 @@ class CooperativeRoomDialogsUI(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+from instance_runtime_fixtures import install as setUpModule

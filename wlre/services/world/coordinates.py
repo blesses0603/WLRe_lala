@@ -51,7 +51,10 @@ class Coordinates:
         return (float(x)+origin[0])/10, stage['offset_y']-(float(z)+origin[2])/10
 
     def route(self, repository, logical_map, start, end, start_height=None,end_height=None):
+        from wlre.services.world.house_navigation import require_general_navigation
+        require_general_navigation(scene=parse_map_id(logical_map))
         stage,scene,_ = self.mapping(logical_map)
+        require_general_navigation(model=stage['model_id'])
         mesh = repository.load(scene)
         result = mesh.route(self.to_navigation(logical_map,*start),self.to_navigation(logical_map,*end),
                             start_height,end_height)
@@ -62,5 +65,6 @@ class Coordinates:
         result['coordinate_formula_source_checked'] = True
         result['map_height'] = stage['map_height']
         result['live_movement_verified'] = False
+        result['can_send_packets'] = False
         # Keep the v0.3 flag false: a source/capture check is not a live movement test.
         return result

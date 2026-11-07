@@ -105,6 +105,8 @@ class InstanceModePage(CooperativeActionsMixin, CooperativeRewardViewMixin,
         ttk.Label(self, text=title, style='Heading.TLabel').pack(anchor='w', pady=(2, 6))
         self.note = tk.StringVar(value='尚未查詢房間。請登入後手動更新。')
         ttk.Label(self, textvariable=self.note, style='Muted.TLabel', anchor='w').pack(fill='x', pady=(0, 10))
+        from wlre.services.instance_browser import catalog_token
+        self._catalog_token = catalog_token()
         self.catalog_records = entries_for(self.mode)
         # Static 3:2 grid: both lists stay visible but users cannot drag
         # a separator or change their sizes independently.
@@ -243,6 +245,7 @@ class InstanceModePage(CooperativeActionsMixin, CooperativeRewardViewMixin,
                local_role_id=None, active_npc_id=None, local_scene=None,
                activity_blocked=False, inventory=None,
                creation_reasons=(), automation_enabled=False):
+        self.refresh_catalog()
         other = other or {}
         self._room_data = dict(data)
         self._room_other = dict(other)

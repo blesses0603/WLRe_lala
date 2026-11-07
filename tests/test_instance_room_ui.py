@@ -146,3 +146,6 @@ class RoomUI(unittest.TestCase):
         self.assertTrue(page.create_button.instate(['disabled']))
         self.app.instance_panel.render(State().snapshot(), live=False)
         self.assertTrue(page.join_button.instate(['disabled']))
+
+
+from instance_runtime_fixtures import install as setUpModule

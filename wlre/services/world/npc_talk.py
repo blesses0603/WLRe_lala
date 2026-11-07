@@ -71,11 +71,10 @@ def make_catalog(raw):
 
 
 def load_catalog(path=None):
-    """Use pinned 1275 text when the application baseline is 1275."""
+    """Default to verified official runtime; explicit files are historical fixtures."""
     if path is None:
-        from wlre.services.world.runtime_1275 import baseline_revision, active_runtime
-        if baseline_revision() != '1262':
-            return dict(active_runtime().talks)
+        from wlre.services.world.runtime_1275 import active_runtime
+        return dict(active_runtime().talks)
     path = Path(path) if path is not None else RESOURCE_ROOT / CATALOG_NAME
     cached = None
     if path == RESOURCE_ROOT / CATALOG_NAME:

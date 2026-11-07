@@ -89,3 +89,8 @@ class MaintenanceUiTests(unittest.TestCase):
         self.assertEqual(self.page.items['repair'][0],0)
         self.assertEqual(picker.table.get_children(),())
         picker.window.destroy()
+
+
+def setUpModule():
+    from combat_runtime_fixtures import install
+    install()

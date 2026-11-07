@@ -1,7 +1,5 @@
 """Original EmojiData row-index mapping; static game sprites, safe literal fallback."""
-from wlre.paths import RESOURCE_ROOT
-from wlre.storage.bundled_database import load_bundled_json, load_bundled_bytes
-import re,json,zipfile,io
+import re,io
 from PIL import Image,ImageTk
 TOKEN=re.compile(r'\[Emoji([0-9]+)\]')
 
@@ -14,21 +12,29 @@ def segments(text):
 
 class EmojiImages:
     def __init__(self,master):
-        self.master=master;self.cache={};base=RESOURCE_ROOT
-        try:
-            self.catalog=load_bundled_json('emoji_catalog.json', root=base)['entries'];self.archive=zipfile.ZipFile(io.BytesIO(load_bundled_bytes('emoji_images.zip', root=base)))
-        except (OSError,ValueError,KeyError,zipfile.BadZipFile):self.catalog={};self.archive=None
+        self.master=master;self.cache={};self.token=None
+    def refresh_source(self):
+        from wlre.services.world.emoji_database import source_token
+        token=source_token()
+        if token==self.token:return False
+        self.token=token;self.cache.clear();return True
+    @property
+    def catalog(self):
+        from wlre.services.world.emoji_database import current_entries
+        self.refresh_source();return current_entries()
     def get(self,token,size=24):
+        from wlre.services.world.emoji_database import current_png
+        self.refresh_source()
         m=TOKEN.fullmatch(token)
         if not m:return None
         index=str(int(m.group(1)));key=index,size
-        if key in self.cache:return self.cache[key]
-        row=self.catalog.get(index)
-        if not row or not row.get('available',True) or not self.archive:return None
         try:
-            with Image.open(io.BytesIO(self.archive.read(row['sprite']+'.png'))) as src:
+            raw=current_png(index)
+            if raw is None:return None
+            if key in self.cache:return self.cache[key]
+            with Image.open(io.BytesIO(raw)) as src:
                 im=src.convert('RGBA');im.thumbnail((size,size),Image.Resampling.LANCZOS)
             result=ImageTk.PhotoImage(im,master=self.master);self.cache[key]=result;return result
-        except (OSError,KeyError,ValueError,zipfile.BadZipFile):return None
+        except (OSError,KeyError,ValueError,TypeError):return None
     def close(self):
-        if self.archive:self.archive.close();self.archive=None
+        self.cache.clear();self.token=None

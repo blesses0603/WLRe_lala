@@ -1,7 +1,7 @@
 """Decoded ZIP sprite cache and independent Tk image lifetime regressions."""
 import io
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
 from PIL import Image
 
@@ -66,37 +66,27 @@ class DecodedItemSpriteCacheTests(unittest.TestCase):
         self.assertNotEqual(cache.get(first, 'a.png', 3).getpixel((1, 1)),
                             cache.get(second, 'a.png', 3).getpixel((1, 1)))
 
-    def test_windows_share_pixels_not_tk_photo_objects_or_zip_lifetimes(self):
-        files = {'shared.png': png('red'), 's1000.png': png('black')}
-        first = MemoryArchive(files, filename='/fixture/item_icons.zip')
-        second = MemoryArchive(files, filename='/fixture/item_icons.zip')
-        photos = []
-        def photo(_pixels, master):
-            result = object()
-            photos.append((master, result))
-            return result
+    def test_windows_share_pixels_and_refresh_existing_handles(self):
+        from types import SimpleNamespace
+        from wlre.services.world.item_image_database import ItemImageCatalog
+        read=Mock(return_value=png('red'))
+        images=SimpleNamespace(database='/synthetic/items.sqlite3',catalog_key='a',models={1000,4321},png=read)
+        catalog=ItemImageCatalog(images,{42:4321})
+        runtime=SimpleNamespace(item_images=catalog)
         DECODED_SPRITES.clear()
-        with patch('wlre.ui.crafting.item_icons.zipfile.ZipFile',
-                   side_effect=[first, second]), \
-             patch('wlre.ui.crafting.item_icons.ICON_MAP',
-                   {'42': {'icon': 'shared'}}), \
-             patch('wlre.ui.crafting.item_icons.ImageTk.PhotoImage', side_effect=photo):
-            a = ItemIcons(master='window-a')
-            b = ItemIcons(master='window-b')
-            item_a = a.get(42, 24)
-            self.assertIs(item_a, a.get(42, 24))
-            item_b = b.get(42, 24)
-            self.assertIsNot(item_a, item_b)
-            self.assertEqual(photos[0][0], 'window-a')
-            self.assertEqual(photos[1][0], 'window-b')
-            self.assertEqual(first.calls, ['shared.png'])
-            self.assertEqual(second.calls, [])
-            a.close()
-            self.assertTrue(first.closed)
-            self.assertFalse(second.closed)
-            self.assertIs(item_b, b.get(42, 24))
-            b.close()
-            self.assertTrue(second.closed)
+        with patch('wlre.services.world.dynamic_bundle_runtime.current_runtime',return_value=runtime),patch(
+                'wlre.ui.crafting.item_icons.ImageTk.PhotoImage',side_effect=lambda *a,**k:Mock()) as photos:
+            a=ItemIcons('window-a');b=ItemIcons('window-b')
+            photo=a.get(42,24);other=b.get(42,24)
+            self.assertIsNot(photo,other);self.assertEqual(read.call_count,1)
+            self.assertIs(photo,a.get(42,24))
+            runtime.item_images=None
+            a.refresh_source();self.assertEqual(photo.paste.call_count,1)
+            self.assertEqual(photo.paste.call_args.args[0].getbbox(),None)
+            runtime.item_images=ItemImageCatalog(SimpleNamespace(database=images.database,catalog_key='b',models=images.models,png=Mock(return_value=png('blue'))),{42:4321})
+            a.refresh_source();self.assertEqual(photo.paste.call_count,2)
+            self.assertEqual(photo.paste.call_args.args[0].getpixel((12,12)),(0,0,255,255))
+            a.close();self.assertFalse(a.cache);self.assertIs(other,b.get(42,24));b.close()
         DECODED_SPRITES.clear()
 
 

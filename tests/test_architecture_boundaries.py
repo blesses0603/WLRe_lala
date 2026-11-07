@@ -12,8 +12,8 @@ from wlre.services.items.crafting_browser_model import Favorites,RECIPES
 
 
 class ArchitectureRegressionTests(unittest.TestCase):
-    def test_missing_expedition_or_button_rejected(self):
-        for missing in ('expedition_catalog.json','assets/buttons/Btn_Bag.png'):
+    def test_missing_remaining_catalog_or_button_rejected(self):
+        for missing in ('navigation_data.zip','assets/buttons/Btn_Bag.png'):
             with self.subTest(missing=missing),tempfile.TemporaryDirectory() as temp:
                 root=Path(temp)
                 for name in REQUIRED_RESOURCES:
@@ -43,7 +43,7 @@ class ArchitectureRegressionTests(unittest.TestCase):
 
     def test_favorites_migrate_once_preserving_original(self):
         with tempfile.TemporaryDirectory() as temp,patch.dict(os.environ,{'LOCALAPPDATA':temp}):
-            legacy=Path(temp)/'old.json';item=int(next(iter(RECIPES)))
+            legacy=Path(temp)/'old.json';item=34026
             original=json.dumps({'version':1,'items':[item]});legacy.write_text(original)
             with patch('wlre.services.items.crafting_browser_model.legacy_favorites_file',return_value=legacy):
                 migrated=Favorites();self.assertEqual(migrated.ids,[item])

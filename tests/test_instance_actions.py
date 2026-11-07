@@ -70,3 +70,6 @@ class DungeonRoomActionBytes(unittest.TestCase):
             logic.command({'type': 'instance_create', 'mode': 'main',
                            'map_id': 30012, 'public': True}, s)
         self.assertIsNone(s.instances['main']['room'])
+
+
+from instance_runtime_fixtures import install as setUpModule

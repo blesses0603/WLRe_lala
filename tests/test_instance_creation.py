@@ -1,5 +1,6 @@
 """Official 1262 room creation: guarded send, server ACK, and no duplicate fee."""
 import unittest
+from instance_runtime_fixtures import fields
 
 from wlre.core.state import State
 from wlre.network.client import SessionLogic
@@ -18,13 +19,14 @@ def ready():
 
 def main_create(logic, state, *, public=True, password=''):
     return logic.command({
-        'type': 'instance_create', 'mode': 'main',
+        **fields(), 'type': 'instance_create', 'mode': 'main',
         'map_id': 30012, 'public': public, 'password': password}, state)
 
 
 def coop_create(logic, state, *, dungeon_id=21, public=True, password='',
                 cost=True, partner=False):
     return logic.command({
+        **fields(dungeon_id, 1 if dungeon_id==21 else 2),
         'type': 'instance_create', 'mode': 'coop',
         'dungeon_id': dungeon_id, 'player_count': 2,
         'public': public, 'password': password,
@@ -148,3 +150,6 @@ class RoomCreation(unittest.TestCase):
         state2.initial_data_complete = False
         with self.assertRaises(ProtocolError):
             main_create(logic2, state2)
+
+
+from instance_runtime_fixtures import install as setUpModule

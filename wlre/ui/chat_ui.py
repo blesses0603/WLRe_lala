@@ -52,6 +52,14 @@ class ChatPanel(ttk.Frame):
         self.view.tag_configure('quoted',foreground='#9ab0c4')
         self.bind('<Destroy>',self.cleanup,add='+')
         for ch,color in {'區域':'#eaf4fa','世界':'#f8d479','隊伍':'#70e1de','組織':'#99e4a8','密語':'#f3a7ec','系統':'#aac9df','跨服':'#d4bbff'}.items():self.view.tag_configure(ch,foreground=color)
+        self.emoji_timer=self.after(1000,self.refresh_emoji_source)
+
+    def refresh_emoji_source(self):
+        self.emoji_timer=None
+        if self.emojis.refresh_source():
+            if self.emoji_picker and self.emoji_picker.winfo_exists():self.emoji_picker.destroy()
+            self.redraw(scroll=False)
+        self.emoji_timer=self.after(1000,self.refresh_emoji_source)
 
     def target_state(self):
         if self.quote and self.quote['channel']!=self.channel.get():self.cancel_quote()
@@ -241,7 +249,7 @@ class ChatPanel(ttk.Frame):
             for i,index in enumerate(rows[self.emoji_page*32:(self.emoji_page+1)*32]):
                 token=f'[Emoji{index}]';picture=self.emojis.get(token,32)
                 button=ttk.Button(grid,text=str(index),image=picture,compound='top',width=4,command=lambda t=token:self.insert_emoji(t));button.grid(row=i//8,column=i%8,padx=2,pady=2)
-            label.set(f'{self.emoji_page+1}/{max(1,(len(rows)+31)//32)} · 點選插入輸入框')
+            label.set(f'{self.emoji_page+1}/{max(1,(len(rows)+31)//32)} · 點選插入輸入框' if rows else '官方表情尚未就緒；聊天仍可使用文字')
         ttk.Button(bottom,text='上一頁',command=lambda:refresh(-1)).pack(side='right');ttk.Button(bottom,text='下一頁',command=lambda:refresh(1)).pack(side='right')
         refresh()
 
@@ -250,6 +258,11 @@ class ChatPanel(ttk.Frame):
 
     def cleanup(self,event):
         if event.widget is self:
+            timer=getattr(self,'emoji_timer',None)
+            if timer is not None:
+                try:self.after_cancel(timer)
+                except tk.TclError:pass
+                self.emoji_timer=None
             if self.pending_timeout is not None:
                 try:self.after_cancel(self.pending_timeout)
                 except tk.TclError:pass

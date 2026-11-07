@@ -199,3 +199,8 @@ class MaintenanceProtocol(unittest.TestCase):
             for length in range(len(packet.payload)):
                 with self.subTest(main=packet.main,sub=packet.sub,length=length),self.assertRaises(ProtocolError):
                     decode(Packet(packet.main,packet.sub,packet.payload[:length]))
+
+
+def setUpModule():
+    from combat_runtime_fixtures import install
+    install()

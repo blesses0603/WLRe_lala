@@ -15,7 +15,9 @@ class LegacySQLiteMissingFilesTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             db = Path(tmp) / 'legacy.sqlite3'
             name = 'instance_catalog_1262.json'
-            data = b'{"version":1262}'
+            from wlre.storage.full_resource_seed import read_config
+            from wlre.paths import RESOURCE_ROOT
+            data = b'synthetic historical bytes'
             digest = hashlib.sha256(data).hexdigest()
             with closing(sqlite3.connect(db)) as con, con:
                 con.execute('CREATE TABLE bundled_resources (name TEXT, sha256 TEXT, data BLOB)')

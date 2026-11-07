@@ -10,7 +10,8 @@ from tkinter import ttk
 def build_instance_catalog(page, cooperative):
     """Preserve original widget identity, heights, layout and selection binding."""
     page.catalog_heading = ttk.Label(
-        page.catalog_column, text="1262 官方副本清單（選擇後建立房間）",
+        page.catalog_column, text=("官方同步副本清單（選擇後建立房間）" if page.catalog_records
+               else "等待官方副本資料完成同步"),
         style='Muted.TLabel')
     page.catalog_heading.pack(anchor='w', pady=(0, 3))
     page.catalog_columns = ('id', 'name', 'level', 'players', 'time')
@@ -32,6 +33,14 @@ def build_instance_catalog(page, cooperative):
     page.catalog_table.configure(yscrollcommand=scroll.set)
     page.catalog_table.pack(side='left', fill='both', expand=True)
     scroll.pack(side='right', fill='y')
+    populate_rows(page)
+    page.catalog_detail = tk.StringVar(value='點選官方副本名稱可查看來源 ID 與獎勵資料筆數。')
+    ttk.Label(page.catalog_column, textvariable=page.catalog_detail,
+              style='Muted.TLabel',wraplength=530).pack(fill='x', pady=(0, 5))
+    page.catalog_table.bind('<<TreeviewSelect>>', page.on_catalog_selected)
+
+
+def populate_rows(page):
     for index, record in enumerate(page.catalog_records):
         variant = (' (版本 %s)' % record['variant']) if record['variant'] else ''
         members = ('%s～%s' % (record['min_members'], record['max_members'])
@@ -41,14 +50,23 @@ def build_instance_catalog(page, cooperative):
         page.catalog_table.insert('', 'end', iid='catalog_%s' % index,
             values=(record['id'], record['name'] + variant,
                     record['min_level'] or '依活動', members, duration))
-    page.catalog_detail = tk.StringVar(value='點選官方副本名稱可查看來源 ID 與獎勵資料筆數。')
-    ttk.Label(page.catalog_column, textvariable=page.catalog_detail,
-              style='Muted.TLabel',wraplength=530).pack(fill='x', pady=(0, 5))
-    page.catalog_table.bind('<<TreeviewSelect>>', page.on_catalog_selected)
 
 
 class InstanceCatalogMixin:
     """Keep existing InstanceModePage catalog callbacks available by inheritance."""
+
+    def refresh_catalog(self):
+        from wlre.services.instance_browser import catalog_token, entries_for
+        token = catalog_token()
+        if token == self._catalog_token:
+            return
+        self._catalog_token = token
+        self.catalog_records = entries_for(self.mode)
+        self.catalog_table.delete(*self.catalog_table.get_children())
+        populate_rows(self)
+        self.catalog_detail.set('官方資料已更新，請重新選擇' if token else '等待官方副本資料完成同步')
+        self.catalog_heading.configure(text='官方同步副本清單' if token else '等待官方副本資料完成同步')
+        self._update_create_button()
 
     def on_catalog_selected(self, _event=None):
         selection = self.catalog_table.selection()
@@ -74,7 +92,7 @@ class InstanceCatalogMixin:
     def _update_create_button(self):
         record = self._selected_catalog()
         eligible = (self._creation_ready and record is not None
-                    and record['kind'] in (1, 2))
+                    and record['kind'] in (1, 2) and record.get('creation_supported', False))
         self.create_button.state(['!disabled'] if eligible else ['disabled'])
         if record is None:
             self.creation_hint.set('建立房間：請先點選官方副本清單的項目')

@@ -1,8 +1,6 @@
 """Read-only official combat item and skill catalog."""
-import json
-from wlre.paths import RESOURCE_ROOT
-from wlre.storage.bundled_database import load_bundled_json
-CAT=load_bundled_json('combat_catalog.json', root=RESOURCE_ROOT)
+from wlre.services.items.live_combat_catalog import CurrentCombatCatalog
+CAT=CurrentCombatCatalog()
 
 def item_name(item_id):
     from wlre.services.world.dynamic_bundle_runtime import current_runtime, dynamic_attempted

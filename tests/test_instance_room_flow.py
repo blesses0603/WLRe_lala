@@ -238,3 +238,6 @@ class InstanceJoinLeave(unittest.TestCase):
         self.assertTrue(state.auto_battle['enabled'])
         with self.assertRaises(ProtocolError):
             logic.command({'type':'instance_leave','mode':'main'}, state)
+
+
+from instance_runtime_fixtures import install as setUpModule

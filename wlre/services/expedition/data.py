@@ -58,9 +58,8 @@ def parse_catalog(tasks_data, levels_data):
 
 
 def load_catalog():
-    path = RESOURCE_ROOT / 'expedition_catalog.json'
-    from wlre.storage.bundled_database import load_bundled_json
-    return load_bundled_json(path.name, root=path.parent)
+    """Compatibility entry point using only validated official runtime data."""
+    return load_active_catalog()
 
 
 @diagnosed('text-v1')
@@ -243,7 +242,7 @@ def load_verified_1275_catalog():
 
 
 def load_active_catalog():
-    """Operation-safe source, distinct from the bundled legacy display data.
+    """Operation-safe source shared by display and automation consumers.
 
     Missing or incompatible 1275 formal inputs are *not* allowed to silently
     fall back to 1262, especially for success probabilities and team choice.
@@ -259,4 +258,5 @@ def load_active_catalog():
         raise Runtime1275Unavailable('當次遠征 Runtime 驗證未完成')
     if baseline_revision() == '1275':
         return load_verified_1275_catalog()
-    return load_catalog()
+    from wlre.services.world.runtime_1275 import Runtime1275Unavailable
+    raise Runtime1275Unavailable('遠征官方資料尚未下載或驗證，請先同步資源')
