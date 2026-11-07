@@ -26,7 +26,10 @@ class AutomaticFlowTests(unittest.TestCase):
         for name in ('wlre.network.npc_dialogue.NPCIndex','wlre.network.automatic_flows.NPCIndex'):
             p=patch(name,return_value=runtime.npc_index);p.start();self.addCleanup(p.stop)
         class Converter:
-            def route(self,repository,scene,start,end,start_height=None):return repository.load(scene).route(start,end)
+            def route(self,repository,scene,start,end,start_height=None):
+                # Synthetic authorization exercises scheduling, not real-world path safety.
+                return {**repository.load(scene).route(start,end),
+                        'can_send_packets':True,'live_movement_verified':True}
             def to_packet(self,scene,x,z):return x,z
         mesh=Mesh({'tiles':[{'vertices_b_int3':[[0,0,0],[1000,0,0],[1000,0,1000],[0,0,1000]],'triangles':[[0,1,2],[0,2,3]]}]})
         mesh.scene_id='fixture'

@@ -2228,3 +2228,62 @@ the official connection table. Reproduction uses the existing
 `tools.review_navigation_shadow_samples --snapshot DIR --output REPORT.json`;
 additional evidence is in each incomplete result's `same_geometry_control`.
 There is no live movement integration, new download, seed removal, push or merge.
+
+### Phase 59: close implicit legacy movement authorization
+
+Restored worktrees were clean at desktop d554c48 / Android 59afcc8, still on
+`codex/official-bootstrap-migration`. No push or main merge was performed.
+
+Inspection found an actual production gap: Movement.start rejected only explicit
+`can_send_packets=False`, while legacy Coordinates.route omitted that key.
+Thus legacy geometry could reach locomotion despite its existing
+`live_movement_verified=False`. The 12 unfiltered control paths demonstrate why
+implicit authorization is unsafe. Movement.start now requires both flags to be
+exactly True, and Coordinates.route explicitly returns can_send_packets=False.
+Missing flags, false values and integer lookalikes are rejected before packet
+coordinate conversion or activation. This intentionally pauses unverified
+general-map automatic movement (including NPC walking/roaming through this
+entry point). It does not enable the new preview for movement or repair the
+legacy topology. House entry/exit is outside this navigation-only change.
+
+Tests that isolate scheduling/NPC orchestration now explicitly supply synthetic
+route authority; this exists only in tests and is not evidence for real maps.
+The minimap double-click integration test now verifies refusal of real legacy
+Coordinates output and no emitted movement packets. Runtime-expiry locomotion
+is still tested with explicitly authorized synthetic geometry.
+
+`tools.review_navigation_movement_guard --report PHASE58_REPORT --snapshot DIR
+--output REPORT` reloads hash-verified official caches, regenerates the 12 actual
+unfiltered problematic paths, and checks Movement refuses every one without
+calling packet conversion or returning a movement packet. It uses synthetic
+player state and never creates a network session. Both hosts passed all 12.
+It is a regression reproducer for this pinned corpus, not a live test driver.
+
+Desktop full discovery: 1,851 tests, OK with 169 skips (14.089 seconds).
+Android full discovery was **not successful**: 1,530 tests, 13 errors / 3 failures
+/ 90 skips, with Kivy attempting a read-only /home/agent/.kivy and local IPC socket
+creation unavailable in the default sandbox. Xvfb is also absent. These results
+are retained in the private phase59 logs, not reclassified as passing. Focused
+navigation, authority, house scope, NPC and automation checks passed: desktop 94,
+Android 93. Android's focused run set KIVY_HOME to a writable workspace location.
+No Android device or new Windows execution of this patch has occurred.
+
+Runtime evidence remains unavailable: command discovery found no Wine, adb,
+Unity, /dev/kvm or /dev/dri. The pinned phase53 bootstrap evidence still explicitly
+states setter_invocation_observed=false, callback_state_verified=false and
+runtime_execution_verified=false. Ordinary installed LaLa or official-client
+video cannot reveal these internal settings. A supported/authorized official
+client test environment is needed to capture, for the same resource identity:
+(1) OnAwakeSettings null/target/invocation, (2) actual post-Awake and pre-request
+heuristic, scale, nearest-distance, tag mask and penalties, (3) exact map/start/end
+and height/mode, and (4) the final post-modifier vectorPath and rejection outcome.
+Do not ask users to supply passwords or to enable undocumented debugging or
+modify the official client. Without such access, no honest procedure for that
+internal observation has been established here.
+
+A controlled live-server movement trial is therefore **not ready**. Its future
+prerequisites are matching runtime observations, full-path parity, explicit
+user-operated test scope and an observation/stop procedure. The current branch
+has no verified production route authority and must not send trial movement to
+work around that missing evidence. All three legacy seed BLOBs remain until the
+replacement covers required ordinary maps and production acceptance is proven.

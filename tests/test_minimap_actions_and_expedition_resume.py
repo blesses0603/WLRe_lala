@@ -82,16 +82,13 @@ class MinimapActionTests(unittest.TestCase):
         self.assertEqual(self.commands,[])
         self.page.draw.assert_called_once_with()
 
-    def test_double_click_routes_to_real_movement_command_and_emits_c6_packets(self):
-        self.assertEqual(self.page.double_pick(self.event()),'break')
+    def test_double_click_cannot_authorize_unverified_legacy_geometry(self):
+        with self.assertRaisesRegex(ProtocolError,'僅供預覽'):
+            self.page.double_pick(self.event())
         self.assertEqual(self.commands,[{'type':'walk','scene':12170,'x':1050,'y':4200}])
-        self.assertTrue(self.logic.movement.active)
-        packets=self.logic.movement.tick(self.state,.2)
-        self.assertTrue(packets)
-        self.assertTrue(all((p.main,p.sub)==(6,1) for p in packets))
-        self.assertEqual(self.state.local_movement['status'],'finished')
-        self.assertEqual((round(self.state.local_movement['x']),round(self.state.local_movement['y'])),(1050,4200))
-        self.assertIsNone(self.state.movement_check['confirmation'])
+        self.assertFalse(self.logic.movement.active)
+        self.assertEqual(self.logic.movement.tick(self.state,.2),[])
+        self.assertFalse(self.state.local_movement)
 
     def test_target_selection_does_not_require_a_navigation_mesh(self):
         self.page.maps.supports_navigation=False
@@ -114,7 +111,12 @@ class MinimapActionTests(unittest.TestCase):
         self.assertFalse(self.logic.movement.active)
 
     def test_runtime_replacement_stops_an_old_active_route(self):
-        self.logic.movement.start(self.state,1100,4200,0)
+        # Explicit synthetic authority tests only the runtime-expiry contract.
+        original=self.converter.route
+        def synthetic(*args,**kwargs):
+            return {**original(*args,**kwargs),'can_send_packets':True,'live_movement_verified':True}
+        with patch.object(self.converter,'route',side_effect=synthetic):
+            self.logic.movement.start(self.state,1100,4200,0)
         replacement=deepcopy(self.runtime)
         replacement.catalog_identity.key='b'*64
         with patch('wlre.services.world.dynamic_bundle_runtime.current_runtime',return_value=replacement):
@@ -133,6 +135,7 @@ class MinimapActionTests(unittest.TestCase):
         route=self.converter.route(repo,12170,start,end,start_height=first[1],end_height=last[1])
         self.assertEqual(route['scene_resource'],'M12170')
         self.assertGreater(len(route['points']),1)
+        self.assertIs(route['can_send_packets'],False)
 
     def test_selected_target_is_drawn_before_movement(self):
         page=SimpleNamespace(_resize_job=None,canvas=Mock(),projection=self.page.projection,

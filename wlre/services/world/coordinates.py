@@ -65,5 +65,6 @@ class Coordinates:
         result['coordinate_formula_source_checked'] = True
         result['map_height'] = stage['map_height']
         result['live_movement_verified'] = False
+        result['can_send_packets'] = False
         # Keep the v0.3 flag false: a source/capture check is not a live movement test.
         return result
