@@ -143,6 +143,9 @@ class App(LoginController, AccountController,
             viewer = NavigationWindow(self.root, self.home_map.selected_id, on_route=self.home_map.set_route)
             viewer.update_live_state(self.snapshot)
             self.navigation_windows.append(viewer)
+        except FileNotFoundError:
+            from wlre.ui.official_navigation_preview import OfficialNavigationPreview
+            OfficialNavigationPreview(self.root,lambda:self.snapshot)
         except (OSError,ValueError,KeyError) as exc:
             messagebox.showerror('導航資料無法載入',str(exc),parent=self.root)
 

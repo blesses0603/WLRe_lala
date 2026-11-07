@@ -15,17 +15,19 @@ from PIL import Image,ImageTk
 
 class NavigationWindow:
     def __init__(self, parent, suggested_scene=None, on_route=None):
+        # Validate legacy inputs before opening a window; a missing seed can
+        # then fall back to the independent official preview without an orphan.
+        self.repository = Repository()
+        self.converter = Coordinates()
         install_theme(parent.winfo_toplevel())
         self.window = tk.Toplevel(parent)
         self.window.title('全場景導航 · 離線幾何預覽')
         configure_dialog(self.window,1120,760)
-        self.repository = Repository()
         self.smallmaps = SmallMaps()
         self.on_route = on_route
         self.background_image = None
         self.background_projection = None
         self.background_photo = None
-        self.converter = Coordinates()
         self.linked_state = None
         self.linked_revision = None
         self.mesh = None

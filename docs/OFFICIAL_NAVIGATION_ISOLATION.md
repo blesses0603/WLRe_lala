@@ -1,6 +1,6 @@
 # 三份舊導航資料隔離實驗
 
-2026-11-07，本機兩端實驗完成。這是可逆的獨立預覽試驗，**不是解除正式移動防護，也不是整個 LaLa 無種子安裝已通過驗收**。沒有修改使用者電腦、既有安裝或原本的資料庫；本階段未推送。
+2026-11-07，本機兩端實驗完成。這是可逆的獨立預覽試驗，**不是解除正式移動防護，也不是整個 LaLa 無種子安裝已通過驗收**。沒有修改使用者電腦、既有安裝或原本的資料庫；最初隔離結果在本機保存；擴大測試另依授權更新草稿 PR。
 
 ## 實作
 
@@ -57,3 +57,83 @@ python -B -m tools.isolated_navigation_trial --workspace /path/to/new-isolated-t
 - 隔離舊資料不能當作新資料的移動授權證據。現有條件不足以讓此試驗直接操作真實角色；正式移動仍禁止。下一步可在隔離安裝中驗收顯示、同步、版本失效與不送包行為；實際角色測試需要另外取得必要證據與有限範圍測試方案，不能只切開關略過防護。
 
 既有 PR 保持草稿，不合併、不發布；這份實驗本身不是完整正式驗收。
+
+## 全清單與完整程式入口擴大測試
+
+新增 `--all-maps`：先核對同版官方 Main Manifest，再分類全部非小屋場景；
+只下載已經過格式驗證的模型，整次測試 Bundle 上限為 64 MiB，保留原有
+每模型 2 檔／32 MiB 上限。未確認格式的模型不猜測、不自動匯入。
+
+兩端獨立從官方下載的結果完全一致：
+
+| 分類 | 模型 | 場景 |
+| --- | ---: | ---: |
+| 已驗證格式、完成本次下載／校驗／建庫 | 17 | 46 |
+| Manifest 有候選資源，但格式尚未驗證 | 753 | 1,077 |
+| 缺少唯一可確認的官方場景資產 | 202 | 210 |
+| 非小屋總數 | 972 | 1,333 |
+
+另 4 個小屋相關場景排除；不是一般地圖缺漏。17 模型 Bundle 合計
+44,296,157 bytes。對全部 46 個已建庫場景，各抽取陸／海／空的鄰接節點
+查詢，共 138 項：93 項可產生預覽、45 項沒有該模式允許通行的節點而
+安全停止。沒有用單點路徑假裝完整路徑通過，但這仍是鄰接抽樣，不是
+任意起終點、全障礙與全地圖實際移動已驗證。
+
+證據是 `isolation-allmaps-desktop/report.json` 與
+`isolation-allmaps-android/report.json`，位於 `/workspace/validation/`；
+`coverage.models` 列出每個模型與其所有場景 ID，`coverage.samples` 列出
+模式、可用／停止原因及 XYZ。兩端 coverage 完全一致。
+
+`tools/check_isolated_application.py` 使用既有隔離副本、全新 app-cold
+私人目錄與虛擬顯示器，執行真正程式入口，而非只匯入預覽類別。
+它不繞過登入或移動閘門；桌面測試只以 UI fixture 顯示主畫面，不登入。
+
+首次桌面實驗重現首頁 HomeMap 立即開啟 navigation_data.zip 導致整個
+App 初始化失敗。已修正為需要舊幾何時才讀取；舊導航視窗在開 Toplevel
+之前先驗證來源。當三份舊資料缺失，導航按鈕改開獨立官方預覽；損壞
+資料仍顯示錯誤，不當成缺檔悄悄換源。正式 Movement 防護不變。
+
+停用自動資料同步的無網路冷啟動結果：桌面真正入口顯示主畫面、開啟
+官方預覽，尚無 Runtime 時明確要求同步；GitHub／官方版本 metadata
+查詢被實驗攔下，沒有網路連線。Android 真正 LaLaApp host 入口能建立
+登入畫面、官方驗證 widgets 與預覽視窗，session 數為零；原生 Android
+Service／Keystore／手機生命週期仍未驗證。對應證據為
+`isolation-cold-desktop/cold-start.json`、`isolation-cold-android/cold-start.json`。
+
+```sh
+# 在先前隔離指令後增加 --all-maps，即進行全清單分類及已驗證模型下載。
+python -B -m tools.check_isolated_application --workspace /path/to/isolated-trial --platform desktop
+# Android host 使用 --platform android；需可用顯示器。
+# --online 僅用於另外的乾淨副本，讓原本啟動同步流程照常執行。
+```
+
+不能重用已存在的 app-cold 目錄來聲稱冷啟動。套件完整性 self-test 仍
+要求正式 seed，未放寬發佈契約；這階段沒有移除正式打包資料。
+
+
+### 真正桌面線上冷啟動與最終回歸
+
+在另一個全新副本／空 app-cold 目錄，啟用原本 `WLRE_Client.main` 的
+launcher 官方同步，沒有注入假 Runtime 或略過版本檢查。實際觀測到
+server_list_ready、runtime_identity_verified、runtime_bundle_ready、
+raw_rebuild_ready 與 official_catalog_stored。回執為 verified_official、
+data_compatibility=compatible，寫入五個 SQLite：官方 catalog、規範
+inventory、emoji、smallmap images、item images。原有下載配額未變。
+程式原本的官方 cgdl HTTPS metadata 來源也允許，最終沒有被測試護欄
+攔下的 request。
+
+主畫面可顯示；測試在 UI 開啟後短時間結束，未等待／強制完成登入前的
+正式 Runtime 啟用。觀測時 current_runtime 為空，官方預覽明確要求
+完成同步，並未偷偷使用舊資料。回執仍為 assets_ready=false、
+protocol_compatibility=unverified、can_send_packets=false。因此可確認
+「無種子啟動並擷取／校驗／入庫」，不能宣稱「正式角色功能全部就緒」。
+完整原始回執與啟動階段位於
+`/workspace/validation/isolation-cold-desktop-online-final/cold-start.json`。
+
+最終本機完整回歸：桌面 1,892 項，OK、3 skipped；Android host
+1,575 項，OK、4 skipped。本次使用可用虛擬顯示器與 IPC，不能把之前
+環境中跳過的結果冒充這次實機測試；仍未執行手機／APK／遊戲正式服。
+
+桌面原 PR #72 已由使用者合併，這些追加成果使用新獨立分支
+`codex/seedless-navigation-preview`，不再推送已合併 PR 的分支。Android
+仍更新原草稿 #71，source lock 對應新的桌面提交。均不合併、不發布。

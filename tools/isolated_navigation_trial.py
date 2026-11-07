@@ -41,7 +41,7 @@ def prepare(destination,snapshot):
     names=subprocess.check_output(['git','ls-files','-z'],cwd=source).decode().split('\0')
     for name in names:
         rel=Path(name)
-        if not name or rel.parts[0] not in ('wlre','tools','android_app'):continue
+        if not name or (rel.parts[0] not in ('wlre','tools','android_app') and name not in ('WLRE_Client.py','main.py')):continue
         original=source/rel
         if original.is_symlink():raise ValueError('Symlink source unsupported')
         target=destination/'source'/rel;target.parent.mkdir(parents=True,exist_ok=True)
@@ -67,7 +67,7 @@ def prepare(destination,snapshot):
     return record
 
 
-def worker(workspace,download,cache_dir):
+def worker(workspace,download,cache_dir,all_maps=False):
     workspace=Path(workspace).resolve();record=json.loads((workspace/'isolation.json').read_text())
     denied=[]
     from urllib.parse import urlsplit
@@ -107,13 +107,26 @@ def worker(workspace,download,cache_dir):
     identity=OfficialCatalogIdentity(saved['data_ver'],saved['exe_version'],tuple(PackageRevision(**p) for p in saved['packages']))
     stages={int(k):v for k,v in json.loads((workspace/'snapshot/current-stages.json').read_text()).items()}
     root=workspace/'data/official_sync';repo=PreviewRepository(identity,stages,root=root)
-    rows=[]
+    rows=[];coverage=None;models=(10001,12050)
+    if all_maps:
+        if not download:raise ValueError('Full inventory requires verified official manifest download')
+        from types import SimpleNamespace
+        from wlre.services.official_manifest_sync import fetch_official_manifest,ManifestSpec
+        from tools.audit_official_navigation_coverage import audit as coverage_audit
+        revision=next(p for p in identity.packages if p.name=='MainPackage')
+        manifest=fetch_official_manifest(ManifestSpec(identity.data_ver,'MainPackage',revision.full_version),cache_root=root/'manifests')
+        coverage=coverage_audit(SimpleNamespace(catalog_identity=identity,stages=stages),manifest)
+        selected=[r for r in coverage['models'] if r['reviewed_cache'] and r['status']=='within_download_budget']
+        if sum(r['bundle_bytes'] for r in selected)>64*1024*1024:raise ValueError('Full trial exceeds 64 MiB download budget')
+        models=tuple(r['model'] for r in selected)
+        for row in coverage['models']:
+            row['preview_status']='pending_verified_download' if row['model'] in models else ('format_not_reviewed' if row['status']=='within_download_budget' else row['status'])
     def rejected(name,action):
         try:action()
         except (OSError,ValueError,RuntimeError,sqlite3.Error) as error:rows.append(dict(case=name,status='rejected',error=str(error)));return
         raise AssertionError('Expected rejection: '+name)
     rejected('cold_start_without_navigation_database',lambda:repo.load(10001))
-    for model in (10001,12050):
+    for model in models:
         if download:
             sync_model(identity,model,root=root)
             method='official_https_bundles_verified_and_extracted'
@@ -130,6 +143,33 @@ def worker(workspace,download,cache_dir):
         route=repo.route(logical,packet(a),packet(b))
         if route['can_send_packets'] is not False or route['live_movement_verified'] is not False:raise AssertionError('Movement authority leaked')
         rows.append(dict(case='general_map_preview',model=model,logical_map=logical,method=method,route=route))
+    if coverage is not None:
+        from collections import Counter
+        coverage['samples']=[]
+        for row in coverage['models']:
+            if row['model'] not in models:continue
+            row['preview_status']='verified_database_available'
+            for scene in row['stage_ids']:
+                for mode in ('land','sea','sky'):
+                    item=dict(scene=scene,model=row['model'],mode=mode,can_send_packets=False)
+                    try:
+                        trial_mesh,trial_origin=repo.load(row['model'],travel_mode=mode)
+                        nodes=sorted(trial_mesh.walkable)
+                        if not nodes:
+                            item['status']='safe_stop_no_eligible_nodes'
+                        else:
+                            first=nodes[0];last=next(iter(sorted(trial_mesh.adjacency[first])),first)
+                            height=6992 if stages[scene]['map_height']==65535 else stages[scene]['map_height']
+                            def xy(node):
+                                p=trial_mesh.centers[node];return ((p[0]+trial_origin[0])/10,height-(p[2]+trial_origin[2])/10)
+                            sample=repo.route(scene,xy(first),xy(last),travel_mode=mode)
+                            if sample['can_send_packets'] is not False:raise AssertionError('Sample authorized movement')
+                            item.update(status='preview_available',sample_kind='adjacent_nodes' if first!=last else 'single_node',points=sample['points'])
+                    except (OSError,ValueError) as error:item.update(status='safe_stop',error=str(error))
+                    coverage['samples'].append(item)
+        coverage['preview_statuses']=dict(Counter(r['preview_status'] for r in coverage['models']))
+        coverage['sample_statuses']=dict(Counter(r['status'] for r in coverage['samples']))
+        coverage['scope']='All scene/model inventory; reviewed models use bounded node samples, not exhaustive routes.'
     old=load_cache(database_path(root),identity.key,10001)
     if download:
         def transfer_failed(*args,**kwargs):raise OSError('controlled bundle transfer failure')
@@ -169,7 +209,7 @@ def worker(workspace,download,cache_dir):
     # packaging/startup selfcheck is not relaxed by this preview experiment.
     from wlre.storage.full_resource_seed import verify_seed
     rejected('normal_seed_selfcheck_still_blocks_missing_seed',lambda:verify_seed(workspace/'source/wlre/resources'/SEED))
-    return dict(rows=rows,catalog_key=identity.key,legacy_reads_during_preview=0,
+    return dict(rows=rows,coverage=coverage,catalog_key=identity.key,legacy_reads_during_preview=0,
                 enforcement_controls=denied,can_send_packets=False,live_movement_verified=False,
                 full_application_startup_verified=False,fresh_download=download,
                 limitations=['Historical supplied identity/stages snapshot; not complete cold boot of all app data.',
@@ -180,20 +220,21 @@ def worker(workspace,download,cache_dir):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--workspace',type=Path,required=True);p.add_argument('--snapshot',type=Path)
-    p.add_argument('--download',action='store_true');p.add_argument('--cache-dir',type=Path)
+    p.add_argument('--all-maps',action='store_true');p.add_argument('--download',action='store_true');p.add_argument('--cache-dir',type=Path)
     p.add_argument('--restore',action='store_true');p.add_argument('--worker',action='store_true',help=argparse.SUPPRESS)
     a=p.parse_args()
     if a.restore:print(json.dumps(restore(a.workspace)));return
     if a.worker:
-        report=worker(a.workspace,a.download,a.cache_dir)
-        (a.workspace/'report.json').write_text(json.dumps(report,indent=2));print(json.dumps({k:v for k,v in report.items() if k!='rows'}));return
+        report=worker(a.workspace,a.download,a.cache_dir,a.all_maps)
+        (a.workspace/'report.json').write_text(json.dumps(report,indent=2));print(json.dumps({k:v for k,v in report.items() if k not in ('rows','coverage')}));return
     if a.snapshot is None or (not a.download and a.cache_dir is None):p.error('Provide --snapshot and either --download or --cache-dir')
     workspace=a.workspace.resolve();record=prepare(workspace,a.snapshot)
     env={**os.environ,'LOCALAPPDATA':str(workspace/'data'),'KIVY_HOME':str(workspace/'kivy'),
          'PYTHONPATH':str(workspace/'source'),'PYTHONDONTWRITEBYTECODE':'1','WLRE_DISABLE_AUTO_CATALOG':'1'}
     command=[sys.executable,'-B',str(workspace/'source/tools/isolated_navigation_trial.py'),'--worker','--workspace',str(workspace)]
     command+=['--download'] if a.download else ['--cache-dir',str(a.cache_dir.resolve())]
-    result=subprocess.run(command,cwd=workspace/'source',env=env,timeout=240)
+    if a.all_maps:command.append('--all-maps')
+    result=subprocess.run(command,cwd=workspace/'source',env=env,timeout=480)
     if digest(Path(record['original_source'])/'wlre/resources'/SEED)!=record['seed_sha256']:raise AssertionError('Original seed changed')
     if result.returncode:raise SystemExit(result.returncode)
 

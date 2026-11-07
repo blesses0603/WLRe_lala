@@ -71,7 +71,8 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
         self.portal_rows=[]
         self.selected_portal=None
         self.audit_window=None
-        self.repository=Repository()
+        # Optional legacy geometry must not prevent a seed-free cold start.
+        self.repository=None
         self.state={}
         self.route=None
         self.image=None
