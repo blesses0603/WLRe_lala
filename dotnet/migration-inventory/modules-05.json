@@ -40,7 +40,7 @@
       "Explicit typed boundaries retain uint option IDs and cap raw labels at 256 Unicode code points. Four over-limit label cases and an option ID above uint are recorded separately as deliberate deltas, not source-parity claims. Missing/default snapshots return null; unrelated known-answer/candidate/readiness fields are ignored and inputs remain unchanged."
     ],
     "outstanding_scope": [
-      "Reviewed candidate catalog/matching is a separate unported module; this solver does not guess, consult knowledge, verify question provenance or produce a server-confirmed answer. Returned option IDs never authorize an action.",
+      "The reviewed candidate catalog/resolver now exists as a separate pure API, but is not integrated with this strict arithmetic helper. Neither API guesses, verifies official question provenance or produces a server-confirmed answer; returned option IDs never authorize an action.",
       "Solver-to-receive/runtime integration, confirmation, memory-intent/storage execution, commands, answer sending, session/generation checks, scheduling and platform/live acceptance remain. No new full Core suite result is claimed for this increment."
     ]
   },
@@ -314,7 +314,8 @@
     "status": "partially_migrated",
     "target_files": [
       "dotnet/Lala.Core/Inventory/CombatResourceActionCandidates.cs",
-      "dotnet/Lala.Core/Battle/CombatRules.cs"
+      "dotnet/Lala.Core/Battle/CombatRules.cs",
+      "dotnet/Lala.Core/Battle/BattleCommandPlanner.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -361,10 +362,14 @@
       "live_server_acceptance": "not_run"
     },
     "migrated_scope": [
-      "Only action_command(..., 'normal', ...) as the pure best-skill fallback: source target selection and CombatRules.NormalSkill with an explicitly supplied normal catalog. Covered within the retained 1,709-observation Python corpus: 1,649 supported exact matches and 60 unsupported food-resource imports with explicit typed rejection. Results are offline intents, not outbound packets."
+      "Initial action_command(..., 'normal', ...) pure best-skill fallback: source target selection and CombatRules.NormalSkill with an explicitly supplied normal catalog. Covered within the retained 1,709-observation Python corpus: 1,649 supported exact matches and 60 unsupported food-resource imports with explicit typed rejection. Results are offline intents, not outbound packets.",
+      "BattleCommandPlanner adds pure slot/identity, owned_units, catch_allowed, all seven action_command modes and plan_round. Ownership/liveness filtering and source-stable ordering, exact BigInteger capture arithmetic, source-key versus coordinate distinctions and prior error precedence are preserved. 956 retained-Python observations: 949 exact in-domain cases and seven explicit typed identity/import rejections; 976 new tests, 2,705 focused including 1,729 existing candidates, and 19 Python regressions passed.",
+      "Battle intents require actor PID at emission only after preceding candidate errors. Ownership/liveness filtering precedes explicit PID validation before ordering, even for singleton owned sequences. Unknown local role produces no owned units; missing reached actor/capture identities are typed rejections, not invented IDs or arbitrary Python-value parity.",
+      "Per-round costs accumulate only in copied immutable Reserved maps. Failure returns no partial intents or provisional inventory; repeated calls start from unchanged caller observations. No hold is installed, HP/SP or items consumed, packet built or command sent."
     ],
     "outstanding_scope": [
-      "Other action modes, owned_units/ownership enumeration, catch_allowed, plan_round, reservation installation, command dispatch and runtime/live acceptance remain. Normal fallback requires known actor/local-role wire identities; no synthetic identity is invented."
+      "Runtime/service/scheduler integration, reservation installation, executable command dispatch, verified normal/capture catalog activation, UI and device/live acceptance remain. Offline intent success is not ownership or send authority.",
+      "Existing wire/stat domains and immutable imports remain explicit; arbitrary Python objects, coercion, missing coordinates and explicit None-versus-absent distinctions are not fully represented. General resource helpers keep their nullable identity contract while the battle emission boundary requires a known actor."
     ]
   },
   {
@@ -378,7 +383,8 @@
     "scope": "runtime",
     "status": "partially_migrated",
     "target_files": [
-      "dotnet/Lala.Core/Battle/CombatRules.cs"
+      "dotnet/Lala.Core/Battle/CombatRules.cs",
+      "dotnet/Lala.Core/Battle/BattleDisplayRules.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -414,21 +420,24 @@
       "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run",
-      "test_count": 450,
+      "test_count": 576,
       "evidence_files": [
         "dotnet/Lala.Core.Tests/Battle/CombatRulesTests.cs",
-        "dotnet/Lala.Core.Tests/Battle/PythonCombatVectors.cs"
+        "dotnet/Lala.Core.Tests/Battle/PythonCombatVectors.cs",
+        "dotnet/Lala.Core.Tests/Battle/BattleDisplayParityTests.cs",
+        "dotnet/Lala.Core.Tests/Battle/BattleDisplayContractTests.cs",
+        "dotnet/Lala.Core.Tests/Battle/BattleDisplayPythonVectors.cs"
       ],
-      "evidence_source": "Local .NET test run confirmed 450 passing tests: 160 normal-attack vectors, 288 effect vectors, snapshot ownership and culture tests; no live-server acceptance."
+      "evidence_source": "Focused Release suite passed 576 tests: 450 existing CombatRules tests plus 126 new battle-display tests. The display oracle covers 116 actual-Python cases, 12 direct labels and 155 attack lines, checked under invariant/Arabic/Turkish/French cultures. This is scoped offline evidence, not a new full Core or live-server acceptance claim."
     },
     "migrated_scope": [
       "normal_skill → CombatRules.NormalSkill, using immutable caller-supplied catalog/equipment snapshots",
-      "effect_text → CombatRules.EffectText, preserving server-reported effect formatting"
+      "effect_text → CombatRules.EffectText, preserving server-reported effect formatting",
+      "unit_label and attack_lines → pure BattleDisplayRules over immutable current battle snapshots and received attack reports; source name fallbacks, all 15 normal-attack and three action-name overrides, ordered/duplicate effects and empty-target/effect behavior. 116 retained-Python cases produce 12 labels and 155 lines; formatting never changes observed HP/SP or other state."
     ],
     "outstanding_scope": [
-      "unit_label and attack_lines not ported.",
-      "CurrentNormalData resource loading/integration not ported.",
-      "Full auto-battle, live command sending and server-result acceptance are not included."
+      "CurrentNormalData resource loading, verified catalog activation and runtime integration remain.",
+      "Display-to-observer/UI wiring, complete auto-battle, live command sending and server-result acceptance are not included. Reports never establish absolute HP/SP; existing received wire types do not claim arbitrary Python scalar parity."
     ]
   },
   {

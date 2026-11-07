@@ -1863,7 +1863,7 @@
       "Source-ordered post-local shop, efficiency, guild actions and Ark receive composition with atomic publication; 26 real State.apply scenarios / 1,414 checkpoints / 38 event kinds."
     ],
     "outstanding_scope": [
-      "Runtime persistence, reviewed-candidate matching, solver-to-runtime outcomes and validated completion remain; emitted receive intents are not executed or saved. Separate explicit offline ArkQuestionStore and strict ArkArithmeticSolver APIs exist, but neither is connected to this receive pipeline or current-session validation.",
+      "Runtime persistence, reviewed-candidate/solver-to-runtime outcomes and validated completion remain; emitted receive intents are not executed or saved. Separate offline ArkQuestionStore, strict ArkArithmeticSolver and ArkReviewedCandidates APIs exist, but none is connected to this receive pipeline or current-session validation.",
       "Planning/begin/tick/commands, runtime catalog loading, UI and live acceptance remain."
     ]
   },

@@ -75,6 +75,21 @@ public static class CombatResourceActionCandidates
                 targetSlot = Slot(chosen);
             }
         }
+        return NormalCore(context,actor,normalCatalog,targetSlot);
+    });
+
+    /// <summary>Shared pure normal action selection used by best-skill fallback and the
+    /// round planner. The source does not add an actor-liveness gate to this helper.</summary>
+    public static CombatResourceActionCandidate Normal(CombatResourceActionContext context, CombatResourceActor actor,
+        NormalAttackCatalogSnapshot normalCatalog, string? targetSlot = null) => Capture(() =>
+    {
+        Validate(context); ArgumentNullException.ThrowIfNull(actor); ArgumentNullException.ThrowIfNull(normalCatalog);
+        return NormalCore(context,actor,normalCatalog,targetSlot);
+    });
+
+    private static CombatResourceActionIntent NormalCore(CombatResourceActionContext context, CombatResourceActor actor,
+        NormalAttackCatalogSnapshot normalCatalog, string? targetSlot)
+    {
         var targets = Enemies(context,actor).Where(value => string.IsNullOrEmpty(targetSlot) || Slot(value) == targetSlot).ToList();
         if (targets.Count == 0) throw new ProtocolException("沒有存活的敵方目標");
         var target = SelectTarget(targets,context.Catalog,0,1);
@@ -84,7 +99,7 @@ public static class CombatResourceActionCandidates
             throw new ArgumentException("Normal fallback requires explicit actor and local role identities.");
         var sid = CombatRules.NormalSkill(new(pid,actor.MasterId,actor.ChangeBodyId,actor.Equips.Select(value => (int)value.ItemId)),role,normalCatalog);
         return Intent(CombatResourceActionKind.NormalAttack,actor,target,sid,null,null,null,[]);
-    });
+    }
 
     /// <summary>Only the game resources hp and sp are valid typed input. Other keys are
     /// rejected before evaluating source gates; arbitrary Python resource strings are not

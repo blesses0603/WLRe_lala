@@ -55,7 +55,7 @@ The first C# increment is an executable offline foundation, not a replacement La
 | `wlre/network/wire.py` → `Lala.Core/Protocol/Wire.cs` | `ported_offline`: packet primitives, strict strings, framing/XOR and incremental decoding have Python golden-vector parity. | Parser diagnostics `read_checkpoint` integration is still outstanding; no formal-server acceptance. |
 | `wlre/network/protocol.py` → `CandidateCommands.cs` | `partially_migrated`: login/select-role/walk/attack/skill/item **byte builders** only; synthetic Python-generated vectors. | Live login/transport, server event decoding and full command dispatch are not implemented by this subset. A builder is not permission or readiness to send. |
 | `wlre/network/resource_safety.py` → `ResourceSafetyPolicy.cs` | `partially_migrated`: `AllowsDuringHold` policy only. | Remaining routing and full resource/version lifecycle integration. |
-| `wlre/services/battle/combat.py` → `CombatRules.cs` | `partially_migrated`: `normal_skill` and `effect_text`, with 450 passing offline tests (160 normal-attack vectors, 288 effect vectors, snapshot ownership and culture). | `unit_label`, `attack_lines`, live catalog loading and complete auto-battle are not ported by this subset. |
+| `wlre/services/battle/combat.py` → `CombatRules.cs` / `BattleDisplayRules.cs` | `partially_migrated`: `normal_skill`, `effect_text` and the later pure `unit_label` / `attack_lines` slice; 576 focused tests include 450 earlier rules tests and 126 display tests. | Live catalog loading/activation, observer/UI wiring, complete auto-battle and live acceptance remain. |
 | New `AccountSession` | Offline session generations, version-match confirmation and latched holds with subset tests. | Complete authentication, credential persistence, socket ownership, reconnection or parity with the original session lifecycle. |
 
 Evidence lives in `dotnet/Lala.Core.Tests/Protocol/WireTests.cs`, `PythonGoldenVectors.cs` `dotnet/Lala.Core.Tests/Sessions/SessionTests.cs`, and `dotnet/Lala.Core.Tests/Battle/CombatRulesTests.cs` / `PythonCombatVectors.cs`. Test/build results apply only to their listed scopes. The inventory's `ported_offline` status never means `live_verified`; Android duplicate copies remain unreconciled until their behavior is explicitly compared. UI/platform scaffolding is not Android service, notification, lifecycle or device acceptance.
@@ -283,10 +283,10 @@ Observe/Confirm/Reject memory intents. The 371 retained-Python sequences cover 3
 snapshots and 48 helper-boundary intents using the actual caught storage-failure path.
 Default deferred composition is separately tested and does not claim storage failed.
 No receive intent is persisted or accepted as a correct answer. A separate explicit
-offline store and strict arithmetic solver are now available below; runtime persistence,
-reviewed-candidate matching, solver-to-runtime completion and execution remain gaps.
-The post-local coordinator requires explicit runtime reads
-when source branches consume them; missing input is not mislabeled as an observed
+offline store, strict arithmetic solver and reviewed candidate resolver are available
+below; runtime persistence, resolver/solver-to-runtime completion and execution remain
+gaps. The post-local coordinator requires explicit runtime reads when source branches
+consume them; missing input is not mislabeled as an observed
 unavailable runtime.
 
 `ArkQuestionStore` now implements an explicit offline SQLite evidence boundary using
@@ -307,7 +307,7 @@ the UI thread. Cancellation is cooperative; the test provider's one-second comma
 timeout differs from Python's 250-ms connection timeout. Uncertain commit failures do
 not synthesize success or trigger automatic retries. `Confirm` records explicit caller
 evidence without authenticating a server receipt. Production provider/native packaging,
-private paths and lifecycle, reviewed-candidate matching, solver-to-runtime integration,
+private paths and lifecycle, reviewed-candidate/solver-to-runtime integration,
 command sending and runtime/device acceptance remain open. See
 [Ark storage boundaries and evidence](../dotnet/Lala.Core.Tests/Storage/README.md).
 
@@ -324,8 +324,32 @@ The solver reads an immutable question and returns an option ID or null. It does
 consult the separate reviewed candidate catalog, guess an answer, authenticate source
 provenance, confirm an answer, execute storage intents or wire into receive/scheduler
 behavior. Known answers, selected options and readiness do not grant it authority.
-Reviewed candidate catalog/matching, solver-to-runtime integration and answer execution
-remain separate gaps. See [strict arithmetic scope and evidence](../dotnet/Lala.Core.Tests/Social/Ark/Arithmetic/README.md).
+The separate pure candidate resolver below does not integrate either path into runtime
+answer execution. See [strict arithmetic scope and evidence](../dotnet/Lala.Core.Tests/Social/Ark/Arithmetic/README.md).
+
+`ArkReviewedCandidates` now ports the reviewed index and pure resolver from
+`ark_candidates.py` and `ark_candidate_data.py`. All 200 text-free rows, seven metadata/
+digest fields and 16 user-review annotations match retained Python exactly; there are
+zero current static quarantines. Whole-index digest, coverage, IDs/options and annotation
+checks run before lookup. The resolver preserves coverage/version/content/quarantine
+precedence, requires exactly one matching caller-observed `DataPackage`, and binds the
+full question text to its paired option IDs/labels. Observed version fields are not
+verified provenance or resource activation.
+
+The 4,865 resolver cases include all 200 IDs in all 24 paired option orders; 42 further
+cases exercise whole-index validation. Positive resolution uses synthetic indexes with
+fingerprints computed from synthetic text. Real built-in rows, metadata, annotations
+and aggregate digest are validated separately; synthetic text against that real index
+returns `changed`. This does not establish any production official-text match. Focused
+Release verification passed 4,921 tests and the retained Python modules passed 11;
+independent source review found no issues. No official text was downloaded or inspected.
+
+Pure matching does not persist evidence, execute receive intents, claim an attempt,
+select/send an answer or establish server confirmation. User review remains unconfirmed
+candidate evidence. Public callers cannot replace the reviewed index; synthetic index
+injection is internal to tests. Runtime receive/storage/scheduler wiring, authenticated
+resource activation, official-text matches and live correctness remain open. See
+[reviewed candidate boundaries and evidence](../dotnet/Lala.Core.Tests/Social/Ark/Candidates/README.md).
 
 All eighteen State.apply observer positions now have bounded receive composition,
 including shop, efficiency, guild actions and Ark after tent. Twenty-six additional
@@ -372,13 +396,44 @@ while 60 unsupported food-resource imports have explicit typed rejection rather 
 source-parity claims. Food accepts only `hp`/`sp`; nine additional rejection contracts
 cover this boundary. Supported cases preserve learned chains, source-key/target order,
 ProtocolError-only fallback, food restrictions, exact numeric ties and proposed item
-costs. The only `battle_commands.action_command` branch included is normal attack
-as the best-skill fallback; other action modes, ownership enumeration, capture checks
-and round planning remain outstanding. Normal fallback requires known actor/local-role
-wire identities rather than inventing IDs. No candidate constructs/sends packets,
+costs. This helper increment initially included only normal attack as the best-skill
+fallback; the separate planner below now adds the remaining pure battle selection.
+Normal fallback requires known actor/local-role wire identities rather than inventing
+IDs. No candidate constructs/sends packets,
 installs holds or consumes items. Helper/candidate coordinator and scheduler wiring,
 verified catalog activation and account/UI/live acceptance remain gaps. See
 [action-candidate boundaries and evidence](../dotnet/Lala.Core.Tests/Inventory/CombatActionCandidatesREADME.md).
+
+`BattleCommandPlanner` now adds the pure `battle_commands.py` slot/identity helpers,
+owned-unit enumeration, capture eligibility, all seven action modes and complete round
+proposals. The 956 retained-Python observations contain 949 exact in-domain cases and
+seven explicit typed identity/import rejections. Known-role ownership/liveness filtering
+precedes explicit actor-PID validation before sorting, including singleton sequences.
+The battle emission boundary requires an actor PID after earlier candidate errors;
+general learned/food helpers keep their existing nullable identity contract. Capture
+preserves level/master/equipment rules and uses exact BigInteger arithmetic rather than
+overflowing supported Int64 observations. No identity, liveness or catalog trust is guessed.
+
+Each round copies proposed costs into a private immutable Reserved map for subsequent
+actors, without changing target HP/SP or installing holds. A failure returns no partial
+intents or provisional inventory, and later calls start from the original observations.
+Source slot/target ordering, exclusions and error precedence remain explicit. The final
+focused suite passed 2,705 tests: 976 new planner tests plus 1,729 existing candidates;
+19 retained Python regressions passed. Independent review approved the identity follow-on.
+Runtime/catalog activation, executable command dispatch, reservation installation,
+scheduler/UI wiring and live acceptance remain open; arbitrary Python object/coercion
+parity is not claimed. See [battle action and round boundaries](../dotnet/Lala.Core.Tests/Battle/BattleCommandREADME.md).
+
+`BattleDisplayRules` now ports pure `unit_label` and `attack_lines`. Received names and
+fallbacks, 15 normal-attack names and three action-name overrides, action/target/effect
+order, duplicates and empty-effective-change text match the retained source. Formatting
+uses the current snapshot even for inactive/dead/exited units and never changes state
+or interprets a report as authoritative HP/SP. The 116 Python cases cover 12 direct
+labels and 155 attack lines under four cultures. The 576 focused tests include 126 new
+display tests and 450 existing CombatRules tests; independent review approved this
+slice. Observer/UI wiring, full auto-battle, catalog activation and live acceptance
+remain gaps. Existing received-event wire types do not imply arbitrary Python scalar
+parity. See [battle display evidence](../dotnet/Lala.Core.Tests/Battle/BattleDisplayREADME.md).
 
 Eve v115 parsing now validates all eleven scene sections before exposing immutable
 NPC/interaction indexes. Versions, offsets, record/scene limits, skipped layouts,
@@ -423,31 +478,49 @@ acceptance follows from these offline suites.
 | `6b382c2` skill reasons/rows | `CombatSkillValidationParityTests.cs`, `CombatSkillValidationContractTests.cs` and `CombatResourceREADME.md` under `Lala.Core.Tests/Inventory` | 2,029 combined skill-focused tests and 21,487 full Core tests on that slice; 928 new oracle cases. |
 | `d8a5ad1` Eve diagnostic wiring | `Lala.Core.Tests/World/Eve/EveDiagnosticTests.cs` and `EveDiagnosticPythonVectors.cs` | 4,848 focused tests and 26,463 full Core tests on the isolated `654118a` base before the subsequent two-test hotfix; 2,146 source diagnostic observations and 26 Python regressions. |
 | `974b249` combat action candidates + `a7bea51` hp/sp boundary | `CombatActionCandidateParityTests.cs`, `CombatActionCandidateContractTests.cs` and `CombatActionCandidatesREADME.md` under `Lala.Core.Tests/Inventory` | Final boundary-focused suite: 1,729 passed, including 1,649 supported exact matches, 60 explicit typed rejections and nine new rejection contracts. All 1,709 Python observations remain. The earlier 26,027 full Core pass predates this boundary correction; 19 retained Python regressions were reported separately. No updated unified full-suite result is claimed. |
-| `c4489f8` explicit Ark storage | `ArkQuestionStorageParityTests.cs`, `ArkQuestionStorageContractTests.cs` and `README.md` under `Lala.Core.Tests/Storage` | 362 focused tests (326 new) and 24,633 full Core tests on isolated base `654118a` plus storage; 104 identity vectors, 149 scenarios / 1,402 operations, three Python-created databases and 36 Python regressions. |
+| `c4489f8` explicit Ark storage plus corruption/schema fixes | `ArkQuestionStorageParityTests.cs`, `ArkQuestionStorageContractTests.cs` and `README.md` under `Lala.Core.Tests/Storage` | Current focused suite: 371 passed, comprising 335 storage-specific tests after nine fixes (256 parity/database-image cases + 79 contracts) and 36 existing matches. Initial 24,633 full Core result on `654118a` plus storage predates those fixes; 104 identity vectors, 149 scenarios / 1,402 operations, three Python-created databases and 36 Python regressions remain. |
 | `1863c3b` strict Ark arithmetic | `ArkArithmeticParityTests.cs`, `ArkArithmeticContractTests.cs` and `README.md` under `Lala.Core.Tests/Social/Ark/Arithmetic` | 336 focused Release tests passed: 304 retained-Python cases plus 32 source/boundary/contracts. Five original Python tests passed. No full Core run is claimed for this increment. |
+| `5c9e0ea` reviewed Ark candidates | `ArkCandidateParityTests.cs`, `ArkCandidateContractTests.cs` and `README.md` under `Lala.Core.Tests/Social/Ark/Candidates` | 4,921 focused Release tests passed: 4,865 synthetic resolver cases, 42 index cases and additional source/data/contracts; 11 retained Python tests passed. All 200 real text-free rows, seven metadata/digest fields and 16 annotations are checked separately from synthetic positive matches. No full-suite or official-text-match claim is made for this newer increment. |
+| `17c7903` + `ced277a` battle planning | `BattleCommandParityTests.cs`, `BattleCommandContractTests.cs` and `BattleCommandREADME.md` under `Lala.Core.Tests/Battle` | 2,705 focused passed: 976 new planner tests plus 1,729 existing candidates; 956 Python observations distinguish 949 exact cases from seven explicit typed rejections. Retained Python regressions: 19 passed. No updated integrated full-suite count is claimed. |
+| `6ca75e5` battle display | `BattleDisplayParityTests.cs`, `BattleDisplayContractTests.cs` and `BattleDisplayREADME.md` under `Lala.Core.Tests/Battle` | 576 focused passed: 126 new display tests plus 450 existing CombatRules tests; 116 Python cases, 12 labels and 155 attack lines. No full-suite or runtime/UI acceptance claim. |
 
 Inventory status remains partial for these modules. Desktop `battle_commands.py`
-(normal fallback), `storage/ark_questions.py` (explicit offline store) and
-`services/ark_first_answer.py` (strict arithmetic) move from not migrated to partially
-migrated; the summary is now 586 not migrated, 108 partially migrated and 2 ported
-offline. Android inventory and reservation entries share identical source hashes and
-receive the same bounded evidence. Android combat-resource, battle-command and Eve
-hashes differ, so they stay unreconciled; the baseline has no Android
-`storage/ark_questions.py` or `services/ark_first_answer.py` entry. `IsCompleteState`
-remains false. The offline store and arithmetic solver do not establish Ark runtime
+(pure action/round planning), `storage/ark_questions.py` (explicit offline store),
+`services/ark_first_answer.py` (strict arithmetic), `services/ark_candidates.py` (pure
+reviewed resolver) and `services/ark_candidate_data.py` (text-free reviewed index) move
+from not migrated to partially migrated; the summary is now 584 not migrated, 110
+partially migrated and 2 ported offline. Android inventory and reservation entries share identical source hashes and
+receive the same bounded evidence. Android combat-resource, battle-command, combat/display
+and Eve hashes differ, so they stay unreconciled; the baseline has no Android
+`storage/ark_questions.py`, `services/ark_first_answer.py`, `services/ark_candidates.py`
+or `services/ark_candidate_data.py` entry. `IsCompleteState` remains false. The offline
+store, arithmetic solver and reviewed resolver do not establish Ark runtime
 persistence or command activation, and none of these slices establishes full migration
 or full runtime acceptance. Current combined verification is recorded below.
 
 
-### Integrated verification for the next PR increment
+### Integrated verification for published commit `9e0a04f`
 
 The integrated tree after `f939c4f` passes **28,865 Core Release tests**, with no
 failures or skips, using standard build/test settings. Android lifecycle remains
 **59/59**; Desktop Release builds with zero warnings/errors and its offline inspector
 passes **9 checks**. The retained Python suite runs **2,273 tests**, with **216**
 existing platform/headless skips. Strict repository audit and whitespace checks pass.
-These local receipts do not replace the pending remote cross-platform CI or device
-and official-server acceptance.
+Remote verification for published commit `9e0a04f` is also green in
+[CI run 42403253359](https://github.com/blesses0603/WLRe_lala/actions/runs/42403253359)
+and [CI run 42403254318](https://github.com/blesses0603/WLRe_lala/actions/runs/42403254318).
+Windows, macOS and Linux each passed 28,865 Core tests and 59 lifecycle tests, built
+Desktop with zero warnings/errors and passed all nine offline inspector checks.
+The Android validation APK build succeeded. These receipts apply to `9e0a04f`, not
+the newer reviewed-candidate, battle-planning or display increments; their focused
+evidence is listed above. The subsequent integrated tree through `ced277a` passes
+**34,888 Core Release tests**, with zero failures/skips. Android lifecycle passes
+**59/59**; Desktop Release has zero warnings/errors and **9** offline self-test checks
+pass. Retained Python runs **2,273** tests with **216** existing platform/headless
+skips, and strict repository audit passes. These newer local results await their own
+remote cross-platform CI; the NPC catalog parser is not part of this tree.
+CI builds and offline tests do not establish installation, device, official-text or
+live-server acceptance.
 
 The final Ark storage review adds nine corruption/schema regressions: contradictory
 registered candidate/attempt evidence fails closed, all identity predicates explicitly

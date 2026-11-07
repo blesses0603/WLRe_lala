@@ -1981,8 +1981,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.ark_candidate_data",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Social/Ark/ArkCandidateData.cs",
+      "dotnet/Lala.Core/Social/Ark/ArkReviewedCandidates.cs"
+    ],
     "evidence": {
       "source_definitions": [],
       "imports": [],
@@ -1991,11 +1994,19 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Exact immutable copy of all 200 text-free reviewed rows, seven metadata/digest fields and 16 user-review annotations, with zero current static quarantines. IDs/options/fingerprints, data version, package identity, review revision and aggregate digest match the retained Python data; no official question text is bundled.",
+      "Whole-index validation checks exact digest, expected coverage, unique IDs, answer membership, four distinct positive options, fingerprint shape and annotation coverage/disjointness before lookup. The real built-in data is checked separately from synthetic positive resolver inputs; 42 index cases and exact full-data comparison are included in the 4,921 focused tests."
+    ],
+    "outstanding_scope": [
+      "Production official-text matches, authenticated version/provenance, runtime catalog activation and live-server correctness remain unverified. No official text was downloaded or inspected; user-reviewed entries are unconfirmed candidates, never server answer keys or permission.",
+      "Resolver-to-receive/storage/runtime integration, receive-intent execution, durable attempt claiming, answer selection/sending, server confirmation, session/generation checks and device acceptance remain. The uint question domain is explicit; arbitrary Python objects and out-of-domain IDs are not dynamic import inputs. Internal synthetic-index injection is test-only."
+    ]
   },
   {
     "id": "desktop:wlre/services/ark_candidates.py",
@@ -2006,8 +2017,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.ark_candidates",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Social/Ark/ArkCandidateData.cs",
+      "dotnet/Lala.Core/Social/Ark/ArkReviewedCandidates.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -2043,10 +2057,18 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Pure ArkReviewedCandidates.Index/Resolve on immutable questions and caller-observed version fields, preserving coverage/version/content/quarantine precedence, exact text and paired-label binding, reasons, source and revision. Exactly one matching DataPackage observation is required; no catalog token, role or resource authority is manufactured.",
+      "Actual-Python differential evidence covers 4,865 synthetic resolver cases, including all 200 IDs in all 24 paired option orders, plus 42 whole-index cases. Positive candidate/quarantine cases use synthetic indexes with matching synthetic fingerprints; the unchanged real built-in rows/digests are validated separately. Focused Release: 4,921 passed; retained Python modules: 11 passed."
+    ],
+    "outstanding_scope": [
+      "Production official-text matches, authenticated version/provenance, runtime catalog activation and live-server correctness remain unverified. No official text was downloaded or inspected; user-reviewed entries are unconfirmed candidates, never server answer keys or permission.",
+      "Resolver-to-receive/storage/runtime integration, receive-intent execution, durable attempt claiming, answer selection/sending, server confirmation, session/generation checks and device acceptance remain. The uint question domain is explicit; arbitrary Python objects and out-of-domain IDs are not dynamic import inputs. Internal synthetic-index injection is test-only."
+    ]
   }
 ]
