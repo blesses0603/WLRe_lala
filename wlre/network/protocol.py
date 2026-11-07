@@ -1,6 +1,4 @@
 """Layouts transcribed from uploaded Lua; no execution of game Lua."""
-from wlre.paths import RESOURCE_ROOT
-import json
 from wlre.network.wire import Packet, Reader, Writer, ProtocolError
 from wlre.network.layouts import role_list, world_player, battle_unit
 from wlre.services.star_ark import decode_ark

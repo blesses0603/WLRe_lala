@@ -1,26 +1,16 @@
 """Main-page minimap. Single click selects; double click invokes guarded movement."""
 
 from wlre.services.world.catalog_source_policy import is_official_revision
-from wlre.paths import PROJECT_ROOT
-import math
 import tkinter as tk
-from wlre.ui.window_layout import configure_dialog
 from wlre.ui.rounded_notebook import RoundedNotebook
 from tkinter import ttk, messagebox
-from PIL import Image,ImageTk
 from wlre.ui.minimap import SmallMaps
-from wlre.services.world.display_position import current_position
-from wlre.services.world.navigation import Repository, NavigationError
-from wlre.services.world.map_names import map_label, parse_map_id
-from wlre.services.world.portals import (Portals, nearest_marker,
-                                         portal_map_pixel, portal_source_diagnostic, marked_portals)
-from wlre.services.world.portal_policy import allowed_rows, destination_problem
+from wlre.services.world.portals import Portals, portal_source_diagnostic, marked_portals
+from wlre.services.world.portal_policy import allowed_rows
 from wlre.services.world.portal_dedup_1275 import collapse_portal_destinations
-from wlre.services.world.npc_catalog import NPCIndex, scene_npcs, npc_detail
-from wlre.services.world.npc_talk import load_catalog as load_npc_talks, dialogue_text
+from wlre.services.world.npc_catalog import NPCIndex, scene_npcs
+from wlre.services.world.npc_talk import load_catalog as load_npc_talks
 from wlre.services.world.npc_interact import NPCInteractIndex
-from wlre.services.world.npc_shop import shop_catalog
-from wlre.services.world.npc_item_data import item_catalog, sellable
 from wlre.features.minimap.map_view import MinimapCanvasMixin
 from wlre.features.minimap.buttons import MinimapPickMixin
 from wlre.features.minimap.navigation_ui import MinimapNavigationMixin

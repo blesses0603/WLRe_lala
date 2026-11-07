@@ -1,6 +1,5 @@
 """ServerList.txt endpoints follow Network.Connect; never guess line addresses."""
 from wlre.paths import RESOURCE_ROOT
-import json
 
 CUSTOM='目前連線（自訂）'
 

@@ -1,6 +1,5 @@
 """Code-owned non-credential connection settings from the owner's capture."""
-from wlre.paths import RESOURCE_ROOT
-import json
+from wlre.paths import RESOURCE_ROOT  # Retained for no-seed compatibility probes.
 from wlre.network.wire import ProtocolError
 
 

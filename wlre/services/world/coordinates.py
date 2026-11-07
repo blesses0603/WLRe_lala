@@ -6,7 +6,6 @@ support A = B + (boundsCenter - boundsSize/2)*1000 (rounding <= 0.5 Int3).
 Live movement and dynamic obstacle geometry are not verified by these formulas.
 """
 from wlre.paths import RESOURCE_ROOT
-import json
 from wlre.services.world.navigation import NavigationError, finite
 from wlre.services.world.map_names import parse_map_id, map_label
 
