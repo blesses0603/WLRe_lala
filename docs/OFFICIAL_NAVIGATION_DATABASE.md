@@ -2342,3 +2342,68 @@ GetNearest/modifier behavior for all scenes, runtime obstacles, the player's
 actual traversal state, and server acceptance. Package 1296 matching alone cannot
 supply those observations. No guards were relaxed, no seeds removed, and no
 live movement, push, merge or release was performed.
+
+### Phase 61: observed Bangkok corner and source-derived waypoint following
+
+The supplied frame review corrects (2835,4052) to t=8.466667 s; t=8.5 s is
+(2826,4060). Eight observations from 8.2 through 8.8 s are pinned in
+`tools/review_navigation_corner_following.py`. The current movement/traffic mode
+is not visible and is not assumed. All eight positions locate on node 21,
+flags 524289 (walkable bit set, tag 1), excluded by land mask 9. Distances to the
+ideal planar land route decrease from 19.55 to 16.48 packet-coordinate units;
+nearest eligible land-boundary distances decrease from 14.54 to 4.95. Thus this
+is a continuous observed deviation, not a single mistyped sample. These are
+spatial measurements; timestamps do not reveal internal path vertices.
+
+Verified MoveController Lua SHA-256
+`fa020de008d42e2d54c7e10bd75c67b9dbe2aaaba173ddf313b7d4c23646ef30`
+contains a waypoint-following step before movement: lines 113-125 select squared
+threshold 0.01 for EMoveSender.Server and 0.16 otherwise, advance while squared
+2-D distance is strictly below the threshold, then aim toward the next point.
+Lines 152-157 clamp movement to direction length or horizontalSpeed*deltaTime;
+lines 205/230 use CharacterController.Move. Static source supports early corner
+switching, but does not prove the branch, frame times or collisions in the video.
+At the established coordinate scale, the two radii are 10 and 40 displayed units.
+
+The new diagnostic implements a bounded **Python model** of this step, not Lua
+or Unity execution. Fixed sensitivity inputs are 30/60/120 FPS, speed 350 packet
+units/s and radii 10/40; no parameters are fitted to the video. No collision,
+gravity or hidden runtime path modifications are modeled. Comparing spatial
+polylines to the eight samples gives:
+
+| Radius | FPS | Maximum observed-to-model distance |
+| ---: | ---: | ---: |
+| 10 | 30 | 16.45 |
+| 10 | 60 / 120 | 13.12 |
+| 40 | 30 | 4.18 |
+| 40 | 60 / 120 | 8.12 |
+
+The 40-unit model explains the direction and much of the size of corner cutting,
+including entering a region excluded from the original land graph. Residuals
+remain larger than coordinate rounding; do not infer FPS, sender, traffic mode,
+actual vectorPath or collision behavior from the improved fit. Model final
+positions are reported instead of silently snapping them to the requested goal.
+
+Optional pinned native test extracts the exact 24-face / 26-vertex corridor
+chosen by our land preview and remaps only those nodes into the already bounded
+FunnelModifier.Apply harness. Native portal construction and funnel produce the
+same four points: (4836,5154), (3680,3980), (3010,3870), (1850,4915), with maximum
+packet-coordinate error below 0.001. This is native Android ARM64 code in modeled
+VM/pool/list state, not Windows execution or official graph selection. It does
+not extend the 256-node complete-search harness: Bangkok's full 513-node search
+was not run. No evidence that the official video used this corridor is implied.
+
+Reproduce with `python -m tools.review_navigation_corner_following --snapshot DIR
+--move-source PINNED_DECODED_LUA --output REPORT.json`, optionally supplying both
+`--libil2cpp` and `--libunity` for the native corridor check. External official
+code is hash-pinned and not copied into the repository. Invalid inputs, work
+budget exhaustion and native mismatches fail rather than adjusting the model.
+Both hosts produce matching reports; related tests pass desktop 100 / Android
+99, including strict-threshold, no-overshoot and fixed-work-budget cases. No
+production motion algorithm, masks, movement authority or seed changed.
+
+Next evidence needed is actual waypoint switching/character movement around the
+corner, including sender, traffic mode, per-frame position and CharacterController
+result. Existing video establishes a spatial deviation but cannot expose those
+fields. Do not resolve the deviation by allowing tag 1 for land, removing obstacles,
+or treating a source-derived approximation as official runtime validation.
