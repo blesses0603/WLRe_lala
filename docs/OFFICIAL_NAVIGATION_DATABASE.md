@@ -2287,3 +2287,58 @@ user-operated test scope and an observation/stop procedure. The current branch
 has no verified production route authority and must not send trial movement to
 work around that missing evidence. All three legacy seed BLOBs remain until the
 replacement covers required ordinary maps and production acceptance is proven.
+
+### Phase 60: all-mode directed graph and bidirectional acceptance matrix
+
+The user-side read-only inventory reports Windows Data/Main Package 1296 matching
+our historical sample, with the official game stopped and no logs, symbols or
+diagnostic facility found. This confirms a package-version match only; it does
+not observe post-Awake callbacks or actual path requests.
+
+Added `tools.review_navigation_mode_matrix` with `--snapshot DIR --controls
+PHASE58_REPORT --output REPORT`. It loads exact-key hash-verified caches, independently
+constructs allowed node sets using explicit reviewed tags (land 0/3, sea 2,
+sky 0/1/2/3) and walkability, and checks every directed arc against serialized
+connections and shared geometry. It compares the resulting full graph with the
+preview graph before testing routes. Model/cache mismatch, graph mismatch,
+incorrect costs, forbidden route edges or the independent solver's work-budget
+exhaustion stop the audit; none is counted as an ordinary no-route result.
+
+Coverage: 17 ordinary models / 9,075 geometric nodes / 51 model-mode rows.
+All node eligibility and allowed directed arcs were checked. The fixed sample
+of up to five nodes per row is now tested in both directions, with the independent
+FIFO minimum-cost solver for every query (604 queries):
+
+| Mode | Allowed nodes | Allowed arcs | Valid minimum-cost routes | Confirmed unreachable |
+| --- | ---: | ---: | ---: | ---: |
+| Land | 2,164 | 4,362 | 272 | 20 |
+| Sea | 1,462 | 2,996 | 20 | 0 |
+| Sky | 8,274 | 23,452 | 292 | 0 |
+
+Sixteen sea rows have no eligible nodes and are explicitly reported as such,
+not as successful route coverage. This is complete graph-eligibility checking
+for these 17 caches, not all-pairs routing or all 972 ordinary model candidates.
+
+All 12 previously forbidden old-algorithm cases were traced to excluded travel
+tags. There were no missing serialized arcs or missing shared edges along those
+reported paths. Excluded-node occurrences by map: 12050=26, 13217=3, 13218=8,
+13219=8, 13220=10, 13221=6, 13222=4, 13223=2, 13225=9, 13226=9, 13227=1,
+58001=124. Therefore the current mode-filtered preview is doing substantive route
+planning with independently verified cost/eligibility; the production refusal
+guard is not being presented as the replacement navigation implementation.
+
+Synthetic tests cover all four known tags, disabled walkability, an unknown tag
+that must not become sky permission, asymmetric costs, and separation of a
+missing serialized arc from a travel-tag exclusion. Focused suites pass desktop
+97 / Android 96; both offline matrix reports match exactly. Full application
+suites were not rerun for this diagnostic-only addition; prior Android full-suite
+environment limitations remain. No new Windows execution or live-server test is
+claimed. Both previously delivered offline ZIPs remain unchanged.
+
+Confirmed: pinned geometry, serialized connections, reviewed fixed tag rules,
+per-node penalties and zero-tag-penalty graph optimum for sampled endpoints.
+Unconfirmed: whether actual scene startup changes those defaults, final native
+GetNearest/modifier behavior for all scenes, runtime obstacles, the player's
+actual traversal state, and server acceptance. Package 1296 matching alone cannot
+supply those observations. No guards were relaxed, no seeds removed, and no
+live movement, push, merge or release was performed.
