@@ -641,8 +641,12 @@
     "target_project": "Lala.Core",
     "target_subsystem": "State.efficiency",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Battle/EfficiencyModels.cs",
+      "dotnet/Lala.Core/Battle/EfficiencyRules.cs",
+      "dotnet/Lala.Core/Battle/EfficiencyTracker.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -696,8 +700,8 @@
     },
     "acceptance_profile": "state",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
     },
@@ -705,7 +709,14 @@
       "desktop_source": "wlre/core/efficiency.py",
       "identical_source": true,
       "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
-    }
+    },
+    "migrated_scope": [
+      "Offline EXP curves/progress, rates/forecast and complete battle evidence tracking with immutable snapshots, confirmed/inferred flags and bounded history."
+    ],
+    "outstanding_scope": [
+      "Typed input domain: degrees0-2/curve levels1-400, signed64 input EXP and BigInteger gains.",
+      "Network/knowledge event adapters, NPC naming catalog and UI integration remain."
+    ]
   },
   {
     "id": "android:wlre/core/event_log.py",
@@ -1101,8 +1112,10 @@
     "target_project": "Lala.Core",
     "target_subsystem": "State.state_session_events",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Sessions/SessionEventReducer.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1116,8 +1129,8 @@
     },
     "acceptance_profile": "state",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
     },
@@ -1125,7 +1138,13 @@
       "desktop_source": "wlre/core/state_session_events.py",
       "identical_source": true,
       "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
-    }
+    },
+    "migrated_scope": [
+      "Pure immutable session event reducer: phases, gold evidence, NPC/event gates, attribute namespaces and unknown count."
+    ],
+    "outstanding_scope": [
+      "Packet counting supplied by caller; not complete State, transport/session lifecycle or command authority."
+    ]
   },
   {
     "id": "android:wlre/core/state_world_events.py",
@@ -1667,8 +1686,12 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Protocol.instances",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Instances/InstanceDecoder.cs",
+      "dotnet/Lala.Core/Instances/InstanceLayouts.cs",
+      "dotnet/Lala.Core/Instances/InstanceEvents.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1703,8 +1726,8 @@
     },
     "acceptance_profile": "protocol",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
     },
@@ -1712,7 +1735,13 @@
       "desktop_source": "wlre/network/instances.py",
       "identical_source": true,
       "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
-    }
+    },
+    "migrated_scope": [
+      "Complete inbound S85/S186 decode/layouts and typed ServerProtocol integration."
+    ],
+    "outstanding_scope": [
+      "Room/entry/reward services, sweep/challenge requests and state orchestration not included."
+    ]
   },
   {
     "id": "android:wlre/network/layouts.py",
@@ -1776,8 +1805,10 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Protocol.live_data",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Protocol/LiveDataProtocol.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1806,8 +1837,8 @@
     },
     "acceptance_profile": "protocol",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
     },
@@ -1815,7 +1846,13 @@
       "desktop_source": "wlre/network/live_data.py",
       "identical_source": true,
       "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
-    }
+    },
+    "migrated_scope": [
+      "All item_save, companion, player_info and decode_live branches with immutable typed data and strict boundaries."
+    ],
+    "outstanding_scope": [
+      "Live network/event reducer/session integration and device/server acceptance not run."
+    ]
   },
   {
     "id": "android:wlre/network/non_npc_diagnostics.py",
@@ -1861,8 +1898,10 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Protocol.npc_dialogue",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Protocol/ServerProtocol.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1914,8 +1953,8 @@
     },
     "acceptance_profile": "protocol",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
     },
@@ -1923,7 +1962,13 @@
       "desktop_source": "wlre/network/npc_dialogue.py",
       "identical_source": true,
       "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
-    }
+    },
+    "migrated_scope": [
+      "Pure decode_effect 18-byte header, short-effect blocking semantics and opaque extension length."
+    ],
+    "outstanding_scope": [
+      "NPC request/choice/close commands, confirmations, state transitions and official catalog integration remain."
+    ]
   },
   {
     "id": "android:wlre/network/outbound_observations.py",

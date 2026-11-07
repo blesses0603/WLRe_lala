@@ -244,8 +244,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Resources/OfficialCatalogObservation.cs",
+      "dotnet/Lala.Core/Resources/ManifestIdentity.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -384,11 +387,17 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Display-only dynamic metadata validation and internal before/after source identity checks."
+    ],
+    "outstanding_scope": [
+      "Complete extraction, load orchestration and trusted source-contract issuance remain."
+    ]
   },
   {
     "id": "desktop:wlre/services/world/emoji_database.py",
@@ -813,8 +822,10 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Protocol/ServerProtocol.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -851,11 +862,17 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Pure decode_floor_extension with exact source lengths and accepted ranges."
+    ],
+    "outstanding_scope": [
+      "House models/navigation/runtime authority and other module operations remain."
+    ]
   },
   {
     "id": "desktop:wlre/services/world/instance_runtime.py",

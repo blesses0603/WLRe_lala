@@ -14,6 +14,26 @@ Core must not reference Avalonia, Android APIs, Tk, Kivy or a Python interpreter
 
 The Python application remains available until replacement features are accepted. Do not delete original code, credential stores or resource databases merely because a C# type exists. Do not enable live commands because a demo, compilation or codec test succeeds. No official-server actions or spending are authorized by this inventory.
 
+## Confirmed shared-core responsibility map
+
+Keep one `Lala.Core` project. The following are responsibility boundaries, not a claim that every module is already implemented or a requirement to rename working code immediately:
+
+- Accounts / Sessions: account isolation, session generations and event-driven login/role state.
+- Transport / Protocol: connection adapters, bounded framing, exact packet layouts and dispatch. Decoding never itself authorizes an action.
+- State: single-writer ownership, service mutation scopes, reducers and immutable published snapshots.
+- Resources / Catalogs / Storage: official-source identity, reviewed parsing, generation/cache activation and atomic persistence.
+- Battle: rules, evidence, efficiency and eventual battle orchestration.
+- World: maps, navigation, position reconciliation and runtime obstacles. Preview routes are not movement permission.
+- Inventory / Skills: owned items, reservations, skill data/rules and operations; bag and skills may load independently.
+- Expedition: team conditions, results, state and scheduling.
+- Instances: dungeon instances and verified dungeon sweep behavior.
+- Social / Organization / Ark: chat, groups/guilds and ark-specific state/services.
+- Hero challenge: a separate feature boundary for entry, element and difficulty; do not treat dungeon sweeping as hero challenge or invent unverified protocol behavior.
+- Automation / Scheduling: deterministic service coordination, deadlines, cancellation and safe pending-request settlement.
+- Safety / Diagnostics / Abstractions: resource holds, command guards, redacted evidence and platform-neutral contracts.
+
+Migration remains source-driven and incremental. Existing verified files are moved only when integrations and tests justify it. Android/desktop hosts stay outside Core.
+
 ## Source baselines
 
 - Desktop: `blesses0603/WLRe_lala`, main `0f8bf6a99a70070cea1aeec60a0d6ca93dbc581a`.

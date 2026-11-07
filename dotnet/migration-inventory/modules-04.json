@@ -1056,8 +1056,12 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Protocol.instances",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Instances/InstanceDecoder.cs",
+      "dotnet/Lala.Core/Instances/InstanceLayouts.cs",
+      "dotnet/Lala.Core/Instances/InstanceEvents.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1091,11 +1095,17 @@
     },
     "acceptance_profile": "protocol",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Complete inbound S85/S186 decode/layouts and typed ServerProtocol integration."
+    ],
+    "outstanding_scope": [
+      "Room/entry/reward services, sweep/challenge requests and state orchestration not included."
+    ]
   },
   {
     "id": "desktop:wlre/network/layouts.py",
@@ -1154,8 +1164,10 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Protocol.live_data",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Protocol/LiveDataProtocol.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1184,11 +1196,17 @@
     },
     "acceptance_profile": "protocol",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "All item_save, companion, player_info and decode_live branches with immutable typed data and strict boundaries."
+    ],
+    "outstanding_scope": [
+      "Live network/event reducer/session integration and device/server acceptance not run."
+    ]
   },
   {
     "id": "desktop:wlre/network/npc_dialogue.py",
@@ -1199,8 +1217,10 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Protocol.npc_dialogue",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Protocol/ServerProtocol.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1252,11 +1272,17 @@
     },
     "acceptance_profile": "protocol",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Pure decode_effect 18-byte header, short-effect blocking semantics and opaque extension length."
+    ],
+    "outstanding_scope": [
+      "NPC request/choice/close commands, confirmations, state transitions and official catalog integration remain."
+    ]
   },
   {
     "id": "desktop:wlre/network/outbound_observations.py",
@@ -1304,7 +1330,10 @@
     "scope": "runtime",
     "status": "partially_migrated",
     "target_files": [
-      "dotnet/Lala.Core/Protocol/CandidateCommands.cs"
+      "dotnet/Lala.Core/Protocol/CandidateCommands.cs",
+      "dotnet/Lala.Core/Protocol/ServerProtocol.cs",
+      "dotnet/Lala.Core/Protocol/ServerEvents.cs",
+      "dotnet/Lala.Core/Protocol/ServerProtocolNames.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -1420,11 +1449,12 @@
       "evidence_source": "Local .NET test run passed Python golden parity / subset tests; no device or live-server acceptance claimed."
     },
     "migrated_scope": [
-      "Pure candidate byte builders: login, select_role, walk, attack, cast_skill, use_battle_item and use_field_item"
+      "Pure candidate byte builders: login, select_role, walk, attack, cast_skill, use_battle_item and use_field_item",
+      "Reachable direct decode branches and outbound movement; composes migrated typed decoders, drops credential echoes, explicitly reports unported service families."
     ],
     "outstanding_scope": [
-      "Server event decoder and remaining protocol dispatch not ported.",
-      "No live transport/login flow or command authorization follows from candidate byte parity."
+      "Ark, daily tasks, cube, room storage, recovery, crafting and tent remain explicit unsupported decoder families until separate integration.",
+      "No live transport, aggregate state reducer or command authorization."
     ]
   },
   {

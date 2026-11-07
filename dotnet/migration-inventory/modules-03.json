@@ -1078,8 +1078,12 @@
     "target_project": "Lala.Core",
     "target_subsystem": "State.efficiency",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Battle/EfficiencyModels.cs",
+      "dotnet/Lala.Core/Battle/EfficiencyRules.cs",
+      "dotnet/Lala.Core/Battle/EfficiencyTracker.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1133,11 +1137,18 @@
     },
     "acceptance_profile": "state",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Offline EXP curves/progress, rates/forecast and complete battle evidence tracking with immutable snapshots, confirmed/inferred flags and bounded history."
+    ],
+    "outstanding_scope": [
+      "Typed input domain: degrees0-2/curve levels1-400, signed64 input EXP and BigInteger gains.",
+      "Network/knowledge event adapters, NPC naming catalog and UI integration remain."
+    ]
   },
   {
     "id": "desktop:wlre/core/event_log.py",
@@ -1539,8 +1550,10 @@
     "target_project": "Lala.Core",
     "target_subsystem": "State.state_session_events",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Sessions/SessionEventReducer.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1554,11 +1567,17 @@
     },
     "acceptance_profile": "state",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Pure immutable session event reducer: phases, gold evidence, NPC/event gates, attribute namespaces and unknown count."
+    ],
+    "outstanding_scope": [
+      "Packet counting supplied by caller; not complete State, transport/session lifecycle or command authority."
+    ]
   },
   {
     "id": "desktop:wlre/core/state_world_events.py",

@@ -441,8 +441,10 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Resources/OfficialCatalogObservation.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -471,11 +473,17 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Metadata projection validates current key, all five features and bounded source metadata."
+    ],
+    "outstanding_scope": [
+      "SQLite I/O, verified parsed game records and runtime activation remain."
+    ]
   },
   {
     "id": "desktop:wlre/services/world/official_combat_sources.py",
