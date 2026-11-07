@@ -4,6 +4,14 @@ from wlre.services.battle.auto_battle import defaults
 
 
 class ServerAccountSettings(unittest.TestCase):
+    def setUp(self):
+        from unittest.mock import patch
+        rows=server_lines.parse([
+            {'id':1,'name':'測試甲'},{'id':2,'name':'測試乙'},
+            {'id':101,'address':'8.8.8.8','port':16988},
+            {'id':102,'address':'8.8.4.4','port':16988},
+            {'id':201,'address':'1.1.1.1','port':16988}])
+        self.enterContext(patch.object(server_lines,'load',return_value=rows))
     def test_official_lines_share_while_accounts_and_servers_stay_separate(self):
         lines=server_lines.load();earth=[r for r in lines if r['id']//100==1];mercury=next(r for r in lines if r['id']//100==2)
         def key(row,account='fixture'):return store.identity(row['host'],row['port'],account,row['id'])
@@ -20,7 +28,9 @@ class ServerAccountSettings(unittest.TestCase):
                 old=store._hash([row['host'],row['port'],'fixture',row['id']])
                 value=defaults();value['field_heal']=bool(index)
                 store.save(old,value,directory);file=store.settings_file(old,directory)
-                os.utime(file,ns=(1000000000+index,1000000000+index));originals[file]=file.read_bytes()
+                # Distinguishable on Windows filesystems too; 1 ns rounds away.
+                timestamp=1_000_000_000*(index+1)
+                os.utime(file,ns=(timestamp,timestamp));originals[file]=file.read_bytes()
             first,second=lines[:2];key=store.identity(first['host'],first['port'],'fixture',first['id'])
             legacy=store.legacy_identities(first['host'],first['port'],'fixture',first['id'])
             self.assertTrue(store.load(key,directory,legacy)['field_heal'])

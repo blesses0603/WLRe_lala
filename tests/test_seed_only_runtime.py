@@ -18,7 +18,9 @@ class SeedOnlyRuntimeTests(unittest.TestCase):
             build_seed(RESOURCE_ROOT,root/SEED_NAME)
             with patch.object(defaults,'RESOURCE_ROOT',root),patch.object(server_lines,'RESOURCE_ROOT',root),patch.object(resource_compatibility,'RESOURCE_ROOT',root):
                 self.assertTrue(defaults.load_default_profile()['game_endpoint'])
-                self.assertTrue(server_lines.load())
+                # The seed no longer supplies a server list; cold offline startup
+                # remains usable while official server metadata is unavailable.
+                self.assertIsInstance(server_lines.load(),list)
                 self.assertEqual(resource_compatibility.load_supported_resources()['schema_version'],1)
             validate_resources(root)
             files=data_files(package,compact=True)
@@ -38,7 +40,7 @@ class SeedOnlyRuntimeTests(unittest.TestCase):
             build_seed(RESOURCE_ROOT,root/SEED_NAME)
             shutil.copy2(RESOURCE_ROOT.parent.parent/'WLRE_Client.py',base/'WLRE_Client.py')
             env=dict(os.environ,LOCALAPPDATA=str(base/'new_user'),WLRE_DISABLE_AUTO_CATALOG='1')
-            commands=[['WLRE_Client.py','--self-test'],['-c','from wlre.ui.gui import App;from wlre.storage.defaults import load_default_profile;from wlre.storage.server_lines import load;assert load();assert load_default_profile()']]
+            commands=[['WLRE_Client.py','--self-test'],['-c','from wlre.ui.gui import App;from wlre.storage.defaults import load_default_profile;from wlre.storage.server_lines import load;assert load()==[];assert load_default_profile()']]
             if os.environ.get('DISPLAY') or os.name=='nt' or sys.platform=='darwin':
                 commands.append(['WLRE_Client.py','--smoke-test-gui'])
             for args in commands:

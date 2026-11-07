@@ -6,7 +6,7 @@ results are frozen for the rest of this login to avoid duplicate spending.
 import time
 from wlre.network.wire import ProtocolError
 from wlre.network.instance_actions import create_main_room, create_coop_room
-from wlre.services.instance_browser import entries_for
+from wlre.services.instance_browser import selected_entry
 from wlre.services.battle.party import own_team
 from wlre.services.instance_activity import instance_background_blockers
 
@@ -66,19 +66,17 @@ def create(state, command, now=None):
         raise ProtocolError('協力獎勵待處理，不可建立房間')
     public = command.get('public')
     password = _validated_password(public, command.get('password'))
+    row = selected_entry(mode, command)
     if mode == 'main':
         map_id = command.get('map_id')
-        row = next((x for x in entries_for('main')
-                    if x['kind'] == 1 and x['map_id'] == map_id), None)
-        if row is None:
-            raise ProtocolError('請選擇經 1262 官方確認的一般副本')
-        packet = create_main_room(map_id, public=public, password=password)
+        if row['kind'] != 1 or row['map_id'] != map_id:
+            raise ProtocolError('請選擇經當次官方確認的一般副本')
+        packet = create_main_room(map_id, public=public, password=password,
+                                  catalog_key=row['catalog_key'])
         expected = {'map_id': map_id, 'kind': 1}
     else:
         dungeon_id = command.get('dungeon_id')
-        row = next((x for x in entries_for('coop')
-                    if x['id'] == dungeon_id), None)
-        if row is None:
+        if row['id'] != dungeon_id:
             raise ProtocolError('請選擇經官方確認的協力活動')
         if command.get('confirm_cost') is not True:
             raise ProtocolError('協力創房可能消耗門票或點數，請確認後再送出')
@@ -87,7 +85,8 @@ def create(state, command, now=None):
         # Optional follower bonuses (if introduced in later game versions)
         # must not be represented as automatically granted.
         capacity = command.get('player_count')
-        packet = create_coop_room(dungeon_id, capacity, public=public, password=password)
+        packet = create_coop_room(dungeon_id, capacity, public=public, password=password,
+                                  variant=row['variant'], catalog_key=row['catalog_key'])
         # Match the exact C186-1 / S186-3 event NPC index. Named events
         # (IDs 27 and 28) use 1 and 2, not zero.
         expected = {'dungeon_id': dungeon_id, 'kind': row['variant'],

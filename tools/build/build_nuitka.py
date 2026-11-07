@@ -33,7 +33,7 @@ def compiler_jobs(requested=None, cpu_count=None):
 def make_command(python,mode='standalone',root=ROOT,compiler='auto',diagnose_compiler=False,jobs=None):
     output=root/'dist_nuitka'/mode
     command=[str(python),'-m','nuitka','--mode='+mode,'--enable-plugin=tk-inter',
-             '--include-package=wlre','--include-package=UnityPy',
+             '--include-package=wlre','--include-package=UnityPy','--include-package=Crypto','--include-package-data=Crypto',
              '--include-package-data=UnityPy','--windows-console-mode=disable',
              '--user-plugin='+str(root/'tools/build/unitypy_nuitka_plugin.py'),
              '--windows-icon-from-ico='+str(root/'wlre/resources/assets/app.ico'),

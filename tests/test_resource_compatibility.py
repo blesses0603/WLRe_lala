@@ -132,10 +132,11 @@ class BundledResourceCompatibilityTests(unittest.TestCase):
             with self.assertRaises(ResourceBaselineError):
                 load_supported_resources(path)
 
-    def test_packager_requires_database_with_verified_compatibility_config(self):
+    def test_packager_uses_code_owned_policy_not_bundled_compatibility_data(self):
         from wlre.resource_manifest import REQUIRED_RESOURCES, data_files
         from wlre.paths import PACKAGE_ROOT
-        self.assertIn("lala_supported_resources.json", REQUIRED_RESOURCES)
+        self.assertNotIn("lala_supported_resources.json", REQUIRED_RESOURCES)
+        self.assertEqual(load_supported_resources()["schema_version"],1)
         filenames = [str(p) for p in data_files(PACKAGE_ROOT)]
         self.assertTrue(any(n.endswith("resource_catalog_seed.sqlite3") for n in filenames))
         self.assertFalse(any(n.endswith("lala_supported_resources.json") for n in filenames))

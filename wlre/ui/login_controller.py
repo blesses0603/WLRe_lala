@@ -53,6 +53,7 @@ class LoginController:
         ttk.Button(connection_tools,text='新增',command=self.new_saved_login).pack(side='right')
         ttk.Button(connection_tools,text='版本檢測',command=self.reopen_version_check).pack(side='right',padx=(0,7))
         self.refresh_saved_accounts()
+        ttk.Label(self.login_tab,text=server_lines.status_label(),wraplength=820).pack(fill='x',padx=8,pady=3)
         login=LabelFrame(self.login_tab,text='帳號登入',padding=8)
         login.pack(fill='x')
         for col in range(4):login.columnconfigure(col,weight=1)
@@ -92,6 +93,8 @@ class LoginController:
 
 
     def refresh_server_lines(self):
+        try:self.line_catalog=server_lines.load()
+        except (OSError,ValueError,TypeError):self.line_catalog=[]
         choices={server_lines.CUSTOM:None}
         for row in self.line_catalog:choices[row['name']]=dict(row)
         try:

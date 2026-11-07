@@ -12,11 +12,12 @@ from wlre.ui.home_map import HomeMap
 
 
 def runtime(key='a',width=7520):
-    # Synthetic verified-runtime fixture. Artwork is read from the real seed.
-    return SimpleNamespace(revision=1286,catalog_identity=SimpleNamespace(key=key*64),
+    # Synthetic runtime and artwork; no official image seed.
+    from smallmap_runtime_fixtures import attach
+    return attach(SimpleNamespace(revision=1286,catalog_identity=SimpleNamespace(key=key*64),
         stages={12170:{'model_id':12170,'map_width':width,'map_height':6433,
                        'small_offset_x':12,'small_offset_y':84}},
-        npc_index=SimpleNamespace(scenes={}),interact_index=SimpleNamespace(scenes={}),talks={})
+        npc_index=SimpleNamespace(scenes={}),interact_index=SimpleNamespace(scenes={}),talks={}))
 
 
 class Page(MinimapNavigationMixin):
@@ -58,6 +59,22 @@ class DynamicMinimapReloadTests(unittest.TestCase):
         self.assertIsNotNone(self.page.mesh)
         self.page.repository.load.assert_called_once_with('M12170')
         self.page.refresh_portals.assert_called_once_with()
+
+    def test_same_identity_image_republish_after_portal_refresh_reloads(self):
+        from smallmap_runtime_fixtures import Images
+        self.page.set_state({'player':{'scene':12170}})
+        old=self.page.image
+        self.current.smallmaps=Images(self.current.catalog_identity.key,(12170,))
+        self.page.refresh_runtime_sources()
+        self.assertIsNone(self.page.image)
+        self.page.set_state({'player':{'scene':12170}})
+        self.assertIsNotNone(self.page.image)
+        self.assertIsNot(self.page.image,old)
+        self.current.smallmaps=None
+        self.page.refresh_runtime_sources()
+        self.page.set_state({'player':{'scene':12170}})
+        self.assertIsNone(self.page.image)
+        self.assertIsNone(self.page.projection)
 
     def test_runtime_rebind_closes_stale_npc_windows_and_selections(self):
         windows=[]

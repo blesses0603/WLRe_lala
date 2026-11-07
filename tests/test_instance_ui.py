@@ -26,6 +26,24 @@ class InstanceNavigation(unittest.TestCase):
             self.root.tk.call('after', 'cancel', job)
         self.root.destroy()
 
+    def test_catalog_update_and_cold_start_clear_selection(self):
+        from instance_runtime_fixtures import catalog
+        from wlre.network.wire import ProtocolError
+        page=self.app.instance_panel.main_page
+        page.catalog_table.selection_set('catalog_0')
+        updated=catalog()
+        updated['catalog_key']='updated'
+        updated['records'][0]['name']='更新的測試名稱'
+        with patch('wlre.services.instance_browser.official_catalog',return_value=updated):
+            page.refresh_catalog()
+            self.assertFalse(page.catalog_table.selection())
+            self.assertIn('更新的測試名稱',page.catalog_table.item('catalog_0')['values'])
+        with patch('wlre.services.instance_browser.official_catalog',side_effect=ProtocolError('未同步')):
+            page.refresh_catalog()
+            self.assertEqual(page.catalog_records,())
+            self.assertFalse(page.catalog_table.get_children())
+            self.assertTrue(page.create_button.instate(['disabled']))
+
     def test_main_entry_and_two_subtabs_are_navigable(self):
         panel = self.app.instance_panel
         launcher=self.app.instance_launcher
@@ -54,7 +72,7 @@ class InstanceNavigation(unittest.TestCase):
                     ['房間／副本', '人數／條件', '公開狀態'],
                 )
                 self.assertEqual(len(page.catalog_table.get_children()),
-                                 3 if page.cooperative else 27)
+                                 3 if page.cooperative else 5)
                 self.assertTrue(page.enter_button.instate(['disabled']))
         self.assertFalse(self.errors, self.errors)
 
@@ -242,7 +260,8 @@ class InstanceNavigation(unittest.TestCase):
                 confirm.invoke()
                 send.assert_called_once_with({
                     'type': 'instance_create', 'mode': 'main', 'public': True,
-                    'password': '', 'map_id': 30012
+                    'password': '', 'map_id': 30012,
+                    'catalog_key': 'test-catalog', 'catalog_id': 1, 'catalog_variant': 0
                 })
         self.assertTrue(page.create_button.instate(['disabled']))
 
@@ -279,3 +298,6 @@ class InstanceNavigation(unittest.TestCase):
         self.assertTrue(panel.main_page.refresh_button.instate(['disabled']))
         self.assertTrue(panel.coop_page.enter_button.instate(['disabled']))
         self.assertEqual(panel.coop_page.entries.get_children(), ())
+
+
+from instance_runtime_fixtures import install as setUpModule

@@ -67,12 +67,12 @@ def validate(settings):
                 base=profile[key][0] if many else profile[key]
                 if not isinstance(row,dict) or set(row)-set(base)-{'bUseNextSkill'}:raise ProtocolError('未知AI行動欄位')
                 entry={**base,**row}
-                if type(entry['id']) is not int:raise ProtocolError('AI行動ID須為整數')
+                if type(entry['id']) is not int or not -3<=entry['id']<=65535:raise ProtocolError('AI行動ID須為整數')
                 if entry['id'] in (-2,-3):entry['kind']=2
                 if type(entry['kind']) is not int or entry['kind'] not in (1,2):raise ProtocolError('kind須為1特技或2包包道具')
                 if entry['kind']==1:
-                    if entry['id'] not in {0,*ACTION_IDS} and str(entry['id']) not in CAT['skills']:raise ProtocolError('特技不在目前版本資料表')
-                elif entry['id'] not in (0,-2,-3) and CAT['items'].get(str(entry['id']),{}).get('kind') not in (23,32):raise ProtocolError('補給僅支援包包食物／料理')
+                    if CAT['skills'] and entry['id'] not in {0,*ACTION_IDS} and str(entry['id']) not in CAT['skills']:raise ProtocolError('特技不在目前版本資料表')
+                elif CAT['items'] and entry['id'] not in (0,-2,-3) and CAT['items'].get(str(entry['id']),{}).get('kind') not in (23,32):raise ProtocolError('補給僅支援包包食物／料理')
                 if entry['kind']==2 and entry.get('bUseNextSkill'):raise ProtocolError('道具沒有次階特技')
                 if entry['target'] not in (1,2,3):raise ProtocolError('未知目標選擇種類')
                 if 'notice' in entry and entry['notice'] not in (1,2,3):raise ProtocolError('notice須為1同方、2角色、3夥伴')

@@ -21,25 +21,19 @@ def verified_index_file(path, scenes):
 
 
 class NPCCatalogTests(unittest.TestCase):
-    def test_bundled_official_eve_index(self):
-        index = NPCIndex()
-        self.assertFalse(index.path.is_file())
-        self.assertTrue(read_config(index.path.name, root=RESOURCE_ROOT))
-        self.assertEqual(index.path.name, 'npc_event_index_1262.json.gz')
-        self.assertEqual(len(index.scenes), 1256)
-        self.assertEqual(sum(map(len, index.scenes.values())), 10879)
-        rows=[v for group in index.scenes.values() for v in group]
-        self.assertEqual(sum(row['event_count'] > 0 for row in rows), 8014)
-        self.assertEqual(sum(row['event_count'] == 0 for row in rows), 2865)
-        self.assertEqual(sum(row.get('buy_kind', 0) != 0 for row in rows), 32)
+    def test_default_index_uses_official_runtime_and_returns_copies(self):
+        index=NPCIndex()
+        self.assertIsNone(index.path)
+        self.assertEqual(index.for_scene(10000)[0]['npc_id'],321)
+        row=index.for_scene(10000)[0];row['npc_id']=999
+        self.assertEqual(index.for_scene(10000)[0]['npc_id'],321)
 
-    def test_gzip_catalog_decodes_without_loss(self):
-        source = RESOURCE_ROOT/'npc_event_index_1262.json.gz'
-        with gzip.open(io.BytesIO(read_config(source.name, root=RESOURCE_ROOT)), 'rt', encoding='utf-8') as stream:
-            data=json.load(stream)
-        self.assertEqual(data['version'], 1262)
-        self.assertEqual(data['source'], 'EventData.NewNpc')
-        self.assertEqual(data['bundle_md5'], '81af690395d5e6a233afa9a664e2c555')
+    def test_explicit_gzip_fixture_is_still_validated(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path=Path(folder)/'fixture.gz'
+            raw=json.dumps({'version':1262,'source':'EventData.NewNpc','scenes':{}}).encode()
+            path.write_bytes(gzip.compress(raw))
+            self.assertEqual(NPCIndex(path).scenes,{})
 
     def test_position_only_marker_never_fabricates_event_index(self):
         rows = scene_npcs(100, [{
@@ -165,13 +159,17 @@ if __name__ == '__main__':
     unittest.main()
 
 
-# These historical tests verify bundled 1262 fixtures explicitly. Production
-# LaLa now defaults to 1275, with no implicit source fallback.
+# Packet compatibility uses a legacy baseline with an explicit synthetic
+# runtime fixture; no shipped NPC catalog is required.
 from unittest.mock import patch as _legacy_patch
 _legacy_context = None
 
 
 def setUpModule():
+    global _official_context
+    from npc_runtime_fixtures import runtime
+    _official_context = _legacy_patch('wlre.services.world.runtime_1275.active_runtime',return_value=runtime())
+    _official_context.start()
     global _legacy_context
     _legacy_context = _legacy_patch(
         'wlre.services.world.runtime_1275.baseline_revision', return_value='1262')
@@ -181,6 +179,7 @@ def setUpModule():
 
 
 def tearDownModule():
+    _official_context.stop()
     from wlre.services.world.npc_item_data import item_catalog
     item_catalog.cache_clear()
     _legacy_context.stop()

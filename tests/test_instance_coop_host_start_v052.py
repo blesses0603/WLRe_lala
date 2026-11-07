@@ -1,5 +1,6 @@
 """Co-op named event creation and full-room host standby regression."""
 import unittest
+from instance_runtime_fixtures import fields
 from wlre.core.state import State
 from wlre.network.client import SessionLogic
 from wlre.network.protocol import decode
@@ -16,7 +17,7 @@ def setup():
 
 
 def create(logic, state, activity=28):
-    return logic.command({'type': 'instance_create', 'mode': 'coop',
+    return logic.command({**fields(activity, 1 if activity==21 else 2), 'type': 'instance_create', 'mode': 'coop',
         'dungeon_id': activity, 'player_count': 2, 'public': True,
         'password': '', 'confirm_cost': True}, state)
 
@@ -87,3 +88,6 @@ class CooperativeRoomRecovery(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+from instance_runtime_fixtures import install as setUpModule

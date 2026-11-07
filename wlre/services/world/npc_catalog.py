@@ -10,7 +10,6 @@ verification. Never infer indices from list position, NPC ID, MapActionNpcData,
 or portal IDs.
 """
 import gzip
-import io
 import json
 from pathlib import Path
 from wlre.paths import RESOURCE_ROOT
@@ -35,27 +34,19 @@ def _valid_index(row):
 
 class NPCIndex:
     def __init__(self, path=None):
-        # Runtime never resolves NPC event indices from 1262 while baseline 1275.
         if path is None:
-            from wlre.services.world.runtime_1275 import baseline_revision, active_runtime
-            if baseline_revision() != '1262':
-                from wlre.services.world.catalog_source_policy import official_runtime
-                active = official_runtime('npc')
-                self.path = None
-                self.scenes = active.npc_index.scenes
-                return
-        self.path = Path(path) if path is not None else RESOURCE_ROOT/'npc_event_index_1262.json.gz'
+            from wlre.services.world.runtime_1275 import active_runtime
+            self.path = None
+            self.scenes = active_runtime().npc_index.scenes
+            return
+        self.path = Path(path)
         self.scenes = {}
-        cached = None
-        if path is None:
-            from wlre.storage.bundled_database import load_legacy_resource
-            cached = load_legacy_resource('npc_event_index_1262.json.gz')
-        if path is not None and not self.path.is_file():
+        if not self.path.is_file():
             return
         if self.path.suffix == '.gz':
             # Bound decompression before JSON parsing to reject corrupt or
             # maliciously expanded resource data.
-            with (gzip.GzipFile(fileobj=io.BytesIO(cached)) if cached is not None else gzip.open(self.path, 'rb')) as stream:
+            with gzip.open(self.path, 'rb') as stream:
                 raw = stream.read(16 * 1024 * 1024 + 1)
             if len(raw) > 16 * 1024 * 1024:
                 raise ValueError('NPC 索引檔超過安全上限')
@@ -65,12 +56,6 @@ class NPCIndex:
         if (not isinstance(data, dict) or data.get('version') != FORMAT_VERSION
                 or data.get('source') != SOURCE or not isinstance(data.get('scenes'), dict)):
             raise ValueError('NPC 索引表不是官方 1262 EventData.NewNpc 格式')
-        if path is None:
-            if (data.get('scene_count') != 1256 or data.get('npc_count') != 10879
-                    or data.get('bundle_md5') != '81af690395d5e6a233afa9a664e2c555'):
-                raise ValueError('預裝 NPC 資料來源或數量不符官方 Eve 1262')
-            if len(data['scenes']) != data['scene_count']:
-                raise ValueError('NPC 場景數量不符')
         total = 0
         for scene, records in data['scenes'].items():
             if not scene.isdecimal() or not 0 <= int(scene) <= 65535 or not isinstance(records, list):
@@ -84,8 +69,6 @@ class NPCIndex:
                 indices.add(record['index'])
             total += len(records)
             self.scenes[scene] = [dict(record) for record in records]
-        if path is None and total != data['npc_count']:
-            raise ValueError('NPC 索引資料總數不符')
 
     def for_scene(self, scene):
         rows = self.scenes.get(str(scene), [])

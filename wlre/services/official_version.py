@@ -28,8 +28,9 @@ from wlre.services.resource_compatibility import (
 LA_LA_SUPPORTED_RESOURCES = load_supported_resources()
 BASELINE, BASELINE_MANIFEST = baseline_maps(LA_LA_SUPPORTED_RESOURCES)
 SUPPORTED_OFFICIAL_EXE_VERSION = LA_LA_SUPPORTED_RESOURCES["official_game_exe_version"]
-OFFICIAL_HOST = "wlreftp.chinesegamer.net"
-ROOT = "https://wlreftp.chinesegamer.net/WLN/TW"
+from wlre.services.official_source import selected_host
+OFFICIAL_HOST = selected_host()
+ROOT = "https://" + OFFICIAL_HOST + "/WLN/TW"
 RESOURCE_MAP_URL = ROOT + "/ResourcePath_PC.dat"
 MAX_RESPONSE_BYTES = 16 * 1024
 _VERSION = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,63}\Z")
@@ -117,7 +118,7 @@ def fetch_bytes(url, *, timeout=12, opener=None, cache_bust=True):
     if opener is None:
         opener = build_opener(_ApprovedRedirect()).open
     headers = {
-        "Accept": "text/plain, application/json",
+        "Accept": "*/*",  # Official source mirror serves metadata as */*.
         "Cache-Control": "no-cache",
         "Pragma": "no-cache",
         "User-Agent": "WLRe-LaLa-VersionCheck/1",

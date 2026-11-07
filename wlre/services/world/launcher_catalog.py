@@ -125,6 +125,15 @@ def prepare_on_launch(*, runner=None, root=None, environ=None, progress=None):
         if progress is not None:
             progress(phase, details)
     if real_launcher_run:
+        try:
+            from wlre.services.official_server_list import sync_server_list
+            server_result = sync_server_list()
+            if progress is not None:
+                progress('server_list_ready', {'count': server_result['count']})
+        except (OSError, ValueError, TypeError, RuntimeError):
+            if progress is not None:
+                progress('server_list_unavailable', {})
+    if real_launcher_run:
         # Discover live independent package revisions and manifest digests.
         # This metadata cannot approve gameplay assets or network packets.
         try:

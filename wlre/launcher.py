@@ -20,7 +20,7 @@ def ensure_extractor_environment(python, root):
                    if line.startswith('UnityPy==')), None)
     if not pinned:
         raise RuntimeError('LaLa 缺少已審核的 UnityPy 固定版本')
-    check = ("import importlib.metadata as m; import UnityPy, lz4.block, brotli; "
+    check = ("import importlib.metadata as m; import UnityPy, lz4.block, brotli; from Crypto.Cipher import AES; assert m.version('pycryptodome') == '3.23.0'; "
              "from PIL import Image, ImageTk, features; "
              "assert m.version('UnityPy') == " + repr(pinned) + "; "
              "assert features.check('webp') and callable(UnityPy.load)")

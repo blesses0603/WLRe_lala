@@ -25,6 +25,9 @@ def self_test_unityfs():
     Bundle decoding or compatibility with future Unity versions.
     """
     import UnityPy
+    from Crypto.Cipher import AES
+    if AES.new(bytes(16),AES.MODE_CBC,bytes(16)).encrypt(bytes(16)).hex()!='66e94bd4ef8a2c3b884cfa59ca342b2e':
+        raise RuntimeError('Bundled official Lua AES codec failed its known-answer check')
     import brotli
     import lz4.block
     from UnityPy.classes import TextAsset

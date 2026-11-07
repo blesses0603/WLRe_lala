@@ -7,8 +7,9 @@ import copy,json,time
 from wlre.network.wire import Packet, Reader, Writer, ProtocolError
 from wlre.services.items.combat_resources import item_name, available
 
-from wlre.storage.bundled_database import load_bundled_json
-RECIPES=load_bundled_json('crafting_catalog.json', root=RESOURCE_ROOT)['recipes']
+# Published in place only after official Bundle and normalized DB validation.
+# Cold start must not expose a historical recipe as current game data.
+RECIPES = {}
 
 
 def activate_1275_recipes(runtime):

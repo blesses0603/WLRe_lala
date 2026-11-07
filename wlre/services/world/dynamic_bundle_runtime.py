@@ -161,7 +161,9 @@ def parse_runtime_recipes(raw, items):
 def prepare_dynamic_runtime(*, sync=False, sync_root=None, observe=None,
                             retrieve=None, execute=None,
                             max_download_bytes=32 * 1024 * 1024,
-                            max_downloads=24):
+                            max_downloads=24, max_image_download_bytes=64*1024*1024,
+                            max_image_downloads=4, max_emoji_download_bytes=32*1024*1024,
+                            max_emoji_downloads=8):
     """Official observation -> verified manifests/Bundles -> complete runtime.
 
     Verification is performed on every load, including cache hits. Downloading
@@ -186,6 +188,12 @@ def prepare_dynamic_runtime(*, sync=False, sync_root=None, observe=None,
             or not 0 <= max_downloads <= 24 or type(max_download_bytes) is not int
             or not 0 <= max_download_bytes <= 32 * 1024 * 1024):
         raise DynamicRuntimeUnavailable('Invalid runtime download budget')
+    if (type(max_image_download_bytes) is not int or not 0 <= max_image_download_bytes <= 64*1024*1024
+            or type(max_image_downloads) is not int or not 0 <= max_image_downloads <= 4):
+        raise DynamicRuntimeUnavailable('Invalid image download budget')
+    if (type(max_emoji_download_bytes) is not int or not 0 <= max_emoji_download_bytes <= 32*1024*1024
+            or type(max_emoji_downloads) is not int or not 0 <= max_emoji_downloads <= 8):
+        raise DynamicRuntimeUnavailable('Invalid emoji download budget')
     before = validate_snapshot(observe())
     manifests = {p: retrieve(spec_from_snapshot(before, p), cache_root=root / 'manifests')
                  for p in PACKAGES}
@@ -193,6 +201,9 @@ def prepare_dynamic_runtime(*, sync=False, sync_root=None, observe=None,
     from wlre.services.world.daily_task_catalog import TABLES as DAILY_TABLES
     from wlre.services.world.guild_catalog import TABLES as GUILD_TABLES
     from wlre.services.world.ark_catalog import TABLES as ARK_TABLES
+    from wlre.services.world.instance_runtime import TABLES as INSTANCE_TABLES
+    from wlre.services.world.npc_battle_catalog import TABLES as BATTLE_TALK_TABLES
+    from wlre.services.world.emoji_database import TABLES as EMOJI_TABLES
     if sync:
         pre_download = validate_snapshot(observe())
         if any(before[k] != pre_download[k] for k in ('data_ver', 'exe_version', 'packages')):
@@ -205,7 +216,7 @@ def prepare_dynamic_runtime(*, sync=False, sync_root=None, observe=None,
         # Optional metadata cannot prevent the core runtime from loading.
         left_bytes = max_download_bytes - plan.download_bytes
         left_files = max_downloads - plan.download_count
-        for table in _PORTAL_TABLES + _OPTIONAL_ROUTE_TABLES + DAILY_TABLES + GUILD_TABLES + ARK_TABLES:
+        for table in ('SkillData_C',) + BATTLE_TALK_TABLES + INSTANCE_TABLES + _PORTAL_TABLES + _OPTIONAL_ROUTE_TABLES + DAILY_TABLES + GUILD_TABLES + ARK_TABLES + EMOJI_TABLES:
             try:
                 optional = build_update_plan(manifests['DataPackage'],
                     asset_paths=(_ASSET_ROOT + table + '.bytes',), cache_root=root / 'bundles')
@@ -219,8 +230,45 @@ def prepare_dynamic_runtime(*, sync=False, sync_root=None, observe=None,
                         max_downloads=optional.download_count)
             except (OSError, ValueError, RuntimeError):
                 pass
+    if sync:
+        # Image Bundles have a separate bounded budget from core data tables.
+        try:
+            from wlre.services.world.smallmap_database import image_paths, MAX_DOWNLOAD_BYTES, MAX_DOWNLOADS
+            images = build_update_plan(manifests['MainPackage'],
+                asset_paths=image_paths(manifests['MainPackage']),cache_root=root/'bundles')
+            execute(images,cache_root=root/'bundles',download=True,
+                    max_download_bytes=max_image_download_bytes,max_downloads=max_image_downloads)
+        except (OSError,ValueError,RuntimeError):
+            pass  # Core tables remain available; image loader reports absence.
+    if sync:
+        try:
+            from wlre.services.world.emoji_database import ASSET
+            emojis = build_update_plan(manifests['MainPackage'],asset_paths=(ASSET,),cache_root=root/'bundles')
+            execute(emojis,cache_root=root/'bundles',download=True,
+                    max_download_bytes=max_emoji_download_bytes,max_downloads=max_emoji_downloads)
+        except (OSError,ValueError,RuntimeError):
+            pass
+    if sync:
+        try:
+            from wlre.services.world.item_image_database import image_paths as item_paths, MAX_DOWNLOAD_BYTES, MAX_DOWNLOADS
+            item_images = build_update_plan(manifests['MainPackage'],asset_paths=item_paths(manifests['MainPackage']),cache_root=root/'bundles')
+            execute(item_images,cache_root=root/'bundles',download=True,
+                    max_download_bytes=MAX_DOWNLOAD_BYTES,max_downloads=MAX_DOWNLOADS)
+        except (OSError,ValueError,RuntimeError):
+            pass  # Optional images: the loader reports precise unavailable status.
+    combat_source_error = None
+    if sync:
+        try:
+            from wlre.services.world.official_combat_sources import load_inputs
+            load_inputs(root,identity.data_ver,download=True)
+        except (OSError,ValueError,RuntimeError,ImportError) as error:
+            combat_source_error = str(error)[:200]
     runtime = load_verified_bundle_runtime(sync_root=root,
                         _verified_context=(before, manifests, identity))
+    if combat_source_error is not None and hasattr(runtime,'combat_catalog'):
+        from dataclasses import replace
+        runtime=replace(runtime,combat_catalog=None,
+            combat_catalog_status='官方戰鬥來源同步失敗：'+combat_source_error)
     after = validate_snapshot(observe())
     if any(before[k] != after[k] for k in ('data_ver', 'exe_version', 'packages')):
         raise DynamicRuntimeUnavailable('Official versions changed during runtime load')

@@ -67,6 +67,7 @@ class MinimapNavigationMixin:
             self.map_error=str(exc)
             self.note.set(self.map_error)
         self._map_runtime_catalog_key=getattr(self,'_runtime_catalog_key',None)
+        self._map_runtime_images=getattr(self,'_runtime_images',None)
         self.refresh_portals()
         self.draw()
 
@@ -79,6 +80,8 @@ class MinimapNavigationMixin:
         runtime_changed=refresh_sources() if callable(refresh_sources) else False
         runtime_changed = runtime_changed or (getattr(self,'_map_runtime_catalog_key',None) !=
                                                getattr(self,'_runtime_catalog_key',None))
+        runtime_changed = runtime_changed or (getattr(self,'_map_runtime_images',None) is not
+                                               getattr(self,'_runtime_images',None))
         if scene is not None and (force or runtime_changed or scene!=self.selected_id):
             self.show_map(scene)
         self.update_npc_buttons()

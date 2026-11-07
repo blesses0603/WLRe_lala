@@ -96,13 +96,18 @@ class ServerLines(unittest.TestCase):
     def test_invalid_or_empty_lines_rejected(self):
         for data in ([],[{'id':1}], [{'id':101,'address':'x','port':0}], [{'id':101,'address':'bad host','port':123}],self.example()+[self.example()[1]]):
             with self.subTest(data=data),self.assertRaises(ValueError):server_lines.parse(data)
-    def test_bundled_official_lines_and_endpoint_lookup(self):
-        rows=server_lines.load()
-        self.assertEqual([r['id'] for r in rows],[101,102,103,104,105,201,202])
-        self.assertTrue(all(r['port']==16988 for r in rows))
-        self.assertEqual(server_lines.for_endpoint(rows,'34.81.10.22',16988)['id'],101)
+    def test_cached_official_lines_and_endpoint_lookup(self):
+        from test_official_server_list import snapshot, body
+        from wlre.services.official_server_list import sync_server_list
+        with tempfile.TemporaryDirectory() as directory:
+            database=Path(directory)/'resources.sqlite3'
+            sync_server_list(database=database,observe=snapshot,fetch=lambda _:body())
+            with patch('wlre.services.official_server_list.database_path',return_value=database):
+                rows=server_lines.load()
+        self.assertEqual([r['id'] for r in rows],[101])
+        self.assertEqual(server_lines.for_endpoint(rows,'8.8.8.8',16988)['id'],101)
         self.assertIsNone(server_lines.for_endpoint(rows,'unknown.invalid',16988))
-        self.assertEqual(len({r['host'] for r in rows}),7)
+
 
 
 class WindowsAdapter(unittest.TestCase):

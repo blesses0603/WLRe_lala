@@ -190,3 +190,6 @@ class EntryUI(unittest.TestCase):
         self.app.instance_panel.render(snap, live=False)
         self.assertTrue(self.page.enter_button.instate(['disabled']))
         self.assertTrue(self.app.instance_panel.coop_page.enter_button.instate(['disabled']))
+
+
+from instance_runtime_fixtures import install as setUpModule

@@ -1,3 +1,6 @@
 # Bundled UnityFS / TextAsset decoder for native Windows and macOS distributions.
 # Keep one reviewed version across build environments and source CI.
 UnityPy==1.25.4
+
+# Reviewed official Lua data codec (never executes Lua).
+pycryptodome==3.23.0

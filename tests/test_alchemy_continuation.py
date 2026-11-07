@@ -60,3 +60,11 @@ class AlchemyContinuation(unittest.TestCase):
         self.assertNotIn('材料扣除（格位',state.alchemy['status'])
         self.assertEqual(state.alchemy['completed'],0)
         self.assertFalse(state.inventory['reliable']);self.assertIsNone(service.pending)
+
+from alchemy_runtime_fixtures import install as _previous_setUpModule
+
+
+def setUpModule():
+    from combat_runtime_fixtures import install
+    install()
+    _previous_setUpModule()

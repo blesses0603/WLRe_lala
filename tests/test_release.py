@@ -12,7 +12,8 @@ from wlre.storage.full_resource_seed import read_config
 B=Path(__file__).resolve().parents[1]/'wlre/resources'
 
 def setup():
- s=State();s.player={'role_id':111,'name':'測試','scene':12000,'x':0,'y':0};s.inventory.update(ready=True,reliable=True,capacity=200)
+ # Synthetic receipt fixture: explicitly supply the stackability proof it needs.
+ s=State();s.inventory['server_stackable']={'10000':True};s.player={'role_id':111,'name':'測試','scene':12000,'x':0,'y':0};s.inventory.update(ready=True,reliable=True,capacity=200)
  from wlre.services.items.alchemy import category
  mats=[]
  for sid in CAT['items']:
@@ -123,18 +124,25 @@ class Concurrency(unittest.TestCase):
   self.assertEqual(auto_battle.validate(cfg)['profiles']['player']['orderAction'][0]['id'],-1)
 
 class Images(unittest.TestCase):
- def test_catalog_mapping_complete(self):
-  self.assertEqual(set(json.loads(read_config('item_icon_map.json', root=B).decode('utf-8'))['items']),set(CAT['items']))
- def test_all_png_valid(self):
-  with zipfile.ZipFile(io.BytesIO(read_config('item_icons.zip', root=B))) as z:
-   self.assertEqual(len(z.namelist()),4334)
-   for n in z.namelist():
-    with self.subTest(n=n):
-     with Image.open(io.BytesIO(z.read(n))) as image:image.verify()
- def test_coverage(self):
-  items=json.loads(read_config('item_icon_map.json', root=B).decode('utf-8'))['items'];r=json.loads(read_config('item_icon_coverage.json', root=B).decode('utf-8'))
-  with zipfile.ZipFile(io.BytesIO(read_config('item_icons.zip', root=B))) as z:
-   for sid,row in items.items():self.assertEqual(row['original_available'],row['icon']+'.png' in z.NameToInfo)
-  self.assertEqual(r['items_with_original_images'],9855);self.assertEqual(r['items_with_missing_icons'],1432)
+ def test_item_images_are_not_shipped_in_seed(self):
+  from wlre.storage.resource_seed_manifest import SOURCE_MANIFEST, RETIRED_RESOURCES
+  for name in ('item_icon_map.json','item_icons.zip'):
+   self.assertNotIn(name,SOURCE_MANIFEST)
+   self.assertIn(name,RETIRED_RESOURCES)
+ def test_cold_start_does_not_activate_legacy_image_mapping(self):
+  from unittest.mock import patch
+  from wlre.services.world.item_image_database import current_catalog
+  with patch('wlre.services.world.dynamic_bundle_runtime.current_runtime',return_value=None):
+   self.assertIsNone(current_catalog())
+
+
+from alchemy_runtime_fixtures import install as _previous_setUpModule
+
+
+
+def setUpModule():
+    from combat_runtime_fixtures import install
+    install()
+    _previous_setUpModule()
 
 if __name__=='__main__':unittest.main(verbosity=2)

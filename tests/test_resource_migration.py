@@ -39,22 +39,14 @@ class ResourceMigrationTests(unittest.TestCase):
             self.assertEqual(load_bundled_bytes('a.json',root=root,database=db),b'old')
             self.assertEqual(load_bundled_bytes('a.json',root=root,database=db,refresh=True),b'new')
 
-    def test_icon_and_emoji_archives_open_with_no_original_files(self):
-        import zipfile
+    def test_cold_icons_and_emoji_never_read_bundled_files(self):
         from unittest.mock import patch
-        from wlre.ui.crafting import item_icons
-        from wlre.ui import chat_emoji
-        with tempfile.TemporaryDirectory() as folder:
-            base=Path(folder);root=base/'resources';root.mkdir();empty=base/'empty';empty.mkdir()
-            (root/'item_icon_map.json').write_text('{"items":{}}')
-            (root/'emoji_catalog.json').write_text('{"entries":{}}')
-            for name in ('item_icons.zip','emoji_images.zip'):
-                with zipfile.ZipFile(root/name,'w') as archive: archive.writestr('fixture',b'ok')
-            db=base/'official_sync'/'derived_catalogs'/'resource_inventory.sqlite3'
-            migrate_resources(root,db)
-            with patch('wlre.storage.bundled_database.data_root',return_value=base), patch.object(item_icons,'BASE',empty), patch.object(chat_emoji,'RESOURCE_ROOT',empty):
-                icons=item_icons.ItemIcons(None);emoji=chat_emoji.EmojiImages(None)
-                try:
-                    self.assertEqual(icons.archive.read('fixture'),b'ok')
-                    self.assertEqual(emoji.archive.read('fixture'),b'ok')
-                finally: icons.close();emoji.close()
+        from wlre.ui.crafting.item_icons import ItemIcons, ICON_MAP
+        from wlre.ui.chat_emoji import EmojiImages
+        with patch('wlre.services.world.dynamic_bundle_runtime.current_runtime',return_value=None),patch(
+                'wlre.storage.bundled_database.load_bundled_bytes',side_effect=AssertionError('retired resources')):
+            icons=ItemIcons(None);emoji=EmojiImages(None)
+            self.assertEqual(dict(ICON_MAP),{})
+            self.assertIsNone(icons._pixels(1,16).getbbox())
+            self.assertEqual(emoji.catalog,{})
+            icons.close();emoji.close()

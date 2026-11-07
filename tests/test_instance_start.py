@@ -150,3 +150,6 @@ class StartChallengeUI(unittest.TestCase):
         self.assertTrue(self.page.start_button.instate(['disabled']))
         self.app.instance_panel.render(self.snapshot(), live=False)
         self.assertTrue(self.page.start_button.instate(['disabled']))
+
+
+from instance_runtime_fixtures import install as setUpModule

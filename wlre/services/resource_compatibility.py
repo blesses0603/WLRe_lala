@@ -1,6 +1,6 @@
-"""Bundled, release-reviewed LaLa resource compatibility declaration.
+"""Release-reviewed LaLa resource compatibility policy, stored as application code.
 
-The *official server* supplies the observed revisions. This local JSON
+The *official server* supplies the observed revisions. This code-owned policy
 declares only what this particular LaLa build was tested against; network
 downloads must never edit or replace it.
 """
@@ -23,7 +23,7 @@ class ResourceBaselineError(ValueError):
 
 
 def load_supported_resources(path=None):
-    """Load the *bundled* compatibility file; validate before any comparison.
+    """Load code-owned policy; validate before any comparison.
 
     The optional path is for offline unit tests. No environment variable,
     user game installation or official network response supplies this file.
@@ -31,8 +31,8 @@ def load_supported_resources(path=None):
     filename = Path(path) if path is not None else RESOURCE_ROOT / FILENAME
     try:
         if path is None:
-            from wlre.storage.full_resource_seed import read_config
-            raw = read_config(FILENAME, root=RESOURCE_ROOT)
+            from wlre.configuration import SUPPORTED_RESOURCES
+            raw = json.dumps(SUPPORTED_RESOURCES).encode('utf-8')
         else:
             raw = filename.read_bytes()
     except OSError as exc:

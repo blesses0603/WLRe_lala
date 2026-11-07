@@ -76,7 +76,7 @@ class Favorites:
             with file_lock(self.path):data=json.loads(self.path.read_text(encoding='utf-8'))
             if not isinstance(data,dict) or data.get('version',1)!=1 or not isinstance(data.get('items',[]),list):raise ValueError('收藏格式錯誤')
             values=data.get('items',[])
-            self.ids=list(dict.fromkeys(int(v) for v in values if str(v) in RECIPES))[:self.limit]
+            self.ids=list(dict.fromkeys(int(v) for v in values if type(v) in (int, str) and str(v).isdecimal() and 0 < int(v) <= 65535))[:self.limit]
         except FileNotFoundError:pass
         except (ValueError,TypeError,OSError) as exc:self.load_error=str(exc)
     def toggle(self,item_id):

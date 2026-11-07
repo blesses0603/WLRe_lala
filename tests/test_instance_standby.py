@@ -202,3 +202,6 @@ class StandbyUI(unittest.TestCase):
             'room_id': 91, 'started': 0, 'target': True}
         self.app.instance_panel.render(pending, live=True)
         self.assertTrue(self.page.standby_button.instate(['disabled']))
+
+
+from instance_runtime_fixtures import install as setUpModule

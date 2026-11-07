@@ -15,7 +15,11 @@ from wlre.resource_manifest import REQUIRED_RESOURCES
 
 class BundledNPCResourceTests(unittest.TestCase):
     def test_exact_source_sha256_and_sizes(self):
+        from wlre.storage.resource_seed_manifest import RETIRED_RESOURCES
         for filename,(digest,size,source,source_hash,count) in ASSETS.items():
+            if filename in RETIRED_RESOURCES:
+                self.assertNotIn(filename,REQUIRED_RESOURCES)
+                continue
             with self.subTest(filename=filename):
                 path=RESOURCE_ROOT/filename
                 self.assertIn(filename,REQUIRED_RESOURCES)
@@ -24,20 +28,20 @@ class BundledNPCResourceTests(unittest.TestCase):
                 self.assertEqual(len(raw),size)
                 self.assertEqual(hashlib.sha256(raw).hexdigest(),digest)
 
-    def test_real_talk_and_text_are_not_mixed(self):
-        talks=load_catalog()
-        texts=load_text_data()
-        battle=load_battle_talk()
-        self.assertEqual(len(talks),29873)
-        self.assertEqual(len(texts),39901)
-        self.assertEqual(len(battle),16)
-        self.assertEqual(sum(len(v) for v in battle.values()),94)
-        self.assertEqual(dialogue_text(talks,10001),'要。')
-        self.assertEqual(texts[1],'確定')
+    def test_talk_and_text_use_separate_runtime_namespaces(self):
+        from npc_runtime_fixtures import runtime
+        value=runtime();value.talks={1:'dialogue'};value.texts={1:'localization'}
+        with patch('wlre.services.world.runtime_1275.active_runtime',return_value=value):
+            talks=load_catalog();texts=load_text_data()
+            self.assertEqual(dialogue_text(talks,1),'dialogue')
+            self.assertEqual(texts[1],'localization')
+            talks[1]='changed';texts[1]='changed'
+            self.assertEqual(load_catalog()[1],'dialogue')
+            self.assertEqual(load_text_data()[1],'localization')
         self.assertIsNone(dialogue_text(talks,True))
-        for group in battle.values():
-            for row in group:
-                self.assertIn(row['text_id'],texts)
+        value.battle_talk={1:[dict(text_id=1,kind=4,parameter=1,duration=5)]}
+        with patch('wlre.services.world.runtime_1275.active_runtime',return_value=value):
+            self.assertEqual(load_battle_talk(),value.battle_talk)
 
     def test_modified_default_text_is_blocked_before_display(self):
         with TemporaryDirectory() as temp:

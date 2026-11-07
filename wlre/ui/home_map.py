@@ -204,7 +204,9 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
         from wlre.services.world.dynamic_bundle_runtime import current_runtime, dynamic_attempted
         runtime = current_runtime()
         key = runtime.catalog_identity.key if runtime is not None else None
-        changed = key != getattr(self, '_runtime_catalog_key', None)
+        images = getattr(runtime,'smallmaps',None)
+        changed = (key != getattr(self, '_runtime_catalog_key', None)
+                   or images is not getattr(self,'_runtime_images',None))
         if changed:
             self.selected_npc=self.selected_portal=None
             for name in ('npc_shop_window','npc_choice_window','npc_history_window'):
@@ -229,6 +231,7 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
             self.npc_talks = dict(runtime.talks) if runtime is not None else {}
             self.npc_index_error = self.npc_interact_error = self.npc_talk_error = runtime is None
             self._runtime_catalog_key = key
+            self._runtime_images = images
         if dynamic_attempted() and runtime is None:
             self.npc_index = None
             self.npc_interacts.scenes = {}

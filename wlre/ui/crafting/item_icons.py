@@ -1,36 +1,75 @@
-"""Cached crafting item icons; shared by inventory and recovery views.
-
-API remains exposed from wlre.ui.crafting_browser for existing callers.
-"""
-from wlre.paths import RESOURCE_ROOT
-from wlre.ui.crafting.icon_cache import DECODED_SPRITES
-import io
-from wlre.storage.bundled_database import load_bundled_json, load_bundled_bytes
-import json
-import zipfile
+"""Window-local Tk images backed by verified official SQLite snapshots."""
 from collections import OrderedDict
-import tkinter as tk
-from PIL import ImageTk
+from collections.abc import Mapping
+from PIL import Image, ImageTk
+from wlre.services.world.item_image_database import current_catalog, source_token
+from wlre.ui.crafting.icon_cache import DECODED_SPRITES
 
-BASE = RESOURCE_ROOT
-ICON_MAP = load_bundled_json('item_icon_map.json', root=BASE)['items']
+
+class LiveIconMap(Mapping):
+    def __getitem__(self,key):
+        catalog=current_catalog()
+        if catalog is None or int(key) not in catalog.mapping:raise KeyError(key)
+        return dict((catalog.metadata or {}).get(int(key),{}),icon='s%04d'%catalog.mapping[int(key)])
+    def __iter__(self):
+        catalog=current_catalog()
+        return iter(tuple(str(k) for k in catalog.mapping) if catalog else ())
+    def __len__(self):
+        catalog=current_catalog()
+        return len(catalog.mapping) if catalog else 0
+
+
+ICON_MAP=LiveIconMap()
+
+
+class DatabaseArchive:
+    def __init__(self,catalog):
+        self.catalog=catalog
+        self.filename=(str(catalog.images.database),catalog.catalog_key,id(catalog))
+    def read(self,name):
+        raw=self.catalog.images.png(int(name[1:-4]))
+        if raw is None:raise KeyError(name)
+        return raw
 
 
 class ItemIcons:
-    def __init__(self,master):self.master=master;self.archive=zipfile.ZipFile(io.BytesIO(load_bundled_bytes('item_icons.zip', root=BASE)));self.cache=OrderedDict()
-    def get(self,item_id,size=64):
-        name=ICON_MAP.get(str(item_id),{}).get('icon','s1000')+'.png'
-        if name not in self.archive.NameToInfo:name='s1000.png'
-        # Different item IDs may share an original sprite or the native fallback.
-        key=name,size
-        if key in self.cache:self.cache.move_to_end(key);return self.cache[key]
-        try:
-            # Cache Pillow pixels across windows; keep Tk images window-local.
-            canvas=DECODED_SPRITES.get(self.archive,name,size)
-            image=ImageTk.PhotoImage(canvas,master=self.master)
-        except (KeyError,OSError):image=tk.PhotoImage(master=self.master,width=size,height=size)
-        self.cache[key]=image
-        while len(self.cache)>128:self.cache.popitem(last=False)
-        return image
+    def __init__(self,master):
+        self.master=master;self.cache=OrderedDict();self.source=source_token();self.timer=None
+        self.closed=False
+        if hasattr(master,'after'):
+            self.timer=master.after(1000,self.refresh_source)
+            master.bind('<Destroy>',lambda event:self.close() if event.widget is master else None,add='+')
 
-    def close(self):self.archive.close();self.cache.clear()
+    def _pixels(self,item_id,size):
+        catalog=current_catalog()
+        if catalog is not None:
+            try:
+                return DECODED_SPRITES.get(DatabaseArchive(catalog),'s%04d.png'%catalog.icon(item_id),size)
+            except (KeyError,OSError,ValueError):pass
+        return Image.new('RGBA',(size,size))
+
+    def refresh_source(self):
+        if self.closed:return
+        token=source_token()
+        if token!=self.source:
+            self.source=token
+            for (item_id,size),photo in self.cache.items():photo.paste(self._pixels(item_id,size))
+        if hasattr(self.master,'after'):self.timer=self.master.after(1000,self.refresh_source)
+
+    def get(self,item_id,size=64):
+        token=source_token()
+        if token!=self.source:
+            self.source=token
+            for (ident,pixels),photo in self.cache.items():photo.paste(self._pixels(ident,pixels))
+        key=item_id,size
+        if key not in self.cache:self.cache[key]=ImageTk.PhotoImage(self._pixels(item_id,size),master=self.master)
+        self.cache.move_to_end(key)
+        while len(self.cache)>128:self.cache.popitem(last=False)
+        return self.cache[key]
+
+    def close(self):
+        self.closed=True
+        if self.timer is not None:
+            try:self.master.after_cancel(self.timer)
+            except Exception:pass
+        self.cache.clear()

@@ -139,12 +139,13 @@ def item_totals(inventory):
 def claim_space(quest):
     """Reserve empty slots for every possible item reward; don't assume stacks."""
     if 'rewards' not in quest or 'special_reward' not in quest: return None
+    rules = STACKABLE.snapshot()  # One activated version for the complete capacity decision.
     need = 0
     for reward in quest['rewards'] + [quest['special_reward']]:
         kind, sid, count = reward['kind'], reward['id'], reward['value']
         if kind in (10, 11):
-            if str(sid) not in STACKABLE or count < 0: return None
-            need += math.ceil(count / 200) if kind == 10 and STACKABLE[str(sid)] else count
+            if str(sid) not in rules or count < 0: return None
+            need += math.ceil(count / 200) if kind == 10 and rules[str(sid)] else count
         elif kind not in (0, 1, 2, 6, 12, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31):
             return None  # e.g. an automatically opened lucky bag needs its own data
     return need

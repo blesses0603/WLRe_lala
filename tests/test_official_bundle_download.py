@@ -42,7 +42,7 @@ class BundleDownloadTests(unittest.TestCase):
     def test_known_1275_url_is_strictly_derived(self):
         value = spec()
         self.assertEqual(value.url,
-                         'https://wlreftp.chinesegamer.net/WLN/TW/1.3.21/'
+                         'https://wlreftpsrc.chinesegamer.net/WLN/TW/1.3.21/'
                          'ResourcesPC/AssetBundle/datapackage_data_v.bundle')
 
     def test_verify_and_reuse_cache_without_second_network_request(self):

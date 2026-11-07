@@ -26,28 +26,34 @@ def _password(public, password, maximum):
     return _int(password, 1, maximum, '私人房間密碼')
 
 
-def _main_stage(map_id):
+def _main_stage(map_id, catalog_key=None):
     map_id = _int(map_id, 1, 65535, '副本場景 ID')
     if not any(row['kind'] == 1 and row['map_id'] == map_id
+               and (catalog_key is None or row['catalog_key'] == catalog_key)
                for row in entries_for('main')):
-        raise ProtocolError('不是已核對的 1262 一般副本場景')
+        raise ProtocolError('不是已核對的當次官方一般副本場景')
     return map_id
 
 
-def _coop_details(dungeon_id):
+def _coop_details(dungeon_id, variant=None, catalog_key=None):
     dungeon_id = _int(dungeon_id, 1, 65535, '協力副本 ID')
-    row = next((r for r in entries_for('coop') if r['id'] == dungeon_id), None)
-    if row is None:
-        raise ProtocolError('不是已核對的 1262 協力副本')
+    matches = [r for r in entries_for('coop') if r['id'] == dungeon_id
+               and (variant is None or r['variant'] == variant)
+               and (catalog_key is None or r['catalog_key'] == catalog_key)]
+    if len(matches) != 1:
+        raise ProtocolError('協力副本 ID 不唯一或不存在，請使用副本 ID 與變體')
+    row = matches[0]
+    if not row.get('creation_supported', False):
+        raise ProtocolError('不是已核對的當次官方協力副本')
     if row['variant'] not in (1, 2):
         raise ProtocolError('不支援的協力活動種類')
     npc_idx = row['npc_id'] if row['variant'] == 2 else 0
     return row, row['variant'], _int(npc_idx, 0, 255, '協力活動索引')
 
 
-def create_main_room(map_id, *, public, password=0):
+def create_main_room(map_id, *, public, password=0, catalog_key=None):
     """C85-3. Recruit flag is explicitly zero, no unverified Unicode message."""
-    map_id = _main_stage(map_id)
+    map_id = _main_stage(map_id, catalog_key)
     password = _password(public, password, 65535)
     payload = Writer().u16(map_id).u8(int(public)).u16(password)
     if public:
@@ -55,9 +61,9 @@ def create_main_room(map_id, *, public, password=0):
     return Packet(85, 3, payload.build())
 
 
-def create_coop_room(dungeon_id, player_count, *, public, password=0):
+def create_coop_room(dungeon_id, player_count, *, public, password=0, variant=None, catalog_key=None):
     """C186-1. User must confirm any admission cost before this is sent."""
-    row, kind, npc_idx = _coop_details(dungeon_id)
+    row, kind, npc_idx = _coop_details(dungeon_id, variant, catalog_key)
     player_count = _int(player_count, row['min_members'], row['max_members'],
                         '協力房間人數')
     password = _password(public, password, 4294967295)

@@ -28,10 +28,23 @@ def parse(data):
     return sorted(result,key=lambda r:r['id'])
 
 def load():
-    """Use the bundled official snapshot, including inside a Nuitka EXE."""
-    from wlre.storage.full_resource_seed import read_config
-    return parse(json.loads(read_config('server_list.json', root=RESOURCE_ROOT).decode('utf-8-sig')))
+    """Read the last verified official import; a new offline install has no lines."""
+    from wlre.services.official_server_list import read_cached_server_list
+    return read_cached_server_list()['rows']
 
 
 def for_endpoint(lines,host,port):
     return next((row for row in lines if row['host']==host and row['port']==port),None)
+
+
+def status_label():
+    from wlre.services.official_server_list import read_cached_server_list
+    try:
+        status = read_cached_server_list()
+    except (OSError, ValueError):
+        return '伺服器清單校驗失敗，請重新更新官方資料'
+    if not status['rows']:
+        return '尚未取得官方伺服器清單，請連網更新官方資料'
+    source = status['origin'].split('/')[2]
+    prefix = '更新失敗，沿用上次官方清單' if status['status'] == 'cached_after_refresh_failure' else '官方伺服器清單'
+    return prefix + ' · ' + source + ' · ' + status['checked_at']

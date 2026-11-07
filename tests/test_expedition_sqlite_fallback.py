@@ -1,45 +1,20 @@
-"""Regression: missing bundled expedition JSON must still load verified SQLite data."""
-import json
-from contextlib import closing
-from pathlib import Path
-import sqlite3
-from tempfile import TemporaryDirectory
+"""Historical bundled SQLite must not replace an unavailable official runtime."""
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
+from wlre.services.expedition import data
+from wlre.services.world.runtime_1275 import Runtime1275Unavailable
 
-from wlre.services.expedition import data as expedition_data
+class OfficialExpeditionSourceTests(unittest.TestCase):
+    def test_public_entry_returns_copy_of_verified_runtime(self):
+        fixture={'tasks':{'1':{'name':'fixture'}},'levels':{'1':{'teams':1}},'npcs':{}}
+        with patch('wlre.services.world.dynamic_bundle_runtime.current_runtime',return_value=SimpleNamespace(expedition=fixture)):
+            saved=data.load_catalog()
+            saved['tasks']['1']['name']='changed'
+            self.assertEqual(data.load_active_catalog()['tasks']['1']['name'],'fixture')
 
-
-class ExpeditionSQLiteFallbackTests(unittest.TestCase):
-    def test_missing_original_uses_sqlite(self):
-        payload = {'tasks': {'1': {'name': 'test'}}, 'levels': {'1': {'teams': 1}}}
-        with TemporaryDirectory() as folder:
-            root = Path(folder)
-            database = root / 'inventory.sqlite3'
-            raw = json.dumps(payload).encode('utf-8')
-            import hashlib
-            digest = hashlib.sha256(raw).hexdigest()
-            with closing(sqlite3.connect(database)) as db, db:
-                db.execute('CREATE TABLE bundled_active (name TEXT PRIMARY KEY, sha256 TEXT NOT NULL)')
-                db.execute('CREATE TABLE bundled_resources (name TEXT NOT NULL, sha256 TEXT NOT NULL, data BLOB NOT NULL, PRIMARY KEY(name,sha256))')
-                db.execute('INSERT INTO bundled_active VALUES (?,?)', ('expedition_catalog.json', digest))
-                db.execute('INSERT INTO bundled_resources VALUES (?,?,?)', ('expedition_catalog.json', digest, raw))
-            with patch.object(expedition_data, 'RESOURCE_ROOT', root):
-                with patch('wlre.storage.bundled_database.data_root', return_value=root):
-                    # The default DB path is under data_root, so patch the loader to target this isolated DB.
-                    from wlre.storage.bundled_database import load_bundled_json
-                    with patch('wlre.storage.bundled_database.load_bundled_json',
-                               side_effect=lambda name, **kwargs: load_bundled_json(name, database=database, **kwargs)):
-                        self.assertEqual(expedition_data.load_catalog(), payload)
-
-    def test_missing_source_and_database_raises(self):
-        with TemporaryDirectory() as folder:
-            root = Path(folder)
-            with patch.object(expedition_data, 'RESOURCE_ROOT', root):
-                with patch('wlre.storage.bundled_database.data_root', return_value=root):
-                    with self.assertRaises(FileNotFoundError):
-                        expedition_data.load_catalog()
-
-
-if __name__ == '__main__':
-    unittest.main()
+    def test_cold_or_failed_runtime_never_uses_old_seed(self):
+        with patch('wlre.services.world.dynamic_bundle_runtime.current_runtime',return_value=None), patch('wlre.storage.bundled_database.load_bundled_json',side_effect=AssertionError('legacy seed read')):
+            for attempted in (False,True):
+                with self.subTest(attempted=attempted), patch('wlre.services.world.dynamic_bundle_runtime.dynamic_attempted',return_value=attempted), patch('wlre.services.world.runtime_1275.baseline_revision',return_value='1262'):
+                    with self.assertRaises(Runtime1275Unavailable):data.load_catalog()

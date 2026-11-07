@@ -9,6 +9,7 @@ from __future__ import annotations
 from functools import lru_cache
 import hashlib
 import json
+import sqlite3
 from pathlib import Path
 
 from wlre.storage.paths import data_root
@@ -31,7 +32,7 @@ _REQUIRED_TABLES = (
 # breaks the core ten-table NPC/recipe runtime or enables game packets.
 _PORTAL_TABLES = ('StageMapData_C', 'EveDoorLinks')
 _OPTIONAL_ROUTE_TABLES = ('DoorLinkData_C',)
-_DIAGNOSTIC_TABLES = ('DailyTaskData_C', 'DungeonData_C', 'CooperateEventData_C')
+_DIAGNOSTIC_TABLES = ('DailyTaskData_C', 'DungeonData_C', 'CooperateEventData_C', 'NpcTalkData_C', 'EmojiData_C')
 _ASSET_ROOT = 'Assets/ResourcesBuild/Data/'
 
 
@@ -323,19 +324,29 @@ def load_verified_bundle_runtime(*, sync_root=None, _verified_context=None):
             stage, error = extraction_errors[0]
             raise error
 
+        from wlre.storage.normalized_resources import load_parsed
+        # Bundle verification above remains mandatory even on a database hit.
+        normalized_key = (identity.key if dynamic else hashlib.sha256(
+            json.dumps(_PINNED_MANIFEST_SHA256, sort_keys=True).encode()).hexdigest())
+        def stored(feature, tables, parse):
+            return load_parsed(root / 'derived_catalogs' / 'resource_inventory.sqlite3',
+                               normalized_key, feature,
+                               ('runtime-v3-' if feature == 'items' else 'runtime-v1-') + ('dynamic' if dynamic else '1275'),
+                               {name: sources[name] for name in tables}, parse)
+
         stage = 'Eve'
         eve = sources['Eve']
         if not dynamic and hashlib.sha256(eve).hexdigest() != EVE_SHA256:
             raise BundleRuntimeUnavailable('1275 Eve 來源 SHA-256 不符')
-        npc = json.loads(derive_eve_index(eve, 'EventData.NewNpc'))
-        interacts = json.loads(derive_eve_index(eve, 'EventData.NewInteract'))
+        npc = stored('npc', ('Eve',), lambda: json.loads(derive_eve_index(eve, 'EventData.NewNpc')))
+        interacts = stored('interactions', ('Eve',), lambda: json.loads(derive_eve_index(eve, 'EventData.NewInteract')))
         if not dynamic and (npc.get('record_count') != 10975
                 or interacts.get('record_count') != 1634
                 or len(npc.get('scenes', {})) != 1262):
             raise BundleRuntimeUnavailable('NPC／互動事件數不符合已審核 1275 資料')
         stage = 'ItemData_C'
-        items = parse_itemdata(sources['ItemData_C'],
-                               package_version=verified_data.spec.package_version)
+        items = stored('items', ('ItemData_C',), lambda: parse_itemdata(
+            sources['ItemData_C'], package_version=verified_data.spec.package_version))
         if dynamic:
             for rows in interacts['scenes'].values():
                 for interaction in rows:
@@ -346,23 +357,24 @@ def load_verified_bundle_runtime(*, sync_root=None, _verified_context=None):
                                 or offer['text_id'] not in items):
                             raise BundleRuntimeUnavailable('商店商品缺少同版 ItemData 來源')
         stage = 'TalkData_C'
-        talk_rows = parse_talk_data(sources['TalkData_C'])
+        talk_rows = stored('talks', ('TalkData_C',), lambda: parse_talk_data(sources['TalkData_C']))
         stage = 'TextData_C'
-        texts = parse_text_data(sources['TextData_C'])
+        texts = stored('texts', ('TextData_C',), lambda: parse_text_data(sources['TextData_C']))
         stage = 'SmithData_C'
         if dynamic:
             from wlre.services.world.dynamic_bundle_runtime import parse_runtime_recipes
-            recipes, recipe_catalog = parse_runtime_recipes(sources['SmithData_C'], items)
+            recipes, recipe_catalog = stored('recipes', ('SmithData_C', 'ItemData_C'),
+                lambda: parse_runtime_recipes(sources['SmithData_C'], items))
         else:
-            recipes = parse_smith_1275(sources['SmithData_C'])
+            recipes = stored('recipes', ('SmithData_C',), lambda: parse_smith_1275(sources['SmithData_C']))
         stage = 'ScenesData_C'
-        scene_rows = parse_stages(sources['ScenesData_C'])
+        scene_rows = stored('scenes', ('ScenesData_C',), lambda: parse_stages(sources['ScenesData_C']))
         stage = 'Eve'
         if dynamic:
             from wlre.services.world.doors_1275 import parse_verified_doors
-            doors = parse_verified_doors(eve)
+            doors = stored('doors', ('Eve',), lambda: parse_verified_doors(eve))
         else:
-            doors = parse_doors_1275(eve)
+            doors = stored('doors', ('Eve',), lambda: parse_doors_1275(eve))
         portal_destinations, portal_names, portal_positions = {}, {}, {}
         portal_display_destinations = {}
         portal_link_evidence = {}
@@ -492,11 +504,11 @@ def load_verified_bundle_runtime(*, sync_root=None, _verified_context=None):
                 hashlib.sha256(sources['AdventureLvData_C']).hexdigest()
                 != ADVENTURE_LEVEL_1275_SHA256):
             raise BundleRuntimeUnavailable('1275 遠征任務／等級來源 SHA-256 不符')
-        expedition = parse_expedition(
-            sources['AdventureData_C'], sources['AdventureLvData_C'])
+        expedition = stored('expedition', ('AdventureData_C', 'AdventureLvData_C'),
+            lambda: parse_expedition(sources['AdventureData_C'], sources['AdventureLvData_C']))
         stage = 'NpcData_C／NpcCareerData_C'
-        expedition_npcs = parse_expedition_npcs(
-            sources['NpcData_C'], sources['NpcCareerData_C'])
+        expedition_npcs = stored('expedition_npcs', ('NpcData_C', 'NpcCareerData_C'),
+            lambda: parse_expedition_npcs(sources['NpcData_C'], sources['NpcCareerData_C']))
         if not dynamic and (len(expedition['tasks']) != 260
                 or len(expedition['levels']) != 10
                 or len(expedition_npcs) != 7561):
@@ -554,6 +566,79 @@ def load_verified_bundle_runtime(*, sync_root=None, _verified_context=None):
             except (OSError,ValueError,TypeError,KeyError,RuntimeError):
                 ark_status='方舟資料缺少或格式不合，已停用方舟自動操作'
 
+        combat_catalog = None
+        combat_status = '官方戰鬥資料尚未同步'
+        if dynamic:
+            try:
+                from wlre.services.world.combat_catalog import load_verified_catalog as load_combat
+                combat_catalog = load_combat(verified_data,bundle_root,load_container,root,identity,sources,texts)
+                combat_status = '官方戰鬥資料已由同版資料庫載入'
+            except (OSError,ValueError,TypeError,KeyError,RuntimeError,ImportError,sqlite3.Error) as error:
+                combat_status = '官方戰鬥資料未通過驗證：' + str(error)
+
+        normal_catalog = None
+        normal_status = '官方普攻資料尚未同步'
+        if dynamic:
+            try:
+                from wlre.services.world.normal_attack_catalog import build_catalog
+                normal_catalog = stored('normal_attacks', ('NpcData_C','ItemData_C'),
+                    lambda: build_catalog(sources['NpcData_C'],sources['ItemData_C']))
+                normal_status = '官方普攻與捕捉資料已由同版資料庫載入'
+            except (OSError,ValueError,TypeError,KeyError,RuntimeError,sqlite3.Error) as error:
+                normal_status = '官方普攻資料未通過驗證：' + str(error)
+
+        item_images = None
+        item_image_status = '物品圖示需要當次官方資料'
+        if dynamic:
+            try:
+                from wlre.services.world.item_image_database import load_verified_images as load_item_images
+                item_images = load_item_images(manifests['MainPackage'],bundle_root,root,identity,items)
+                item_image_status = '官方物品圖示已由同版資料庫載入'
+            except (OSError,ValueError,TypeError,KeyError,RuntimeError,sqlite3.Error) as error:
+                item_image_status = '物品圖示未通過驗證：' + str(error)
+
+        emoji_catalog = None
+        emoji_status = '表情需要當次官方資料'
+        if dynamic:
+            try:
+                from wlre.services.world.emoji_database import load_verified_catalog as load_emoji
+                emoji_catalog = load_emoji(verified_data,manifests['MainPackage'],bundle_root,root,identity,load_container)
+                emoji_status = '官方表情已由同版資料庫載入'
+            except (OSError,ValueError,TypeError,KeyError,RuntimeError,sqlite3.Error) as error:
+                emoji_status = '表情未通過驗證：' + str(error)
+
+        smallmaps = None
+        smallmap_status = '小地圖需要當次官方資料'
+        if dynamic:
+            try:
+                from wlre.services.world.smallmap_database import load_verified_images
+                smallmaps = load_verified_images(manifests['MainPackage'],bundle_root,root,identity)
+                smallmap_status = '官方小地圖已由同版圖像資料庫載入'
+            except (OSError,ValueError,TypeError,KeyError,RuntimeError,sqlite3.Error) as error:
+                smallmap_status = '小地圖未通過驗證：' + str(error)
+
+        battle_talk = None
+        battle_talk_status = '戰鬥台詞需要當次官方資料'
+        if dynamic:
+            try:
+                from wlre.services.world.npc_battle_catalog import load_verified_catalog as load_battle
+                battle_talk = load_battle(verified_data, bundle_root, load_container,
+                                         root, identity, sources)
+                battle_talk_status = '戰鬥台詞與同版文字已由 SQLite 驗證'
+            except (OSError, ValueError, TypeError, KeyError, RuntimeError) as error:
+                battle_talk_status = '戰鬥台詞未通過驗證：' + str(error)
+
+        instances = None
+        instance_status = '副本需要當次官方動態資料'
+        if dynamic:
+            try:
+                from wlre.services.world.instance_runtime import load_verified_catalog as load_instances
+                instances = load_instances(verified_data, bundle_root, load_container,
+                                           root, identity, sources)
+                instance_status = '同版副本與協力事件已由 SQLite 載入'
+            except (OSError, ValueError, TypeError, KeyError, RuntimeError) as error:
+                instance_status = '副本資料未通過驗證：' + str(error)
+
         stage = '正式 Runtime 建立'
         from wlre.services.world.portal_coverage import audit_portal_coverage
         coverage = audit_portal_coverage(doors, scene_rows,
@@ -583,6 +668,13 @@ def load_verified_bundle_runtime(*, sync_root=None, _verified_context=None):
             ark_catalog=ark_catalog,ark_catalog_status=ark_status,
             guild_catalog=guild_catalog,guild_catalog_status=guild_status,
             daily_tasks=daily_catalog, daily_task_status=daily_status,
+            combat_catalog=combat_catalog,combat_catalog_status=combat_status,
+            normal_attack_catalog=normal_catalog,normal_attack_status=normal_status,
+            item_images=item_images,item_image_status=item_image_status,
+            emoji_catalog=emoji_catalog, emoji_status=emoji_status,
+            smallmaps=smallmaps, smallmap_status=smallmap_status,
+            battle_talk=battle_talk, battle_talk_status=battle_talk_status,
+            instances=instances, instance_status=instance_status,
             doors=doors, expedition=expedition, revision=revision,
         )
         if dynamic:
@@ -600,6 +692,6 @@ def load_verified_bundle_runtime(*, sync_root=None, _verified_context=None):
         return runtime
     except BundleRuntimeUnavailable:
         raise
-    except (OSError, ValueError, KeyError, TypeError, RuntimeError) as exc:
+    except (OSError, ValueError, KeyError, TypeError, RuntimeError, sqlite3.Error) as exc:
         raise BundleRuntimeUnavailable(
             '官方 Bundle 的資料格式無法建立完整 1275 Runtime：' + stage) from exc

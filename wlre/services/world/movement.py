@@ -37,6 +37,9 @@ class Movement:
         fix=state.location.get('confirmed')
         if not fix or not state.player.get('role_id'):raise ProtocolError('尚無本機起點座標，不能規劃移動')
         scene=state.player['scene']
+        from wlre.services.world.house_navigation import require_general_navigation
+        try:require_general_navigation(scene=scene)
+        except ValueError as error:raise ProtocolError(str(error)) from error
         if fix['scene']!=scene:raise ProtocolError('起點與角色地圖不同')
         if state.navigation.get('stale') and state.navigation.get('scene')==scene:
             raise ProtocolError('目前場景的動態障礙尚未重建，暫停導航：'+', '.join(state.navigation.get('reasons',[])))
@@ -52,6 +55,8 @@ class Movement:
         self.converter=self.converter or Coordinates()
         self.repository=self.repository or Repository()
         route=self.converter.route(self.repository,scene,start,(x,y),start_height=start_height)
+        if route.get('can_send_packets') is not True or route.get('live_movement_verified') is not True:
+            raise ProtocolError('路徑尚未具備實際移動驗證與授權，僅供預覽，不能用於角色移動。')
         points=[tuple(p) for p in route['points']]
         # Validate the complete path before replacing an active movement.
         if not points or any(not all(math.isfinite(v) for v in p) for p in points):

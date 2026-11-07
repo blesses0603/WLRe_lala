@@ -189,15 +189,30 @@ class IncrementalPlanTests(unittest.TestCase):
                                      bundle_names=[BUNDLE_NAME], cache_root=tmp)
             self.assertEqual(plan.entries[0].action, 'download')
 
-    def test_missing_dependency_or_cycle_fails_closed(self):
+    def test_mutual_dependencies_follow_yooasset_complete_sets(self):
         current = manifest(dependencies=True)
         current.index['bundles'][1]['dependencies'] = [BUNDLE_NAME]
-        with self.assertRaisesRegex(IncrementalSyncError, 'cycle'):
-            build_update_plan(current, bundle_names=[BUNDLE_NAME])
+        plan = build_update_plan(current, bundle_names=[BUNDLE_NAME])
+        self.assertEqual([entry.spec.name for entry in plan.entries],
+                         ['synthetic_dep.bundle', BUNDLE_NAME])
         current.index['bundles'][1]['dependencies'] = ['unknown.bundle']
         with self.assertRaisesRegex(IncrementalSyncError, 'Missing Bundle dependency'):
             build_update_plan(current, bundle_names=[BUNDLE_NAME])
 
+
+
+    def test_dependency_sets_are_not_recursively_expanded(self):
+        current = manifest(dependencies=True)
+        other = deepcopy(current.index['bundles'][1])
+        other['name'] = 'other.bundle'
+        current.index['bundles'].append(other)
+        current.index['bundles'][1]['dependencies'] = ['other.bundle']
+        plan = build_update_plan(current, bundle_names=[BUNDLE_NAME])
+        self.assertEqual({entry.spec.name for entry in plan.entries},
+                         {BUNDLE_NAME, 'synthetic_dep.bundle'})
+        plan = build_update_plan(current, bundle_names=[BUNDLE_NAME, 'synthetic_dep.bundle'])
+        self.assertEqual({entry.spec.name for entry in plan.entries},
+                         {BUNDLE_NAME, 'synthetic_dep.bundle', 'other.bundle'})
 
 if __name__ == '__main__':
     unittest.main()
