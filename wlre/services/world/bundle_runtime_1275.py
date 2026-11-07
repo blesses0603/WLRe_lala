@@ -603,6 +603,17 @@ def load_verified_bundle_runtime(*, sync_root=None, _verified_context=None):
             except (OSError,ValueError,TypeError,KeyError,RuntimeError,sqlite3.Error) as error:
                 normal_status = '官方普攻資料未通過驗證：' + str(error)
 
+        portraits = None
+        portrait_status = '官方頭像尚未同步'
+        if dynamic:
+            try:
+                from wlre.services.world.portrait_database import load_verified_portraits
+                portraits = load_verified_portraits(manifests['MainPackage'], bundle_root,
+                                                     root, identity, sources['NpcData_C'])
+                portrait_status = '官方角色與夥伴頭像已由同版資料庫載入'
+            except (OSError,ValueError,TypeError,KeyError,RuntimeError,ImportError,sqlite3.Error) as error:
+                portrait_status = '頭像待同步：' + str(error)
+
         item_images = None
         item_image_status = '物品圖示需要當次官方資料'
         if dynamic:
@@ -686,6 +697,7 @@ def load_verified_bundle_runtime(*, sync_root=None, _verified_context=None):
             daily_tasks=daily_catalog, daily_task_status=daily_status,
             combat_catalog=combat_catalog,combat_catalog_status=combat_status,
             normal_attack_catalog=normal_catalog,normal_attack_status=normal_status,
+            portraits=portraits,portrait_status=portrait_status,
             item_images=item_images,item_image_status=item_image_status,
             emoji_catalog=emoji_catalog, emoji_status=emoji_status,
             smallmaps=smallmaps, smallmap_status=smallmap_status,

@@ -249,6 +249,19 @@ def _prepare_runtime_sources(*, sync=False, sync_root=None, observe=None,
                     max_download_bytes=MAX_DOWNLOAD_BYTES,max_downloads=MAX_DOWNLOADS)
         except (OSError,ValueError,RuntimeError):
             pass  # Optional images: the loader reports precise unavailable status.
+    if sync:
+        # Reviewed data-only portrait projection, not a Unity scene/runtime load.
+        # Its exact material/texture/shader PPtrs have a separate fixed budget.
+        try:
+            from wlre.services.world.portrait_assets import source_specs
+            from wlre.services.official_bundle_download import fetch_bundle
+            specs = source_specs(manifests['MainPackage'])
+            if len(specs) > 3 or sum(s.file_size for s in specs) > 32 * 1024 * 1024:
+                raise ValueError('官方頭像下載計畫超出額度')
+            for spec in specs:
+                fetch_bundle(spec, cache_root=root / 'bundles')
+        except (OSError, ValueError, RuntimeError, ImportError):
+            pass  # Optional portraits never block login or core tables.
     combat_source_error = None
     if sync:
         try:

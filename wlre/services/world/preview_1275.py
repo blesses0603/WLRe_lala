@@ -163,6 +163,8 @@ class Preview1275:
     combat_catalog_status: str = '官方戰鬥資料尚未同步'
     normal_attack_catalog: dict | None = None
     normal_attack_status: str = '官方普攻資料尚未同步'
+    portraits: object = None
+    portrait_status: str = '官方頭像尚未同步'
     item_images: object = None
     item_image_status: str = '官方物品圖示尚未同步'
     emoji_status: str = '表情尚未同步'
