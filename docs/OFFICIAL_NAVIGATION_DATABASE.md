@@ -2822,3 +2822,59 @@ actor radius/height, plus real device/server behavior. Passing 3-D point-path
 geometry or supplied-corridor native math cannot fill those gaps. No sea behavior
 is inferred from land/sky tag tests. All three legacy seeds and movement guards
 remain, houses stay enter/exit only, and no push/merge/release occurred.
+
+### Phase 69: complete M12050 prepared native search, with guarded larger arenas
+
+Resource inspection found about 17 GB available host memory and 28 GB workspace
+space. The original 256-node research layout cannot be enlarged in place:
+PathNode/node/connection regions would overlap. `review_navigation_search` now
+has an explicit isolated capacity=1024 option using seven distinct arenas with
+unmapped guard gaps (1,650,688 total mapped data bytes). Lookup, trace-reference,
+trace-vector and heap storage are relocated as well. The default remains 256;
+1025 nodes, arbitrary capacities, shared prepared-state injection and the old
+Prepare callback at extended capacity are rejected. Product download/geometry
+limits and native instruction budgets are unchanged.
+
+Initial 844-chain testing failed on an unmapped native time query after 501
+expansions. That failure was not counted as success. The reviewed native
+DateTime packing/ticks routines now execute for the extended fixture; their
+external clock boundary is explicitly modeled with a deterministic zero return
+and exact caller validation. Native code still checks its deadline. This clock
+is NOT the execution safety bound: each VM call retains its 2,000,000 instruction
+budget and return-PC check, and the command has a 120-second wall timeout.
+Incomplete/over-budget execution raises and never writes a successful report.
+Modeled finite modf and single-thread monitor dependencies remain explicit.
+
+`tools.review_navigation_m12050_search` loads the full pinned 844-node graph with
+all 2,488 directed serialized connections, flags and penalties; no graph
+truncation or corridor-only search is used. All 844 center coordinates are
+computed by the pinned native center function. Six land and four sky queries
+run native ABPath expansion, costs, queue, parent updates and Trace, followed by
+native endpoint modification. Independent Bellman-Ford costs, allowed edges,
+path totals and traced coordinates agree for all ten. The returned node sequences
+also match all ten Python-selected corridors examined in Phase 68. M12050 has
+zero sea-eligible nodes; no sea search success is claimed.
+
+Capacity controls cover complete 4/256/844/1024-node traces, exact equivalence
+between old/new layouts on the small fixtures, and a blocked 844-node chain
+that reaches the expected native no-route error boundary. Both Python hosts
+pass these controls and the ten official queries; outputs are identical except
+elapsed timing (16.59 s desktop, 16.83 s Android host in the recorded run).
+Two sky queries exercise the new clock boundary. Additional desktop regression
+passes all 40 existing native search and 25 native Prepare synthetic cases.
+Related unit suites pass desktop 124 / Android 123.
+
+The term complete graph here means ALL nodes/connections participate in the
+prepared search. It does NOT mean a full official player startup: start/end
+nodes are supplied native centers, heuristic/tag penalties are fixed to zero,
+and full-graph native Prepare/GetNearest, hierarchy/Area initialization and live
+settings are not reproduced for M12050. Native endpoint cost handling is tested
+for these prepared endpoints, not every arbitrary clicked position. Collision,
+actor clearance and grounding are entirely separate and remain unverified.
+
+Next concrete steps: audit/relocate the separate nearest/hierarchy/BBTree arenas
+before extending native Prepare to 844 nodes; add off-center XYZ and same-X/Z
+height queries with independent endpoint checks; then join the resulting searched
+corridor to the already-tested native Apply pipeline. Do not bypass those stages
+by labeling prepared-center search as client runtime equivalence. Keep all three
+seeds, house enter/exit scope and movement guards; local only, no push/merge/release.

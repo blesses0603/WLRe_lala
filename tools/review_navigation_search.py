@@ -12,9 +12,10 @@ from tools.review_navigation_path_state import oracle as state_oracle
 from tools.review_navigation_rotation import IL2CPP_SHA
 
 
-def validate_graph(positions,connections,flags,penalties,start,end,tag_mask,tag_penalties,points):
+def validate_graph(positions,connections,flags,penalties,start,end,tag_mask,tag_penalties,points,*,capacity=256):
+    if type(capacity) is not int or capacity not in (256,1024):raise ValueError('Unreviewed search capacity')
     n=len(positions)
-    if not 1<=n<=256 or len(connections)!=n or len(flags)!=n or len(penalties)!=n:
+    if not 1<=n<=capacity or len(connections)!=n or len(flags)!=n or len(penalties)!=n:
         raise ValueError('Invalid bounded search graph')
     if any(type(i) is not int or not 0<=i<n for i in (start,end)):raise ValueError('Invalid endpoint index')
     for p in [*positions,*points]:
@@ -48,10 +49,22 @@ def validate_graph(positions,connections,flags,penalties,start,end,tag_mask,tag_
 
 
 
-def oracle(path,*,_state=None,_existing_state=None):
+def oracle(path,*,_state=None,_existing_state=None,capacity=256):
+    if type(capacity) is not int or capacity not in (256,1024) or (capacity!=256 and _existing_state is not None):
+        raise ValueError('Extended search requires isolated bounded state')
     state={} if _existing_state is None else _existing_state
     state_oracle(path,_state=state,_path_magnitude=True,_existing_state=_existing_state)
     u=state['vm'];data=state['data']
+    pn_base,node_base,edges_base=0x6080000,0x6090000,0x60a0000
+    lookup_base,heap_base,trace_ref_base,trace_vec_base=0x6002000,0x6003000,0x600b000,0x600d000
+    if capacity==1024:
+        # Separate guarded arenas; never expand the old overlapping 256-node layout.
+        arenas=((0x6201000,0x40000),(0x6242000,0x40000),(0x6283000,0x100000),
+                (0x6384000,0x3000),(0x6388000,0x3000),(0x638c000,0x4000),(0x6391000,0x9000))
+        for address,size in arenas:u.mem_map(address,size)
+        pn_base,node_base,edges_base=0x6201000,0x6242000,0x6283000
+        lookup_base,trace_ref_base,trace_vec_base,heap_base=0x6384000,0x6388000,0x638c000,0x6391000
+
     from unicorn import UC_HOOK_CODE
     from unicorn.arm64_const import UC_ARM64_REG_X0,UC_ARM64_REG_X1,UC_ARM64_REG_X2,UC_ARM64_REG_LR,UC_ARM64_REG_PC
     ranges=[(0x2833638,0x283393c),(0x2e9a6b0,0x2e9a7b8),
@@ -63,7 +76,11 @@ def oracle(path,*,_state=None,_existing_state=None):
             (0x24d26f0,0x24d2f0c),(0x2225164,0x222524c),(0x2d83820,0x2d83848)]
     # Model only external synchronization at these exact reviewed boundaries.
     models=[(0x2472d50,0x2472d54),(0xe6e774,0xe6e778),(0x2d91c7c,0x2d91c80)]
+    if capacity==1024:
+        ranges.extend(((0x1b5253c,0x1b525a0),(0x1b4f8ec,0x1b4f944)))
+        models.append((0xe2e04c,0xe2e050))
     pages={p for a,b in ranges+models for p in range(a&~4095,((b+4095)//4096)*4096,4096)}|{0x4c58000,0x496a000,0x498a000,0x49b7000,0x499e000,0x4c59000,0x4926000,0x4928000,0x4955000,0x4973000}
+    if capacity==1024:pages.add(0x4c55000)
     for p in pages-state['pages']:u.mem_map(p,4096)
     for a,b in ranges:u.mem_write(a,data(a,b-a))
     state['ranges'].extend(ranges+models);state['pages'].update(pages)
@@ -78,11 +95,19 @@ def oracle(path,*,_state=None,_existing_state=None):
     for a in (0x4928060,0x4955018,0x4973240):q(a,0x6010000)
     q(0x4926908,0x6010800);q(0x6010800,0x600e000)
     u.mem_write(0x4c59602,b'\1');u.mem_write(0x4c59603,b'\1');u.mem_write(0x37f3360,data(0x37f3360,5))
+    if capacity==1024:
+        u.mem_write(0x4c5535c,b'\1');u.mem_write(0x4c5532e,b'\1')
     counters={};lock=[False]
     class NoRoute(Exception):pass
     def hook(machine,address,size,user):
         if address in (0x2833724,0x2833638,0x234c80c,0x2d96358):counters[hex(address)]=counters.get(hex(address),0)+1
-        if address==0x2472d50:
+        if address==0xe2e04c:
+            if capacity!=1024 or u.reg_read(UC_ARM64_REG_LR)!=0x1b52580:raise ValueError('Unreviewed clock caller')
+            counters['modeled_clock_calls']=counters.get('modeled_clock_calls',0)+1
+            # Deterministic external time fixture; native DateTime packing/ticks
+            # still execute. VM instruction budget, not this clock, bounds work.
+            u.reg_write(UC_ARM64_REG_X0,0);u.reg_write(UC_ARM64_REG_PC,0x1b52580)
+        elif address==0x2472d50:
             if u.reg_read(UC_ARM64_REG_X0)!=0x600f000 or u.reg_read(UC_ARM64_REG_LR)!=0x2d951e0 or lock[0]:raise ValueError('Unreviewed monitor enter')
             pointer=u.reg_read(UC_ARM64_REG_X2)
             if not 0x61fe000<=pointer<0x61ff000:raise ValueError('Invalid lockTaken pointer')
@@ -96,48 +121,49 @@ def oracle(path,*,_state=None,_existing_state=None):
     u.hook_add(UC_HOOK_CODE,hook)
     def execute(a,args):return state['execute'](a,args,instruction_limit=2000000)
     def run(positions,connections,flags,penalties,start,end,tag_mask,tag_penalties=None,points=None,*,heuristic_scale=0.0,heuristic=0,_prepare=None):
+        if capacity!=256 and _prepare is not None:raise ValueError('Extended Prepare layout not reviewed')
         if type(heuristic) is not int or heuristic not in (0,2):raise ValueError('Unreviewed heuristic mode')
         if type(heuristic_scale) not in (int,float) or not math.isfinite(heuristic_scale) or not 0<=heuristic_scale<=1:raise ValueError('Invalid heuristic scale')
         tag_penalties=[0]*32 if tag_penalties is None else tag_penalties
         points=[positions[start],positions[end]] if points is None and type(start) is int and type(end) is int and 0<=start<len(positions) and 0<=end<len(positions) else points
         if points is None:raise ValueError('Invalid endpoint points')
-        validate_graph(positions,connections,flags,penalties,start,end,tag_mask,tag_penalties,points)
+        validate_graph(positions,connections,flags,penalties,start,end,tag_mask,tag_penalties,points,capacity=capacity)
         # Endpoint choice is prepared input. No nearest-node or Area equivalence claimed.
         if _prepare is None and any(not flags[i]&1 or not tag_mask&(1<<((flags[i]>>19)&31)) for i in (start,end)):
             raise ValueError('Prepared endpoint is not traversable')
         n=len(positions);counters.clear();lock[0]=False
-        u.mem_write(0x6000000,bytes(0x10000));u.mem_write(0x60a0000,bytes(0x50000))
-        h(0x6000010,1);q(0x6000020,0x6001000);q(0x6000028,0x6002000);w(0x6002018,n)
-        q(0x6001018,0x6003000);w(0x6003018,1025)
+        u.mem_write(0x6000000,bytes(0x10000));u.mem_write(edges_base,bytes(0x50000 if capacity==256 else 0x100000))
+        h(0x6000010,1);q(0x6000020,0x6001000);q(0x6000028,lookup_base);w(lookup_base+0x18,n)
+        q(0x6001018,heap_base);w(heap_base+0x18,1025)
         q(0x6008000,0x600e000);q(0x6008010,0x6000000);q(0x6008030,0x600f000)
         u.mem_write(0x600e12c,b'\1');q(0x600e0c8,0x600e800);q(0x600e800,0x600e000)
         q(0x600e258,0x234c80c);q(0x600e288,0x2d96358);q(0x600e2f8,0x234c294);q(0x600e318,0x234d55c)
         q(0x6008050,0x6009000);q(0x6008058,0x600a000)
-        q(0x6009010,0x600b000);q(0x600a010,0x600d000);w(0x600b018,256);w(0x600d018,256)
+        q(0x6009010,trace_ref_base);q(0x600a010,trace_vec_base);w(trace_ref_base+0x18,capacity);w(trace_vec_base+0x18,capacity)
         # Native reviewed modes 0 and 2. Default remains zero-scale mode 0;
         # scene-profile diagnostics explicitly select mode 2, scale 1.
         # The embedding cost pointer remains null.
         w(0x6008088,heuristic);u.mem_write(0x600808c,struct.pack('<f',heuristic_scale));w(0x60080ac,tag_mask)
         q(0x60080b0,0x600c000);w(0x600c018,32);u.mem_write(0x600c020,struct.pack('<32I',*tag_penalties))
-        q(0x60080d0,0x6090000+start*0x100);q(0x60080d8,0x6090000+end*0x100)
+        q(0x60080d0,node_base+start*0x100);q(0x60080d8,node_base+end*0x100)
         u.mem_write(0x6008110,struct.pack('<3i',*points[0]));u.mem_write(0x60080a0,struct.pack('<3i',*points[1]))
         f32=lambda x:struct.unpack('<f',struct.pack('<f',x))[0]
         for address,point in zip((0x60080f8,0x6008104),points):u.mem_write(address,struct.pack('<3f',*[f32(f32(x)*f32(.001)) for x in point]))
         q(0x60f0178,0x2833638);q(0x60f01e8,0x2833724)
         for i,(position,edges) in enumerate(zip(positions,connections)):
-            pn=0x6080000+i*0x100;node=0x6090000+i*0x100;arr=0x60a0000+i*0x400
+            pn=pn_base+i*0x100;node=node_base+i*0x100;arr=edges_base+i*0x400
             u.mem_write(pn,bytes(0x100));u.mem_write(node,bytes(0x100))
             q(node,0x60f0000);w(node+0x10,i);w(node+0x14,flags[i]);w(node+0x18,penalties[i]);u.mem_write(node+0x1c,struct.pack('<3i',*position));q(node+0x28,arr)
             w(arr+0x18,len(edges))
-            for j,(target,cost) in enumerate(edges):q(arr+0x20+j*16,0x6090000+target*0x100);w(arr+0x28+j*16,cost)
-            q(pn+0x10,node);h(pn+0x22,65535);q(0x6002020+i*8,pn)
+            for j,(target,cost) in enumerate(edges):q(arr+0x20+j*16,node_base+target*0x100);w(arr+0x28+j*16,cost)
+            q(pn+0x10,node);h(pn+0x22,65535);q(lookup_base+0x20+i*8,pn)
         prepared=None
-        if _prepare is None:execute(0x2e9a6d0,(0x6080000+end*0x100,1,0))
+        if _prepare is None:execute(0x2e9a6d0,(pn_base+end*0x100,1,0))
         try:
             if _prepare is not None:
                 prepared=_prepare()
                 start,end=prepared['nodes'];points=prepared['int_points']
-                validate_graph(positions,connections,flags,penalties,start,end,tag_mask,tag_penalties,points)
+                validate_graph(positions,connections,flags,penalties,start,end,tag_mask,tag_penalties,points,capacity=capacity)
             stored_scale=struct.unpack('<f',u.mem_read(0x600808c,4))[0]
             requested_scale=struct.unpack('<f',struct.pack('<f',heuristic_scale))[0]
             if rw(0x6008088)!=heuristic or stored_scale!=requested_scale:raise ValueError('Prepared heuristic profile changed')
@@ -148,22 +174,22 @@ def oracle(path,*,_state=None,_existing_state=None):
         if lock[0] or rw(0x6008040)!=2:raise ValueError('Incomplete native search')
         count=rw(0x6009018)
         if not 1<=count<=n or count!=rw(0x600a018):raise ValueError('Invalid native trace size')
-        refs=[rq(0x600b020+i*8) for i in range(count)]
-        if any(not 0x6090000<=r<0x6090000+n*0x100 or (r-0x6090000)%0x100 for r in refs):raise ValueError('Invalid trace reference')
-        nodes=[(r-0x6090000)//0x100 for r in refs]
+        refs=[rq(trace_ref_base+0x20+i*8) for i in range(count)]
+        if any(not node_base<=r<node_base+n*0x100 or (r-node_base)%0x100 for r in refs):raise ValueError('Invalid trace reference')
+        nodes=[(r-node_base)//0x100 for r in refs]
         if nodes[0]!=start or nodes[-1]!=end or len(set(nodes))!=count:raise ValueError('Invalid native search route')
-        vectors=[list(struct.unpack('<3f',u.mem_read(0x600d020+i*12,12))) for i in range(count)]
+        vectors=[list(struct.unpack('<3f',u.mem_read(trace_vec_base+0x20+i*12,12))) for i in range(count)]
         w(0x600f11c,3);w(0x600f120,3)
         execute(0x24d26f0,(0x600f100,0x6008000,0))
         modified_count=rw(0x600a018)
         if modified_count!=max(2,count):raise ValueError('Invalid endpoint-modified size')
-        modified=[list(struct.unpack('<3f',u.mem_read(0x600d020+i*12,12))) for i in range(modified_count)]
+        modified=[list(struct.unpack('<3f',u.mem_read(trace_vec_base+0x20+i*12,12))) for i in range(modified_count)]
         expected=[list(v) for v in vectors] if count>1 else [list(vectors[0]),list(vectors[0])]
         expected[0]=list(struct.unpack('<3f',u.mem_read(0x60080f8,12)));expected[-1]=list(struct.unpack('<3f',u.mem_read(0x6008104,12)))
         if modified!=expected:raise ValueError('Native endpoint modifier mismatch')
         parents=[];gs=[]
         for i in range(n):
-            pn=0x6080000+i*0x100;parent=rq(pn+0x18);parents.append(None if parent==0 else (parent-0x6080000)//0x100);gs.append(rw(pn+0x28))
+            pn=pn_base+i*0x100;parent=rq(pn+0x18);parents.append(None if parent==0 else (parent-pn_base)//0x100);gs.append(rw(pn+0x28))
         return dict(status='complete_prepared_search',path_nodes=nodes,vector_path=vectors,endpoint_modified_path=modified,total_cost=gs[end],parents=parents,g_costs=gs,calls=dict(counters),can_send_packets=False,**({'prepared':prepared} if prepared is not None else {}))
     if _state is not None:_state.update(state)
     return run
