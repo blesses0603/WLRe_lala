@@ -7,7 +7,7 @@ namespace Lala.Android;
 
 [Activity(Label = "LaLa 核心驗證", Theme = "@style/LaLaTheme", MainLauncher = true, Exported = true,
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode)]
-public sealed class MainActivity : AvaloniaMainActivity<App>
+public sealed class MainActivity : AvaloniaMainActivity
 {
     protected override void OnStop()
     {
