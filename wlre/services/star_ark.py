@@ -7,6 +7,7 @@ import time
 import sqlite3
 from wlre.network.wire import Packet,Reader,Writer,ProtocolError
 from wlre.storage.ark_questions import QuestionStore,identity as question_identity
+from wlre.services.ark_first_answer import solve as solve_first_answer
 
 
 def defaults():
@@ -149,6 +150,12 @@ def _remember_question(state,p,q,correct=None):
             answer,status=store.observe(p['token'],p['role'],q)
             q['known_answer']=answer
             q['answer_source']='永久題庫（伺服器已確認）' if answer is not None else ''
+            if status=='unknown':
+                answer=solve_first_answer(q)
+                if answer is not None:
+                    q['known_answer']=answer
+                    q['answer_source']='精確算式計算（尚待伺服器確認）'
+                    status='computed'
         elif correct:
             answer=q['options'][q['selected']-1]
             status=store.confirm(p['token'],p['role'],q,answer)
@@ -156,12 +163,15 @@ def _remember_question(state,p,q,correct=None):
             else:d['answers'].pop(key,None)
         else:
             answer=q['options'][q['selected']-1]
-            store.reject(p['token'],p['role'],q,answer)
+            store.reject(p['token'],p['role'],q,answer,
+                candidate=(q.get('answer_source')=='精確算式計算（尚待伺服器確認）'
+                           and answer==q.get('known_answer')))
             d['answers'].pop(key,None)
             status='wrong'
         d['question_store_status']={
             'confirmed':'已保存伺服器確認答案；相同角色與版本可跨登入重用',
-            'unknown':'已收錄題目；尚無伺服器確認答案，請人工選答',
+            'unknown':'已收錄題目；無確認答案且不屬於可精確計算題型，請人工選答',
+            'computed':'首次遇題：已精確計算並唯一匹配選項，尚待伺服器確認',
             'conflict':'答案紀錄衝突，已停止此題自動選答',
             'wrong':'此次回答錯誤；不由錯誤回覆推測答案',
         }[status]
@@ -445,7 +455,7 @@ def tick(state,world_acknowledged,now=None):
                 answer=q.get('known_answer')
                 if answer in q['options']:
                     packets=command(state,dict(action='answer',index=q['options'].index(answer)+1),world_acknowledged,now)
-                    d['status']='已依永久題庫送出答案，等待伺服器結果與事件完成'
+                    d['status']='已依'+q.get('answer_source','確認答案')+'送出答案，等待伺服器結果與事件完成'
                     return packets
         return []
     if d['catalog_token']!=token:
