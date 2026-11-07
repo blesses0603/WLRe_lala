@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Lala.Core.Battle;
 using Lala.Core.Protocol;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.Battle;
@@ -60,7 +61,7 @@ public sealed class BattleEventParityTests
     private static void AssertSnapshot(JsonNode expected, BattleEventSnapshot actual, string label)
     {
         var projection = Project(actual);
-        Assert.True(JsonNode.DeepEquals(expected, projection), $"{label}: expected {expected}; actual {projection}");
+        LazyAssert.True(JsonNode.DeepEquals(expected, projection), () => $"{label}: expected {expected}; actual {projection}");
     }
 
     internal static JsonObject Project(BattleEventSnapshot state)

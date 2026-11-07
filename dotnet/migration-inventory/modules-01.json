@@ -1820,8 +1820,11 @@
     "target_project": "Lala.Desktop",
     "target_subsystem": "Build.Verification",
     "scope": "developer_tooling",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Resources/BundleSources/YooAssetManifest.cs",
+      "dotnet/Lala.Core/Resources/BundleSources/BundleSourcePlan.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1899,10 +1902,17 @@
     },
     "acceptance_profile": "tooling",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Only the bounded binary parse_manifest subset and bundle-fingerprint comparison used by required-source planning are ported. Actual YooAsset 2.2.5 headers/assets/bundles retain all parsed fields, strict UTF-8/boolean validation, exact duplicate path/name checks, resolved IDs, negative-size/trailing-byte rejection and owned immutable results. Manifests are bounded to 8 MiB and 1,000,000 items, with remaining-byte/minimum-row checks before allocating lists.",
+      "Combined source-preparation evidence: 37 retained actual-Python manifest/plan cases plus 44 contracts, totaling 81 new focused tests. The 350-test Resources pass includes existing tests; these are not 350 new cases. Six CRLF-only source hashes, complete manifest fields, exact plan order and synthetic byte checksums are retained. Invalid cases use typed failures rather than claiming exact Python exception text; no newer full Core receipt is implied."
+    ],
+    "outstanding_scope": [
+      "Archive extraction/loading, private-output validation, generic asset diff/dependency-impact reports, text/CLI/report output and full developer-tool replacement remain unported. This internal Core parser does not establish official provenance, native Unity bundle extraction, actual resource compatibility or runtime admission. The inventory target project remains its original tooling mapping; only the listed parser logic is shared Core."
+    ]
   }
 ]

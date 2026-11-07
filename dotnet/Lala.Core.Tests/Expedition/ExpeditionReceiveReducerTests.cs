@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 using Lala.Core.Expedition;
 using Lala.Core.Protocol;
 using Lala.Core.State;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.Expedition;
@@ -259,7 +260,7 @@ public sealed class ExpeditionReceiveReducerTests
     private static void Check(JsonNode expected, ExpeditionReceiveSnapshot state, string context)
     {
         var actual = Project(state);
-        Assert.True(JsonNode.DeepEquals(expected, actual), $"{context}\nExpected: {expected}\nActual: {actual}");
+        LazyAssert.True(JsonNode.DeepEquals(expected, actual), () => $"{context}\nExpected: {expected}\nActual: {actual}");
     }
     private static JsonObject Project(ExpeditionReceiveSnapshot state)
     {

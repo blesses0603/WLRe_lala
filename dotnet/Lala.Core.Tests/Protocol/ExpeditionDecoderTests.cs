@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Lala.Core.Protocol;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 namespace Lala.Core.Tests.Protocol;
 
@@ -34,7 +35,7 @@ public sealed class ExpeditionDecoderTests
         };
         Assert.Equal(typeNames[kind], actual.GetType());
         var normalized = JsonSerializer.SerializeToNode(actual, actual.GetType(), Options);
-        Assert.True(JsonNode.DeepEquals(expected, normalized), $"Expected {expected}, actual {normalized}");
+        LazyAssert.True(JsonNode.DeepEquals(expected, normalized), () => $"Expected {expected}, actual {normalized}");
     }
     [Theory, MemberData(nameof(Cases))]
     public void StrictPacketLengths(JsonElement sample)

@@ -1,0 +1,132 @@
+{
+  "writer": "UnityPy 1.25.4 SerializedFile.save",
+  "compression_writer": "lz4 4.4.5 raw block",
+  "payload_hex": "0001fffe8041424300c3287f",
+  "path": "Assets/ResourcesBuild/Data/Owned.bytes",
+  "files": {
+    "owned-v6-c0.bundle": {
+      "sha256": "91f26fe13a82e9fccb16d729e062a0f2c5d7c6315784738983500cd7d43b1d79",
+      "bytes": 2898,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "classes": [
+        142,
+        49
+      ],
+      "nodes": [
+        58,
+        9
+      ]
+    },
+    "owned-v7-c0.bundle": {
+      "sha256": "d5b11300e5e4dfc9df84136dc4cbe9762172113371c1c193d367d0c7482abcff",
+      "bytes": 2912,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "classes": [
+        142,
+        49
+      ],
+      "nodes": [
+        58,
+        9
+      ]
+    },
+    "owned-v8-c0.bundle": {
+      "sha256": "171bb636419af681507a2d4a4d6e69b52095d84501731d3b582eb878469c6509",
+      "bytes": 2912,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "classes": [
+        142,
+        49
+      ],
+      "nodes": [
+        58,
+        9
+      ]
+    },
+    "owned-v8-c2.bundle": {
+      "sha256": "8d92a3f0ee515dbfe27904a8c3cec5163ef3caa6cec479ff439872ae66f1960a",
+      "bytes": 1347,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "classes": [
+        142,
+        49
+      ],
+      "nodes": [
+        58,
+        9
+      ]
+    },
+    "owned-v8-c3.bundle": {
+      "sha256": "7fc041701041569c7526ccb477e86d4e010ba2b6332526b74d4df0b6996e1ce5",
+      "bytes": 1356,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "classes": [
+        142,
+        49
+      ],
+      "nodes": [
+        58,
+        9
+      ]
+    },
+    "owned-multiblock.bundle": {
+      "sha256": "25922497a3270d0ccff2d7ff7fdbf6de1c58ea8ae9aeae90d529a9bc4b230906",
+      "bytes": 1624,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "classes": [
+        142,
+        49
+      ],
+      "nodes": [
+        58,
+        9
+      ]
+    },
+    "owned.assets": {
+      "sha256": "acdbbb2f2f6e92755ee259fb6ea7790ce707fe70d1ee1d57a3beca4e3dba7c7f",
+      "bytes": 2784
+    },
+    "duplicate.assets": {
+      "sha256": "b78e2b387b52ef21be7f541d1b9e17cba3bde1e0fe37eb7272e3169bf4d3a8dc",
+      "bytes": 2848
+    },
+    "external.assets": {
+      "sha256": "67ff9f36e2f2b57a628b76762a2041dfdae4bc971a6871c9fa942c70e484f058",
+      "bytes": 2832
+    },
+    "target.assets": {
+      "sha256": "f8bb86f88f7dfb701d405bd6be319a7f5a0ccc2711d0e60099ee1ee2045cd056",
+      "bytes": 2720
+    },
+    "unused-empty.assets": {
+      "sha256": "9f73cf1a127cbb2a12939a18e21a6c67db68e20b83e6036ea7a9ddc4276219b5",
+      "bytes": 2704
+    },
+    "bad-name.assets": {
+      "sha256": "5ace65dcb3f8c883c4ad93659531ae9fd172347d6ab55dba0449e411340c998c",
+      "bytes": 2784
+    },
+    "filename-name.assets": {
+      "sha256": "37ec700c29fe2bc6f22843388f4cd4371d25cac2359e5d472dea4cb24c016341",
+      "bytes": 2784
+    },
+    "wrong-class.assets": {
+      "sha256": "b3425abcbd7354741b58165e62b91378e8ad03bcda0f218f7eb37ee508fa6e23",
+      "bytes": 2784
+    },
+    "empty-script.assets": {
+      "sha256": "3f4a95416bcc621fdd0db702aed6ef8d1cbcd48e5a8e3476c0fe29fd3db36f77",
+      "bytes": 2768
+    },
+    "suffix.assets": {
+      "sha256": "5c600b20941b518254d080a2bb14c7cc928520c0c257da3523734147bb2472fd",
+      "bytes": 2784
+    }
+  }
+}

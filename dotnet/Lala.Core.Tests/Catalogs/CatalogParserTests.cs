@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Lala.Core.Catalogs;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.Catalogs;
@@ -225,8 +226,8 @@ public sealed class CatalogParserTests
     private static void AssertJson<T>(string expected, T actual)
     {
         JsonNode? actualNode = JsonSerializer.SerializeToNode(actual);
-        Assert.True(JsonNode.DeepEquals(JsonNode.Parse(expected), actualNode),
-            $"Expected {expected}\nActual {actualNode?.ToJsonString()}");
+        LazyAssert.True(JsonNode.DeepEquals(JsonNode.Parse(expected), actualNode),
+            () => $"Expected {expected}\nActual {actualNode?.ToJsonString()}");
     }
 
     private static Dictionary<string, object> Project(ItemDataRow row)

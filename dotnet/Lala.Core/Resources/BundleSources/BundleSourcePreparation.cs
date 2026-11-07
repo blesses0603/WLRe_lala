@@ -1,0 +1,252 @@
+using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
+
+namespace Lala.Core.Resources;
+
+// This entire seam is internal. There is deliberately no HTTP implementation or production authority
+// factory. An injected script and matching checksums establish byte integrity, NOT official provenance.
+internal interface IScriptedResourceSource
+{
+    ValueTask<OfficialVersionSnapshot> ObserveAsync(CancellationToken cancellationToken);
+    ValueTask<ScriptedResourceResponse> OpenAsync(string exactUrl, CancellationToken cancellationToken);
+}
+internal sealed record ScriptedResourceResponse(string FinalUrl, int Status, string? ContentLength, Stream Body) : IDisposable
+{
+    public void Dispose() => Body.Dispose();
+}
+internal interface IBundleSourceCacheReader
+{
+    ValueTask<Stream?> OpenReadAsync(BundleSourceSpec spec, CancellationToken cancellationToken);
+}
+
+/// <summary>Owns the exact verified bytes. No path, writeable memory or unchecked reopen escapes.</summary>
+internal sealed class VerifiedBundleSource
+{
+    private readonly byte[] _bytes;
+    internal BundleSourceSpec Spec { get; }
+    internal string Sha256 { get; }
+    internal BundleAcquisition Acquisition { get; }
+    private VerifiedBundleSource(BundleSourceSpec spec, byte[] bytes, BundleAcquisition acquisition, CancellationToken token)
+    { Spec = spec; _bytes = bytes; Acquisition = acquisition; Sha256 = ResourceValidation.Digest(bytes, token); }
+    internal Stream OpenRead() => new MemoryStream(_bytes, 0, _bytes.Length, writable: false, publiclyVisible: false);
+    internal static VerifiedBundleSource Verify(BundleSourceSpec spec, ReadOnlySpan<byte> input, BundleAcquisition acquisition,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (input.Length != spec.Size) throw new BundleSourceException(BundleSourceFailure.ResponseLength, "Bundle length differs from manifest");
+        byte[] bytes = input.ToArray();
+        if (Convert.ToHexStringLower(MD5.HashData(bytes)) != spec.Md5 || ManifestIdentity.Crc32LittleEndian(bytes, cancellationToken) != spec.Crc32Le)
+            throw new BundleSourceException(BundleSourceFailure.Checksum, "Bundle MD5 or little-endian CRC32 differs from manifest");
+        cancellationToken.ThrowIfCancellationRequested();
+        return new(spec, bytes, acquisition, cancellationToken);
+    }
+}
+
+internal sealed record BundleSourceBudget(int MaximumDownloads = 24, long MaximumDownloadBytes = 32L * 1024 * 1024)
+{
+    internal void Validate()
+    {
+        if (MaximumDownloads is < 0 or > 24 || MaximumDownloadBytes is < 0 or > 32L * 1024 * 1024)
+            throw new BundleSourceException(BundleSourceFailure.Budget, "Invalid runtime download budget");
+    }
+}
+
+internal sealed class RequiredBundleSources
+{
+    internal string Status => "required bundle sources verified; extractor unavailable";
+    internal string Provenance => "scripted input; official provenance unavailable";
+    internal string ManifestContentIdentity { get; }
+    internal long Attempt { get; }
+    internal BundleSourcePlan Plan { get; }
+    internal IReadOnlyList<VerifiedBundleSource> Sources { get; }
+    internal int DownloadCount { get; }
+    internal long DownloadBytes { get; }
+    internal RequiredBundleSources(string identity, long attempt, BundleSourcePlan plan, List<VerifiedBundleSource> sources, int count, long bytes)
+    { ManifestContentIdentity = identity; Attempt = attempt; Plan = plan; Sources = sources.AsReadOnly(); DownloadCount = count; DownloadBytes = bytes; }
+}
+
+/// <summary>Connected, offline-only preparation. Does not consume or issue resource/session admission.</summary>
+internal sealed class BundleSourcePreparation
+{
+    // Independent fail-closed cap on all owned sources, including cache hits. Download budgets below
+    // keep the original runtime 24 / 32 MiB ceilings. No huge cached closure may exhaust memory.
+    internal const long MaximumRetainedBytes = 32L * 1024 * 1024;
+    private readonly object _gate = new();
+    private long _attempt;
+    internal void Invalidate() { lock (_gate) { _attempt = checked(_attempt + 1); } }
+    private void Check(long attempt, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        lock (_gate)
+            if (_attempt != attempt) throw new BundleSourceException(BundleSourceFailure.StaleAttempt, "Resource preparation attempt was replaced");
+    }
+
+    internal async Task<RequiredBundleSources> PrepareAsync(IScriptedResourceSource source,
+        IBundleSourceCacheReader? cache = null, BundleSourceBudget? budget = null,
+        string host = OfficialResourceOrigin.DefaultHost, YooAssetManifest? previous = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        cancellationToken.ThrowIfCancellationRequested();
+        budget ??= new(); budget.Validate();
+        host = OfficialResourceOrigin.SelectHost(host);
+        long attempt; lock (_gate) { attempt = _attempt = checked(_attempt + 1); }
+        Check(attempt, cancellationToken);
+        var before = await source.ObserveAsync(cancellationToken).ConfigureAwait(false);
+        Check(attempt, cancellationToken);
+        var manifests = await ReadManifestsAsync(source, before, host, attempt, cancellationToken).ConfigureAwait(false);
+        var plan = BundleSourcePlan.Create(manifests[0], before.DataVersion, previous, cancellationToken);
+        long retained = 0;
+        foreach (var row in plan.Entries)
+        {
+            Check(attempt, cancellationToken);
+            retained = checked(retained + row.Spec.Size);
+            if (retained > MaximumRetainedBytes)
+                throw new BundleSourceException(BundleSourceFailure.Budget, "Required source closure exceeds owned-byte bound");
+        }
+        bool[] cached = new bool[plan.Entries.Count];
+        int downloadCount = 0; long downloadBytes = 0;
+        for (int i = 0; i < plan.Entries.Count; i++)
+        {
+            Check(attempt, cancellationToken);
+            cached[i] = cache is not null && await CacheMatchesAsync(cache, plan.Entries[i].Spec, cancellationToken).ConfigureAwait(false);
+            Check(attempt, cancellationToken);
+            if (!cached[i]) { downloadCount++; downloadBytes += plan.Entries[i].Spec.Size; }
+        }
+        if (downloadCount > budget.MaximumDownloads || downloadBytes > budget.MaximumDownloadBytes)
+            throw new BundleSourceException(BundleSourceFailure.Budget, "Planned downloads exceed explicit byte/file quota");
+        await CheckVersionsAsync(source, before, attempt, cancellationToken).ConfigureAwait(false);
+        var handles = new List<VerifiedBundleSource>();
+        for (int i = 0; i < plan.Entries.Count; i++)
+        {
+            Check(attempt, cancellationToken);
+            var spec = plan.Entries[i].Spec;
+            byte[] bytes;
+            if (cached[i])
+            {
+                using var stream = await cache!.OpenReadAsync(spec, cancellationToken).ConfigureAwait(false);
+                Check(attempt, cancellationToken);
+                if (stream is null) throw new BundleSourceException(BundleSourceFailure.CacheChanged, "Bundle cache disappeared since planning");
+                try
+                {
+                    bytes = await ReadBoundedAsync(stream, spec.Size, spec.Size, cancellationToken).ConfigureAwait(false);
+                    handles.Add(VerifiedBundleSource.Verify(spec, bytes, BundleAcquisition.Cache, cancellationToken));
+                }
+                catch (BundleSourceException)
+                { throw new BundleSourceException(BundleSourceFailure.CacheChanged, "Bundle cache changed since planning"); }
+            }
+            else
+            {
+                bytes = await FetchAsync(source, spec.Url(host), spec.Size, spec.Size, attempt, cancellationToken).ConfigureAwait(false);
+                handles.Add(VerifiedBundleSource.Verify(spec, bytes, BundleAcquisition.ScriptedDownload, cancellationToken));
+            }
+            Check(attempt, cancellationToken);
+        }
+        await CheckVersionsAsync(source, before, attempt, cancellationToken).ConfigureAwait(false);
+        // Re-read both complete manifest responses, not just metadata or old cached receipts. A same
+        // version replacement with its own matching CRC still changes the SHA-256 content identity.
+        var afterManifests = await ReadManifestsAsync(source, before, host, attempt, cancellationToken).ConfigureAwait(false);
+        for (int i = 0; i < manifests.Count; i++)
+            if (manifests[i].Sha256 != afterManifests[i].Sha256)
+                throw new BundleSourceException(BundleSourceFailure.ManifestChanged, "Manifest bytes changed during preparation");
+        await CheckVersionsAsync(source, before, attempt, cancellationToken).ConfigureAwait(false);
+        string identity = ContentIdentity(before, manifests, cancellationToken);
+        lock (_gate)
+        {
+            Check(attempt, cancellationToken);
+            return new(identity, attempt, plan, handles, downloadCount, downloadBytes);
+        }
+    }
+
+    private async Task CheckVersionsAsync(IScriptedResourceSource source, OfficialVersionSnapshot before, long attempt, CancellationToken token)
+    {
+        Check(attempt, token);
+        var after = await source.ObserveAsync(token).ConfigureAwait(false);
+        Check(attempt, token);
+        if (!before.HasSameIdentity(after)) throw new BundleSourceException(BundleSourceFailure.VersionsChanged, "Observed versions changed during preparation");
+    }
+    private async Task<IReadOnlyList<YooAssetManifest>> ReadManifestsAsync(IScriptedResourceSource source,
+        OfficialVersionSnapshot snapshot, string host, long attempt, CancellationToken token)
+    {
+        var result = new List<YooAssetManifest>();
+        foreach (string package in ResourceValidation.Packages)
+        {
+            Check(attempt, token);
+            string prefix = $"https://{host}/WLN/TW/{snapshot.DataVersion}/ResourcesPC/AssetBundle/{package}";
+            byte[] hash = await FetchAsync(source, prefix + ".hash", 8, null, attempt, token).ConfigureAwait(false);
+            if (hash.Length != 8 || hash.Any(b => !((b >= '0' && b <= '9') || (b >= 'a' && b <= 'f') || (b >= 'A' && b <= 'F'))))
+                throw new BundleSourceException(BundleSourceFailure.Checksum, "Manifest .hash must contain exactly eight ASCII hex bytes");
+            string expected = Encoding.ASCII.GetString(hash).ToLowerInvariant();
+            byte[] bytes = await FetchAsync(source, prefix + ".bytes", ManifestIdentity.MaximumManifestBytes, null, attempt, token).ConfigureAwait(false);
+            if (ManifestIdentity.Crc32LittleEndian(bytes, token) != expected)
+                throw new BundleSourceException(BundleSourceFailure.Checksum, "Manifest bytes differ from response CRC32");
+            var manifest = YooAssetManifest.Parse(bytes, token);
+            manifest.ValidateIdentity(snapshot, package);
+            result.Add(manifest);
+        }
+        return result.AsReadOnly();
+    }
+    private async Task<byte[]> FetchAsync(IScriptedResourceSource source, string url, long maximum, long? exact, long attempt, CancellationToken token)
+    {
+        Check(attempt, token);
+        using var response = await source.OpenAsync(url, token).ConfigureAwait(false);
+        Check(attempt, token);
+        // Source rejection must precede declared length and any body read, including redirects/status.
+        if (response.FinalUrl != url || response.Status != 200)
+            throw new BundleSourceException(BundleSourceFailure.ResponseSource, "Response location or status differs from requested source");
+        long? declared = null;
+        if (response.ContentLength is { } text)
+        {
+            if (text.Length is 0 or > 20 || text.Any(c => c is < '0' or > '9') ||
+                !long.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out long value) || value > maximum || (exact.HasValue && value != exact))
+                throw new BundleSourceException(BundleSourceFailure.ResponseLength, "Invalid response Content-Length");
+            declared = value;
+        }
+        byte[] bytes = await ReadBoundedAsync(response.Body, maximum, exact ?? declared, token).ConfigureAwait(false);
+        Check(attempt, token);
+        return bytes;
+    }
+    private static async Task<bool> CacheMatchesAsync(IBundleSourceCacheReader cache, BundleSourceSpec spec, CancellationToken token)
+    {
+        using var stream = await cache.OpenReadAsync(spec, token).ConfigureAwait(false);
+        if (stream is null) return false;
+        try
+        {
+            byte[] bytes = await ReadBoundedAsync(stream, spec.Size, spec.Size, token).ConfigureAwait(false);
+            _ = VerifiedBundleSource.Verify(spec, bytes, BundleAcquisition.Cache, token);
+            return true;
+        }
+        catch (BundleSourceException) { return false; } // Corrupt initial cache is a miss, never authority.
+    }
+    private static async Task<byte[]> ReadBoundedAsync(Stream stream, long maximum, long? exact, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        using var output = new MemoryStream();
+        byte[] chunk = new byte[64 * 1024];
+        long length = 0;
+        while (true)
+        {
+            token.ThrowIfCancellationRequested();
+            int requested = (int)Math.Min(chunk.Length, maximum - length + 1);
+            int read = await stream.ReadAsync(chunk.AsMemory(0, requested), token).ConfigureAwait(false);
+            token.ThrowIfCancellationRequested();
+            if (read < 0 || read > requested) throw new BundleSourceException(BundleSourceFailure.ResponseLength, "Invalid stream read length");
+            if (read == 0) break;
+            length += read;
+            if (length > maximum) throw new BundleSourceException(BundleSourceFailure.ResponseLength, "Stream exceeds bounded length");
+            output.Write(chunk, 0, read);
+        }
+        if (length == 0 || (exact.HasValue && length != exact))
+            throw new BundleSourceException(BundleSourceFailure.ResponseLength, "Stream empty or truncated");
+        return output.ToArray();
+    }
+    private static string ContentIdentity(OfficialVersionSnapshot snapshot, IReadOnlyList<YooAssetManifest> manifests, CancellationToken token)
+    {
+        // Same canonical structure as ManifestIdentity, but every field now comes from actual parsed bytes.
+        string text = "{\"data_ver\":" + ResourceValidation.Quote(snapshot.DataVersion) + ",\"exe_version\":" + ResourceValidation.Quote(snapshot.ExeVersion) + ",\"packages\":[" +
+            string.Join(',', manifests.Select(m => "{\"full_version\":" + ResourceValidation.Quote(m.Header.PackageVersion) + ",\"manifest_crc32_le\":" + ResourceValidation.Quote(m.Crc32Le) +
+            ",\"manifest_sha256\":" + ResourceValidation.Quote(m.Sha256) + ",\"name\":" + ResourceValidation.Quote(m.Header.PackageName) + "}")) + "],\"schema_version\":1}";
+        return ResourceValidation.Digest(Encoding.ASCII.GetBytes(text), token);
+    }
+}

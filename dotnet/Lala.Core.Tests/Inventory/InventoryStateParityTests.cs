@@ -8,6 +8,7 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Lala.Core.Inventory;
 using Lala.Core.Protocol;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.Inventory;
@@ -328,7 +329,7 @@ public sealed class InventoryStateParityTests
     private static void AssertProjection(JsonNode expected, StorageReceiveSnapshot storage, PotionStorageSnapshot recovery, string label)
     {
         var actual = Project(storage, recovery);
-        Assert.True(JsonNode.DeepEquals(expected, actual), $"{label}: expected {expected}; actual {actual}");
+        LazyAssert.True(JsonNode.DeepEquals(expected, actual), () => $"{label}: expected {expected}; actual {actual}");
     }
     private static void AssertSameProjection(StorageReceiveSnapshot expectedStorage, PotionStorageSnapshot expectedRecovery,
         StorageReceiveSnapshot actualStorage, PotionStorageSnapshot actualRecovery) =>

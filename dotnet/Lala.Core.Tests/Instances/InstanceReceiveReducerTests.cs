@@ -8,6 +8,7 @@ using System.Text.Json.Nodes;
 using Lala.Core.Instances;
 using Lala.Core.Protocol;
 using Lala.Core.State;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.Instances;
@@ -359,7 +360,7 @@ public sealed class InstanceReceiveReducerTests
     private static void Check(JsonNode expected, InstanceReceiveSnapshot state, string where)
     {
         var actual = Project(state);
-        Assert.True(JsonNode.DeepEquals(expected, actual), $"{where}\nExpected {expected.ToJsonString()}\nActual {actual.ToJsonString()}");
+        LazyAssert.True(JsonNode.DeepEquals(expected, actual), () => $"{where}\nExpected {expected.ToJsonString()}\nActual {actual.ToJsonString()}");
     }
     private static string FindRoot()
     {

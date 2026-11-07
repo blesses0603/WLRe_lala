@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Lala.Core.Catalogs;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.Catalogs;
@@ -205,6 +206,6 @@ public sealed class DailyTaskCatalogTests
         awards = row.Awards.Select(award => new { kind = award.Kind, id = award.Id, value = award.Value })
     };
     private static void AssertJson(string expected, object actual) =>
-        Assert.True(JsonNode.DeepEquals(JsonNode.Parse(expected), JsonSerializer.SerializeToNode(actual)),
-            $"Expected {expected}; actual {JsonSerializer.Serialize(actual)}");
+        LazyAssert.True(JsonNode.DeepEquals(JsonNode.Parse(expected), JsonSerializer.SerializeToNode(actual)),
+            () => $"Expected {expected}; actual {JsonSerializer.Serialize(actual)}");
 }

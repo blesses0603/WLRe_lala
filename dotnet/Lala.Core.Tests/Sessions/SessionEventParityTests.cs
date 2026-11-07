@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Lala.Core.Protocol;
 using Lala.Core.Sessions;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.Sessions;
@@ -53,7 +54,7 @@ public sealed class SessionEventParityTests
     {
         var actual = WithoutNulls(JsonSerializer.SerializeToNode(state, Options)!);
         expected = WithoutNulls(expected.DeepClone());
-        Assert.True(JsonNode.DeepEquals(expected, actual), $"Expected {expected}; actual {actual}");
+        LazyAssert.True(JsonNode.DeepEquals(expected, actual), () => $"Expected {expected}; actual {actual}");
     }
 
     private static JsonNode WithoutNulls(JsonNode node)

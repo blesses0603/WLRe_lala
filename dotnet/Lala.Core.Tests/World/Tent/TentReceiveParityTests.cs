@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using Lala.Core.Protocol;
 using Lala.Core.World;
 using Lala.Core.World.Tent;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.World.Tent;
@@ -115,6 +116,6 @@ public sealed class TentReceiveParityTests
     private static void Check(JsonNode expected, TentReceiveSnapshot state, string context)
     {
         var actual = Project(state);
-        Assert.True(JsonNode.DeepEquals(expected, actual), $"{context}\nExpected: {expected}\nActual: {actual}");
+        LazyAssert.True(JsonNode.DeepEquals(expected, actual), () => $"{context}\nExpected: {expected}\nActual: {actual}");
     }
 }

@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 using Lala.Core.Protocol;
 using Lala.Core.Social;
 using Lala.Core.State;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.Social.GuildActions;
@@ -65,7 +66,7 @@ public sealed class GuildActionsParityTests
     private static void AssertSnapshot(JsonNode expected, GuildActionsReceiveSnapshot actual, string label)
     {
         var projection = Project(actual);
-        Assert.True(JsonNode.DeepEquals(expected, projection), $"{label}: expected {expected}; actual {projection}");
+        LazyAssert.True(JsonNode.DeepEquals(expected, projection), () => $"{label}: expected {expected}; actual {projection}");
     }
 
     internal static GuildActionsReceiveSnapshot Read(JsonNode node) => new()

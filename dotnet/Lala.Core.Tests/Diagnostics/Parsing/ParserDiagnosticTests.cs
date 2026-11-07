@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Lala.Core.Diagnostics.Parsing;
 using Lala.Core.State;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.Diagnostics.Parsing;
@@ -438,7 +439,7 @@ public sealed class ParserDiagnosticTests
         Assert.True(expected.AsSpan().SequenceEqual(actual.AsSpan()), name + " differs: " + Encoding.UTF8.GetString(actual.AsSpan()));
     }
     private static void AssertJson(JsonNode? expected, ImmutableArray<byte> actual, string name) =>
-        Assert.True(JsonNode.DeepEquals(expected, JsonNode.Parse(actual.AsSpan())), name + ": " + Encoding.UTF8.GetString(actual.AsSpan()));
+        LazyAssert.True(JsonNode.DeepEquals(expected, JsonNode.Parse(actual.AsSpan())), () => name + ": " + Encoding.UTF8.GetString(actual.AsSpan()));
     private sealed class PoisonInputList : IReadOnlyList<ParserDiagnosticInput>
     {
         public int Count => throw new InvalidOperationException("must not inspect");

@@ -9,6 +9,7 @@ using Lala.Core.Sessions;
 using Lala.Core.State;
 using Lala.Core.Tests.Battle;
 using Lala.Core.World;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.State;
@@ -99,8 +100,8 @@ public sealed class LocalStateParityTests
             ["battle"] = BattleEventParityTests.Project(actual.Battle)
         };
         var normalized = WithoutNulls(expected.DeepClone());
-        Assert.True(JsonNode.DeepEquals(normalized, WithoutNulls(projection)),
-            $"{label}: expected {normalized}; actual {projection}");
+        LazyAssert.True(JsonNode.DeepEquals(normalized, WithoutNulls(projection)),
+            () => $"{label}: expected {normalized}; actual {projection}");
     }
 
     [Theory]

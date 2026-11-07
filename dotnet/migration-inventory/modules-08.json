@@ -267,8 +267,10 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Catalogs/TalkDataParser.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -319,11 +321,19 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Only parse_talk_data is ported: signed Int32 count 1–65,536, UInt16 IDs/string byte lengths, 16-MiB source and 32,768-byte text bounds, strict UTF-16LE and trailing-NUL removal. Every reserved tail byte and voice ID are consumed; zero IDs remain valid, source insertion order is explicit, duplicate-before-control rejection and exact EOF are preserved.",
+      "Owned immutable Talk rows retain optional in-memory talk-v1 diagnostics, exact input/cursor/checkpoint ordering and source messages mapped to CatalogDecodeException. Typed spans/immutable maps and cooperative cancellation are explicit differences; cancellation is not a parser failure.",
+      "Required-table slice: 1,256 unique focused Release passes comprise 1,239 actual decorated-Python vectors, five source-hash checks and twelve contracts. Sixteen compressed/decoded-hash-checked resources retain truncations, full field/result order, diagnostics, source precedence and accepted maximum-record recipes with complete ordered typed-binary result digests. Independent final review approved; three generations reproduced identical resources. This is not full runtime/device/server acceptance."
+    ],
+    "outstanding_scope": [
+      "make_catalog, load_catalog and dialogue_text behavior, verified source selection, extraction, dialogue/runtime installation, persistence/cache, UI/session/transport and commands remain unported. Supplied bytes and source hashes have no provenance or permission; neither full npc_talk module parity nor official-resource/device/live acceptance is claimed."
+    ]
   },
   {
     "id": "desktop:wlre/services/world/obstacle_scope.py",
@@ -1482,8 +1492,8 @@
       "Typed spans replace Python dynamic types/coercions; immutable owned maps/arrays/records replace mutable dictionaries/lists. Exact error messages remain while PreviewError/ValueError/ProtocolError and diagnostic error_type map to CatalogDecodeException. Cooperative cancellation and optional in-memory diagnostics do not create source provenance or command authority."
     ],
     "outstanding_scope": [
-      "All other preview behavior remains unported: archive/catalog/table loading, PreviewNPCIndex/PreviewInteractIndex/Preview1275 composition and load_preview. No ZIP/resource extraction, downloads, installation, storage, adapters, runtime activation, crafting/commands, UI/Android or AccountSession integration.",
-      "No actual official-resource positive acceptance. The separate adapter contract must preserve unmarked ID-keyed maps for 33-byte Smith input rather than blindly substituting ParseRecords, which returns a timed-marked array. Diagnostic schema names do not certify a reviewed source."
+      "All other preview behavior remains unported: archive/catalog/table loading, PreviewNPCIndex/PreviewInteractIndex/Preview1275 composition and load_preview. Smith parsing now composes through the separate pure source adapter; ZIP/resource extraction, downloads, installation, storage, runtime activation, crafting/commands, UI/Android and AccountSession integration remain outstanding.",
+      "No actual official-resource positive acceptance. The separate offline source adapter now preserves the unmarked ID-keyed map for 33-byte Smith input instead of substituting ParseRecords, which returns a timed-marked array. Diagnostic/schema names still do not certify reviewed provenance or runtime acceptance."
     ]
   },
   {
@@ -2294,7 +2304,7 @@
     ],
     "outstanding_scope": [
       "Offline status covers pure typed logic only. MarkTimedRecipes accepts parser-shaped typed arrays, not arbitrary Python dictionary extensions, missing/dynamic time_id, booleans or unbounded/negative integers. Default arrays/null rows reject with the source validation message; unrelated recipe fields receive no added validation.",
-      "catalog_adapters.py integration, provenance, official-resource positive acceptance, runtime/catalog activation, files/downloads/extraction, storage, crafting/sends, UI/Android and session integration remain outstanding. The adapter must return an unmarked ID-keyed map for 33-byte input and a timed-marked array for 35-byte input; ParseRecords is not a universal adapter replacement. smith-reviewed-v1 names a structural selector, not source approval; adapter smith-new-33-v1/smith-new-35-v1 schemas remain distinct from parser diagnostics."
+      "Pure catalog_adapters.py composition is now available, retaining an unmarked ID-keyed map for 33-byte input and a timed-marked array for 35-byte input; ParseRecords is not a universal adapter replacement. Provenance, official-resource positive acceptance, runtime/catalog activation, files/downloads/extraction, storage, crafting/sends, UI/Android and session integration remain outstanding. smith-reviewed-v1 names a structural selector, not source approval; adapter smith-new-33-v1/smith-new-35-v1 schemas remain distinct from parser diagnostics."
     ]
   },
   {
@@ -2402,8 +2412,15 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Resources/UnityTextAssets/UnityTextAssetExtractor.cs",
+      "dotnet/Lala.Core/Resources/UnityTextAssets/BoundedUnityBundle.cs",
+      "dotnet/Lala.Core/Resources/UnityTextAssets/BoundedSerializedFile.cs",
+      "dotnet/Lala.Core/Resources/UnityTextAssets/UnityReadCursor.cs",
+      "dotnet/Lala.Core/Resources/UnityTextAssets/UnityTreeShape.cs",
+      "dotnet/Lala.Core/Resources/UnityTextAssets/UnityCommonStrings.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -2454,10 +2471,23 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Internal offline extraction consumes owned VerifiedBundleSource handles rather than reopenable filesystem paths. Exact ordinal AssetPath lookup rejects duplicate matches within/across containers, including repeated pointers to one object. Only class49 TextAsset resolves; its name must be the filename or final-extension-free stem. Script bytes, including NUL and invalid UTF-8, are copied without text conversion; the requested script must be nonempty.",
+      "Supported format subset: UnityFS 6/7/8 with compression 0/2/3 (none/raw LZ4/LZ4HC), front/end block info, canonical LZ4 termination and reviewed 0x200 padding semantics. SerializedFile22 requires little endian, Windows64 target19, engine2021.3.45f2 and embedded class142/class49 trees matching the reviewed 58-node/9-node parsing semantics. Inert node versions/non-alignment metadata bits are normalized; unknown layouts reject.",
+      "File identities combine verified bundle name and exact directory entry within one data/package/version context. CAB basenames never alias. External PPtrs require explicit source-file/exact-external-path/target-file bindings; no basename fallback, automatic dependencies, filesystem probing, HTTP or external open.",
+      "Bounded inputs: 1–24 distinct bundles, 64 MiB each and 128 MiB aggregate; expansion 64 MiB per bundle/128 MiB aggregate. Further limits cover block info/blocks, serialized files, metadata/types/trees, objects, container entries and encoded path bytes before decoding, dependencies/externals and 16-MiB script payloads. These are allocation/expansion ceilings, not a peak-RSS guarantee. Streams are scoped, results own detached bytes and cancellation is checked through chunk/block/LZ4/metadata/object/container work.",
+      "91 focused tests passed against original UnityPy 1.25.4 writer-generated SerializedFile/UnityFS fixtures and independent lz4 4.4.5 compression. Test-only AssetsTools.NET [3.0.5] independently reads retained hash-verified writer files and m_Script as bytes; malformed inputs never enter that package decoder. Fixtures contain authored payloads/trees, not game payloads or class databases. Runtime Core has no decoder package dependency; only the common-string table is vendored under its accompanying MIT notice.",
+      "A separate read-only local metadata audit observed 22 DataPackage bundles using UnityFS8, engine2021.3.45f2, SerializedFile22, embedded class49/142 trees, header0x243 and 244 LZ4HC blocks. This is metadata compatibility evidence only, not actual-game C# extraction acceptance. The combined 39,346-test Core receipt uses a process-only 3-GiB heap budget; it is separate from the 91 focused passes and is not a standard-setting or remote-CI pass."
+    ],
+    "outstanding_scope": [
+      "Only the stated binary subset is supported, not the whole Python/UnityPy module or arbitrary loader behavior. LZMA, encrypted/unknown flags, stripped trees, other engines/platform targets/SerializedFile layouts and other classes remain unsupported. Exact Python exception-message/decorator parity and filesystem/path-loader integration are not established; typed UnityTextAssetException failures are intentional.",
+      "The separate extractor is not wired into source preparation, catalog loading, six-/ten-table runtime composition, current globals, cache publication or AccountSession. No production source provenance/freshness, runtime admission/installation, AssetsReady, login or send authority is granted. Existing source-preparation terminal status remains required bundle sources verified; extractor unavailable.",
+      "Actual-game C# payload extraction, Desktop application execution, Android runtime/AOT and end-to-end resource/catalog/session acceptance remain unverified. Genuine owned writer fixtures and matching local real metadata are not official-resource positive acceptance; no game payloads are retained in the repository."
+    ]
   }
 ]

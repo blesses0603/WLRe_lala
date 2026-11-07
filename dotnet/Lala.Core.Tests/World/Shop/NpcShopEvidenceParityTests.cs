@@ -8,6 +8,7 @@ using Lala.Core.Protocol;
 using Lala.Core.Sessions;
 using Lala.Core.State;
 using Lala.Core.World.Shop;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.World.Shop;
@@ -41,7 +42,7 @@ public sealed class NpcShopEvidenceParityTests
             history.Add((state, expected));
         }
         foreach (var (old, expected) in history)
-            Assert.True(JsonNode.DeepEquals(expected, Project(old.ToOfflineData())), name + " immutable history");
+            LazyAssert.True(JsonNode.DeepEquals(expected, Project(old.ToOfflineData())), () => name + " immutable history");
     }
 
     [Theory]

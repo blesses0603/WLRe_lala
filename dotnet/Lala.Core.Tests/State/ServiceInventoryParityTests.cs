@@ -74,7 +74,7 @@ public sealed class ServiceInventoryParityTests
                 Assert.Same(result.Bag, result.Observation.AfterLiveBag);
                 Assert.Same(context.Inputs, result.Observation.Inputs);
                 var beforeLive = LiveInventoryParityTests.Project(result.Observation.BeforeLiveBag, CompanionReceiveSnapshot.Empty)["inventory"];
-                Assert.True(JsonNode.DeepEquals(step["before_live_inventory"], beforeLive), $"{name} before apply_live bag at step {number}");
+                LazyAssert.True(JsonNode.DeepEquals(step["before_live_inventory"], beforeLive), () => $"{name} before apply_live bag at step {number}");
             }
             Check(step["expected"]!, state.Snapshot(), at, $"{name} step {number++}");
             history.Add((state.Snapshot(), step["expected"]!, at));

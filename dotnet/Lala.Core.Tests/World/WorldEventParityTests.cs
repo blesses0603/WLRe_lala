@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Lala.Core.Protocol;
 using Lala.Core.World;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.World;
@@ -122,7 +123,7 @@ public sealed class WorldEventParityTests
     {
         var actual = WithoutNulls(Project(state));
         expected = WithoutNulls(expected.DeepClone());
-        Assert.True(JsonNode.DeepEquals(expected, actual), $"Expected {expected}; actual {actual}");
+        LazyAssert.True(JsonNode.DeepEquals(expected, actual), () => $"Expected {expected}; actual {actual}");
     }
 
     private static JsonNode WithoutNulls(JsonNode node)

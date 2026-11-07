@@ -3,6 +3,7 @@ using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Lala.Core.Inventory;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.Inventory;
@@ -29,7 +30,7 @@ public sealed class CombatSkillValidationParityTests
         var result = kind == "reasons" ? JsonSerializer.SerializeToNode(
             CombatResourceKnowledge.SkillReasons(player,companions,role,actor,input["skill_id"]!.GetValue<uint>(),catalog,bag,context),Options) :
             JsonSerializer.SerializeToNode(CombatResourceKnowledge.SkillRows(player,companions,role,actor,catalog,bag,context),Options);
-        Assert.True(JsonNode.DeepEquals(input["expected"],result), $"{kind}\nExpected: {input["expected"]}\nActual: {result}\nInput: {input}");
+        LazyAssert.True(JsonNode.DeepEquals(input["expected"],result), () => $"{kind}\nExpected: {input["expected"]}\nActual: {result}\nInput: {input}");
         Assert.Equal(beforeBag,LiveInventoryParityTests.Project(bag,CompanionReceiveSnapshot.Empty).ToJsonString());
         Assert.Equal(beforeActor,JsonSerializer.Serialize(actor,Options)); Assert.Equal(beforePlayer,JsonSerializer.Serialize(player,Options));
     }

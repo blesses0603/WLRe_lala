@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 <PropertyGroup><TargetFramework>net10.0</TargetFramework><IsPackable>false</IsPackable><IsTestProject>true</IsTestProject></PropertyGroup>
-<ItemGroup><PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.14"/><PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1"/><PackageReference Include="xunit" Version="2.9.3"/><PackageReference Include="xunit.runner.visualstudio" Version="3.1.4"><PrivateAssets>all</PrivateAssets></PackageReference></ItemGroup>
+<ItemGroup><PackageReference Include="AssetsTools.NET" Version="[3.0.5]" PrivateAssets="all" /><PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.14"/><PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1"/><PackageReference Include="xunit" Version="2.9.3"/><PackageReference Include="xunit.runner.visualstudio" Version="3.1.4"><PrivateAssets>all</PrivateAssets></PackageReference></ItemGroup>
 <ItemGroup><ProjectReference Include="../Lala.Core/Lala.Core.csproj"/></ItemGroup>
 <ItemGroup><EmbeddedResource Include="World/Eve/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.World.Eve.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
 <ItemGroup><EmbeddedResource Include="Diagnostics/Parsing/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.Diagnostics.Parsing.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
@@ -12,4 +12,8 @@
 <ItemGroup><EmbeddedResource Include="Catalogs/Combat/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.Catalogs.Combat.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
 <ItemGroup><EmbeddedResource Include="Catalogs/TextBattleTalk/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.Catalogs.TextBattleTalk.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
 <ItemGroup><EmbeddedResource Include="Catalogs/SmithStage/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.Catalogs.SmithStage.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Catalogs/SourceAdapters/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.Catalogs.SourceAdapters.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Resources/UnityTextAssets/Fixtures/*" LogicalName="Lala.Core.Tests.Resources.UnityTextAssets.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Resources/BundleSources/bundle_sources.json" LogicalName="Lala.Core.Tests.Resources.BundleSources.bundle_sources.json" WithCulture="false"/></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Catalogs/RequiredTables/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.Catalogs.RequiredTables.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
 </Project>

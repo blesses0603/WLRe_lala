@@ -12,6 +12,7 @@ using Lala.Core.Protocol;
 using Lala.Core.Sessions;
 using Lala.Core.State;
 using Lala.Core.Tests.Inventory;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.State;
@@ -90,7 +91,7 @@ public sealed class ServiceSocialInstanceParityTests
                 Assert.Same(result.Bag, result.Observation.AfterLiveBag);
                 Assert.Same(context.Inputs, result.Observation.Inputs);
                 var beforeLive = LiveInventoryParityTests.Project(result.Observation.BeforeLiveBag, CompanionReceiveSnapshot.Empty)["inventory"];
-                Assert.True(JsonNode.DeepEquals(step["before_live_inventory"], beforeLive), $"{name} before apply_live bag at step {number}");
+                LazyAssert.True(JsonNode.DeepEquals(step["before_live_inventory"], beforeLive), () => $"{name} before apply_live bag at step {number}");
             }
             Check(step["expected"]!, state.Snapshot(), at, $"{name} step {number++}");
             history.Add((state.Snapshot(), step["expected"]!, at));
@@ -127,9 +128,9 @@ public sealed class ServiceSocialInstanceParityTests
     {
         ServiceStateParityTests.Check(expected["services"]!, state, label);
         var live = LiveInventoryParityTests.Project(state.Bag, state.Companions);
-        Assert.True(JsonNode.DeepEquals(expected["live"], live), $"{label}: expected live {expected["live"]}; actual {live}");
+        LazyAssert.True(JsonNode.DeepEquals(expected["live"], live), () => $"{label}: expected live {expected["live"]}; actual {live}");
         var craft = CraftingStateParityTests.Project(state.Crafting, at);
-        Assert.True(JsonNode.DeepEquals(expected["crafting"], craft), $"{label}: expected crafting {expected["crafting"]}; actual {craft}");
+        LazyAssert.True(JsonNode.DeepEquals(expected["crafting"], craft), () => $"{label}: expected crafting {expected["crafting"]}; actual {craft}");
         Equal(expected["party"], ProjectParty(state.Party), label + " party");
         Equal(expected["own_team"], JsonSerializer.SerializeToNode(state.Party.OwnTeam(state.Player?.RoleId), Options), label + " own team");
         Assert.Equal(expected["team_order"]!.AsArray().Select(value => value!.GetValue<string>()),
@@ -146,7 +147,7 @@ public sealed class ServiceSocialInstanceParityTests
         Assert.Equal(state.Companions.Attributes.Count, state.Local.Session.Attributes.Keys.Count(key => key.StartsWith("follow:", StringComparison.Ordinal)));
     }
     private static void Equal(JsonNode? expected, JsonNode? actual, string label) =>
-        Assert.True(JsonNode.DeepEquals(expected, actual), $"{label}: expected {expected}; actual {actual}");
+        LazyAssert.True(JsonNode.DeepEquals(expected, actual), () => $"{label}: expected {expected}; actual {actual}");
 
     private static JsonObject ProjectParty(PartyEventSnapshot state)
     {

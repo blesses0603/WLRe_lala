@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Lala.Core.Protocol;
 using Lala.Core.Social;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.Social.Party;
@@ -85,7 +86,7 @@ public sealed class PartyEventParityTests
     }
 
     private static void AssertJson(JsonNode? expected, JsonNode? actual, string label) =>
-        Assert.True(JsonNode.DeepEquals(expected, actual), $"{label}: expected {expected}; actual {actual}");
+        LazyAssert.True(JsonNode.DeepEquals(expected, actual), () => $"{label}: expected {expected}; actual {actual}");
 
     private static JsonObject Project(PartyEventSnapshot state)
     {

@@ -1,5 +1,6 @@
 using System.Collections.Frozen;
 using System.Security.Cryptography;
+using Lala.Core.Diagnostics.Parsing;
 
 namespace Lala.Core.Catalogs;
 
@@ -67,6 +68,19 @@ public static class ItemDataParser
         return ParseLayout(snapshot, reviewed1296, includeSkillLink, cancellationToken);
     }
 
+    // Adapter-only entrypoint: the Python adapter does not pass its package version to
+    // parse_itemdata. Preserve the parser's independent fixed source pin and diagnostics.
+    internal static IReadOnlyDictionary<ushort, ItemDataRow> ParseForSourceAdapter(ReadOnlySpan<byte> raw,
+        CancellationToken cancellationToken) => ParserDiagnostics.RunWithRaw(
+            new("wlre.services.world.itemdata_v1.parse_itemdata", "itemdata-v1"), raw, bytes =>
+            {
+                ValidateSize(bytes.Length);
+                bool reviewed = Convert.ToHexStringLower(SHA256.HashData(bytes)) == Reviewed1296Sha256;
+                cancellationToken.ThrowIfCancellationRequested();
+                ValidateSource(null, reviewed, false);
+                return ReadLayout(bytes, reviewed, false, cancellationToken, sourceAdapter: true);
+            }, rows => new(rows.Count), null, cancellationToken);
+
     internal static void ValidateSource(string? packageVersion, bool reviewed1296, bool includeSkillLink)
     {
         if (packageVersion is not null && packageVersion != Reviewed1296Version && !LegacyVersions.Contains(packageVersion))
@@ -83,21 +97,29 @@ public static class ItemDataParser
     // or introducing a caller-supplied digest / public verification bypass.
     internal static IReadOnlyDictionary<ushort, ItemDataRow> ParseLayout(ReadOnlySpan<byte> raw,
         bool reviewed1296, bool includeSkillLink = false, CancellationToken cancellationToken = default)
+        => ReadLayout(raw, reviewed1296, includeSkillLink, cancellationToken, sourceAdapter: false);
+
+    private static IReadOnlyDictionary<ushort, ItemDataRow> ReadLayout(ReadOnlySpan<byte> raw,
+        bool reviewed1296, bool includeSkillLink, CancellationToken cancellationToken, bool sourceAdapter)
     {
         cancellationToken.ThrowIfCancellationRequested();
         ValidateSize(raw.Length);
         if (includeSkillLink && !reviewed1296)
             throw new CatalogDecodeException("Skill link needs reviewed ItemData source");
-        var reader = new CatalogReader(raw, cancellationToken);
+        var reader = new CatalogReader(raw, cancellationToken, sourceAdapter);
         uint count = reader.UInt32();
         if (count is 0 or > MaxItems)
             throw new CatalogDecodeException("ItemData record count outside reviewed range");
         var rows = new Dictionary<ushort, ItemDataRow>();
+        var sourceOrder = sourceAdapter ? new List<ushort>() : null;
         for (int index = 0; index < count; index++)
         {
+            if (sourceAdapter) ParserDiagnostics.Checkpoint(offset: reader.Position, field: "name_length", record: index + 1);
             string name = reader.Utf16();
             byte kind = reader.UInt8();
+            if (sourceAdapter) ParserDiagnostics.Checkpoint(offset: reader.Position, field: "kind_name_length");
             reader.Utf16(allowEmpty: true);
+            if (sourceAdapter) ParserDiagnostics.Checkpoint(offset: reader.Position, field: "item_id");
             ushort itemId = reader.UInt16();
             if (itemId == 0 || rows.ContainsKey(itemId))
                 throw new CatalogDecodeException("Invalid or duplicate ItemData item ID");
@@ -117,6 +139,7 @@ public static class ItemDataParser
             reader.Skip(9);
             ushort skillLink = reader.UInt16();
             ushort[] spares = [reader.UInt16(), reader.UInt16(), reader.UInt16(), reader.UInt16(), reader.UInt16()];
+            if (sourceAdapter) ParserDiagnostics.Checkpoint(offset: reader.Position, field: "description_length");
             ushort descriptionSize = reader.UInt16();
             if (descriptionSize > MaxTextBytes || (descriptionSize & 1) != 0)
                 throw new CatalogDecodeException("Invalid ItemData description length");
@@ -138,6 +161,7 @@ public static class ItemDataParser
             ReviewedItemDetails? details = null;
             if (reviewed1296)
             {
+                if (sourceAdapter) ParserDiagnostics.Checkpoint(offset: reader.Position, field: "unknown_tail_1296");
                 ReadOnlySpan<byte> tail = reader.Take(2);
                 details = new ReviewedItemDetails
                 {
@@ -154,10 +178,13 @@ public static class ItemDataParser
                 };
             }
             rows.Add(itemId, new(itemId, name, price, sellPrice, restrict, openUsed, needLevel, details));
+            sourceOrder?.Add(itemId);
         }
+        if (sourceAdapter) ParserDiagnostics.Checkpoint(offset: reader.Position, field: "end_of_file", expected: raw.Length, actual: reader.Position);
         if (reader.Remaining != 0)
             throw new CatalogDecodeException("ItemData record layout changed or trailing bytes");
-        var snapshot = rows.ToFrozenDictionary();
+        IReadOnlyDictionary<ushort, ItemDataRow> snapshot = sourceAdapter
+            ? new OrderedCatalog<ushort, ItemDataRow>(rows, sourceOrder!) : rows.ToFrozenDictionary();
         cancellationToken.ThrowIfCancellationRequested();
         return snapshot;
     }

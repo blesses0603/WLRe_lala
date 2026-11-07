@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Lala.Core.Diagnostics.Parsing;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.World.Eve;
@@ -62,7 +63,7 @@ public sealed class EveDiagnosticTests
             }
             else Assert.Null(error);
             var actual = JsonNode.Parse(ParserDiagnosticJson.Serialize(ParserDiagnosticRun.Project(observation), default).AsSpan());
-            Assert.True(JsonNode.DeepEquals(sourceEvent, actual), name + ": " + actual);
+            LazyAssert.True(JsonNode.DeepEquals(sourceEvent, actual), () => name + ": " + actual);
         }
     }
 

@@ -7,6 +7,7 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Lala.Core.Inventory;
 using Lala.Core.Protocol;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.Inventory;
@@ -170,6 +171,6 @@ public sealed class CraftingStateParityTests
     private static void Check(JsonNode expected, CraftingReceiveSnapshot state, double at, string context)
     {
         var actual = Project(state, at);
-        Assert.True(JsonNode.DeepEquals(expected, actual), $"{context}\nExpected: {expected}\nActual: {actual}");
+        LazyAssert.True(JsonNode.DeepEquals(expected, actual), () => $"{context}\nExpected: {expected}\nActual: {actual}");
     }
 }

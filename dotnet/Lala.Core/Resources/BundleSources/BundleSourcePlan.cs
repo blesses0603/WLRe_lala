@@ -1,0 +1,103 @@
+using System.Text.RegularExpressions;
+
+namespace Lala.Core.Resources;
+
+internal enum BundleChange { FirstBaseline, Added, Modified, Unchanged }
+internal enum BundleAcquisition { Cache, ScriptedDownload }
+
+internal sealed record BundleSourceSpec
+{
+    internal const long MaximumBundleBytes = 256L * 1024 * 1024;
+    private static readonly Regex NamePattern = new(@"\A[A-Za-z0-9][A-Za-z0-9_.-]{0,190}\.bundle\z", RegexOptions.CultureInvariant | RegexOptions.NonBacktracking);
+    private static readonly Regex Md5Pattern = new(@"\A[a-fA-F0-9]{32}\z", RegexOptions.CultureInvariant | RegexOptions.NonBacktracking);
+    private static readonly Regex CrcPattern = new(@"\A[a-fA-F0-9]{8}\z", RegexOptions.CultureInvariant | RegexOptions.NonBacktracking);
+    internal string DataVersion { get; }
+    internal string Package { get; }
+    internal string PackageVersion { get; }
+    internal string Name { get; }
+    internal long Size { get; }
+    internal string Md5 { get; }
+    internal string Crc32Le { get; }
+    internal BundleSourceSpec(string dataVersion, YooAssetManifest manifest, YooBundleEntry bundle)
+    {
+        if (!ResourceValidation.DataVersion.IsMatch(dataVersion) || !ResourceValidation.Packages.Contains(manifest.Header.PackageName, StringComparer.Ordinal) ||
+            !ResourceValidation.Manifest.IsMatch(manifest.Header.PackageVersion) || manifest.Header.OutputNameStyle != 1 ||
+            !NamePattern.IsMatch(bundle.Name) || bundle.SizeInvalid() || !Md5Pattern.IsMatch(bundle.FileHash) || !CrcPattern.IsMatch(bundle.FileCrc))
+            throw new BundleSourceException(BundleSourceFailure.InvalidBundle, "Manifest bundle metadata invalid or unsupported");
+        DataVersion = dataVersion; Package = manifest.Header.PackageName; PackageVersion = manifest.Header.PackageVersion;
+        Name = bundle.Name; Size = bundle.FileSize; Md5 = bundle.FileHash.ToLowerInvariant(); Crc32Le = bundle.FileCrc.ToLowerInvariant();
+    }
+    internal string Url(string host) => $"https://{OfficialResourceOrigin.SelectHost(host)}/WLN/TW/{DataVersion}/ResourcesPC/AssetBundle/{Name}";
+}
+
+internal static class BundleEntryBounds
+{
+    internal static bool SizeInvalid(this YooBundleEntry bundle) => bundle.FileSize is <= 0 or > BundleSourceSpec.MaximumBundleBytes;
+}
+
+internal sealed record PlannedBundleSource(BundleSourceSpec Spec, BundleChange Change, IReadOnlyList<string> Dependencies);
+
+internal sealed class BundleSourcePlan
+{
+    internal static IReadOnlyList<string> RequiredTables { get; } = Array.AsReadOnly(new[]
+    { "Eve", "ItemData_C", "TalkData_C", "TextData_C", "SmithData_C", "ScenesData_C", "AdventureData_C", "AdventureLvData_C", "NpcData_C", "NpcCareerData_C" });
+    internal static IReadOnlyList<string> RequiredAssetPaths { get; } = Array.AsReadOnly(RequiredTables.Select(x => "Assets/ResourcesBuild/Data/" + x + ".bytes").Order(StringComparer.Ordinal).ToArray());
+    internal IReadOnlyList<PlannedBundleSource> Entries { get; }
+    internal int AddedCount { get; }
+    internal int ModifiedCount { get; }
+    internal int RemovedCount { get; }
+    private BundleSourcePlan(List<PlannedBundleSource> entries, int added, int modified, int removed)
+    { Entries = entries.AsReadOnly(); AddedCount = added; ModifiedCount = modified; RemovedCount = removed; }
+
+    internal static BundleSourcePlan Create(YooAssetManifest current, string dataVersion,
+        YooAssetManifest? previous = null, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (current.Header.PackageName != "DataPackage" || (previous is not null && previous.Header.PackageName != current.Header.PackageName))
+            throw new BundleSourceException(BundleSourceFailure.ManifestIdentity, "Required data tables require DataPackage");
+        var roots = new HashSet<int>();
+        foreach (string path in RequiredAssetPaths)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!current.AssetBundles.TryGetValue(path, out int bundleId))
+                throw new BundleSourceException(BundleSourceFailure.MissingRequiredAsset, "Required exact AssetPath is absent from DataPackage");
+            roots.Add(bundleId);
+        }
+        // YooAsset DependIDs are engine-produced COMPLETE sets, not graph edges. Do not recurse.
+        // In particular cycles are legitimate, and traversing dependency dependencies adds unrelated data.
+        var dependencies = new HashSet<int>();
+        foreach (int root in roots)
+            foreach (int dependency in current.Bundles[root].DependencyIds)
+            { cancellationToken.ThrowIfCancellationRequested(); dependencies.Add(dependency); }
+        var ordered = dependencies.Except(roots).OrderBy(id => current.Bundles[id].Name, StringComparer.Ordinal)
+            .Concat(roots.OrderBy(id => current.Bundles[id].Name, StringComparer.Ordinal));
+        var old = previous?.Bundles.ToDictionary(x => x.Name, StringComparer.Ordinal) ?? new Dictionary<string, YooBundleEntry>(StringComparer.Ordinal);
+        var changes = new Dictionary<string, BundleChange>(StringComparer.Ordinal);
+        int added = 0, modified = 0;
+        foreach (var bundle in current.Bundles)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            BundleChange change = previous is null ? BundleChange.FirstBaseline : !old.TryGetValue(bundle.Name, out var prior) ? BundleChange.Added :
+                SameFingerprint(bundle, current, prior, previous) ? BundleChange.Unchanged : BundleChange.Modified;
+            changes.Add(bundle.Name, change);
+            if (change == BundleChange.Added) added++;
+            if (change == BundleChange.Modified) modified++;
+        }
+        var names = changes.Keys.ToHashSet(StringComparer.Ordinal);
+        int removed = old.Keys.Count(name => !names.Contains(name));
+        var entries = new List<PlannedBundleSource>();
+        foreach (int id in ordered)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var bundle = current.Bundles[id];
+            entries.Add(new(new(dataVersion, current, bundle), changes[bundle.Name],
+                Array.AsReadOnly(bundle.DependencyIds.Select(dep => current.Bundles[dep].Name).ToArray())));
+        }
+        return new(entries, added, modified, removed);
+    }
+
+    private static bool SameFingerprint(YooBundleEntry a, YooAssetManifest current, YooBundleEntry b, YooAssetManifest previous) =>
+        a.FileHash == b.FileHash && a.FileCrc == b.FileCrc && a.FileSize == b.FileSize && a.UnityCrc == b.UnityCrc &&
+        a.Encrypted == b.Encrypted && a.Tags.SequenceEqual(b.Tags) &&
+        a.DependencyIds.Select(id => current.Bundles[id].Name).SequenceEqual(b.DependencyIds.Select(id => previous.Bundles[id].Name));
+}

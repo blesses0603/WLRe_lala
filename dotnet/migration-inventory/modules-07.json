@@ -265,7 +265,10 @@
     "status": "partially_migrated",
     "target_files": [
       "dotnet/Lala.Core/Resources/OfficialCatalogObservation.cs",
-      "dotnet/Lala.Core/Resources/ManifestIdentity.cs"
+      "dotnet/Lala.Core/Resources/ManifestIdentity.cs",
+      "dotnet/Lala.Core/Resources/BundleSources/YooAssetManifest.cs",
+      "dotnet/Lala.Core/Resources/BundleSources/BundleSourcePlan.cs",
+      "dotnet/Lala.Core/Resources/BundleSources/BundleSourcePreparation.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -411,10 +414,13 @@
       "live_server_acceptance": "not_run"
     },
     "migrated_scope": [
-      "Display-only dynamic metadata validation and internal before/after source identity checks."
+      "Display-only dynamic metadata validation and internal before/after source identity checks.",
+      "Internal scripted _prepare_runtime_sources/_confirm_runtime_sources subset now connects both actual manifest parsers, ten-path DataPackage planning, bounded owned bundle bytes and final version/full-manifest stability checks. Replacement/invalidation rejects stale attempts; matching identity uses the canonical ManifestIdentity structure without changing its API. Runtime quotas remain 24 downloads/32 MiB, plus a conservative 32-MiB total retained-byte bound including cache hits.",
+      "Combined source-preparation evidence: 37 retained actual-Python manifest/plan cases plus 44 contracts, totaling 81 new focused tests. The 350-test Resources pass includes existing tests; these are not 350 new cases. Six CRLF-only source hashes, complete manifest fields, exact plan order and synthetic byte checksums are retained. Invalid cases use typed failures rather than claiming exact Python exception text; no newer full Core receipt is implied."
     ],
     "outstanding_scope": [
-      "Complete extraction, load orchestration and trusted source-contract issuance remain."
+      "Production HTTPS and independently trusted provenance/freshness issuance remain absent. Only injected cache streams exist; production filesystem cache acquisition, receipts, previous-version reuse and atomic publication remain deferred. Complete extraction/decoding orchestration, load orchestration, runtime installation/current globals/activation, resource/session admission and command authority remain unported. Terminal source-byte verification is not a ready runtime and never substitutes observation-only CatalogKey for manifest-content identity.",
+      "The bounded UnityTextAssetExtractor now exists as a separate internal offline decoder with owned-writer fixture evidence. It is not connected to this runtime pipeline and supplies no provenance, admission or activation authority."
     ]
   },
   {
@@ -1094,7 +1100,9 @@
     "scope": "runtime",
     "status": "partially_migrated",
     "target_files": [
-      "dotnet/Lala.Core/Catalogs/ItemDataParser.cs"
+      "dotnet/Lala.Core/Catalogs/ItemDataParser.cs",
+      "dotnet/Lala.Core/Catalogs/CatalogReader.cs",
+      "dotnet/Lala.Core/Catalogs/OrderedCatalog.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -1139,10 +1147,11 @@
       "live_server_acceptance": "not_run"
     },
     "migrated_scope": [
-      "Binary ItemData reader, legacy base fields, reviewed digest-pinned 1296 fields and validation."
+      "Binary ItemData reader, legacy base fields, reviewed digest-pinned 1296 fields and validation.",
+      "Internal source-adapter-only ordered/diagnosed parsing reuses the existing layout, preserves the independent fixed 1296 hash and does not inherit the outer contract package version. Source input/count/checkpoint/read/error observations and ordered rows are covered within the 601 adapter vectors; 2,274 focused tests include existing catalog regressions. Existing public signatures, frozen-map results, gate order and diagnostic behavior remain unchanged."
     ],
     "outstanding_scope": [
-      "Runtime loader/activation and official-resource successful parse acceptance not run. Parser diagnostic instrumentation, including the nested ItemData observation when NormalAttackCatalogParser builds a catalog, remains absent; the existing shared reader truncation label is unchanged."
+      "Runtime loader/activation and actual official-resource successful parse acceptance remain unverified. Public/global ItemData diagnostic instrumentation, including nested observations in normal-attack/combat builders, remains absent; the new internal adapter-only path does not close those gaps. Existing public/shared-reader truncation behavior is preserved. Caller-supplied adapter hashes cannot unlock reviewed ItemData fields or bypass its fixed pin."
     ]
   },
   {
@@ -1987,7 +1996,7 @@
     ],
     "outstanding_scope": [
       "_source/CurrentNormalData, resource retrieval, verified runtime/catalog activation, command/capture authority, UI/session integration and actual official-resource successful parsing remain unimplemented or unverified. Public hashes/layout gates cannot be supplied or bypassed by callers; internal layout helpers are test-only.",
-      "Nested ItemData diagnostics remain absent because shared ItemDataParser instrumentation is outside this increment; build_catalog has no source decorator. Shared parsers/readers are unchanged. No full-module, complete diagnostics, device or live acceptance claim; the separate pure combat catalog assembler now reuses this parser, without adding runtime activation or source-asset acceptance."
+      "Nested ItemData diagnostics in this normal-attack builder remain absent; the newer internal source-adapter-only ItemData path does not instrument this call. build_catalog has no source decorator and existing public parser/reader behavior remains unchanged. No full-module, complete diagnostics, device or live acceptance claim; the pure combat catalog assembler reuses this parser without runtime activation or source-asset acceptance."
     ]
   },
   {

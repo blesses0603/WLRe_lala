@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Lala.Core.Instances;
 using Lala.Core.Protocol;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.Instances;
@@ -40,7 +41,7 @@ public sealed class InstanceDecoderTests
         Assert.True(JsonNode.DeepEquals(JsonSerializer.SerializeToNode(actual, actual.GetType(), Options), JsonSerializer.SerializeToNode(dispatched.Event, dispatched.Event.GetType(), Options)));
         var actualJson = JsonSerializer.SerializeToNode(actual, actual.GetType(), Options);
         var expectedJson = JsonNode.Parse(expected.GetRawText());
-        Assert.True(JsonNode.DeepEquals(expectedJson, actualJson), $"{label}: expected {expectedJson}; actual {actualJson}");
+        LazyAssert.True(JsonNode.DeepEquals(expectedJson, actualJson), () => $"{label}: expected {expectedJson}; actual {actualJson}");
     }
 
     [Theory, MemberData(nameof(RecognizedCases))]

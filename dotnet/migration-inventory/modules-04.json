@@ -636,8 +636,10 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Protocol.client",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Sessions/Receive/ReceiveAttempt.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -760,11 +762,23 @@
     },
     "acceptance_profile": "protocol",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Only internal receive-attempt composition is ported: an already-created read-only byte transport feeds the actual FrameDecoder, server dispatcher and all eighteen ServiceStateCoordinator observer positions on one dedicated writer Thread. The inert constructor performs no I/O/callbacks; the first RunAsync owns cancellation and repeated calls share its terminal result. This is not a production transport or authenticated account session.",
+      "Fixed reader-owned buffers cross a bounded channel (default four 4096-byte chunks plus active reader/writer buffers and uint16 partial-frame storage); display publication coalesces to one pending commit. Exact immutable-snapshot-bound inputs use a finite injected clock and force ResourceHeld=true even when the caller supplies false. Lifecycle and observed game phase stay separate, with attempt identity and successful-commit revisions.",
+      "Decode/reduction/commit serialize with retirement. Failed packets publish no partial state/count; earlier valid commits survive a later malformed frame in the same read. The actual decoder is fed bytewise to preserve this behavior; throughput optimization remains deferred. EOF calls Finish, cancellation does not finish partial frames, and missing required Ark runtime evidence fails with a fixed code rather than manufacturing Absent evidence.",
+      "Retirement is synchronous; cancellation callbacks and transport disposal run outside the state lock. Completion waits for the actual reader, joined writer, observer callback, cancellation callbacks and transport cleanup. Late noncooperative reads are discarded; held participants keep completion pending. Cleanup failure reports CleanupFailed/ResourcesReleased=false with a fixed exception, and repeated disposal shares the cleanup outcome.",
+      "Focused verification: 283 unique tests passed, with every frame split/direct-coordinator snapshot comparison, actual-thread ownership, malformed/EOF/error paths, bounded pressure, coalescing, cleanup and cancellation/commit races. Three additional repetitions passed 25 selected tests each, adding 150 race iterations; repeats do not increase the unique test count. A separate synthetic Python receipt sequence was decoded/applied; existing domain source-vector parity remains separate. Independent final review approved the slice."
+    ],
+    "outstanding_scope": [
+      "Full client/run_client behavior remains unported: production socket/dial/transport, verification/login handshake, credentials/authentication, outbound writes/commands, SessionLogic responses, scheduler/automatic operations, runtime/resource installation, account reconnection and complete state parity. AccountSession and Android lifecycle APIs are unchanged; no official-server/device/authenticated readiness or real-network throughput acceptance.",
+      "All resources remain held; parsed catalogs/metadata cannot release the gate, and observed authenticated reducer text is not authentication proof. Saved publications require owner/current-attempt validation. Commit callbacks are ordered but coalesced, not a lossless event log or terminal-status channel; already-admitted callbacks may finish after retirement but none outlive completion.",
+      "Bytewise framing throughput remains unoptimized. Python resource holds continue receiving receipts and are not mapped onto Android terminal ResourceHeld status. The later local combined adapter/receive Core receipt is separate from focused, remote/platform and live acceptance; IsCompleteState remains false."
+    ]
   },
   {
     "id": "desktop:wlre/network/command_envelope.py",

@@ -10,6 +10,7 @@ using Lala.Core.Sessions;
 using Lala.Core.State;
 using Lala.Core.Tests.Battle;
 using Lala.Core.Tests.Inventory;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.State;
@@ -212,7 +213,7 @@ public sealed class ServiceStateParityTests
     {
         var left = WithoutNulls(expected.DeepClone());
         var right = WithoutNulls(actual.DeepClone());
-        Assert.True(JsonNode.DeepEquals(left, right), $"{label}: expected {left}; actual {right}");
+        LazyAssert.True(JsonNode.DeepEquals(left, right), () => $"{label}: expected {left}; actual {right}");
     }
 
     private static JsonNode WithoutNulls(JsonNode node)

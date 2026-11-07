@@ -2,6 +2,7 @@ using System.Buffers.Binary;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Lala.Core.Protocol;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.Protocol;
@@ -70,7 +71,7 @@ public class LiveDataProtocolTests
     {
         var actual = Json(decoded);
         RemoveAbsentNulls(actual, expected);
-        Assert.True(JsonNode.DeepEquals(expected, actual), $"Expected {expected}; actual {actual}");
+        LazyAssert.True(JsonNode.DeepEquals(expected, actual), () => $"Expected {expected}; actual {actual}");
     }
 
     [Theory]

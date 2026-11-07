@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Lala.Core.Social.Ark;
 using Lala.Core.Storage;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 using static Lala.Core.Tests.Storage.ArkQuestionStorageTestDatabase;
 
@@ -71,8 +72,8 @@ public sealed class ArkQuestionStorageParityTests
                 case "reject": store.Reject(token, role, question, answer, flag); result = null; break;
                 default: throw new InvalidDataException(op);
             }
-            Assert.True(JsonNode.DeepEquals(JsonNode.Parse(step.GetProperty("result").GetRawText()), JsonSerializer.SerializeToNode(result)), $"{name} step {index} {op} result");
-            Assert.True(JsonNode.DeepEquals(JsonNode.Parse(step.GetProperty("state").GetRawText()), db.Snapshot()), $"{name} step {index} {op} tables");
+            LazyAssert.True(JsonNode.DeepEquals(JsonNode.Parse(step.GetProperty("result").GetRawText()), JsonSerializer.SerializeToNode(result)), () => $"{name} step {index} {op} result");
+            LazyAssert.True(JsonNode.DeepEquals(JsonNode.Parse(step.GetProperty("state").GetRawText()), db.Snapshot()), () => $"{name} step {index} {op} tables");
             index++;
         }
     }

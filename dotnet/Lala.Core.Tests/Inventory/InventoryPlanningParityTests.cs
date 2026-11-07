@@ -8,6 +8,7 @@ using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Lala.Core.Inventory;
 using Lala.Core.State;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.Inventory;
@@ -181,7 +182,7 @@ public sealed class InventoryPlanningParityTests
     private static BigInteger Big(JsonNode node) => BigInteger.Parse(node.ToJsonString(), CultureInfo.InvariantCulture);
     private static JsonNode Number(BigInteger value) => JsonNode.Parse(value.ToString(CultureInfo.InvariantCulture))!;
     private static void Equal(JsonNode? expected, JsonNode? actual, string label) =>
-        Assert.True(JsonNode.DeepEquals(expected, actual), $"{label}: expected {expected}; actual {actual}");
+        LazyAssert.True(JsonNode.DeepEquals(expected, actual), () => $"{label}: expected {expected}; actual {actual}");
     private static DirectoryInfo Root()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

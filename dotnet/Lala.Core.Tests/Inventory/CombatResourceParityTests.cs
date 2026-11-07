@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Lala.Core.Inventory;
 using Lala.Core.Protocol;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.Inventory;
@@ -32,7 +33,7 @@ public sealed class CombatResourceParityTests
                 role is { } id ? new WorldPlayer(id, (byte)(L(local,"sex") ?? 0),0,0,0,0,(byte)(L(local,"head") ?? 0),0,0,0,0,false,[],S(local,"name") ?? "角色",0) : null, catalog)),
             _ => throw new InvalidOperationException(kind)
         };
-        Assert.True(JsonNode.DeepEquals(input["expected"], result), $"{kind}\nExpected: {input["expected"]}\nActual: {result}");
+        LazyAssert.True(JsonNode.DeepEquals(input["expected"], result), () => $"{kind}\nExpected: {input["expected"]}\nActual: {result}");
         Assert.Equal(beforePlayer, JsonSerializer.Serialize(player, Options));
         Assert.Equal(beforeCompanions, JsonSerializer.Serialize(companions, Options));
     }

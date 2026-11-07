@@ -13,6 +13,7 @@ using Lala.Core.Protocol;
 using Lala.Core.Sessions;
 using Lala.Core.State;
 using Lala.Core.Tests.Inventory;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.State;
@@ -91,7 +92,7 @@ public sealed class ServiceKnowledgeAllocationParityTests
                 foreach (var (key, value) in result.PlayerKnowledge.Stats)
                     Assert.Equal(new BigInteger(value), result.Observation.AllocationContext.PlayerStats[key]);
                 var beforeLive = LiveInventoryParityTests.Project(result.Observation.BeforeLiveBag, CompanionReceiveSnapshot.Empty)["inventory"];
-                Assert.True(JsonNode.DeepEquals(step["before_live_inventory"], beforeLive), $"{name} before apply_live bag at step {number}");
+                LazyAssert.True(JsonNode.DeepEquals(step["before_live_inventory"], beforeLive), () => $"{name} before apply_live bag at step {number}");
             }
             Check(step["expected"]!, state.Snapshot(), at, $"{name} step {number++}");
             history.Add((state.Snapshot(), step["expected"]!, at));
@@ -158,5 +159,5 @@ public sealed class ServiceKnowledgeAllocationParityTests
     private static JsonNode Stats(ImmutableDictionary<string, BigInteger> values) => new JsonObject(values.Select(pair =>
         KeyValuePair.Create(pair.Key, JsonNode.Parse(pair.Value.ToString(CultureInfo.InvariantCulture)))));
     private static void Equal(JsonNode? expected, JsonNode? actual, string label) =>
-        Assert.True(JsonNode.DeepEquals(expected, actual), $"{label}: expected {expected}; actual {actual}");
+        LazyAssert.True(JsonNode.DeepEquals(expected, actual), () => $"{label}: expected {expected}; actual {actual}");
 }

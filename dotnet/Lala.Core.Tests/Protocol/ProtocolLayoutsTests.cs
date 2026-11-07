@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Lala.Core.Protocol;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.Protocol;
@@ -53,7 +54,7 @@ public class ProtocolLayoutsTests
         _ = name;
         var vector = JsonNode.Parse(data)!;
         var actual = Json(Decode(vector, Bytes(vector)));
-        Assert.True(JsonNode.DeepEquals(vector["expected"], actual), $"Expected {vector["expected"]}; actual {actual}");
+        LazyAssert.True(JsonNode.DeepEquals(vector["expected"], actual), () => $"Expected {vector["expected"]}; actual {actual}");
     }
 
     [Theory]

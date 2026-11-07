@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text.Json.Nodes;
 using Lala.Core.Battle;
 using Lala.Core.Protocol;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.Battle;
@@ -122,7 +123,7 @@ public sealed class AttributeAllocationParityTests
         ["sent_at"] = state.SentAt, ["status"] = state.Status
     };
     private static void AssertJson(JsonNode? expected, JsonNode? actual, string label) =>
-        Assert.True(JsonNode.DeepEquals(expected, actual), $"{label}: expected {expected}; actual {actual}");
+        LazyAssert.True(JsonNode.DeepEquals(expected, actual), () => $"{label}: expected {expected}; actual {actual}");
     private static string Hash(ReadOnlySpan<byte> source) => Convert.ToHexString(SHA256.HashData(Normalize(source))).ToLowerInvariant();
     private static byte[] Normalize(ReadOnlySpan<byte> source)
     {

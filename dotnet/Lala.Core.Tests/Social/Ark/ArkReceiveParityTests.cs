@@ -7,6 +7,7 @@ using System.Text.Json.Serialization;
 using Lala.Core.Protocol;
 using Lala.Core.Social.Ark;
 using Lala.Core.State;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.Social.Ark;
@@ -198,7 +199,7 @@ public sealed class ArkReceiveParityTests
     }
 
     private static void Check(JsonNode expected, JsonNode actual, string description) =>
-        Assert.True(JsonNode.DeepEquals(expected, actual), $"{description}\nExpected: {expected}\nActual: {actual}");
+        LazyAssert.True(JsonNode.DeepEquals(expected, actual), () => $"{description}\nExpected: {expected}\nActual: {actual}");
 
     private sealed class IntegerConverter : JsonConverter<BigInteger>
     {

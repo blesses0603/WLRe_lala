@@ -10,6 +10,7 @@ using System.Text.Json.Nodes;
 using Lala.Core.Battle;
 using Lala.Core.Catalogs;
 using Lala.Core.Diagnostics.Parsing;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.Catalogs.NormalAttack;
@@ -60,7 +61,7 @@ public sealed class NormalAttackCatalogTests
         }
         else Assert.Null(error);
         var actual = JsonNode.Parse(ParserDiagnosticJson.Serialize(ParserDiagnosticRun.Project(observation), default).AsSpan());
-        Assert.True(JsonNode.DeepEquals(expected, actual), name + ": " + actual);
+        LazyAssert.True(JsonNode.DeepEquals(expected, actual), () => name + ": " + actual);
         Assert.False(session.Run.AssetsReady);
         Assert.False(session.Run.CanSendPackets);
     }

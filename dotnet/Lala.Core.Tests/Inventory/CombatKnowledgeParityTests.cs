@@ -6,6 +6,7 @@ using Lala.Core.Battle;
 using Lala.Core.Inventory;
 using Lala.Core.Protocol;
 using Lala.Core.Sessions;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.Inventory;
@@ -140,5 +141,5 @@ public sealed class CombatKnowledgeParityTests
         return row;
     }
     private static void AssertJson(JsonNode expected, JsonNode actual, string label) =>
-        Assert.True(JsonNode.DeepEquals(expected, actual), $"{label}: expected {expected}; actual {actual}");
+        LazyAssert.True(JsonNode.DeepEquals(expected, actual), () => $"{label}: expected {expected}; actual {actual}");
 }

@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using Lala.Core.Protocol;
 using Lala.Core.World;
 using Lala.Core.World.Tent;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.World.Tent;
@@ -58,7 +59,7 @@ public sealed class TentDecoderTests
             var json = Canonical(actual)?.ToJsonString() ?? "null";
             Assert.Equal(hash.GetValue<string>(), Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(json))).ToLowerInvariant());
         }
-        else Assert.True(JsonNode.DeepEquals(outcome["expected"], actual), $"Expected {outcome["expected"]}; actual {actual}");
+        else LazyAssert.True(JsonNode.DeepEquals(outcome["expected"], actual), () => $"Expected {outcome["expected"]}; actual {actual}");
     }
 
     [Theory, MemberData(nameof(AllCases))]

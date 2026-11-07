@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Lala.Core.Activities;
 using Lala.Core.Protocol;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.Protocol;
@@ -77,7 +78,7 @@ public class ServerProtocolTests
         }
         var expected = WithoutNulls(outcome["expected"]?.DeepClone());
         var actual = WithoutNulls(Json(Decode(v, bytes)));
-        Assert.True(JsonNode.DeepEquals(expected, actual), $"Expected {expected}; actual {actual}");
+        LazyAssert.True(JsonNode.DeepEquals(expected, actual), () => $"Expected {expected}; actual {actual}");
     }
 
     [Theory]

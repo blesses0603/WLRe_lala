@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Lala.Core.Protocol;
 using Lala.Core.Social;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.Social;
@@ -61,7 +62,7 @@ public sealed class SocialDecoderTests
             actual.AsObject().Remove("main"); actual.AsObject().Remove("sub");
         }
         RemoveAbsentNulls(actual, expected);
-        Assert.True(JsonNode.DeepEquals(expected, actual), $"Expected {expected}; actual {actual}");
+        LazyAssert.True(JsonNode.DeepEquals(expected, actual), () => $"Expected {expected}; actual {actual}");
     }
 
     [Theory, MemberData(nameof(ValidCases))]

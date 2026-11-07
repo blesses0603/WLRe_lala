@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Lala.Core.Resources;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.Resources;
@@ -63,8 +64,8 @@ public sealed class ResourceValidationTests
         object actual = Evaluate(kind, body);
         var expected = JsonNode.Parse(expectedJson)!;
         if (kind == "snapshot-compare") expected.AsObject().Remove("note"); // localized display text is not a policy field
-        Assert.True(JsonNode.DeepEquals(expected, JsonNode.Parse(JsonSerializer.Serialize(actual))),
-            $"Python parity mismatch: {kind}/{name}\nExpected {expected}\nActual {JsonSerializer.Serialize(actual)}");
+        LazyAssert.True(JsonNode.DeepEquals(expected, JsonNode.Parse(JsonSerializer.Serialize(actual))),
+            () => $"Python parity mismatch: {kind}/{name}\nExpected {expected}\nActual {JsonSerializer.Serialize(actual)}");
     }
 
     private static object Evaluate(string kind, byte[] body)

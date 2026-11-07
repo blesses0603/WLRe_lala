@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Lala.Core.Battle;
 using Lala.Core.Inventory;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.Inventory;
@@ -32,7 +33,7 @@ public sealed class CombatActionCandidateParityTests
         else
         {
             var result = Run(input,context,actor,normal);
-            Assert.True(JsonNode.DeepEquals(input["expected"],Project(result)), $"Case {caseId}\nExpected: {input["expected"]}\nActual: {Project(result)}\nInput: {input}");
+            LazyAssert.True(JsonNode.DeepEquals(input["expected"],Project(result)), () => $"Case {caseId}\nExpected: {input["expected"]}\nActual: {Project(result)}\nInput: {input}");
         }
         Assert.Equal(beforeBag,LiveInventoryParityTests.Project(context.Inventory,context.Companions).ToJsonString());
         Assert.Equal(beforePlayer,JsonSerializer.Serialize(context.Player)); Assert.Equal(beforeActor,JsonSerializer.Serialize(actor));

@@ -7,6 +7,7 @@ using Lala.Core.Inventory;
 using Lala.Core.Protocol;
 using Lala.Core.State;
 using Lala.Core.World;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.World;
@@ -103,8 +104,8 @@ public sealed class FurnitureGeometryIntegrationTests
         {
             ["phase"] = world.Phase, ["packet_count"] = Number(world.PacketCount), ["navigation"] = navigation
         };
-        Assert.True(JsonNode.DeepEquals(WithoutNulls(expected.DeepClone()), WithoutNulls(actual)),
-            $"{label}: expected {expected}; actual {actual}");
+        LazyAssert.True(JsonNode.DeepEquals(WithoutNulls(expected.DeepClone()), WithoutNulls(actual)),
+            () => $"{label}: expected {expected}; actual {actual}");
     }
 
     private static JsonNode Number(BigInteger value) => JsonNode.Parse(value.ToString(CultureInfo.InvariantCulture))!;

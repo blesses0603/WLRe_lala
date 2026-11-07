@@ -898,7 +898,10 @@
     "scope": "runtime",
     "status": "partially_migrated",
     "target_files": [
-      "dotnet/Lala.Core/Catalogs/TextDataParser.cs"
+      "dotnet/Lala.Core/Catalogs/TextDataParser.cs",
+      "dotnet/Lala.Core/Catalogs/ExpeditionCatalogModels.cs",
+      "dotnet/Lala.Core/Catalogs/ExpeditionCatalogParser.cs",
+      "dotnet/Lala.Core/Catalogs/ExpeditionWireReader.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -966,13 +969,17 @@
       "live_server_acceptance": "not_run"
     },
     "migrated_scope": [
-      "Only pure parse_text_data is ported: more than four and at most 16 MiB, signed Int32 count 1–1,000,000, UInt32 keys and UInt16 byte lengths. Strict UTF-16LE retains zero keys, empty strings, BOMs and every NUL without the unrelated ItemData string cap. Duplicate keys, odd lengths, invalid Unicode, truncation and trailing bytes fail closed; results are owned read-only maps.",
+      "Pure parse_text_data subset: more than four and at most 16 MiB, signed Int32 count 1–1,000,000, UInt32 keys and UInt16 byte lengths. Strict UTF-16LE retains zero keys, empty strings, BOMs and every NUL without the unrelated ItemData string cap. Duplicate keys, odd lengths, invalid Unicode, truncation and trailing bytes fail closed; results are owned read-only maps.",
       "Source text-v1 decorator/read diagnostics retain the text_data input name, digests, counts, checkpoints and failure cursor fields. Shared internal diagnostics add only an optional code-owned input name, retaining raw as the default for existing callers; diagnostics are optional and in memory.",
-      "Combined TextData/NPC quote evidence: 295 actual decorated-Python vectors and 309 focused Release passes (295 parity, four source hashes, ten contracts), plus 31 original Python tests. Synthetic maximum-count/16-MiB inputs use deterministic recipes and full-result digests. Exact source messages are retained while ProtocolError/ValueError and diagnostic error_type map to CatalogDecodeException; typed spans, immutable ownership and cooperative cancellation are explicit API differences."
+      "Combined TextData/NPC quote evidence: 295 actual decorated-Python vectors and 309 focused Release passes (295 parity, four source hashes, ten contracts), plus 31 original Python tests. Synthetic maximum-count/16-MiB inputs use deterministic recipes and full-result digests. Exact source messages are retained while ProtocolError/ValueError and diagnostic error_type map to CatalogDecodeException; typed spans, immutable ownership and cooperative cancellation are explicit API differences.",
+      "parse_catalog now retains complete 105-byte AdventureData rows with conditions, four recommendations, three rewards, special reward and signed EXP; 15-byte AdventureLv rows and source hashes remain. Whole-row checks and complete task-table/EOF-before-level ordering are preserved. Source decimal-string task/NPC keys become ushort and level keys byte in owned ordered immutable results.",
+      "parse_npcs parses the complete career table and EOF before the NPC header; 17-byte rows join career ID to original ID. Each NPC consumes two strict UInt16-byte-length strings and 203 fixed fields, returning element/kind/original ID. Zero original IDs and absent target rows remain valid. This is the expedition projection, not reviewed NormalAttackCatalogParser. Raw expedition parsers retain source count/string limits, including valid NPC inputs above 16 MiB, rather than inheriting the separate composition ceiling.",
+      "attach_names reuses TextDataParser, accepts only parser-produced immutable catalogs, rejects missing/empty names but preserves whitespace/NUL names, defaults absent areas to empty and appends the TextData hash. Exact parser schemas/input names, cursor/checkpoint/digest observations and nested event order remain; attach adds no decorator. Exact source rejection messages map to CatalogDecodeException except uncaught NPC Unicode errors use DecoderFallbackException with platform-specific message excluded from parity.",
+      "Required-table slice: 1,256 unique focused Release passes comprise 1,239 actual decorated-Python vectors, five source-hash checks and twelve contracts. Sixteen compressed/decoded-hash-checked resources retain truncations, full field/result order, diagnostics, source precedence and accepted maximum-record recipes with complete ordered typed-binary result digests. Independent final review approved; three generations reproduced identical resources. This is not full runtime/device/server acceptance."
     ],
     "outstanding_scope": [
-      "All other expedition data behavior remains outside this slice: parse_catalog, attach_names, expedition NPC/career parsing, load_catalog/load_verified_1275_catalog/load_active_catalog, data roots and runtime/catalog selection. No localization runtime, files/downloads, bundle extraction, SQLite/cache installation, UI/Android/session wiring or commands.",
-      "Synthetic TextData parse success and quote-reference validation do not certify official revision identity, official-resource positive acceptance or gameplay readiness. Surrounding original Python runtime tests do not establish C# runtime/storage migration. No full-module or new combined full-suite acceptance is claimed."
+      "data_root, load_catalog, load_verified_1275_catalog, load_active_catalog, official source verification/pinned runtime policies and runtime/catalog selection remain unported. No localization runtime activation, files/downloads, extraction, SQLite/cache installation, UI/Android/session/transport or commands. The separate six-source composition has a 16-MiB per-source bound but does not alter raw expedition parser acceptance.",
+      "Typed spans, parser-produced catalogs and immutable fixed-schema values do not emulate arbitrary Python objects, dictionary mutations or malformed caller catalog shapes. Synthetic parse/name-join success and content hashes do not certify provenance, official-resource positive acceptance or gameplay readiness. Cooperative cancellation adds no failure observation or partial catalog."
     ]
   },
   {
@@ -1441,7 +1448,7 @@
       "Typed spans replace Python dynamic types/coercions; immutable owned maps/arrays/records replace mutable dictionaries/lists. Exact error messages remain while PreviewError/ValueError/ProtocolError and diagnostic error_type map to CatalogDecodeException. Cooperative cancellation and optional in-memory diagnostics do not create source provenance or command authority."
     ],
     "outstanding_scope": [
-      "Dungeon/Cooperate parsers, awards/flags, catalog assembly/name binding and save_catalog remain unported. No catalog adapters, verified identity/activation, extraction/downloads/installation/storage, live globals, entry/transfer/send logic, AccountSession, UI or Android changes.",
+      "Dungeon/Cooperate parsers, awards/flags, catalog assembly/name binding and save_catalog remain unported. Stage parsing now composes through the separate pure source adapter; verified identity/activation, extraction/downloads/installation/storage, live globals, entry/transfer/send logic, AccountSession, UI and Android integration remain outstanding.",
       "No official resources or actual official-source/runtime/device/server positive acceptance. Parsed Stage fields and diagnostic success do not authorize instance entry or portal/map use."
     ]
   },

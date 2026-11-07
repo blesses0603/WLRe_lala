@@ -600,8 +600,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.official_bundle_download",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Resources/BundleSources/BundleSourcePlan.cs",
+      "dotnet/Lala.Core/Resources/BundleSources/BundleSourcePreparation.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -664,11 +667,19 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Partial BundleSpec/spec_from_manifest validation and fetch/verification behavior through internal injected response/cache streams only. Safe bundle names, package/version/output-style metadata, 256-MiB per-bundle metadata cap and exact URL construction precede acquisition. Response URL/status checks precede Content-Length/body reads; at-most-64-KiB chunks and a one-byte overflow probe reject excess/truncated content. Owned private bytes are verified by exact length, MD5 and little-endian CRC32; returned handles never reopen a filename.",
+      "Cache candidates are checked during planning and acquisition. Initial corruption is a miss; a planned hit that changes is a hard failure, not an implicit extra download. Every opened stream is disposed on success/failure/cancellation/stale attempts. An independent 32-MiB total owned-source bound includes cache hits.",
+      "Combined source-preparation evidence: 37 retained actual-Python manifest/plan cases plus 44 contracts, totaling 81 new focused tests. The 350-test Resources pass includes existing tests; these are not 350 new cases. Six CRLF-only source hashes, complete manifest fields, exact plan order and synthetic byte checksums are retained. Invalid cases use typed failures rather than claiming exact Python exception text; no newer full Core receipt is implied."
+    ],
+    "outstanding_scope": [
+      "No production HTTPS source, TLS/provenance receipt, filesystem cache acquisition adapter, paths/cache receipts, previous-version content reuse, atomic publication or persisted writes. Only the injected cache-stream seam exists; safe cancellable regular-file opening and anchored no-follow writes remain future platform work. Checksums do not authorize extraction/runtime/login or packet sending."
+    ]
   },
   {
     "id": "desktop:wlre/services/official_incremental_sync.py",
@@ -679,8 +690,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.official_incremental_sync",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Resources/BundleSources/BundleSourcePlan.cs",
+      "dotnet/Lala.Core/Resources/BundleSources/BundleSourcePreparation.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -745,11 +759,19 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Only planning for the ten exact DataPackage runtime paths and scripted bounded acquisition is connected. Each selected root contributes its complete DependIDs set once; dependencies excluding roots precede roots, each group sorted by bundle name. Cycles/self-references/repeated IDs are not recursively traversed or rejected merely as graph cycles. Whole-index bundle added/modified/removed counts compare resolved dependency names, tags, encryption, Unity CRC and file identity.",
+      "The runtime-specific download ceilings are 24 files/32 MiB, checked before any bundle acquisition; these are not the generic execute_update_plan defaults. An additional conservative 32-MiB retained-byte cap covers both downloads and cache hits. MainPackage is independently parsed and identity-checked before required DataPackage bundles can be acquired.",
+      "Combined source-preparation evidence: 37 retained actual-Python manifest/plan cases plus 44 contracts, totaling 81 new focused tests. The 350-test Resources pass includes existing tests; these are not 350 new cases. Six CRLF-only source hashes, complete manifest fields, exact plan order and synthetic byte checksums are retained. Invalid cases use typed failures rather than claiming exact Python exception text; no newer full Core receipt is implied."
+    ],
+    "outstanding_scope": [
+      "Generic arbitrary-selector planning, previous verified manifest discovery, historical receipt scanning, cross-version bundle reuse, production execution/HTTPS and filesystem cache publication remain unported. This is not complete execute_update_plan, extraction, resource activation or trusted admission. The internal seam performs no cache writes or partial-file creation."
+    ]
   },
   {
     "id": "desktop:wlre/services/official_lua_index.py",
@@ -839,8 +861,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.official_manifest_sync",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Resources/BundleSources/YooAssetManifest.cs",
+      "dotnet/Lala.Core/Resources/BundleSources/BundleSourcePreparation.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -929,11 +954,19 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Partial manifest retrieval/identity checks use an internal scripted source for DataPackage and MainPackage. Exact response location/status precede length/body checks; eight ASCII hex hash bytes, bounded manifest bytes and little-endian CRC32 must match before actual binary parsing and header/package/version/output-style checks. Both complete manifests and versions are reread at the end, rejecting same-version byte replacement as well as version changes.",
+      "Manifest-content identity matches the existing canonical ManifestIdentity structure using actual parsed fields, not the observation-only CatalogKey. The existing ManifestIdentity API is unchanged; owned bytes and attempt checks prevent stale result reuse.",
+      "Combined source-preparation evidence: 37 retained actual-Python manifest/plan cases plus 44 contracts, totaling 81 new focused tests. The 350-test Resources pass includes existing tests; these are not 350 new cases. Six CRLF-only source hashes, complete manifest fields, exact plan order and synthetic byte checksums are retained. Invalid cases use typed failures rather than claiming exact Python exception text; no newer full Core receipt is implied."
+    ],
+    "outstanding_scope": [
+      "Production HTTPS/origin authentication, trusted source/freshness receipts, cached-manifest receipt reads/writes, atomic persistence and public provenance issuance remain unported. The scripted source and matching CRC/hash values do not establish official manifest authenticity or runtime admission. No filesystem root/cache publication/extractor is supplied."
+    ]
   },
   {
     "id": "desktop:wlre/services/official_resource_sync.py",
@@ -1269,7 +1302,13 @@
       "dotnet/Lala.Core/Catalogs/TextDataParser.cs",
       "dotnet/Lala.Core/Catalogs/NpcBattleTalkCatalogParser.cs",
       "dotnet/Lala.Core/Catalogs/SmithDataParser.cs",
-      "dotnet/Lala.Core/Catalogs/StageDataParser.cs"
+      "dotnet/Lala.Core/Catalogs/StageDataParser.cs",
+      "dotnet/Lala.Core/Catalogs/CatalogSourceAdapters.cs",
+      "dotnet/Lala.Core/Catalogs/ItemDataParser.cs",
+      "dotnet/Lala.Core/Catalogs/CatalogReader.cs",
+      "dotnet/Lala.Core/Catalogs/TalkDataParser.cs",
+      "dotnet/Lala.Core/Catalogs/ExpeditionCatalogParser.cs",
+      "dotnet/Lala.Core/Catalogs/ExpeditionWireReader.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -1372,10 +1411,12 @@
       "NormalAttackCatalogParser now reuses optional source-equivalent NPC decorator/read diagnostics within its 810-vector corpus, retaining digest/count/checkpoint/error behavior and privacy/cancellation contracts. build_catalog itself has no source decorator, and its nested ItemData observation is not yet instrumented.",
       "CombatCatalogParser reuses supported NPC diagnostics and preserves secondary NPC reread checkpoints in enclosing diagnosed calls; three real-Python regressions verify parent failure locations after names, keys or constants fail. It does not invent aggregate constants/builder events or supply missing ItemData/SkillData decorators.",
       "Automatic optional in-memory TextData/NPC quote diagnostics retain text-v1 and npc-battle-talk-known-v1 schemas, parser IDs, input names, digests, counts and failure cursors in 295 actual decorated-Python vectors. The internal span helper accepts an optional code-owned input name: existing raw defaults remain unchanged, and TextData uses text_data. The quote builder remains undecorated; error type labels use CatalogDecodeException.",
-      "Optional Smith/Stage diagnostics preserve smith-33-v1, smith-35-v1, smith-reviewed-v1 and stage-76-v1 parser schemas, data input names, counts, digests and failure locations across 768 actual decorated-Python vectors. Nested Smith 33-byte successes are suppressed, child failures remain separate, and selector outer locations retain only the source child offset rather than copying child field/record metadata. Timed marking is undecorated; these schemas do not certify source provenance."
+      "Optional Smith/Stage diagnostics preserve smith-33-v1, smith-35-v1, smith-reviewed-v1 and stage-76-v1 parser schemas, data input names, counts, digests and failure locations across 768 actual decorated-Python vectors. Nested Smith 33-byte successes are suppressed, child failures remain separate, and selector outer locations retain only the source child offset rather than copying child field/record metadata. Timed marking is undecorated; these schemas do not certify source provenance.",
+      "Catalog source adapters add catalog-contract-v1/catalog-set-v1 observations and an internal adapter-only ItemData diagnosed/ordered path. Within 601 actual decorated-Python vectors, feature results count as null and selected sets as five; nested successes are suppressed, child failures stay separate, outer wrapping retains exact generic messages without child cursors or inner payloads. Existing public ItemData diagnostic behavior is unchanged.",
+      "Talk and expedition catalog/NPC parsers now retain talk-v1, adventure-v1 and npc-career-v1 source IDs/schemas, exact named input digests, cursor/checkpoints and nested observation order within 1,239 actual-Python vectors. Attach/six-source composition add no aggregate decorator. NPC strict Unicode failures retain DecoderFallbackException as the typed counterpart of uncaught UnicodeDecodeError; its platform-specific codec message is not asserted. Cancellation returns no partial catalog and adds no parser failure."
     ],
     "outstanding_scope": [
-      "Filesystem/atomic persistence, default paths, registry/signature binding, traceback-local inference, ItemData/SkillData/remaining parser instrumentation and runtime catalog integration remain. Eve, normal-NPC, TextData, NPC quote and Smith/Stage observations do not activate resources; reports never authorize assets or commands."
+      "Filesystem/atomic persistence, default paths, registry/signature binding, traceback-local inference, public/global ItemData and SkillData/remaining parser instrumentation, and runtime catalog integration remain. Internal adapter-only ItemData observations do not close existing normal-attack/combat nested diagnostic gaps. All parser/adapter observations remain non-authorizing; reports never activate assets or commands."
     ]
   },
   {
@@ -2282,8 +2323,14 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Resources/BundleSources/BundleSourcePlan.cs",
+      "dotnet/Lala.Core/Resources/BundleSources/BundleSourcePreparation.cs",
+      "dotnet/Lala.Core/Catalogs/OfflineRuntimeTableDecoder.cs",
+      "dotnet/Lala.Core/Catalogs/ExpeditionCatalogModels.cs",
+      "dotnet/Lala.Core/Catalogs/ExpeditionCatalogParser.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -2359,11 +2406,22 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Required-source preparation from sync_pinned_runtime_bundles is partially composed: exact ten names and Assets/ResourcesBuild/Data/<name>.bytes paths from DataPackage, both-package manifest validation, source quotas, complete-set dependency order, injected cache/download stream verification and immutable owned source handles. The terminal status is required bundle sources verified; extractor unavailable.",
+      "Combined source-preparation evidence: 37 retained actual-Python manifest/plan cases plus 44 contracts, totaling 81 new focused tests. The 350-test Resources pass includes existing tests; these are not 350 new cases. Six CRLF-only source hashes, complete manifest fields, exact plan order and synthetic byte checksums are retained. Invalid cases use typed failures rather than claiming exact Python exception text; no newer full Core receipt is implied.",
+      "The separate OfflineRuntimeTableDecoder now composes only supplied Talk, Text, Adventure, AdventureLv, NPC and career bytes in their relative source parse order. Each source is checked at its stage for presence and a 16-MiB ceiling; unrelated keys are ignored. Runtime name binding requires nonblank names and at most 8192 Unicode codepoints for name/area, including Python whitespace U+001C–U+001F. It adds NPC/career hashes to Adventure hashes, not an invented TextData hash.",
+      "Strict name-binding parity executes the exact source AST block while excluding enclosing fixed-source/hash/count gates, caches and activation. Trusted revision/source labels are removed only when comparing this block with the intentionally unverified C# result. SourceKind is supplied_offline_tables; verified-provenance, assets-ready, send and runtime-admitted flags are always false.",
+      "Required-table slice: 1,256 unique focused Release passes comprise 1,239 actual decorated-Python vectors, five source-hash checks and twelve contracts. Sixteen compressed/decoded-hash-checked resources retain truncations, full field/result order, diagnostics, source precedence and accepted maximum-record recipes with complete ordered typed-binary result digests. Independent final review approved; three generations reproduced identical resources. This is not full runtime/device/server acceptance."
+    ],
+    "outstanding_scope": [
+      "No full sync_pinned_runtime_bundles production/cache integration or load_verified_bundle_runtime. The six-table decoder does not implement full ten-table assembly, Eve door projection, fixed-version runtime hash/count policy, Unity extraction orchestration, normalized storage, trusted provenance, install/activation, freshness/admission, login or commands. Source-preparation types remain internal; the separate supplied-table decoder is explicitly unverified and cannot override existing pins.",
+      "The bounded UnityTextAssetExtractor now exists as a separate internal offline decoder with owned-writer fixture evidence. It is not connected to this runtime pipeline and supplies no provenance, admission or activation authority."
+    ]
   },
   {
     "id": "desktop:wlre/services/world/catalog_adapters.py",
@@ -2374,8 +2432,15 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "ported_offline",
+    "target_files": [
+      "dotnet/Lala.Core/Catalogs/CatalogSourceModels.cs",
+      "dotnet/Lala.Core/Catalogs/CatalogSourceAdapters.cs",
+      "dotnet/Lala.Core/Catalogs/CatalogSourceAdapters.Json.cs",
+      "dotnet/Lala.Core/Catalogs/OrderedCatalog.cs",
+      "dotnet/Lala.Core/Catalogs/ItemDataParser.cs",
+      "dotnet/Lala.Core/Catalogs/CatalogReader.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -2439,11 +2504,23 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Offline module surface is ported within the documented typed API: immutable source contracts/results, JSON scene validation, binary layout gates, all schema decoders, parse_feature and parse_selected. Constructor feature/schema, source-name, lowercase SHA-256, package and version validation precedes feature catalog-key/package-version/nonempty 16-MiB/hash checks in source order. Exactly five contracts return npc, shops, crafting, scenes, items in order; extra payloads are ignored, extra contracts reject, and late failure returns no partial set. Historic All four error wording is retained.",
+      "Composes actual ItemData, Smith and Stage parsers and accepts EVE-derived NPC/shop JSON, preserving validated extras, recursive key order and duplicate-property first-position/last-value behavior. Smith reviewed selection returns an unmarked keyed map for 33-byte rows and a timed-marked array for 35-byte rows; zero rows select 33 first. Ordered immutable results own their binary/JSON data.",
+      "ItemData composition uses an internal-only ordered/diagnosed path through the shared layout, preserving the fixed independent 1296 pin without forwarding the adapter package version. Caller hashes do not unlock reviewed ItemData fields. Existing public ItemData behavior, frozen-map returns, admission order, signatures and diagnostics are unchanged.",
+      "Source catalog-contract-v1/catalog-set-v1 diagnostics retain exact adapter messages and source locations: feature record count is null, selected count is five, nested successes are suppressed, child failures remain separate, and generic wrapping retains no inner exception/payload or child cursor. CatalogAdapterException/CatalogDecodeException labels explicitly replace Python types.",
+      "601 actual decorated-Python vectors in seven compressed/decoded-hash-checked resources with seven source fingerprints and complete ordered-output digests for maximum inputs. Focused Release 2,274 passes include older ItemData/catalog, normal-attack and combat regressions, not 2,274 new tests. Original Python: 35 passes and one private official-bundle skip; independent static review and byte-identical fixture regeneration passed."
+    ],
+    "outstanding_scope": [
+      "Caller contracts/checksums/catalog keys/package versions are validation inputs, not independently reviewed provenance. AssetsReady and CanSendPackets are permanently false. No runtime/state activation, ten-table completeness, extraction/downloads, storage/installation, network/login/sends, UI/Android/session, official-source positive, device or live acceptance is established. New integrated full-suite verification remains separate from focused evidence.",
+      "Typed spans, nullable strings/contracts and mappings exclude arbitrary dynamic Python input values. JSON uses strict UTF-8/RFC syntax, depth at most 64, finite floats and valid Unicode escapes; NaN/Infinity, overflow-to-infinity and unpaired surrogates reject explicitly. Python 4,300-digit integer limits apply even to ignored/overwritten values; row/count integers reject booleans/floats while schema_version retains true/1.0 equality. Valid Unicode name/version lengths count scalars. Cooperative cancellation is added; bounded synchronous JSON parse checks cancellation before and after.",
+      "The internal ItemData diagnostic path does not complete missing public/global ItemData diagnostics or the existing normal-attack/combat nested observations. No full dynamic-Python value acceptance or runtime migration claim."
+    ]
   },
   {
     "id": "desktop:wlre/services/world/catalog_identity.py",
@@ -2507,7 +2584,7 @@
       "Internal post-parser package/header CRC/SHA identity derivation and stale-source checks."
     ],
     "outstanding_scope": [
-      "No public verified-source factory; actual trusted manifest fetch/full YooAsset adapter remains."
+      "No public verified-source factory or trusted production manifest fetch/provenance issuance. The internal bounded YooAsset parser and scripted source-preparation path now compute the same canonical content identity from parsed bytes, but do not change ManifestIdentity APIs or mint source/admission authority."
     ]
   },
   {
@@ -2808,7 +2885,7 @@
     ],
     "outstanding_scope": [
       "load_verified_catalog, downloads/network/files, Lua execution/decryption, normalized caches, verified runtime activation and UI/session/command integration remain. Synthetic pins are substituted only in restored test contexts; public gates reject synthetic assets. No actual official-resource success or runtime provenance is established.",
-      "Reused ItemDataParser and SkillDataParser source decorators remain absent. Constants/build_catalog have no source decorator; only supported NPC and enclosing-parent diagnostics are compared, with secondary NPC reread checkpoints preserved. This is not full diagnostic parity.",
+      "Reused ItemDataParser and SkillDataParser source decorators remain absent in combat assembly; the newer internal source-adapter-only ItemData path does not change these calls. Constants/build_catalog have no source decorator; supported NPC and enclosing-parent diagnostics retain secondary NPC reread checkpoints. This is not full diagnostic parity.",
       "Inherited SkillDataParser public size-before-hash order and English fingerprint error differ from Python hash-first/Chinese error; short layout record rejection and inherited ItemData truncation labels are explicit narrow deltas. Unknown enum/invalid float/4300-digit-limit errors are value-free, and projection ranges are deliberate typed limits rather than arbitrary Python-object parity."
     ]
   }

@@ -9,6 +9,7 @@ using System.Text.Json.Nodes;
 using Lala.Core.Catalogs;
 using Lala.Core.Diagnostics.Parsing;
 using Lala.Core.Inventory;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.Catalogs.Combat;
@@ -50,7 +51,7 @@ public sealed class CombatCatalogTests
             var expected = JsonNode.Parse(supportedDiagnostics[index].GetRawText())!;
             if (expected["error_type"] is not null) expected["error_type"] = nameof(CatalogDecodeException);
             var actual = JsonNode.Parse(ParserDiagnosticJson.Serialize(ParserDiagnosticRun.Project(session.Run.Events[index]), default).AsSpan());
-            Assert.True(JsonNode.DeepEquals(expected, actual), name + ": " + actual);
+            LazyAssert.True(JsonNode.DeepEquals(expected, actual), () => name + ": " + actual);
         }
         Assert.False(session.Run.AssetsReady);
         Assert.False(session.Run.CanSendPackets);

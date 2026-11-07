@@ -1296,7 +1296,8 @@
     "scope": "runtime",
     "status": "partially_migrated",
     "target_files": [
-      "dotnet/Lala.Core/State/ServiceStateCoordinator.cs"
+      "dotnet/Lala.Core/State/ServiceStateCoordinator.cs",
+      "dotnet/Lala.Core/Sessions/Receive/ReceiveAttempt.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -1434,10 +1435,11 @@
       "Crafting and bounded bag/companion observers now composed, with shared stackability and ordered S8 buffers;13 mixed State.apply scenarios524 checkpoints.",
       "Party and instances now run before local dispatch; tent runs afterward. Twenty-two mixed Python sequences cover 679 checkpoints.",
       "Player/equipment/battle knowledge now feeds allocation before local dispatch, preserving returned shared projections; 26 mixed Python sequences cover 1,064 checkpoints.",
-      "Source-ordered post-local shop, efficiency, guild actions and Ark receive composition with atomic publication; 26 real State.apply scenarios / 1,414 checkpoints / 38 event kinds."
+      "Source-ordered post-local shop, efficiency, guild actions and Ark receive composition with atomic publication; 26 real State.apply scenarios / 1,414 checkpoints / 38 event kinds.",
+      "Internal receive-only integration now connects the actual wire decoder/server dispatcher to all eighteen existing observers on a dedicated writer Thread, preserving snapshot-bound inputs, forced resource holds and atomic commit/retirement. The 283 unique receive tests compare intermediate/final snapshots with direct coordinator composition; repeated race runs are stability evidence, not additional unique tests."
     ],
     "outstanding_scope": [
-      "All eighteen observer positions have bounded receive composition, not complete State/module parity. Persistence completion, command/tick scheduling, remaining fields and live-session/transport wiring remain."
+      "All eighteen observer positions and their internal receive-only byte-source integration are bounded subsets, not complete State/module parity. Persistence completion, command/tick scheduling, remaining fields, production transport and authenticated account-session wiring remain. IsCompleteState stays false; forced receive resource holds never establish runtime readiness."
     ]
   },
   {

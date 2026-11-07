@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Lala.Core.Automation;
 using Lala.Core.Protocol;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.Automation;
@@ -184,7 +185,7 @@ public sealed class AutomationParityTests
             string[] packets = candidate is null ? [] : [Convert.ToHexString(candidate.Body()).ToLowerInvariant()];
             Assert.Equal(row.GetProperty("packets").EnumerateArray().Select(p => p.GetString()), packets);
             var expected = JsonNode.Parse(row.GetProperty("state").GetRawText()); var actual = cube ? View(cs) : View(ds);
-            Assert.True(JsonNode.DeepEquals(expected, actual), label + "\nExpected: " + expected + "\nActual: " + actual);
+            LazyAssert.True(JsonNode.DeepEquals(expected, actual), () => label + "\nExpected: " + expected + "\nActual: " + actual);
         }
     }
     private static RewardBag Bag(RewardBag bag, JsonElement op)

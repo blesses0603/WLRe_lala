@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Lala.Core.Diagnostics.Parsing;
 
 [assembly: InternalsVisibleTo("Lala.Core.Tests")]
 
@@ -12,19 +13,21 @@ public sealed class CatalogDecodeException : FormatException
     public CatalogDecodeException(string message) : base(message) { }
 }
 
-internal ref struct CatalogReader(ReadOnlySpan<byte> data, CancellationToken cancellationToken)
+internal ref struct CatalogReader(ReadOnlySpan<byte> data, CancellationToken cancellationToken, bool sourceItem = false)
 {
     private static readonly UnicodeEncoding StrictUnicode = new(false, false, true);
     private readonly ReadOnlySpan<byte> data = data;
     private readonly CancellationToken cancellationToken = cancellationToken;
+    private readonly bool sourceItem = sourceItem;
     public int Position { get; private set; }
     public int Remaining => data.Length - Position;
 
     public ReadOnlySpan<byte> Take(int length)
     {
+        if (sourceItem) ParserDiagnostics.ReadCheckpoint(Position, length, Remaining);
         cancellationToken.ThrowIfCancellationRequested();
         if (length < 0 || length > Remaining)
-            throw new CatalogDecodeException("Catalog record truncated");
+            throw new CatalogDecodeException(sourceItem ? "ItemData record truncated" : "Catalog record truncated");
         ReadOnlySpan<byte> result = data.Slice(Position, length);
         Position += length;
         return result;
@@ -40,7 +43,11 @@ internal ref struct CatalogReader(ReadOnlySpan<byte> data, CancellationToken can
     {
         ushort length = UInt16();
         if ((!allowEmpty && length == 0) || length > ItemDataParser.MaxTextBytes || (length & 1) != 0)
+        {
+            if (sourceItem) ParserDiagnostics.Checkpoint(actual: length, expectedMax: ItemDataParser.MaxTextBytes,
+                constraint: allowEmpty ? "even_utf16_length" : "nonempty_even_utf16_length");
             throw new CatalogDecodeException("Invalid ItemData Unicode byte length");
+        }
         string text;
         try { text = StrictUnicode.GetString(Take(length)).TrimEnd('\0'); }
         catch (DecoderFallbackException)

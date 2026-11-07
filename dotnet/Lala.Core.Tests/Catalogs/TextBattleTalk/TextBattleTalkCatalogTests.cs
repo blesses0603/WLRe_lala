@@ -11,6 +11,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Lala.Core.Catalogs;
 using Lala.Core.Diagnostics.Parsing;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.Catalogs.TextBattleTalk;
@@ -315,7 +316,7 @@ public sealed class TextBattleTalkCatalogTests
         }
         var actual = JsonNode.Parse(ParserDiagnosticJson.Serialize(ParserDiagnosticRun.Project(actualEvent), default).AsSpan())!;
         if (!includeIdentity) actual.AsObject().Remove("identity");
-        Assert.True(JsonNode.DeepEquals(expected, actual), "Retained Python and C# diagnostics differ: " + actual);
+        LazyAssert.True(JsonNode.DeepEquals(expected, actual), () => "Retained Python and C# diagnostics differ: " + actual);
     }
 
     private static JsonElement Fixture(string name) => TextBattleTalkPythonVectors.FindCase(name);
