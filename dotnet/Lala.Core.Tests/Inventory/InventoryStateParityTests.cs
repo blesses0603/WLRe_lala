@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Numerics;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -88,15 +89,84 @@ public sealed class InventoryStateParityTests
     [Fact]
     public void OracleSourceHashesMatchRetainedPythonFiles()
     {
+        var directory = RepositoryRoot();
+        foreach (var (path, hash) in JsonNode.Parse(InventoryStatePythonVectors.SourceSha256)!.AsObject())
+        {
+            var bytes = File.ReadAllBytes(Path.Combine(directory.FullName, path));
+            Assert.Equal(hash!.GetValue<string>(), CanonicalSourceSha256(bytes));
+        }
+    }
+
+    public static IEnumerable<object[]> RetainedSourceHashes() =>
+        JsonNode.Parse(InventoryStatePythonVectors.SourceSha256)!.AsObject()
+            .Select(entry => new object[] { entry.Key, entry.Value!.GetValue<string>() });
+
+    [Theory]
+    [MemberData(nameof(RetainedSourceHashes))]
+    public void RetainedSourceHashesAcceptLfAndCrlfButRejectActualContentChanges(string path, string expected)
+    {
+        // Exercise every real retained source against the pinned hash, not only a
+        // synthetic sample. No repository file is edited to simulate Windows checkout.
+        var text = File.ReadAllText(Path.Combine(RepositoryRoot().FullName, path), Encoding.UTF8)
+            .Replace("\r\n", "\n", StringComparison.Ordinal);
+        var lf = Encoding.UTF8.GetBytes(text);
+        var crlf = Encoding.UTF8.GetBytes(text.Replace("\n", "\r\n", StringComparison.Ordinal));
+        Assert.Equal(expected, CanonicalSourceSha256(lf));
+        Assert.Equal(expected, CanonicalSourceSha256(crlf));
+        Assert.NotEqual(expected, CanonicalSourceSha256([.. lf, (byte)' ']));
+        Assert.NotEqual(expected, CanonicalSourceSha256([.. crlf, (byte)' ']));
+        var changedLf = (byte[])lf.Clone();
+        var changedCrlf = (byte[])crlf.Clone();
+        changedLf[0] ^= 1;
+        changedCrlf[0] ^= 1;
+        Assert.NotEqual(expected, CanonicalSourceSha256(changedLf));
+        Assert.NotEqual(expected, CanonicalSourceSha256(changedCrlf));
+    }
+
+    [Theory]
+    [InlineData("", "")]
+    [InlineData("\n", "\r\n")]
+    [InlineData("中文 😀\nsecond\n", "中文 😀\r\nsecond\r\n")]
+    [InlineData("one\ntwo\nthree", "one\r\ntwo\nthree")]
+    [InlineData("bare\rcarriage\r", "bare\rcarriage\r")]
+    [InlineData("\r\n", "\r\r\n")]
+    public void SourceHashNormalizationOnlyReplacesCrlfPairs(string canonical, string checkout)
+    {
+        var expected = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical))).ToLowerInvariant();
+        Assert.Equal(expected, CanonicalSourceSha256(Encoding.UTF8.GetBytes(checkout)));
+    }
+
+    [Fact]
+    public void SourceHashNormalizationPreservesNonNewlineBytesWithoutTextDecoding()
+    {
+        byte[] canonical = [0, 0xff, 0xfe, 13, 42, 10, 32, 13];
+        byte[] checkout = [0, 0xff, 0xfe, 13, 42, 13, 10, 32, 13];
+        var expected = Convert.ToHexString(SHA256.HashData(canonical)).ToLowerInvariant();
+        Assert.Equal(expected, CanonicalSourceSha256(checkout));
+        Assert.NotEqual(expected, CanonicalSourceSha256([0, 0xff, 0xfe, 42, 10, 32, 13]));
+    }
+
+    private static DirectoryInfo RepositoryRoot()
+    {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "wlre", "services", "items", "room_storage.py")))
             directory = directory.Parent;
         Assert.NotNull(directory);
-        foreach (var (path, hash) in JsonNode.Parse(InventoryStatePythonVectors.SourceSha256)!.AsObject())
+        return directory;
+    }
+
+    private static string CanonicalSourceSha256(ReadOnlySpan<byte> source)
+    {
+        // Git text checkout may use CRLF. Match the generator's canonical LF bytes,
+        // preserving bare CR, BOMs, whitespace, invalid UTF-8 and all content changes.
+        var canonical = new byte[source.Length];
+        var count = 0;
+        for (var index = 0; index < source.Length; index++)
         {
-            var bytes = File.ReadAllBytes(Path.Combine(directory.FullName, path));
-            Assert.Equal(hash!.GetValue<string>(), Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant());
+            if (source[index] == '\r' && index + 1 < source.Length && source[index + 1] == '\n') continue;
+            canonical[count++] = source[index];
         }
+        return Convert.ToHexString(SHA256.HashData(canonical.AsSpan(0, count))).ToLowerInvariant();
     }
 
     private static InventoryEvent? Decode(Packet packet) => StorageDecoder.Decode(packet) ?? RecoveryDecoder.Decode(packet);
