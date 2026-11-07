@@ -39,7 +39,7 @@ class PortraitRows(ttk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
         self.columnconfigure(1, weight=1)
-        self.photos = {}; self.keys = {}; self.texts = {}; self.images = {}
+        self.photos = {}; self._portrait_keys = {}; self.texts = {}; self.images = {}
         self.closed = False
         for row, kind in enumerate(('player', 'companion')):
             icon = ttk.Label(self, anchor='center', padding=0)
@@ -78,7 +78,7 @@ class PortraitRows(ttk.Frame):
             if absent:
                 status = ''; valid = False
             key = (identity, response.get('revision'), valid, id(provider))
-            if key != self.keys.get(kind):
+            if key != self._portrait_keys.get(kind):
                 pixels = image.convert('RGBA').copy() if valid else placeholder()
                 if valid:
                     pixels.thumbnail((SIZE, SIZE), Image.Resampling.LANCZOS)
@@ -88,7 +88,7 @@ class PortraitRows(ttk.Frame):
                 photo = ImageTk.PhotoImage(pixels, master=self)
                 self.images[kind].configure(image=photo)
                 self.photos[kind] = photo
-                self.keys[kind] = key
+                self._portrait_keys[kind] = key
             caption = '夥伴：未出戰' if absent else (captions[kind] or '夥伴資料待同步')
             self.images[kind].configure(text='待同步' if not valid and not absent else '',
                                         compound='center')
@@ -117,4 +117,4 @@ class PortraitRows(ttk.Frame):
     def _destroyed(self, event):
         if event.widget is self:
             self.closed = True
-            self.photos.clear(); self.keys.clear()
+            self.photos.clear(); self._portrait_keys.clear()

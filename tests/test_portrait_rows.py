@@ -20,6 +20,16 @@ class PortraitIdentity(unittest.TestCase):
         state['knowledge']['active_npc_id'] = None
         self.assertIsNone(row_identity(state, 'companion'))
 
+    def test_widget_attributes_do_not_shadow_tk_methods(self):
+        import ast
+        import inspect
+        from tkinter import ttk
+        tree = ast.parse(inspect.getsource(PortraitRows))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Attribute) and isinstance(node.ctx, ast.Store):
+                if isinstance(node.value, ast.Name) and node.value.id == 'self':
+                    self.assertFalse(callable(getattr(ttk.Frame, node.attr, None)), node.attr)
+
     def test_placeholder_is_only_a_neutral_transparent_ring(self):
         image = placeholder()
         self.assertEqual(image.size, (40, 40))
@@ -50,6 +60,11 @@ class PortraitWidgets(unittest.TestCase):
         self.rows.render_state(self.state, self.caption, live, provider)
         self.root.update()
 
+    def test_widget_keys_remains_callable_after_render(self):
+        self.update(self.provider)
+        self.assertTrue(callable(self.rows.keys))
+        self.assertIn('padding', self.rows.keys())
+
     def test_two_images_are_left_of_separate_text_rows(self):
         self.update(self.provider)
         for kind in ('player', 'companion'):
@@ -71,8 +86,8 @@ class PortraitWidgets(unittest.TestCase):
         self.state['player']['role_id'] = 2; self.update(self.provider)
         self.assertIsNot(old, self.rows.photos['player'])
         self.state['knowledge']['active_npc_id'] = None; self.update(self.provider)
-        self.assertIsNone(self.rows.keys['companion'][0])
-        self.assertFalse(self.rows.keys['companion'][2])
+        self.assertIsNone(self.rows._portrait_keys['companion'][0])
+        self.assertFalse(self.rows._portrait_keys['companion'][2])
 
     def test_missing_or_failed_provider_stays_pending_and_keeps_health(self):
         self.update()
@@ -94,7 +109,7 @@ class PortraitWidgets(unittest.TestCase):
         self.rows.destroy()
         self.assertTrue(self.rows.closed)
         self.assertFalse(self.rows.photos)
-        self.assertFalse(self.rows.keys)
+        self.assertFalse(self.rows._portrait_keys)
 
     def test_real_provider_pixels_arrive_without_widget_closing_source(self):
         from wlre.services.world.character_portraits import PortraitProvider
