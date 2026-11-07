@@ -2652,3 +2652,60 @@ or Python 3.11 OpenCV run. Existing related suites separately pass desktop 108
 and Android Python 3.11 107. No full-suite or device success is implied. All three
 legacy navigation seeds and movement authority guards remain; local work only,
 no push, merge, release, connection or movement packet.
+
+### Phase 66: bounded motion matrix across ordinary models and travel tags
+
+`tools.review_navigation_motion_matrix` adds an offline regression over all 17
+cached reviewed ordinary models at the pinned 1296 catalog. Houses remain excluded.
+It builds independent allowed-tag graphs, samples first/middle/last eligible nodes
+and tests directed pairs with independent cost verification. Flat corridors are
+smoothed by the existing bounded funnel; nonplanar corridors remain refused.
+This supplements, rather than replaces, Phase 60's 604 graph queries.
+
+The movement diagnostic uses the previously reviewed early-switch loop ordering,
+including the final update after point removal, with fixed 30/60/120 FPS, speed
+3.5 world units/s and waypoint radius 0.4. It is capped at 180 modeled seconds,
+512 points and planar geometry. Complete straight runs between target changes
+are retained for segment-containment checks against all eligible same-height
+triangles. Other floors are excluded. Sea/sky labels select navigation tags;
+this does NOT verify their actual character controllers, speed or physics.
+
+Both Python environments produce identical reports:
+
+| Mode | Planar queries | Nonplanar refusals | Disconnected | Motion runs | Containment-rejected runs |
+| --- | --- | --- | --- | --- | --- |
+| Land | 90 | 6 | 6 | 270 | 195 |
+| Sea | 2 | 0 | 4 | 6 | 6 |
+| Sky | 98 | 4 | 0 | 294 | 12 |
+
+Total: 51 model/mode rows, 210 queries, 190 planar paths and 570 motion runs;
+16 sea-mode rows have no eligible nodes and are not counted as successful routes.
+No run exceeded the time bound. Maximum modeled final-target distance is 37.083
+packet-coordinate units, within the source-derived 40-unit threshold. This is
+model-to-requested-target error, not error versus an observed official session.
+
+IMPORTANT: 213 containment rejections are not 213 proven physical violations.
+For each first rejected segment, nine points are sampled and distances measured
+to eligible triangle edges. 98 runs have demonstrated departure >1 packet unit;
+maximum sampled departure is 20.2393, all in land mode. Two additional land runs
+have positive departures <=1; 95 land, 6 sea and 12 sky runs have zero departure
+at these nine samples. These zero-sample cases remain unresolved (narrow gaps,
+vertex/edge numerics, or predicate sensitivity); they are NOT declared safe or
+physical collisions. The sampled distance is a lower-bound observation for one
+segment, not exhaustive maximum clearance or character-radius validation.
+
+Regression tests independently reproduce an L-shaped corridor whose ideal path
+is contained while early switching cuts outside by a measurable amount, compare
+compressed motion endpoints to the prior Bangkok follower at all three FPS,
+and check nonfinite/nonplanar rejection and timeout. Related suites pass desktop
+111 and Android Python 3.11 110. Actual-data reports run separately on both
+interpreters and match. No new Windows or Android-device runtime test occurred.
+
+The useful result is a repeatable cross-model diagnostic, not a production
+movement replacement. Remaining blockers are actual collision response/character
+clearance at corners, nonplanar modifier behavior, session search settings and
+real sea/sky movement behavior. The Bangkok video remains one black-box walking
+case, not evidence for these other modes/maps. Next automate classification of
+zero-sample containment rejections with robust geometric witnesses, and extend
+source/native tests of nonplanar final paths before considering movement authority.
+Keep all three seeds and current guards. No push, merge, release or network play.
