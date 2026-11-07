@@ -210,5 +210,33 @@ Crafting/furniture receive snapshots now preserve queue and furniture insertion
 order, ownership, readiness, sparse tool rows, compaction, error receipts and
 pending uncertainty. Elapsed-time queries use an explicit timestamp and never
 claim completion. Python parity covers 140 sequences / 5,225 snapshots. This
-slice does not yet compose into ServiceStateCoordinator or implement recipe/tool
+slice is now composed into ServiceStateCoordinator but does not implement recipe/tool
 planning, material confirmations, output tracking, timeouts or automatic execution.
+
+The mixed service coordinator now includes crafting and the bounded bag/companion
+apply_live slices, in source order. Shared stackability and companion attributes
+remain consistent across projections, with distinct before-observers, before-live
+and after-live bag evidence. Thirteen additional State.apply scenarios cover 524
+checkpoints. Complete player/battle knowledge, equipment, other omitted observers
+and transport remain outstanding; the coordinator still reports incomplete State.
+
+Party and tent receive snapshots are also available independently. Party preserves
+ordered team merges, current-role queries and explicit request expiry without
+inventing readiness or stale-event rejection. Tent receives use post-world role
+and scene, separating visibility from deployment and preserving uncertain pending
+evidence. Neither performs commands or runs timers. Their common-coordinator
+composition and full lifecycle/command integration remain outstanding.
+
+Dungeon/cooperative receive state now includes the six existing creation/room-flow/
+standby/start/entry/reward observers. Typed observations preserve uncertain pending
+work and distinguish acknowledgements, room evidence, scene entry and incomplete
+reward receipts. Role identity must be supplied before local world dispatch; catalog
+map IDs are caller declarations, not verified provenance. Python parity covers
+1,173 sequences / 5,527 steps. Commands, timers/disconnect, session wiring and live
+acceptance remain outstanding. No generation, dungeon sweep or hero challenge is
+invented where the retained source has none.
+
+Large Automation/Ark/Tent decoder fixtures now use deterministic gzip byte arrays.
+All original JSON payload bytes and cases are retained; compiled-payload hashes and
+regeneration match. This frees about 3.46 MiB in the C# user-string heap and reduces
+the test assembly without changing production logic or skipping verification.

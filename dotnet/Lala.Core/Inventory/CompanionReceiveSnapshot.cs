@@ -18,7 +18,8 @@ public sealed record CompanionProfileSnapshot(CompanionSnapshot Data,
 }
 
 /// <summary>Bounded companion portion of apply_live/set_companion, including its S8 slot
-/// buffer. This buffer is local to this domain, not wired to SessionEventSnapshot.Attributes.
+/// buffer. Standalone reduction owns this buffer; ServiceStateCoordinator keeps it consistent
+/// with SessionEventSnapshot.Attributes, preserving the explicit replay order.
 /// A different NPC reusing a slot clears old attributes; the same NPC replays them.</summary>
 public sealed record CompanionReceiveSnapshot
 {

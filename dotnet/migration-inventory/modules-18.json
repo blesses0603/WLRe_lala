@@ -61,7 +61,9 @@
     "status": "partially_migrated",
     "target_files": [
       "dotnet/Lala.Core/World/Tent/TentDecoder.cs",
-      "dotnet/Lala.Core/World/Tent/TentEvents.cs"
+      "dotnet/Lala.Core/World/Tent/TentEvents.cs",
+      "dotnet/Lala.Core/World/Tent/TentReceiveSnapshot.cs",
+      "dotnet/Lala.Core/World/Tent/TentReceiveReducer.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -137,10 +139,11 @@
       "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
     },
     "migrated_scope": [
-      "Receive-only immutable observations and common dispatcher integration; exact Python field/error/prefix/tail parity."
+      "Receive-only immutable observations and common dispatcher integration; exact Python field/error/prefix/tail parity.",
+      "Receive tent defaults/apply with explicit post-world role/scene, deployment/visibility/pending/return evidence;221 Python sequences5610 snapshots."
     ],
     "outstanding_scope": [
-      "No service reducers, planners, command sends, runtime catalog loading, UI or live acceptance."
+      "Coordinator wiring, timers/expiry, exit resolver, commands/place/retrieve/entry, runtime provenance and live acceptance remain."
     ]
   },
   {

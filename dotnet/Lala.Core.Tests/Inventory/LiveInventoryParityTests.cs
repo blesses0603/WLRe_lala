@@ -101,7 +101,7 @@ public sealed class LiveInventoryParityTests
         return Convert.ToHexString(SHA256.HashData(normalized.AsSpan(0, length))).ToLowerInvariant();
     }
 
-    private static BagReceiveSnapshot ReadBag(JsonNode node) => new()
+    internal static BagReceiveSnapshot ReadBag(JsonNode node) => new()
     {
         Ready = node["ready"]!.GetValue<bool>(), Reliable = node["reliable"]!.GetValue<bool>(),
         Capacity = node["capacity"]?.GetValue<byte>(), Revision = Big(node["revision"]!),
@@ -146,7 +146,7 @@ public sealed class LiveInventoryParityTests
         _ => state.ScalarValue is BigInteger big ? Number(big) : JsonSerializer.SerializeToNode(state.ScalarValue)
     };
 
-    private static JsonObject Project(BagReceiveSnapshot bag, CompanionReceiveSnapshot companions)
+    internal static JsonObject Project(BagReceiveSnapshot bag, CompanionReceiveSnapshot companions)
     {
         var items = new JsonObject();
         foreach (var (slot, item) in bag.Items)

@@ -22,7 +22,7 @@ public sealed class ServiceStateContractTests
         Assert.Null(inputs.WorldCatalog);
         Assert.Null(inputs.DailyCatalog.Catalog);
         Assert.Null(inputs.DailyCatalog.Token);
-        Assert.False(inputs.Bag.Ready);
+        Assert.False(state.Snapshot().Bag.Ready);
         var result = state.Apply(new HeartbeatRequestEvent(), new(state.Snapshot(), inputs));
         Assert.False(result.IsCompleteState);
         Assert.False(result.DailyTasks.CatalogReady);
@@ -100,8 +100,7 @@ public sealed class ServiceStateContractTests
         var input = new ServiceObservationInputs(1e12)
         {
             ResourceHeld = resourceHeld,
-            DailyCatalog = new(new([new(1, 1, 100, 1, 1, [new(12, 0, 1)])], []), "synthetic-current"),
-            Bag = new() { Ready = true, Reliable = true, Revision = 999, Capacity = 255 }
+            DailyCatalog = new(new([new(1, 1, 100, 1, 1, [new(12, 0, 1)])], []), "synthetic-current")
         };
         var daily = state.Apply(new ServerDailyTaskEvent(4, new TaskRewardNotice(1, [])), new(state.Snapshot(), input));
         Assert.True(daily.DailyTasks.Pending!.Notice);
@@ -205,8 +204,6 @@ public sealed class ServiceStateContractTests
         Assert.Throws<ArgumentNullException>(() => state.Apply((ServerEvent)null!, Context(state)));
         Assert.Throws<ArgumentNullException>(() => state.Apply(new HeartbeatRequestEvent(), null!));
         Assert.Throws<ArgumentNullException>(() => state.Apply(new HeartbeatRequestEvent(), new(before, null!)));
-        Assert.Throws<ArgumentNullException>(() => state.Apply(new HeartbeatRequestEvent(),
-            new(before, new(1) { Bag = null! })));
         Assert.Throws<ArgumentNullException>(() => state.Apply(new HeartbeatRequestEvent(),
             new(before, new(1) { DailyCatalog = null! })));
         Assert.Same(before, state.Snapshot());

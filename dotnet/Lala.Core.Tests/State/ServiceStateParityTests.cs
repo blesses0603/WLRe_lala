@@ -72,9 +72,9 @@ public sealed class ServiceStateParityTests
         Assert.Equal(JsonSerializer.Deserialize<string[]>(ServiceStatePythonVectors.ObserverOrder),
             ServiceStateCoordinator.ObserverOrder.Select(stage => stage.SourceFunction));
         Assert.Equal(new[] { "apply_daily_tasks", "apply_cube", "apply_recovery", "apply_guild",
-            "apply_activity", "apply_storage", "apply_expedition", "dispatch_local" },
+            "apply_activity", "apply_crafting", "apply_storage", "apply_expedition", "dispatch_local" },
             ServiceStateCoordinator.ObserverOrder.Where(stage => stage.Composed).Select(stage => stage.SourceFunction));
-        Assert.Equal(new[] { "apply_crafting", "apply_live", "apply_points_event", "apply_party", "apply_instances",
+        Assert.Equal(new[] { "apply_live", "apply_points_event", "apply_party", "apply_instances",
             "apply_tent", "observe_shop_evidence", "observe_efficiency", "apply_actions", "apply_ark" },
             ServiceStateCoordinator.ObserverOrder.Where(stage => !stage.Composed).Select(stage => stage.SourceFunction));
         Assert.False(new ServiceStateSnapshot().IsCompleteState);
@@ -170,7 +170,7 @@ public sealed class ServiceStateParityTests
         return canonical[..count];
     }
 
-    private static void Check(JsonNode expected, ServiceStateSnapshot state, string label)
+    internal static void Check(JsonNode expected, ServiceStateSnapshot state, string label)
     {
         var local = state.Local;
         Assert.Equal(local.Phase, local.World.Phase);

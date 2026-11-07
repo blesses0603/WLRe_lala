@@ -11,6 +11,11 @@ public static class CompanionReceiveReducer
 {
     public static CompanionReceiveSnapshot Apply(CompanionReceiveSnapshot state, ServerEvent observation,
         uint? localRoleId = null, ImmutableDictionary<uint, ImmutableArray<uint>>? npcSkills = null)
+        => ObserveLocalAttribute(ApplyBeforeLocal(state, observation, localRoleId, npcSkills), observation);
+
+    /// <summary>The companion receive slice of apply_live, before dispatch_local writes S8.</summary>
+    public static CompanionReceiveSnapshot ApplyBeforeLocal(CompanionReceiveSnapshot state, ServerEvent observation,
+        uint? localRoleId = null, ImmutableDictionary<uint, ImmutableArray<uint>>? npcSkills = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(observation);
@@ -20,7 +25,17 @@ public static class CompanionReceiveReducer
         if (attribute.HumanKind == 4 && state.Companions.TryGetValue(index, out var profile))
             state = state with { Companions = state.Companions.SetItem(index, ApplyAttribute(profile,
                 new(attribute.Kind, attribute.Parameter, attribute.Value), attribute.Sub)) };
-        // State's local-session observer stores S8 after apply_live, even human_kind != 4.
+        return state;
+    }
+
+    /// <summary>Mirrors only dispatch_local's companion buffer write, even human_kind != 4.
+    /// Service composition calls this after local dispatch, not as another apply_live observer.</summary>
+    public static CompanionReceiveSnapshot ObserveLocalAttribute(CompanionReceiveSnapshot state, ServerEvent observation)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        ArgumentNullException.ThrowIfNull(observation);
+        if (observation is not AttributeSetEvent { Index: { } index } attribute ||
+            attribute.Entity != $"follow:{index}") return state;
         var entries = state.Attributes.GetValueOrDefault(index, []);
         var position = -1;
         for (var i = 0; i < entries.Length; i++)

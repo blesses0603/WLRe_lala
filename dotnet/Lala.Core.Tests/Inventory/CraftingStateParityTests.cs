@@ -108,7 +108,7 @@ public sealed class CraftingStateParityTests
         var name => new NamedEvent(name)
     };
 
-    private static CraftingReceiveSnapshot Read(JsonNode expected)
+    internal static CraftingReceiveSnapshot Read(JsonNode expected)
     {
         var craft = expected["crafting"]!;
         var room = expected["furniture"]!;
@@ -141,7 +141,7 @@ public sealed class CraftingStateParityTests
         };
     }
 
-    private static JsonNode Project(CraftingReceiveSnapshot state, double at)
+    internal static JsonNode Project(CraftingReceiveSnapshot state, double at)
     {
         var c = state.Crafting;
         var craft = JsonSerializer.SerializeToNode(new

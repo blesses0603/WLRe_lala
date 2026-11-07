@@ -1424,10 +1424,11 @@
       "live_server_acceptance": "not_run"
     },
     "migrated_scope": [
-      "Bounded owner-thread service observer composition before local dispatch;14 real State.apply sequences698 checkpoints36event kinds; atomic rollback intentionally stronger than Python."
+      "Bounded owner-thread service observer composition before local dispatch;14 real State.apply sequences698 checkpoints36event kinds; atomic rollback intentionally stronger than Python.",
+      "Crafting and bounded bag/companion observers now composed, with shared stackability and ordered S8 buffers;13 mixed State.apply scenarios524 checkpoints."
     ],
     "outstanding_scope": [
-      "Not completeState: crafting/live, points, party, instances, tent/shop/efficiency/guild-actions/ark and live-session wiring remain omitted."
+      "Incomplete apply_live player/battle knowledge/equipment, points, party, instances, tent/shop/efficiency/guildactions/ark and live-session wiring remain."
     ]
   },
   {

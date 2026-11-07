@@ -14,9 +14,9 @@ The complete order from `State.apply` is exposed by `ObserverOrder`, including g
 3. `apply_recovery`: composed, receive balances only.
 4. `apply_guild`: composed, receive roster and pre-local self-leave matching only.
 5. `apply_activity`: composed through the existing `ActivityLocks` reducer.
-6. `apply_crafting`: **not composed**; crafting/furniture receive state remains absent.
+6. `apply_crafting`: composed, receive crafting/furniture with explicit role/time.
 7. `apply_storage`: composed, including its separate observed server-stackability map.
-8. `apply_live`: **not composed**; bags, knowledge, skills, companions and equipment absent.
+8. `apply_live`: **partially composed**, bag and companion receive slices only. Player/battle knowledge and equipment remain absent; ObserverOrder deliberately does not mark this stage complete.
 9. `apply_points_event`: **not composed**; attribute allocation absent.
 10. `apply_party`: **not composed**; party membership/requests absent.
 11. `apply_expedition`: composed, receive state and explicit deadlines only.
@@ -30,8 +30,8 @@ The complete order from `State.apply` is exposed by `ObserverOrder`, including g
 
 Efficiency's existing mutable tracker needs post-live knowledge and a transactional
 snapshot import/restore contract before it can join this coordinator. It is not run
-with fabricated empty knowledge. Independent crafting/live receive work is not
-integrated by this increment.
+with fabricated empty knowledge. Crafting and bounded bag/companion receive work are now integrated; complete
+apply_live remains outstanding.
 
 The observation's new packet count is calculated before the supported observers.
 All pre-local observers share the old player and phase. Local dispatch advances its
@@ -50,10 +50,10 @@ player, never an account ID, external bag, or caller-guessed role.
 - Time must be finite and explicit. Recorded clock regression is accepted as in the
   source. No clock, network, filesystem, callbacks or resource loading is invoked.
 - World scene catalog is per observation. Omitted means unknown, not reuse of an old
-  catalog. Missing daily catalog and bag evidence remain unknown. `ResourceHeld`
+  catalog. Missing daily, schedule, item-stack and NPC-skill inputs remain unknown. `ResourceHeld`
   defaults to true. These inputs are caller evidence, not resource verification,
   admission, catalog activation, or action authorization.
-- Daily catalog/bag evidence is retained for inspection only. Receive observers do
+- Daily catalog evidence is retained for inspection only. Bag evidence comes from the owned snapshot, never an external contradictory RewardBag. Receive observers do
   not call `Tick` or `Request`, create candidates, settle pending rewards, expire
   requests, reserve items, or send packets, even with elapsed deadlines, eligible
   rewards, a reliable changed bag, or an explicitly false resource hold.
@@ -72,12 +72,17 @@ player, never an account ID, external bag, or caller-guessed role.
 
 ## Cross-domain limitations
 
-Omitted observers can modify fields also present in local projections. In particular,
-`apply_live` clears buffered companion attributes on deletion/replacement and updates
-battle equipment. Those effects are **not** supplied here. The local projection is
-therefore local-dispatch parity, not full-State parity for such events. Storage's
-`server_stackable` observations remain a separate receive map, not a reconstructed
-bag or verified item catalog. Raw S8 values are not complete player/companion knowledge.
+The bag and storage share exactly one observed server-stackability map. Imports
+reject contradictory maps. Companion S8 buffers retain source insertion order and
+must agree with local follow:* attributes; deletion/reassignment clears both views
+before local dispatch records a new attribute. Snapshot imports reject inconsistent
+projections rather than guessing. `BeforeObserversBag`, `BeforeLiveBag` (after
+storage), and `AfterLiveBag` record three distinct immutable stages.
+
+Omitted apply_live branches still update player/battle knowledge and equipment,
+so full-State parity is not established. Raw S8 values and injected NPC mappings
+are not verified catalogs or action authority. The common dispatcher requires
+explicit CraftingScheduleContext for layout-dependent schedule records.
 All service actions, scheduling, lifecycle/disconnect policy, persistence, live
 catalog activation, transport, UI, Android wiring, device and official-server
 acceptance remain outside this increment.
@@ -116,3 +121,12 @@ directory first failed one missing-UnityPy import; no dependency was installed.
 No live login, send, purchase, formal-server probe, runtime download or credentials
 are involved. Passing offline tests does not constitute official-resource/platform/
 server acceptance or completion of the Python module migration.
+
+## Mixed inventory integration verification
+
+`ServiceInventoryGenerateVectors.py` adds 13 real State.apply scenarios, 524
+checkpoints and 30 event kinds. It compares all previously covered projections plus
+bag/reservations, crafting/furniture and companion buffers, with historical
+immutability, stage-specific bag evidence, explicit layout selection, context
+changes, malformed packets and atomic rollback. Source hashes in both oracles
+normalize CRLF byte pairs only; all other source bytes remain significant.

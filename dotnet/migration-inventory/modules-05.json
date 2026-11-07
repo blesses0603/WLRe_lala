@@ -451,10 +451,13 @@
     "source_sha256": "a5205fe2fd7ac4ee994420d0ea11a84e4914eb5960b72bfef92fc2278bd50d32",
     "source_lines": 131,
     "target_project": "Lala.Core",
-    "target_subsystem": "Services.battle",
+    "target_subsystem": "Social.Party",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Social/PartyEventSnapshot.cs",
+      "dotnet/Lala.Core/Social/PartyEventReducer.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -499,11 +502,17 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Receive party defaults/apply, ordered own-team/name queries and explicit expiry;30 Python sequences4368 snapshots. No invented readiness/staleevent filter."
+    ],
+    "outstanding_scope": [
+      "Coordinator wiring, commands/invites/join/leave, automatic expiry scheduling, session invalidation and live acceptance remain."
+    ]
   },
   {
     "id": "desktop:wlre/services/battle/party_guard.py",
@@ -1419,8 +1428,13 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.instance_creation",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Instances/InstanceReceiveSnapshot.cs",
+      "dotnet/Lala.Core/Instances/InstanceReceiveReducer.cs",
+      "dotnet/Lala.Core/Instances/InstanceReceiveObservers.cs",
+      "dotnet/Lala.Core/Instances/InstanceReceiveProjection.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1461,11 +1475,17 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Pure dungeon/cooperative receive defaults/apply and six receive observers, preserving pending uncertainty, entry and reward evidence;1173 Python sequences5527 steps. Role context is pre-local dispatch."
+    ],
+    "outstanding_scope": [
+      "Commands, timers/disconnect, provenance validation, coordinator/session wiring, transport and live acceptance remain. No generation/sweep/hero behavior is invented."
+    ]
   },
   {
     "id": "desktop:wlre/services/instance_entry.py",
@@ -1476,8 +1496,13 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.instance_entry",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Instances/InstanceReceiveSnapshot.cs",
+      "dotnet/Lala.Core/Instances/InstanceReceiveReducer.cs",
+      "dotnet/Lala.Core/Instances/InstanceReceiveObservers.cs",
+      "dotnet/Lala.Core/Instances/InstanceReceiveProjection.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1515,11 +1540,17 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Pure dungeon/cooperative receive defaults/apply and six receive observers, preserving pending uncertainty, entry and reward evidence;1173 Python sequences5527 steps. Role context is pre-local dispatch."
+    ],
+    "outstanding_scope": [
+      "Commands, timers/disconnect, provenance validation, coordinator/session wiring, transport and live acceptance remain. No generation/sweep/hero behavior is invented."
+    ]
   },
   {
     "id": "desktop:wlre/services/instance_rewards.py",
@@ -1530,8 +1561,13 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.instance_rewards",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Instances/InstanceReceiveSnapshot.cs",
+      "dotnet/Lala.Core/Instances/InstanceReceiveReducer.cs",
+      "dotnet/Lala.Core/Instances/InstanceReceiveObservers.cs",
+      "dotnet/Lala.Core/Instances/InstanceReceiveProjection.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1600,11 +1636,17 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Pure dungeon/cooperative receive defaults/apply and six receive observers, preserving pending uncertainty, entry and reward evidence;1173 Python sequences5527 steps. Role context is pre-local dispatch."
+    ],
+    "outstanding_scope": [
+      "Commands, timers/disconnect, provenance validation, coordinator/session wiring, transport and live acceptance remain. No generation/sweep/hero behavior is invented."
+    ]
   },
   {
     "id": "desktop:wlre/services/instance_room_flow.py",
@@ -1615,8 +1657,13 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.instance_room_flow",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Instances/InstanceReceiveSnapshot.cs",
+      "dotnet/Lala.Core/Instances/InstanceReceiveReducer.cs",
+      "dotnet/Lala.Core/Instances/InstanceReceiveObservers.cs",
+      "dotnet/Lala.Core/Instances/InstanceReceiveProjection.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1673,11 +1720,17 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Pure dungeon/cooperative receive defaults/apply and six receive observers, preserving pending uncertainty, entry and reward evidence;1173 Python sequences5527 steps. Role context is pre-local dispatch."
+    ],
+    "outstanding_scope": [
+      "Commands, timers/disconnect, provenance validation, coordinator/session wiring, transport and live acceptance remain. No generation/sweep/hero behavior is invented."
+    ]
   },
   {
     "id": "desktop:wlre/services/instance_standby.py",
@@ -1688,8 +1741,13 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.instance_standby",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Instances/InstanceReceiveSnapshot.cs",
+      "dotnet/Lala.Core/Instances/InstanceReceiveReducer.cs",
+      "dotnet/Lala.Core/Instances/InstanceReceiveObservers.cs",
+      "dotnet/Lala.Core/Instances/InstanceReceiveProjection.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1725,11 +1783,17 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Pure dungeon/cooperative receive defaults/apply and six receive observers, preserving pending uncertainty, entry and reward evidence;1173 Python sequences5527 steps. Role context is pre-local dispatch."
+    ],
+    "outstanding_scope": [
+      "Commands, timers/disconnect, provenance validation, coordinator/session wiring, transport and live acceptance remain. No generation/sweep/hero behavior is invented."
+    ]
   },
   {
     "id": "desktop:wlre/services/instance_start.py",
@@ -1740,8 +1804,13 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.instance_start",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Instances/InstanceReceiveSnapshot.cs",
+      "dotnet/Lala.Core/Instances/InstanceReceiveReducer.cs",
+      "dotnet/Lala.Core/Instances/InstanceReceiveObservers.cs",
+      "dotnet/Lala.Core/Instances/InstanceReceiveProjection.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1779,11 +1848,17 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Pure dungeon/cooperative receive defaults/apply and six receive observers, preserving pending uncertainty, entry and reward evidence;1173 Python sequences5527 steps. Role context is pre-local dispatch."
+    ],
+    "outstanding_scope": [
+      "Commands, timers/disconnect, provenance validation, coordinator/session wiring, transport and live acceptance remain. No generation/sweep/hero behavior is invented."
+    ]
   },
   {
     "id": "desktop:wlre/services/instances.py",
@@ -1794,8 +1869,13 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.instances",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Instances/InstanceReceiveSnapshot.cs",
+      "dotnet/Lala.Core/Instances/InstanceReceiveReducer.cs",
+      "dotnet/Lala.Core/Instances/InstanceReceiveObservers.cs",
+      "dotnet/Lala.Core/Instances/InstanceReceiveProjection.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1829,11 +1909,17 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Pure dungeon/cooperative receive defaults/apply and six receive observers, preserving pending uncertainty, entry and reward evidence;1173 Python sequences5527 steps. Role context is pre-local dispatch."
+    ],
+    "outstanding_scope": [
+      "Commands, timers/disconnect, provenance validation, coordinator/session wiring, transport and live acceptance remain. No generation/sweep/hero behavior is invented."
+    ]
   },
   {
     "id": "desktop:wlre/services/items/__init__.py",
