@@ -896,8 +896,10 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.expedition",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Catalogs/TextDataParser.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -958,11 +960,20 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Only pure parse_text_data is ported: more than four and at most 16 MiB, signed Int32 count 1–1,000,000, UInt32 keys and UInt16 byte lengths. Strict UTF-16LE retains zero keys, empty strings, BOMs and every NUL without the unrelated ItemData string cap. Duplicate keys, odd lengths, invalid Unicode, truncation and trailing bytes fail closed; results are owned read-only maps.",
+      "Source text-v1 decorator/read diagnostics retain the text_data input name, digests, counts, checkpoints and failure cursor fields. Shared internal diagnostics add only an optional code-owned input name, retaining raw as the default for existing callers; diagnostics are optional and in memory.",
+      "Combined TextData/NPC quote evidence: 295 actual decorated-Python vectors and 309 focused Release passes (295 parity, four source hashes, ten contracts), plus 31 original Python tests. Synthetic maximum-count/16-MiB inputs use deterministic recipes and full-result digests. Exact source messages are retained while ProtocolError/ValueError and diagnostic error_type map to CatalogDecodeException; typed spans, immutable ownership and cooperative cancellation are explicit API differences."
+    ],
+    "outstanding_scope": [
+      "All other expedition data behavior remains outside this slice: parse_catalog, attach_names, expedition NPC/career parsing, load_catalog/load_verified_1275_catalog/load_active_catalog, data roots and runtime/catalog selection. No localization runtime, files/downloads, bundle extraction, SQLite/cache installation, UI/Android/session wiring or commands.",
+      "Synthetic TextData parse success and quote-reference validation do not certify official revision identity, official-resource positive acceptance or gameplay readiness. Surrounding original Python runtime tests do not establish C# runtime/storage migration. No full-module or new combined full-suite acceptance is claimed."
+    ]
   },
   {
     "id": "desktop:wlre/services/expedition/manager.py",
@@ -1362,8 +1373,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.instance_catalog",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Catalogs/StageDataParser.cs",
+      "dotnet/Lala.Core/Catalogs/OrderedCatalog.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1415,11 +1429,21 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Only parse_stages and its count validation are ported: signed count 0–20,000, exact 76-byte source reads, all 17 returned fields and explicit consumption of every discarded field. ID zero is valid; duplicate IDs reject only after the complete duplicate row is read. Trailing bytes are checked after all records, without a whole-input-size precheck changing failure precedence.",
+      "Owned ordered maps preserve source key order independently of lookup. Source stage-76-v1 diagnostics retain data input names, counts, checkpoints, digests and exact read offsets/requested/available byte counts and raw error messages. Parser diagnostic schema remains distinct from the adapter stage-new-76-v1 contract.",
+      "Combined Smith/Stage evidence: 768 actual decorated-Python vectors in eight compressed/decoded-hash-checked resources; 781 focused Release passes (768 vectors, five source hashes, eight contracts), 18 retained Python passes and independent fixture/recipe/full-result-digest review. Four maximum-count cases compare complete ordered 20,000-record result digests, not count/endpoints alone.",
+      "Typed spans replace Python dynamic types/coercions; immutable owned maps/arrays/records replace mutable dictionaries/lists. Exact error messages remain while PreviewError/ValueError/ProtocolError and diagnostic error_type map to CatalogDecodeException. Cooperative cancellation and optional in-memory diagnostics do not create source provenance or command authority."
+    ],
+    "outstanding_scope": [
+      "Dungeon/Cooperate parsers, awards/flags, catalog assembly/name binding and save_catalog remain unported. No catalog adapters, verified identity/activation, extraction/downloads/installation/storage, live globals, entry/transfer/send logic, AccountSession, UI or Android changes.",
+      "No official resources or actual official-source/runtime/device/server positive acceptance. Parsed Stage fields and diagnostic success do not authorize instance entry or portal/map use."
+    ]
   },
   {
     "id": "desktop:wlre/services/instance_combat.py",

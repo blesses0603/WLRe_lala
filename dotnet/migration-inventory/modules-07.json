@@ -2142,8 +2142,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Catalogs/NpcBattleTalkCatalogParser.cs",
+      "dotnet/Lala.Core/Catalogs/TextDataParser.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -2179,11 +2182,20 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Only pure parse_known_battle_talk/build_catalog are ported. Public parsing checks the fixed reviewed SHA-256 before structural checks, with no public pin override. The bounded 1–20,000 count uses exact 10-byte <HIBHB rows, nonzero group/text IDs and at most 255 rows per group. Immutable rows/groups preserve explicit group insertion order, row order and valid duplicate quote rows.",
+      "Builder order is quote parsing, TextData parsing, then missing-reference validation; empty referenced strings remain valid. Output contains only quote groups, not attached text or certified TextData provenance. Source npc-battle-talk-known-v1 diagnostics retain raw input digests, result counts and source-fingerprint failure locations; the builder has no aggregate source decorator.",
+      "Combined TextData/NPC quote evidence: 295 actual decorated-Python vectors, 309 focused Release passes and 31 retained original Python passes; independent review regenerated all six compressed fixture resources in memory. Synthetic layout helpers are internal-only; public entrypoints reject all synthetic quote inputs. Exact source messages are retained while ProtocolError/ValueError and diagnostic labels map to CatalogDecodeException; typed spans, immutable ownership and cancellation are explicit differences."
+    ],
+    "outstanding_scope": [
+      "load_verified_catalog, official fetch/manifest verification, bundle extraction, normalized SQLite/cache installation, global catalog activation, localization/UI/Android/session integration and commands remain unimplemented. Fixed public gates have no synthetic bypass or caller-selected source profile.",
+      "Actual pinned official-source successful parsing and same-revision TextData acceptance remain unverified. A synthetic reference join or diagnostic observation does not authorize production use; surrounding Python runtime tests do not establish that runtime/storage behavior is ported. No new combined full-suite or full-module acceptance claim."
+    ]
   },
   {
     "id": "desktop:wlre/services/world/npc_catalog.py",

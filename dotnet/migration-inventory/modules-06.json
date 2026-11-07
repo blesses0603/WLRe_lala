@@ -1265,7 +1265,11 @@
       "dotnet/Lala.Core/Diagnostics/Parsing/ParserDiagnostics.cs",
       "dotnet/Lala.Core/World/Eve/EveV115Parser.cs",
       "dotnet/Lala.Core/Catalogs/NormalAttackCatalogParser.cs",
-      "dotnet/Lala.Core/Catalogs/CombatCatalogParser.cs"
+      "dotnet/Lala.Core/Catalogs/CombatCatalogParser.cs",
+      "dotnet/Lala.Core/Catalogs/TextDataParser.cs",
+      "dotnet/Lala.Core/Catalogs/NpcBattleTalkCatalogParser.cs",
+      "dotnet/Lala.Core/Catalogs/SmithDataParser.cs",
+      "dotnet/Lala.Core/Catalogs/StageDataParser.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -1366,10 +1370,12 @@
       "Bounded privacy-safe in-memory sessions/checkpoints, input digests, baseline validation/comparison and exact report JSON; 509 synthetic Python cases plus safety/concurrency contracts. Explicit metadata/depth admission and cancellation protections are documented deltas.",
       "Automatic diagnostics on Eve typed Parse and serialized Derive entrypoints, including source-equivalent scene/header checkpoints, raw-input digests, nested-session behavior and lazy failure association without an active session; 2,146 actual-Python decorator observations plus cancellation/privacy/concurrency contracts. Error type labels use EveDecodeException; three duplicate-scene cases retain the documented fail-closed delta.",
       "NormalAttackCatalogParser now reuses optional source-equivalent NPC decorator/read diagnostics within its 810-vector corpus, retaining digest/count/checkpoint/error behavior and privacy/cancellation contracts. build_catalog itself has no source decorator, and its nested ItemData observation is not yet instrumented.",
-      "CombatCatalogParser reuses supported NPC diagnostics and preserves secondary NPC reread checkpoints in enclosing diagnosed calls; three real-Python regressions verify parent failure locations after names, keys or constants fail. It does not invent aggregate constants/builder events or supply missing ItemData/SkillData decorators."
+      "CombatCatalogParser reuses supported NPC diagnostics and preserves secondary NPC reread checkpoints in enclosing diagnosed calls; three real-Python regressions verify parent failure locations after names, keys or constants fail. It does not invent aggregate constants/builder events or supply missing ItemData/SkillData decorators.",
+      "Automatic optional in-memory TextData/NPC quote diagnostics retain text-v1 and npc-battle-talk-known-v1 schemas, parser IDs, input names, digests, counts and failure cursors in 295 actual decorated-Python vectors. The internal span helper accepts an optional code-owned input name: existing raw defaults remain unchanged, and TextData uses text_data. The quote builder remains undecorated; error type labels use CatalogDecodeException.",
+      "Optional Smith/Stage diagnostics preserve smith-33-v1, smith-35-v1, smith-reviewed-v1 and stage-76-v1 parser schemas, data input names, counts, digests and failure locations across 768 actual decorated-Python vectors. Nested Smith 33-byte successes are suppressed, child failures remain separate, and selector outer locations retain only the source child offset rather than copying child field/record metadata. Timed marking is undecorated; these schemas do not certify source provenance."
     ],
     "outstanding_scope": [
-      "Filesystem/atomic persistence, default paths, registry/signature binding, traceback-local inference, ItemData/SkillData/remaining parser instrumentation and runtime catalog integration remain. Eve and normal-NPC observations do not activate resources; reports never authorize assets or commands."
+      "Filesystem/atomic persistence, default paths, registry/signature binding, traceback-local inference, ItemData/SkillData/remaining parser instrumentation and runtime catalog integration remain. Eve, normal-NPC, TextData, NPC quote and Smith/Stage observations do not activate resources; reports never authorize assets or commands."
     ]
   },
   {

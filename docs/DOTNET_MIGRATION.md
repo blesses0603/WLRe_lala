@@ -493,6 +493,76 @@ parsers are unchanged. `load_verified_catalog`, network/files, normalized caches
 resource activation, UI/session wiring and commands remain gaps. See
 [combat catalog scope and evidence](../dotnet/Lala.Core.Tests/Catalogs/Combat/README.md).
 
+`TextDataParser` now ports only `expedition/data.py`'s `parse_text_data`.
+The source's more-than-four-byte / 16-MiB size limit, signed count of 1–1,000,000,
+UInt32 keys and UInt16 lengths remain. Strict UTF-16LE preserves zero keys, empty
+strings, BOMs and every NUL without an unrelated ItemData string cap. Duplicate keys,
+odd lengths, malformed Unicode, truncation and trailing bytes fail closed.
+
+`NpcBattleTalkCatalogParser` ports only `parse_known_battle_talk` and `build_catalog`.
+The public fixed reviewed SHA-256 is checked before structure, with no pin override.
+Counts of 1–20,000 require exact 10-byte rows, nonzero group/text IDs and at most 255
+rows per group. Immutable quote groups retain explicit group order, row order and
+valid duplicate rows. The builder parses quotes, then TextData, then checks references;
+empty referenced strings are valid. It returns groups only and does not certify that
+TextData belongs to an official revision or attach decoded text.
+
+All 295 actual decorated-Python vectors retain values, errors and emitted diagnostics
+in six hashed gzip resources. Maximum-count and exact 16-MiB inputs use deterministic
+recipes with full-result digests. Focused Release verification passed 309 tests
+(295 parity, four source hashes, ten contracts); 31 original Python tests passed,
+including surrounding runtime tests that do not imply that runtime was ported.
+Independent review regenerated the fixtures in memory. Public quote entrypoints reject
+all synthetic inputs; successful synthetic quote layouts use internal-only test helpers.
+No actual pinned official-resource success is established; later integrated local
+verification is recorded below.
+
+The `text-v1` and `npc-battle-talk-known-v1` diagnostics preserve source input names,
+digests, counts and failure cursors. The internal helper's optional code-owned input
+name defaults to the unchanged `raw`; TextData uses `text_data`. The builder has no
+source decorator. Error messages remain exact while Python exception types map to
+`CatalogDecodeException`; typed spans, immutable ownership and cooperative cancellation
+are explicit differences. Diagnostics remain optional and in memory. Other expedition
+parsing/name binding, `load_verified_catalog`, files/downloads, bundle extraction,
+SQLite/cache installation, localization/runtime activation, UI/Android/session wiring
+and commands remain gaps. See [TextData and NPC quote scope and evidence](../dotnet/Lala.Core.Tests/Catalogs/TextBattleTalk/README.md).
+
+`SmithDataParser` ports `preview_1275.py`'s `parse_smith_1275` and all three pure
+`smith_candidate.py` functions: candidate parsing, timed marking and layout selection.
+Signed counts of 0–20,000 require exact 33/35-byte rows; zero rows select 33 first.
+The 33-byte map rejects zero/duplicate output IDs, while 35-byte rows require unique
+nonzero recipe keys and preserve multiple recipes per output. All returned fields,
+material-slot order, duplicate materials and zero amounts remain. Zero material IDs
+are omitted; `material_count` validates at most five but does not truncate slots.
+Raw results omit `read_only`; timed marking copies rows and sets it when `time_id != 0`.
+
+`StageDataParser` ports only `instance_catalog.py`'s `parse_stages`, retaining all 17
+returned fields and consuming every discarded field in the exact 76-byte layout.
+Zero IDs remain valid; duplicate rejection follows the complete duplicate row read.
+Exact truncation offsets/byte counts and trailing-byte ordering remain, without an
+input-size precheck that changes error precedence. Immutable maps explicitly retain
+source insertion order separately from frozen lookup.
+
+The 768 actual decorated-Python vectors retain full diagnostics and raw error text
+in eight hashed gzip resources. Four successful 20,000-record cases use compact
+input recipes and complete ordered-result digests. The 781 focused Release tests
+(768 vectors, five source hashes, eight contracts) and 18 original Python tests pass;
+independent review reproduced the fixtures and verified recipes/full-result digests.
+Typed spans, immutable records, cancellation and CLR exception labels are explicit
+differences. Timed marking supports parser-shaped typed rows, not arbitrary Python
+extra keys or dynamic `time_id` values. Optional memory-only diagnostics preserve
+source `data` input names and nested Smith failure behavior; marking is undecorated.
+
+The `smith-reviewed-v1` structural selector does not certify source identity. Adapter
+integration remains separate: its 33-byte branch returns an unmarked ID-keyed map,
+while its 35-byte branch returns a timed-marked array. `ParseRecords` must not blindly
+replace that distinction. Adapter schemas (`smith-new-33-v1`, `smith-new-35-v1`,
+`stage-new-76-v1`) remain distinct from parser diagnostic schemas. Other preview
+loading, Dungeon/Cooperate parsing/building, adapters, runtime/storage/installation,
+crafting/entry/transfer/send logic, UI/Android and session wiring remain unported.
+No official-resource positive acceptance is established. See [Smith and Stage scope
+and evidence](../dotnet/Lala.Core.Tests/Catalogs/SmithStage/README.md).
+
 Eve v115 parsing now validates all eleven scene sections before exposing immutable
 NPC/interaction indexes. Versions, offsets, record/scene limits, skipped layouts,
 truncations and cancellation are checked. The 2,143 exact Python cases are separate
@@ -520,9 +590,10 @@ the three duplicate-scene hardening cases remain explicit differences, and error
 labels use the existing C# exception type. Nested/concurrent sessions, exception
 identity, input ownership and cancellation have directed contracts. Success outside
 a diagnostic session stays quiet; failure retains a safe observation without keeping
-input bytes or exception messages. Normal-NPC instrumentation is now separately listed
-above; filesystem persistence, default paths, nested ItemData/SkillData/remaining parser
-instrumentation and runtime catalog activation remain unimplemented.
+input bytes or exception messages. Normal-NPC, TextData, NPC quote and Smith/Stage
+instrumentation are now separately listed above; filesystem persistence, default paths, nested
+ItemData/SkillData/remaining parser instrumentation and runtime catalog activation
+remain unimplemented.
 
 ### Latest incremental verification evidence
 
@@ -544,18 +615,26 @@ acceptance follows from these offline suites.
 | `6ca75e5` battle display | `BattleDisplayParityTests.cs`, `BattleDisplayContractTests.cs` and `BattleDisplayREADME.md` under `Lala.Core.Tests/Battle` | 576 focused passed: 126 new display tests plus 450 existing CombatRules tests; 116 Python cases, 12 labels and 155 attack lines. No full-suite or runtime/UI acceptance claim. |
 | `fe585ca` normal-attack catalog subset | `NormalAttackCatalogTests.cs`, `NormalAttackPythonVectors.cs` and `README.md` under `Lala.Core.Tests/Catalogs/NormalAttack` | 825 focused Release tests passed against 810 actual-Python vectors. Retained Python: 24 passed, one existing asset-dependent skip. Exactly 247 inherited ItemData truncation labels are mapped; 235 NPC truncations retain exact wording. No official-resource success or new combined full-run claim. |
 | `4215512` combat constants/catalog assembly | `CombatCatalogTests.cs`, `CombatCatalogPythonVectors.cs` and `README.md` under `Lala.Core.Tests/Catalogs/Combat` | 2,869 focused Catalogs/knowledge tests passed, including 208 new tests and 195 actual-Python vectors. Retained Python: 20 passed, one existing private-asset skip. Explicit inherited gate/error and nested-diagnostic gaps remain; no official-resource success or updated combined full-suite result is claimed. |
+| `9843735` TextData/NPC quote subset | `TextBattleTalkCatalogTests.cs`, `TextBattleTalkPythonVectors.cs` and `README.md` under `Lala.Core.Tests/Catalogs/TextBattleTalk` | 309 focused Release passes: 295 actual decorated-Python vectors, four source hashes and ten contracts; 31 original Python passes. Independent review regenerated all six resources. Typed API/exception differences remain explicit; no official-source positive acceptance, runtime/storage migration or new combined full-suite claim. |
+| `61a4451` Smith/Stage dependencies | `SmithStageCatalogTests.cs`, `SmithStagePythonVectors.cs` and `README.md` under `Lala.Core.Tests/Catalogs/SmithStage` | 781 focused Release passes: 768 actual decorated-Python vectors, five source hashes and eight contracts; 18 original Python passes. Eight gzip resources and four maximum-result digests independently reviewed. No adapter/runtime/store migration or official-source positive acceptance; the later integrated local receipt is recorded below. |
 
-Inventory status remains partial for these modules. Desktop `battle_commands.py`
+Inventory status remains partial for the subset modules below. Desktop `battle_commands.py`
 (pure action/round planning), `storage/ark_questions.py` (explicit offline store),
 `services/ark_first_answer.py` (strict arithmetic), `services/ark_candidates.py` (pure
-reviewed resolver), `services/ark_candidate_data.py` (text-free reviewed index) and
-`services/world/normal_attack_catalog.py` (offline parse/build subset) move from not
-migrated to partially migrated; the summary is now 583 not migrated, 111 partially
-migrated and 2 ported offline. Android inventory and reservation entries share identical
-source hashes and receive the same bounded evidence. Android combat-resource, battle-command, combat/display
-and Eve hashes differ, so they stay unreconciled; the baseline has no Android
-`storage/ark_questions.py`, `services/ark_first_answer.py`, `services/ark_candidates.py`,
-`services/ark_candidate_data.py` or `services/world/normal_attack_catalog.py` entry.
+reviewed resolver), `services/ark_candidate_data.py` (text-free reviewed index),
+`services/world/normal_attack_catalog.py` (offline parse/build),
+`services/expedition/data.py` (TextData only), `services/world/npc_battle_catalog.py`
+(offline quote parse/build), `services/world/preview_1275.py` (Smith 33-byte parsing
+only) and `services/instance_catalog.py` (Stage parsing only) move from not migrated
+to partially migrated. `services/world/smith_candidate.py` is ported offline for its
+three pure functions within the documented typed API; integration acceptance remains
+separate. The summary is now 578 not migrated, 115 partially migrated and 3 ported
+offline. Android inventory and reservation entries share identical source hashes and
+receive the same bounded evidence. Android combat-resource, battle-command,
+combat/display, Eve, expedition-data, preview, Smith-candidate and instance-catalog
+hashes differ, so they stay unreconciled; the baseline has no Android `storage/ark_questions.py`, `services/ark_first_answer.py`, `services/ark_candidates.py`,
+`services/ark_candidate_data.py`, `services/world/normal_attack_catalog.py` or
+`services/world/npc_battle_catalog.py` entry.
 `IsCompleteState` remains false. The offline store, arithmetic solver and reviewed resolver do not establish Ark runtime
 persistence or command activation, and none of these slices establishes full migration
 or full runtime acceptance. Current combined verification is recorded below.
@@ -610,13 +689,27 @@ unchanged by this increment. The strict arithmetic helper and reviewed candidate
 intents remain separate from sending or confirming answers. `IsCompleteState` stays
 false; the migration remains a Draft and is not ready to replace the Python client.
 
-### Integrated normal/NPC and combat catalogs (8.0.15 candidate)
+### Integrated verification for published commit `9f42b6f` (8.0.15)
 
-The integrated tree through `74f925e` passes **35,923 Core Release tests** with zero
-failures/skips under the standard command, without GC or execution-policy overrides.
+The integrated tree through `74f925e`, published as `9f42b6f`, passes
+**35,923 Core Release tests** with zero failures/skips under the standard command,
+without GC or execution-policy overrides.
 Lifecycle remains **59/59**, Desktop builds with zero warnings/errors and its **9**
 offline checks pass. Retained Python runs **2,273** tests with **216** existing skips.
-Remote CI for this candidate is pending publication.
+Remote [.NET CI run 42409260253](https://github.com/blesses0603/WLRe_lala/actions/runs/42409260253)
+is green for `9f42b6f`: Windows, macOS and Linux each pass **35,923 Core tests**,
+**59 lifecycle tests** and **9 offline self-tests**, with Desktop builds reporting
+zero warnings/errors. The Android validation APK build also succeeds.
+
+[Python CI run 42409260256](https://github.com/blesses0603/WLRe_lala/actions/runs/42409260256)
+is green after rerunning only its failed macOS job, without changing the commit.
+The initial `test_busy_database_fails_closed_with_bounded_wait` failure measured
+**1.075378 seconds** against the existing **1.0-second** threshold. The unchanged
+[macOS rerun job 128515192188](https://github.com/blesses0603/WLRe_lala/actions/runs/42409260256/job/128515192188)
+succeeded with **2,273 tests** and **194 existing skips**. No Python source or test
+threshold was changed, and the successful rerun does not establish or fix the timing
+failure's root cause. These published-commit receipts exclude the newer `9843735`
+TextData/NPC quote increment, its later test-memory changes and the Smith/Stage slice.
 
 Earlier aggregate runs were terminated (diagnostic exit 137, about 4.3 GiB peak
 testhost RSS). Test-only changes keep NPC/EVE JSON out of theory display names and
@@ -635,3 +728,36 @@ This increment does not implement runtime catalog installation or official-sourc
 positive acceptance. ItemData/SkillData automatic diagnostics and the documented
 legacy SkillData admission-order differences remain outstanding. Android and
 AccountSession are unchanged, and `IsCompleteState` remains false.
+
+### Integrated TextData/NPC quote verification through `d4c80ee`
+
+The `9843735` slice retains its **309 focused passes** above. The integrated tree
+through `d4c80ee` now passes **36,235 Core Release tests** under the standard command.
+This is a local receipt, not new remote CI, and excludes the later `61a4451` Smith/Stage
+increment. Before the test-only changes below, the first standard run ended in a
+testhost crash. A temporary process-only **2 GiB diagnostic run** completed **36,232
+results** with **three OutOfMemory failures** in legacy fixture loading or assertion
+JSON formatting. This failed diagnostic run is not a standard-command pass or proof
+that the text/quote slice caused the memory pressure.
+
+Test-only follow-ons `eb84db5` and `d4c80ee` cache a detached battle-command baseline
+row with fresh deep clones per test and defer inventory assertion-message formatting
+until an assertion fails. Added contracts cover nested mutation isolation and ensure
+passing assertions do not format messages, while failures preserve their full xUnit
+message. Equality checks, expected values, fixture coverage and failure thresholds
+remain unchanged. No production, Python, GC, parallelism or CI-policy change is made.
+The standard full-suite pass after these changes does not prove a unique cause for
+every earlier termination or establish runtime/resource activation or official-source
+acceptance. The subsequent aggregate receipt including Smith/Stage follows.
+
+### Integrated Smith/Stage verification through `61a4451`
+
+The integrated standard Core Release run including Smith/Stage passes **37,016 tests**,
+with **zero failures or skips** and **no GC overrides**. This newer local result is
+separate from the published `9f42b6f` (8.0.15) remote CI receipts above. Final lifecycle **59/59**, Desktop Release **zero warnings/errors** and **9**
+offline self-tests pass. The retained Python suite runs **2,273 tests**, with **216**
+existing platform/headless skips, using the established dependency-equipped test
+environment. An initial global-interpreter invocation lacked UnityPy and is not
+counted as a passing run. Strict repository audit and whitespace checks pass.
+Remote CI for this 8.0.16 candidate remains pending publication. No adapter/runtime/storage wiring or official-resource positive
+acceptance follows from this aggregate pass; `IsCompleteState` remains false.

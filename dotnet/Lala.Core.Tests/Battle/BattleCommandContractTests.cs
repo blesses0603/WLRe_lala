@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Numerics;
+using System.Text.Json.Nodes;
 using Lala.Core.Battle;
 using Lala.Core.Inventory;
 using Xunit;
@@ -9,7 +10,25 @@ namespace Lala.Core.Tests.Battle;
 
 public sealed class BattleCommandContractTests
 {
-    private static BattleCommandContext Baseline => BattleCommandParityTests.Context(BattleCommandPythonVectors.Read()["cases"]![0]!);
+    // Detach the one required row so repeated contract cases never retain or reparse the full corpus.
+    private static readonly Lazy<JsonNode> BaselineTemplate = new(() =>
+        BattleCommandPythonVectors.Read()["cases"]![0]!.DeepClone());
+    private static JsonNode BaselineInput => BaselineTemplate.Value.DeepClone();
+    private static BattleCommandContext Baseline => BattleCommandParityTests.Context(BaselineInput);
+
+    [Fact]
+    public void BaselineInputsAreDetachedAndNestedMutationsCannotLeakBetweenTests()
+    {
+        var first = BaselineInput;
+        var second = BaselineInput;
+        var expected = second.ToJsonString();
+        Assert.Null(first.Parent);Assert.Null(second.Parent);
+        Assert.NotSame(first,second);Assert.NotSame(first["catalog"],second["catalog"]);
+        first["catalog"]!.AsObject().Clear();
+        Assert.Equal(expected,second.ToJsonString());
+        Assert.Equal(expected,BaselineInput.ToJsonString());
+    }
+
     private static BattleCommandContext Shared(int count)
     {
         var context = Baseline;var resources = context.Resources; var skill = resources.Catalog.Skills[1001]; var bag = resources.Inventory;

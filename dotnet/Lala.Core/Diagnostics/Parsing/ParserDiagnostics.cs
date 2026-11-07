@@ -97,9 +97,9 @@ public static class ParserDiagnostics
     // Synchronous only: neither the span nor the callback enters an observation or escapes this call.
     internal static T RunWithRaw<T>(ParserDiagnosticDefinition definition, ReadOnlySpan<byte> raw,
         Func<ReadOnlySpan<byte>, T> parse, Func<T, ParserResultSummary> summarize,
-        string? sourceVariant, CancellationToken cancellationToken) =>
+        string? sourceVariant, CancellationToken cancellationToken, string inputName = "raw") =>
         RunCore<ReadOnlySpan<byte>, T>(definition, raw, parse,
-            static (bytes, token) => ImmutableDictionary<string, ParserInputDigest>.Empty.Add("raw", Digest(bytes, token)),
+            (bytes, token) => ImmutableDictionary<string, ParserInputDigest>.Empty.Add(inputName, Digest(bytes, token)),
             summarize, sourceVariant, null, null, cancellationToken);
 
     private static T RunCore<TInput, T>(ParserDiagnosticDefinition definition, TInput input,

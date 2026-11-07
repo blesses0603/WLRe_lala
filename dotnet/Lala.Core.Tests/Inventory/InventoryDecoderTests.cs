@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Lala.Core.Inventory;
 using Lala.Core.Protocol;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.Inventory;
@@ -56,7 +57,7 @@ public sealed class InventoryDecoderTests
     private static void AssertJson(JsonNode? expected, JsonNode? actual)
     {
         RemoveAbsentNulls(actual, expected);
-        Assert.True(JsonNode.DeepEquals(expected, actual), $"Expected {expected}; actual {actual}");
+        LazyAssert.True(JsonNode.DeepEquals(expected, actual), () => $"Expected {expected}; actual {actual}");
     }
 
     private static void AssertOutcome(JsonNode vector, JsonNode outcome, byte[] payload)

@@ -9,6 +9,7 @@ using Lala.Core.Protocol;
 using Lala.Core.Sessions;
 using Lala.Core.State;
 using Lala.Core.Tests.Inventory;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.State;
@@ -95,9 +96,9 @@ public sealed class ServiceInventoryParityTests
     {
         ServiceStateParityTests.Check(expected["services"]!, state, label);
         var live = LiveInventoryParityTests.Project(state.Bag, state.Companions);
-        Assert.True(JsonNode.DeepEquals(expected["live"], live), $"{label}: expected live {expected["live"]}; actual {live}");
+        LazyAssert.True(JsonNode.DeepEquals(expected["live"], live), () => $"{label}: expected live {expected["live"]}; actual {live}");
         var craft = CraftingStateParityTests.Project(state.Crafting, at);
-        Assert.True(JsonNode.DeepEquals(expected["crafting"], craft), $"{label}: expected crafting {expected["crafting"]}; actual {craft}");
+        LazyAssert.True(JsonNode.DeepEquals(expected["crafting"], craft), () => $"{label}: expected crafting {expected["crafting"]}; actual {craft}");
         Assert.Same(state.Storage.ServerStackable, state.Bag.ServerStackable);
         foreach (var (slot, attributes) in state.Companions.Attributes)
         {

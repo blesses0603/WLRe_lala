@@ -1394,8 +1394,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Catalogs/SmithDataParser.cs",
+      "dotnet/Lala.Core/Catalogs/OrderedCatalog.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1467,11 +1470,21 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Only parse_smith_1275 is ported as Parse33: signed count 0–20,000, exact 33-byte rows and nonzero unique output IDs. It preserves every returned field and material-slot order, duplicate materials and zero amounts while omitting zero material IDs. material_count validates at most five but neither truncates slots nor appears in the result; raw rows omit read_only.",
+      "Ordered read-only maps retain Python insertion order separately from frozen lookup. Source smith-33-v1 diagnostics preserve input name data, counts, checkpoints, digests, failure locations and exact source messages.",
+      "Combined Smith/Stage evidence: 768 actual decorated-Python vectors in eight compressed/decoded-hash-checked resources; 781 focused Release passes (768 vectors, five source hashes, eight contracts), 18 retained Python passes and independent fixture/recipe/full-result-digest review. Four maximum-count cases compare complete ordered 20,000-record result digests, not count/endpoints alone.",
+      "Typed spans replace Python dynamic types/coercions; immutable owned maps/arrays/records replace mutable dictionaries/lists. Exact error messages remain while PreviewError/ValueError/ProtocolError and diagnostic error_type map to CatalogDecodeException. Cooperative cancellation and optional in-memory diagnostics do not create source provenance or command authority."
+    ],
+    "outstanding_scope": [
+      "All other preview behavior remains unported: archive/catalog/table loading, PreviewNPCIndex/PreviewInteractIndex/Preview1275 composition and load_preview. No ZIP/resource extraction, downloads, installation, storage, adapters, runtime activation, crafting/commands, UI/Android or AccountSession integration.",
+      "No actual official-resource positive acceptance. The separate adapter contract must preserve unmarked ID-keyed maps for 33-byte Smith input rather than blindly substituting ParseRecords, which returns a timed-marked array. Diagnostic schema names do not certify a reviewed source."
+    ]
   },
   {
     "id": "desktop:wlre/services/world/resource_classification.py",
@@ -2232,8 +2245,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "ported_offline",
+    "target_files": [
+      "dotnet/Lala.Core/Catalogs/SmithDataParser.cs",
+      "dotnet/Lala.Core/Catalogs/OrderedCatalog.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -2264,11 +2280,22 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "All three pure functions are ported for the documented typed API: parse_smith_candidate, mark_timed_recipes and parse_smith_records. Exact 35-byte candidate rows require nonzero unique leading recipe keys while preserving multiple recipes for one output. RecipeId/CandidateRowKey and ReadOnly are nullable to distinguish omitted source fields from zero/false.",
+      "The selector accepts signed counts 0–20,000 and exact 33/35-byte layouts, selecting 33 first for zero records. Timed marking copies rows and sets read_only exactly when time_id is nonzero; raw parser outputs are unmarked. Material order/duplicates/zero amounts and source field/error ordering are preserved.",
+      "Source smith-35-v1/smith-reviewed-v1 diagnostics retain data input names, digests, counts, profiles and nested decorated Parse33 behavior. Nested successes remain suppressed and failures remain separate; outer traceback-derived child offsets do not copy child field/record values. MarkTimedRecipes has no source decorator.",
+      "Combined Smith/Stage evidence: 768 actual decorated-Python vectors in eight compressed/decoded-hash-checked resources; 781 focused Release passes (768 vectors, five source hashes, eight contracts), 18 retained Python passes and independent fixture/recipe/full-result-digest review. Four maximum-count cases compare complete ordered 20,000-record result digests, not count/endpoints alone.",
+      "Typed spans replace Python dynamic types/coercions; immutable owned maps/arrays/records replace mutable dictionaries/lists. Exact error messages remain while PreviewError/ValueError/ProtocolError and diagnostic error_type map to CatalogDecodeException. Cooperative cancellation and optional in-memory diagnostics do not create source provenance or command authority."
+    ],
+    "outstanding_scope": [
+      "Offline status covers pure typed logic only. MarkTimedRecipes accepts parser-shaped typed arrays, not arbitrary Python dictionary extensions, missing/dynamic time_id, booleans or unbounded/negative integers. Default arrays/null rows reject with the source validation message; unrelated recipe fields receive no added validation.",
+      "catalog_adapters.py integration, provenance, official-resource positive acceptance, runtime/catalog activation, files/downloads/extraction, storage, crafting/sends, UI/Android and session integration remain outstanding. The adapter must return an unmarked ID-keyed map for 33-byte input and a timed-marked array for 35-byte input; ParseRecords is not a universal adapter replacement. smith-reviewed-v1 names a structural selector, not source approval; adapter smith-new-33-v1/smith-new-35-v1 schemas remain distinct from parser diagnostics."
+    ]
   },
   {
     "id": "desktop:wlre/services/world/tent.py",

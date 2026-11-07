@@ -8,6 +8,7 @@ using System.Text.Json.Serialization;
 using Lala.Core.Inventory;
 using Lala.Core.Protocol;
 using Lala.Core.State;
+using Lala.Core.Tests.TestSupport;
 using Xunit;
 
 namespace Lala.Core.Tests.Inventory;
@@ -219,5 +220,5 @@ public sealed class LiveInventoryParityTests
     private static JsonNode Number(BigInteger value) => JsonNode.Parse(value.ToString(CultureInfo.InvariantCulture))!;
     private static string Key(uint value) => value.ToString(CultureInfo.InvariantCulture);
     private static void AssertJson(JsonNode expected, JsonNode actual, string label) =>
-        Assert.True(JsonNode.DeepEquals(expected, actual), $"{label}: expected {expected}; actual {actual}");
+        LazyAssert.True(JsonNode.DeepEquals(expected, actual), () => $"{label}: expected {expected}; actual {actual}");
 }
