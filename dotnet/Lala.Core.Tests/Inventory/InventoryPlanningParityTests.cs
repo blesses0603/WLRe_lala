@@ -2,8 +2,10 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Numerics;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using Lala.Core.Inventory;
 using Lala.Core.State;
 using Xunit;
@@ -110,8 +112,10 @@ public sealed class InventoryPlanningParityTests
         Assert.NotEqual(Hash([0xef, 0xbb, 0xbf, 1]), Hash([1]));
     }
 
-    [Fact]
-    public void GeneratedPublicationPartsAreBoundedGzipByteFixtures()
+    [Theory]
+    [InlineData("\n")]
+    [InlineData("\r\n")]
+    public void GeneratedPublicationPartsAreBoundedGzipByteFixtures(string newline)
     {
         var directory = Path.Combine(Root().FullName, "dotnet", "Lala.Core.Tests", "Inventory");
         var files = Directory.GetFiles(directory, "InventoryPlanningPythonVectors*.cs");
@@ -120,10 +124,34 @@ public sealed class InventoryPlanningParityTests
         {
             Assert.InRange(new FileInfo(path).Length, 1, 500_000);
             var text = File.ReadAllText(path);
+            var checkout = text.Replace("\r\n", "\n", StringComparison.Ordinal)
+                .Replace("\n", newline, StringComparison.Ordinal);
+            Assert.InRange(Encoding.UTF8.GetByteCount(checkout), 1, 500_000);
             Assert.DoesNotContain("FromBase64String", text, StringComparison.Ordinal);
             if (path.Contains(".Part", StringComparison.Ordinal))
                 Assert.Contains("GzipJson.Decode([", text, StringComparison.Ordinal);
         }
+    }
+
+    [Fact]
+    public void RepartitioningPreservesEveryCaseSnapshotAndGzipByte()
+    {
+        // Pin the ordered streams and API payloads from the original 153-case oracle.
+        var directory = Path.Combine(Root().FullName, "dotnet", "Lala.Core.Tests", "Inventory");
+        var compressed = Directory.GetFiles(directory, "InventoryPlanningPythonVectors.Part*.cs")
+            .Order(StringComparer.Ordinal)
+            .SelectMany(path => Regex.Matches(File.ReadAllText(path), @"0x([0-9a-f]{2})")
+                .Select(match => Convert.ToByte(match.Groups[1].Value, 16))).ToArray();
+        Assert.Equal("c69bb16f02ac09bb5b73f69df6a77edf28af7e7a19fbb9e11675b59805e09880",
+            Convert.ToHexString(SHA256.HashData(compressed)).ToLowerInvariant());
+
+        var cases = InventoryPlanningPythonVectors.Sequences().ToArray();
+        Assert.Equal(153, cases.Length);
+        Assert.Equal(153, cases.Select(row => (string)row[0]).Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal(2032, cases.Sum(row => JsonNode.Parse((string)row[1])!.AsArray().Count));
+        var payload = Encoding.UTF8.GetBytes(string.Concat(cases.Select(row => $"{row[0]}\n{row[1]}\n")));
+        Assert.Equal("85cf25db8d9535f1b1eeab0abaacf7ed4335ec9d2d67478ac93e302af78a4898",
+            Convert.ToHexString(SHA256.HashData(payload)).ToLowerInvariant());
     }
 
     internal static JsonObject Project(BagReceiveSnapshot state)
