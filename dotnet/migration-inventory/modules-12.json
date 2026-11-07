@@ -592,8 +592,12 @@
     "target_project": "Lala.Android",
     "target_subsystem": "Platform.ForegroundService",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Android/Platform/ConnectionService.cs",
+      "dotnet/Lala.Android/Platform/ConnectionServiceClient.cs",
+      "dotnet/Lala.Android/Platform/ServiceCommandState.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -652,11 +656,19 @@
     },
     "acceptance_profile": "android",
     "verification": {
-      "csharp_build": "not_run",
+      "csharp_build": "passed_android_debug_apk_for_listed_subset",
       "differential_tests": "not_run",
       "device_acceptance": "not_run",
-      "live_server_acceptance": "not_run"
-    }
+      "live_server_acceptance": "not_run",
+      "lifecycle_contract_tests": "59 tests passed; controlled synthetic adapters/network/host guards, not Python parity or device/server acceptance",
+      "evidence_document": "dotnet/Lala.Android/README.md"
+    },
+    "migrated_scope": [
+      "以程序內唯一 coordinator、local Binder、start epoch 與 owner lease 建立服務所有權；不沿用 Python Unix socket RPC。"
+    ],
+    "outstanding_scope": [
+      "完整命令／事件派送、自動功能、IPC 等價、實際 Core transport 接入與實機驗收未完成。"
+    ]
   },
   {
     "id": "android:android_app/service.py",
@@ -667,8 +679,13 @@
     "target_project": "Lala.Android",
     "target_subsystem": "Platform.ForegroundService",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Android/Platform/ConnectionService.cs",
+      "dotnet/Lala.Android/Platform/ConnectionNotification.cs",
+      "dotnet/Lala.Android/Platform/AndroidNetworkMonitor.cs",
+      "dotnet/Lala.Android/Properties/AndroidManifest.xml"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -693,11 +710,19 @@
     },
     "acceptance_profile": "android",
     "verification": {
-      "csharp_build": "not_run",
+      "csharp_build": "passed_android_debug_apk_for_listed_subset",
       "differential_tests": "not_run",
       "device_acceptance": "not_run",
-      "live_server_acceptance": "not_run"
-    }
+      "live_server_acceptance": "not_run",
+      "lifecycle_contract_tests": "59 tests passed; controlled synthetic adapters/network/host guards, not Python parity or device/server acceptance",
+      "evidence_document": "dotnet/Lala.Android/README.md"
+    },
+    "migrated_scope": [
+      "明確使用者啟動的 specialUse 前景服務、通知停止、NotSticky、網路等待與 OS 停止路徑。"
+    ],
+    "outstanding_scope": [
+      "Core adapter 預設 unavailable；簽章完整性、Keystore、wake lock、懸浮球、實機與正式服驗收未完成。"
+    ]
   },
   {
     "id": "android:android_app/sessions.py",
@@ -708,8 +733,11 @@
     "target_project": "Lala.Android",
     "target_subsystem": "Platform.SessionHost",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Android/Lifecycle/ConnectionContracts.cs",
+      "dotnet/Lala.Android/Lifecycle/ConnectionCoordinator.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -752,11 +780,19 @@
     },
     "acceptance_profile": "android",
     "verification": {
-      "csharp_build": "not_run",
+      "csharp_build": "passed_android_debug_apk_for_listed_subset",
       "differential_tests": "not_run",
       "device_acceptance": "not_run",
-      "live_server_acceptance": "not_run"
-    }
+      "live_server_acceptance": "not_run",
+      "lifecycle_contract_tests": "59 tests passed; controlled synthetic adapters/network/host guards, not Python parity or device/server acceptance",
+      "evidence_document": "dotnet/Lala.Android/README.md"
+    },
+    "migrated_scope": [
+      "單一選定帳號 slot、generation／attempt 隔離、切帳先清理、有限重試、連線與清理 watchdog；只以受控 adapter 驗證。"
+    ],
+    "outstanding_scope": [
+      "舊 Android 多帳號集合、真實登入／socket、狀態同步與指令派送未移植；未宣稱完整 Python 行為等價。"
+    ]
   },
   {
     "id": "android:android_app/settings_ui.py",

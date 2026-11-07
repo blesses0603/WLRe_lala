@@ -81,6 +81,12 @@ All production modules are individually mapped in the JSON inventory; the table 
 
 ## Android platform contract (not solved by Avalonia UI)
 
+### PR79 Android lifecycle increment
+
+The Android C# host now has a single selected-account coordinator, a process-wide runtime owned by the foreground service, local Binder observation, notification/permission flows and network monitoring. The platform-free contracts are under `Lala.Android/Lifecycle`; Core APIs are unchanged. The default Core adapter is explicitly unavailable and never opens a socket or reports a synthetic active session. This is partial host migration, not parity with the Python multi-account service, credential vault, integrity checks or live transport. See [Android lifecycle responsibilities and acceptance](../dotnet/Lala.Android/README.md).
+
+The historical Python `dataSync` declaration below is reference evidence; the new host chooses `specialUse` with a declared subtype for a user-started ongoing game connection. Play review and device acceptance are not established by that choice. Notification denial defers startup by product policy. Activity backgrounding does not own cancellation of a started session; explicit stop, platform stop and process death do. No persisted login or boot restart is added.
+
 Evidence is from the Android baseline above, not a promise that the old implementation satisfies every newer OS rule.
 
 | Contract | Source | Required migration and tests |

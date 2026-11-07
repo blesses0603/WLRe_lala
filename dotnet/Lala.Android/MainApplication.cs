@@ -1,6 +1,5 @@
 using Android.Runtime;
 using Avalonia.Android;
-using Lala.Presentation;
 
 namespace Lala.Android;
 
@@ -8,4 +7,4 @@ namespace Lala.Android;
 // IActivityApplicationLifetime.MainViewFactory to obtain a fresh view.
 [global::Android.App.Application]
 public sealed class MainApplication(nint javaReference, JniHandleOwnership transfer)
-    : AvaloniaAndroidApplication<App>(javaReference, transfer);
+    : AvaloniaAndroidApplication<AndroidApp>(javaReference, transfer);

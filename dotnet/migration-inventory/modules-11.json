@@ -737,8 +737,13 @@
     "target_project": "Lala.Android",
     "target_subsystem": "UI.Lifecycle",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Android/MainActivity.cs",
+      "dotnet/Lala.Android/AndroidApp.cs",
+      "dotnet/Lala.Android/AndroidMainView.cs",
+      "dotnet/Lala.Android/Platform/ConnectionServiceClient.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -798,11 +803,19 @@
     },
     "acceptance_profile": "android",
     "verification": {
-      "csharp_build": "not_run",
+      "csharp_build": "passed_android_debug_apk_for_listed_subset",
       "differential_tests": "not_run",
       "device_acceptance": "not_run",
-      "live_server_acceptance": "not_run"
-    }
+      "live_server_acceptance": "not_run",
+      "lifecycle_contract_tests": "59 tests passed; controlled synthetic adapters/network/host guards, not Python parity or device/server acceptance",
+      "evidence_document": "dotnet/Lala.Android/README.md"
+    },
+    "migrated_scope": [
+      "Activity 僅綁定／訂閱服務，前背景只取消離線解析；通知授權後不自動登入。"
+    ],
+    "outstanding_scope": [
+      "完整登入／資料驗證頁、其他遊戲頁面、舊 UI 等價、憑證與實機生命週期仍待移植及驗收。"
+    ]
   },
   {
     "id": "android:android_app/assets.py",

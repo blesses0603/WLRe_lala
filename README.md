@@ -2,6 +2,8 @@
 
 > **v7.3.1 桌面發行（2026-11-07）**：以 main `8aa7a684` 為基底，包含 PR #74 的舊導航資料隔離、無種子啟動及官方預覽修正。程式、介面與封裝共用 `wlre.__version__ = 7.3.1`；由版本 Tag 觸發 Windows x64、macOS arm64／x64 建置，成功後發布 ZIP 與 SHA-256。正式服完整端到端、全地圖導航／實際移動與使用者電腦實機驗收仍未完成；官方導航預覽不授權正式移動。macOS Intel CI 不驗證 GUI，Apple Developer ID 公證亦未完成。Android 不在本次發行範圍。下列舊版段落保留歷史狀態，不代表本次驗收結果。
 
+> **PR79 C#／Avalonia Android 生命週期（預計 v0.2.0，未正式發布）**：新 `dotnet/Lala.Android` 已加入前景服務、通知停止、畫面重新綁定、網路等待及有限重連的架構；共用登入／TCP 核心尚未接入，不能登入遊戲。Android C# host 的版本獨立於本頁 Python 桌面版 `7.3.1`，也不更動舊 Android 倉庫。實作、測試邊界與待驗收項目見 [Android 生命週期](dotnet/Lala.Android/README.md)。
+
 > **官方導航換源與受限徘徊（PR 評估，尚未合併／發布）**：移除發行包內三份舊導航資料及12 MB隨附seed，缺資料只從當期官方校驗來源同步。依使用者要求，平面陸地移動改用有界路徑契約，不再因未做正式服實測而一律禁止；版本、完整性、可達性、樓層、速度、距離及校正停止仍檢查。558模型各一中心離線抽樣425完成四點mock循環、133安全拒絕，不代表任意位置或真服成功。詳見[受限移動](docs/OFFICIAL_BOUNDED_MOVEMENT.md)與[舊資料移除](docs/LEGACY_NAVIGATION_REMOVAL.md)。
 
 > **v7.3.0 官方資源解析診斷（開發中）**：每次 Launcher／Runtime 更新自動記錄解析器、資料雜湊、失敗欄位與位元組位置，並檢查其他可取得資料。已知 33／35-byte 配方仍使用原有嚴格選擇；未知格式只產生診斷，不猜測欄位或解除登入。可執行 `python -m tools.diagnose_parsers` 檢視結果；加 `--sync` 重新同步檢查。涵蓋範圍與驗收見 [解析器自動診斷](docs/PARSER_DIAGNOSTICS.md)。尚未合併、發布或通過正式服驗收。

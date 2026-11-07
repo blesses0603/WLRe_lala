@@ -6,8 +6,8 @@
 
 - `Lala.Core`: platform-independent protocol, session safety, battle rule ports; no Avalonia or Android references.
 - `Lala.Desktop`: Windows/macOS Avalonia host. Currently exposes a working **offline** frame inspector using the actual shared codec.
-- `Lala.Android`: Android Avalonia host linking the same presentation sources, with cancellation on backgrounding. Production foreground connection, secure storage, notifications and permission flows are not implemented yet.
-- `Lala.Core.Tests`: tests only, not a fourth product project.
+- `Lala.Android`: Android Avalonia host with a service-owned connection lifecycle, explicit notification permission/stop flows and the shared offline inspector. The actual Core login/transport adapter is still unavailable; no game connection is simulated. See [Android lifecycle and acceptance](Lala.Android/README.md).
+- `Lala.Core.Tests` and `Lala.Android.Lifecycle.Tests`: tests only, not additional product projects.
 
 The full source-by-source migration inventory is [migration-inventory.json](migration-inventory.json). Architecture, platform contracts and acceptance gates: [migration plan](../docs/DOTNET_MIGRATION.md). Not-yet-migrated features must not be enabled by substituting guessed protocol behavior.
 
@@ -18,6 +18,7 @@ Install the official .NET 10 SDK. `global.json` allows newer .NET 10 feature ban
 ```sh
 cd dotnet
 dotnet test Lala.Core.Tests/Lala.Core.Tests.csproj -c Release
+dotnet test Lala.Android.Lifecycle.Tests/Lala.Android.Lifecycle.Tests.csproj -c Release
 dotnet build Lala.Desktop/Lala.Desktop.csproj -c Release
 dotnet run --project Lala.Desktop -c Release -- --self-test
 dotnet run --project Lala.Desktop -c Release
@@ -27,7 +28,7 @@ dotnet run --project Lala.Desktop -c Release
 
 ```sh
 dotnet workload install android
-dotnet build Lala.Android/Lala.Android.csproj -c Debug
+dotnet build Lala.Android/Lala.Android.csproj -c Debug -p:EmbedAssembliesIntoApk=true
 ```
 
 Android also requires a supported Android SDK and Java SDK. A successful cross-platform build is not a physical-device test, macOS signing/notarization, release-ready APK, or official-server acceptance.
@@ -50,3 +51,7 @@ Activity decoding and movement-lock state now have an offline typed implementati
 The next Core increment adds offline ItemData/SkillData parsing and stack rules; single-writer scoped state ownership; role/world/battle/social layouts; S31 expedition events; and geometry-only navigation/funnel/motion checks. The integrated Release suite contains **2607 passing tests**. Independent review and retained Python vectors cover bounded source subsets, not full functional migration. Catalog activation, real session/dispatcher integration, runtime movement and official-resource/device/server acceptance remain incomplete. See each test area's README/LAYOUTS.md/EXPEDITION.md and inventory scope entries.
 
 The following Core increment adds the typed server dispatcher, all live-data layouts, receive-only chat/guild/instance decoding, immutable session event reduction, completed-battle EXP efficiency, and bounded/cancellable resource identity metadata validation. **8201 Release tests pass** after integration. Chat/guild/instance results now flow through the dispatcher; unported service families remain explicitly unsupported. Session event reduction does not modify AccountSession or transport lifecycle. Resource observations remain non-authorizing and do not activate catalogs.
+
+## Android lifecycle increment (v0.2.0 candidate)
+
+The subsequent Android increment prepares foreground service ownership, reconnection/cancellation guards and platform status UI while Core continues independently. It does not modify Core APIs or implement its missing transport. The default adapter reports unavailable, process death never silently restores login, and all live-server/device acceptance remains separate. Desktop's Python version remains 7.3.1; Android C# host versions are independent.

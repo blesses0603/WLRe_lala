@@ -1,7 +1,7 @@
 using Android.App;
 using Android.Content.PM;
 using Avalonia.Android;
-using Lala.Presentation;
+using Lala.Android.Platform;
 
 namespace Lala.Android;
 
@@ -9,10 +9,36 @@ namespace Lala.Android;
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode)]
 public sealed class MainActivity : AvaloniaMainActivity
 {
+    protected override void OnStart()
+    {
+        base.OnStart();
+        ConnectionServiceClient.Instance.Attach(this);
+    }
+
+    protected override void OnResume()
+    {
+        base.OnResume();
+        ConnectionServiceClient.Instance.SetResumed(this, true);
+    }
+
+    protected override void OnPause()
+    {
+        ConnectionServiceClient.Instance.SetResumed(this, false);
+        base.OnPause();
+    }
+
     protected override void OnStop()
     {
-        // Never retain pending work when the activity goes into the background.
-        (Avalonia.Application.Current as App)?.SuspendInspection();
+        // Only view-local work is cancelled; a started service owns the session.
+        (Avalonia.Application.Current as AndroidApp)?.SuspendInspection();
+        ConnectionServiceClient.Instance.Detach(this);
         base.OnStop();
+    }
+
+    public override void OnRequestPermissionsResult(int requestCode, string[] permissions, Permission[] grantResults)
+    {
+        base.OnRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == ConnectionServiceClient.NotificationRequest)
+            ConnectionServiceClient.Instance.OnNotificationResult();
     }
 }
