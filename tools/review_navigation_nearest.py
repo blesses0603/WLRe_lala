@@ -1,6 +1,6 @@
 """Bounded native NavmeshBase.GetNearest graph-level integration probe.
 
-Synthetic one-graph state, up to 2x2 tiles/512 triangles and initialized vtables.
+Synthetic one-graph state, up to 2x2 tiles/512 triangles (isolated opt-in 1024) and initialized vtables.
 Center preparation explicitly models modf; optional outer AstarPath calls. Not a live map,
 Android-device acceptance, or movement authority.
 """
@@ -12,8 +12,9 @@ from tools.review_navigation_vertices import oracle as vertex_oracle,validate_in
 from tools.review_navigation_bbtree import oracle as tree_oracle
 
 
-def validate_query(vertices,faces,point,origin):
-    if not isinstance(faces,list) or not 1<=len(faces)<=512:raise ValueError('Require 1..512 triangles')
+def validate_query(vertices,faces,point,origin,*,capacity=512):
+    if type(capacity) is not int or capacity not in (512,1024):raise ValueError('Invalid nearest capacity')
+    if not isinstance(faces,list) or not 1<=len(faces)<=capacity:raise ValueError(f'Require 1..{capacity} triangles')
     for face in faces:validate_inputs(vertices,face)
     for vector in (point,origin):
         if len(vector)!=3 or any(type(x) not in (int,float) or not math.isfinite(x) or abs(x)>1000 for x in vector):
@@ -26,7 +27,9 @@ def validate_query(vertices,faces,point,origin):
         if not any(cross):raise ValueError('Degenerate triangle')
 
 
-def oracle(path,*,_state=None,_search_state=False,_outer_instruction_limit=200000):
+def oracle(path,*,_state=None,_search_state=False,_outer_instruction_limit=200000,capacity=512):
+    if type(capacity) is not int or capacity not in (512,1024) or (capacity!=512 and _search_state):
+        raise ValueError('Extended nearest requires isolated state')
     if type(_outer_instruction_limit) is not int or _outer_instruction_limit not in (200000,400000):
         raise ValueError('Unreviewed diagnostic instruction budget')
     if _search_state and _outer_instruction_limit!=200000:
@@ -57,9 +60,9 @@ def oracle(path,*,_state=None,_search_state=False,_outer_instruction_limit=20000
     q(0x6049020,0x604a000);q(0x604a040,0x604b000);w(0x604b018,1);q(0x604b020,0x6020000)
     u.mem_write(0x4c54e25,b'\x01');u.mem_write(0x4c5039f,b'\x01')
     u.mem_write(0x604801c,b'\x01\x01')
-    build=tree_oracle(path)
+    build=tree_oracle(path,capacity=capacity)
     def query(vertices,faces,point,origin=(0,0,0),matrix=False,walkable=None,*,outer=False,full_search=False,graph_mask=1,max_distance=None,tile_shape=(1,1),face_tiles=None,cell_size=1.0,tile_cells=(10,10),node_flags=None,tag_mask=None):
-     validate_query(vertices,faces,point,origin)
+     validate_query(vertices,faces,point,origin,capacity=capacity)
      if len(tile_shape)!=2 or any(type(x) is not int or not 1<=x<=2 for x in tile_shape):raise ValueError('Require at most 2x2 tiles')
      if type(cell_size) not in (int,float) or not math.isfinite(cell_size) or not 0<cell_size<=100:raise ValueError('Invalid cell size')
      if len(tile_cells)!=2 or any(type(x) is not int or not 1<=x<=100000 for x in tile_cells):raise ValueError('Invalid tile cell dimensions')

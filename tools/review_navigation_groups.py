@@ -11,8 +11,9 @@ import struct
 from tools.review_navigation_rotation import checked_bytes,IL2CPP_SHA
 
 
-def validate_graph(adjacency,walkable,*,multiple=False):
-    if not isinstance(adjacency,list) or not 1<=len(adjacency)<=(512 if multiple else 256):
+def validate_graph(adjacency,walkable,*,multiple=False,capacity=512):
+    if type(capacity) is not int or capacity not in (512,1024) or (capacity!=512 and not multiple):raise ValueError('Invalid group capacity')
+    if not isinstance(adjacency,list) or not 1<=len(adjacency)<=(capacity if multiple else 256):
         raise ValueError('Require bounded node count')
     if len(walkable)!=len(adjacency) or any(type(v) is not bool for v in walkable) or (not multiple and not walkable[0]):
         raise ValueError('Require Boolean flags and a walkable single-group starting node')
@@ -22,7 +23,8 @@ def validate_graph(adjacency,walkable,*,multiple=False):
         if len(neighbors)!=len(set(neighbors)):raise ValueError('Duplicate references')
 
 
-def oracle(path,*,multiple=False):
+def oracle(path,*,multiple=False,capacity=512):
+    if type(capacity) is not int or capacity not in (512,1024) or (capacity!=512 and not multiple):raise ValueError('Invalid group capacity')
     raw=checked_bytes(path,IL2CPP_SHA)
     from unicorn import Uc,UC_ARCH_ARM64,UC_MODE_ARM,UC_HOOK_CODE
     from unicorn.arm64_const import UC_ARM64_REG_CPACR_EL1,UC_ARM64_REG_X0,UC_ARM64_REG_X1,UC_ARM64_REG_X2,UC_ARM64_REG_SP,UC_ARM64_REG_LR,UC_ARM64_REG_PC
@@ -75,15 +77,20 @@ def oracle(path,*,multiple=False):
      children=[(p-0x6050000)//0x100 for p in refs]
      if len(set(children))!=count:raise ValueError('Duplicate native children')
      return dict(children=children,flags=[read(0x6050014+i*0x100) for i in range(len(adjacency))],queue_remaining=read(0x6001020))
+    group_base,group_stride,edge_base,edge_stride=0x6800000,0x3000,0x6100000,0x2000
+    if capacity==1024:
+        u.mem_map(0x7001000,0x100000);u.mem_map(0x7200000,0x1004000)
+        group_base,group_stride,edge_base,edge_stride=0x7200000,0x4000,0x7001000,0x400
     def grouped(adjacency,walkable):
-        validate_graph(adjacency,walkable,multiple=True)
+        validate_graph(adjacency,walkable,multiple=True,capacity=capacity)
+        if capacity==1024 and any(len(row)>32 for row in adjacency):raise ValueError('Extended group edge bound')
         n=len(adjacency)
         u.mem_write(0x6000000,bytes(0x5000))
         q(0x6000010,0x6070000);q(0x6000018,0x6073000)
         for arr in (0x6070000,0x6073000):w(arr+0x18,n+1)
         q(0x6000040,0x6062000);q(0x6062018,0x2d85d64);q(0x6062040,0x6000000)
         q(0x6063188,0x2d94558);q(0x6000048,0x6001000)
-        q(0x6001010,0x6020000);w(0x6020018,512)
+        q(0x6001010,0x6020000);w(0x6020018,capacity)
         # Registered int-specialized native methods, with preinitialized
         # comparer/static context; no Python search or deduplication callback.
         q(0x60103a0,0x6010500);q(0x6010508,0x1f51960);q(0x6010520,0x6010200)
@@ -94,13 +101,13 @@ def oracle(path,*,multiple=False):
         u.mem_write(0x6016132,b'\x01');q(0x60160b8,0x6017000);q(0x6017000,0x6018000)
         q(0x6018000,0x6019000);q(0x60191d8,0x2ce74f8);q(0x60191e0,0x601a000);q(0x601a020,0x6010200)
         for g in range(n+1):
-            record=0x6800000+g*0x3000
-            u.mem_write(record,bytes(0x2000))
+            record=group_base+g*group_stride
+            u.mem_write(record,bytes(0x2000 if capacity==512 else 0x3000))
             q(0x6070020+g*8,record);q(0x6073020+g*8,record+0x1100)
             q(record+0x10,record+0x100);w(record+0x118,256)
-            q(record+0x1110,record+0x1200);w(record+0x1218,512)
+            q(record+0x1110,record+0x1200);w(record+0x1218,capacity)
         for i,neighbors in enumerate(adjacency):
-            node=0x6080000+i*0x100;arr=0x6100000+i*0x2000
+            node=0x6080000+i*0x100;arr=edge_base+i*edge_stride
             q(node,0x6063000);w(node+0x14,int(walkable[i]));q(node+0x28,arr);w(arr+0x18,len(neighbors))
             for j,neighbor in enumerate(neighbors):q(arr+0x20+j*16,0x6080000+neighbor*0x100)
         read=lambda a:struct.unpack('<I',u.mem_read(a,4))[0]
@@ -110,14 +117,14 @@ def oracle(path,*,multiple=False):
             if not walkable[i] or (read(0x6080014+i*0x100)>>1)&0x1ffff:continue
             g=len(groups)+1
             execute(0x2d84edc,0x6000000,g,0x6080000+i*0x100)
-            record=0x6800000+g*0x3000;count=read(record+0x18)
+            record=group_base+g*group_stride;count=read(record+0x18)
             if not 1<=count<=256:raise ValueError('Invalid group size')
             refs=[struct.unpack('<Q',u.mem_read(record+0x120+j*8,8))[0] for j in range(count)]
             if any(not 0x6080000<=p<0x6080000+n*0x100 or (p-0x6080000)%0x100 for p in refs):raise ValueError('Invalid group pointer')
             groups.append([(p-0x6080000)//0x100 for p in refs])
         connections=[[]]
         for g in range(1,len(groups)+1):
-            record=0x6800000+g*0x3000;count=read(record+0x1118)
+            record=group_base+g*group_stride;count=read(record+0x1118)
             if count>len(groups):raise ValueError('Invalid group link count')
             connections.append(list(struct.unpack('<'+'I'*count,u.mem_read(record+0x1220,count*4))))
         # Keep native groups/connections in this VM and run native Area fill.

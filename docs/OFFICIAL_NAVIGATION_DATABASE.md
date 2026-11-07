@@ -2878,3 +2878,62 @@ height queries with independent endpoint checks; then join the resulting searche
 corridor to the already-tested native Apply pipeline. Do not bypass those stages
 by labeling prepared-center search as client runtime equivalence. Keep all three
 seeds, house enter/exit scope and movement guards; local only, no push/merge/release.
+
+### Phase 70: full 844-node hierarchy, native BBTree and arbitrary 3-D nearest
+
+The separate hierarchy, BBTree and nearest probes now support an explicit
+isolated capacity=1024. Defaults stay 512; extended nearest still rejects shared
+search-state use. BBTree index/rectangle buffers are relocated to avoid overlap
+at maximum count. Extended hierarchy uses separate edge/group arenas, bounded
+32-neighbor records and 1024-entry queues/connection lists; the native 256-child
+group bound is unchanged. Extra hierarchy mappings are bounded (~17 MiB), with
+no change to product limits. Native build/group/nearest instruction ceilings
+remain enforced; each complete command also has a 180-second wall deadline.
+
+The pinned M12050 graph, original graph0 settings, original flags and all 844
+faces are used. Native grouping produces 5 hierarchy groups; native node Area
+labels match an independent component traversal (one connected walkable component).
+A separate 844-node chain with its middle node disabled verifies disconnected
+Area initialization. Root iteration order is explicitly prepared, not official
+RecalculateAll startup. Native BBTree output is structurally checked for full
+reference coverage, links and bounding boxes before nearest queries consume it.
+
+Fifteen XYZ probes include offsets from four node/triangle centers, below/near/
+above-surface heights, a retained nonflat face, an exact vertex, outside-map and
+far-map points. Thirty land/sky native outer AstarPath.GetNearest queries match
+independent double-precision 3-D closest-triangle calculations. Maximum returned
+closest-point discrepancy is 7.014e-6 world units; chosen-node squared-distance
+excess versus the independent minimum is zero. Boundary ties are permitted.
+A far-point max-distance=0.1 control correctly returns no node.
+
+Sea-mode empty-candidate behavior is explicitly NOT passed. Initial testing
+attempted all 15 empty-mode queries and each hit the 200,000-instruction ceiling.
+The final reproducible runner retains one such failure, skips 14 repetitions
+because the verified graph has zero eligible sea nodes, and attempts exactly one
+isolated 400,000-budget probe using the already-supported diagnostic option.
+That probe also fails by instruction budget on both hosts. No indefinite retry,
+limit removal, fabricated null result or success substitution is used. Existing
+product eligibility checks can refuse unavailable modes, but native empty-search
+completion remains an unresolved fixture/runtime question.
+
+The hierarchy/Area results and nearest fixture are separately initialized VMs;
+the node group bits are copied with original travel tags retained. This does NOT
+establish full shared-state ABPath.Prepare, Area filtering/SetStart and nearest
+selection in one 844-node search instance. Those pointer/owner contracts still
+need explicit relocation and integration before joining Phase 69's full search.
+
+Both hosts have identical outputs except timing (~68.36 / 63.90 seconds): 30
+matched nearest cases, one matched distance-limit rejection, one 200k failure,
+14 intentionally unrun duplicates and one 400k failure. Capacity controls at
+1024 nodes verify 511 native BBTree boxes and all 1024 references, 1024 isolated
+native hierarchy Areas, and the correct nearest node on a 1024-triangle mesh.
+Default desktop regression passes 9 BBTree, 9 multiple-group and 384 nearest
+cases. Related unit suites pass desktop 125 / Android 124.
+
+Concrete next steps: inspect the bounded empty-candidate loop without treating
+its timeout as proof of no path; unify the relocated nearest/hierarchy/search
+ownership and native Prepare structures; then test arbitrary XYZ start/end pairs
+through search and final native modifiers in that same VM. Full client startup,
+actual character collision/grounding, player dimensions and runtime settings
+remain separate evidence needs. All three seeds and movement guards stay; no
+push, merge, release, login or movement packets.

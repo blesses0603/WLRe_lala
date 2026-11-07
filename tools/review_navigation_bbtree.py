@@ -9,8 +9,9 @@ import struct
 from tools.review_navigation_rotation import checked_bytes,IL2CPP_SHA
 
 
-def validate_inputs(rects,centers):
-    if not 1<=len(rects)<=512 or len(centers)!=len(rects):raise ValueError('Invalid tree input count')
+def validate_inputs(rects,centers,*,capacity=512):
+    if type(capacity) is not int or capacity not in (512,1024):raise ValueError('Invalid tree capacity')
+    if not 1<=len(rects)<=capacity or len(centers)!=len(rects):raise ValueError('Invalid tree input count')
     for rect,center in zip(rects,centers):
         if len(rect)!=4 or len(center)!=3 or any(type(v) is not int or abs(v)>10000000 for v in (*rect,*center)):
             raise ValueError('Require bounded integer rectangle/center inputs')
@@ -41,7 +42,8 @@ def validate_tree(result,rects):
     if len(seen)!=len(boxes):raise ValueError('Unreachable native box')
 
 
-def oracle(path):
+def oracle(path,*,capacity=512):
+    if type(capacity) is not int or capacity not in (512,1024):raise ValueError('Invalid tree capacity')
     raw=checked_bytes(path,IL2CPP_SHA)
     from unicorn import Uc,UC_ARCH_ARM64,UC_MODE_ARM,UC_HOOK_CODE
     from unicorn.arm64_const import UC_ARM64_REG_CPACR_EL1,UC_ARM64_REG_X0,UC_ARM64_REG_SP,UC_ARM64_REG_LR,UC_ARM64_REG_PC,UC_ARM64_REG_W0
@@ -61,16 +63,18 @@ def oracle(path):
      if not any(a<=address<b for a,b in ranges):raise ValueError('Unverified runtime branch '+hex(address))
      visited.add(address)
     u.hook_add(UC_HOOK_CODE,guard)
+    index_base=0x6052000 if capacity==512 else 0x6054000
+    rect_base=0x6054000 if capacity==512 else 0x6056000
     def run(rects,centers):
-     validate_inputs(rects,centers);n=len(rects)
+     validate_inputs(rects,centers,capacity=capacity);n=len(rects)
      u.mem_write(0x6000000,bytes(0x100));u.mem_write(0x6000010,struct.pack('<2Q',0x6020000,0x6040000))
-     for ptr,count in ((0x6020000,2048),(0x6040000,2048),(0x6050000,n),(0x6052000,n),(0x6054000,n)):
+     for ptr,count in ((0x6020000,2048),(0x6040000,2048),(0x6050000,n),(index_base,n),(rect_base,n)):
       u.mem_write(ptr,bytes(0x20));u.mem_write(ptr+0x18,struct.pack('<Q',count))
      u.mem_write(0x6040000,struct.pack('<Q',0x6011000))
-     u.mem_write(0x6052020,struct.pack('<'+'i'*n,*range(n)));u.mem_write(0x6054020,b''.join(struct.pack('<4i',*r) for r in rects))
+     u.mem_write(index_base+0x20,struct.pack('<'+'i'*n,*range(n)));u.mem_write(rect_base+0x20,b''.join(struct.pack('<4i',*r) for r in rects))
      for i,center in enumerate(centers):
       node=0x6060000+i*0x100;u.mem_write(node,struct.pack('<Q',0x6012000));u.mem_write(node+0x1c,struct.pack('<3i',*center));u.mem_write(0x6050020+i*8,struct.pack('<Q',node))
-     for i,value in enumerate((0x6000000,0x6050000,0x6052000,0x6054000,0,n,0)):u.reg_write(UC_ARM64_REG_X0+i,value)
+     for i,value in enumerate((0x6000000,0x6050000,index_base,rect_base,0,n,0)):u.reg_write(UC_ARM64_REG_X0+i,value)
      u.reg_write(UC_ARM64_REG_SP,0x63ff000);u.reg_write(UC_ARM64_REG_LR,0x601f000);u.emu_start(0x2842f6c,0x601f000,count=3000000)
      if u.reg_read(UC_ARM64_REG_PC)!=0x601f000:raise ValueError('Instruction ceiling')
      count,leaves=struct.unpack('<2I',u.mem_read(0x6000020,8))
