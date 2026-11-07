@@ -2709,3 +2709,58 @@ case, not evidence for these other modes/maps. Next automate classification of
 zero-sample containment rejections with robust geometric witnesses, and extend
 source/native tests of nonplanar final paths before considering movement authority.
 Keep all three seeds and current guards. No push, merge, release or network play.
+
+### Phase 67: classify departures and implement geometry-only preview fallback
+
+The 98 >1-unit departures are reproducible results of the modeled early-switch
+mechanism. They are NOT proven legal official traversal or wall penetration.
+Actual CharacterController collision/clearance is unknown. The demonstrated risk
+is deploying that no-collision follower as authoritative movement: its segments
+can leave allowed geometry. No departure is reclassified as legal from the Bangkok
+video alone. The unresolved small/zero-sample containment cases remain distinct.
+
+`navigation_motion_safety.check_preview` now verifies catalog agreement, explicit
+preview authority, allowed faces/connections, same-height geometry, endpoints,
+ordered-corridor containment, motion continuity and endpoint threshold. It bounds
+points, triangles and aggregate geometry checks. It refuses unsupported input;
+no snapping, forbidden-tag expansion or other-floor coverage is used.
+
+For valid planar ideal paths it returns an exact-waypoint PREVIEW fallback.
+`exact_waypoint_step` implements a pure distance-consuming step: reach a corner
+exactly, then spend remaining distance on the next segment. A large timestep
+returns separate segments through corners, never a shortcut from start to finish.
+It refuses positions that left the current validated segment, nonplanar input and
+invalid/bounded inputs. It has no transport dependency or side effect. Both the
+checker result and fallback/step result explicitly deny packet/live authority.
+It is not wired into the live controller and does not guarantee physical actor
+clearance, dynamic obstacle safety or equivalence to the official character.
+
+The full pinned matrix reruns on desktop and Android Python: all 570 modeled runs
+have contained ideal planar fallback candidates; early-switch containment still
+rejects 213 profiles, including 98 substantial sampled departures. Exact stepping
+through each candidate's full path reaches the requested geometric endpoint and
+its emitted segments remain in eligible geometry. This is a point-path guarantee
+under unchanged static geometry, not a device/server guarantee. Finite FPS cases
+are not used to authorize arbitrary official runtime movement.
+
+New positive/negative tests cover a narrow L corridor, an early-switch departure
+with contained fallback, an unsafe direct shortcut, stale catalog, forbidden
+faces, nonplanar points, small/large exact steps and out-of-segment state. Checker
+and fallback outputs are passed to Movement.start in tests: both are refused,
+Movement.tick emits nothing and packet coordinate conversion is never called.
+Related suites pass desktop 116 / Android 115.
+
+All ten nonplanar refusals in this sample are M12050: six land and four sky
+queries. Existing native research has established nonplanar funnel kernels and
+small prepared-graph pipelines (Phases 41-42 and later), but this does not establish
+M12050's complete final player path under actual runtime settings, vertical
+movement/collision or floor selection. The product planar smoother and new
+fallback still refuse these cases rather than flattening the terrain.
+
+Next choices within offline scope: obtain independent geometric witnesses for
+remaining ambiguous containment rejections, and extend a bounded native pipeline
+to actual nonplanar corridors with explicit endpoint/floor/settings evidence.
+Physical controller equivalence still needs reliable same-version collision and
+movement observations; the one Bangkok walking recording does not supply sea/sky
+or slope evidence. No account access is needed for the current diagnostics.
+All three legacy seeds and live movement guards remain. No push/merge/release.

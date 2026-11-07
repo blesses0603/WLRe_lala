@@ -17,6 +17,7 @@ from wlre.services.world.navigation import NavigationError
 from wlre.services.world.navigation_database import REVIEWED_MODELS,database_path,load_cache
 from wlre.services.world.navigation_preview import PreviewMesh,NoPreviewRoute
 from wlre.services.world.navigation_funnel import covered
+from wlre.services.world.navigation_motion_safety import check_preview,exact_waypoint_step
 
 
 def motion(points,fps):
@@ -94,7 +95,15 @@ def audit(decoded,model,mode):
             unsafe=[(x,y) for x,y in result['segments'] if not covered(x,y,triangles)]
             error=math.dist(result['stop'],points[-1])/10
             if error>40.000001:raise AssertionError('Modeled stop exceeds source threshold')
-            row['motion'].append(dict(fps=fps,frames=result['frames'],segments=len(result['segments']),
+            safety=check_preview(mesh,route,result['segments'],catalog_key=CATALOG,expected_catalog_key=CATALOG)
+            if safety['can_send_packets'] is not False:raise AssertionError('Safety audit granted authority')
+            if safety['fallback']:
+                exact=exact_waypoint_step(points,0,points[0],sum(math.dist(a,b) for a,b in zip(points,points[1:]))+1)
+                if not exact['done'] or math.dist(exact['position'],points[-1])>1e-7 or any(not covered(a,b,triangles) for a,b in exact['segments']):
+                    raise AssertionError('Exact-waypoint preview fallback failed geometry check')
+            row['motion'].append(dict(safety_status=safety['status'],safety_reason=safety['reason'],
+                fallback_policy=safety['fallback']['policy'] if safety['fallback'] else None,
+                fps=fps,frames=result['frames'],segments=len(result['segments']),
                 stop_error_packet=error,containment_rejected_segments=len(unsafe),
                 first_crossing=unsafe[0] if unsafe else None,
                 first_crossing_sample_departure_packet=departure_sample(unsafe[0],triangles) if unsafe else 0,complete=True))
@@ -116,6 +125,8 @@ def main():
     summary=dict(models=len(rows)//3,mode_rows=len(rows),empty_modes=sum(not r['eligible'] for r in rows),
         cases=len(cases),statuses=dict(Counter(c['status'] for c in cases)),motion_runs=len(runs),
         incomplete=sum(not m['complete'] for m in runs),
+        safety_statuses=dict(Counter(m.get('safety_status','incomplete') for m in runs)),
+        fallback_rejections=dict(Counter(m['safety_reason'] for m in runs if m.get('safety_reason'))),
         containment_rejected_runs=sum(m.get('containment_rejected_segments',0)>0 for m in runs),
         sampled_departure_over_one_unit_runs=sum(m.get('first_crossing_sample_departure_packet',0)>1 for m in runs),
         max_stop_error_packet=max((m.get('stop_error_packet',0) for m in runs),default=None))
