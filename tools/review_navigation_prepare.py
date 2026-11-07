@@ -14,19 +14,20 @@ from tools.review_navigation_outer import compare as compare_nearest
 from tools.review_navigation_rotation import IL2CPP_SHA
 
 
-def validate_inputs(vertices,faces,connections,flags,penalties,start_point,end_point,tag_mask,origin=(0,0,0)):
-    validate_query(vertices,faces,start_point,origin);validate_query(vertices,faces,end_point,origin)
+def validate_inputs(vertices,faces,connections,flags,penalties,start_point,end_point,tag_mask,origin=(0,0,0),*,capacity=256):
+    validate_query(vertices,faces,start_point,origin,capacity=1024 if capacity==1024 else 512);validate_query(vertices,faces,end_point,origin,capacity=1024 if capacity==1024 else 512)
     n=len(faces)
-    if n>256:raise ValueError('Require at most 256 preparation nodes')
+    if type(capacity) is not int or capacity not in (256,1024) or n>capacity:raise ValueError('Invalid bounded preparation nodes')
     # Validate graph bookkeeping before creating native hierarchy. Exact native
     # centers and adjusted endpoint cost bounds are validated again by search.
-    validate_search([[i,0,0] for i in range(n)],connections,flags,penalties,0,0,tag_mask,[0]*32,[[0,0,0],[0,0,0]])
+    validate_search([[i,0,0] for i in range(n)],connections,flags,penalties,0,0,tag_mask,[0]*32,[[0,0,0],[0,0,0]],capacity=capacity)
 
 
-def oracle(path,*,_state=None):
-    state={};nearest=nearest_oracle(path,_state=state,_search_state=True)
-    search=search_oracle(path,_existing_state=state,_state=state);groups=groups_oracle(path,multiple=True)
-    u=state['vm'];data=state['data']
+def oracle(path,*,_state=None,capacity=256):
+    if type(capacity) is not int or capacity not in (256,1024):raise ValueError('Invalid Prepare capacity')
+    state={};nearest=nearest_oracle(path,_state=state,_search_state=True,capacity=1024 if capacity==1024 else 512,_shared_large_prepare=capacity==1024,_outer_instruction_limit=1000000 if capacity==1024 else 200000)
+    search=search_oracle(path,_existing_state=state,_state=state,capacity=capacity);groups=groups_oracle(path,multiple=True,capacity=1024 if capacity==1024 else 512)
+    u=state['vm'];data=state['data'];node_base=0x6242000 if capacity==1024 else 0x6090000
     from unicorn.arm64_const import UC_ARM64_REG_TPIDR_EL0
     ranges=((0x234d214,0x234d55c),(0x2d861d8,0x2d863ec),(0x2d95850,0x2d95938),
             (0x2d93f00,0x2d93f74),(0x2d84a14,0x2d84a44),(0x2a90220,0x2a9024c),
@@ -52,7 +53,7 @@ def oracle(path,*,_state=None):
     u.reg_write(UC_ARM64_REG_TPIDR_EL0,0x61d0000)
     def run(vertices,faces,connections,flags,penalties,start_point,end_point,tag_mask,origin=(0,0,0),cell_size=1.,tile_cells=(10,10),scene_profile=False):
         if type(scene_profile) is not bool:raise ValueError('Invalid scene profile selector')
-        validate_inputs(vertices,faces,connections,flags,penalties,start_point,end_point,tag_mask,origin)
+        validate_inputs(vertices,faces,connections,flags,penalties,start_point,end_point,tag_mask,origin,capacity=capacity)
         n=len(faces)
         # Native hierarchy construction ignores traffic tags, as the official
         # hierarchy does; NNConstraint subsequently enforces both Area and tags.
@@ -61,18 +62,18 @@ def oracle(path,*,_state=None):
         # Clear Area filtering before building/reusing graph and BBTree state.
         u.mem_write(0x6048014,b'\0');w(0x6048018,0xffffffff)
         nearest(vertices,faces,start_point,origin,outer=True,full_search=not scene_profile,max_distance=100 if scene_profile else None,node_flags=native_flags,tag_mask=tag_mask,cell_size=cell_size,tile_cells=tile_cells)
-        positions=[list(struct.unpack('<3i',u.mem_read(0x609001c+i*0x100,12))) for i in range(n)]
+        positions=[list(struct.unpack('<3i',u.mem_read(node_base+0x1c+i*0x100,12))) for i in range(n)]
         areas=hierarchy['native_area_output']['areas'];w(0x6064018,len(areas));u.mem_write(0x6064020,struct.pack('<'+'I'*len(areas),*areas))
         def prepare():
-            for i,face in enumerate(faces):u.mem_write(0x6090030+i*0x100,struct.pack('<3i',*face))
+            for i,face in enumerate(faces):u.mem_write(node_base+0x30+i*0x100,struct.pack('<3i',*face))
             q(0x60f0218,0x2832dd8);q(0x600e308,0x234caf4)
             q(0x6008078,0x6048000);u.mem_write(0x6048014,b'\1');w(0x6048018,0xffffffff)
             u.mem_write(0x604801f,b'\1')
             for address,point in zip((0x60080f8,0x6008104),(start_point,end_point)):u.mem_write(address,struct.pack('<3f',*point))
             state['execute'](0x234d214,(0x6008000,0),instruction_limit=1000000)
             ptrs=struct.unpack('<2Q',u.mem_read(0x60080d0,16))
-            if any(not 0x6090000<=p<0x6090000+n*0x100 or (p-0x6090000)%0x100 for p in ptrs):raise ValueError('Invalid prepared endpoint pointer')
-            nodes=[(p-0x6090000)//0x100 for p in ptrs]
+            if any(not node_base<=p<node_base+n*0x100 or (p-node_base)%0x100 for p in ptrs):raise ValueError('Invalid prepared endpoint pointer')
+            nodes=[(p-node_base)//0x100 for p in ptrs]
             points=[list(struct.unpack('<3f',u.mem_read(a,12))) for a in (0x60080f8,0x6008104)]
             int_points=[list(struct.unpack('<3i',u.mem_read(a,12))) for a in (0x6008110,0x60080a0)]
             allowed=[bool(f&1 and tag_mask&(1<<((f>>19)&31))) for f in flags]

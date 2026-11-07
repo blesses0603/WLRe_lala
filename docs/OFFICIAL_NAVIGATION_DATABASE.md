@@ -2937,3 +2937,61 @@ through search and final native modifiers in that same VM. Full client startup,
 actual character collision/grounding, player dimensions and runtime settings
 remain separate evidence needs. All three seeds and movement guards stay; no
 push, merge, release, login or movement packets.
+
+### Phase 71: same-VM full-graph Prepare and bounded empty-mode completion
+
+The empty-mode budget issue is now quantified, not assumed away. The bounded
+`trace_empty_mode` witness counts instructions only after entering outer native
+GetNearest. At 200,000 instructions it had executed 1,008 vertex accesses and
+failed by budget. On the complete 844-face geometry, the same query completes
+with no node after 498,329 instructions and 2,532 vertex accesses (three per
+face). Thus the previous 200k/400k ceilings were below this measured full scan.
+
+A 1,000,000-instruction ceiling is now an explicit option only for the reviewed
+1024-node isolated or dedicated shared-Prepare layout. Other capacities/shared
+profiles still reject it. No budget is removed: completion still requires native
+return and valid output, native Prepare has its own 1m ceiling, search retains
+2m per call, and each full test command has a 180-second wall deadline. This is
+an empirical bounded allowance with headroom, not a promise that every input
+within the capacity will finish; future over-budget cases remain failures.
+
+The large nearest and search factories now share the relocated node arena through
+an explicit internal layout selector. `review_navigation_prepare(capacity=1024)`
+uses it to execute native ABPath.Prepare, GetNearest, PathNNConstraint.SetStart,
+Area-restricted end selection, Int3 conversion, Initialize, CalculateStep, Trace
+and StartEndModifier in one VM on ALL 844 nodes and 2,488 connections. Native
+hierarchy grouping/Area outputs are still computed in a separate bounded VM and
+copied into this shared state. This is prepared object initialization, not actual
+client deserialization or RecalculateAll lifecycle execution.
+
+`tools.review_navigation_m12050_prepare` verifies the official cache hash/settings
+and runs 16 cases: ten off-center above/below-surface land/sky pairs, exact-vertex
+to outside-map, near-surface to far-map, empty sea mode, empty tag mask, disabled
+walkability and a separate graph-with-all-connections-removed control. Original
+XYZ requests, selected/clamped points, Int3 endpoints, selected nodes, costs,
+parents and traced vectors are retained. Each prepared start is checked against
+independent 3-D nearest geometry; the end is checked against the start Area and
+travel tags. Independent cost/edge/vector checks verify the resulting search.
+
+Results match on both Python hosts (excluding elapsed timing, 71.23/71.51 s).
+Twelve ordinary/boundary cases complete search. Three empty/unwalkable cases
+correctly reach the native no-route error boundary before Prepare completes;
+this validates failure selection, not the client's error-string/UI handling.
+The disconnected control completes a ONE-node path after clamping the end into
+the start Area. Its requested end is 99.0153 world units from the corrected end:
+this is emphatically NOT successful arrival at the original destination. Both
+original and adjusted endpoints remain visible for later acceptance policies.
+
+Related unit suites pass desktop 126 / Android 125, including invalid shared
+layout/capacity/budget rejection before binary loading. Additional desktop native
+regression retains 25 existing Prepare and 40 search cases. The isolated bounded
+empty-mode witness also reproduces its failure at 200k and completion at 1m.
+All outputs deny packet/live authority; no product sender or movement guard changed.
+
+Remaining evidence: join the native final Funnel/player modifier pipeline to
+these off-center prepared endpoints (the prior corridor checks used separate
+fixtures), confirm actual player runtime search/settings/overrides, and validate
+character collision/clearance/grounding and device behavior. The grouped-state
+construction still does not prove full official client startup. Three legacy
+seeds, house enter/exit-only scope and formal movement guards remain. Local
+commits only; no push, merge, release, login or movement packets.

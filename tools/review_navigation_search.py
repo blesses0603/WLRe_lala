@@ -50,7 +50,7 @@ def validate_graph(positions,connections,flags,penalties,start,end,tag_mask,tag_
 
 
 def oracle(path,*,_state=None,_existing_state=None,capacity=256):
-    if type(capacity) is not int or capacity not in (256,1024) or (capacity!=256 and _existing_state is not None):
+    if type(capacity) is not int or capacity not in (256,1024) or (capacity!=256 and _existing_state is not None and _existing_state.get('large_prepare_layout') is not True):
         raise ValueError('Extended search requires isolated bounded state')
     state={} if _existing_state is None else _existing_state
     state_oracle(path,_state=state,_path_magnitude=True,_existing_state=_existing_state)
@@ -121,7 +121,7 @@ def oracle(path,*,_state=None,_existing_state=None,capacity=256):
     u.hook_add(UC_HOOK_CODE,hook)
     def execute(a,args):return state['execute'](a,args,instruction_limit=2000000)
     def run(positions,connections,flags,penalties,start,end,tag_mask,tag_penalties=None,points=None,*,heuristic_scale=0.0,heuristic=0,_prepare=None):
-        if capacity!=256 and _prepare is not None:raise ValueError('Extended Prepare layout not reviewed')
+        if capacity!=256 and _prepare is not None and state.get('large_prepare_layout') is not True:raise ValueError('Extended Prepare layout not reviewed')
         if type(heuristic) is not int or heuristic not in (0,2):raise ValueError('Unreviewed heuristic mode')
         if type(heuristic_scale) not in (int,float) or not math.isfinite(heuristic_scale) or not 0<=heuristic_scale<=1:raise ValueError('Invalid heuristic scale')
         tag_penalties=[0]*32 if tag_penalties is None else tag_penalties

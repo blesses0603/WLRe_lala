@@ -47,4 +47,17 @@ class ExtendedNearestInitializationTests(unittest.TestCase):
         validate_graph([[] for _ in range(1024)],[True]*1024,multiple=True,capacity=1024)
 
 
+
+class SharedLargePrepareLimits(unittest.TestCase):
+    def test_invalid_shared_profiles_rejected_before_loading(self):
+        from tools.review_navigation_nearest import oracle
+        from tools.review_navigation_prepare import oracle as prepare
+        for kwargs in (dict(capacity=1024,_shared_large_prepare=True),
+                       dict(capacity=1024,_search_state=True,_shared_large_prepare=True,_outer_instruction_limit=400000),
+                       dict(capacity=512,_outer_instruction_limit=1000000),
+                       dict(capacity=1024,_search_state=True,_shared_large_prepare=1)):
+            with self.assertRaises(ValueError):oracle('must-not-open',**kwargs)
+        with self.assertRaises(ValueError):prepare('must-not-open',capacity=2048)
+
+
 if __name__=='__main__':unittest.main()

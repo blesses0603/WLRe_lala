@@ -27,16 +27,19 @@ def validate_query(vertices,faces,point,origin,*,capacity=512):
         if not any(cross):raise ValueError('Degenerate triangle')
 
 
-def oracle(path,*,_state=None,_search_state=False,_outer_instruction_limit=200000,capacity=512):
-    if type(capacity) is not int or capacity not in (512,1024) or (capacity!=512 and _search_state):
+def oracle(path,*,_state=None,_search_state=False,_outer_instruction_limit=200000,capacity=512,_shared_large_prepare=False):
+    if type(capacity) is not int or capacity not in (512,1024) or (capacity!=512 and _search_state and not _shared_large_prepare):
         raise ValueError('Extended nearest requires isolated state')
-    if type(_outer_instruction_limit) is not int or _outer_instruction_limit not in (200000,400000):
+    if type(_shared_large_prepare) is not bool:raise ValueError('Invalid shared Prepare selector')
+    if _shared_large_prepare and (not _search_state or capacity!=1024 or _outer_instruction_limit not in (200000,1000000)):
+        raise ValueError('Invalid shared large Prepare layout')
+    if type(_outer_instruction_limit) is not int or _outer_instruction_limit not in ((200000,400000,1000000) if capacity==1024 and (not _search_state or _shared_large_prepare) else (200000,400000)):
         raise ValueError('Unreviewed diagnostic instruction budget')
-    if _search_state and _outer_instruction_limit!=200000:
+    if _search_state and _outer_instruction_limit!=200000 and not (_shared_large_prepare and _outer_instruction_limit==1000000):
         raise ValueError('Extended diagnostic budget is not for path pipelines')
     # Optional native dependencies are loaded after the vertex factory checks hash.
     state={}
-    node_base=0x6090000 if _search_state else 0x6080000
+    node_base=0x6242000 if _shared_large_prepare else 0x6090000 if _search_state else 0x6080000
     load=vertex_oracle(path,modeled_center=True,_state=state,_path_magnitude=_search_state);u=state['vm'];data=state['data']
     from unicorn.arm64_const import UC_ARM64_REG_S0,UC_ARM64_REG_X8
     ranges=((0x2843ff8,0x28440d4),(0x1a7a794,0x1a7abb0),(0x1a76cb8,0x1a76d34),(0x2e9b100,0x2e9b144),(0x2a903a4,0x2a903f4),(0x2a8ff50,0x2a8ff68),(0x2a8ff80,0x2a90030),(0x2d83808,0x2d83814),(0x2d93f7c,0x2d93f88),(0x27a375c,0x27a3c0c),(0x27a1618,0x27a16b8),(0x22d23f0,0x22d2454),(0x30c9944,0x30c999c),(0x28383b8,0x28383e0),(0x2d86f88,0x2d86f90),(0x2843af0,0x2843bc8),(0x2843cb0,0x2843d94),(0x28440d4,0x28442f4),(0x24c3e70,0x24c3e80),(0x2832dd8,0x2832f18),(0x2a98e20,0x2a99050),(0x2d83820,0x2d83848),(0x20d12c4,0x20d133c),(0x20d14bc,0x20d1534),(0xe00550,0xe00554),(0xe81860,0xe81864),(0xec1130,0xec1178))
@@ -116,6 +119,7 @@ def oracle(path,*,_state=None,_search_state=False,_outer_instruction_limit=20000
                  point=list(struct.unpack('<3f',u.mem_read(0x6045008 if outer else 0x6045010,12))) if node else None,tile=list(tile))
      if result['point'] and not all(math.isfinite(x) for x in result['point']):raise ValueError('Nonfinite nearest output')
      return result
+    if _shared_large_prepare:state['large_prepare_layout']=True
     if _state is not None:_state.update(state)
     return query
 
