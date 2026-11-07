@@ -9,6 +9,7 @@ from tkinter import ttk
 
 from wlre.ui.gui import App
 from wlre.ui.version_gate_controller import VersionGateController
+from wlre.ui.window_layout import wait_for_widget_mapping
 
 
 _UNPATCHED_START_VERSION_CHECK = VersionGateController.start_version_check
@@ -44,7 +45,7 @@ class PreloginVersionWindowTests(unittest.TestCase):
         self.patcher = patch.object(VersionGateController, "start_version_check")
         self.patcher.start()
         self.app = App(self.root)
-        self.root.update_idletasks()
+        wait_for_widget_mapping(self.app.version_window)
 
     def tearDown(self):
         self.patcher.stop()
@@ -143,7 +144,7 @@ class PreloginVersionWindowTests(unittest.TestCase):
                 self.app.start_version_check.reset_mock()
                 self.app.events.put(('session_finished', None))
                 App._poll_once(self.app)
-                self.root.update_idletasks()
+                wait_for_widget_mapping(self.app.login_window)
                 self.assertFalse(self.app.live_active)
                 self.assertEqual(self.app.version_window.state(), 'withdrawn')
                 self.assertTrue(self.app.login_window.winfo_ismapped())
@@ -248,7 +249,7 @@ class PreloginVersionWindowTests(unittest.TestCase):
         import time
         self.deliver(official_result())
         self.app.continue_to_login()
-        self.root.update_idletasks()
+        wait_for_widget_mapping(self.app.login_version_label)
         self.assertTrue(self.app.login_version_label.winfo_ismapped())
         for label in self.app.login_tab.winfo_children():
             if isinstance(label, ttk.Label):

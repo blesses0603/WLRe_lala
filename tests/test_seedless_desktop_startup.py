@@ -2,6 +2,7 @@ import tkinter as tk
 import unittest
 from unittest.mock import patch
 from gui_support import isolate_gui_background_checks
+from wlre.ui.window_layout import wait_for_widget_mapping
 
 
 class SeedlessDesktopTests(unittest.TestCase):
@@ -19,7 +20,7 @@ class SeedlessDesktopTests(unittest.TestCase):
         self.app=App(self.root)
 
     def test_dashboard_does_not_require_legacy_navigation(self):
-        self.app.show_main();self.root.update_idletasks()
+        self.app.show_main();wait_for_widget_mapping(self.app.overview_panel)
         self.assertTrue(self.app.overview_panel.winfo_ismapped())
         self.assertIsNone(self.app.home_map.repository)
 
