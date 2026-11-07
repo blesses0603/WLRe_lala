@@ -2407,3 +2407,61 @@ corner, including sender, traffic mode, per-frame position and CharacterControll
 result. Existing video establishes a spatial deviation but cannot expose those
 fields. Do not resolve the deviation by allowing tag 1 for land, removing obstacles,
 or treating a source-derived approximation as official runtime validation.
+
+### Phase 62: confirmed walking; execute waypoint following in pinned Lua
+
+The user confirms the Bangkok recording was walking. We therefore retain land
+mask 9; the tag-1 segment is no longer explained by presumed air traffic.
+Walking still does not reveal EMoveSender, exact frame times, callbacks or physics.
+
+Static source tracing strengthens the normal local-input branch evidence:
+PlayerController.MoveToStage ends by calling RoleController.MoveToPosition with
+EMoveSender.Player and isPlayer=true (line 478). PlayerController.MoveToPosition
+forwards its supplied sender; RoleController forwards it to MoveController
+(lines 506-542). Define enumerates Player=1, Server=3, AutoWalk=6 (352-362).
+PlayerController.Appear sets WalkSpeed (325), Define sets WalkSpeed=3.5 (807),
+and RoleController.SetMoveSpeed calls MoveController.SetDefaultSpeed.
+MoveToPosition copies defaultSpeed into horizontalSpeed. These source defaults
+are not proof of the observed session's input branch or later overrides.
+
+`tools.review_navigation_lua_motion --move-source PINNED_LUA --output REPORT`
+now executes the actual hash-pinned MoveController.Update source in host Lua 5.4,
+using supplied currentPath, grounded walking state and speed 3.5. Vector functions
+and CharacterController.Move are explicit stubs: Move applies displacement without
+collision. No official Lua/native binding or Unity physics equivalence is claimed.
+The source itself performs threshold selection, point removal, direction/step
+calculation, Move invocation and completion/reset. Host OS/file/module access is
+removed, source bytes are pinned and bounded, and instruction/frame/output caps
+fail closed. Official Lua content remains external to the repository.
+
+Nine fixed cases (Player/AutoWalk/Server x 30/60/120 FPS) passed on both hosts.
+Player and AutoWalk have identical results with the 40-coordinate-unit radius;
+Server uses 10. Actual Lua traces match the prior Python translation within
+1.5e-10 packet-coordinate units. This confirms the translation under the supplied
+stubs, not the gameplay environment. The 40-radius observed-corner residual is
+still 4.18-8.12; no tuning or mask relaxation was performed.
+
+An additional comparison assumption must remain explicit: (1850,4915) is the
+observed final stopped position, not a captured requested target/vectorPath end.
+Under the supplied four-point path, Player/AutoWalk models stop at approximately
+(1863.57,4903.18), (1875.13,4893.24), or (1877.34,4891.33) for 30/60/120 FPS.
+Do not snap these to the recorded endpoint or claim a match. Target coordinates,
+completion callbacks and collision handling remain unobserved. RoleController's
+OnMoveDone invokes a supplied callback and clears its move target; the callback's
+actual observed-session behavior has not been captured.
+
+Collision evidence: MoveController creates/reuses a Unity CharacterController,
+sets stepOffset=0.4 and performs CharacterController.Move for grounded walking.
+Its UpdateCharacterControllerSize derives radius/height/center from the character
+model, and RoleController supplies those model values. A tag-1 navigation region
+is therefore not itself proof of an impassable physics collider: waypoint
+selection and actual collision movement are separate stages. The actual character
+model dimensions, collider geometry/state and Move displacement result are still
+needed to confirm the physical trajectory. Do not invent these values.
+
+Related suites pass desktop 102 / Android 101. Two new guards reject unreviewed
+or oversized Lua before execution; the actual nine-case source runs also pass.
+No production movement was changed or enabled, no legacy data removed, and no
+new Windows/live-server test, push, merge or release occurred. Current safe
+progress is an independently reproduced source-following mechanism; complete
+runtime equivalence remains unproven.
