@@ -81,6 +81,8 @@ def build_catalog(skill_raw,npc_raw,item_raw,texts,clear):
     skills=parse_skills(skill_raw)
     for row in skills.values():
         row['name']=texts.get(row['Name'])
+        description=texts.get(row['Desc'])
+        row['description']=description if isinstance(description,str) else ''
         if not isinstance(row['name'],str) or not row['name']:raise ValueError('Missing official skill name')
     keys={}
     for ident,row in skills.items():
@@ -111,5 +113,5 @@ def load_verified_catalog(manifest,bundle_root,loader,root,identity,sources,text
     clear,lua_inputs=load_inputs(root,identity.data_ver)
     inputs={**lua_inputs,'SkillData_C':skill_raw,**{name:sources[name] for name in ('NpcData_C','ItemData_C','TextData_C')}}
     return load_parsed(Path(root)/'derived_catalogs'/'resource_inventory.sqlite3',identity.key,
-        'combat','combat-reviewed-v1',inputs,
+        'combat','combat-reviewed-v2',inputs,
         lambda:build_catalog(skill_raw,sources['NpcData_C'],sources['ItemData_C'],texts,clear))

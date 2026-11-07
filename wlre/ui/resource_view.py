@@ -8,6 +8,7 @@ from wlre.services.items.combat_resources import CAT, skill_rows, food_command, 
 from wlre.services.battle.battle_commands import owned_units
 from wlre.ui.crafting_browser import ItemIcons
 from wlre.ui.bag_grid import BagGrid
+from wlre.ui.skill_browser import SkillBrowser
 from wlre.ui.room_storage_status import unlock_message, storage_sync_message, confirmed_view
 from wlre.ui.layout import heading,scroll_table
 
@@ -32,10 +33,11 @@ class ResourceView:
         tabs.add(bag,text='實際包包')
         tabs.add(remote,text='超空間袋')
         tabs.add(skills,text='全部已確認特技')
-        # Keep the current v0.5.0 window and skill table; only replace bag content.
         self.bag=BagGrid(bag,self.icons,self.use_item)
         self.bag.pack(fill='both',expand=True)
-        self.skills=self.table(skills,('actor','id','name','level','kind','sp','status','source'),('角色／夥伴','ID','特技','等級','分類','消耗SP','基礎條件／不可用原因','資料來源'))
+        self.skill_browser=SkillBrowser(skills,self.use_skill)
+        self.skill_browser.pack(fill='both',expand=True)
+        self.skills=self.skill_browser.list
         # The large duplicate HP/SP row is no longer needed.
         # Context-specific recovery buttons remain in the compact item strip.
         self.remote_status=tk.StringVar(value='等待 S62 同步')
@@ -67,8 +69,6 @@ class ResourceView:
         self.add_storage_actions(self.bag,[('存入儲藏室','garage','deposit'),('存入雜物櫃','materials','deposit')])
         self.add_storage_actions(self.remote_garage,[('取出到背包','garage','withdraw')])
         self.add_storage_actions(self.remote_materials,[('取出到背包','materials','withdraw')])
-        ttk.Button(skills,text='施放選取特技（戰鬥內）',command=self.use_skill).pack(anchor='w',pady=5)
-        ttk.Label(skills,text='搜尋列出已學、裝備附帶、生活與被動；可施放與否會再核對目前回合、武器、資源及目標。',wraplength=960).pack(anchor='w')
         self.query.trace_add('write',lambda *a:self.refresh())
         self.set_state(app.snapshot)
 
@@ -100,19 +100,11 @@ class ResourceView:
         self.signature=signature;query=self.query.get().casefold();inv=state.get('inventory',{});k=state.get('knowledge',{})
         self.status.set(f"包包：{'已同步' if inv.get('ready') else '等待S23-5'}｜{'數量有效' if inv.get('reliable') else '尚不可自動取用'}｜{len(inv.get('items',{}))}格；角色技能：{'已同步' if k.get('player',{}).get('ready') else '等待S5-3'}；夥伴資料：{len(k.get('companions',{}))}隻。更新顯示不會發送未驗證的查包封包。")
         self.status.set(self.status.get()+(' 官方戰鬥資料已同步。' if source_token() is not None else ' 官方戰鬥資料尚未同步，技能與物品規則暫不可用。'))
-        selected_bag=self.bag.selection();selected_skill=self.skills.selection()
-        self.skills.delete(*self.skills.get_children());self.skill_map={}
+        selected_bag=self.bag.selection()
         self.bag_map=self.bag.render(inv,query)
         self.update_remote_status(state)
-        for actor in self.actors(state):
-            label=('角色 ' if actor['pid']==state.get('player',{}).get('role_id') else f"夥伴#{actor.get('npc_index')} ")+actor.get('name','')
-            for row in skill_rows(state,actor):
-                if query and query not in (label+row['name']+str(row['id'])).casefold():continue
-                iid=f"skill{actor['pid']}_{actor.get('npc_index',0)}_{row['id']}"
-                self.skill_map[iid]=(actor,row['id'])
-                self.skills.insert('','end',iid=iid,values=(label,row['id'],row['name'],row['level'],row['category'],row['sp'],'；'.join(row['reasons']) or '基礎條件可用',row['source']))
+        self.skill_browser.render(state,self.actors(state),query,self.app.live_active)
         if selected_bag and selected_bag[0] in self.bag_map and not self.bag.selection():self.bag.selection_set(selected_bag[0])
-        if selected_skill and selected_skill[0] in self.skill_map:self.skills.selection_set(selected_skill[0])
 
     def update_remote_status(self,state):
         inventory = state.get('inventory', {})
@@ -187,8 +179,10 @@ class ResourceView:
 
     def use_skill(self):
         selected=self.skills.selection()
-        if not selected:return
-        actor,sid=self.skill_map[selected[0]];state=self.app.snapshot
+        if not selected or selected[0] not in self.skill_browser.skill_map:return
+        actor,sid=self.skill_browser.skill_map[selected[0]];state=self.app.snapshot
+        if not self.app.live_active:
+            messagebox.showinfo('特技','請先登入角色',parent=self.window);return
         try:
             if not state.get('battle',{}).get('active'):raise ValueError('請在可下令的戰鬥回合施放特技')
             target=self.app.priority_target
