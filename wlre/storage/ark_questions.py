@@ -89,9 +89,11 @@ class QuestionStore:
                  catalog, scope, fingerprint))
         return 'conflict' if conflict else 'confirmed'
 
-    def reject(self, token, role, question, answer):
+    def reject(self, token, role, question, answer, candidate=False):
+        if type(answer) is not int or answer not in question['options']:
+            raise ValueError('拒絕答案不在當前選項中')
         catalog, scope, fingerprint, _ = identity(token, role, question)
         with self._connection() as db:
             db.execute('''UPDATE questions SET answer=NULL,conflict=1,updated=?
-                WHERE catalog=? AND role=? AND fingerprint=? AND answer=?''',
-                (int(time.time()), catalog, scope, fingerprint, answer))
+                WHERE catalog=? AND role=? AND fingerprint=? AND (answer=? OR ?)''',
+                (int(time.time()), catalog, scope, fingerprint, answer, int(candidate is True)))
