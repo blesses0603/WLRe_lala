@@ -2582,3 +2582,73 @@ can interval routes be described as image-supported target candidates.
 Both hosts produce identical conditional reports. Related suites: desktop 108,
 Android 107 passed. All work remains offline; no device/runtime verification,
 movement authority change, seed removal, push, merge or release.
+
+### Phase 65: original video materialized; independent texture registration
+
+The original user attachment was successfully materialized through the supported
+Library transfer helper. It remains private under validation, not in either
+repository or a published artifact. Video SHA-256:
+cd1f655bc9fa7e7b9b447b0d63a5e4e3bc0d049e5c99f48377b71d010483573f.
+ffprobe confirms 962x572, 30 FPS, 13 seconds. Decoded frame 32 is 1.066667 s;
+its PNG SHA-256 is
+667b93904c592f8d2c4076382feaa650ed66287d3074b35a8e2ae703df2da203.
+The frame shows the area map and cursor; no new recording is required.
+
+`tools.review_navigation_video_registration` uses optional research-only OpenCV
+5.0.0 / NumPy 2.5.4 to match static texture features. They were installed only
+under validation, not product dependencies. The tool checks the known official
+artwork hash, bounds frame/artwork dimensions, corrects resize pixel-center
+coordinates and uses a spatial checkerboard holdout before transform estimation.
+It excludes the header/bottom controls and rejects descriptor outliers with a
+ratio test and RANSAC. No player position, route marker or stopping coordinate
+is a calibration control. Official image and video bytes remain external.
+
+At frame 32: 257 deduplicated correspondences; 142 training points, 120 RANSAC
+inliers. Of 115 held-out candidates, 104 have residual <=1.5 px; median over ALL
+115 is 0.3184 px. The accepted maximum is 1.3440 px; the other 11 are not silently
+counted as validated. Similarity scale is about 0.274981 screen px/texel and
+translation (671.573,180.842), with a small rotation term 0.00017474. Full affine
+singular scales 0.275295 and 0.274879 differ by about 0.15%, below the tool's
+explicit 1% rejection threshold. This threshold is a diagnostic criterion,
+not proof of exact Unity transformation parameters.
+
+This independently confirms why (675,182), the approximate visible crop origin,
+was not the full image origin. Using the reviewed cursor (759,410), the nominal
+click maps to approximately (1832.46,4929.37). It was NOT fitted to the observed
+stop (1850,4915). +/-2 px cursor error plus an explicit 1.5 px registration
+allowance gives a rectangular sensitivity envelope:
+
+    x: 1756.05 .. 1908.88
+    y: 4852.95 .. 5005.79
+
+The envelope is not a probabilistic confidence interval or a proven error bound;
+cursor hotspot/event timing, unmodeled UI distortion and floor correction remain
+uncertain. It contains the observed stopping point, but does not identify that
+point as the requested target. Independent registrations of frames 0 and 37
+produce hypothetical projections of the SAME screen location around
+(1835.50,4923.42) and (1833.11,4930.69); no click in those frames is inferred.
+These checks constrain transform drift without reusing the endpoint.
+
+Nine fixed target samples (center and rectangle edges/corners) all produce offline
+land previews. This is not exhaustive coverage of the rectangle. The nominal
+route has the same two intermediate corners (3680,3980), (3010,3870). At fixed
+30/60/120 FPS, the existing identity-collision Python model stops at:
+
+| FPS | Modeled stop | Distance to observed stop | Maximum corner residual |
+| --- | --- | --- | --- |
+| 30 | (1845.53,4918.00) | 5.38 | 4.08 |
+| 60 | (1857.10,4908.05) | 9.93 | 8.03 |
+| 120 | (1859.30,4906.15) | 12.84 | 8.03 |
+
+Across all 27 sample/FPS cases stop distance ranges 5.38-121.04. Do not select
+one FPS/target as an actual runtime estimate. These results support consistency
+of the source-derived corner-following mechanism with this video, while leaving
+real CharacterController collisions, actual vectorPath and timing unverified.
+No land tag relaxation, target snap or production algorithm change was made.
+
+Both repository copies reproduce identical registration and 27-case results
+using the DESKTOP Python 3.12 research environment; this is not an Android-device
+or Python 3.11 OpenCV run. Existing related suites separately pass desktop 108
+and Android Python 3.11 107. No full-suite or device success is implied. All three
+legacy navigation seeds and movement authority guards remain; local work only,
+no push, merge, release, connection or movement packet.
