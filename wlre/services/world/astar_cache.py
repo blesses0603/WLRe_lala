@@ -9,31 +9,11 @@ from pathlib import Path
 import re
 import struct
 import zipfile
+from wlre.services.parser_diagnostics import diagnosed
 
-REVIEWED_CACHES=frozenset({
-    'a728cd68b449c76d89585bcb2f8c29a7bdd146e5da18d9ad01f6647565e689e6',
-    'ab622995a92f4bc8f6914c716fda0a82bc2bbfc52a3b6636e616c30d25485889',
-    '5fb34818dba90dd16c133f2504fd4e3a6da1351eb90262bab538da87b8de61cb',
-    '721540e7699eaa738ef8bf899bf2deb9b808fc11cf05c2678efbbf82b003337d',
-    '13c46904d5c16e3418f4c2dd7a7ab24621323b8eccad677900c3031c9c3edc3f',
-    '4899fcbe081b3f8924219ef26b4ae490afc007c38d85fb9b1b96d7a7dd38f1b9',
-    '2bc5d749067948ad630697f71da34d9a79164ca7f8783625a1341b14be3bc455',
-    '493c40032453791d503112d95dfc5ab87a5aa9674ba5be50b60122b7abe8b552',
-    '713401e696f3befe979e17db6e0182bbcd20822e02cae187dfa83feabc5b10e1',
-    'bd4581bbc2c1661123cd16e46303f0d9e8da63afea47330a50e38fce0b128828',
-    'd95005692c09067a3ca6e5d32759d4ed002baec095535a4f7bc592f141a8ae90',
+from wlre.services.world.navigation_reviewed_models import REVIEWED_MODELS
 
-    '5ce014b21935647aceaeb697cde52110c1509ced3212388972c5f7e0132e004e',
-    '998e421e3ec0fe29cd9c5fe215f0336d20a9afb7a6a480d28c135bede226d06f',
-    'aac34ed3b1d41360d48a116a301d60aa523d7df79e986a762e8fc5d71b874ff9',
-
-    '3703387b6fee3cc4e4654ba682366277ec13bc2e90baf8f115c8c31a4785acab',
-    '3203818b7256474b28539346256fb08a7e866939e9af8ae5aa0ef1c740526ab0',
-    '8260bebfbefe5818ae705595d58f6f2ec3b85a415f778d5312bd5bdda7ddcb8d',
-    '9fafab7be0d03215611949d69fbfeecf0ca4bb280f812f2bedda462d6067d227',
-    '5ff98ac860fd1f161a9bc5134555fe207afb03a3f3961eb178d2aa35b8ef1384',
-    '6e915dac61f477eaa0f2e07bce729d730e1875bad882c80e940fe9d8b1ed5b78',
-})
+REVIEWED_CACHES=frozenset(REVIEWED_MODELS.values())
 MEMBERS=frozenset(('graph0.json','graph_references.binary','graph0_extra.binary',
                   'graph0_references.binary','node_link2.binary','meta.json'))
 MAX_BYTES=8*1024*1024
@@ -78,6 +58,18 @@ def decode_geometry(raw):
 def review_cache(raw):
     if type(raw) is not bytes or len(raw)>MAX_BYTES or hashlib.sha256(raw).hexdigest() not in REVIEWED_CACHES:
         raise ValueError('A* cache fingerprint has not been reviewed')
+    return inspect_cache_format(raw)
+
+
+@diagnosed('astar-cache-4.3.60-single-tile-preview-v1')
+def inspect_cache_format(raw):
+    """Research-only inspection, not approval to import or use a candidate.
+
+    Product consumers must use review_cache, which additionally pins the bytes.
+    This function never writes a registry, database or movement authority.
+    """
+    if type(raw) is not bytes or len(raw)>MAX_BYTES:
+        raise ValueError('A* cache exceeds review quota')
     try:
         with zipfile.ZipFile(io.BytesIO(raw)) as archive:
             info=archive.infolist()

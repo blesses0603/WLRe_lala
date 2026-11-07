@@ -56,8 +56,9 @@ class DynamicMinimapReloadTests(unittest.TestCase):
         self.assertIsNotNone(self.page.projection)
         self.assertEqual(self.page.image.size,(1024,1024))
         self.assertIsNone(self.page.map_error)
-        self.assertIsNotNone(self.page.mesh)
-        self.page.repository.load.assert_called_once_with('M12170')
+        self.assertIsNone(self.page.mesh)
+        self.assertFalse(self.page.maps.supports_navigation)
+        self.page.repository.load.assert_not_called()
         self.page.refresh_portals.assert_called_once_with()
 
     def test_same_identity_image_republish_after_portal_refresh_reloads(self):

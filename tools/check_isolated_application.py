@@ -81,8 +81,8 @@ def check(workspace,platform,online=False):
                     app.show_main();root.update_idletasks()
                     observations['dashboard_mapped']=bool(app.overview_panel.winfo_ismapped())
                     dialogs=[]
-                    def preview(*args):
-                        result=OfficialNavigationPreview(*args);dialogs.append(result);return result
+                    def preview(*args, **kwargs):
+                        result=OfficialNavigationPreview(*args, **kwargs);dialogs.append(result);return result
                     with patch('wlre.ui.official_navigation_preview.OfficialNavigationPreview',side_effect=preview):
                         app.open_navigation()
                     if len(dialogs)!=1:raise AssertionError('Missing independent official preview')

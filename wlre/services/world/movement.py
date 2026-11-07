@@ -1,8 +1,6 @@
 """Local path locomotion and C6-1 position reporting, not server arrival ACKs."""
 from wlre.core.state_ownership import writes
 import math
-from wlre.services.world.coordinates import Coordinates
-from wlre.services.world.navigation import Repository
 from wlre.network.protocol import walk
 from wlre.network.wire import ProtocolError
 from wlre.services.battle.party import own_team
@@ -52,8 +50,8 @@ class Movement:
             start=(fix['x'],fix['y']);start_height=None
         else:raise ProtocolError('起點位置不明：先前座標同步沒有本機定位或可續用的推算位置')
         token=current_catalog_token()
-        self.converter=self.converter or Coordinates()
-        self.repository=self.repository or Repository()
+        if self.converter is None or self.repository is None:
+            raise ProtocolError("官方導航僅供預覽，尚未驗證實際移動；不使用歷史離線資料。")
         route=self.converter.route(self.repository,scene,start,(x,y),start_height=start_height)
         if route.get('can_send_packets') is not True or route.get('live_movement_verified') is not True:
             raise ProtocolError('路徑尚未具備實際移動驗證與授權，僅供預覽，不能用於角色移動。')

@@ -50,7 +50,8 @@ class MinimapNavigationMixin:
             self.projection,scene=self.maps.projection(self.selected_id)
             self.image=self.maps.image(scene)
             if self.image is not None:
-                if getattr(self.maps, 'supports_navigation', True):
+                if (not is_official_revision(getattr(self.maps, 'source_revision', None))
+                        and getattr(self.maps, 'supports_navigation', True)):
                     try:
                         if self.repository is None:
                             from wlre.services.world.navigation import Repository
@@ -58,7 +59,7 @@ class MinimapNavigationMixin:
                         self.mesh=self.repository.load(scene)
                     except (NavigationError,OSError):pass
                 if is_official_revision(getattr(self.maps, 'source_revision', None)):
-                    action='單擊選目標，雙擊移動' if self.mesh is not None else '可選目標，導航資料尚未就緒'
+                    action='可選目標；官方路徑請開啟導航預覽（不移動角色）'
                     self.note.set(self.scene_display_name()+f'｜官方 {self.maps.source_revision} 場景座標｜'+action)
                 else:
                     self.note.set(self.scene_display_name()+'｜原始小地圖')

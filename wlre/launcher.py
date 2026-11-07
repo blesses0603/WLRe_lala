@@ -12,7 +12,7 @@ def ensure_extractor_environment(python, root):
     Never install dependencies to the system interpreter just to run LaLa.
     Native Nuitka bundles already include UnityPy and do not use this path.
     """
-    if '--navigation' in sys.argv or '--self-test' in sys.argv:
+    if '--self-test' in sys.argv:
         return python
     requirement = root / 'requirements-extractor.txt'
     pinned = next((line.split('==', 1)[1].strip()
@@ -59,7 +59,11 @@ def ensure_extractor_environment(python, root):
 
 def main():
     root=Path(__file__).resolve().parents[1]
-    arguments=['-m','wlre.ui.navigation_gui'] if '--navigation' in sys.argv else ['-m','wlre.ui.gui']
+    # The navigation shortcut shares official preparation and version checks.
+    # It must never launch the historical seed-only inspector.
+    arguments=['-m','wlre.ui.gui']
+    if '--navigation' in sys.argv:
+        print('官方導航：完成資料準備後，請由主頁開啟導航預覽；不會移動角色。',flush=True)
     python=Path(sys.executable)
     try:
         from PIL import Image,features
@@ -80,7 +84,7 @@ def main():
                 subprocess.run([str(python),'-c',"from PIL import Image,ImageTk,features; assert hasattr(Image,'Resampling') and features.check('webp')"],check=True)
     # Source users still get the pinned decoder in a private venv. App owns
     # resource preparation and official verification in one continuous window.
-    if '--navigation' not in sys.argv and '--self-test' not in sys.argv:
+    if '--self-test' not in sys.argv:
         python = ensure_extractor_environment(python, root)
     return subprocess.run([str(python),*arguments],cwd=root).returncode
 

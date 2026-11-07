@@ -6,6 +6,10 @@ from wlre.services.world.navigation_database import REVIEWED_MODELS, import_cach
 MAX_BYTES=32*1024*1024
 MAX_FILES=2
 
+# Exact scene pointers inspected in official MainPackage 1296, not filename guesses.
+REVIEWED_CACHE_NAMES={10082: '11082', 15012: '15011'}
+REVIEWED_DEPENDENCY_MODELS={15012: 15011}
+
 
 def sync_model(identity,model,*,root=None,fetch=None,manifest=None,observe=None):
     from wlre.storage.paths import data_root
@@ -38,7 +42,8 @@ def sync_model(identity,model,*,root=None,fetch=None,manifest=None,observe=None)
         if len(rows)!=1:raise ValueError('Navigation scene bundle is not unique')
         # Reviewed naming narrows a candidate only; exact CAB + path ID below
         # must resolve the serialized pointer before any bytes can be imported.
-        dep=f'mainpackage_scene_{model:05d}_dependency.bundle'
+        dependency_model=REVIEWED_DEPENDENCY_MODELS.get(model,model)
+        dep=f'mainpackage_scene_{dependency_model:05d}_dependency.bundle'
         if dep not in rows[0]['dependencies']:raise ValueError('Navigation dependency not declared by manifest')
         specs=[spec_from_manifest(data_ver=identity.data_ver,package='MainPackage',index=manifest.index,name=n) for n in (name,dep)]
         if len(specs)>MAX_FILES or sum(s.file_size for s in specs)>MAX_BYTES:
@@ -73,6 +78,6 @@ def extract_cache(paths,model):
              if o.type.name=='TextAsset' and o.path_id==ref['m_PathID'] and external.endswith('/'+o.assets_file.name)]
     if len(targets)!=1:raise ValueError('Navigation external CAB/path ID unresolved')
     tree=targets[0].read_typetree()
-    if tree['m_Name']!=str(model):raise ValueError('Navigation TextAsset model mismatch')
+    if tree['m_Name']!=REVIEWED_CACHE_NAMES.get(model,str(model)):raise ValueError('Navigation TextAsset model mismatch')
     raw=tree['m_Script'];raw=raw.encode('utf-8','surrogateescape') if isinstance(raw,str) else bytes(raw)
-    return raw,dict(external=external,path_id=ref['m_PathID'])
+    return raw,dict(external=external,path_id=ref['m_PathID'],textasset_name=tree['m_Name'])

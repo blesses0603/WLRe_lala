@@ -138,16 +138,12 @@ class App(LoginController, AccountController,
         return True
 
     def open_navigation(self):
-        try:
-            from wlre.ui.navigation_gui import NavigationWindow
-            viewer = NavigationWindow(self.root, self.home_map.selected_id, on_route=self.home_map.set_route)
-            viewer.update_live_state(self.snapshot)
-            self.navigation_windows.append(viewer)
-        except FileNotFoundError:
-            from wlre.ui.official_navigation_preview import OfficialNavigationPreview
-            OfficialNavigationPreview(self.root,lambda:self.snapshot)
-        except (OSError,ValueError,KeyError) as exc:
-            messagebox.showerror('導航資料無法載入',str(exc),parent=self.root)
+        # Current navigation never probes or falls back to historical geometry.
+        from wlre.ui.official_navigation_preview import OfficialNavigationPreview
+        viewer = OfficialNavigationPreview(
+            self.root, lambda: self.snapshot, suggested_scene=self.home_map.selected_id)
+        self.navigation_windows.append(viewer)
+        return viewer
 
     def write(self, text):
         if self.entered_world and self.background_window():

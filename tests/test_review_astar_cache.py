@@ -50,6 +50,16 @@ class ReviewTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'fingerprint'):
             subject.review_cache(archive())
 
+    def test_candidate_inspection_never_approves_fingerprint(self):
+        raw = archive()
+        before = subject.REVIEWED_CACHES
+        result = subject.inspect_cache_format(raw)
+        self.assertFalse(result['can_send_packets'])
+        self.assertFalse(result['live_movement_verified'])
+        self.assertEqual(subject.REVIEWED_CACHES, before)
+        with self.assertRaisesRegex(ValueError, 'fingerprint'):
+            subject.review_cache(raw)
+
     def test_truncation_and_trailing_bytes(self):
         for raw in (geometry()[:-1], geometry() + b'\0'):
             with self.subTest(length=len(raw)), self.assertRaises(ValueError):

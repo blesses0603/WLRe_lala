@@ -2,7 +2,6 @@
 from wlre.core.state_ownership import writes
 from wlre.services.coordination import reason as coordination_reason
 from wlre.network.wire import ProtocolError
-from wlre.services.world.coordinates import Coordinates
 from wlre.services.battle.party import own_team
 
 OFFSETS=((-2,-1),(-2,2),(2,-1),(2,2))
@@ -32,7 +31,9 @@ class Roaming:
     def start(self,state,movement,now=0):
         if state.activities:raise ProtocolError('目前'+ '、'.join(state.activities)+'中，不能啟動徘徊')
         self.center=origin(state);self.scene=state.player['scene'];self.role_id=state.player['role_id']
-        self.converter=self.converter or getattr(movement,'converter',None) or Coordinates()
+        self.converter=self.converter or getattr(movement,'converter',None)
+        if self.converter is None:
+            raise ProtocolError('官方導航僅供預覽，尚未驗證徘徊；不使用歷史離線資料。')
         self.converter.mapping(self.scene)
         movement.stop(state,'切換為原版四點徘徊')
         self.enabled=True;self.sticky=False;self.manual=False

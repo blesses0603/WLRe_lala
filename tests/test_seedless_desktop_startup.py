@@ -32,8 +32,9 @@ class SeedlessDesktopTests(unittest.TestCase):
         after=len([w for w in self.root.winfo_children() if isinstance(w,tk.Toplevel)])
         self.assertEqual(after,before+1)
 
-    def test_corrupt_legacy_is_reported_not_hidden(self):
-        with (patch('wlre.ui.navigation_gui.Repository',side_effect=ValueError('corrupt')),
-              patch('wlre.ui.gui.messagebox.showerror') as error):
+    def test_corrupt_legacy_is_not_accessed_by_official_entry(self):
+        with (patch('wlre.ui.navigation_gui.Repository',side_effect=ValueError('corrupt')) as legacy,
+              patch('wlre.ui.official_navigation_preview.OfficialNavigationPreview') as preview):
             self.app.open_navigation()
-        error.assert_called_once()
+        legacy.assert_not_called()
+        preview.assert_called_once()

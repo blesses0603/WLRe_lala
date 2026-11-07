@@ -97,13 +97,15 @@ class IsolatedDesktopCheckTests(unittest.TestCase):
                 self.show_time = root.now
 
             def open_navigation(self):
-                official_navigation_preview.OfficialNavigationPreview(root, lambda: self.snapshot)
+                official_navigation_preview.OfficialNavigationPreview(root, lambda: self.snapshot, suggested_scene=12050)
 
             def close(self):
                 root.closed = True
 
         class FakePreview:
-            def __init__(self, *args):
+            def __init__(self, *args, suggested_scene=None):
+                if suggested_scene != 12050:
+                    raise AssertionError("Preview entry keywords were not forwarded")
                 self.validation_error = None
 
             def run(self, download):
