@@ -1,5 +1,6 @@
 """Regression coverage for resource contracts and compatible preference migration."""
 import json
+import shutil
 import os
 from pathlib import Path
 import tempfile
@@ -13,7 +14,7 @@ from wlre.services.items.crafting_browser_model import Favorites,RECIPES
 
 class ArchitectureRegressionTests(unittest.TestCase):
     def test_missing_remaining_catalog_or_button_rejected(self):
-        for missing in ('navigation_data.zip','assets/buttons/Btn_Bag.png'):
+        for missing in ('assets/app.ico','assets/buttons/Btn_Bag.png'):
             with self.subTest(missing=missing),tempfile.TemporaryDirectory() as temp:
                 root=Path(temp)
                 for name in REQUIRED_RESOURCES:
@@ -25,10 +26,10 @@ class ArchitectureRegressionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp)
             from wlre.storage.full_resource_seed import SEED_NAME, SOURCE_MANIFEST
-            for name in (SEED_NAME, *REQUIRED_RESOURCES):
+            for name in REQUIRED_RESOURCES:
                 if name in SOURCE_MANIFEST: continue
                 target=root/name;target.parent.mkdir(parents=True,exist_ok=True)
-                target.symlink_to(RESOURCE_ROOT/name)
+                shutil.copyfile(RESOURCE_ROOT/name,target)
             (root/'broken.png').write_bytes(b'not an image')
             with self.assertRaises(OSError):validate_resources(root)
 

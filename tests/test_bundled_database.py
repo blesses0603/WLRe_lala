@@ -26,7 +26,7 @@ class BundledDatabaseTests(unittest.TestCase):
     def test_missing_source_uses_database_for_all_catalogs(self):
         names = ('combat_catalog.json', 'crafting_catalog.json', 'alchemy_catalog.json',
                  'expedition_catalog.json', 'map_names.json', 'portals.json',
-                 'item_icon_map.json', 'item_stackable.json', 'stage_coordinates.json')
+                 'item_icon_map.json', 'item_stackable.json', 'synthetic_coordinates.json')
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             database = root / 'resources.sqlite3'

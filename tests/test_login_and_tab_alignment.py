@@ -49,6 +49,9 @@ class LoginAndTabAlignment(unittest.TestCase):
                 },
             },
         }
+        from test_background_version_observer import identity
+        self.app._version_gate_result['runtime_identity'] = identity()
+        self.app._background_full_check_finished(self.app._version_gate_result, True)
         self.app.version_gate_state='ready'
         self.app._version_gate_checked=time.monotonic()
         with patch('wlre.ui.version_gate_controller.messagebox.showwarning',

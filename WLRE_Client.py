@@ -104,11 +104,15 @@ def smoke_test_gui():
 
 def main():
     from wlre.storage.paths import error_log_file
-    log_dir=error_log_file().parent
-    log_dir.mkdir(parents=True,exist_ok=True)
-    # Console-less EXEs still keep Tk callback errors and startup tracebacks.
-    log=log_dir/'error.log'
-    if sys.stderr is None:sys.stderr=log.open('a',encoding='utf8',buffering=1)
+    log=error_log_file()
+    # Logging is best-effort: a read-only data directory must not prevent
+    # startup or replace the original failure with a diagnostic-write error.
+    try:
+        log.parent.mkdir(parents=True,exist_ok=True)
+        # Console-less EXEs still keep Tk callback errors when writable.
+        if sys.stderr is None:sys.stderr=log.open('a',encoding='utf8',buffering=1)
+    except OSError:
+        pass
     try:
         if '--smoke-test-gui' in sys.argv:return smoke_test_gui()
         if '--self-test-unityfs' in sys.argv:return self_test_unityfs()
@@ -123,11 +127,22 @@ def main():
         return 0
     except Exception:
         details=traceback.format_exc()
-        with log.open('a',encoding='utf8') as stream:stream.write(details+'\n')
-        if not any(flag in sys.argv for flag in ('--self-test','--smoke-test-gui','--self-test-unityfs')) and os.name=='nt':
-            import ctypes
-            ctypes.windll.user32.MessageBoxW(None,'程式啟動失敗，詳細記錄：\n'+str(log),'飄流Re:LaLa  =By赤寧=',0x10)
-        elif sys.stderr:print(details,file=sys.stderr)
+        logged=False
+        try:
+            with log.open('a',encoding='utf8') as stream:stream.write(details+'\n')
+            logged=True
+        except OSError:
+            pass
+        try:
+            if not any(flag in sys.argv for flag in ('--self-test','--smoke-test-gui','--self-test-unityfs')) and os.name=='nt':
+                import ctypes
+                message=('程式啟動失敗，詳細記錄：\n'+str(log) if logged else
+                         '程式啟動失敗，無法寫入錯誤記錄：\n'+details)
+                ctypes.windll.user32.MessageBoxW(None,message,'飄流Re:LaLa  =By赤寧=',0x10)
+            elif sys.stderr:print(details,file=sys.stderr)
+        except Exception:
+            # An unavailable console/dialog must not mask the startup error.
+            pass
         return 1
 
 

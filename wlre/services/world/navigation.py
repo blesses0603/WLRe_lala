@@ -4,7 +4,6 @@ Connectivity is reconstructed from identical 3-D triangle edges. Original graph
 flags, off-mesh links, runtime cuts and network-coordinate conversion are not
 applied. This module never sends movement commands.
 """
-from wlre.paths import RESOURCE_ROOT
 import heapq
 import io
 import json
@@ -25,11 +24,11 @@ def finite(*values):
 
 class Repository:
     def __init__(self, path=None):
-        self.path = Path(path) if path else RESOURCE_ROOT.joinpath('navigation_data.zip')
-        self._database_archive = None
         if path is None:
-            from wlre.storage.bundled_database import load_bundled_bytes
-            self._database_archive = load_bundled_bytes('navigation_data.zip', root=RESOURCE_ROOT)
+            raise FileNotFoundError('舊導航資源已退役；請使用當期官方導航資料庫。')
+        # Explicit external research archives remain separate from product loading.
+        self.path = Path(path)
+        self._database_archive = None
         with self._open_archive() as z:
             self._catalog = json.loads(z.read('catalog.json'))
         self.scenes = {r['id']: r for r in self._catalog}

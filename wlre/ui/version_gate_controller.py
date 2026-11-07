@@ -17,6 +17,8 @@ from wlre.services.game_version_gate import run_prelogin_check
 from wlre.services.official_version import BASELINE
 from wlre.services.resource_compatibility import baseline_label
 from wlre.ui.window_layout import configure_dialog
+from wlre.ui.background_version_controller import BackgroundVersionController
+from wlre.services.background_version_observer import version_identifiers_from_database
 
 
 def _is_verified_login_result(result):
@@ -86,7 +88,7 @@ def _launcher_status_text():
     return status
 
 
-class VersionGateController:
+class VersionGateController(BackgroundVersionController):
     def initialize_version_gate(self):
         self.version_gate_state = "checking"
         self.version_gate_text = tk.StringVar(
@@ -127,6 +129,7 @@ class VersionGateController:
         self._startup_failure = None
         self._startup_close_job = None
         self._launcher_catalog_status = _launcher_status_text()
+        BackgroundVersionController.initialize_background_observer(self)
 
     def show_version_check(self):
         """Compact, single-page version review before exposing credentials.
@@ -157,13 +160,15 @@ class VersionGateController:
         # The larger result typography needs enough physical height on
         # Windows, where ttk buttons and CJK fonts have taller native metrics.
         # Otherwise the GitHub-update action row may be clipped off-screen.
-        configure_dialog(window, 1000, 710)
+        compact = window.winfo_screenheight() < 800
+        initial_height = min(710, max(1, window.winfo_screenheight() - 48))
+        configure_dialog(window, 1000, initial_height)
         window.protocol("WM_DELETE_WINDOW", self.close)
         # The helper is replaced with a no-result stub in native GUI smoke
         # tests. Never depend on its return value; derive usable dimensions
         # from Tk's own screen metrics instead.
         width = max(1, min(1000, window.winfo_screenwidth() - 24))
-        height = max(1, min(710, window.winfo_screenheight() - 24))
+        height = initial_height
         # configure_dialog normally fixes both maxsize and minsize. This
         # information-heavy view must reflow and grow on high-DPI desktops.
         window.minsize(min(850, width), min(590, height))
@@ -173,7 +178,7 @@ class VersionGateController:
 
         # Native ttk panels participate in LaLa's existing glass-background
         # compositor; unlike a standalone Canvas they do not obscure artwork.
-        shell = ttk.Frame(window, padding=(22, 16, 22, 14))
+        shell = ttk.Frame(window, padding=(22, 2, 22, 4) if compact else (22, 16, 22, 14))
         shell.pack(fill="both", expand=True)
         self._version_shell = shell
         self._version_fit_job = None
@@ -182,7 +187,7 @@ class VersionGateController:
         # translation length or display scale cannot push them offscreen.
         footer = ttk.Frame(shell)
         footer.pack(side="bottom", fill="x")
-        ttk.Separator(footer, orient="horizontal").pack(fill="x", pady=(6, 9))
+        ttk.Separator(footer, orient="horizontal").pack(fill="x", pady=(3, 5) if compact else (6, 9))
         self._version_elapsed_label = ttk.Label(
             footer, textvariable=self._startup_elapsed, style="Muted.TLabel",
             justify="left")
@@ -192,8 +197,9 @@ class VersionGateController:
         self._version_footer_hint = ttk.Label(
             footer, text="僅查官方公開版本，不需要遊戲帳號或密碼。",
             style="Muted.TLabel", justify="left")
-        self._version_footer_hint.pack(anchor="w", fill="x", pady=(0, 9))
+        self._version_footer_hint.pack(anchor="w", fill="x", pady=(0, 5) if compact else (0, 9))
 
+        self.build_background_observer_controls(footer)
         actions = ttk.Frame(footer)
         actions.pack(fill="x")
         for column in range(3):
@@ -216,16 +222,16 @@ class VersionGateController:
         # The title bar already names this page. Do not repeat the
         # heading or explanatory paragraph here: the status is the focus.
         # One card holds both the prominent result and its detailed reason.
-        alert = ttk.Frame(body, padding=(18, 14, 18, 15))
+        alert = ttk.Frame(body, padding=(18, 4, 18, 4) if compact else (18, 14, 18, 15))
         alert._section_outline = True
         alert._surface_fill = (9, 27, 46, 235)
-        alert.pack(fill="x", pady=(0, 15))
+        alert.pack(fill="x", pady=(0, 4) if compact else (0, 15))
         self._version_alert_panel = alert
         self._version_alert_heading_label = ttk.Label(
             alert, textvariable=self._version_heading,
             style="VersionAlertHeading.TLabel", anchor="w",
             justify="left", wraplength=870)
-        self._version_alert_heading_label.pack(anchor="w", fill="x", pady=(0, 5))
+        self._version_alert_heading_label.pack(anchor="w", fill="x", pady=(0, 2) if compact else (0, 5))
         self._version_alert_message_label = ttk.Label(
             alert, textvariable=self.version_gate_text,
             style="VersionAlertMessage.TLabel", anchor="w",
@@ -235,8 +241,8 @@ class VersionGateController:
         # A title above a single painted section avoids the native
         # TLabelframe notch + glass outline which created the double border.
         ttk.Label(body, text="官方遊戲資源（唯讀）",
-                  style="Section.TLabel").pack(anchor="w", pady=(0, 6))
-        details = ttk.Frame(body, padding=(17, 12, 17, 12))
+                  style="Section.TLabel").pack(anchor="w", pady=(0, 3) if compact else (0, 6))
+        details = ttk.Frame(body, padding=(17, 4, 17, 4) if compact else (17, 12, 17, 12))
         details._section_outline = True
         details._surface_fill = (6, 20, 36, 226)
         details.pack(fill="x")
@@ -252,16 +258,16 @@ class VersionGateController:
                 ("目前 Runtime 資源版本", self._version_baseline),
                 ("檢查結果", self._version_remote))):
             name_label = ttk.Label(details, text=label, anchor="w")
-            name_label.grid(row=index, column=0, sticky="nw", pady=4, padx=(0, 12))
+            name_label.grid(row=index, column=0, sticky="nw", pady=1 if compact else 4, padx=(0, 12))
             self._version_resource_labels.append(name_label)
             value_label = ttk.Label(details, textvariable=variable,
                                     anchor="w", wraplength=710, justify="left")
-            value_label.grid(row=index, column=1, sticky="ew", pady=4)
+            value_label.grid(row=index, column=1, sticky="ew", pady=1 if compact else 4)
             self._version_resource_values.append(value_label)
 
         ttk.Label(body, text="LaLa 程式更新（GitHub 正式 Release）",
-                  style="Section.TLabel").pack(anchor="w", pady=(15, 6))
-        updates = ttk.Frame(body, padding=(17, 12, 17, 13))
+                  style="Section.TLabel").pack(anchor="w", pady=(4, 3) if compact else (15, 6))
+        updates = ttk.Frame(body, padding=(17, 6, 17, 6) if compact else (17, 12, 17, 13))
         updates._section_outline = True
         updates._surface_fill = (6, 20, 36, 226)
         updates.pack(fill="x")
@@ -272,7 +278,7 @@ class VersionGateController:
         self._version_release_label.pack(anchor="w", fill="x")
 
         controls = ttk.Frame(updates)
-        controls.pack(fill="x", pady=(10, 0))
+        controls.pack(fill="x", pady=(6, 0) if compact else (10, 0))
         for column in range(3):
             controls.columnconfigure(column, weight=1, uniform="lala_update_actions")
         self._lala_retry_button = ttk.Button(
@@ -321,6 +327,7 @@ class VersionGateController:
         self._version_release_label.configure(wraplength=max(300, width - 108))
         self._version_footer_hint.configure(wraplength=max(300, width - 65))
         self._version_elapsed_label.configure(wraplength=max(300, width - 65))
+        self._background_label.configure(wraplength=max(300, width - 65))
         self._schedule_version_fit()
 
     def _schedule_version_fit(self):
@@ -363,6 +370,9 @@ class VersionGateController:
                            self._lala_retry_button, self._lala_download_button,
                            self._lala_open_button):
                 button.configure(state="disabled")
+            self._refresh_observer_controls()
+            return
+        if hasattr(self, '_observer_alarm') and self._render_background_alarm():
             return
         result = self._version_gate_result or {}
         remote = result.get("remote")
@@ -421,7 +431,8 @@ class VersionGateController:
             + "\n資源收集紀錄：" + self._launcher_catalog_status)
         if hasattr(self, '_version_retry_button'):
             self._version_retry_button.configure(
-                state="disabled" if self.version_gate_state == "checking" else "normal")
+                text="斷線後完整檢查" if self.live_active else "重新查詢官方版本",
+                state="disabled" if self.version_gate_state == "checking" or self.live_active else "normal")
         if self.version_gate_state == "checking":
             preparing = self._startup_phase == 'preparing'
             update = self._startup_progress_update
@@ -478,7 +489,7 @@ class VersionGateController:
         """Explicit acknowledgement grants one login stage, not network access."""
         if self._closing or self._startup_exit_requested.is_set() or self.version_gate_state == "checking":
             return
-        if (self.version_gate_state != "ready" or
+        if (self._observer_requires_full_check or self.version_gate_state != "ready" or
                 not _is_verified_login_result(self._version_gate_result)):
             messagebox.showwarning("禁止登入", self.version_gate_text.get(),
                                    parent=self.dialog_parent())
@@ -506,15 +517,16 @@ class VersionGateController:
             text = "正在安全結束程式；不會建立新的連線。"
         elif self.version_gate_state == 'checking':
             text = "正在準備資源或檢查官方版本；完整驗證通過前不會連線。"
+        elif self._observer_requires_full_check:
+            text = "背景識別曾有異常，已撤銷舊登入授權；請先完成官方版本與 Runtime 完整檢查。"
         elif (self.version_gate_state == 'ready' and self._version_gate_entry_approved
               and _is_verified_login_result(self._version_gate_result)):
-            if (not self._version_gate_checked
-                    or time.monotonic() - self._version_gate_checked > 300):
-                text = "上次檢查已過期；按登入後會先重新檢查，通過前不會連線。"
+            if not self._observer_is_fresh():
+                text = "版本觀測已過期；按登入後先唯讀比對，成功後請再按登入。識別相同仍無法偵測同版內容替換。"
             else:
-                # This remains true if the page stays open beyond five minutes.
-                # Do not claim the currently unseen official version is unchanged.
-                text = "上次官方檢查通過；結果最多沿用 5 分鐘，登入時會確認是否過期（非即時監測）。"
+                minutes = self._background_schedule.interval_seconds / 60
+                text = (f"本次已完整驗證；版本識別最多沿用 {minutes:g} 分鐘（輪詢非即時監測）。"
+                        "過期只補唯讀比對，無法偵測同版內容替換。")
         else:
             text = "版本尚未確認或資料不一致，請按「版本檢測」重新確認。"
         self._login_version_status.set(text)
@@ -525,20 +537,31 @@ class VersionGateController:
             enabled = (self._version_gate_entry_approved and
                        self.version_gate_state == "ready" and
                        _is_verified_login_result(self._version_gate_result) and
-                       not self.live_active)
+                       not self._observer_requires_full_check and not self.live_active)
             self.connect_button.configure(state="normal" if enabled else "disabled")
 
     def start_version_check(self):
         if self._closing or self._startup_exit_requested.is_set():
             return
+        if self.live_active:
+            # This entry also runs from the initial after() callback. A late
+            # timer must not enter a synchronous modal loop while connected.
+            self.show_version_check()
+            note = "已連線時只能背景觀測識別；請先安全中斷，再執行完整檢查。"
+            self.version_gate_text.set(note)
+            if hasattr(self, '_version_footer_hint'):
+                self._version_footer_hint.configure(text=note)
+            return
         # Serialize cache-writing work. Rapid clicks cannot start duplicate
         # preparation or race runtime activation. A completed retry always
-        # makes a fresh official check, never reuses the launcher receipt.
+        # synchronizes current sources before its independent official check.
+        # Preparation receipts cannot replace verification or skip recovery.
         if not self._version_worker_done.is_set():
             return
         if (self.login_window is not None and self.login_window.winfo_exists()
                 and self.login_window.state() != "withdrawn" and not self.live_active):
             self.show_version_check()
+        self._background_full_check_started()
         self._version_gate_generation += 1
         generation = self._version_gate_generation
         self._version_gate_entry_approved = False
@@ -547,6 +570,8 @@ class VersionGateController:
         self._startup_progress.take()  # Discard an earlier generation's display.
         self._official_progress.take()
         self._startup_progress_update = None
+        self._startup_failure = None
+        self._startup_prepared.clear()  # Completion belongs to this full attempt.
         self._startup_started_at = time.monotonic()
         self._startup_stage_started_at = self._startup_started_at
         self._startup_finished_at = None
@@ -556,10 +581,9 @@ class VersionGateController:
         if bar is not None:
             bar.reset()
         self._update_startup_elapsed()
-        self._startup_phase = 'official' if self._startup_prepared.is_set() else 'preparing'
+        self._startup_phase = 'preparing'
         self.version_gate_text.set(
-            "正在向官方來源確認資源版本與完整 Runtime…" if self._startup_prepared.is_set() else
-            "正在準備並校驗 LaLa 官方資源，完成後將獨立檢查登入條件…")
+            "正在同步並校驗目前官方資源，完成後將獨立檢查登入條件…")
         self._set_login_gate_button()
         self._render_version_window()
         # GitHub is independent: an outage never changes the game login gate.
@@ -576,17 +600,20 @@ class VersionGateController:
             # Capture only thread-safe data, never App/Tk objects. A non-daemon
             # worker and deferred close keep cache writes alive until completed.
             try:
-                if not prepared.is_set():
-                    try:
-                        receipt = prepare_on_launch(progress=progress.report)
-                        if not isinstance(receipt, dict) or receipt.get('status') == 'error':
-                            status = '資源收集未完成；正式 Runtime 結果另列'
-                        else:
-                            status = _launcher_status_text()
-                    except Exception:
-                        status = '資源收集發生例外；正式 Runtime 結果另列'
-                    progress.finish(status)
-                    prepared.set()
+                # Every explicit full retry must repair missing/new-version
+                # sources, including after offline or partial preparation.
+                # prepare_on_launch is source-only; the complete Runtime is
+                # constructed exactly once by the independent gate below.
+                try:
+                    receipt = prepare_on_launch(progress=progress.report)
+                    if not isinstance(receipt, dict) or receipt.get('status') == 'error':
+                        status = '資源收集未完成；正式 Runtime 結果另列'
+                    else:
+                        status = _launcher_status_text()
+                except Exception:
+                    status = '資源收集發生例外；正式 Runtime 結果另列'
+                progress.finish(status)
+                prepared.set()
                 if exiting.is_set():
                     return
                 try:
@@ -596,7 +623,7 @@ class VersionGateController:
                               "message": "版本檢測程式發生例外，已禁止登入；請重新查詢或回報開發者。",
                               "remote": {"status": "unverified", "failed_stage": "檢測程式",
                                          "reason": "內部例外（非官方版本回應）"}}
-                official_messages.put((generation, result))
+                official_messages.put((generation, result, time.monotonic()))
             finally:
                 done.set()
 
@@ -607,7 +634,7 @@ class VersionGateController:
             done.set()
             official_messages.put((generation, {
                 "blocked": True, "status": "unverified",
-                "message": "啟動檢查無法開始，已禁止登入；請重新查詢。"}))
+                "message": "啟動檢查無法開始，已禁止登入；請重新查詢。"}, time.monotonic()))
 
     def _drain_startup_progress(self):
         update, failure, terminal = self._startup_progress.take()
@@ -641,7 +668,8 @@ class VersionGateController:
 
     def _update_startup_elapsed(self):
         """Use the existing UI poll; at most one text change per second, no timer."""
-        if not hasattr(self, '_startup_elapsed') or self._startup_started_at is None:
+        if (getattr(self, '_observer_alarm', False) or not hasattr(self, '_startup_elapsed')
+                or self._startup_started_at is None):
             return
         finished = self._startup_finished_at
         now = time.monotonic() if finished is None else finished
@@ -691,7 +719,7 @@ class VersionGateController:
         self._drain_startup_progress()
         while True:
             try:
-                generation, result = self._version_gate_messages.get_nowait()
+                generation, result, completed_at = self._version_gate_messages.get_nowait()
             except queue.Empty:
                 self._drain_lala_update_messages()
                 self._update_startup_elapsed()
@@ -702,7 +730,8 @@ class VersionGateController:
             if not isinstance(result, dict):
                 result = {}
             result = dict(result)
-            if not _is_verified_login_result(result):
+            if (not _is_verified_login_result(result) or
+                    version_identifiers_from_database(result.get('runtime_identity')) is None):
                 # Treat missing/contradictory status or an unexpected response
                 # as a failed verification, even if the worker said blocked=False.
                 result["blocked"] = True
@@ -713,6 +742,8 @@ class VersionGateController:
             self._version_gate_checked = time.monotonic()
             self.version_gate_state = (
                 "ready" if _is_verified_login_result(result) else "blocked")
+            self._background_full_check_finished(
+                result, self.version_gate_state == 'ready', completed_at=completed_at)
             self._finish_startup_presentation()
             self.version_gate_text.set(
                 result.get("message") or "官方版本無法完整驗證；禁止登入，請重新查詢。")
@@ -806,8 +837,17 @@ class VersionGateController:
 
     def can_login_after_version_check(self):
         """Authoritative App.connect guard, even when invoked without button."""
+        if not self._closing and not self._startup_exit_requested.is_set():
+            # A completed failure already in the mailbox wins over a click.
+            # Drain only ready results; never wait for an in-flight request.
+            self.poll_background_versions(start_due=False)
         self._update_login_version_status()
         if self._closing or self._startup_exit_requested.is_set():
+            return False
+        if self._observer_requires_full_check:
+            messagebox.showwarning("需完整檢查", "背景識別曾有異常；請完成官方版本與 Runtime 完整檢查後再登入。",
+                                   parent=self.dialog_parent())
+            self.show_version_check()
             return False
         if (self.version_gate_state != "ready" or
                 not self._version_gate_entry_approved or
@@ -822,12 +862,13 @@ class VersionGateController:
                                    parent=self.dialog_parent())
             self.show_version_check()
             return False
-        # A previously checked official version can go stale while browsing
-        # login settings. Never use an expired online result as a login pass.
-        if not self._version_gate_checked or time.monotonic() - self._version_gate_checked > 300:
-            self.start_version_check()
-            messagebox.showinfo("版本重新檢查",
-                                "上次官方版本檢查已過期，請重新確認檢測結果。",
+        # Full startup verification remains the authority. A separate bounded
+        # identifier observation may renew freshness, never its content stamp.
+        if not self._observer_is_fresh():
+            self._start_background_observation(force=True)
+            self._update_login_version_status()
+            messagebox.showinfo("版本重新觀測",
+                                "版本識別觀測已過期，正在唯讀比對官方、資料庫與本次 Runtime；成功後請再次按登入。",
                                 parent=self.dialog_parent())
             return False
         return True

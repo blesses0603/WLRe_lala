@@ -5,17 +5,13 @@ All 724 caches have zero rotation. Their paired vertex arrays independently
 support A = B + (boundsCenter - boundsSize/2)*1000 (rounding <= 0.5 Int3).
 Live movement and dynamic obstacle geometry are not verified by these formulas.
 """
-from wlre.paths import RESOURCE_ROOT
 from wlre.services.world.navigation import NavigationError, finite
 from wlre.services.world.map_names import parse_map_id, map_label
 
 
 class Coordinates:
     def __init__(self):
-        base = RESOURCE_ROOT
-        from wlre.storage.bundled_database import load_bundled_json
-        self.stages = load_bundled_json('stage_coordinates.json', root=base)['stages']
-        self.origins = load_bundled_json('graph_origins.json', root=base)
+        raise FileNotFoundError('舊導航座標已退役；請使用當期官方資料與導航資料庫。')
 
     def mapping(self, logical_map):
         try:

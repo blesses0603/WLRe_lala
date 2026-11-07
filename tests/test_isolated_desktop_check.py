@@ -68,7 +68,7 @@ class IsolatedDesktopCheckTests(unittest.TestCase):
                 self._version_worker_done = threading.Event()
                 self.version_gate_state = 'checking'
                 self._version_gate_result = None
-                self.overview_panel = SimpleNamespace(winfo_ismapped=lambda: True)
+                self.overview_panel = SimpleNamespace(winfo_ismapped=lambda: True, update_idletasks=lambda: None)
                 self.snapshot = {}
                 self.show_time = None
                 apps.append(self)
@@ -97,13 +97,15 @@ class IsolatedDesktopCheckTests(unittest.TestCase):
                 self.show_time = root.now
 
             def open_navigation(self):
-                official_navigation_preview.OfficialNavigationPreview(root, lambda: self.snapshot)
+                official_navigation_preview.OfficialNavigationPreview(root, lambda: self.snapshot, suggested_scene=12050)
 
             def close(self):
                 root.closed = True
 
         class FakePreview:
-            def __init__(self, *args):
+            def __init__(self, *args, suggested_scene=None):
+                if suggested_scene != 12050:
+                    raise AssertionError("Preview entry keywords were not forwarded")
                 self.validation_error = None
 
             def run(self, download):

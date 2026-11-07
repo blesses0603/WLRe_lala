@@ -36,6 +36,7 @@ from wlre.network.commands import dispatch
 from wlre.network.automatic_flows import AutomaticFlows
 from wlre.network.npc_dialogue import flush_npc_choice
 from wlre.services.items import reservations
+from wlre.network.resource_safety import apply_hold, command_allowed, hold_event, HOLD_REASON
 
 
 def post_battle_trace(state, phase):
@@ -143,7 +144,10 @@ def verify_account(endpoint, profile, account, password, emit, stop_event, timeo
 
 class SessionLogic:
     """Deterministic reactions shared by network operation and tests."""
-    def __init__(self, role_index=None):
+    def __init__(self, role_index=None, *, resource_safety_hold=None):
+        self.resource_safety_hold = resource_safety_hold
+        self.resource_safety_held = False
+        self.resource_hold_announced = False
         self.flows = AutomaticFlows()
         self.last_chat_time = None
         self.last_companion_time = None
@@ -173,6 +177,7 @@ class SessionLogic:
 
     def receive(self, event, state):
         state.assert_writer()
+        self.check_resource_safety(state)
         outgoing = []
         kind = event['type']
         self.room_storage.observe(event,state)
@@ -266,7 +271,8 @@ class SessionLogic:
             if event['result'] != 0: raise LoginRejected(f"login rejected: result {event['result']}")
             if event['login_kind'] != 2: raise ProtocolError('unexpected formal login kind')
             self.authenticated = True
-        elif kind == 'role_list_available' and self.role_index is not None:
+        elif (kind == 'role_list_available' and self.role_index is not None
+              and not self.resource_safety_held):
             outgoing += self.command({'type': 'select_role', 'index': self.role_index}, state)
         if state.player and state.initial_data_complete and not self.world_acknowledged:
             outgoing.extend([Packet(12, 1), Packet(3, 2)])
@@ -281,6 +287,10 @@ class SessionLogic:
 
     def flush_events(self,state):
         state.assert_writer()
+        if self.check_resource_safety(state):
+            # C20-6 can advance arbitrary NPC/battle scripts, not merely ACK
+            # transport. Keep the pending event, but do not advance it on hold.
+            return []
         # Manual choice is itself a Lua continuation grant; it does not wait
         # for S20-10. Consume only this one grant, keeping other NPC steps manual.
         if self.world_acknowledged:
@@ -304,9 +314,22 @@ class SessionLogic:
     def command(self, command, state):
         state.assert_writer()
         validate_command(command)
+        if self.check_resource_safety(state) and not command_allowed(command):
+            raise ProtocolError(HOLD_REASON)
         packets=dispatch(self, command, state)
         self.flows.remember(command,state)
         return packets
+
+    def check_resource_safety(self, state):
+        return apply_hold(self, state)
+
+    def publish_resource_safety(self, state, emit, on_state):
+        self.check_resource_safety(state)
+        if self.resource_safety_held and not self.resource_hold_announced:
+            self.resource_hold_announced = True
+            emit(hold_event())
+            if on_state:
+                notify_state(on_state, state)
 
 
     def disconnect(self,state):
@@ -355,7 +378,8 @@ class SessionLogic:
 def run_client(host, port, profile, emit, *, account=None, password=None,
                login_kind=2, platform=None, language=None, role_index=None,
                duration=15, timeout=5, verify_first=False, stop_event=None,
-               commands=None, on_state=None, snapshot_interval=0, tcp_keepalive=False):
+               commands=None, on_state=None, snapshot_interval=0, tcp_keepalive=False,
+               resource_safety_hold=None):
     if duration is not None and duration <= 0 or timeout <= 0:
         raise ProtocolError('duration and timeout must be positive')
     if snapshot_interval<0:raise ProtocolError('snapshot_interval must not be negative')
@@ -363,6 +387,13 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
         on_state=StatePublisher(on_state,snapshot_interval)
     stop_event = stop_event or threading.Event()
     commands = commands or queue.Queue()
+    def held_before_connect():
+        if resource_safety_hold is not None and resource_safety_hold.is_set():
+            emit(hold_event())
+            return True
+        return False
+    if held_before_connect():
+        return State()
     profile = dict(profile)
     for key in ('rx_xor', 'tx_xor'):
         if not isinstance(profile[key], int) or not 0 <= profile[key] <= 255:
@@ -381,9 +412,10 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
             verify_account(endpoint, profile, account, password, emit, stop_event)
     else:
         request = None
-    if stop_event.is_set(): return State()
+    if stop_event.is_set() or held_before_connect(): return State()
     state = State(phase='connecting')
-    parser, logic = FrameDecoder(profile['rx_xor']), SessionLogic(role_index)
+    parser, logic = FrameDecoder(profile['rx_xor']), SessionLogic(
+        role_index, resource_safety_hold=resource_safety_hold)
     deadline = time.monotonic() + duration if duration is not None else float('inf')
     health = ConnectionHealth(emit)
     cleanup_timer = PeriodicCleanup()
@@ -400,8 +432,11 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
                   'wire_observed_in_capture': bool(profile.get('capture_sha256'))})
             if request:
                 if stop_event.wait(0.1): return state
-                _send(connection, request, profile['tx_xor'], emit)
+                logic.publish_resource_safety(state, emit, on_state)
+                if not logic.resource_safety_held:
+                    _send(connection, request, profile['tx_xor'], emit)
             while not stop_event.is_set() and time.monotonic() < deadline:
+                logic.publish_resource_safety(state, emit, on_state)
                 if cleanup_timer.due():
                     removed = state.clear_position_history()
                     emit({'type': 'periodic_cleanup', 'positions_removed': removed})
@@ -441,6 +476,7 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
                 advance_services(logic,state,
                     lambda packet:_send_command_packet(connection,packet,profile['tx_xor'],state,emit,on_state),
                     lambda packet:_send(connection,packet,profile['tx_xor'],emit),emit,on_state)
+                logic.publish_resource_safety(state, emit, on_state)
                 try: raw = connection.recv(65536)
                 except socket.timeout: continue
                 if not raw:
@@ -464,6 +500,7 @@ def run_client(host, port, profile, emit, *, account=None, password=None,
                         if request:
                             for response in logic.receive(event, state):
                                 _send(connection, response, profile['tx_xor'], emit)
+                            logic.publish_resource_safety(state, emit, on_state)
                             if (event['type'] in ('fight_exit', 'battle_unit_exit')
                                     and (state.battle.get('post_event') or {}).get('status')
                                     in ('cooperative_wait', 'exit_delay')):

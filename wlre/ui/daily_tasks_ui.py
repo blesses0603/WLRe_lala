@@ -26,6 +26,9 @@ class DailyTaskPanel(ttk.Frame):
         self.claim.pack(side='left')
         self.go=ttk.Button(actions,text='開啟相關功能',command=self.open_destination)
         self.go.pack(side='left',padx=8)
+        if cycle==1:
+            self.assistant=ttk.Button(actions,text='每日助手',command=self.open_assistant)
+            self.assistant.pack(side='left')
         self.chest=ttk.Button(actions,text='領取活躍寶箱',command=lambda:self.act('chest',cycle=self.cycle))
         self.chest.pack(side='right')
         ttk.Label(self,textvariable=self.details,wraplength=760).pack(anchor='w',fill='x',pady=4)
@@ -45,6 +48,10 @@ class DailyTaskPanel(ttk.Frame):
         self.claim.configure(state='normal' if self.live and row and row['eligible'] and not self.blocked else 'disabled')
         self.go.configure(state='normal' if row and (row['condition_kind'] in (7,8,9,12,16) or
             row['condition_kind']==10 and row['condition_params'][0] in (1,2)) else 'disabled')
+
+    def open_assistant(self):
+        panel=self.app.benefits_panel
+        panel.tabs.select(panel.assistant_panel)
 
     def open_destination(self):
         selected=self.tree.selection();row=self.rows.get(selected[0]) if selected else None

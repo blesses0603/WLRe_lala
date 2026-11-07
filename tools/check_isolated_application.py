@@ -44,7 +44,8 @@ def check(workspace,platform,online=False):
     workspace=Path(workspace).resolve()
     if (workspace/'source/wlre/resources/resource_catalog_seed.sqlite3').exists():raise ValueError('Seed is not isolated')
     if not (workspace/'isolation.json').is_file():raise ValueError('Not an isolation workspace')
-    attempts=[];connections=[]
+    attempts=[];connections=[];legacy_accesses=[]
+    forbidden_names={"resource_catalog_seed.sqlite3","navigation_data.zip","graph_origins.json","stage_coordinates.json"}
     from urllib.parse import urlsplit
     import socket
     proxies=set()
@@ -53,6 +54,14 @@ def check(workspace,platform,online=False):
         u=urlsplit(proxy)
         proxies={(r[4][0],r[4][1]) for r in socket.getaddrinfo(u.hostname,u.port or 80,type=socket.SOCK_STREAM)}
     def audit(event,args):
+        if event in ('open','sqlite3.connect') and args and isinstance(args[0],(str,bytes,os.PathLike)):
+            name=os.fsdecode(args[0])
+            if name.startswith('file:'):
+                from urllib.request import url2pathname
+                name=url2pathname(urlsplit(name).path)
+            if Path(name).name in forbidden_names:
+                legacy_accesses.append(Path(name).name)
+                raise PermissionError('Cold-start smoke forbids retired navigation seed reads')
         if event=='urllib.Request':
             url=urlsplit(args[0])
             if online and url.scheme=='https' and url.hostname in ('wlreftpsrc.chinesegamer.net','wlreftp.chinesegamer.net','cgdl.chinesegamer.net','api.github.com'):
@@ -78,11 +87,13 @@ def check(workspace,platform,online=False):
             deadline=time.monotonic()+(420 if online else 30)
             def exercise():
                 try:
-                    app.show_main();root.update_idletasks()
+                    app.show_main()
+                    from wlre.ui.window_layout import wait_for_widget_mapping
+                    wait_for_widget_mapping(app.overview_panel)
                     observations['dashboard_mapped']=bool(app.overview_panel.winfo_ismapped())
                     dialogs=[]
-                    def preview(*args):
-                        result=OfficialNavigationPreview(*args);dialogs.append(result);return result
+                    def preview(*args, **kwargs):
+                        result=OfficialNavigationPreview(*args, **kwargs);dialogs.append(result);return result
                     with patch('wlre.ui.official_navigation_preview.OfficialNavigationPreview',side_effect=preview):
                         app.open_navigation()
                     if len(dialogs)!=1:raise AssertionError('Missing independent official preview')
@@ -162,8 +173,9 @@ def check(workspace,platform,online=False):
             finally:app.stop()
         Clock.schedule_once(exercise,.3);app.run()
         if errors or not observations.get('login_root_built') or observations.get('sessions')!=0:raise AssertionError((errors,observations))
+    if legacy_accesses:raise AssertionError('Unexpected retired navigation read: '+str(legacy_accesses))
     if any(x['event']=='socket.connect' for x in attempts):raise AssertionError('Unexpected socket connection attempt')
-    return dict(platform=platform,observations=observations,blocked_metadata_requests=attempts,https_transport_connections=len(connections),online_bootstrap=online,seed_present=False,
+    return dict(platform=platform,observations=observations,blocked_metadata_requests=attempts,https_transport_connections=len(connections),online_bootstrap=online,seed_present=False,legacy_navigation_reads=0,
                 actual_game_login=False,can_send_packets=False,
                 scope='Actual application host entry and UI smoke; native Android service/device and live gameplay not tested.')
 

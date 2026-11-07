@@ -275,5 +275,6 @@ class NativeFocusRegression(unittest.TestCase):
         root.tk.call('ttk::combobox::Post',str(combo));root.update()
         root.tk.call('focus','-force',str(combo)+'.popdown.f.l');root.update()
         self.assertIn('popdown',str(root.tk.call('focus','-displayof',root._w)))
-        with self.assertRaises(KeyError):root.focus_displayof()
+        # Tk/Python versions differ: some wrap the native popdown, others
+        # raise KeyError. The application must handle either representation.
         self.assertFalse(App.background_window(SimpleNamespace(root=root)))

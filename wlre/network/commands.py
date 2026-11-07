@@ -39,6 +39,9 @@ def dispatch(logic,command,state):
         logic.selected = True
         state.phase = 'role_selected_awaiting_world'
         return [packet]
+    if kind=='daily_assistant':
+        from wlre.services.daily_assistant import command as assistant_command
+        return assistant_command(state,command,logic.world_acknowledged)
     if kind=='star_ark':
         from wlre.services.star_ark import command as ark_command
         return ark_command(state,command,logic.world_acknowledged)

@@ -21,7 +21,7 @@ from wlre.features.portals.panel import PortalInteractionMixin
 class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
               MinimapNavigationMixin, NPCInteractionMixin,
               PortalInteractionMixin, ttk.Frame):
-    def __init__(self,parent,on_pick,on_navigation,on_move=None,on_portal=None,status_parent=None,show_status=True,compact=False,on_npc=None,on_npc_next=None):
+    def __init__(self,parent,on_pick,on_navigation,on_move=None,on_portal=None,status_parent=None,show_status=True,compact=False,on_npc=None,on_npc_next=None,on_sync=None,on_cancel_sync=None):
         super().__init__(parent,padding=8 if compact else 12)
         self.on_pick,self.on_navigation=on_pick,on_navigation
         self.on_move=on_move
@@ -78,6 +78,15 @@ class HomeMap(MinimapCanvasMixin, MinimapPickMixin,
         self.rowconfigure(1,weight=1)
         self.map_title=tk.StringVar(value='小地圖｜等待角色地圖')
         ttk.Label(header,textvariable=self.map_title,style='Heading.TLabel',wraplength=350).pack(side='left',fill='x',expand=True)
+        navigation_actions=ttk.Frame(self)
+        navigation_actions.grid(row=3,column=0,sticky='ew')
+        ttk.Button(navigation_actions,text='導航預覽',command=self.on_navigation).pack(side='left')
+        if on_sync is not None:
+            ttk.Button(navigation_actions,text='同步導航',command=on_sync).pack(side='left')
+        if on_cancel_sync is not None:
+            ttk.Button(navigation_actions,text='取消同步',command=on_cancel_sync).pack(side='left')
+        self.navigation_status=tk.StringVar(value='導航：等待目前地圖。')
+        ttk.Label(self,textvariable=self.navigation_status,wraplength=350).grid(row=4,column=0,sticky='ew')
         self.portal_status=tk.StringVar(value='單擊選取傳點，按換圖按鈕或雙擊才送出；不會自動走路。')
         body=ttk.Frame(self)
         body.grid(row=1,column=0,sticky='nsew')

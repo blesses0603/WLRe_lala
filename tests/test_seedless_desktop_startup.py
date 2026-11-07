@@ -20,6 +20,10 @@ class SeedlessDesktopTests(unittest.TestCase):
         self.app=App(self.root)
 
     def test_dashboard_does_not_require_legacy_navigation(self):
+        from wlre.paths import RESOURCE_ROOT
+        from wlre.storage.resource_seed_manifest import RETIRED_NAVIGATION
+        self.assertFalse((RESOURCE_ROOT/'resource_catalog_seed.sqlite3').exists())
+        self.assertFalse(any((RESOURCE_ROOT/name).exists() for name in RETIRED_NAVIGATION))
         self.app.show_main();wait_for_widget_mapping(self.app.overview_panel)
         self.assertTrue(self.app.overview_panel.winfo_ismapped())
         self.assertIsNone(self.app.home_map.repository)
@@ -32,8 +36,9 @@ class SeedlessDesktopTests(unittest.TestCase):
         after=len([w for w in self.root.winfo_children() if isinstance(w,tk.Toplevel)])
         self.assertEqual(after,before+1)
 
-    def test_corrupt_legacy_is_reported_not_hidden(self):
-        with (patch('wlre.ui.navigation_gui.Repository',side_effect=ValueError('corrupt')),
-              patch('wlre.ui.gui.messagebox.showerror') as error):
+    def test_corrupt_legacy_is_not_accessed_by_official_entry(self):
+        with (patch('wlre.services.world.navigation.Repository',side_effect=ValueError('corrupt')) as legacy,
+              patch('wlre.ui.official_navigation_preview.OfficialNavigationPreview') as preview):
             self.app.open_navigation()
-        error.assert_called_once()
+        legacy.assert_not_called()
+        preview.assert_called_once()

@@ -1,0 +1,29 @@
+{
+  "models": 558,
+  "scenes": 795,
+  "samples": 2385,
+  "results": {
+    "preview": 1636,
+    "safe_stop_no_pair": 749
+  },
+  "legacy_accesses": 0,
+  "seed_absent": true,
+  "wrong_version_rejections": 558,
+  "can_send_packets": false,
+  "gui_verified": false,
+  "source_commit": "29b6d16b6c781910a0b0f6e3172ab19e687ff0ed",
+  "legacy_guard_control": "rejected",
+  "tested_working_tree_sha256": {
+    "wlre/services/world/navigation_database.py": "be862b96472bd0e5b291b3bcd1078d1828a6244e4d44a4cd0339b182b9ffbdcc",
+    "wlre/services/world/navigation_preview.py": "bc92f14ee1f4d1efe29cce68eff6261373c80b394707122bb1af97ccd6fe27f6",
+    "wlre/services/world/navigation_sync.py": "80235ea2e3b70366be19ab67dee67275dd18b6a65bb5804e142d66f8fa088669",
+    "wlre/services/world/smallmaps.py": "706c58937d37080cfce97d287ee99e8d21116962303da8be105822b35ed64d8f",
+    "wlre/services/world/movement.py": "436cfa6ce01249e4652300ab9a1de54200e6ac1194c460992f43b52607b63224",
+    "wlre/services/world/roaming.py": "33733b52e5dde22d9341bfe67fd52934ec7a18f04338c5e5e70851a6f1f3d4cb",
+    "wlre/features/minimap/navigation_ui.py": "8dfaf4aa015a617ce610c0d14ad967a1471206f7196f8964ac7b568294a683ea",
+    "wlre/ui/gui.py": "d3d677c1f7489ad8651aca9726272702ea31cde3971e783654aba203f865fa32",
+    "wlre/ui/official_navigation_preview.py": "2fab5d4c43989f56642c1d90981d4cd00a8f91d21f1998c3cf3d4c5cf05c0be9",
+    "wlre/__main__.py": "8467c36e566374274c6c5db6f385984a4077d3e21c0a0b300b6202a6bfc8aef0"
+  },
+  "scope": "Fresh isolated source copy; seed quarantined and reads of seed, three legacy navigation files, original checkout and quarantine denied. Official-source extracted caches and verified ScenesData snapshot supplied. Not GUI or live server acceptance."
+}

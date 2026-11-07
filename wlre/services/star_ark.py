@@ -384,6 +384,26 @@ def best_dispatch(state,catalog):
 def _event_key(d,event,token):return (token,d['generation'],event['main'],event['index'],event['id'])
 
 
+def fight_rewards(state,event,catalog):
+    """Validate fight rewards/capacity without mutation or packet construction.
+
+    Callers must first verify current catalog identity and event eligibility.
+    The projection and packet path share these exact conservative guards.
+    """
+    if event['kind']!=1 or event['id'] not in catalog['fights']:raise ProtocolError('沒有同版戰鬥事件資料')
+    if not state.auto_battle.get('enabled'):raise ProtocolError('請先啟用並設定自動戰鬥')
+    from wlre.services.daily_tasks import slots_needed
+    from wlre.services.instance_rewards import bag_claim_problem
+    row=catalog['fights'][event['id']];awards=[a for a in row['awards'] if a['kind']]
+    # Agent rewards and unknown/lucky-bag rewards require separate
+    # capacity evidence and are not authorized by a guessed slot count.
+    if row['agent']:raise ProtocolError('事件會新增情報員，尚缺情報員容量驗收')
+    needed=slots_needed(awards)
+    issue=bag_claim_problem(state.inventory,required_slots=needed)
+    if issue:raise ProtocolError(issue)
+    return awards,needed
+
+
 def begin(state,action,world_acknowledged,event=None,now=None):
     if not world_acknowledged:raise ProtocolError('等待世界初始化確認')
     issue=problem(state)
@@ -405,17 +425,7 @@ def begin(state,action,world_acknowledged,event=None,now=None):
         key=_event_key(d,event,token)
         if key in d['attempted']:raise ProtocolError('此事件已要求執行，等待新事件清單')
         if action=='fight':
-            if event['kind']!=1 or event['id'] not in catalog['fights']:raise ProtocolError('沒有同版戰鬥事件資料')
-            if not state.auto_battle.get('enabled'):raise ProtocolError('請先啟用並設定自動戰鬥')
-            from wlre.services.daily_tasks import slots_needed
-            from wlre.services.instance_rewards import bag_claim_problem
-            row=catalog['fights'][event['id']];awards=[a for a in row['awards'] if a['kind']]
-            # Agent rewards and unknown/lucky-bag rewards require separate
-            # capacity evidence and are not authorized by a guessed slot count.
-            if row['agent']:raise ProtocolError('事件會新增情報員，尚缺情報員容量驗收')
-            needed=slots_needed(awards)
-            issue=bag_claim_problem(state.inventory,required_slots=needed)
-            if issue:raise ProtocolError(issue)
+            awards,needed=fight_rewards(state,event,catalog)
             expected={}
             for a in awards:
                 if a['kind'] in (10,11):expected[a['id']]=expected.get(a['id'],0)+a['value']

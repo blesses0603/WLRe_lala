@@ -136,3 +136,9 @@ star_ark、ark_catalog、ark_questions 模組。本次沒有移植 Android 方�
 驗證：本機完整 unittest 1,645 項（1,480 通過、165 因缺顯示等平台條件跳過）；
 Python compileall、git diff --check、strict-git repository audit 與 --self-test 通過。
 Windows／macOS CI、原生 GUI／正式服及打包未驗證。
+
+
+### 桌面每日助手
+
+集中設定與當期目標總覽請見 [每日任務助手](DAILY_TASK_ASSISTANT.md)。
+助手沿用本文件的服務確認與正式服驗收限制，不新增第二套自動發包排程。

@@ -123,7 +123,7 @@ class SecondaryFeatures(unittest.TestCase):
     def test_other_window_owns_ark_and_guild_pages_and_benefits_keeps_only_rewards(self):
         benefits=self.app.benefits_panel;other=self.app.other_features_panel
         self.assertEqual([benefits.tabs.tab(p,'text') for p in benefits.tabs.tabs()],
-                         ['魔方','每日任務','每週任務'])
+                         ['魔方','每日任務','每週任務','每日助手'])
         self.assertEqual([other.tabs.tab(p,'text') for p in other.tabs.tabs()],['方舟','組織'])
         for panel in (other.ark_panel,other.guild_panel):
             self.assertEqual(panel.winfo_toplevel(),self.app.feature_windows['other'])

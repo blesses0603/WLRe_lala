@@ -50,31 +50,38 @@ def main(argv=None):
     p.add_argument("--duration", type=float, default=15)
     args = parser.parse_args(argv)
     try:
-        if args.command in ('map-coordinate','map-route'):
-            from wlre.services.world.coordinates import Coordinates
-            from wlre.services.world.navigation import Repository
-            converter = Coordinates()
-            if args.command=='map-coordinate':
-                function = converter.to_packet if args.inverse else converter.to_navigation
-                stage,scene,_ = converter.mapping(args.map_id)
-                dump({'logical_map':args.map_id,'map_label':map_label(args.map_id),'scene_resource':scene,
-                      'point':function(args.map_id,args.x,args.y),
-                      'coordinate_space':'packet_xy' if args.inverse else 'navcache_vertices_b_int3_xz',
-                      'formula_source_checked':True,'live_movement_verified':False})
+        if args.command in ('map-coordinate','map-route') or args.command.startswith('nav-'):
+            from wlre.services.world.dynamic_bundle_runtime import prepare_dynamic_runtime
+            from wlre.services.world.navigation_preview import PreviewRepository, REVIEWED_COORDINATE_CATALOGS
+            from wlre.services.world.navigation_database import REVIEWED_MODELS
+            runtime=prepare_dynamic_runtime(sync=False)
+            repository=PreviewRepository(runtime.catalog_identity,runtime.stages)
+            if args.command=='map-route':
+                dump(repository.route(args.map_id,args.start,args.end,
+                                      start_height=args.start_height,end_height=args.end_height))
+            elif args.command=='map-coordinate':
+                if runtime.catalog_identity.key not in REVIEWED_COORDINATE_CATALOGS:
+                    raise ValueError('此官方版本座標尚未完成驗證。')
+                from wlre.services.world.house_navigation import require_general_navigation
+                require_general_navigation(scene=args.map_id)
+                stage=runtime.stages[args.map_id];model=stage['model_id']
+                mesh,origin=repository.load(model)
+                height=6992 if stage['map_height']==65535 else stage['map_height']
+                point=((args.x+origin[0])/10,height-(args.y+origin[2])/10) if args.inverse else (args.x*10-origin[0],(height-args.y)*10-origin[2])
+                dump({'logical_map':args.map_id,'scene_resource':mesh.scene_id,'point':point,
+                      'catalog_key':runtime.catalog_identity.key,'can_send_packets':False})
+            elif args.command=='nav-list':
+                from wlre.services.world.house_navigation import HOUSE_MODELS
+                models=sorted({r['model_id'] for r in runtime.stages.values()} & set(REVIEWED_MODELS) - set(HOUSE_MODELS))
+                dump({'type':'official_navigation_catalog','models':models,
+                      'catalog_key':runtime.catalog_identity.key,'can_send_packets':False,
+                      'note':'Reviewed models only; per-model official database sync may still be required.'})
             else:
-                dump(converter.route(Repository(),args.map_id,args.start,args.end,args.start_height,args.end_height))
-        elif args.command.startswith('nav-'):
-            from wlre.services.world.navigation import Repository
-            repository = Repository()
-            if args.command == 'nav-list':
-                dump({'type':'navigation_catalog','scenes':repository.catalog})
-            else:
-                mesh = repository.load(args.scene)
-                if args.command == 'nav-query':
-                    face,point = mesh.locate(args.x,args.z,args.height)
-                    dump({'type':'navigation_surface','scene_resource':mesh.scene_id,
-                          'face':face,'point':point,'coordinate_space':'navcache_vertices_b_int3',
-                          'network_coordinates_verified':False})
+                mesh,_origin=repository.load(args.scene)
+                if args.command=='nav-query':
+                    face,point=mesh.locate(args.x,args.z,args.height)
+                    dump({'type':'official_navigation_surface','scene_resource':mesh.scene_id,
+                          'face':face,'point':point,'can_send_packets':False})
                 else:
                     dump(mesh.route(args.start,args.end,args.start_height,args.end_height))
         else:

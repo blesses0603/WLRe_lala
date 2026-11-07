@@ -5,7 +5,7 @@ import hashlib
 import json
 from wlre.services.world.house_navigation import HOUSE_MODELS,HOUSE_TEMPLATES,HOUSE_MIN,HOUSE_MAX
 from wlre.services.world.navigation_database import REVIEWED_MODELS
-from wlre.services.world.navigation_sync import MAX_BYTES
+from wlre.services.world.navigation_sync import MAX_BYTES, REVIEWED_DEPENDENCY_MODELS
 
 
 def inventory(stages,index):
@@ -21,7 +21,8 @@ def inventory(stages,index):
         result=dict(model=model,stage_ids=sorted(scenes),reviewed_cache=model in REVIEWED_MODELS,can_send_packets=False)
         if len(assets)!=1:result['status']='missing_or_ambiguous_scene_asset'
         else:
-            root=assets[0]['bundle_name'];dep=f'mainpackage_scene_{model:05d}_dependency.bundle'
+            root=assets[0]['bundle_name'];dependency_model=REVIEWED_DEPENDENCY_MODELS.get(model,model)
+            dep=f'mainpackage_scene_{dependency_model:05d}_dependency.bundle'
             roots=[b for b in index['bundles'] if b['name']==root]
             deps=[b for b in index['bundles'] if b['name']==dep]
             if len(roots)!=1 or len(deps)!=1:result['status']='missing_or_ambiguous_bundle'

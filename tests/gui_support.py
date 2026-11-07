@@ -20,7 +20,7 @@ def isolate_gui_background_checks(case):
         if threading.get_ident() != ui_thread:
             raise RuntimeError('GUI fixtures must be released on their Tk thread')
         for worker in threading.enumerate():
-            if worker.name in ('official-version-check', 'lala-release-check'):
+            if worker.name in ('official-version-check', 'lala-release-check', 'background-version-observer'):
                 worker.join(timeout=1)
         for key in list(vars(case)):
             if not key.startswith('_') and key not in original_attributes and key != 'tearDown_exceptions':
@@ -35,6 +35,11 @@ def isolate_gui_background_checks(case):
                       'remote': {'status': 'unverified', 'packages': {}}})
     release_check = patch('wlre.ui.version_gate_controller.check_lala_release',
                           side_effect=OSError('offline GUI fixture'))
+    from wlre.ui.background_version_controller import _unknown_observation
+    observer = patch('wlre.ui.background_version_controller.observe_background_versions',
+                     side_effect=_unknown_observation)
+    observer.start()
+    register(observer.stop)
     preparation.start()
     official.start()
     release_check.start()

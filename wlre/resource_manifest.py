@@ -8,10 +8,7 @@ DATA_SUFFIXES={'.json','.zip','.gz','.png','.ico','.sqlite3'}
 REQUIRED_RESOURCES=(
 
 
-    'graph_origins.json',
-    'navigation_data.zip',
 
-    'stage_coordinates.json',
     'assets/app.ico','assets/exp_background.png',
     *('assets/buttons/'+name+'.png' for name in (
         'Btn_004','Btn_014','Btn_016','Btn_Bag','Btn_CategoryAISetting003','Btn_Close04','Btn_Setting')),
@@ -24,25 +21,18 @@ REQUIRED_RESOURCES=(
 
 def require_resources(root):
     root=Path(root)
-    from wlre.storage.full_resource_seed import SEED_NAME, verify_seed, SOURCE_MANIFEST
-    seeded=(root/SEED_NAME).is_file()
-    if seeded: verify_seed(root/SEED_NAME)
-    missing=[name for name in REQUIRED_RESOURCES
-             if not (seeded and name in SOURCE_MANIFEST) and not (root/name).is_file()]
+    missing=[name for name in REQUIRED_RESOURCES if not (root/name).is_file()]
     if missing:raise RuntimeError('Missing resources: '+', '.join(missing))
 
 
 def data_files(package_root, *, compact=False):
     package_root=Path(package_root)
-    from wlre.storage.full_resource_seed import SEED_NAME, build_seed, SOURCE_MANIFEST
     from wlre.storage.resource_seed_manifest import RETIRED_RESOURCES
     resources=package_root/'resources'
-    if compact: build_seed(resources,resources/SEED_NAME)
     require_resources(resources)
     return sorted(p for p in package_root.rglob('*')
                   if p.is_file() and p.suffix.lower() in DATA_SUFFIXES
                   and not (p.parent==resources and p.name in RETIRED_RESOURCES)
-                  and not (compact and p.parent==resources and p.name in SOURCE_MANIFEST)
                   and not any(part.startswith('.') or part=='__pycache__' for part in p.relative_to(package_root).parts))
 
 
@@ -50,7 +40,9 @@ def validate_resources(root):
     """Validate all shipped data, including nested button/function-icon images."""
     from PIL import Image
     root=Path(root);require_resources(root)
+    from wlre.storage.resource_seed_manifest import RETIRED_RESOURCES
     for path in root.rglob('*'):
+        if path.parent==root and path.name in RETIRED_RESOURCES:continue
         if not path.is_file():continue
         if path.suffix=='.json':
             with path.open(encoding='utf8') as stream:json.load(stream)

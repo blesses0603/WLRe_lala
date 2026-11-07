@@ -143,16 +143,9 @@ class SmallMaps:
             height = 6992 if stage['map_height'] == 65535 else stage['map_height']
             origin=(0,0,0)
             self.supports_navigation=False
-            from wlre.services.world.dynamic_bundle_runtime import current_runtime
-            if current_runtime() is not None:
-                try:
-                    self.coordinates=self.coordinates or Coordinates()
-                    _matched,matched_model,origin=self.coordinates.mapping(logical_map)
-                    if matched_model!=model:
-                        raise NavigationError('導航模型與目前小地圖不同。')
-                    self.supports_navigation=True
-                except (ValueError,OSError):
-                    origin=(0,0,0)
+            # Official artwork projection is defined by the current scene table.
+            # Historical graph origins/coordinates must not fill missing data or
+            # authorize a legacy mesh. Routes live in the separate official preview.
             return Projection({**stage, 'offset_y': height}, origin), model
         stage,scene,origin=self.coordinates.mapping(logical_map)
         return Projection(stage,origin),scene

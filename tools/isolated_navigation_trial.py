@@ -20,6 +20,8 @@ def digest(path):
 def restore(workspace):
     workspace=Path(workspace).resolve()
     saved=json.loads((workspace/'isolation.json').read_text())
+    if saved.get('seed_sha256') is None:
+        raise ValueError('This seed-free trial has no quarantined seed to restore')
     target=workspace/'source/wlre/resources'/SEED
     held=workspace/'quarantine'/SEED
     if saved['seed_sha256']!=digest(held):raise ValueError('Quarantine checksum mismatch')
@@ -33,9 +35,7 @@ def prepare(destination,snapshot):
     source=Path(__file__).resolve().parents[1];destination=Path(destination).resolve()
     if destination.exists():raise ValueError('Use a new isolated directory')
     if destination.is_relative_to(source):raise ValueError('Isolation must be outside the source checkout')
-    seed=source/'wlre/resources'/SEED;before=digest(seed)
-    from wlre.storage.full_resource_seed import verify_seed
-    verify_seed(seed)
+    seed=source/'wlre/resources'/SEED;before=digest(seed) if seed.is_file() else None
     destination.mkdir(parents=True)
     # Only tracked source/assets, never user data, credentials or .git.
     names=subprocess.check_output(['git','ls-files','-z'],cwd=source).decode().split('\0')
@@ -43,18 +43,18 @@ def prepare(destination,snapshot):
         rel=Path(name)
         if not name or (rel.parts[0] not in ('wlre','tools','android_app') and name not in ('WLRE_Client.py','main.py')):continue
         original=source/rel
+        if rel.as_posix()=='wlre/resources/'+SEED and not original.exists():continue
         if original.is_symlink():raise ValueError('Symlink source unsupported')
         target=destination/'source'/rel;target.parent.mkdir(parents=True,exist_ok=True)
         shutil.copyfile(original,target)
     # Include this reviewed working-tree diagnostic before its local commit.
     shutil.copyfile(__file__,destination/'source/tools'/Path(__file__).name)
     copied_seed=destination/'source/wlre/resources'/SEED
-    if not copied_seed.exists():
-        # Android provisions the pinned seed rather than tracking it in Git.
-        shutil.copyfile(seed,copied_seed)
-    if digest(copied_seed)!=before:raise ValueError('Copied seed differs from verified original')
     (destination/'quarantine').mkdir()
-    shutil.move(destination/'source/wlre/resources'/SEED,destination/'quarantine'/SEED)
+    if before is not None:
+        if not copied_seed.exists():shutil.copyfile(seed,copied_seed)
+        if digest(copied_seed)!=before:raise ValueError('Copied seed differs from original')
+        shutil.move(copied_seed,destination/'quarantine'/SEED)
     if any((destination/'source/wlre/resources'/name).exists() for name in LEGACY):raise ValueError('Unexpected legacy loose file')
     (destination/'snapshot').mkdir()
     for name in ('current-identity.json','current-stages.json'):
@@ -63,7 +63,7 @@ def prepare(destination,snapshot):
                 source_commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=source,text=True).strip(),
                 tool_sha256=digest(__file__),snapshot_sha256={n:digest(destination/'snapshot'/n) for n in ('current-identity.json','current-stages.json')})
     (destination/'isolation.json').write_text(json.dumps(record,indent=2))
-    if digest(seed)!=before:raise AssertionError('Original seed changed')
+    if (digest(seed) if seed.is_file() else None)!=before:raise AssertionError('Original seed changed')
     return record
 
 
@@ -208,7 +208,7 @@ def worker(workspace,download,cache_dir,all_maps=False):
     # Record the standard seed contract separately: the normal whole-app
     # packaging/startup selfcheck is not relaxed by this preview experiment.
     from wlre.storage.full_resource_seed import verify_seed
-    rejected('normal_seed_selfcheck_still_blocks_missing_seed',lambda:verify_seed(workspace/'source/wlre/resources'/SEED))
+    rejected('retired_seed_api_rejects_without_reading',lambda:verify_seed(workspace/'source/wlre/resources'/SEED))
     return dict(rows=rows,coverage=coverage,catalog_key=identity.key,legacy_reads_during_preview=0,
                 enforcement_controls=denied,can_send_packets=False,live_movement_verified=False,
                 full_application_startup_verified=False,fresh_download=download,
@@ -235,7 +235,8 @@ def main():
     command+=['--download'] if a.download else ['--cache-dir',str(a.cache_dir.resolve())]
     if a.all_maps:command.append('--all-maps')
     result=subprocess.run(command,cwd=workspace/'source',env=env,timeout=480)
-    if digest(Path(record['original_source'])/'wlre/resources'/SEED)!=record['seed_sha256']:raise AssertionError('Original seed changed')
+    original_seed=Path(record['original_source'])/'wlre/resources'/SEED
+    if (digest(original_seed) if original_seed.is_file() else None)!=record['seed_sha256']:raise AssertionError('Original seed changed')
     if result.returncode:raise SystemExit(result.returncode)
 
 

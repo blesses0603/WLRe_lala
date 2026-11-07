@@ -138,7 +138,7 @@ class BundledResourceCompatibilityTests(unittest.TestCase):
         self.assertNotIn("lala_supported_resources.json", REQUIRED_RESOURCES)
         self.assertEqual(load_supported_resources()["schema_version"],1)
         filenames = [str(p) for p in data_files(PACKAGE_ROOT)]
-        self.assertTrue(any(n.endswith("resource_catalog_seed.sqlite3") for n in filenames))
+        self.assertFalse(any(n.endswith("resource_catalog_seed.sqlite3") for n in filenames))
         self.assertFalse(any(n.endswith("lala_supported_resources.json") for n in filenames))
 
 

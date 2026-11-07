@@ -63,12 +63,15 @@ class App(LoginController, AccountController,
         self.theme=install_theme(root)
         self.events,self.commands=DisplayQueue(),queue.Queue()
         self.stop_event=threading.Event()
+        self._session_resource_hold=threading.Event()
         self.worker=None
         self.live_active=False
         self.profile=None
         self._settings_key=None
         self.snapshot={}
         self.navigation_windows=[]
+        from wlre.services.world.navigation_autosync import NavigationAutoSync
+        self.navigation_sync = NavigationAutoSync()
         self.resource_windows=[]
         self.attribute_window=None
         self.role_map={}
@@ -76,6 +79,8 @@ class App(LoginController, AccountController,
         self.last_movement_check=None
         self.initialize_login()
         self.initialize_version_gate()
+        root.bind('<Destroy>', lambda event: self.close_background_observer()
+                  if event.widget is root else None, add='+')
         self.connection_monitor=ConnectionStatus()
         self.connection_status=tk.StringVar(value='尚未連線')
         self.status=tk.StringVar(value='載入設定中…')
@@ -138,16 +143,28 @@ class App(LoginController, AccountController,
         return True
 
     def open_navigation(self):
-        try:
-            from wlre.ui.navigation_gui import NavigationWindow
-            viewer = NavigationWindow(self.root, self.home_map.selected_id, on_route=self.home_map.set_route)
-            viewer.update_live_state(self.snapshot)
-            self.navigation_windows.append(viewer)
-        except FileNotFoundError:
-            from wlre.ui.official_navigation_preview import OfficialNavigationPreview
-            OfficialNavigationPreview(self.root,lambda:self.snapshot)
-        except (OSError,ValueError,KeyError) as exc:
-            messagebox.showerror('導航資料無法載入',str(exc),parent=self.root)
+        # Current navigation never probes or falls back to historical geometry.
+        from wlre.ui.official_navigation_preview import OfficialNavigationPreview
+        viewer = OfficialNavigationPreview(
+            self.root, lambda: self.snapshot, suggested_scene=self.home_map.selected_id)
+        self.navigation_windows.append(viewer)
+        return viewer
+
+    def poll_navigation_sync(self, retry=False):
+        if not hasattr(self, 'navigation_sync'):
+            return
+        enabled = (self.live_active and not self.stop_event.is_set()
+                   and not self._session_resource_hold.is_set()
+                   and self.snapshot.get('phase') == 'world_ready')
+        value = self.navigation_sync.update(self.snapshot, enabled=enabled, retry=retry)
+        self.home_map.navigation_status.set(value['message'])
+
+    def request_navigation_sync(self):
+        self.poll_navigation_sync(retry=True)
+
+    def cancel_navigation_sync(self):
+        self.navigation_sync.cancel()
+        self.poll_navigation_sync()
 
     def write(self, text):
         if self.entered_world and self.background_window():
@@ -224,6 +241,9 @@ class App(LoginController, AccountController,
         except (OSError,ValueError,KeyError,TypeError) as exc:
             messagebox.showerror('帳號設定','設定無法載入，未覆寫原檔。'+str(exc),parent=self.dialog_parent());return
         if not self.save_saved_login():return
+        # Local settings/storage may have taken time while an observation
+        # completed. Consume it before clearing credentials or starting work.
+        if not self.can_login_after_version_check():return
         self.password.set('')
         self.entered_world=False
         self.hide_all_features()
@@ -247,11 +267,14 @@ class App(LoginController, AccountController,
         self.instance_panel.render({}, live=False)
         self.overview_panel.update_state({})
         self.live_active=True
+        self._session_resource_hold=threading.Event()
+        resource_safety_hold=self._session_resource_hold
         def work():
             try:
                 run_client(host,port,profile,bridge.receive,
                            account=account,password=password,verify_first=True,duration=None,
                            stop_event=stop_event,commands=commands,
+                           resource_safety_hold=resource_safety_hold,
                            on_state=bridge.snapshot,snapshot_interval=0.1,tcp_keepalive=True)
             finally:
                 bridge.finished()
@@ -366,9 +389,12 @@ class App(LoginController, AccountController,
         # Legacy event-loop tests use minimal App surrogates without version state.
         if hasattr(self, '_version_gate_messages'):
             VersionGateController.drain_version_checks(self)
+        if hasattr(self, '_background_messages'):
+            self.poll_background_versions()
         failed=False
         try:
             App._poll_once(self)
+            App.poll_navigation_sync(self)
         except Exception as exc:
             failed=True
             if hasattr(self,'_pending_display'):self._pending_display=None
@@ -389,12 +415,17 @@ class App(LoginController, AccountController,
 
     def stop(self):
         self.stop_event.set()
+        if hasattr(self, 'navigation_sync'):self.navigation_sync.cancel()
         self.status.set('正在中斷連線…')
 
     def close(self):
-        if self._closing or self.defer_close_for_startup():
+        if self._closing:
+            return
+        self.close_background_observer()
+        if self.defer_close_for_startup():
             return
         self._closing=True
+        if hasattr(self, 'navigation_sync'):self.navigation_sync.close()
         self.stop_event.set();self.password.set('');self.diagnostics.close();self.root.destroy()
 
 

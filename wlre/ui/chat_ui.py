@@ -1,6 +1,6 @@
 """Persistent, bounded chat panel; normal receives append without rebuilding UI."""
 from collections import deque
-from datetime import datetime
+from wlre.ui.display_time import clock_text
 import tkinter as tk
 from tkinter import ttk
 from wlre.ui.theme import group
@@ -107,7 +107,7 @@ class ChatPanel(ttk.Frame):
         elif kind=='connection_closed':
             self.finish_pending();self.status.set('連線已結束，登入後可繼續聊天')
         elif kind=='chat_message':
-            e=dict(event,time=datetime.now().strftime('%H:%M:%S'))
+            e=dict(event,time=clock_text())
             e['name']=plain_text(self.names.name(e['role_id'],name_scope(e)) if e['role_id'] else '系統')
             e['own_id']=state.get('player',{}).get('role_id')
             at_bottom=self.view.yview()[1]>=.999
