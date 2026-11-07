@@ -2764,3 +2764,61 @@ Physical controller equivalence still needs reliable same-version collision and
 movement observations; the one Bangkok walking recording does not supply sea/sky
 or slope evidence. No account access is needed for the current diagnostics.
 All three legacy seeds and live movement guards remain. No push/merge/release.
+
+### Phase 68: M12050 true 3-D surface checks and supplied-corridor native Apply
+
+The pinned model has one tile, 844 triangles and 445 vertices. Vertex-A heights
+are 12000 (405 vertices) and 12001 (40); 148 triangles are nonflat, maximum face
+slope 0.574925 degrees. Thus these ten previously refused samples involve a
+0.001-world-unit vertical variation, not evidence of a multi-floor staircase.
+Its cause is unproven and the values are preserved, not flattened. Every A/B
+vertex pair satisfies A=B+origin with origin (0,-20000,0); world coordinates use
+A/1000. No separate story/floor labels are inferred from this geometry.
+
+`tools.review_navigation_m12050` checks all ten original failing pairs (six land,
+four sky). Python's reviewed graph selects each allowed corridor, then a compact
+remapping supplies its real vertex-A coordinates, faces and serialized edge
+indices to the pinned native FunnelModifier.Apply VM. Corridors have 19-78 faces
+and at most 80 vertices; existing VM limits are unchanged. This is explicitly
+NOT native Prepare/GetNearest/search over the entire 844-node graph. Native
+pool/list state and the native-funnel VM bridge retain their documented fixture
+assumptions (Medium quality, unwrap true).
+
+`navigation_surface_3d.segment_on_surface` checks the union of triangle-clipped
+segment intervals using signed plane distances AND 3-D barycentric coordinates.
+It does not treat X/Z containment as surface containment. Normal and lateral
+numerical allowances are expressed in world units, capped at 1e-5, 100 times
+smaller than the model's retained height step. Lateral bands scale by triangle
+altitude rather than a fixed barycentric epsilon: this handles native float
+points near small portal edges without granting a larger physical clearance.
+Degenerate geometry, invalid values and excessive triangle counts are refused.
+This tolerance is an explicit numerical diagnostic policy, not actor clearance.
+
+Results are identical on desktop and Android Python hosts: 20 supplied-corridor
+native profiles. All ten split=true outputs pass every 3-D segment check. All
+ten split=false outputs contain one or more segments rejected by the surface
+criterion. A straight chord spanning subtly folded faces is not guaranteed to
+lie on the faces; rejection does not imply the official character penetrates
+terrain, since actual grounding/collision remains outside this VM. Maximum native
+endpoint discrepancy is 2.051e-6 world units, within the numerical allowance.
+
+For each case, the original unsmoothed route's full XYZ portal-midpoint points
+are separately checked and retained as `unsmoothed_3d_portal_midpoint_preview`.
+All ten pass 3-D surface containment. This is a conservative geometry fallback
+in the diagnostic report, with can_send_packets/live_movement_verified=false;
+it does not send movement or reuse the planar exact-waypoint stepper on slopes.
+The product planar smoother and live authority restrictions remain unchanged.
+
+Six new tests distinguish slope-height correctness from X/Z projection, reject
+chords across folded surfaces while accepting portal-split segments, prevent
+bridging overlapping floors, verify world-scaled lateral tolerance on small
+triangles, reject a full .001 height displacement, and reject invalid/degenerate
+input. Related suites pass desktop 122 / Android 121. Original official data,
+full native libraries and reports stay external; only diagnostics/tests ship.
+
+Remaining gap: complete same-version native graph initialization/search and final
+player modifier/settings for M12050, real controller grounding/collision and
+actor radius/height, plus real device/server behavior. Passing 3-D point-path
+geometry or supplied-corridor native math cannot fill those gaps. No sea behavior
+is inferred from land/sky tag tests. All three legacy seeds and movement guards
+remain, houses stay enter/exit only, and no push/merge/release occurred.
