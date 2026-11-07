@@ -46,3 +46,5 @@ The inventory index uses schema version 2: load the relative `module_files` to o
 ## Shared-core continuation
 
 Activity decoding and movement-lock state now have an offline typed implementation, with 200 synthetic Python parity vectors and 28 edge-case tests. The complete Core suite at this increment contains 1180 passing tests. This does not connect activities to a live session or movement dispatcher. Subsequent work prioritizes Core parity; no expansion of the desktop or Android interface is included in this increment.
+
+The next Core increment adds offline ItemData/SkillData parsing and stack rules; single-writer scoped state ownership; role/world/battle/social layouts; S31 expedition events; and geometry-only navigation/funnel/motion checks. The integrated Release suite contains **2607 passing tests**. Independent review and retained Python vectors cover bounded source subsets, not full functional migration. Catalog activation, real session/dispatcher integration, runtime movement and official-resource/device/server acceptance remain incomplete. See each test area's README/LAYOUTS.md/EXPEDITION.md and inventory scope entries.

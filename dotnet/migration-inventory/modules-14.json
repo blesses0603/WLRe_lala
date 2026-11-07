@@ -1035,8 +1035,12 @@
     "target_project": "Lala.Core",
     "target_subsystem": "State.state_ownership",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/State/StateOwnership.cs",
+      "dotnet/Lala.Core/State/OwnedState.cs",
+      "dotnet/Lala.Core/State/StateValue.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1070,8 +1074,8 @@
     },
     "acceptance_profile": "state",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
     },
@@ -1079,7 +1083,14 @@
       "desktop_source": "wlre/core/state_ownership.py",
       "identical_source": true,
       "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
-    }
+    },
+    "migrated_scope": [
+      "All 11 mutation scope grants, creator-thread ownership, nested scope restoration, guarded edits and immutable snapshots."
+    ],
+    "outstanding_scope": [
+      "Foundation uses closed scalars/string maps and current-root path handles, not a drop-in Python container replacement.",
+      "Numeric-key star_ark maps, ordered position-cache eviction, all State defaults/reducers and dispatcher integration remain."
+    ]
   },
   {
     "id": "android:wlre/core/state_session_events.py",
@@ -1475,8 +1486,10 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Protocol.connection_health",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Diagnostics/ConnectionHealth.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1500,8 +1513,8 @@
     },
     "acceptance_profile": "protocol",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
     },
@@ -1509,7 +1522,14 @@
       "desktop_source": "wlre/network/connection_health.py",
       "identical_source": true,
       "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
-    }
+    },
+    "migrated_scope": [
+      "Injected-clock transport evidence, throttle, quiet and closed status."
+    ],
+    "outstanding_scope": [
+      "Socket keepalive setup and sanitized exception frame metadata not migrated.",
+      "Quiet remains uncertainty, never a logout decision."
+    ]
   },
   {
     "id": "android:wlre/network/expedition.py",
@@ -1520,8 +1540,10 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Protocol.expedition",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Protocol/ExpeditionDecoder.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1547,8 +1569,8 @@
     },
     "acceptance_profile": "protocol",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "160_synthetic_packet_parity_plus_160_length_cases_and_immutability_passed",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
     },
@@ -1556,7 +1578,13 @@
       "desktop_source": "wlre/network/expedition.py",
       "identical_source": true,
       "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
-    }
+    },
+    "migrated_scope": [
+      "All recognized S31 expedition/outpost packet variants, immutable typed events, strict lengths and documented opaque extensions."
+    ],
+    "outstanding_scope": [
+      "Connect decoder to network dispatcher and complete expedition state/service orchestration; device/live acceptance not run."
+    ]
   },
   {
     "id": "android:wlre/network/instance_actions.py",
@@ -1695,8 +1723,10 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Protocol.layouts",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Protocol/ProtocolLayouts.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1720,8 +1750,8 @@
     },
     "acceptance_profile": "protocol",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
     },
@@ -1729,7 +1759,13 @@
       "desktop_source": "wlre/network/layouts.py",
       "identical_source": true,
       "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
-    }
+    },
+    "migrated_scope": [
+      "role_list, world_player, battle_unit, immutable records and strict packet wrappers."
+    ],
+    "outstanding_scope": [
+      "Live/session state integration and server acceptance not run."
+    ]
   },
   {
     "id": "android:wlre/network/live_data.py",
@@ -2109,8 +2145,10 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Protocol.social_protocol",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Protocol/SocialProtocol.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -2126,8 +2164,8 @@
     },
     "acceptance_profile": "protocol",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
     },
@@ -2135,6 +2173,12 @@
       "desktop_source": "wlre/network/social_protocol.py",
       "identical_source": true,
       "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
-    }
+    },
+    "migrated_scope": [
+      "All decode_social branches, immutable events, strict boundaries and private namecard discard."
+    ],
+    "outstanding_scope": [
+      "Social service state/commands and live dispatcher integration remain."
+    ]
   }
 ]

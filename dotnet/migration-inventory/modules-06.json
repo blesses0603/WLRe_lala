@@ -2564,8 +2564,10 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Catalogs/SkillDataParser.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -2615,10 +2617,16 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "SKILL_FIELDS and parse_skills: all 71 fields, strict source fingerprint and layout validation."
+    ],
+    "outstanding_scope": [
+      "NPC/Lua decoding, name/key lookup, element matrices, full catalog construction and loader/cache orchestration remain Python."
+    ]
   }
 ]

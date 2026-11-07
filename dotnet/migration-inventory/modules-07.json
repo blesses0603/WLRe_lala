@@ -998,8 +998,10 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Catalogs/ItemStackRules.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1023,11 +1025,17 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "All pure reviewed can_overlap branches and typed input validation."
+    ],
+    "outstanding_scope": [
+      "CurrentStackRules facade and catalog activation not migrated."
+    ]
   },
   {
     "id": "desktop:wlre/services/world/itemdata_v1.py",
@@ -1038,8 +1046,10 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Catalogs/ItemDataParser.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1077,11 +1087,17 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Binary ItemData reader, legacy base fields, reviewed digest-pinned 1296 fields and validation."
+    ],
+    "outstanding_scope": [
+      "Runtime loader/activation and official-resource successful parse acceptance not run."
+    ]
   },
   {
     "id": "desktop:wlre/services/world/launcher_catalog.py",
@@ -1303,8 +1319,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/World/NavigationMesh.cs",
+      "dotnet/Lala.Core/World/NavigationGeometry.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1359,11 +1378,17 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Mesh construction, shared-edge geometry, location/height ambiguity, A* route preview."
+    ],
+    "outstanding_scope": [
+      "Archive/database/download loading and runtime movement not included."
+    ]
   },
   {
     "id": "desktop:wlre/services/world/navigation_autosync.py",
@@ -1480,8 +1505,10 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/World/NavigationFunnel.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1510,11 +1537,17 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Planar funnel and containment with cancellation and signed Int3 bounds."
+    ],
+    "outstanding_scope": [
+      "Movement authority and collision/actor clearance acceptance remain separate."
+    ]
   },
   {
     "id": "desktop:wlre/services/world/navigation_motion_safety.py",
@@ -1525,8 +1558,10 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/World/NavigationMotionSafety.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1553,11 +1588,17 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Preview rejection guards and exact-waypoint stepping, no movement authority."
+    ],
+    "outstanding_scope": [
+      "Runtime identity, packet-coordinate adapter, collision/device validation and Movement integration remain."
+    ]
   },
   {
     "id": "desktop:wlre/services/world/navigation_preview.py",
@@ -1568,8 +1609,10 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/World/NavigationMesh.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1608,11 +1651,17 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Directed/tag-filtered PreviewMesh, serialized cost/penalty routing and optional smoothing."
+    ],
+    "outstanding_scope": [
+      "Runtime loader/database/facade integration not included."
+    ]
   },
   {
     "id": "desktop:wlre/services/world/navigation_preview_job.py",

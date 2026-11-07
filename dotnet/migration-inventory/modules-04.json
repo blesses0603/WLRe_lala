@@ -938,8 +938,10 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Protocol.expedition",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Protocol/ExpeditionDecoder.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -965,11 +967,17 @@
     },
     "acceptance_profile": "protocol",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "160_synthetic_packet_parity_plus_160_length_cases_and_immutability_passed",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "All recognized S31 expedition/outpost packet variants, immutable typed events, strict lengths and documented opaque extensions."
+    ],
+    "outstanding_scope": [
+      "Connect decoder to network dispatcher and complete expedition state/service orchestration; device/live acceptance not run."
+    ]
   },
   {
     "id": "desktop:wlre/network/instance_actions.py",
@@ -1098,8 +1106,10 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Protocol.layouts",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Protocol/ProtocolLayouts.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1123,11 +1133,17 @@
     },
     "acceptance_profile": "protocol",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "role_list, world_player, battle_unit, immutable records and strict packet wrappers."
+    ],
+    "outstanding_scope": [
+      "Live/session state integration and server acceptance not run."
+    ]
   },
   {
     "id": "desktop:wlre/network/live_data.py",
@@ -1545,8 +1561,10 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Protocol.social_protocol",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Protocol/SocialProtocol.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1562,11 +1580,17 @@
     },
     "acceptance_profile": "protocol",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "All decode_social branches, immutable events, strict boundaries and private namecard discard."
+    ],
+    "outstanding_scope": [
+      "Social service state/commands and live dispatcher integration remain."
+    ]
   },
   {
     "id": "desktop:wlre/network/state_updates.py",

@@ -1033,8 +1033,10 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.expedition",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Expedition/ExpeditionTeams.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1074,8 +1076,8 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
     },
@@ -1083,7 +1085,14 @@
       "desktop_source": "wlre/services/expedition/teams.py",
       "identical_source": true,
       "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
-    }
+    },
+    "migrated_scope": [
+      "Offline condition evaluation, team rate calculation and exact team selection with cancellation."
+    ],
+    "outstanding_scope": [
+      "Protocol, scheduling, UI and live expedition integration not migrated.",
+      "Rejects negative malformed values explicitly rather than preserving unsafe pruning behavior."
+    ]
   },
   {
     "id": "android:wlre/services/expedition_data.py",

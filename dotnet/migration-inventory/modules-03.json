@@ -1478,8 +1478,12 @@
     "target_project": "Lala.Core",
     "target_subsystem": "State.state_ownership",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/State/StateOwnership.cs",
+      "dotnet/Lala.Core/State/OwnedState.cs",
+      "dotnet/Lala.Core/State/StateValue.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1513,11 +1517,18 @@
     },
     "acceptance_profile": "state",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "All 11 mutation scope grants, creator-thread ownership, nested scope restoration, guarded edits and immutable snapshots."
+    ],
+    "outstanding_scope": [
+      "Foundation uses closed scalars/string maps and current-root path handles, not a drop-in Python container replacement.",
+      "Numeric-key star_ark maps, ordered position-cache eviction, all State defaults/reducers and dispatcher integration remain."
+    ]
   },
   {
     "id": "desktop:wlre/core/state_session_events.py",
