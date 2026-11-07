@@ -321,6 +321,172 @@ class StarArkTests(unittest.TestCase):
         ark._remember_question(self.state,p,q)
         self.assertEqual(q['known_answer'],22)
 
+    def prepare_candidate(self,qid=63901):
+        from wlre.services import ark_candidate_data as data
+        from wlre.storage.ark_questions import fingerprint
+        record=next(r for r in data.QUESTIONS if r[0]==qid)
+        answer,options=record[1:3]
+        labels=['離線甲','離線乙','離線丙','離線丁'];text='人工候選測試題'
+        q=dict(question=qid,text=text,options=list(options),labels=labels)
+        entries=tuple((qid,answer,options,fingerprint(q)[0]) if r[0]==qid else r for r in data.QUESTIONS)
+        from wlre.services.ark_candidates import index_digest
+        checksum=index_digest(entries,data.QUARANTINED)
+        p=patch.object(data,'QUESTIONS',entries);p.start();self.addCleanup(p.stop)
+        p=patch.object(data,'INDEX_SHA256',checksum);p.start();self.addCleanup(p.stop)
+        self.runtime.catalog_identity=SimpleNamespace(key='a'*64,data_ver=data.DATA_VER,
+            packages=[SimpleNamespace(name='DataPackage',full_version=data.PACKAGE_VERSION,
+                                      manifest_sha256=data.MANIFEST_SHA256)])
+        self.catalog['texts'].update({qid:text,**dict(zip(options,labels))})
+        self.feed(events(3,2));ark.tick(self.state,True,0)
+        return qid,answer,options
+
+    def open_candidate(self,qid=63901):
+        qid,answer,options=self.prepare_candidate(qid)
+        ark.command(self.state,dict(action='question',index=1),True,1)
+        order=tuple(reversed(options))
+        self.feed(Packet(191,11,struct.pack('<IBII4I',qid,6,8,10,*order)))
+        return answer,order.index(answer)+1
+
+    def test_reviewed_first_answer_matches_shuffled_id_sends_once_and_learns_only_result(self):
+        from wlre.storage.ark_questions import QuestionStore
+        answer,position=self.open_candidate();q=self.state.star_ark['question']
+        store=QuestionStore(self.question_db)
+        self.assertEqual(store.observe((True,'a'*64),1,q),(None,'unknown'))
+        self.assertEqual(q['answer_kind'],'reviewed_candidate')
+        self.assertIn('可能答錯',q['answer_source'])
+        self.state.star_ark['enabled']=True
+        self.assertEqual(ark.tick(self.state,True,2),[Packet(191,7,bytes([position]))])
+        self.assertEqual(ark.tick(self.state,True,3),[])
+        self.assertEqual(store.observe((True,'a'*64),1,q),(None,'unknown'))
+        self.feed(Packet(191,12,bytes([1,position])))
+        self.assertEqual(store.observe((True,'a'*64),1,q),(answer,'confirmed'))
+        self.assertEqual(q['answer_kind'],'server_confirmed')
+
+    def test_candidate_scheduler_requires_no_manual_open_or_answer(self):
+        from wlre.network.service_scheduler import advance_services
+        qid,answer,options=self.prepare_candidate()
+        self.state.star_ark.update(enabled=True,dispatch_enabled=False,fights_enabled=False)
+        sent=[]
+        def advance():
+            with patch('wlre.services.daily_tasks.tick',return_value=[]):
+                advance_services(self.logic,self.state,sent.append,lambda p:None,lambda e:None,None)
+        advance();advance()
+        self.assertEqual(sent,[Packet(191,6,b'\x01\x02\x00')])
+        self.feed(Packet(191,11,struct.pack('<IBII4I',qid,6,8,10,*reversed(options))))
+        advance();advance()
+        self.assertEqual(sent[-1],Packet(191,7,bytes([list(reversed(options)).index(answer)+1])))
+        self.assertEqual(len(sent),2)
+
+    def test_candidate_quarantine_never_sends_but_manual_answer_available(self):
+        from wlre.services import ark_candidate_data as data
+        from wlre.services.ark_candidates import index_digest
+        quarantined={63906:'測試隔離原因'}
+        users={k:v for k,v in data.USER_REVIEWED.items() if k!=63906}
+        for name,value in [('QUARANTINED',quarantined),('USER_REVIEWED',users)]:
+            p=patch.object(data,name,value);p.start();self.addCleanup(p.stop)
+        p=patch.object(data,'INDEX_SHA256',index_digest(data.QUESTIONS,quarantined));p.start();self.addCleanup(p.stop)
+        _,position=self.open_candidate(63906)
+        self.state.star_ark['enabled']=True
+        self.assertEqual(ark.tick(self.state,True,2),[])
+        self.assertIn('有爭議',self.state.star_ark['question_store_status'])
+        self.assertEqual(ark.command(self.state,dict(action='answer',index=position),True,3),
+                         [Packet(191,7,bytes([position]))])
+
+    def test_candidate_error_quarantines_durably_without_using_reported_other_answer(self):
+        from wlre.storage.ark_questions import QuestionStore
+        _,position=self.open_candidate();self.state.star_ark['enabled']=True
+        ark.tick(self.state,True,2);self.feed(Packet(191,12,b'\x00\x02'))
+        q=self.state.star_ark['question']
+        self.assertEqual(QuestionStore(self.question_db).observe((True,'a'*64),1,q),(None,'conflict'))
+        self.assertEqual(ark.tick(self.state,True,3),[])
+        self.assertIsNone(q['known_answer'])
+
+    def test_candidate_pause_toggle_and_unacknowledged_world_do_not_claim_or_send(self):
+        from wlre.storage.ark_questions import QuestionStore
+        answer,_=self.open_candidate();q=self.state.star_ark['question']
+        self.assertEqual(ark.tick(self.state,True,2),[])
+        self.state.star_ark.update(enabled=True,questions_enabled=False)
+        self.assertEqual(ark.tick(self.state,True,3),[])
+        self.state.star_ark['questions_enabled']=True;self.state.automation['enabled']=False
+        self.assertEqual(ark.tick(self.state,True,4),[])
+        self.state.automation['enabled']=True
+        self.assertEqual(ark.tick(self.state,False,5),[])
+        self.assertTrue(QuestionStore(self.question_db).claim_candidate((True,'a'*64),1,q,answer))
+
+    def test_candidate_conflicting_server_confirmation_is_quarantined_before_send(self):
+        from wlre.storage.ark_questions import QuestionStore
+        answer,_=self.open_candidate();q=self.state.star_ark['question']
+        different=next(i for i in q['options'] if i!=answer)
+        QuestionStore(self.question_db).confirm((True,'a'*64),1,q,different)
+        self.state.star_ark['enabled']=True
+        self.assertEqual(ark.tick(self.state,True,2),[])
+        self.assertIn('衝突',self.state.star_ark['question_store_status'])
+
+    def test_manual_candidate_send_persists_pending_without_confirmation(self):
+        from wlre.storage.ark_questions import QuestionStore
+        answer,position=self.open_candidate();q=self.state.star_ark['question']
+        self.assertEqual(ark.command(self.state,dict(action='answer',index=position),True,2),
+                         [Packet(191,7,bytes([position]))])
+        self.assertTrue(q['selected_candidate'])
+        self.assertEqual(QuestionStore(self.question_db).observe((True,'a'*64),1,q),(None,'unknown'))
+        ark._remember_question(self.state,self.state.star_ark['pending'],q)
+        self.assertIsNone(q['known_answer'])
+        self.assertIn('結果未確認',self.state.star_ark['question_store_status'])
+        self.feed(Packet(191,12,bytes([0,position])))
+        self.assertEqual(QuestionStore(self.question_db).observe((True,'a'*64),1,q),(None,'conflict'))
+
+    def test_manual_candidate_missing_record_still_prevents_auto_retry(self):
+        from wlre.storage.ark_questions import QuestionStore
+        answer,position=self.open_candidate();q=self.state.star_ark['question']
+        store=QuestionStore(self.question_db)
+        with store._connection() as db:db.execute('DELETE FROM candidates')
+        self.assertEqual(ark.command(self.state,dict(action='answer',index=position),True,2),
+                         [Packet(191,7,bytes([position]))])
+        ark._remember_question(self.state,self.state.star_ark['pending'],q)
+        self.assertIsNone(q['known_answer'])
+        self.assertIn('結果未確認',self.state.star_ark['question_store_status'])
+
+    def test_user_reviewed_candidate_remains_unconfirmed(self):
+        from wlre.storage.ark_questions import QuestionStore
+        answer,position=self.open_candidate(104300);q=self.state.star_ark['question']
+        self.assertEqual(q['candidate_source'],'user_reviewed')
+        self.assertIn('使用者覆核候選',q['answer_source'])
+        self.state.star_ark['enabled']=True
+        self.assertEqual(ark.tick(self.state,True,2),[Packet(191,7,bytes([position]))])
+        self.assertEqual(QuestionStore(self.question_db).observe((True,'a'*64),1,q),(None,'unknown'))
+
+    def test_candidate_pending_elsewhere_and_reconnect_never_retry(self):
+        from wlre.storage.ark_questions import QuestionStore
+        answer,_=self.open_candidate();q=self.state.star_ark['question']
+        self.assertTrue(QuestionStore(self.question_db).claim_candidate((True,'a'*64),1,q,answer))
+        self.state.star_ark['enabled']=True
+        self.assertEqual(ark.tick(self.state,True,2),[])
+        self.assertIn('結果未確認',self.state.star_ark['question_store_status'])
+        ark._remember_question(self.state,self.state.star_ark['pending'],q)
+        self.assertIsNone(q['known_answer'])
+
+    def test_candidate_live_text_change_or_version_change_blocks_before_send(self):
+        answer,_=self.open_candidate();self.catalog['texts'][answer]='更動'
+        self.state.star_ark['enabled']=True
+        self.assertEqual(ark.tick(self.state,True,2),[])
+        self.assertIn('資料不符',self.state.star_ark['question_store_status'])
+        self.catalog['texts'][answer]='離線甲'
+        self.runtime.catalog_identity.packages[0].full_version='1297_changed'
+        ark._remember_question(self.state,self.state.star_ark['pending'],self.state.star_ark['question'])
+        self.assertIsNone(self.state.star_ark['question']['known_answer'])
+        self.assertIn('版本不符',self.state.star_ark['question_store_status'])
+
+    def test_candidate_timeout_preserves_unresolved_claim(self):
+        from wlre.storage.ark_questions import QuestionStore
+        from wlre.services import ark_candidate_data as data
+        answer,_=self.open_candidate();q=self.state.star_ark['question']
+        self.state.star_ark['enabled']=True;ark.tick(self.state,True,2)
+        self.assertEqual(ark.tick(self.state,True,30),[])
+        self.assertTrue(self.state.star_ark['uncertain'])
+        status=QuestionStore(self.question_db).record_candidate((True,'a'*64),1,q,answer,
+                                                                'reviewed_import',data.REVIEW_REVISION)
+        self.assertEqual(status,'pending')
+
     def test_scheduler_requests_question_then_sends_known_answer_without_manual_commands(self):
         from wlre.network.service_scheduler import advance_services
         self.confirm_question();self.feed(events(3,3))
