@@ -3,6 +3,7 @@
 Missing GId/assets remain absent. No skill-ID substitution or invented art.
 """
 from collections import OrderedDict
+from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 import hashlib
 import io
@@ -81,25 +82,90 @@ def skill_icon_image(data, size=64):
 
 
 class SkillIcons:
-    """Window-local Tk references; caller retains photos shown in live cards."""
-    def __init__(self, master):
+    """Decode on one worker; create at most four Tk photos per UI tick.
+
+    SQLite reads, checksums and PNG decoding never run on the Tk thread.
+    Closing cancels queued work; completed workers never call Tk directly.
+    """
+    def __init__(self, master, on_ready=None, executor=None):
         self.master = master
+        self.on_ready = on_ready
         self.cache = OrderedDict()
+        self.pending = OrderedDict()
+        self.executor = executor
+        self.owns_executor = executor is None
+        self.timer = None
+        self.closed = False
 
     def get(self, data, size=64):
+        if self.closed:
+            return None
         name = icon_name(data)
+        if name is None:
+            return None
         key = name, size
         if key in self.cache:
             self.cache.move_to_end(key)
             return self.cache[key]
-        pixels = skill_icon_image(data, size)
-        if pixels is None:
-            return None
-        photo = ImageTk.PhotoImage(pixels, master=self.master)
-        self.cache[key] = photo
-        while len(self.cache) > 128:
-            self.cache.popitem(last=False)
-        return photo
+        if key not in self.pending and len(self.pending) < 512:
+            if self.executor is None:
+                self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix='skill-icons')
+            self.pending[key] = self.executor.submit(skill_icon_image, {'GId': data['GId']}, size)
+            if self.timer is None:
+                self.timer = self.master.after(15, self._poll)
+        return None
+
+    def _poll(self):
+        self.timer = None
+        if self.closed:
+            return
+        completed = 0
+        for key, future in list(self.pending.items()):
+            if not future.done():
+                continue
+            del self.pending[key]
+            try:
+                pixels = future.result()
+            except Exception:
+                pixels = None
+            photo = None
+            if pixels is not None:
+                try:
+                    photo = ImageTk.PhotoImage(pixels, master=self.master)
+                finally:
+                    pixels.close()
+            self.cache[key] = photo  # Cache misses as well; no per-refresh retry storm.
+            while len(self.cache) > 512:
+                self.cache.popitem(last=False)
+            if self.on_ready is not None:
+                self.on_ready(key, photo)
+            completed += 1
+            if completed == 4:
+                break
+        if self.pending:
+            self.timer = self.master.after(15, self._poll)
+
+    @staticmethod
+    def _discard(future):
+        if not future.cancelled():
+            try:
+                pixels = future.result()
+                if pixels is not None:
+                    pixels.close()
+            except Exception:
+                pass
 
     def close(self):
+        if self.closed:
+            return
+        self.closed = True
+        if self.timer is not None:
+            self.master.after_cancel(self.timer)
+            self.timer = None
+        for future in self.pending.values():
+            if not future.cancel():
+                future.add_done_callback(self._discard)
+        self.pending.clear()
+        if self.executor is not None and self.owns_executor:
+            self.executor.shutdown(wait=False, cancel_futures=True)
         self.cache.clear()

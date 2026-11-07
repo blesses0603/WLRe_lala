@@ -86,6 +86,27 @@ class BrowserTests(unittest.TestCase):
             self.browser.category.set(category);self.browser.render_skills();self.root.update()
         self.browser.destroy();self.root.update()
         self.assertFalse(self.errors)
+    def test_unchanged_refresh_does_not_rebuild_trees(self):
+        with patch.object(self.browser.list,'delete',wraps=self.browser.list.delete) as delete, \
+             patch.object(self.browser.actor_list,'delete',wraps=self.browser.actor_list.delete) as actors:
+            self.browser.render(self.state,ACTORS,'',True)
+            delete.assert_not_called();actors.assert_not_called()
+
+    def test_late_icon_only_updates_current_selection(self):
+        with patch.object(self.browser.icon,'configure') as configure:
+            self.browser.icon_ready(('icon_sk999s',64),'stale-photo')
+            configure.assert_not_called()
+        self.browser.category.set('魔法');self.browser.render_skills()
+        self.browser.icon_ready(('icon_sk999s',40),'stale-photo')
+        self.assertFalse(self.browser.skill_photos)
+
+    def test_actor_stats_change_refreshes_action_context(self):
+        actors=[dict(ACTORS[0],hp=10),ACTORS[1]]
+        self.browser.render(self.state,actors,'',True)
+        actors[0]['hp']=5
+        self.browser.render(self.state,actors,'',True)
+        self.assertEqual(next(iter(self.browser.skill_map.values()))[0]['hp'],5)
+
     def test_720p_layout_keeps_buttons_inside(self):
         self.root.geometry('1000x530');self.root.update()
         for widget in (self.browser.cast,self.browser.list,self.browser.actor_list):

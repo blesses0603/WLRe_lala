@@ -1,5 +1,6 @@
 """Game-style read-only skill browsing; casting remains ResourceView's command."""
 import tkinter as tk
+from copy import deepcopy
 from tkinter import ttk
 from PIL import Image, ImageTk
 from wlre.ui.theme import group
@@ -7,7 +8,7 @@ from wlre.ui.skill_browser_model import (CATEGORIES, actor_key, skill_key, match
                                          detail_text, level_text)
 from wlre.services.items.combat_resources import CAT, skill_rows
 from wlre.services.world.character_portraits import PortraitProvider
-from wlre.ui.skill_icons import SkillIcons
+from wlre.ui.skill_icons import SkillIcons, icon_name
 
 
 class SkillBrowser(ttk.Frame):
@@ -15,8 +16,9 @@ class SkillBrowser(ttk.Frame):
         super().__init__(parent, padding=6)
         self.state = {}; self.actors = []; self.rows = {}; self.skill_map = {}
         self.query = ''; self.live = False; self.closed = False; self.photos = {}
-        self.provider = PortraitProvider(); self.portrait_job = None
-        self.icons = SkillIcons(self); self.skill_photos = {}; self.detail_photo = None
+        self.provider = PortraitProvider(); self.portrait_job = None; self.portrait_revisions = {}
+        self.render_signature = None
+        self.icons = SkillIcons(self, self.icon_ready); self.skill_photos = {}; self.detail_photo = None
         self.selected_actor = None; self.selected_skill = None
         self.category = tk.StringVar(value='全部')
         self.columnconfigure(0, minsize=145); self.columnconfigure(1, weight=4, minsize=300)
@@ -79,13 +81,21 @@ class SkillBrowser(ttk.Frame):
         self.state, self.actors, self.query, self.live = state, actors, query, live
         keys = [actor_key(actor) for actor in actors]
         selected = self.selected_actor if self.selected_actor in keys else (keys[0] if keys else None)
-        self.actor_list.delete(*self.actor_list.get_children())
+        for key in self.actor_list.get_children():
+            if key not in keys:
+                self.actor_list.delete(key)
+                self.photos.pop(key, None); self.portrait_revisions.pop(key, None)
         for actor in actors:
             key = actor_key(actor)
             level = actor.get('level', '?')
             label = actor.get('name', '') or ('角色' if not actor.get('npc_index') else '夥伴')
             if actor.get('npc_index'): label = f"#{actor['npc_index']} {label}"
-            self.actor_list.insert('', 'end', iid=key, text=f'{label}\nLv.{level}')
+            text = f'{label}\nLv.{level}'
+            if self.actor_list.exists(key):
+                if self.actor_list.item(key, 'text') != text: self.actor_list.item(key, text=text)
+                self.actor_list.move(key, '', 'end')
+            else:
+                self.actor_list.insert('', 'end', iid=key, text=text)
         self.selected_actor = selected
         if selected: self.actor_list.selection_set(selected)
         self.refresh_portraits(); self.render_skills()
@@ -104,6 +114,10 @@ class SkillBrowser(ttk.Frame):
                 view = dict(self.state, knowledge=dict(knowledge, active_npc_id=actor['pid'],
                             companions={slot: profile} if profile else {}))
             result = self.provider.request(view, kind, 40)
+            revision = result.get('revision')
+            if revision is not None and self.portrait_revisions.get(key) == revision:
+                continue
+            self.portrait_revisions[key] = revision
             pixels = result.get('image')
             if not isinstance(pixels, Image.Image):
                 self.actor_list.item(key, image=''); self.photos.pop(key, None); continue
@@ -119,25 +133,43 @@ class SkillBrowser(ttk.Frame):
 
     def render_skills(self):
         if self.closed: return
+        actor = next((a for a in self.actors if actor_key(a) == self.selected_actor), None)
+        entries = [(row, CAT['skills'].get(str(row['id']), {})) for row in skill_rows(self.state, actor)
+                   if matches(row, actor, self.query, self.category.get())] if actor else []
+        signature = (self.selected_actor, actor, entries, self.live, self.state.get('battle', {}).get('active', False))
+        if signature == self.render_signature:
+            return
+        self.render_signature = deepcopy(signature)
         previous = self.selected_skill
         self.list.delete(*self.list.get_children()); self.rows = {}; self.skill_map = {}; self.skill_photos = {}
-        actor = next((a for a in self.actors if actor_key(a) == self.selected_actor), None)
-        if actor:
-            for row in skill_rows(self.state, actor):
-                if not matches(row, actor, self.query, self.category.get()): continue
-                key = skill_key(actor, row['id']); data = CAT['skills'].get(str(row['id']), {})
-                self.rows[key] = (row, data); self.skill_map[key] = (actor, row['id'])
-                limit = data.get('LvLimit')
-                level = 'MAX' if type(limit) is int and limit > 0 and row['level'] >= limit else f"Lv.{row['level']}"
-                photo = self.icons.get(data, 40)
-                if photo is not None: self.skill_photos[key] = photo
-                self.list.insert('', 'end', iid=key, text=row['name'], image=photo or '',
-                                 values=(level, row['sp'] if row['sp'] is not None else '?'))
+        for row, data in entries:
+            key = skill_key(actor, row['id'])
+            self.rows[key] = (row, data); self.skill_map[key] = (actor, row['id'])
+            limit = data.get('LvLimit')
+            level = 'MAX' if type(limit) is int and limit > 0 and row['level'] >= limit else f"Lv.{row['level']}"
+            photo = self.icons.get(data, 40)
+            if photo is not None: self.skill_photos[key] = photo
+            self.list.insert('', 'end', iid=key, text=row['name'], image=photo or '',
+                             values=(level, row['sp'] if row['sp'] is not None else '?'))
         keys = list(self.rows)
         self.selected_skill = previous if previous in self.rows else (keys[0] if keys else None)
         self.count.configure(text=f'{len(keys)} 項特技' if keys else '沒有符合條件的已確認特技')
         if self.selected_skill: self.list.selection_set(self.selected_skill); self.list.see(self.selected_skill)
         self.show_detail()
+
+    def icon_ready(self, icon_key, photo):
+        if self.closed or photo is None: return
+        name, size = icon_key
+        if size == 40:
+            for key, (_row, data) in self.rows.items():
+                if icon_name(data) == name and self.list.exists(key):
+                    self.skill_photos[key] = photo
+                    self.list.item(key, image=photo)
+        elif size == 64:
+            entry = self.rows.get(self.selected_skill)
+            if entry is not None and icon_name(entry[1]) == name:
+                self.detail_photo = photo
+                self.icon.configure(image=photo, text='')
 
     def pick_skill(self, event=None):
         selected = self.list.selection()
