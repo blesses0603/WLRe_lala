@@ -538,8 +538,10 @@
     "target_project": "Lala.Core",
     "target_subsystem": "State.activity",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Activities/ActivityLocks.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -559,8 +561,8 @@
     },
     "acceptance_profile": "state",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "200_synthetic_python_cases_plus_28_boundary_tests_passed",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
     },
@@ -568,7 +570,13 @@
       "desktop_source": "wlre/core/activity.py",
       "identical_source": true,
       "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
-    }
+    },
+    "migrated_scope": [
+      "All recognized activity packet forms, role ownership, initial-list reset, geometry clearing and world-player reset as offline typed state."
+    ],
+    "outstanding_scope": [
+      "Connect to full session state and network event dispatcher; device and live acceptance not run."
+    ]
   },
   {
     "id": "android:wlre/core/diagnostics.py",

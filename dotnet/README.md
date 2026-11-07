@@ -42,3 +42,7 @@ Android also requires a supported Android SDK and Java SDK. A successful cross-p
 The independent branch and Draft PR remain open until all module parity, real platforms and official-server acceptance gates pass. No Python module is deleted in this initial increment.
 
 The inventory index uses schema version 2: load the relative `module_files` to obtain all 696 entries. Partitioning keeps individual review/upload units small; no source entries were removed.
+
+## Shared-core continuation
+
+Activity decoding and movement-lock state now have an offline typed implementation, with 200 synthetic Python parity vectors and 28 edge-case tests. The complete Core suite at this increment contains 1180 passing tests. This does not connect activities to a live session or movement dispatcher. Subsequent work prioritizes Core parity; no expansion of the desktop or Android interface is included in this increment.
