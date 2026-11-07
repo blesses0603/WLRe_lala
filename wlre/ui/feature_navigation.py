@@ -6,6 +6,7 @@ one instance each; no game protocol or session timing moves into this module.
 from wlre.ui.feature_windows import WINDOWS
 from wlre.ui.window_layout import center_on_main
 from wlre.ui.resource_view import ResourceView
+from wlre.ui.skill_view import SkillView
 from wlre.ui.attribute_points_ui import AttributePointWindow
 
 
@@ -50,6 +51,17 @@ class FeatureWindowController:
 
     def open_resources(self):
         self.resource_windows.append(ResourceView(self))
+
+    def open_skills(self):
+        self.assert_ui_thread()
+        view = self.skill_window
+        if view is not None and view.window.winfo_exists():
+            view.set_state(self.snapshot)
+            view.window.deiconify()
+            view.window.lift()
+            view.window.focus_set()
+        else:
+            self.skill_window = SkillView(self)
 
     def open_attributes(self):
         view=self.attribute_window

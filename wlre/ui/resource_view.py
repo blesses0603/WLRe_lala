@@ -1,24 +1,23 @@
-"""Live bag contents and every confirmed learned/equipment skill, with reasons."""
+"""Live inventory and server-confirmed storage, separate from skill browsing."""
 import tkinter as tk
 from wlre.ui.window_layout import configure_dialog
 from wlre.ui.rounded_notebook import RoundedNotebook
 from tkinter import ttk,messagebox
 from wlre.ui.storage_transfer_form import StorageTransferForm
-from wlre.services.items.combat_resources import CAT, skill_rows, food_command, learned_command, field_context
+from wlre.services.items.combat_resources import food_command, field_context
 from wlre.services.battle.battle_commands import owned_units
 from wlre.ui.crafting_browser import ItemIcons
 from wlre.ui.bag_grid import BagGrid
-from wlre.ui.skill_browser import SkillBrowser
 from wlre.ui.room_storage_status import unlock_message, storage_sync_message, confirmed_view
 from wlre.ui.layout import heading,scroll_table
 
 class ResourceView:
     def __init__(self,app):
-        self.app=app;self.window=tk.Toplevel(app.root);self.window.title('包包與角色／夥伴特技');self.window._no_glass_border=True;configure_dialog(self.window,1040,700)
-        self.signature=None;self.skill_map={};self.bag_map={};self.bag_images={};self.icons=ItemIcons(self.window)
+        self.app=app;self.window=tk.Toplevel(app.root);self.window.title('包包與超空間袋');self.window._no_glass_border=True;configure_dialog(self.window,1040,700)
+        self.signature=None;self.bag_map={};self.bag_images={};self.icons=ItemIcons(self.window)
         self.window.bind('<Destroy>',self.destroyed,add='+')
         header=ttk.Frame(self.window,padding=(12,10,12,0));header.pack(fill='x')
-        heading(header,'包包與特技','搜尋已同步物品與特技，選取後使用下方操作。')
+        heading(header,'包包與超空間袋','搜尋已同步物品，選取後使用下方操作。')
         bar=ttk.Frame(self.window,padding=(12,0,12,8));bar.pack(fill='x')
         ttk.Label(bar,text='搜尋名稱／ID').pack(side='left')
         self.query=tk.StringVar();ttk.Entry(bar,textvariable=self.query,width=25).pack(side='left',padx=6)
@@ -29,15 +28,11 @@ class ResourceView:
         self.tabs=tabs
         self.storage_queued_revision=None
         self.storage_form=StorageTransferForm(self.window,app,self.storage_sent,self.cancel_storage)
-        bag=ttk.Frame(tabs);remote=ttk.Frame(tabs);skills=ttk.Frame(tabs)
+        bag=ttk.Frame(tabs);remote=ttk.Frame(tabs)
         tabs.add(bag,text='實際包包')
         tabs.add(remote,text='超空間袋')
-        tabs.add(skills,text='全部已確認特技')
         self.bag=BagGrid(bag,self.icons,self.use_item)
         self.bag.pack(fill='both',expand=True)
-        self.skill_browser=SkillBrowser(skills,self.use_skill)
-        self.skill_browser.pack(fill='both',expand=True)
-        self.skills=self.skill_browser.list
         # The large duplicate HP/SP row is no longer needed.
         # Context-specific recovery buttons remain in the compact item strip.
         self.remote_status=tk.StringVar(value='等待 S62 同步')
@@ -83,27 +78,16 @@ class ResourceView:
 
     def refresh(self):self.signature=None;self.set_state(self.app.snapshot)
 
-    def actors(self,state):
-        if state.get('battle',{}).get('active'):return owned_units(state,False)
-        k=state.get('knowledge',{});context,role=field_context(state);role.update(col=0,row=0)
-        actors=[role] if state.get('player',{}).get('role_id') else []
-        for profile in k.get('companions',{}).values():
-            actors.append({'col':0,'row':0,'pid':profile['npc_id'],'master_id':state['player']['role_id'],
-                'npc_index':profile['index'],'name':CAT['npcs'].get(str(profile['npc_id']),{}).get('name','夥伴'),
-                'equips':profile.get('equips',[]),**profile.get('stats',{})})
-        return actors
-
     def set_state(self,state):
         from wlre.services.items.live_combat_catalog import source_token
         signature=(source_token(),self.app.live_active,str(state.get('inventory')),str(state.get('knowledge')),str(state.get('battle_units')),state.get('battle',{}).get('active'),self.query.get(),state.get('room_storage',{}).get('revision'))
         if signature==self.signature:return
         self.signature=signature;query=self.query.get().casefold();inv=state.get('inventory',{});k=state.get('knowledge',{})
-        self.status.set(f"包包：{'已同步' if inv.get('ready') else '等待S23-5'}｜{'數量有效' if inv.get('reliable') else '尚不可自動取用'}｜{len(inv.get('items',{}))}格；角色技能：{'已同步' if k.get('player',{}).get('ready') else '等待S5-3'}；夥伴資料：{len(k.get('companions',{}))}隻。更新顯示不會發送未驗證的查包封包。")
+        self.status.set(f"包包：{'已同步' if inv.get('ready') else '等待S23-5'}｜{'數量有效' if inv.get('reliable') else '尚不可自動取用'}｜{len(inv.get('items',{}))}格。更新顯示不會發送未驗證的查包封包。")
         self.status.set(self.status.get()+(' 官方戰鬥資料已同步。' if source_token() is not None else ' 官方戰鬥資料尚未同步，技能與物品規則暫不可用。'))
         selected_bag=self.bag.selection()
         self.bag_map=self.bag.render(inv,query)
         self.update_remote_status(state)
-        self.skill_browser.render(state,self.actors(state),query,self.app.live_active)
         if selected_bag and selected_bag[0] in self.bag_map and not self.bag.selection():self.bag.selection_set(selected_bag[0])
 
     def update_remote_status(self,state):
@@ -176,19 +160,3 @@ class ResourceView:
                 target=context['battle_units'][f"{cmd['target_col']}:{cmd['target_row']}"];cmd['npc_index']=target.get('npc_index',0)
             self.app.send(cmd)
         except (ValueError,KeyError) as exc:messagebox.showinfo('道具補給',str(exc),parent=self.window)
-
-    def use_skill(self):
-        selected=self.skills.selection()
-        if not selected or selected[0] not in self.skill_browser.skill_map:return
-        actor,sid=self.skill_browser.skill_map[selected[0]];state=self.app.snapshot
-        if not self.app.live_active:
-            messagebox.showinfo('特技','請先登入角色',parent=self.window);return
-        try:
-            if not state.get('battle',{}).get('active'):raise ValueError('請在可下令的戰鬥回合施放特技')
-            target=self.app.priority_target
-            data=CAT['skills'].get(str(sid),{})
-            if data.get('TargetKind') in (1,3,5):target=None
-            cmd=learned_command(state,actor,sid,target)
-            cmd.update(battle_count=state['battle_count'],round=state['battle']['round'])
-            self.app.send(cmd)
-        except (ValueError,KeyError) as exc:messagebox.showinfo('特技',str(exc),parent=self.window)

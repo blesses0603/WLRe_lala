@@ -134,7 +134,7 @@ class PortraitWidgets(unittest.TestCase):
     def test_overview_owns_default_provider_but_not_injected_provider(self):
         from unittest.mock import Mock, patch
         from wlre.ui.overview_ui import OverviewPanel
-        app = SimpleNamespace(open_resources=lambda: None, open_attributes=lambda: None)
+        app = SimpleNamespace(open_resources=lambda: None, open_skills=lambda: None, open_attributes=lambda: None)
         owned = Mock()
         with patch('wlre.services.world.character_portraits.PortraitProvider', return_value=owned):
             panel = OverviewPanel(self.root, app)

@@ -73,6 +73,7 @@ class App(LoginController, AccountController,
         from wlre.services.world.navigation_autosync import NavigationAutoSync
         self.navigation_sync = NavigationAutoSync()
         self.resource_windows=[]
+        self.skill_window=None
         self.attribute_window=None
         self.role_map={}
         self.map_target_scene=None
@@ -342,6 +343,8 @@ class App(LoginController, AccountController,
                 if view.window.winfo_exists():view.set_state(state);remaining_resources.append(view)
             except tk.TclError:pass
         self.resource_windows=remaining_resources
+        if self.skill_window is not None and self.skill_window.window.winfo_exists():
+            self.skill_window.set_state(state)
         if self.attribute_window is not None and self.attribute_window.window.winfo_exists():
             self.attribute_window.render(state)
         self.ai_status.set(ai_summary(state.get('auto_battle',{})))

@@ -1,4 +1,4 @@
-"""Game-style read-only skill browsing; casting remains ResourceView's command."""
+"""Game-style read-only skill browsing; casting remains SkillView's command."""
 import tkinter as tk
 from copy import deepcopy
 from tkinter import ttk
