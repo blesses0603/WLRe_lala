@@ -129,18 +129,8 @@ public class ServerProtocolTests
     }
 
     [Theory]
-    [InlineData(191, 1, "star_ark")]
-    [InlineData(75, 24, "star_ark")]
-    [InlineData(124, 1, "daily_tasks")]
-    [InlineData(122, 1, "time_cube")]
-    [InlineData(62, 7, "room_storage")]
-    [InlineData(23, 208, "recovery")]
     [InlineData(64, 1, "crafting")]
-    [InlineData(65, 1, "tent")]
-    [InlineData(62, 1, "crafting")]
-    [InlineData(62, 2, "crafting")]
-    [InlineData(62, 4, "crafting")]
-    public void UnportedServiceDecodersAreExplicitAndNeverFallThroughToShallowGeometry(int main, int sub, string decoder)
+    public void UnportedOrContextDependentDecodersRemainExplicit(int main, int sub, string decoder)
     {
         foreach (var bytes in new[] { Array.Empty<byte>(), Encoding.ASCII.GetBytes(Private) })
         {
@@ -158,6 +148,18 @@ public class ServerProtocolTests
         foreach (var main in new[] { 2, 191, 75, 39, 10, 124, 122, 85, 186, 62, 23, 64, 65 })
             Assert.IsType<UnimplementedServerEvent>(ServerProtocol.Decode(new(main, 255, [0xff])));
     }
+    [Fact]
+    public void TentOpaqueAcknowledgementsAndPillarFallbackKeepTheirMeaning()
+    {
+        foreach (var sub in new[] { 2, 5, 8 })
+            Assert.IsType<UnimplementedServerEvent>(ServerProtocol.Decode(new(65, sub, [1])));
+        var empty = Assert.IsType<Lala.Core.World.Tent.TentSceneListEvent>(ServerProtocol.Decode(new(65, 3, [])));
+        Assert.Empty(empty.Tents);
+        var pillar = Assert.IsType<NavigationGeometryChangeEvent>(ServerProtocol.Decode(new(65, 13, [1, 2])));
+        Assert.Equal("pillar_changed", pillar.Reason);
+        Assert.Throws<ProtocolException>(() => ServerProtocol.Decode(new(65, 13, [1])));
+    }
+
     [Fact]
     public void DelegatedModelsRemainTypedAndNamecardsAreStillDiscarded()
     {

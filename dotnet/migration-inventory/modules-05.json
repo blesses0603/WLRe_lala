@@ -687,8 +687,12 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.daily_tasks",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Automation/DailyTaskProtocol.cs",
+      "dotnet/Lala.Core/Automation/DailyTaskState.cs",
+      "dotnet/Lala.Core/Automation/DailyTaskPlanning.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -787,11 +791,17 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Pure receive/reduce/candidate planning with generations, task marks, exact receipts and uncertainty. Automation fixtures jointly cover 233 packets and 74 sequences / 669 transitions."
+    ],
+    "outstanding_scope": [
+      "No catalog extraction, live dispatch, task-condition execution, actual claiming or UI."
+    ]
   },
   {
     "id": "desktop:wlre/services/expedition/__init__.py",
@@ -2067,8 +2077,12 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.items",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Inventory/CraftingDecoder.cs",
+      "dotnet/Lala.Core/Inventory/CraftingScheduleContext.cs",
+      "dotnet/Lala.Core/Inventory/InventoryEvents.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -2178,11 +2192,17 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Receive-only crafting/schedule/furniture decoder with explicit schedule layout context and dispatcher precedence."
+    ],
+    "outstanding_scope": [
+      "Crafting reducers, planning, reservations, resource activation and execution remain."
+    ]
   },
   {
     "id": "desktop:wlre/services/items/crafting_browser_model.py",
@@ -2261,8 +2281,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.items",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Inventory/CraftingDecoder.cs",
+      "dotnet/Lala.Core/Inventory/CraftingScheduleContext.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -2302,11 +2325,17 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Receive schedule records and recipe-to-item lookup using explicit supplied context."
+    ],
+    "outstanding_scope": [
+      "Official catalog loading/verification, runtime activation and execution remain."
+    ]
   },
   {
     "id": "desktop:wlre/services/items/crafting_plan.py",

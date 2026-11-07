@@ -218,8 +218,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.items",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Inventory/RecoveryDecoder.cs",
+      "dotnet/Lala.Core/Inventory/InventoryEvents.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -266,11 +269,17 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Receive-only recovery decoder and bottle kind mapping."
+    ],
+    "outstanding_scope": [
+      "Recovery reducers, consumption planning, sends and live acceptance remain."
+    ]
   },
   {
     "id": "desktop:wlre/services/items/reservations.py",
@@ -354,8 +363,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.items",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Inventory/StorageDecoder.cs",
+      "dotnet/Lala.Core/Inventory/InventoryEvents.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -399,11 +411,17 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Receive-only storage decoder with exact item records and dispatcher parity."
+    ],
+    "outstanding_scope": [
+      "Storage reducers, transfer planning, reservations, sends and live acceptance remain."
+    ]
   },
   {
     "id": "desktop:wlre/services/items/room_storage_transfer.py",
@@ -1658,8 +1676,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.star_ark",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Social/Ark/ArkDecoder.cs",
+      "dotnet/Lala.Core/Social/Ark/ArkEvents.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1777,11 +1798,17 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Receive-only immutable observations and common dispatcher integration; exact Python field/error/prefix/tail parity."
+    ],
+    "outstanding_scope": [
+      "No service reducers, planners, command sends, runtime catalog loading, UI or live acceptance."
+    ]
   },
   {
     "id": "desktop:wlre/services/time_cube.py",
@@ -1792,8 +1819,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.time_cube",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Automation/TimeCube.cs",
+      "dotnet/Lala.Core/Automation/AutomationInputs.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1839,11 +1869,17 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Pure receive/reduce/candidate planning with explicit holds, acknowledgement, pending receipts and uncertainty."
+    ],
+    "outstanding_scope": [
+      "No live dispatch, verified resource loading, actual claiming or UI."
+    ]
   },
   {
     "id": "desktop:wlre/services/world/__init__.py",

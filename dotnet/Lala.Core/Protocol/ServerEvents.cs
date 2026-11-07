@@ -1,6 +1,8 @@
 using System.Collections.Immutable;
 using Lala.Core.Activities;
 using Lala.Core.Instances;
+using Lala.Core.Automation;
+using Lala.Core.Inventory;
 
 namespace Lala.Core.Protocol;
 
@@ -11,6 +13,30 @@ public abstract record ServerEvent(byte Main, byte Sub)
 }
 
 public sealed record ServerInstanceEvent(byte Main, byte Sub, InstanceEvent Event) : ServerEvent(Main, Sub)
+{
+    public override string Type => Event.Type;
+}
+
+public sealed record ServerTimeCubeEvent(byte Sub, TimeCubeEvent Event) : ServerEvent(122, Sub)
+{
+    public override string Type => Event switch
+    {
+        CubeInfo => "cube_info", CubeItem => "cube_item", CubeLegacyResult => "cube_legacy_result",
+        _ => throw new InvalidOperationException("Unknown time cube event")
+    };
+}
+public sealed record ServerDailyTaskEvent(byte Sub, DailyTaskEvent Event) : ServerEvent(124, Sub)
+{
+    public override string Type => Event switch
+    {
+        TaskSnapshot => "daily_task_snapshot", TaskGroups => "daily_task_groups", TaskMarksChanged => "daily_task_marks",
+        TaskProgress => "daily_task_progress", TaskUnknownUpdate => "daily_task_unknown_update",
+        TaskRewardNotice => "daily_task_reward_notice", TaskError => "daily_task_error",
+        _ => throw new InvalidOperationException("Unknown daily task event")
+    };
+}
+
+public sealed record ServerInventoryEvent(InventoryEvent Event) : ServerEvent(Event.Main, Event.Sub)
 {
     public override string Type => Event.Type;
 }

@@ -17,11 +17,19 @@ Also ported are the small, pure dependencies `npc_dialogue.py::decode_effect` an
 
 Chat, guild/actions and instance decoders are now integrated with the typed dispatcher. Chat accepts an explicit local role ID via a two-argument overload, while the original one-argument entry point remains supported.
 
-The star-ark, daily-tasks, time-cube, room-storage, recovery, crafting and tent decoders are **not implemented here**. Their known packet keys return `UnsupportedServerDecoderEvent` with the decoder name and payload length. Their body/subtype validity is deliberately not asserted. Unknown keys still return `UnimplementedServerEvent`.
+Ark, daily tasks, time cube, room storage, recovery, crafting and tent receive
+families are now integrated. S64-1/16 require an explicit
+`CraftingScheduleContext` in the three-argument overload; absent context returns
+`UnsupportedServerDecoderEvent` without parsing. Supplying context selects an
+already-known schedule layout and does not verify or activate a catalog.
+Unknown keys and ignored nonempty S65-2/5/8 extensions still return
+`UnimplementedServerEvent`. S65-13 retains the pillar geometry fallback.
 
-This is significant for S62-1/2/4: Python's crafting decoder shadows older shallow geometry branches, so the dispatcher reports unsupported crafting instead of pretending those packets were decoded. No partial parse or caller-selectable bypass is exposed. These unsupported bodies, including discriminator-dependent unknown subtypes, are not claimed as Python differential parity.
+Detailed S62 furniture records take precedence over older shallow geometry
+branches. Their geometry effect remains subject to the world reducer's house
+scope and empty-snapshot guards; decoding alone never authorizes movement.
 
-No adapter has been connected to the live state reducer. These decoded events do not grant authority to buy, move, attack, continue dialogue or change accounts.
+The offline local coordinator can consume these observations, but no adapter has been connected to a live session. These decoded events do not grant authority to buy, move, attack, continue dialogue or change accounts.
 
 ## Verification
 

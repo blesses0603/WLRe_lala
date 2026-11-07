@@ -133,6 +133,33 @@ A draft PR may publish a useful tested increment while gates remain open. Its de
 | `wlre/network/connection_health.py` → `ConnectionHealth.cs` | Partial offline transport evidence port with injected clocks. | Socket keepalive and exception metadata remain; quiet is not logout. |
 | `wlre/services/expedition/teams.py` → `ExpeditionTeams.cs` | Partial offline conditions/rates/team selection, 408 parity and boundary checks. | No protocol, scheduler, UI or live expedition integration. |
 
-Latest combined local core test run: **952 passed, 0 failed, 0 skipped**. This count includes synthetic parity and boundary cases, not 952 end-to-end game features.
+Historical first-increment run: **952 passed**. Newer scope-specific evidence follows; test counts include synthetic parity and boundary cases, not end-to-end game features.
 
 The inventory index uses schema version 2: load the relative `module_files` to obtain all 696 entries. Partitioning keeps individual review/upload units small; no source entries were removed.
+
+## Core state and task integration increment
+
+The current batch adds immutable battle/world reducers, pure time-cube and
+daily-task lifecycle planners, and receive-only storage/recovery/crafting
+layouts. The common dispatcher preserves full inventory records; schedule
+layouts require explicit context and remain unsupported without it. Candidate
+packets are not sends or spending authority. No AccountSession, transport
+lifecycle, UI or Android implementation is expanded by this batch.
+
+Automation source parity covers 233 packet vectors and 74 sequences / 669
+transitions; battle covers 20 sequences / 602 checkpoints; world covers 68
+sequences / 934 checkpoints plus 288 scope cases. Inventory includes 418 source
+vectors, malformed prefixes and maximum-count boundaries. Fixtures are synthetic
+and offline; these counts do not establish complete feature or live parity.
+
+The owner-thread `LocalStateCoordinator` now combines session/world/battle
+observations, shared phase/count and current player identity, with immutable
+snapshot publication. Python routing/helper parity covers 283 checkpoints and
+coalesced publication covers 23 operations. Service observers, actual account
+lifecycle and live network routing remain unintegrated.
+
+Ark and tent receive decoders now join the common dispatcher. They preserve
+strict Ark flags and permissive source-defined tent fields, ignored nonempty
+acknowledgements, empty snapshots and S65-13 geometry fallback. Synthetic Python
+parity covers 2,261 cases and 16,598 prefix outcomes; service reducers/planners,
+commands and live activation are still outstanding.

@@ -1631,8 +1631,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Protocol.state_updates",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/State/LocalStateCoordinator.cs",
+      "dotnet/Lala.Core/State/LocalStatePublisher.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1654,11 +1657,17 @@
     },
     "acceptance_profile": "protocol",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Owner-thread offline composition of session/world/battle reducers and synchronous coalesced immutable publication; 283 Python checkpoints and 23 publication operations."
+    ],
+    "outstanding_scope": [
+      "No complete State.apply service observers, network dispatch, account lifecycle, timers or UI wiring."
+    ]
   },
   {
     "id": "desktop:wlre/network/wire.py",

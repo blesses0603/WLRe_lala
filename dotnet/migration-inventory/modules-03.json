@@ -1423,8 +1423,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "State.state_battle_events",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Battle/BattleEventReducer.cs",
+      "dotnet/Lala.Core/Battle/BattleEventModels.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1438,11 +1441,17 @@
     },
     "acceptance_profile": "state",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Pure immutable battle reducer with 20 Python sequences / 602 checkpoints; ordered units, attributes and reports."
+    ],
+    "outstanding_scope": [
+      "No full State service observers, combat automation or live-session activation."
+    ]
   },
   {
     "id": "desktop:wlre/core/state_events.py",
@@ -1453,8 +1462,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "State.state_events",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/State/LocalStateCoordinator.cs",
+      "dotnet/Lala.Core/State/LocalStatePublisher.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1474,11 +1486,17 @@
     },
     "acceptance_profile": "state",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Owner-thread offline composition of session/world/battle reducers and synchronous coalesced immutable publication; 283 Python checkpoints and 23 publication operations."
+    ],
+    "outstanding_scope": [
+      "No complete State.apply service observers, network dispatch, account lifecycle, timers or UI wiring."
+    ]
   },
   {
     "id": "desktop:wlre/core/state_ownership.py",
@@ -1588,8 +1606,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "State.state_world_events",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/World/WorldEventReducer.cs",
+      "dotnet/Lala.Core/World/WorldEventModels.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1605,11 +1626,17 @@
     },
     "acceptance_profile": "state",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Pure immutable world reducer with position/house evidence, 68 Python sequences / 934 checkpoints and 288 scope cases."
+    ],
+    "outstanding_scope": [
+      "No resource activation, movement sending, full State observers or live navigation authority."
+    ]
   },
   {
     "id": "desktop:wlre/features/__init__.py",

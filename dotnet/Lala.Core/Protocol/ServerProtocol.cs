@@ -2,6 +2,10 @@ using System.Collections.Immutable;
 using Lala.Core.Activities;
 using Lala.Core.Social;
 using Lala.Core.Instances;
+using Lala.Core.Automation;
+using Lala.Core.Inventory;
+using Lala.Core.Social.Ark;
+using Lala.Core.World.Tent;
 
 namespace Lala.Core.Protocol;
 
@@ -12,18 +16,28 @@ public static class ServerProtocol
 {
     public static ServerEvent Decode(Packet packet) => Decode(packet, null);
 
-    public static ServerEvent Decode(Packet packet, uint? localRoleId)
+    public static ServerEvent Decode(Packet packet, uint? localRoleId) => Decode(packet, localRoleId, null);
+
+    public static ServerEvent Decode(Packet packet, uint? localRoleId, CraftingScheduleContext? craftingSchedules)
     {
         ArgumentNullException.ThrowIfNull(packet);
         if (ChatDecoder.Decode(packet, localRoleId) is { } chat) return new ServerSocialEvent(chat);
         if (GuildActionsDecoder.Decode(packet) is { } actions) return new ServerSocialEvent(actions);
         if (GuildDecoder.Decode(packet) is { } guild) return new ServerSocialEvent(guild);
-        if (UnsupportedDecoder(packet) is { } decoder)
+        if (UnsupportedDecoder(packet, craftingSchedules) is { } decoder)
             return new UnsupportedServerDecoderEvent(packet.Main, packet.Sub, decoder, packet.Payload.Length);
+        if (ArkDecoder.Decode(packet) is { } ark) return ark;
+        if (DailyTaskProtocol.Decode(packet) is { } daily) return new ServerDailyTaskEvent(packet.Sub, daily);
+        if (TimeCubeProtocol.Decode(packet) is { } cube) return new ServerTimeCubeEvent(packet.Sub, cube);
         if (InstanceDecoder.Decode(packet) is { } instance) return new ServerInstanceEvent(packet.Main, packet.Sub, instance);
+        if (StorageDecoder.Decode(packet) is { } storage) return new ServerInventoryEvent(storage);
         if (ExpeditionDecoder.Decode(packet) is { } expedition) return new ServerExpeditionEvent(packet.Sub, expedition);
+        if (RecoveryDecoder.Decode(packet) is { } recovery) return new ServerInventoryEvent(recovery);
         if (ActivityDecoder.Decode(packet) is { } activity) return new ServerActivityEvent(packet.Main, packet.Sub, activity);
 
+        if (CraftingDecoder.Decode(packet, craftingSchedules) is { } crafting) return new ServerInventoryEvent(crafting);
+
+        if (TentDecoder.Decode(packet) is { } tent) return tent;
         var r = new PacketReader(packet.Payload.Span);
         if (Geometry(packet, r) is { } geometry) return geometry;
         if (SocialProtocol.Decode(packet) is { } social) return new ServerSocialEvent(social);
@@ -169,14 +183,9 @@ public static class ServerProtocol
 
     // Classify only by published packet keys. Contents remain unparsed and are not returned.
     // These guards precede every migrated fallback exactly where the Python service chain does.
-    private static string? UnsupportedDecoder(Packet p) => (p.Main, p.Sub) switch
+    private static string? UnsupportedDecoder(Packet p, CraftingScheduleContext? craftingSchedules) => (p.Main, p.Sub) switch
     {
-        (75, 24) or (191, 0 or 1 or 2 or 3 or 4 or 5 or 6 or 7 or 10 or 11 or 12 or 15 or 16 or 17 or 18 or 19) => "star_ark",
-        (124, >= 1 and <= 5) => "daily_tasks", (122, >= 1 and <= 3) => "time_cube",
-        (62, 7 or 11 or 13 or 25 or 57 or 71 or 72 or 73 or 74 or 75) => "room_storage",
-        (23, 208) => "recovery",
-        (64, 1 or 2 or 3 or 4 or 5 or 6 or 7 or 8 or 10 or 16 or 25) or (62, 1 or 2 or 4 or 5 or 76) => "crafting",
-        (65, 1 or 2 or 3 or 4 or 5 or 7 or 8 or 16 or 18) => "tent",
+        (64, 1 or 16) when craftingSchedules is null => "crafting",
         _ => null
     };
 }

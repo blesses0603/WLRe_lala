@@ -8,8 +8,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Protocol.state_updates",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/State/LocalStateCoordinator.cs",
+      "dotnet/Lala.Core/State/LocalStatePublisher.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -31,8 +34,8 @@
     },
     "acceptance_profile": "protocol",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
     },
@@ -40,7 +43,13 @@
       "desktop_source": "wlre/network/state_updates.py",
       "identical_source": true,
       "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
-    }
+    },
+    "migrated_scope": [
+      "Owner-thread offline composition of session/world/battle reducers and synchronous coalesced immutable publication; 283 Python checkpoints and 23 publication operations."
+    ],
+    "outstanding_scope": [
+      "No complete State.apply service observers, network dispatch, account lifecycle, timers or UI wiring."
+    ]
   },
   {
     "id": "android:wlre/network/wire.py",
@@ -2352,8 +2361,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.items",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Inventory/CraftingDecoder.cs",
+      "dotnet/Lala.Core/Inventory/CraftingScheduleContext.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -2393,8 +2405,8 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
     },
@@ -2402,7 +2414,13 @@
       "desktop_source": "wlre/services/items/crafting_official_v1286.py",
       "identical_source": true,
       "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
-    }
+    },
+    "migrated_scope": [
+      "Receive schedule records and recipe-to-item lookup using explicit supplied context."
+    ],
+    "outstanding_scope": [
+      "Official catalog loading/verification, runtime activation and execution remain."
+    ]
   },
   {
     "id": "android:wlre/services/items/crafting_plan.py",

@@ -58,8 +58,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/World/Tent/TentDecoder.cs",
+      "dotnet/Lala.Core/World/Tent/TentEvents.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -123,8 +126,8 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
     },
@@ -132,7 +135,13 @@
       "desktop_source": "wlre/services/world/tent.py",
       "identical_source": true,
       "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
-    }
+    },
+    "migrated_scope": [
+      "Receive-only immutable observations and common dispatcher integration; exact Python field/error/prefix/tail parity."
+    ],
+    "outstanding_scope": [
+      "No service reducers, planners, command sends, runtime catalog loading, UI or live acceptance."
+    ]
   },
   {
     "id": "android:wlre/services/world/unity_textasset.py",
