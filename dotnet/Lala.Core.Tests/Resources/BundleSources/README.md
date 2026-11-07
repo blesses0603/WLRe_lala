@@ -86,12 +86,14 @@ and same-version manifest replacements. Content identity matches the canonical
 ManifestIdentity structure; observation-only CatalogKey is never substituted.
 The existing ManifestIdentity API is unchanged.
 
-The terminal status is exactly `required bundle sources verified; extractor
-unavailable`. All new production types are internal. There is no production
-source implementation, freshness credential, official provenance assertion,
-AssetsReady value, extractor, runtime activation, resource confirmation, packet
-permission or login admission. Synthetic data and matching hashes cannot mint
-any of those capabilities.
+The source-only status is exactly `required bundle sources verified; no runtime
+candidate built`. All source-preparation types remain internal. The separately
+tested `OfflineBundleRuntimePreparation` now consumes these owned handles with the
+bounded native extractor and all ten structural decoders, then reobserves sources.
+See `../RuntimeFlow/README.md`. There is still no production source implementation,
+freshness credential, official provenance assertion, AssetsReady value, runtime
+activation, resource confirmation, packet permission or login admission. Synthetic
+data and matching hashes cannot mint any of those capabilities.
 
 Runtime download quotas retain the Python ceilings of **24 files / 32 MiB** and
 are checked before any bundle acquisition. A separate conservative **32 MiB total

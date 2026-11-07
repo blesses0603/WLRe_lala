@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using System.Collections.Frozen;
 
 namespace Lala.Core.Resources;
 
@@ -43,11 +44,18 @@ internal sealed class BundleSourcePlan
     { "Eve", "ItemData_C", "TalkData_C", "TextData_C", "SmithData_C", "ScenesData_C", "AdventureData_C", "AdventureLvData_C", "NpcData_C", "NpcCareerData_C" });
     internal static IReadOnlyList<string> RequiredAssetPaths { get; } = Array.AsReadOnly(RequiredTables.Select(x => "Assets/ResourcesBuild/Data/" + x + ".bytes").Order(StringComparer.Ordinal).ToArray());
     internal IReadOnlyList<PlannedBundleSource> Entries { get; }
+    // Each lookup is the source runtime's single-asset plan: its listed complete dependency
+    // set (not recursive graph traversal), then its root. Unrelated selected roots stay out.
+    internal IReadOnlyDictionary<string, IReadOnlyList<string>> AssetSourceNames { get; }
     internal int AddedCount { get; }
     internal int ModifiedCount { get; }
     internal int RemovedCount { get; }
-    private BundleSourcePlan(List<PlannedBundleSource> entries, int added, int modified, int removed)
-    { Entries = entries.AsReadOnly(); AddedCount = added; ModifiedCount = modified; RemovedCount = removed; }
+    private BundleSourcePlan(List<PlannedBundleSource> entries, Dictionary<string, IReadOnlyList<string>> assetSources,
+        int added, int modified, int removed)
+    {
+        Entries = entries.AsReadOnly(); AssetSourceNames = assetSources.ToFrozenDictionary(StringComparer.Ordinal);
+        AddedCount = added; ModifiedCount = modified; RemovedCount = removed;
+    }
 
     internal static BundleSourcePlan Create(YooAssetManifest current, string dataVersion,
         YooAssetManifest? previous = null, CancellationToken cancellationToken = default)
@@ -93,7 +101,17 @@ internal sealed class BundleSourcePlan
             entries.Add(new(new(dataVersion, current, bundle), changes[bundle.Name],
                 Array.AsReadOnly(bundle.DependencyIds.Select(dep => current.Bundles[dep].Name).ToArray())));
         }
-        return new(entries, added, modified, removed);
+        var assetSources = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+        foreach (string path in RequiredAssetPaths)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            int root = current.AssetBundles[path];
+            string[] namesForAsset = current.Bundles[root].DependencyIds.Distinct().Where(id => id != root)
+                .Select(id => current.Bundles[id].Name).Order(StringComparer.Ordinal)
+                .Append(current.Bundles[root].Name).ToArray();
+            assetSources.Add(path, Array.AsReadOnly(namesForAsset));
+        }
+        return new(entries, assetSources, added, modified, removed);
     }
 
     private static bool SameFingerprint(YooBundleEntry a, YooAssetManifest current, YooBundleEntry b, YooAssetManifest previous) =>

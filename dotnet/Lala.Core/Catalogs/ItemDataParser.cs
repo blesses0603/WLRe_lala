@@ -68,6 +68,24 @@ public static class ItemDataParser
         return ParseLayout(snapshot, reviewed1296, includeSkillLink, cancellationToken);
     }
 
+    // Runtime composition keeps the actual parser diagnostic/checkpoints and insertion order,
+    // with the same mandatory package policy and fixed 1296 pin as the public parser.
+    internal static IReadOnlyDictionary<ushort, ItemDataRow> ParseForRuntimeCandidate(ReadOnlySpan<byte> raw,
+        string packageVersion, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        ReadOnlySpan<byte> snapshot = raw.Length <= MaxBytes ? raw.ToArray() : raw;
+        return ParserDiagnostics.RunWithRaw(
+            new("wlre.services.world.itemdata_v1.parse_itemdata", "itemdata-v1"), snapshot, bytes =>
+            {
+                ValidateSize(bytes.Length);
+                bool reviewed = Convert.ToHexStringLower(SHA256.HashData(bytes)) == Reviewed1296Sha256;
+                token.ThrowIfCancellationRequested();
+                ValidateSource(packageVersion, reviewed, false);
+                return ReadLayout(bytes, reviewed, false, token, sourceAdapter: true);
+            }, rows => new(rows.Count), null, token);
+    }
+
     // Adapter-only entrypoint: the Python adapter does not pass its package version to
     // parse_itemdata. Preserve the parser's independent fixed source pin and diagnostics.
     internal static IReadOnlyDictionary<ushort, ItemDataRow> ParseForSourceAdapter(ReadOnlySpan<byte> raw,

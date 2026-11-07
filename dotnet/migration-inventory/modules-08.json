@@ -770,8 +770,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/World/Portals/OfflineEventPortalProjector.cs",
+      "dotnet/Lala.Core/World/Portals/OfflineEventPortalProjection.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -810,11 +813,18 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Only _projection_guard is reused for typed StageDataRow geometry in the event projector: sentinel width/height 65535 maps to 6992, nonpositive maximum dimensions reject, and rate 100*(1024-24)/max(width,height), offsets and height are retained. This does not authenticate the stage or establish image/route provenance.",
+      "105 actual retained-Python synthetic cases plus three contracts pass as 108 focused tests; 5,521 impacted Eve/World/RuntimeCandidate tests also passed. Source fingerprints for event, boundary, portal-evidence and door helpers and deterministic compressed/decoded fixture hashes are retained; independent review approved. Tests compare all source-present fields and row/array counts, while typed optional fields remain explicit. No full dynamic-Python object or official-resource/runtime acceptance is claimed."
+    ],
+    "outstanding_scope": [
+      "_packet_position, read_only_portal_evidence, read_only_door_link_routes and read_only_stage_portal_markers remain unported. No portal-link/image evidence loading, official-source acceptance, runtime/UI/session/Android activation or travel/packet permission. Typed ushort stage fields exclude arbitrary Python stage dictionaries."
+    ]
   },
   {
     "id": "desktop:wlre/services/world/portal_inspection_1275.py",
@@ -2098,8 +2108,10 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Catalogs/RuntimeCandidateBindings.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -2119,11 +2131,18 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Only bind_scene_names for immutable parser-produced Stage/Text maps is implemented by internal RuntimeCandidateBindings.SceneNames and consumed by the ten-table candidate. Preserve source order; skip zero/missing NameId, empty/Python-whitespace-only names, names above 160 Unicode codepoints and characters below U+0020; use Python strip semantics and never invent fallback labels.",
+      "Actual Python binding cases are retained inside the 157-vector candidate corpus and the 166 candidate tests within 1,102 focused passes. These are offline typed binding checks, not navigation permission or runtime activation."
+    ],
+    "outstanding_scope": [
+      "source_scene_label is not implemented. The typed helper consumes only parser-produced maps, not arbitrary Python object/type combinations. No legacy-name fallback, destination inference, routes, runtime/UI/session/Android call site, resource admission or packet authority is supplied."
+    ]
   },
   {
     "id": "desktop:wlre/services/world/smallmap_database.py",
@@ -2419,7 +2438,8 @@
       "dotnet/Lala.Core/Resources/UnityTextAssets/BoundedSerializedFile.cs",
       "dotnet/Lala.Core/Resources/UnityTextAssets/UnityReadCursor.cs",
       "dotnet/Lala.Core/Resources/UnityTextAssets/UnityTreeShape.cs",
-      "dotnet/Lala.Core/Resources/UnityTextAssets/UnityCommonStrings.cs"
+      "dotnet/Lala.Core/Resources/UnityTextAssets/UnityCommonStrings.cs",
+      "dotnet/Lala.Core/Resources/BundleSources/OfflineBundleRuntimePreparation.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -2482,11 +2502,14 @@
       "File identities combine verified bundle name and exact directory entry within one data/package/version context. CAB basenames never alias. External PPtrs require explicit source-file/exact-external-path/target-file bindings; no basename fallback, automatic dependencies, filesystem probing, HTTP or external open.",
       "Bounded inputs: 1–24 distinct bundles, 64 MiB each and 128 MiB aggregate; expansion 64 MiB per bundle/128 MiB aggregate. Further limits cover block info/blocks, serialized files, metadata/types/trees, objects, container entries and encoded path bytes before decoding, dependencies/externals and 16-MiB script payloads. These are allocation/expansion ceilings, not a peak-RSS guarantee. Streams are scoped, results own detached bytes and cancellation is checked through chunk/block/LZ4/metadata/object/container work.",
       "91 focused tests passed against original UnityPy 1.25.4 writer-generated SerializedFile/UnityFS fixtures and independent lz4 4.4.5 compression. Test-only AssetsTools.NET [3.0.5] independently reads retained hash-verified writer files and m_Script as bytes; malformed inputs never enter that package decoder. Fixtures contain authored payloads/trees, not game payloads or class databases. Runtime Core has no decoder package dependency; only the common-string table is vendored under its accompanying MIT notice.",
-      "A separate read-only local metadata audit observed 22 DataPackage bundles using UnityFS8, engine2021.3.45f2, SerializedFile22, embedded class49/142 trees, header0x243 and 244 LZ4HC blocks. This is metadata compatibility evidence only, not actual-game C# extraction acceptance. The combined 39,346-test Core receipt uses a process-only 3-GiB heap budget; it is separate from the 91 focused passes and is not a standard-setting or remote-CI pass."
+      "A separate read-only local metadata audit observed 22 DataPackage bundles using UnityFS8, engine2021.3.45f2, SerializedFile22, embedded class49/142 trees, header0x243 and 244 LZ4HC blocks. This is metadata compatibility evidence only, not actual-game C# extraction acceptance. The combined 39,346-test Core receipt uses a process-only 3-GiB heap budget; it is separate from the 91 focused passes and is not a standard-setting or remote-CI pass.",
+      "Internal OfflineBundleRuntimePreparation now connects the actual scripted source preparer, owned VerifiedBundleSource handles, native UnityTextAssetExtractor and all ten structural table decoders, without replacement decoder callbacks. Each asset uses only its exact manifest root plus listed complete dependency set, not recursive traversal or the union of all selected roots. Every table is extracted before raw decoding; original cache/source mutation cannot change owned bytes.",
+      "The flow uses genuine owned multi-TextAsset UnityFS fixtures, exact per-asset manifest-selected closures and a conservative 32-MiB aggregate output cap. It rejects external PPtrs rather than deriving allowlists; no untrusted package decoder or filesystem reopen is added.",
+      "100 focused Release passes comprise 19 new owned-flow contracts plus 81 existing BundleSource cases, with no skips, using the process-only 3-GiB cap. Ten genuine original UnityPy 1.25.4 writer/LZ4HC bundles plus evidence (11 files) regenerated identically; original ten payload hashes are pinned to the retained candidate fixture. Independent source/security review approved. This is orchestration evidence, not real-game/CDN/runtime admission or a new aggregate count."
     ],
     "outstanding_scope": [
       "Only the stated binary subset is supported, not the whole Python/UnityPy module or arbitrary loader behavior. LZMA, encrypted/unknown flags, stripped trees, other engines/platform targets/SerializedFile layouts and other classes remain unsupported. Exact Python exception-message/decorator parity and filesystem/path-loader integration are not established; typed UnityTextAssetException failures are intentional.",
-      "The separate extractor is not wired into source preparation, catalog loading, six-/ten-table runtime composition, current globals, cache publication or AccountSession. No production source provenance/freshness, runtime admission/installation, AssetsReady, login or send authority is granted. Existing source-preparation terminal status remains required bundle sources verified; extractor unavailable.",
+      "Internal scripted source preparation, bounded extraction and ten-table structural decoding are now connected. Production catalog loading/current globals, cache publication, official-source provenance/freshness, database-byte admission, static 1275 gates, runtime installation, AssetsReady, AccountSession, login and send authority remain absent. The source-only preparation status is required bundle sources verified; no runtime candidate built.",
       "Actual-game C# payload extraction, Desktop application execution, Android runtime/AOT and end-to-end resource/catalog/session acceptance remain unverified. Genuine owned writer fixtures and matching local real metadata are not official-resource positive acceptance; no game payloads are retained in the repository."
     ]
   }

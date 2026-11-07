@@ -76,7 +76,7 @@ public sealed class EveV115Tests
     public void Embedded_resource_names_are_platform_independent_and_not_satellites()
     {
         var names = typeof(EveV115Tests).Assembly.GetManifestResourceNames()
-            .Where(name => name.StartsWith("Lala.Core.Tests.World.Eve.Fixtures.", StringComparison.Ordinal))
+            .Where(name => name.StartsWith("Lala.Core.Tests.World.Eve.Fixtures.eve-v115-", StringComparison.Ordinal))
             .Order(StringComparer.Ordinal).ToArray();
         Assert.Equal(EvePythonVectors.ResourceCount, names.Length);
         Assert.Equal(Enumerable.Range(1, EvePythonVectors.ResourceCount)

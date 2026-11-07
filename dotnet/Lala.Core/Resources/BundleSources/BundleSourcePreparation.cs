@@ -54,16 +54,25 @@ internal sealed record BundleSourceBudget(int MaximumDownloads = 24, long Maximu
 
 internal sealed class RequiredBundleSources
 {
-    internal string Status => "required bundle sources verified; extractor unavailable";
+    internal string Status => "required bundle sources verified; no runtime candidate built";
     internal string Provenance => "scripted input; official provenance unavailable";
     internal string ManifestContentIdentity { get; }
     internal long Attempt { get; }
+    internal object Owner { get; }
+    internal OfficialVersionSnapshot Snapshot { get; }
+    internal IReadOnlyList<YooAssetManifest> Manifests { get; }
+    internal string Host { get; }
     internal BundleSourcePlan Plan { get; }
     internal IReadOnlyList<VerifiedBundleSource> Sources { get; }
     internal int DownloadCount { get; }
     internal long DownloadBytes { get; }
-    internal RequiredBundleSources(string identity, long attempt, BundleSourcePlan plan, List<VerifiedBundleSource> sources, int count, long bytes)
-    { ManifestContentIdentity = identity; Attempt = attempt; Plan = plan; Sources = sources.AsReadOnly(); DownloadCount = count; DownloadBytes = bytes; }
+    internal RequiredBundleSources(string identity, long attempt, BundleSourcePlan plan, List<VerifiedBundleSource> sources, int count, long bytes,
+        object owner, OfficialVersionSnapshot snapshot, IReadOnlyList<YooAssetManifest> manifests, string host)
+    {
+        ManifestContentIdentity = identity; Attempt = attempt; Plan = plan; Sources = sources.AsReadOnly();
+        DownloadCount = count; DownloadBytes = bytes; Owner = owner; Snapshot = snapshot;
+        Manifests = Array.AsReadOnly(manifests.ToArray()); Host = host;
+    }
 }
 
 /// <summary>Connected, offline-only preparation. Does not consume or issue resource/session admission.</summary>
@@ -73,6 +82,7 @@ internal sealed class BundleSourcePreparation
     // keep the original runtime 24 / 32 MiB ceilings. No huge cached closure may exhaust memory.
     internal const long MaximumRetainedBytes = 32L * 1024 * 1024;
     private readonly object _gate = new();
+    private readonly object _owner = new();
     private long _attempt;
     internal void Invalidate() { lock (_gate) { _attempt = checked(_attempt + 1); } }
     private void Check(long attempt, CancellationToken token)
@@ -155,8 +165,40 @@ internal sealed class BundleSourcePreparation
         lock (_gate)
         {
             Check(attempt, cancellationToken);
-            return new(identity, attempt, plan, handles, downloadCount, downloadBytes);
+            return new(identity, attempt, plan, handles, downloadCount, downloadBytes, _owner, before, manifests, host);
         }
+    }
+
+    // Reobserve AFTER extraction/table decoding. Preparing owned bytes alone does not establish
+    // that even the scripted source remained stable while the structural candidate was built.
+    internal async Task ConfirmUnchangedAsync(IScriptedResourceSource source, RequiredBundleSources prepared,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        EnsureCurrent(prepared, cancellationToken);
+        await CheckVersionsAsync(source, prepared.Snapshot, prepared.Attempt, cancellationToken).ConfigureAwait(false);
+        var manifests = await ReadManifestsAsync(source, prepared.Snapshot, prepared.Host, prepared.Attempt, cancellationToken).ConfigureAwait(false);
+        for (int i = 0; i < prepared.Manifests.Count; i++)
+            if (prepared.Manifests[i].Sha256 != manifests[i].Sha256)
+                throw new BundleSourceException(BundleSourceFailure.ManifestChanged, "Manifest bytes changed during runtime candidate construction");
+        await CheckVersionsAsync(source, prepared.Snapshot, prepared.Attempt, cancellationToken).ConfigureAwait(false);
+        EnsureCurrent(prepared, cancellationToken);
+    }
+
+    internal void EnsureCurrent(RequiredBundleSources prepared, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(prepared);
+        if (!ReferenceEquals(prepared.Owner, _owner))
+            throw new BundleSourceException(BundleSourceFailure.StaleAttempt, "Resource preparation belongs to another attempt owner");
+        Check(prepared.Attempt, token);
+    }
+
+    // Linearization point for returning a historical offline observation. Not installation,
+    // activation or a promise that a server will remain unchanged after this point.
+    internal T ReturnCurrent<T>(RequiredBundleSources prepared, T result, CancellationToken token)
+    {
+        lock (_gate) { EnsureCurrent(prepared, token); return result; }
     }
 
     private async Task CheckVersionsAsync(IScriptedResourceSource source, OfficialVersionSnapshot before, long attempt, CancellationToken token)

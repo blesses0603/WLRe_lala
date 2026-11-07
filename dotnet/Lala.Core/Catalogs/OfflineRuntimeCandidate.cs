@@ -1,0 +1,117 @@
+using System.Collections.Immutable;
+using Lala.Core.World.Eve;
+
+namespace Lala.Core.Catalogs;
+
+/// <summary>
+/// Immutable structural composition of ten supplied table payloads. Neither this object nor its
+/// hashes establish official provenance, fresh-source stability, database admission or readiness.
+/// Optional catalogs are unavailable; event/convey observations never authorize routes or packets.
+/// </summary>
+public sealed class OfflineRuntimeCandidate
+{
+    internal OfflineRuntimeCandidate(EveV115Indexes indexes, IReadOnlyDictionary<ushort, ItemDataRow> items,
+        IReadOnlyDictionary<ushort, TalkDataRow> talks, IReadOnlyDictionary<uint, string> texts,
+        RuntimeRecipeCandidate recipes, IReadOnlyDictionary<ushort, StageDataRow> stages,
+        EveDoorProjection doors, IReadOnlyDictionary<ushort, string> sceneNames,
+        ExpeditionCatalogData expedition, IReadOnlyDictionary<ushort, ExpeditionNpcData> npcs,
+        IReadOnlyDictionary<string, string> hashes)
+        => (EveIndexes, Items, Talks, Texts, Recipes, Stages, Doors, SceneNames, Expedition, Npcs, SourceSha256) =
+            (indexes, items, talks, texts, recipes, stages, doors, sceneNames, expedition, npcs, hashes);
+    public EveV115Indexes EveIndexes { get; }
+    public IReadOnlyDictionary<ushort, ItemDataRow> Items { get; }
+    public IReadOnlyDictionary<ushort, TalkDataRow> Talks { get; }
+    public IReadOnlyDictionary<uint, string> Texts { get; }
+    public RuntimeRecipeCandidate Recipes { get; }
+    public IReadOnlyDictionary<ushort, StageDataRow> Stages { get; }
+    public EveDoorProjection Doors { get; }
+    public IReadOnlyDictionary<ushort, string> SceneNames { get; }
+    public ExpeditionCatalogData Expedition { get; }
+    public IReadOnlyDictionary<ushort, ExpeditionNpcData> Npcs { get; }
+    public IReadOnlyDictionary<string, string> SourceSha256 { get; }
+    public string SourceKind => "supplied_offline_tables";
+    public bool RequiredTablesStructurallyComplete => true;
+    public bool HasVerifiedProvenance => false;
+    public bool RuntimeAdmitted => false;
+    public bool AssetsReady => false;
+    public bool CanSendPackets => false;
+    public ImmutableArray<string> UnavailableOptionalSources =>
+        ["SkillData", "portal_metadata", "images", "daily", "guild", "Ark", "combat", "normal_attacks",
+            "portraits", "emoji", "smallmaps", "battle_talk", "instances"];
+}
+
+/// <summary>
+/// Dynamic-branch structural bindings only, without verified-context input, cache, source admission
+/// or installation. Does not implement static 1275 fixed hash/count runtime admission. ItemData's
+/// reviewed package/version digest checks remain mandatory and cannot be supplied by callers.
+/// </summary>
+public static class OfflineRuntimeCandidateDecoder
+{
+    public const int MaxSourceBytes = 16 * 1024 * 1024;
+    public static ImmutableArray<string> Sources { get; } =
+        ["Eve", "ItemData_C", "TalkData_C", "TextData_C", "SmithData_C", "ScenesData_C",
+            "AdventureData_C", "AdventureLvData_C", "NpcData_C", "NpcCareerData_C"];
+
+    public static OfflineRuntimeCandidate Decode(IReadOnlyDictionary<string, ReadOnlyMemory<byte>> supplied,
+        string packageVersion, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(supplied);
+        ArgumentNullException.ThrowIfNull(packageVersion);
+        // The source extracts all ten assets before parsing any table. Snapshot every required
+        // payload in that order. Missing is distinct from present-empty. Unrelated keys are ignored.
+        var sources = new Dictionary<string, byte[]>(StringComparer.Ordinal);
+        foreach (string name in Sources)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!supplied.TryGetValue(name, out var raw))
+                throw new CatalogDecodeException("Missing offline raw table: " + name);
+            if (raw.Length > MaxSourceBytes)
+                throw new CatalogDecodeException("Oversized offline raw table: " + name);
+            sources.Add(name, raw.ToArray());
+        }
+        cancellationToken.ThrowIfCancellationRequested();
+        var eve = sources["Eve"];
+        EveV115Indexes npcs, interactions;
+        try
+        {
+            npcs = EveV115Parser.Parse(eve, cancellationToken);
+            interactions = npcs;
+        }
+        catch (EveDecodeException)
+        {
+            // Source combined-index fallback preserves which per-feature limit failed first.
+            npcs = EveV115Parser.Parse(eve, EveV115Parser.NpcSource, cancellationToken);
+            interactions = EveV115Parser.Parse(eve, EveV115Parser.InteractionSource, cancellationToken);
+        }
+        // A successfully returned candidate requires both indexes. Fallback parses preserve
+        // errors; if both succeed their full-layout parse has already validated the same bytes.
+        var indexes = ReferenceEquals(npcs, interactions) ? npcs : new EveV115Indexes(
+            npcs.Scenes.Select((scene, index) => scene with { Interactions = interactions.Scenes[index].Interactions }).ToImmutableArray(),
+            true, true, npcs.NpcRecordCount, interactions.InteractionRecordCount);
+        var items = ItemDataParser.ParseForRuntimeCandidate(sources["ItemData_C"], packageVersion, cancellationToken);
+        RuntimeCandidateBindings.CheckShopItems(indexes, items, cancellationToken);
+        var talks = TalkDataParser.Parse(sources["TalkData_C"], cancellationToken);
+        var texts = TextDataParser.Parse(sources["TextData_C"], cancellationToken);
+        var recipes = RuntimeCandidateBindings.Recipes(sources["SmithData_C"], items, cancellationToken);
+        var stages = StageDataParser.Parse(sources["ScenesData_C"], cancellationToken);
+        var doors = EveDoorParser.ParseLayout(eve, cancellationToken);
+        // Typed OpenUsed is always an integer; Recipes already validates every product/material.
+        if (stages.Count == 0 || talks.Count == 0 || texts.Count == 0)
+            throw new CatalogDecodeException("1275 場景或對話原始資料缺失");
+        var expedition = ExpeditionCatalogParser.ParseCatalog(sources["AdventureData_C"], sources["AdventureLvData_C"], cancellationToken);
+        var expeditionNpcs = ExpeditionCatalogParser.ParseNpcs(sources["NpcData_C"], sources["NpcCareerData_C"], cancellationToken);
+        var named = ExpeditionCatalogParser.BindNames(expedition, texts, strictRuntimeNames: true, cancellationToken);
+        var expeditionHashes = ExpeditionCatalogParser.CopyHashes(expedition.SourceSha256);
+        expeditionHashes["NpcData_C"] = ExpeditionCatalogParser.Hash(sources["NpcData_C"], cancellationToken);
+        expeditionHashes["NpcCareerData_C"] = ExpeditionCatalogParser.Hash(sources["NpcCareerData_C"], cancellationToken);
+        var hashes = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (string name in Sources) hashes.Add(name, ExpeditionCatalogParser.Hash(sources[name], cancellationToken));
+        var candidate = new OfflineRuntimeCandidate(indexes, items, talks, texts, recipes, stages, doors,
+            RuntimeCandidateBindings.SceneNames(stages, texts, cancellationToken),
+            new(named, expedition.Levels, new OrderedCatalog<string, string>(expeditionHashes, expeditionHashes.Keys)),
+            expeditionNpcs, new OrderedCatalog<string, string>(hashes, hashes.Keys));
+        cancellationToken.ThrowIfCancellationRequested();
+        return candidate;
+    }
+}

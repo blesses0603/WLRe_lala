@@ -185,8 +185,12 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/World/Eve/EveDoorParser.cs",
+      "dotnet/Lala.Core/World/Eve/EveDoorProjection.cs",
+      "dotnet/Lala.Core/World/Eve/EveDoorCp950.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -247,11 +251,21 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Source door parser/helper logic is ported through a bounded immutable API separate from the stricter full Eve parser. Public ParsePinned1275 checks the original fixed SHA-256 before layout checks and requires 1262 scenes; there is no custom-pin overload. Internal ParseLayout is used only by tests/structural composition and makes no official-source claim.",
+      "Ordered geometry, original pre-prefix name bytes, strict CP950 names, duplicate byte event references, PlayerTouch records, unsigned condition values, signed effects, conditional convey transfers and missing convey IDs are retained. Destination zero is preserved; DestinationDecoded means only that references resolved, not a valid route. Source overlap/skipped-NPC behavior and group/convey-only directory checks are kept instead of silently importing stricter full-Eve checks.",
+      "Bounds retain 32-MiB input, 4096 scenes and per-scene NPC/door/Mine/Goods/Event limits, with source uint16 group/convey counts. An added 1,000,000 retained-unit limit bounds overlapping windows, parameters and repeated references. One of 928 actual decorated-Python oracle cases explicitly records a source-valid safety rejection; it is not exact parity. Cancellation, detached snapshots and immutable shared event values prevent partial/mutable results.",
+      "936 door tests passed within the 1,102 focused suite. The 928-vector gzip corpus checks full ordered output, errors/checkpoints, every helper and pinned rejection. A lazy 39,564-byte code-owned CP950 table avoids machine codepage providers; its digest and all 65,792 single-/double-byte outcomes match Python. Three generators reproduced identical artifacts and independent source/security review approved. AssetsReady, CanSendPackets, AuthorizesTravel and AuthorizesRuntime remain false."
+    ],
+    "outstanding_scope": [
+      "The source public parse_verified_doors surface is only an internal bounded layout path; arbitrary dynamic Python values/expected counts are not a public C# contract. The retained-unit budget has an explicit safety divergence, and typed EveDoorSourceException replaces DoorSourceError. Official pinned success is unverified because no actual official Eve asset was supplied.",
+      "A separate OfflineEventPortalProjector now consumes door observations, and the scripted owned-source flow invokes door decoding within the ten-table candidate. Neither connection supplies StageMap/EveDoorLinks reconciliation, broader route conflicts/coverage, event execution, live travel, official source admission, production runtime/session/UI/Android wiring, authentication or live-server acceptance."
+    ]
   },
   {
     "id": "desktop:wlre/services/world/dynamic_bundle_runtime.py",
@@ -268,7 +282,10 @@
       "dotnet/Lala.Core/Resources/ManifestIdentity.cs",
       "dotnet/Lala.Core/Resources/BundleSources/YooAssetManifest.cs",
       "dotnet/Lala.Core/Resources/BundleSources/BundleSourcePlan.cs",
-      "dotnet/Lala.Core/Resources/BundleSources/BundleSourcePreparation.cs"
+      "dotnet/Lala.Core/Resources/BundleSources/BundleSourcePreparation.cs",
+      "dotnet/Lala.Core/Catalogs/OfflineRuntimeCandidate.cs",
+      "dotnet/Lala.Core/Catalogs/RuntimeCandidateBindings.cs",
+      "dotnet/Lala.Core/Resources/BundleSources/OfflineBundleRuntimePreparation.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -416,11 +433,18 @@
     "migrated_scope": [
       "Display-only dynamic metadata validation and internal before/after source identity checks.",
       "Internal scripted _prepare_runtime_sources/_confirm_runtime_sources subset now connects both actual manifest parsers, ten-path DataPackage planning, bounded owned bundle bytes and final version/full-manifest stability checks. Replacement/invalidation rejects stale attempts; matching identity uses the canonical ManifestIdentity structure without changing its API. Runtime quotas remain 24 downloads/32 MiB, plus a conservative 32-MiB total retained-byte bound including cache hits.",
-      "Combined source-preparation evidence: 37 retained actual-Python manifest/plan cases plus 44 contracts, totaling 81 new focused tests. The 350-test Resources pass includes existing tests; these are not 350 new cases. Six CRLF-only source hashes, complete manifest fields, exact plan order and synthetic byte checksums are retained. Invalid cases use typed failures rather than claiming exact Python exception text; no newer full Core receipt is implied."
+      "Combined source-preparation evidence: 37 retained actual-Python manifest/plan cases plus 44 contracts, totaling 81 new focused tests. The 350-test Resources pass includes existing tests; these are not 350 new cases. Six CRLF-only source hashes, complete manifest fields, exact plan order and synthetic byte checksums are retained. Invalid cases use typed failures rather than claiming exact Python exception text; no newer full Core receipt is implied.",
+      "parse_runtime_recipes is composed internally from immutable parser-owned ItemData and Smith 33/35-byte rows. Every product/material must exist in those ItemData rows, zero material counts reject, exact OpenUsed bytes are retained and all recipe identities remain in source order. Duplicate products, including conditional recipes, are omitted only from the product lookup, never discarded from the full catalog or guessed. Source runtime-recipes-v1 diagnostics preserve outer counts/errors and nested offset behavior.",
+      "The separate OfflineRuntimeCandidateDecoder composes the dynamic required-table structural branch with shop joins, nonempty checks and strict names. This is not a dynamic load/activation entrypoint, fresh-source context or complete optional-catalog runtime.",
+      "The 3338585 slice passed 1,102 focused Release tests (166 candidate and 936 door), then 11,247 impacted Catalogs + World.Eve tests, with no skips, using the process-only 3-GiB heap cap. Candidate evidence retains 157 exact-Python runtime-AST/binding vectors and four source pins; door evidence is separate. Independent source/security review approved, all three generators reproduced byte-identical artifacts and 53 related Python tests passed. These focused/impacted receipts are not full runtime, platform or official-source acceptance.",
+      "Internal OfflineBundleRuntimePreparation now connects the actual scripted source preparer, owned VerifiedBundleSource handles, native UnityTextAssetExtractor and all ten structural table decoders, without replacement decoder callbacks. Each asset uses only its exact manifest root plus listed complete dependency set, not recursive traversal or the union of all selected roots. Every table is extracted before raw decoding; original cache/source mutation cannot change owned bytes.",
+      "After decoding, versions are freshly observed, both complete manifest hash/byte responses are reread and compared, then versions are observed again. Same-owner/attempt checks and a final generation-lock return prevent invalidated/superseded late results. Returned data is only a historical scripted-source observation, not continuing server stability or official provenance.",
+      "A separate 32-MiB aggregate extracted-table ownership cap supplements 16-MiB per-table and 32-MiB acquired-source limits. This may reject source-valid large tables and is an explicit safety restriction. Missing/duplicate paths, late table errors, cancellation and stale attempts return no partial candidate. External PPtrs reject because this orchestrator does not infer an allowlist from dependency names.",
+      "100 focused Release passes comprise 19 new owned-flow contracts plus 81 existing BundleSource cases, with no skips, using the process-only 3-GiB cap. Ten genuine original UnityPy 1.25.4 writer/LZ4HC bundles plus evidence (11 files) regenerated identically; original ten payload hashes are pinned to the retained candidate fixture. Independent source/security review approved. This is orchestration evidence, not real-game/CDN/runtime admission or a new aggregate count."
     ],
     "outstanding_scope": [
-      "Production HTTPS and independently trusted provenance/freshness issuance remain absent. Only injected cache streams exist; production filesystem cache acquisition, receipts, previous-version reuse and atomic publication remain deferred. Complete extraction/decoding orchestration, load orchestration, runtime installation/current globals/activation, resource/session admission and command authority remain unported. Terminal source-byte verification is not a ready runtime and never substitutes observation-only CatalogKey for manifest-content identity.",
-      "The bounded UnityTextAssetExtractor now exists as a separate internal offline decoder with owned-writer fixture evidence. It is not connected to this runtime pipeline and supplies no provenance, admission or activation authority."
+      "The scripted owned-byte flow is connected, but no production HTTPS/filesystem source, official-origin/freshness credential, database-byte admission, static 1275 runtime hash/audited-count/recipe-count gates, persisted receipts, cache publication, optional catalogs or production runtime installation/current globals/activation is supplied. SourceStability is historical scripted reobservation; OfficialProvenance, DatabaseAdmission, RuntimeInstallation and Static1275Admission remain unavailable. No AccountSession, resource confirmation, login, command, Android/AOT or actual-game acceptance.",
+      "Offline event-portal reconciliation now exists separately, but is not installed into the ten-table candidate or owned-source flow. StageMap/EveDoorLinks bindings, broader route conflicts/coverage and travel authority remain outstanding. Caller maps/package labels/content hashes never override existing pins or grant admission."
     ]
   },
   {
@@ -612,8 +636,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/World/Portals/OfflineEventPortalProjector.cs",
+      "dotnet/Lala.Core/World/Portals/OfflineEventPortalProjection.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -633,11 +660,21 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Pure reconcile_event_portals is implemented for typed immutable EveDoorProjection/StageDataRow inputs and a carried-forward OfflineEventPortalProjection. Missing conveys or zero/unknown stage destinations revoke prior position/destination claims; all conditional targets are retained in sorted order and conditions are never executed. Multiple targets remain undecided rather than guessed.",
+      "Preserves source geometry, duplicate/zero index behavior and prior point/metadata behavior, including retaining a prior point outside newly calculated bounds. An incompatible prior destination removes its claims and creates a conflicting_event_destination issue; immutable issue state must be retained on later passes to prevent resurrecting the claim. The source in-place door/dictionary mutation is replaced with detached immutable positions/destinations/issues, not persistent storage.",
+      "Source cross-check field names such as DestinationVerified are geometric/referential observations, not official provenance or permission. Candidate construction and owned-source preparation do not automatically invoke this separate projector. Cancellation returns no new state and never mutates prior snapshots.",
+      "105 actual retained-Python synthetic cases plus three contracts pass as 108 focused tests; 5,521 impacted Eve/World/RuntimeCandidate tests also passed. Source fingerprints for event, boundary, portal-evidence and door helpers and deterministic compressed/decoded fixture hashes are retained; independent review approved. Tests compare all source-present fields and row/array counts, while typed optional fields remain explicit. No full dynamic-Python object or official-resource/runtime acceptance is claimed."
+    ],
+    "outstanding_scope": [
+      "The typed immutable API is not arbitrary Python dictionaries, mutation aliases or an open-ended metadata contract. Callers must carry the returned Issues state forward; discarding it is not source-equivalent repeated reconciliation. No optional portal-catalog promotion, runtime integration/admission, route execution, server-confirmed transfers, UI/Android call site, network, installation or travel/packet authority.",
+      "StageMap/EveDoorLinks bindings, boundary matching, broader reconcile_route_conflicts and route coverage are separate unported work; event-destination conflicts here do not complete those modules."
+    ]
   },
   {
     "id": "desktop:wlre/services/world/feature_resource_index.py",
@@ -1148,10 +1185,11 @@
     },
     "migrated_scope": [
       "Binary ItemData reader, legacy base fields, reviewed digest-pinned 1296 fields and validation.",
-      "Internal source-adapter-only ordered/diagnosed parsing reuses the existing layout, preserves the independent fixed 1296 hash and does not inherit the outer contract package version. Source input/count/checkpoint/read/error observations and ordered rows are covered within the 601 adapter vectors; 2,274 focused tests include existing catalog regressions. Existing public signatures, frozen-map results, gate order and diagnostic behavior remain unchanged."
+      "Internal source-adapter-only ordered/diagnosed parsing reuses the existing layout, preserves the independent fixed 1296 hash and does not inherit the outer contract package version. Source input/count/checkpoint/read/error observations and ordered rows are covered within the 601 adapter vectors; 2,274 focused tests include existing catalog regressions. Existing public signatures, frozen-map results, gate order and diagnostic behavior remain unchanged.",
+      "A separate internal ParseForRuntimeCandidate path now retains insertion order and existing ItemData diagnostics while forwarding the actual package version through the unchanged public version policy/fixed 1296 pin. Unlike the source-adapter path, it does not omit that version. Positive synthetic candidates use the real legacy policy; synthetic 1296 bytes reject. No public parser behavior or reviewed-source pin is relaxed."
     ],
     "outstanding_scope": [
-      "Runtime loader/activation and actual official-resource successful parse acceptance remain unverified. Public/global ItemData diagnostic instrumentation, including nested observations in normal-attack/combat builders, remains absent; the new internal adapter-only path does not close those gaps. Existing public/shared-reader truncation behavior is preserved. Caller-supplied adapter hashes cannot unlock reviewed ItemData fields or bypass its fixed pin."
+      "Runtime loader/activation and actual official-resource successful parse acceptance remain unverified. Public/global ItemData diagnostic instrumentation, including nested observations in normal-attack/combat builders, remains absent; the internal adapter/candidate paths do not close those gaps. Existing public/shared-reader truncation behavior is preserved. Caller-supplied adapter hashes cannot unlock reviewed ItemData fields or bypass its fixed pin."
     ]
   },
   {

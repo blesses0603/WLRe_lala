@@ -693,7 +693,8 @@
     "status": "partially_migrated",
     "target_files": [
       "dotnet/Lala.Core/Resources/BundleSources/BundleSourcePlan.cs",
-      "dotnet/Lala.Core/Resources/BundleSources/BundleSourcePreparation.cs"
+      "dotnet/Lala.Core/Resources/BundleSources/BundleSourcePreparation.cs",
+      "dotnet/Lala.Core/Resources/BundleSources/OfflineBundleRuntimePreparation.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -767,7 +768,8 @@
     "migrated_scope": [
       "Only planning for the ten exact DataPackage runtime paths and scripted bounded acquisition is connected. Each selected root contributes its complete DependIDs set once; dependencies excluding roots precede roots, each group sorted by bundle name. Cycles/self-references/repeated IDs are not recursively traversed or rejected merely as graph cycles. Whole-index bundle added/modified/removed counts compare resolved dependency names, tags, encryption, Unity CRC and file identity.",
       "The runtime-specific download ceilings are 24 files/32 MiB, checked before any bundle acquisition; these are not the generic execute_update_plan defaults. An additional conservative 32-MiB retained-byte cap covers both downloads and cache hits. MainPackage is independently parsed and identity-checked before required DataPackage bundles can be acquired.",
-      "Combined source-preparation evidence: 37 retained actual-Python manifest/plan cases plus 44 contracts, totaling 81 new focused tests. The 350-test Resources pass includes existing tests; these are not 350 new cases. Six CRLF-only source hashes, complete manifest fields, exact plan order and synthetic byte checksums are retained. Invalid cases use typed failures rather than claiming exact Python exception text; no newer full Core receipt is implied."
+      "Combined source-preparation evidence: 37 retained actual-Python manifest/plan cases plus 44 contracts, totaling 81 new focused tests. The 350-test Resources pass includes existing tests; these are not 350 new cases. Six CRLF-only source hashes, complete manifest fields, exact plan order and synthetic byte checksums are retained. Invalid cases use typed failures rather than claiming exact Python exception text; no newer full Core receipt is implied.",
+      "The connected offline flow additionally retains an exact per-asset source set: distinct listed dependencies sorted by name, excluding the root, then that root. These complete sets are not recursively expanded; extraction never scans unrelated roots from the overall ten-asset union. The 19 new flow contracts include dependency isolation and duplicate-path behavior."
     ],
     "outstanding_scope": [
       "Generic arbitrary-selector planning, previous verified manifest discovery, historical receipt scanning, cross-version bundle reuse, production execution/HTTPS and filesystem cache publication remain unported. This is not complete execute_update_plan, extraction, resource activation or trusted admission. The internal seam performs no cache writes or partial-file creation."
@@ -864,7 +866,8 @@
     "status": "partially_migrated",
     "target_files": [
       "dotnet/Lala.Core/Resources/BundleSources/YooAssetManifest.cs",
-      "dotnet/Lala.Core/Resources/BundleSources/BundleSourcePreparation.cs"
+      "dotnet/Lala.Core/Resources/BundleSources/BundleSourcePreparation.cs",
+      "dotnet/Lala.Core/Resources/BundleSources/OfflineBundleRuntimePreparation.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -962,10 +965,11 @@
     "migrated_scope": [
       "Partial manifest retrieval/identity checks use an internal scripted source for DataPackage and MainPackage. Exact response location/status precede length/body checks; eight ASCII hex hash bytes, bounded manifest bytes and little-endian CRC32 must match before actual binary parsing and header/package/version/output-style checks. Both complete manifests and versions are reread at the end, rejecting same-version byte replacement as well as version changes.",
       "Manifest-content identity matches the existing canonical ManifestIdentity structure using actual parsed fields, not the observation-only CatalogKey. The existing ManifestIdentity API is unchanged; owned bytes and attempt checks prevent stale result reuse.",
-      "Combined source-preparation evidence: 37 retained actual-Python manifest/plan cases plus 44 contracts, totaling 81 new focused tests. The 350-test Resources pass includes existing tests; these are not 350 new cases. Six CRLF-only source hashes, complete manifest fields, exact plan order and synthetic byte checksums are retained. Invalid cases use typed failures rather than claiming exact Python exception text; no newer full Core receipt is implied."
+      "Combined source-preparation evidence: 37 retained actual-Python manifest/plan cases plus 44 contracts, totaling 81 new focused tests. The 350-test Resources pass includes existing tests; these are not 350 new cases. Six CRLF-only source hashes, complete manifest fields, exact plan order and synthetic byte checksums are retained. Invalid cases use typed failures rather than claiming exact Python exception text; no newer full Core receipt is implied.",
+      "After decoding, versions are freshly observed, both complete manifest hash/byte responses are reread and compared, then versions are observed again. Same-owner/attempt checks and a final generation-lock return prevent invalidated/superseded late results. Returned data is only a historical scripted-source observation, not continuing server stability or official provenance."
     ],
     "outstanding_scope": [
-      "Production HTTPS/origin authentication, trusted source/freshness receipts, cached-manifest receipt reads/writes, atomic persistence and public provenance issuance remain unported. The scripted source and matching CRC/hash values do not establish official manifest authenticity or runtime admission. No filesystem root/cache publication/extractor is supplied."
+      "Production HTTPS/origin authentication, trusted source/freshness receipts, cached-manifest receipt reads/writes, atomic persistence and public provenance issuance remain unported. The scripted source and matching CRC/hash values do not establish official manifest authenticity or runtime admission. No filesystem root/cache publication or production source is supplied. The native extractor is connected only through the separate scripted offline flow."
     ]
   },
   {
@@ -1308,7 +1312,9 @@
       "dotnet/Lala.Core/Catalogs/CatalogReader.cs",
       "dotnet/Lala.Core/Catalogs/TalkDataParser.cs",
       "dotnet/Lala.Core/Catalogs/ExpeditionCatalogParser.cs",
-      "dotnet/Lala.Core/Catalogs/ExpeditionWireReader.cs"
+      "dotnet/Lala.Core/Catalogs/ExpeditionWireReader.cs",
+      "dotnet/Lala.Core/Catalogs/RuntimeCandidateBindings.cs",
+      "dotnet/Lala.Core/World/Eve/EveDoorParser.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -1413,10 +1419,11 @@
       "Automatic optional in-memory TextData/NPC quote diagnostics retain text-v1 and npc-battle-talk-known-v1 schemas, parser IDs, input names, digests, counts and failure cursors in 295 actual decorated-Python vectors. The internal span helper accepts an optional code-owned input name: existing raw defaults remain unchanged, and TextData uses text_data. The quote builder remains undecorated; error type labels use CatalogDecodeException.",
       "Optional Smith/Stage diagnostics preserve smith-33-v1, smith-35-v1, smith-reviewed-v1 and stage-76-v1 parser schemas, data input names, counts, digests and failure locations across 768 actual decorated-Python vectors. Nested Smith 33-byte successes are suppressed, child failures remain separate, and selector outer locations retain only the source child offset rather than copying child field/record metadata. Timed marking is undecorated; these schemas do not certify source provenance.",
       "Catalog source adapters add catalog-contract-v1/catalog-set-v1 observations and an internal adapter-only ItemData diagnosed/ordered path. Within 601 actual decorated-Python vectors, feature results count as null and selected sets as five; nested successes are suppressed, child failures stay separate, outer wrapping retains exact generic messages without child cursors or inner payloads. Existing public ItemData diagnostic behavior is unchanged.",
-      "Talk and expedition catalog/NPC parsers now retain talk-v1, adventure-v1 and npc-career-v1 source IDs/schemas, exact named input digests, cursor/checkpoints and nested observation order within 1,239 actual-Python vectors. Attach/six-source composition add no aggregate decorator. NPC strict Unicode failures retain DecoderFallbackException as the typed counterpart of uncaught UnicodeDecodeError; its platform-specific codec message is not asserted. Cancellation returns no partial catalog and adds no parser failure."
+      "Talk and expedition catalog/NPC parsers now retain talk-v1, adventure-v1 and npc-career-v1 source IDs/schemas, exact named input digests, cursor/checkpoints and nested observation order within 1,239 actual-Python vectors. Attach/six-source composition add no aggregate decorator. NPC strict Unicode failures retain DecoderFallbackException as the typed counterpart of uncaught UnicodeDecodeError; its platform-specific codec message is not asserted. Cancellation returns no partial catalog and adds no parser failure.",
+      "Door parsing adds eve-1275-pinned/eve-doors-v115 observations with exact source messages/checkpoints in 928 actual-Python vectors, separately identifying one retained-budget safety divergence and typed exception labels. Runtime recipe composition adds runtime-recipes-v1 counts/errors/nested offsets in candidate vectors. Internal candidate ItemData reuses source diagnostics with the actual public package policy; no candidate-wide decorator is invented."
     ],
     "outstanding_scope": [
-      "Filesystem/atomic persistence, default paths, registry/signature binding, traceback-local inference, public/global ItemData and SkillData/remaining parser instrumentation, and runtime catalog integration remain. Internal adapter-only ItemData observations do not close existing normal-attack/combat nested diagnostic gaps. All parser/adapter observations remain non-authorizing; reports never activate assets or commands."
+      "Filesystem/atomic persistence, default paths, registry/signature binding, traceback-local inference, public/global ItemData and SkillData/remaining parser instrumentation, and runtime catalog integration remain. Internal adapter/candidate ItemData observations do not close existing normal-attack/combat nested diagnostic gaps. All parser/adapter observations remain non-authorizing; reports never activate assets or commands."
     ]
   },
   {
@@ -2261,8 +2268,10 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/World/Portals/OfflineEventPortalProjector.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -2308,11 +2317,18 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Only touch_bounds and door_anchor geometry is reused inside the separate typed event projector: sign types 1/4 strict rectangles, ratio range 1–255 and 0–65535 positions. Signed long arithmetic converts uint coordinates before subtracting one, so zero cannot wrap; event-specific line and point fallback remains in the event projector.",
+      "105 actual retained-Python synthetic cases plus three contracts pass as 108 focused tests; 5,521 impacted Eve/World/RuntimeCandidate tests also passed. Source fingerprints for event, boundary, portal-evidence and door helpers and deterministic compressed/decoded fixture hashes are retained; independent review approved. Tests compare all source-present fields and row/array counts, while typed optional fields remain explicit. No full dynamic-Python object or official-resource/runtime acceptance is claimed."
+    ],
+    "outstanding_scope": [
+      "matching_doors, boundary_portal_bindings, reconcile_touch_bindings and reconcile_route_conflicts remain unported. No StageMap/EveDoorLinks parser connection, boundary-route identity proof, route coverage, actual-resource acceptance, runtime/UI/session/Android integration or movement authority. The helper subset uses typed parser values, not arbitrary Python value combinations."
+    ]
   },
   {
     "id": "desktop:wlre/services/world/bundle_runtime_1275.py",
@@ -2329,7 +2345,13 @@
       "dotnet/Lala.Core/Resources/BundleSources/BundleSourcePreparation.cs",
       "dotnet/Lala.Core/Catalogs/OfflineRuntimeTableDecoder.cs",
       "dotnet/Lala.Core/Catalogs/ExpeditionCatalogModels.cs",
-      "dotnet/Lala.Core/Catalogs/ExpeditionCatalogParser.cs"
+      "dotnet/Lala.Core/Catalogs/ExpeditionCatalogParser.cs",
+      "dotnet/Lala.Core/Catalogs/OfflineRuntimeCandidate.cs",
+      "dotnet/Lala.Core/Catalogs/RuntimeCandidateBindings.cs",
+      "dotnet/Lala.Core/World/Eve/EveDoorParser.cs",
+      "dotnet/Lala.Core/World/Eve/EveDoorProjection.cs",
+      "dotnet/Lala.Core/World/Eve/EveDoorCp950.cs",
+      "dotnet/Lala.Core/Resources/BundleSources/OfflineBundleRuntimePreparation.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -2412,15 +2434,23 @@
       "live_server_acceptance": "not_run"
     },
     "migrated_scope": [
-      "Required-source preparation from sync_pinned_runtime_bundles is partially composed: exact ten names and Assets/ResourcesBuild/Data/<name>.bytes paths from DataPackage, both-package manifest validation, source quotas, complete-set dependency order, injected cache/download stream verification and immutable owned source handles. The terminal status is required bundle sources verified; extractor unavailable.",
+      "Required-source preparation from sync_pinned_runtime_bundles is partially composed: exact ten names and Assets/ResourcesBuild/Data/<name>.bytes paths from DataPackage, both-package manifest validation, source quotas, complete-set dependency order, injected cache/download stream verification and immutable owned source handles. The source-only terminal status is now required bundle sources verified; no runtime candidate built; the separate internal flow below performs structural construction.",
       "Combined source-preparation evidence: 37 retained actual-Python manifest/plan cases plus 44 contracts, totaling 81 new focused tests. The 350-test Resources pass includes existing tests; these are not 350 new cases. Six CRLF-only source hashes, complete manifest fields, exact plan order and synthetic byte checksums are retained. Invalid cases use typed failures rather than claiming exact Python exception text; no newer full Core receipt is implied.",
       "The separate OfflineRuntimeTableDecoder now composes only supplied Talk, Text, Adventure, AdventureLv, NPC and career bytes in their relative source parse order. Each source is checked at its stage for presence and a 16-MiB ceiling; unrelated keys are ignored. Runtime name binding requires nonblank names and at most 8192 Unicode codepoints for name/area, including Python whitespace U+001C–U+001F. It adds NPC/career hashes to Adventure hashes, not an invented TextData hash.",
       "Strict name-binding parity executes the exact source AST block while excluding enclosing fixed-source/hash/count gates, caches and activation. Trusted revision/source labels are removed only when comparing this block with the intentionally unverified C# result. SourceKind is supplied_offline_tables; verified-provenance, assets-ready, send and runtime-admitted flags are always false.",
-      "Required-table slice: 1,256 unique focused Release passes comprise 1,239 actual decorated-Python vectors, five source-hash checks and twelve contracts. Sixteen compressed/decoded-hash-checked resources retain truncations, full field/result order, diagnostics, source precedence and accepted maximum-record recipes with complete ordered typed-binary result digests. Independent final review approved; three generations reproduced identical resources. This is not full runtime/device/server acceptance."
+      "Required-table slice: 1,256 unique focused Release passes comprise 1,239 actual decorated-Python vectors, five source-hash checks and twelve contracts. Sixteen compressed/decoded-hash-checked resources retain truncations, full field/result order, diagnostics, source precedence and accepted maximum-record recipes with complete ordered typed-binary result digests. Independent final review approved; three generations reproduced identical resources. This is not full runtime/device/server acceptance.",
+      "OfflineRuntimeCandidateDecoder now separately composes the dynamic branch structural statements over ten owned supplied tables in extraction order: Eve, ItemData_C, TalkData_C, TextData_C, SmithData_C, ScenesData_C, AdventureData_C, AdventureLvData_C, NpcData_C, NpcCareerData_C. Missing/empty inputs differ; each source is capped at 16 MiB and unrelated keys, including claimed provenance, are ignored. This is not the source loader or static 1275 admission branch.",
+      "Construction preserves combined-then-per-feature full-Eve fallback, public ItemData version policy/fixed 1296 pin and ordered rows, shop forms 2/3 kind-3 database-kind-2/item references, Talk/Text/recipes/scenes, separate door projection, then nonempty scene/talk/text checks, expedition/career/NPC and strict names. No invented Eve-NPC-to-expedition-NPC join or convey route validation. Existing immutable raw parsers retain field coverage; new fixtures focus on stage/error order, relationships, hashes and linked values.",
+      "RequiredTablesStructurallyComplete reports only successful local construction. SourceKind remains supplied_offline_tables; provenance/runtime-admitted/assets-ready/send flags remain false. Every required source is copied, cancellation/error returns no candidate, and returned candidates cannot be mutated by later input changes. Optional catalogs including SkillData, portals, images, daily/guild/Ark/combat/instances remain unavailable.",
+      "The 3338585 slice passed 1,102 focused Release tests (166 candidate and 936 door), then 11,247 impacted Catalogs + World.Eve tests, with no skips, using the process-only 3-GiB heap cap. Candidate evidence retains 157 exact-Python runtime-AST/binding vectors and four source pins; door evidence is separate. Independent source/security review approved, all three generators reproduced byte-identical artifacts and 53 related Python tests passed. These focused/impacted receipts are not full runtime, platform or official-source acceptance.",
+      "Internal OfflineBundleRuntimePreparation now connects the actual scripted source preparer, owned VerifiedBundleSource handles, native UnityTextAssetExtractor and all ten structural table decoders, without replacement decoder callbacks. Each asset uses only its exact manifest root plus listed complete dependency set, not recursive traversal or the union of all selected roots. Every table is extracted before raw decoding; original cache/source mutation cannot change owned bytes.",
+      "After decoding, versions are freshly observed, both complete manifest hash/byte responses are reread and compared, then versions are observed again. Same-owner/attempt checks and a final generation-lock return prevent invalidated/superseded late results. Returned data is only a historical scripted-source observation, not continuing server stability or official provenance.",
+      "A separate 32-MiB aggregate extracted-table ownership cap supplements 16-MiB per-table and 32-MiB acquired-source limits. This may reject source-valid large tables and is an explicit safety restriction. Missing/duplicate paths, late table errors, cancellation and stale attempts return no partial candidate. External PPtrs reject because this orchestrator does not infer an allowlist from dependency names.",
+      "100 focused Release passes comprise 19 new owned-flow contracts plus 81 existing BundleSource cases, with no skips, using the process-only 3-GiB cap. Ten genuine original UnityPy 1.25.4 writer/LZ4HC bundles plus evidence (11 files) regenerated identically; original ten payload hashes are pinned to the retained candidate fixture. Independent source/security review approved. This is orchestration evidence, not real-game/CDN/runtime admission or a new aggregate count."
     ],
     "outstanding_scope": [
-      "No full sync_pinned_runtime_bundles production/cache integration or load_verified_bundle_runtime. The six-table decoder does not implement full ten-table assembly, Eve door projection, fixed-version runtime hash/count policy, Unity extraction orchestration, normalized storage, trusted provenance, install/activation, freshness/admission, login or commands. Source-preparation types remain internal; the separate supplied-table decoder is explicitly unverified and cannot override existing pins.",
-      "The bounded UnityTextAssetExtractor now exists as a separate internal offline decoder with owned-writer fixture evidence. It is not connected to this runtime pipeline and supplies no provenance, admission or activation authority."
+      "The scripted owned-byte flow is connected, but no production HTTPS/filesystem source, official-origin/freshness credential, database-byte admission, static 1275 runtime hash/audited-count/recipe-count gates, persisted receipts, cache publication, optional catalogs or production runtime installation/current globals/activation is supplied. SourceStability is historical scripted reobservation; OfficialProvenance, DatabaseAdmission, RuntimeInstallation and Static1275Admission remain unavailable. No AccountSession, resource confirmation, login, command, Android/AOT or actual-game acceptance.",
+      "Offline event-portal reconciliation now exists separately, but is not installed into the ten-table candidate or owned-source flow. StageMap/EveDoorLinks bindings, broader route conflicts/coverage and travel authority remain outstanding. Caller maps/package labels/content hashes never override existing pins or grant admission."
     ]
   },
   {

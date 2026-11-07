@@ -1637,8 +1637,10 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/World/Portals/OfflineEventPortalProjector.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1684,8 +1686,8 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
     },
@@ -1693,7 +1695,14 @@
       "desktop_source": "wlre/services/world/boundary_portals.py",
       "identical_source": true,
       "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
-    }
+    },
+    "migrated_scope": [
+      "Only touch_bounds and door_anchor geometry is reused inside the separate typed event projector: sign types 1/4 strict rectangles, ratio range 1–255 and 0–65535 positions. Signed long arithmetic converts uint coordinates before subtracting one, so zero cannot wrap; event-specific line and point fallback remains in the event projector.",
+      "105 actual retained-Python synthetic cases plus three contracts pass as 108 focused tests; 5,521 impacted Eve/World/RuntimeCandidate tests also passed. Source fingerprints for event, boundary, portal-evidence and door helpers and deterministic compressed/decoded fixture hashes are retained; independent review approved. Tests compare all source-present fields and row/array counts, while typed optional fields remain explicit. No full dynamic-Python object or official-resource/runtime acceptance is claimed."
+    ],
+    "outstanding_scope": [
+      "matching_doors, boundary_portal_bindings, reconcile_touch_bindings and reconcile_route_conflicts remain unported. No StageMap/EveDoorLinks parser connection, boundary-route identity proof, route coverage, actual-resource acceptance, runtime/UI/session/Android integration or movement authority. The helper subset uses typed parser values, not arbitrary Python value combinations."
+    ]
   },
   {
     "id": "android:wlre/services/world/bundle_runtime_1275.py",
@@ -2513,8 +2522,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/World/Portals/OfflineEventPortalProjector.cs",
+      "dotnet/Lala.Core/World/Portals/OfflineEventPortalProjection.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -2534,8 +2546,8 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
     },
@@ -2543,7 +2555,17 @@
       "desktop_source": "wlre/services/world/event_portals.py",
       "identical_source": true,
       "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
-    }
+    },
+    "migrated_scope": [
+      "Pure reconcile_event_portals is implemented for typed immutable EveDoorProjection/StageDataRow inputs and a carried-forward OfflineEventPortalProjection. Missing conveys or zero/unknown stage destinations revoke prior position/destination claims; all conditional targets are retained in sorted order and conditions are never executed. Multiple targets remain undecided rather than guessed.",
+      "Preserves source geometry, duplicate/zero index behavior and prior point/metadata behavior, including retaining a prior point outside newly calculated bounds. An incompatible prior destination removes its claims and creates a conflicting_event_destination issue; immutable issue state must be retained on later passes to prevent resurrecting the claim. The source in-place door/dictionary mutation is replaced with detached immutable positions/destinations/issues, not persistent storage.",
+      "Source cross-check field names such as DestinationVerified are geometric/referential observations, not official provenance or permission. Candidate construction and owned-source preparation do not automatically invoke this separate projector. Cancellation returns no new state and never mutates prior snapshots.",
+      "105 actual retained-Python synthetic cases plus three contracts pass as 108 focused tests; 5,521 impacted Eve/World/RuntimeCandidate tests also passed. Source fingerprints for event, boundary, portal-evidence and door helpers and deterministic compressed/decoded fixture hashes are retained; independent review approved. Tests compare all source-present fields and row/array counts, while typed optional fields remain explicit. No full dynamic-Python object or official-resource/runtime acceptance is claimed."
+    ],
+    "outstanding_scope": [
+      "The typed immutable API is not arbitrary Python dictionaries, mutation aliases or an open-ended metadata contract. Callers must carry the returned Issues state forward; discarding it is not source-equivalent repeated reconciliation. No optional portal-catalog promotion, runtime integration/admission, route execution, server-confirmed transfers, UI/Android call site, network, installation or travel/packet authority.",
+      "StageMap/EveDoorLinks bindings, boundary matching, broader reconcile_route_conflicts and route coverage are separate unported work; event-destination conflicts here do not complete those modules."
+    ]
   },
   {
     "id": "android:wlre/services/world/feature_resource_index.py",

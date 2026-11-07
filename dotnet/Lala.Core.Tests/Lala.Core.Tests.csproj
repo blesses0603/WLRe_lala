@@ -16,4 +16,6 @@
 <ItemGroup><EmbeddedResource Include="Resources/UnityTextAssets/Fixtures/*" LogicalName="Lala.Core.Tests.Resources.UnityTextAssets.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
 <ItemGroup><EmbeddedResource Include="Resources/BundleSources/bundle_sources.json" LogicalName="Lala.Core.Tests.Resources.BundleSources.bundle_sources.json" WithCulture="false"/></ItemGroup>
 <ItemGroup><EmbeddedResource Include="Catalogs/RequiredTables/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.Catalogs.RequiredTables.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Catalogs/RuntimeCandidate/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.Catalogs.RuntimeCandidate.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Resources/RuntimeFlow/Fixtures/*" LogicalName="Lala.Core.Tests.Resources.RuntimeFlow.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
 </Project>

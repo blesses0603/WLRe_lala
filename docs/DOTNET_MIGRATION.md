@@ -686,9 +686,9 @@ Focused Resources verification passed **350 tests**, including **81 new tests**:
 complete parsed fields, exact ordering and synthetic checksums remain pinned. These
 fixtures use allowlisted in-memory HTTP responses and small synthetic payloads, not
 actual Unity bundles. Independent review resolved final-observation and unsafe portable
-filesystem-adapter issues. The terminal status is exactly “required bundle sources
-verified; extractor unavailable.” This source-preparation slice remains internal and
-is not wired to the separate extractor described below. No runtime installation/activation,
+filesystem-adapter issues. The source-only status is now “required bundle sources
+verified; no runtime candidate built.” The separate internal owned flow described
+below connects this preparer to the native extractor and ten-table decoder. No runtime installation/activation,
 freshness/admission credential, `AssetsReady` value, login or packet authority is supplied. The later integrated source-preparation receipt is
 recorded below, separately from newer raw-table work. See
 [bundle-source scope and evidence](../dotnet/Lala.Core.Tests/Resources/BundleSources/README.md).
@@ -730,9 +730,9 @@ payloads or class databases are retained.
 A separate read-only local audit found 22 DataPackage bundles with UnityFS 8,
 Unity 2021.3.45f2, SerializedFile 22, embedded class 49/142 trees, header `0x243` and
 244 LZ4HC blocks. This is metadata compatibility evidence, not actual-game C#
-extraction acceptance. Source-preparation orchestration, catalog/runtime installation,
-provenance/admission, Desktop application execution and Android/AOT remain unverified
-or unconnected. No resources, login or commands are enabled. See
+extraction acceptance. Internal source-to-extraction orchestration is now connected
+as described below; production catalog/runtime installation, provenance/admission,
+Desktop application execution and Android/AOT remain unverified or unconnected. No resources, login or commands are enabled. See
 [Unity extraction scope and evidence](../dotnet/Lala.Core.Tests/Resources/UnityTextAssets/README.md).
 
 `TalkDataParser` now ports only `npc_talk.py`'s `parse_talk_data`: signed counts,
@@ -772,10 +772,125 @@ Unicode decode error maps to `DecoderFallbackException` without asserting its pl
 codec message. Attach/composition invent no diagnosed parser.
 
 The result is labeled `supplied_offline_tables`; provenance, assets-ready, send and
-runtime-admitted flags stay false. Existing pins are unchanged. Six supplied tables
-do not establish a full ten-table runtime, Eve doors, extraction, source admission,
-installation, cache, transport/login, UI/Android or official-resource acceptance.
+runtime-admitted flags stay false. Existing pins are unchanged. This six-source API remains separate
+from the newer ten-table structural candidate and door projection below. Neither
+constitutes source admission, installation, cache, transport/login, UI/Android or
+official-resource acceptance.
 See [required raw-table scope and evidence](../dotnet/Lala.Core.Tests/Catalogs/RequiredTables/README.md).
+
+`OfflineRuntimeCandidateDecoder` now composes the **dynamic structural branch** into
+one owned, immutable ten-table candidate. It snapshots Eve, ItemData, Talk, Text,
+Smith, Scenes, Adventure, AdventureLv, NPC and career sources in extraction order,
+distinguishes missing from empty, caps each at 16 MiB and ignores extra keys, including
+claimed provenance. Full Eve parsing keeps its combined-then-per-feature failure
+fallback. The new internal ItemData candidate path retains insertion order and source
+diagnostics while applying the unchanged public package-version policy and fixed
+1296 hash. Synthetic success uses the actual legacy policy; synthetic 1296 inputs reject.
+
+Shop forms 2/3 with kind-3 offers must reference database kind 2 and an owned ItemData
+row. Dynamic Smith 33/35 recipes validate every product/material against those same
+items, reject zero material counts and retain exact OpenUsed bytes. All recipe
+identities remain ordered; duplicate products, including conditional recipes, are
+excluded only from the product lookup. Scene parsing precedes door projection and
+nonempty scene/talk/text checks. Expedition/career/NPC and strict runtime names follow.
+No source rule joins Eve NPC IDs to expedition NPC IDs, so no such join is invented.
+`bind_scene_names` skips invalid/missing labels with Python strip/codepoint rules;
+`source_scene_label` remains unported.
+
+`EveDoorParser` is deliberately separate from the stricter full Eve parser. Public
+`ParsePinned1275` checks the original fixed SHA before layout checks and requires
+1,262 scenes; only an internal layout path supports synthetic composition. Ordered
+geometry, original name bytes, strict CP950 names, repeated event references,
+PlayerTouch records, unsigned conditions, signed effects, conditional convey transfers
+and missing convey IDs remain. Destination zero is retained; `DestinationDecoded`
+means referential decoding, not route validity or travel permission. Source-supported
+overlapping windows, skipped NPC behavior and group/convey-only directory checks
+are preserved rather than replaced with full-Eve validation.
+
+Door limits include 32-MiB input, 4,096 scenes and source per-scene record/count limits.
+An additional 1,000,000 retained-unit ceiling bounds repeated windows and references:
+one of **928 actual-Python door vectors** documents a source-valid safety rejection,
+not parity. The lazy 39,564-byte code-owned CP950 mapping is checked against all
+**65,792** single-/double-byte Python outcomes. Cancellation and immutable outputs
+prevent partial or caller-mutable results; no actual official pinned success is claimed.
+
+The candidate is not `load_verified_bundle_runtime` or static 1275 admission. Static
+Eve/adventure hashes, audited counts and the static recipe-count gate are not implemented
+by it. `RequiredTablesStructurallyComplete` means only local construction succeeded;
+provenance, runtime-admitted, assets-ready and send flags remain false. Fresh official
+source provenance/freshness, database-byte admission and runtime installation remain
+missing. The newer scripted flow below connects owned extraction-to-table decoding
+and post-decode reobservation without supplying those credentials. Optional SkillData,
+portal metadata, images, daily/guild/Ark/combat and other catalogs remain unavailable.
+A separate event-portal projector is now available below, but is not installed into
+this candidate. StageMap/EveDoorLinks bindings, broader route conflicts/coverage,
+session/UI/Android and command activation remain outstanding.
+
+**1,102 focused tests** passed (166 candidate and 936 door), then **11,247 impacted
+Catalogs + World.Eve tests**, without skips, using the process-only **3 GiB** heap cap.
+Candidate evidence retains **157** exact runtime-AST/binding vectors and four source
+pins. Its in-memory callback is not a database, and its oracle excludes source
+verification, extraction, caches, optional features and activation. Independent
+source/security review approved; all three generators reproduced identical artifacts
+and **53** related Python tests passed. These are focused/impacted receipts, not an
+aggregate or official-resource acceptance claim. See
+[ten-table candidate scope](../dotnet/Lala.Core.Tests/Catalogs/RuntimeCandidate/README.md)
+and [door projection evidence](../dotnet/Lala.Core.Tests/World/Eve/EveDoorREADME.md).
+
+`OfflineBundleRuntimePreparation` now connects the real internal source preparer,
+owned bundle handles, native extractor and all ten structural decoders without a
+replacement-decoder callback. Each asset uses its own exact manifest root plus its
+listed complete dependency set, not recursive expansion or every selected runtime
+root. Unrelated containers cannot change duplicate-path semantics. Every required
+TextAsset is extracted before any table is parsed, in the original ten-table order.
+A separate conservative **32-MiB aggregate extracted-table cap** supplements existing
+per-table/native/acquired-source limits. It can reject unusually large source-valid
+tables and is an explicit safety restriction, not parity. External PPtrs reject;
+manifest dependencies do not invent an allowlist.
+
+After successful decoding, the flow observes versions, rereads both complete manifest
+hash/byte responses, compares original parsed content and observes versions again.
+Owner/attempt checks and a final generation-lock return reject late superseded or
+invalidated operations. The result is a historical scripted observation, not a
+promise of future server stability. Cache streams are not reopened for extraction;
+all bytes are owned and errors/cancellation return no partial result or mutation of
+an earlier candidate. Official provenance, database admission, static 1275 admission
+and runtime installation remain explicitly unavailable. There is still no production
+HTTP/filesystem source, cache publication, database receipt or AccountSession change.
+
+**100 focused Release passes** comprise **19 new flow contracts plus 81 existing
+BundleSource cases**. Genuine owned UnityPy 1.25.4 / LZ4HC fixtures cover split roots,
+exact dependency isolation, missing/duplicate paths, external references, late raw
+decoder errors, aggregate limits, source mutation and post-decode invalidation.
+All **11 fixture files** regenerated identically; independent source/security review
+approved. This uses the process-only **3 GiB** heap cap and is not actual-game/CDN or
+runtime acceptance. See [owned-flow scope and evidence](../dotnet/Lala.Core.Tests/Resources/RuntimeFlow/README.md).
+
+`OfflineEventPortalProjector` separately ports typed event-convey reconciliation.
+It retains every conditional destination without executing conditions. Missing
+conveys or zero/unknown-stage targets revoke prior position/destination claims;
+multiple targets remain undecided. Geometry preserves signed arithmetic before
+subtracting one, source rectangles/lines/anchors and the original prior-point behavior,
+including retaining a prior point outside new bounds. Conflicting prior destinations
+create an immutable `conflicting_event_destination` issue. Callers must carry this
+returned issue state forward so repeated reconciliation cannot resurrect that claim.
+This replaces source in-place mutation with detached immutable state, not disk storage.
+
+Only `boundary_portals.py`'s `touch_bounds`/`door_anchor` and
+`portal_evidence_1275.py`'s `_projection_guard` are included. Broader boundary matching,
+StageMap/EveDoorLinks bindings, route conflicts and coverage remain unported. Fields
+such as `DestinationVerified` describe source cross-checks, not official trust or
+travel permission. The projector is not installed into the candidate or owned flow.
+Typed optional fields and immutable maps do not promise arbitrary Python dictionary
+or mutation-alias parity. Cancellation preserves prior state and returns no partial
+projection. No runtime, transport, installation or Android call site is added.
+
+The event slice passed **108 focused tests** (**105 actual-Python vectors plus three
+contracts**) and **5,521 impacted tests**. Deterministic fixtures pin event, boundary,
+portal-evidence and door sources; independent review approved. Tests retain every
+source-present field and row/array counts, including multi-pass conflict cases.
+See [event projector tests](../dotnet/Lala.Core.Tests/World/Eve/OfflineEventPortalTests.cs)
+and [retained Python fixture generator](../dotnet/Lala.Core.Tests/World/Eve/generate_event_portal_vectors.py).
 
 Eve v115 parsing now validates all eleven scene sections before exposing immutable
 NPC/interaction indexes. Versions, offsets, record/scene limits, skipped layouts,
@@ -807,8 +922,9 @@ a diagnostic session stays quiet; failure retains a safe observation without kee
 input bytes or exception messages. Normal-NPC, TextData, NPC quote and Smith/Stage
 instrumentation are now separately listed above; filesystem persistence, default paths,
 public/global ItemData, SkillData and remaining parser instrumentation and runtime
-catalog activation remain unimplemented. The adapter-only ItemData observations above
-do not close existing normal-attack/combat diagnostic gaps.
+catalog activation remain unimplemented. The internal adapter/candidate ItemData
+observations above do not close existing normal-attack/combat diagnostic gaps. Door and dynamic-recipe diagnostics now have
+the separately scoped source evidence described above.
 
 ### Latest incremental verification evidence
 
@@ -837,6 +953,9 @@ acceptance follows from these offline suites.
 | `fe5e61b` required bundle-source preparation | `BundleSourceParityTests.cs`, `BundleSourcePreparationTests.cs`, `bundle_sources.json` and `README.md` under `Lala.Core.Tests/Resources/BundleSources` | 350 focused Resources passes include 81 new tests: 37 actual-Python parser/plan vectors and 44 contracts. Six source pins and complete synthetic index/plan/checksum evidence remain; no production HTTPS/provenance, filesystem cache publication, extraction/runtime/admission or newer combined full count claimed. |
 | `3abe07a` required Talk/expedition tables | `RequiredTableParityTests.cs`, `RequiredTableBoundaryTests.cs`, `RequiredTableOracleCases.cs` and `README.md` under `Lala.Core.Tests/Catalogs/RequiredTables` | 1,256 unique focused Release passes: 1,239 retained actual-Python vectors, five source hashes and twelve contracts. Independent final review and three identical generations; no full ten-table runtime, source admission or newer aggregate count claimed. |
 | `daf4953` bounded UnityFS/TextAsset extraction | `UnityTextAssetTests.cs`, `UnityBoundariesTests.cs`, `UnityIndependentDecoderTests.cs` and `README.md` under `Lala.Core.Tests/Resources/UnityTextAssets` | 91 focused passes with genuine owned UnityPy writer fixtures and independent test-only AssetsTools.NET 3.0.5 byte decoding. Explicit format/ownership/aggregate-budget limits; local actual-resource metadata compatibility is not actual-game C# extraction, pipeline integration or Android/AOT acceptance. The later process-capped aggregate receipt is recorded below. |
+| `3338585` owned ten-table structural candidate and doors | `RuntimeCandidateTests.cs`, `RuntimeCandidateOracleCases.cs` and `README.md` under `Lala.Core.Tests/Catalogs/RuntimeCandidate`; `EveDoorTests.cs`, `EveDoorPythonVectors.cs` and `EveDoorREADME.md` under `Lala.Core.Tests/World/Eve` | 1,102 focused passes (166 candidate / 936 door) and 11,247 impacted passes, using the process-only 3-GiB cap. 157 candidate and 928 door Python vectors retain one explicit door-budget safety divergence; 53 related Python tests passed, independent review approved and three generators reproduced exactly. Structural completeness is not runtime admission; aggregate evidence follows below. |
+| `4d70eb0` owned source-to-runtime structural flow | `OfflineBundleRuntimePreparationTests.cs`, genuine owned UnityFS fixtures and `README.md` under `Lala.Core.Tests/Resources/RuntimeFlow` | 100 focused passes: 19 new contracts plus 81 existing BundleSource cases, under the process-only 3-GiB cap. Eleven retained fixture files regenerated identically; independent review approved. Post-decode scripted reobservation and owned extraction do not issue official provenance, admission or active-runtime authority. |
+| `1ebc354` separate immutable event-portal projection | `OfflineEventPortalTests.cs`, `EventPortalPythonVectors.cs` and `generate_event_portal_vectors.py` under `Lala.Core.Tests/World/Eve` | 108 focused passes (105 actual-Python vectors and three contracts), then 5,521 impacted passes; independent review and deterministic fixtures. Typed carried-forward issues preserve conflicts; no candidate installation, broader boundary reconciliation, route coverage or travel authority. |
 
 Inventory status remains partial for the subset modules below. Desktop `network/client.py`
 (internal receive only), `battle_commands.py`
@@ -847,14 +966,16 @@ reviewed resolver), `services/ark_candidate_data.py` (text-free reviewed index),
 `services/expedition/data.py` (TextData/task/level/NPC/name-binding subsets),
 `services/world/npc_battle_catalog.py`
 (offline quote parse/build), `services/world/preview_1275.py` (Smith 33-byte parsing
-only), `services/instance_catalog.py` (Stage parsing only) and
-`services/world/npc_talk.py` (Talk decoding only) and
-`services/world/unity_textasset.py` (bounded internal binary extraction) move from not migrated
+only), `services/instance_catalog.py` (Stage parsing only),
+`services/world/npc_talk.py` (Talk decoding only),
+`services/world/unity_textasset.py` (bounded internal binary extraction),
+`services/world/doors_1275.py` (bounded door projection) and
+`services/world/scene_names_1275.py` (typed scene-name binding only) move from not migrated
 to partially migrated. `services/world/smith_candidate.py` is ported offline for its
 three pure functions within the documented typed API. `services/world/catalog_adapters.py`
 is also ported offline for its bounded validation/composition surface; runtime
 integration and official-source acceptance remain separate. The summary is now
-569 not migrated, 123 partially migrated and 4 ported offline. Android inventory and
+560 not migrated, 132 partially migrated and 4 ported offline. Android inventory and
 reservation entries share identical source hashes and receive the same bounded evidence. Android network-client, combat-resource, battle-command,
 combat/display, Eve, expedition-data, preview, Smith-candidate, instance-catalog,
 ItemData and catalog-adapter hashes differ, so they stay unreconciled. The baseline has
@@ -867,7 +988,12 @@ The manifest-index tool's binary parser subset, `official_manifest_sync.py`,
 `world/dynamic_bundle_runtime.py` remains partial with expanded internal preparation
 scope. All six corresponding Android source hashes differ, so none is mirrored. The newer
 Talk/expedition/raw-runtime decoder and Unity TextAsset sources also differ from
-Android; they remain partial desktop evidence only.
+Android; they remain partial desktop evidence only. Door, dynamic-runtime and ItemData
+hashes also differ. The scene-name source hash is identical, so its narrow binding
+subset is mirrored to Android without claiming an Android call site or device pass.
+The event projector, boundary geometry and projection-guard subsets are also partial;
+all three corresponding Android source hashes are identical, so the same bounded
+evidence is mirrored. Their remaining module functions and runtime work are not complete.
 `IsCompleteState` remains false. The offline store, arithmetic solver and reviewed resolver do not establish Ark runtime
 persistence or command activation, and none of these slices establishes full migration
 or full runtime acceptance. Current combined verification is recorded below.
@@ -1022,8 +1148,8 @@ Retained Python runs **2,273 tests** with **216** existing skips in the establis
 test environment. Strict repository audit and whitespace checks pass. The earlier
 **37,918** receipt excludes this increment; **350 Resources** remains focused evidence,
 not a count of new tests. The project-resource merge retained both entries; no
-production behavior or test policy was relaxed. Remote CI for this candidate is
-pending publication. No genuine Unity extraction, production source provenance,
+production behavior or test policy was relaxed. This historical subset is included
+in the later published `231f894`; its remote CI status is recorded below. No genuine Unity extraction, production source provenance,
 secure filesystem cache publication, runtime admission or live transport/login is
 established by this result.
 
@@ -1035,8 +1161,8 @@ compiled assembly and a process-only `DOTNET_GCHeapHardLimit=0xC0000000` (**3 Gi
 Peak testhost RSS was **3,245,384 KiB**. This is a local, process-capped receipt, **not
 a standard-setting pass**. New standard runs ended in host termination without
 assertion failures; no unique root cause is established or claimed fixed. Repository
-and CI GC settings and parallel-execution policies remain unchanged, and remote
-standard CI remains pending.
+and CI GC settings and parallel-execution policies remain unchanged. The later
+published standard-setting remote receipt is recorded below.
 
 Test-only `d58d6a8` changes **55** pure `DeepEquals` assertion messages across **49
 files** to use the existing `LazyAssert`, deferring message construction until
@@ -1055,20 +1181,75 @@ entries are both preserved. This `d58d6a8` receipt excludes the later Unity extr
 No runtime admission follows from fixture registration or successful synthetic
 decoding; `IsCompleteState` remains false.
 
-### Integrated Unity extraction candidate verification through `daf4953` (8.0.17)
+### Integrated verification for published commit `231f894` (8.0.17)
 
-The integrated tree including the bounded Unity extractor passes **39,346 Core
+The integrated tree through `daf4953`, published as `231f894` with the same final
+`c99a136` tree, includes the bounded Unity extractor and passes **39,346 Core
 Release tests**, with **zero failures or skips**, under a process-only **3 GiB** heap
 budget. The build reports **zero warnings/errors**. This is a local process-capped
-result, not a standard-setting pass; standard remote CI remains pending. The prior
+result, not a standard-setting local pass; the completed standard-setting remote
+.NET receipt and pending Python workflow are recorded below. The prior
 **39,255** receipt excludes the extractor. No unique cause for the earlier standard
 host terminations is claimed fixed, and repository/CI GC policy is unchanged.
 
 Final local refreshes on `daf4953` pass **59/59 lifecycle tests**, Desktop Release
 with **zero warnings/errors** and **9 offline self-tests**. Retained Python runs
 **2,273 tests** with **216 existing skips**, and strict repository audit passes.
-These local receipts are separate from pending remote CI. The 91-test focused
+These local receipts remain separate from the remote CI results below. The 91-test focused
 extraction receipt and matching real metadata do not establish actual-game payload
-extraction, complete
-resource-pipeline wiring, runtime admission or Android/AOT acceptance.
+extraction, complete resource-pipeline wiring, runtime admission or Android/AOT acceptance.
 `IsCompleteState` remains false.
+
+Published `231f894` [.NET CI run 42416341780](https://github.com/blesses0603/WLRe_lala/actions/runs/42416341780)
+is fully green. Windows, macOS and Linux each pass **39,346 Core tests**, **59 lifecycle
+tests** and **9 Desktop self-tests** under standard settings, with Desktop reporting
+zero warnings/errors. The Android validation APK job also passes. This is the
+standard-setting remote .NET receipt; it does not change the process-capped settings
+of the local run or establish a unique cause for the earlier local host terminations.
+
+[Python CI run 42416341769](https://github.com/blesses0603/WLRe_lala/actions/runs/42416341769)
+completed with Windows and Ubuntu passing, but macOS failed the existing one-second
+SQLite bounded-wait assertion: **1.009152792 seconds** exceeded **1.0 second**.
+The single [macOS retry job 128537032310](https://github.com/blesses0603/WLRe_lala/actions/runs/42416341769/job/128537032310)
+also failed that assertion at **1.171469625 seconds**. The Python workflow is not
+green. No further reruns or threshold/production changes are claimed; observational
+diagnosis is underway and the timing cause is not fixed. These published-commit receipts exclude
+`3338585` and the later flow/event slices.
+
+### Integrated ten-table candidate verification through `3338585`
+
+The newer integrated tree passes **40,448 Core Release tests**, with **zero failures
+or skips** and **zero build warnings/errors**, under the process-only
+`DOTNET_GCHeapHardLimit=0xC0000000` (**3 GiB**). Repository GC/CI policy is unchanged.
+This is a local capped aggregate, not a standard-setting local pass or a new remote
+CI receipt. The earlier published **39,346** total excludes this increment.
+The full retained Python suite runs **2,273 tests** with **216 existing skips**, and
+strict repository audit passes with **287 checked links**. These final local receipts
+are separate from the **53** related Python passes above and published `231f894` CI.
+No new lifecycle/Desktop result for `3338585` is asserted here. A complete structural
+candidate still does not establish verified source extraction, runtime admission/activation,
+official-resource success or live acceptance. `IsCompleteState` remains false.
+
+### Integrated owned-flow and event-projector verification through `f4b8eb9` (8.0.18 candidate)
+
+The integrated tree includes `4d70eb0` and `1ebc354` and passes **40,575 Core Release
+tests**, with **zero failures/skips** and **zero build warnings/errors**, under the
+process-only `DOTNET_GCHeapHardLimit=0xC0000000` (**3 GiB**). This remains a local
+capped aggregate, not a standard-setting local or new remote CI pass. The earlier
+**40,448** total excludes both increments; focused/impacted counts are separate.
+
+Final local checks pass **59/59 lifecycle tests**, Desktop Release with **zero
+warnings/errors** and **9 offline self-tests**. The retained Python suite runs
+**2,273 tests** with **216 existing skips**; strict repository audit passes with
+**289 checked links**. These results do not resolve the published 8.0.17 macOS
+Python CI failures above, and no 8.0.18 remote CI receipt is claimed yet.
+
+Diagnostic-only `f4b8eb9` adds a macOS pretest observation step using a fresh temporary
+SQLite database, a bounded worker, SQLite build options and measured busy/sleep times.
+It does not open application databases or change production code, existing assertions,
+timing thresholds, GC policy or regression failure behavior. The step collects evidence;
+it is not a timing fix or proof of a unique root cause.
+
+Structural flow and separate geometric evidence still do not establish official
+provenance, database admission, runtime installation/activation, actual-game extraction,
+Android/AOT or live acceptance. `IsCompleteState` remains false.

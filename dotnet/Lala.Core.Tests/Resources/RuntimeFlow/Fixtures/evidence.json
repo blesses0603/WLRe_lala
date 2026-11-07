@@ -1,0 +1,1219 @@
+{
+  "schema": "owned-runtime-flow-v1",
+  "ownership": "Original synthetic table fixtures only; no game data, user data, private paths, network, or class database.",
+  "writers": [
+    "UnityPy 1.25.4 SerializedFile.save",
+    "UnityPy 1.25.4 BundleFile.save('lz4hc')"
+  ],
+  "packages": {
+    "UnityPy": "1.25.4",
+    "lz4": "4.4.5"
+  },
+  "compression_writer": "lz4 4.4.5 raw block through UnityPy",
+  "verification": "Fresh UnityPy reader validates all container entries, duplicate entries, names, raw payloads, and explicit in-memory external target resolution. Both writer round trips are stable.",
+  "input": {
+    "file": "Catalogs/RuntimeCandidate/Fixtures/runtime-candidate.json.gz",
+    "sha256": "d9e7d7c81118b6643ed8dfc49335188fc92b140d5dc70152d60b7afd9ad02348",
+    "case_id": 0,
+    "case_name": "all-ten-duplicate-products"
+  },
+  "tables": [
+    {
+      "table": "Eve",
+      "asset_path": "Assets/ResourcesBuild/Data/Eve.bytes",
+      "name": "Eve",
+      "path_id": 2,
+      "bytes": 388,
+      "sha256": "85ae58e10b14bf7b29e84e2ad5af3381486dd607c6e3c9f2120412c69b5aae9e"
+    },
+    {
+      "table": "ItemData_C",
+      "asset_path": "Assets/ResourcesBuild/Data/ItemData_C.bytes",
+      "name": "ItemData_C",
+      "path_id": 3,
+      "bytes": 745,
+      "sha256": "0e88099bdbd408c604f464903f007ac08fa8e81228354ac8515f2b98da31b7e1"
+    },
+    {
+      "table": "TalkData_C",
+      "asset_path": "Assets/ResourcesBuild/Data/TalkData_C.bytes",
+      "name": "TalkData_C",
+      "path_id": 4,
+      "bytes": 53,
+      "sha256": "556463018833fd44b28175ccd0a8b77de5bac24f4ca8e8eb2d3beba4142094d3"
+    },
+    {
+      "table": "TextData_C",
+      "asset_path": "Assets/ResourcesBuild/Data/TextData_C.bytes",
+      "name": "TextData_C",
+      "path_id": 5,
+      "bytes": 46,
+      "sha256": "467d8db1a91ae2e5666828886cca48439b8794f3aa5d4494920ede6e39009e55"
+    },
+    {
+      "table": "SmithData_C",
+      "asset_path": "Assets/ResourcesBuild/Data/SmithData_C.bytes",
+      "name": "SmithData_C",
+      "path_id": 6,
+      "bytes": 109,
+      "sha256": "7089086eb8912c6005b27d4be141bd38210765b380b5ba80b62b48fcea2ac73b"
+    },
+    {
+      "table": "ScenesData_C",
+      "asset_path": "Assets/ResourcesBuild/Data/ScenesData_C.bytes",
+      "name": "ScenesData_C",
+      "path_id": 7,
+      "bytes": 80,
+      "sha256": "059a09e181f41d42d580f601da016ab73a30e92bb2a358e7197018efdad3f826"
+    },
+    {
+      "table": "AdventureData_C",
+      "asset_path": "Assets/ResourcesBuild/Data/AdventureData_C.bytes",
+      "name": "AdventureData_C",
+      "path_id": 8,
+      "bytes": 109,
+      "sha256": "dba15c67cce3a44682f711e67498e86c6b06aca5dc14f5b49c836c898d03ba7e"
+    },
+    {
+      "table": "AdventureLvData_C",
+      "asset_path": "Assets/ResourcesBuild/Data/AdventureLvData_C.bytes",
+      "name": "AdventureLvData_C",
+      "path_id": 9,
+      "bytes": 19,
+      "sha256": "510055ebd43bbd4de4e2ddc8ce30bc861b73cfeb782a8e63e40dbdd6d9906835"
+    },
+    {
+      "table": "NpcData_C",
+      "asset_path": "Assets/ResourcesBuild/Data/NpcData_C.bytes",
+      "name": "NpcData_C",
+      "path_id": 10,
+      "bytes": 219,
+      "sha256": "455c9f7e703663f58d0e864c9f3d3c024b0317692aa0c0d96e826ee35f535752"
+    },
+    {
+      "table": "NpcCareerData_C",
+      "asset_path": "Assets/ResourcesBuild/Data/NpcCareerData_C.bytes",
+      "name": "NpcCareerData_C",
+      "path_id": 11,
+      "bytes": 21,
+      "sha256": "03e1af527b1c2c3aa1d5fe757a67e8cc374130ede2c5b5ebd66a3cae46747186"
+    }
+  ],
+  "scenarios": {
+    "all-ten": {
+      "asset_bundle": {
+        "Eve": "all-ten.bundle",
+        "ItemData_C": "all-ten.bundle",
+        "TalkData_C": "all-ten.bundle",
+        "TextData_C": "all-ten.bundle",
+        "SmithData_C": "all-ten.bundle",
+        "ScenesData_C": "all-ten.bundle",
+        "AdventureData_C": "all-ten.bundle",
+        "AdventureLvData_C": "all-ten.bundle",
+        "NpcData_C": "all-ten.bundle",
+        "NpcCareerData_C": "all-ten.bundle"
+      }
+    },
+    "split": {
+      "asset_bundle": {
+        "Eve": "split-root.bundle",
+        "ItemData_C": "split-root.bundle",
+        "TalkData_C": "split-root.bundle",
+        "TextData_C": "split-root.bundle",
+        "SmithData_C": "split-root.bundle",
+        "ScenesData_C": "split-root.bundle",
+        "AdventureData_C": "split-dependency.bundle",
+        "AdventureLvData_C": "split-dependency.bundle",
+        "NpcData_C": "split-dependency.bundle",
+        "NpcCareerData_C": "split-dependency.bundle"
+      },
+      "bundle_dependencies": {
+        "split-root.bundle": [
+          "split-dependency.bundle"
+        ],
+        "split-dependency.bundle": []
+      }
+    },
+    "missing-path": {
+      "table": "NpcCareerData_C",
+      "change": "Container entry omitted; underlying TextAsset is still present and valid."
+    },
+    "duplicate-path": {
+      "table": "NpcCareerData_C",
+      "change": "Two identical exact container mappings point to the same local TextAsset."
+    },
+    "late-invalid": {
+      "table": "NpcCareerData_C",
+      "change": "Last raw table byte removed; UnityFS, SerializedFile, container, name, and TextAsset bytes remain valid."
+    },
+    "aggregate-overflow": {
+      "script_bytes_each": 3565159,
+      "script_bytes_total": 35651590,
+      "change": "All ten original payloads zero-padded past the 32 MiB aggregate extraction budget; each script remains below 16 MiB. Do not parse padded raw-table bytes."
+    },
+    "unrelated-duplicate": {
+      "table": "Eve",
+      "change": "Separate bundle supplies a duplicate exact Eve path. Include only in its declared dependency closure, never every acquired bundle."
+    },
+    "external": {
+      "asset_bundle": {
+        "Eve": "external-root.bundle",
+        "ItemData_C": "external-root.bundle",
+        "TalkData_C": "external-root.bundle",
+        "TextData_C": "external-root.bundle",
+        "SmithData_C": "external-root.bundle",
+        "ScenesData_C": "external-root.bundle",
+        "AdventureData_C": "external-root.bundle",
+        "AdventureLvData_C": "external-root.bundle",
+        "NpcData_C": "external-root.bundle",
+        "NpcCareerData_C": "external-root.bundle"
+      },
+      "bundle_dependencies": {
+        "external-root.bundle": [
+          "external-target.bundle"
+        ],
+        "external-target.bundle": []
+      },
+      "binding": {
+        "source": {
+          "bundle": "external-root.bundle",
+          "directory": "CAB-runtime-flow"
+        },
+        "external_path": "archive:/CAB-runtime-flow/CAB-runtime-flow",
+        "target": {
+          "bundle": "external-target.bundle",
+          "directory": "CAB-runtime-flow"
+        }
+      },
+      "table": "NpcCareerData_C"
+    }
+  },
+  "files": {
+    "all-ten.bundle": {
+      "bytes": 2105,
+      "sha256": "4447fc87924d0eda953d4189dbf8c4669560b137e934a72d90344e5be3784bad",
+      "serialized_sha256": "f436ece84054c75add660f5fddb1b26a5916a03750a3d58cb94c2b08cec9bbe9",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [],
+      "externals": [],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/Eve.bytes",
+          "file_id": 0,
+          "path_id": 2
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/ItemData_C.bytes",
+          "file_id": 0,
+          "path_id": 3
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/TalkData_C.bytes",
+          "file_id": 0,
+          "path_id": 4
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/TextData_C.bytes",
+          "file_id": 0,
+          "path_id": 5
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/SmithData_C.bytes",
+          "file_id": 0,
+          "path_id": 6
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/ScenesData_C.bytes",
+          "file_id": 0,
+          "path_id": 7
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/AdventureData_C.bytes",
+          "file_id": 0,
+          "path_id": 8
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/AdventureLvData_C.bytes",
+          "file_id": 0,
+          "path_id": 9
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/NpcData_C.bytes",
+          "file_id": 0,
+          "path_id": 10
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/NpcCareerData_C.bytes",
+          "file_id": 0,
+          "path_id": 11
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 2,
+          "name": "Eve",
+          "bytes": 388,
+          "sha256": "85ae58e10b14bf7b29e84e2ad5af3381486dd607c6e3c9f2120412c69b5aae9e"
+        },
+        {
+          "path_id": 3,
+          "name": "ItemData_C",
+          "bytes": 745,
+          "sha256": "0e88099bdbd408c604f464903f007ac08fa8e81228354ac8515f2b98da31b7e1"
+        },
+        {
+          "path_id": 4,
+          "name": "TalkData_C",
+          "bytes": 53,
+          "sha256": "556463018833fd44b28175ccd0a8b77de5bac24f4ca8e8eb2d3beba4142094d3"
+        },
+        {
+          "path_id": 5,
+          "name": "TextData_C",
+          "bytes": 46,
+          "sha256": "467d8db1a91ae2e5666828886cca48439b8794f3aa5d4494920ede6e39009e55"
+        },
+        {
+          "path_id": 6,
+          "name": "SmithData_C",
+          "bytes": 109,
+          "sha256": "7089086eb8912c6005b27d4be141bd38210765b380b5ba80b62b48fcea2ac73b"
+        },
+        {
+          "path_id": 7,
+          "name": "ScenesData_C",
+          "bytes": 80,
+          "sha256": "059a09e181f41d42d580f601da016ab73a30e92bb2a358e7197018efdad3f826"
+        },
+        {
+          "path_id": 8,
+          "name": "AdventureData_C",
+          "bytes": 109,
+          "sha256": "dba15c67cce3a44682f711e67498e86c6b06aca5dc14f5b49c836c898d03ba7e"
+        },
+        {
+          "path_id": 9,
+          "name": "AdventureLvData_C",
+          "bytes": 19,
+          "sha256": "510055ebd43bbd4de4e2ddc8ce30bc861b73cfeb782a8e63e40dbdd6d9906835"
+        },
+        {
+          "path_id": 10,
+          "name": "NpcData_C",
+          "bytes": 219,
+          "sha256": "455c9f7e703663f58d0e864c9f3d3c024b0317692aa0c0d96e826ee35f535752"
+        },
+        {
+          "path_id": 11,
+          "name": "NpcCareerData_C",
+          "bytes": 21,
+          "sha256": "03e1af527b1c2c3aa1d5fe757a67e8cc374130ede2c5b5ebd66a3cae46747186"
+        }
+      ]
+    },
+    "split-root.bundle": {
+      "bytes": 1707,
+      "sha256": "becfcd8eab709c354207582f308f296ea1f95f9ce9c362aa6ed509877c8de0f7",
+      "serialized_sha256": "4cb56121aa86e02afa7efdeae54c8f499aa9d1b2f9143c7fce8c84d8cf246bdf",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [
+        "split-dependency.bundle"
+      ],
+      "externals": [],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/Eve.bytes",
+          "file_id": 0,
+          "path_id": 2
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/ItemData_C.bytes",
+          "file_id": 0,
+          "path_id": 3
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/TalkData_C.bytes",
+          "file_id": 0,
+          "path_id": 4
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/TextData_C.bytes",
+          "file_id": 0,
+          "path_id": 5
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/SmithData_C.bytes",
+          "file_id": 0,
+          "path_id": 6
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/ScenesData_C.bytes",
+          "file_id": 0,
+          "path_id": 7
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 2,
+          "name": "Eve",
+          "bytes": 388,
+          "sha256": "85ae58e10b14bf7b29e84e2ad5af3381486dd607c6e3c9f2120412c69b5aae9e"
+        },
+        {
+          "path_id": 3,
+          "name": "ItemData_C",
+          "bytes": 745,
+          "sha256": "0e88099bdbd408c604f464903f007ac08fa8e81228354ac8515f2b98da31b7e1"
+        },
+        {
+          "path_id": 4,
+          "name": "TalkData_C",
+          "bytes": 53,
+          "sha256": "556463018833fd44b28175ccd0a8b77de5bac24f4ca8e8eb2d3beba4142094d3"
+        },
+        {
+          "path_id": 5,
+          "name": "TextData_C",
+          "bytes": 46,
+          "sha256": "467d8db1a91ae2e5666828886cca48439b8794f3aa5d4494920ede6e39009e55"
+        },
+        {
+          "path_id": 6,
+          "name": "SmithData_C",
+          "bytes": 109,
+          "sha256": "7089086eb8912c6005b27d4be141bd38210765b380b5ba80b62b48fcea2ac73b"
+        },
+        {
+          "path_id": 7,
+          "name": "ScenesData_C",
+          "bytes": 80,
+          "sha256": "059a09e181f41d42d580f601da016ab73a30e92bb2a358e7197018efdad3f826"
+        }
+      ]
+    },
+    "split-dependency.bundle": {
+      "bytes": 1478,
+      "sha256": "457b8c789b85ad692019bbd5074ba8cdac970fb2500662218dbc8ad26111ab89",
+      "serialized_sha256": "0d04aabe32e1775bf97e0daf63095bfff1cf47b289b8916823446ed111f396a1",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [],
+      "externals": [],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/AdventureData_C.bytes",
+          "file_id": 0,
+          "path_id": 8
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/AdventureLvData_C.bytes",
+          "file_id": 0,
+          "path_id": 9
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/NpcData_C.bytes",
+          "file_id": 0,
+          "path_id": 10
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/NpcCareerData_C.bytes",
+          "file_id": 0,
+          "path_id": 11
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 8,
+          "name": "AdventureData_C",
+          "bytes": 109,
+          "sha256": "dba15c67cce3a44682f711e67498e86c6b06aca5dc14f5b49c836c898d03ba7e"
+        },
+        {
+          "path_id": 9,
+          "name": "AdventureLvData_C",
+          "bytes": 19,
+          "sha256": "510055ebd43bbd4de4e2ddc8ce30bc861b73cfeb782a8e63e40dbdd6d9906835"
+        },
+        {
+          "path_id": 10,
+          "name": "NpcData_C",
+          "bytes": 219,
+          "sha256": "455c9f7e703663f58d0e864c9f3d3c024b0317692aa0c0d96e826ee35f535752"
+        },
+        {
+          "path_id": 11,
+          "name": "NpcCareerData_C",
+          "bytes": 21,
+          "sha256": "03e1af527b1c2c3aa1d5fe757a67e8cc374130ede2c5b5ebd66a3cae46747186"
+        }
+      ]
+    },
+    "missing-path.bundle": {
+      "bytes": 2094,
+      "sha256": "6cb49c479ca62e790369d9b98eb1c93724a0fbb5cce37f3498424e9c7461503e",
+      "serialized_sha256": "5122b626bf82a322a5dbc63b430195bde455e7f3ca940678d1425a6cf4c8c769",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [],
+      "externals": [],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/Eve.bytes",
+          "file_id": 0,
+          "path_id": 2
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/ItemData_C.bytes",
+          "file_id": 0,
+          "path_id": 3
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/TalkData_C.bytes",
+          "file_id": 0,
+          "path_id": 4
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/TextData_C.bytes",
+          "file_id": 0,
+          "path_id": 5
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/SmithData_C.bytes",
+          "file_id": 0,
+          "path_id": 6
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/ScenesData_C.bytes",
+          "file_id": 0,
+          "path_id": 7
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/AdventureData_C.bytes",
+          "file_id": 0,
+          "path_id": 8
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/AdventureLvData_C.bytes",
+          "file_id": 0,
+          "path_id": 9
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/NpcData_C.bytes",
+          "file_id": 0,
+          "path_id": 10
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 2,
+          "name": "Eve",
+          "bytes": 388,
+          "sha256": "85ae58e10b14bf7b29e84e2ad5af3381486dd607c6e3c9f2120412c69b5aae9e"
+        },
+        {
+          "path_id": 3,
+          "name": "ItemData_C",
+          "bytes": 745,
+          "sha256": "0e88099bdbd408c604f464903f007ac08fa8e81228354ac8515f2b98da31b7e1"
+        },
+        {
+          "path_id": 4,
+          "name": "TalkData_C",
+          "bytes": 53,
+          "sha256": "556463018833fd44b28175ccd0a8b77de5bac24f4ca8e8eb2d3beba4142094d3"
+        },
+        {
+          "path_id": 5,
+          "name": "TextData_C",
+          "bytes": 46,
+          "sha256": "467d8db1a91ae2e5666828886cca48439b8794f3aa5d4494920ede6e39009e55"
+        },
+        {
+          "path_id": 6,
+          "name": "SmithData_C",
+          "bytes": 109,
+          "sha256": "7089086eb8912c6005b27d4be141bd38210765b380b5ba80b62b48fcea2ac73b"
+        },
+        {
+          "path_id": 7,
+          "name": "ScenesData_C",
+          "bytes": 80,
+          "sha256": "059a09e181f41d42d580f601da016ab73a30e92bb2a358e7197018efdad3f826"
+        },
+        {
+          "path_id": 8,
+          "name": "AdventureData_C",
+          "bytes": 109,
+          "sha256": "dba15c67cce3a44682f711e67498e86c6b06aca5dc14f5b49c836c898d03ba7e"
+        },
+        {
+          "path_id": 9,
+          "name": "AdventureLvData_C",
+          "bytes": 19,
+          "sha256": "510055ebd43bbd4de4e2ddc8ce30bc861b73cfeb782a8e63e40dbdd6d9906835"
+        },
+        {
+          "path_id": 10,
+          "name": "NpcData_C",
+          "bytes": 219,
+          "sha256": "455c9f7e703663f58d0e864c9f3d3c024b0317692aa0c0d96e826ee35f535752"
+        },
+        {
+          "path_id": 11,
+          "name": "NpcCareerData_C",
+          "bytes": 21,
+          "sha256": "03e1af527b1c2c3aa1d5fe757a67e8cc374130ede2c5b5ebd66a3cae46747186"
+        }
+      ]
+    },
+    "duplicate-path.bundle": {
+      "bytes": 2103,
+      "sha256": "ef13d9f08f734cf3c97e1f7fe427d1ae4bea135591070e5dcfbce2be4c2fa44b",
+      "serialized_sha256": "88833d9564d86a5973b4d6fe8ee6e8c74efec038c7e2d9c1885ac5b7730b9760",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [],
+      "externals": [],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/Eve.bytes",
+          "file_id": 0,
+          "path_id": 2
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/ItemData_C.bytes",
+          "file_id": 0,
+          "path_id": 3
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/TalkData_C.bytes",
+          "file_id": 0,
+          "path_id": 4
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/TextData_C.bytes",
+          "file_id": 0,
+          "path_id": 5
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/SmithData_C.bytes",
+          "file_id": 0,
+          "path_id": 6
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/ScenesData_C.bytes",
+          "file_id": 0,
+          "path_id": 7
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/AdventureData_C.bytes",
+          "file_id": 0,
+          "path_id": 8
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/AdventureLvData_C.bytes",
+          "file_id": 0,
+          "path_id": 9
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/NpcData_C.bytes",
+          "file_id": 0,
+          "path_id": 10
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/NpcCareerData_C.bytes",
+          "file_id": 0,
+          "path_id": 11
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/NpcCareerData_C.bytes",
+          "file_id": 0,
+          "path_id": 11
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 2,
+          "name": "Eve",
+          "bytes": 388,
+          "sha256": "85ae58e10b14bf7b29e84e2ad5af3381486dd607c6e3c9f2120412c69b5aae9e"
+        },
+        {
+          "path_id": 3,
+          "name": "ItemData_C",
+          "bytes": 745,
+          "sha256": "0e88099bdbd408c604f464903f007ac08fa8e81228354ac8515f2b98da31b7e1"
+        },
+        {
+          "path_id": 4,
+          "name": "TalkData_C",
+          "bytes": 53,
+          "sha256": "556463018833fd44b28175ccd0a8b77de5bac24f4ca8e8eb2d3beba4142094d3"
+        },
+        {
+          "path_id": 5,
+          "name": "TextData_C",
+          "bytes": 46,
+          "sha256": "467d8db1a91ae2e5666828886cca48439b8794f3aa5d4494920ede6e39009e55"
+        },
+        {
+          "path_id": 6,
+          "name": "SmithData_C",
+          "bytes": 109,
+          "sha256": "7089086eb8912c6005b27d4be141bd38210765b380b5ba80b62b48fcea2ac73b"
+        },
+        {
+          "path_id": 7,
+          "name": "ScenesData_C",
+          "bytes": 80,
+          "sha256": "059a09e181f41d42d580f601da016ab73a30e92bb2a358e7197018efdad3f826"
+        },
+        {
+          "path_id": 8,
+          "name": "AdventureData_C",
+          "bytes": 109,
+          "sha256": "dba15c67cce3a44682f711e67498e86c6b06aca5dc14f5b49c836c898d03ba7e"
+        },
+        {
+          "path_id": 9,
+          "name": "AdventureLvData_C",
+          "bytes": 19,
+          "sha256": "510055ebd43bbd4de4e2ddc8ce30bc861b73cfeb782a8e63e40dbdd6d9906835"
+        },
+        {
+          "path_id": 10,
+          "name": "NpcData_C",
+          "bytes": 219,
+          "sha256": "455c9f7e703663f58d0e864c9f3d3c024b0317692aa0c0d96e826ee35f535752"
+        },
+        {
+          "path_id": 11,
+          "name": "NpcCareerData_C",
+          "bytes": 21,
+          "sha256": "03e1af527b1c2c3aa1d5fe757a67e8cc374130ede2c5b5ebd66a3cae46747186"
+        }
+      ]
+    },
+    "late-invalid.bundle": {
+      "bytes": 2107,
+      "sha256": "8ae7692bf9221816d3b75415c2adb09fa0b90d15aa9b651c3b52a06a5710e0c6",
+      "serialized_sha256": "3b823d22e496519b144316cba01527ae23a49697fe1b165e00a20b58fa7416ae",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [],
+      "externals": [],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/Eve.bytes",
+          "file_id": 0,
+          "path_id": 2
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/ItemData_C.bytes",
+          "file_id": 0,
+          "path_id": 3
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/TalkData_C.bytes",
+          "file_id": 0,
+          "path_id": 4
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/TextData_C.bytes",
+          "file_id": 0,
+          "path_id": 5
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/SmithData_C.bytes",
+          "file_id": 0,
+          "path_id": 6
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/ScenesData_C.bytes",
+          "file_id": 0,
+          "path_id": 7
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/AdventureData_C.bytes",
+          "file_id": 0,
+          "path_id": 8
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/AdventureLvData_C.bytes",
+          "file_id": 0,
+          "path_id": 9
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/NpcData_C.bytes",
+          "file_id": 0,
+          "path_id": 10
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/NpcCareerData_C.bytes",
+          "file_id": 0,
+          "path_id": 11
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 2,
+          "name": "Eve",
+          "bytes": 388,
+          "sha256": "85ae58e10b14bf7b29e84e2ad5af3381486dd607c6e3c9f2120412c69b5aae9e"
+        },
+        {
+          "path_id": 3,
+          "name": "ItemData_C",
+          "bytes": 745,
+          "sha256": "0e88099bdbd408c604f464903f007ac08fa8e81228354ac8515f2b98da31b7e1"
+        },
+        {
+          "path_id": 4,
+          "name": "TalkData_C",
+          "bytes": 53,
+          "sha256": "556463018833fd44b28175ccd0a8b77de5bac24f4ca8e8eb2d3beba4142094d3"
+        },
+        {
+          "path_id": 5,
+          "name": "TextData_C",
+          "bytes": 46,
+          "sha256": "467d8db1a91ae2e5666828886cca48439b8794f3aa5d4494920ede6e39009e55"
+        },
+        {
+          "path_id": 6,
+          "name": "SmithData_C",
+          "bytes": 109,
+          "sha256": "7089086eb8912c6005b27d4be141bd38210765b380b5ba80b62b48fcea2ac73b"
+        },
+        {
+          "path_id": 7,
+          "name": "ScenesData_C",
+          "bytes": 80,
+          "sha256": "059a09e181f41d42d580f601da016ab73a30e92bb2a358e7197018efdad3f826"
+        },
+        {
+          "path_id": 8,
+          "name": "AdventureData_C",
+          "bytes": 109,
+          "sha256": "dba15c67cce3a44682f711e67498e86c6b06aca5dc14f5b49c836c898d03ba7e"
+        },
+        {
+          "path_id": 9,
+          "name": "AdventureLvData_C",
+          "bytes": 19,
+          "sha256": "510055ebd43bbd4de4e2ddc8ce30bc861b73cfeb782a8e63e40dbdd6d9906835"
+        },
+        {
+          "path_id": 10,
+          "name": "NpcData_C",
+          "bytes": 219,
+          "sha256": "455c9f7e703663f58d0e864c9f3d3c024b0317692aa0c0d96e826ee35f535752"
+        },
+        {
+          "path_id": 11,
+          "name": "NpcCareerData_C",
+          "bytes": 20,
+          "sha256": "21ac370d6c68af8d7f5948532982e2fe55179252fd073b267d1ffed73b95bebc"
+        }
+      ]
+    },
+    "unrelated-duplicate.bundle": {
+      "bytes": 1226,
+      "sha256": "6583a25a55b88b64af50743eb2ef73f43a3ad8e86b4263303e66ead889cb19bf",
+      "serialized_sha256": "e4c90abbe5c7f31f5580ab46e3d3450002c86e1c2dd75541a896feee161b0125",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [],
+      "externals": [],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/Eve.bytes",
+          "file_id": 0,
+          "path_id": 2
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 2,
+          "name": "Eve",
+          "bytes": 388,
+          "sha256": "85ae58e10b14bf7b29e84e2ad5af3381486dd607c6e3c9f2120412c69b5aae9e"
+        }
+      ]
+    },
+    "external-root.bundle": {
+      "bytes": 2133,
+      "sha256": "4d385f4d38d182ed9f999ab137e6fe4c0ea019ba743be201462db2731902430a",
+      "serialized_sha256": "6a152b98ea2d51bc66a7baad3decd46d55bb518574556bc8ca09e684122c02e8",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [
+        "external-target.bundle"
+      ],
+      "externals": [
+        "archive:/CAB-runtime-flow/CAB-runtime-flow"
+      ],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/Eve.bytes",
+          "file_id": 0,
+          "path_id": 2
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/ItemData_C.bytes",
+          "file_id": 0,
+          "path_id": 3
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/TalkData_C.bytes",
+          "file_id": 0,
+          "path_id": 4
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/TextData_C.bytes",
+          "file_id": 0,
+          "path_id": 5
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/SmithData_C.bytes",
+          "file_id": 0,
+          "path_id": 6
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/ScenesData_C.bytes",
+          "file_id": 0,
+          "path_id": 7
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/AdventureData_C.bytes",
+          "file_id": 0,
+          "path_id": 8
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/AdventureLvData_C.bytes",
+          "file_id": 0,
+          "path_id": 9
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/NpcData_C.bytes",
+          "file_id": 0,
+          "path_id": 10
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/NpcCareerData_C.bytes",
+          "file_id": 1,
+          "path_id": 11
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 2,
+          "name": "Eve",
+          "bytes": 388,
+          "sha256": "85ae58e10b14bf7b29e84e2ad5af3381486dd607c6e3c9f2120412c69b5aae9e"
+        },
+        {
+          "path_id": 3,
+          "name": "ItemData_C",
+          "bytes": 745,
+          "sha256": "0e88099bdbd408c604f464903f007ac08fa8e81228354ac8515f2b98da31b7e1"
+        },
+        {
+          "path_id": 4,
+          "name": "TalkData_C",
+          "bytes": 53,
+          "sha256": "556463018833fd44b28175ccd0a8b77de5bac24f4ca8e8eb2d3beba4142094d3"
+        },
+        {
+          "path_id": 5,
+          "name": "TextData_C",
+          "bytes": 46,
+          "sha256": "467d8db1a91ae2e5666828886cca48439b8794f3aa5d4494920ede6e39009e55"
+        },
+        {
+          "path_id": 6,
+          "name": "SmithData_C",
+          "bytes": 109,
+          "sha256": "7089086eb8912c6005b27d4be141bd38210765b380b5ba80b62b48fcea2ac73b"
+        },
+        {
+          "path_id": 7,
+          "name": "ScenesData_C",
+          "bytes": 80,
+          "sha256": "059a09e181f41d42d580f601da016ab73a30e92bb2a358e7197018efdad3f826"
+        },
+        {
+          "path_id": 8,
+          "name": "AdventureData_C",
+          "bytes": 109,
+          "sha256": "dba15c67cce3a44682f711e67498e86c6b06aca5dc14f5b49c836c898d03ba7e"
+        },
+        {
+          "path_id": 9,
+          "name": "AdventureLvData_C",
+          "bytes": 19,
+          "sha256": "510055ebd43bbd4de4e2ddc8ce30bc861b73cfeb782a8e63e40dbdd6d9906835"
+        },
+        {
+          "path_id": 10,
+          "name": "NpcData_C",
+          "bytes": 219,
+          "sha256": "455c9f7e703663f58d0e864c9f3d3c024b0317692aa0c0d96e826ee35f535752"
+        }
+      ]
+    },
+    "external-target.bundle": {
+      "bytes": 1022,
+      "sha256": "40af10356a82c05b9078ed9969bfb2f6c153ac5b339ef9ee3bd2dd432f8a689b",
+      "serialized_sha256": "f1734e9ae1a82b7338f5a845d8e6a4a732f6d9ccc305abbe9ecc20fc389d07b9",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [],
+      "externals": [],
+      "container": [],
+      "scripts": [
+        {
+          "path_id": 11,
+          "name": "NpcCareerData_C",
+          "bytes": 21,
+          "sha256": "03e1af527b1c2c3aa1d5fe757a67e8cc374130ede2c5b5ebd66a3cae46747186"
+        }
+      ]
+    },
+    "aggregate-overflow.bundle": {
+      "bytes": 144944,
+      "sha256": "a48c37a5f637237bb386acf8e926eaef5fc81984aedcbff4a707775d66fe207b",
+      "serialized_sha256": "cfb3b68db10d886178f05da226c325ab7134000a4aabdd36442f73862bd0d6de",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [],
+      "externals": [],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/Eve.bytes",
+          "file_id": 0,
+          "path_id": 2
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/ItemData_C.bytes",
+          "file_id": 0,
+          "path_id": 3
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/TalkData_C.bytes",
+          "file_id": 0,
+          "path_id": 4
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/TextData_C.bytes",
+          "file_id": 0,
+          "path_id": 5
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/SmithData_C.bytes",
+          "file_id": 0,
+          "path_id": 6
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/ScenesData_C.bytes",
+          "file_id": 0,
+          "path_id": 7
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/AdventureData_C.bytes",
+          "file_id": 0,
+          "path_id": 8
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/AdventureLvData_C.bytes",
+          "file_id": 0,
+          "path_id": 9
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/NpcData_C.bytes",
+          "file_id": 0,
+          "path_id": 10
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/NpcCareerData_C.bytes",
+          "file_id": 0,
+          "path_id": 11
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 2,
+          "name": "Eve",
+          "bytes": 3565159,
+          "sha256": "30f2c7a7d531edd16c80f9cde772f6442fa213af8942cd4530f8e32424bfd5ef"
+        },
+        {
+          "path_id": 3,
+          "name": "ItemData_C",
+          "bytes": 3565159,
+          "sha256": "aad4d81d603a121fdd7dfae65afc531562c071e7df16b543f408e393ce30ffae"
+        },
+        {
+          "path_id": 4,
+          "name": "TalkData_C",
+          "bytes": 3565159,
+          "sha256": "e03f429372d85838a2f3338daad1b0275010af228a40cdb21c74ac7d946c99f4"
+        },
+        {
+          "path_id": 5,
+          "name": "TextData_C",
+          "bytes": 3565159,
+          "sha256": "f8f1c879afdf360bcc3ac9f23dca5fcd0a1da9d46ee19020190d4bb9e2727a3d"
+        },
+        {
+          "path_id": 6,
+          "name": "SmithData_C",
+          "bytes": 3565159,
+          "sha256": "ad802b1849f6353737131272c3811283db446aebbeefe089fc02b9bf38754a69"
+        },
+        {
+          "path_id": 7,
+          "name": "ScenesData_C",
+          "bytes": 3565159,
+          "sha256": "c64fdce1da0ce150b74d56945c8977621b69ccb92cc90c70c041bff85841bfd4"
+        },
+        {
+          "path_id": 8,
+          "name": "AdventureData_C",
+          "bytes": 3565159,
+          "sha256": "dab15f18905e5f5aaf379fe2b8841c919aa5467502ffb468be1108f9e79726d3"
+        },
+        {
+          "path_id": 9,
+          "name": "AdventureLvData_C",
+          "bytes": 3565159,
+          "sha256": "69433a8f064f3c6a6e3d01dffa31b3edd661aeaad23e4de85354aafb1018667b"
+        },
+        {
+          "path_id": 10,
+          "name": "NpcData_C",
+          "bytes": 3565159,
+          "sha256": "f0cf3728ceae6b9a5d05de8aa043d063bfa468a43f14911ac3c94397b7b4f292"
+        },
+        {
+          "path_id": 11,
+          "name": "NpcCareerData_C",
+          "bytes": 3565159,
+          "sha256": "5a1898813f33d2f6594ec88d80f8b2f86f0184a9f898f656d6eb992890e515f8"
+        }
+      ]
+    }
+  }
+}

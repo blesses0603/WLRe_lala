@@ -66,7 +66,7 @@ public sealed class BundleSourcePreparationTests
     public async Task CompletePipelineChecksBothManifestContentsAndReturnsOwnedSourcesOnly()
     {
         var script = new Script(); var result = await new BundleSourcePreparation().PrepareAsync(script);
-        Assert.Equal("required bundle sources verified; extractor unavailable", result.Status);
+        Assert.Equal("required bundle sources verified; no runtime candidate built", result.Status);
         Assert.Equal("scripted input; official provenance unavailable", result.Provenance);
         Assert.Equal(4, result.DownloadCount); Assert.Equal(170, result.DownloadBytes); Assert.Equal(4, script.Observations);
         Assert.Equal(new[] { "dep-a.bundle", "dep-b.bundle", "root-a.bundle", "root-b.bundle" }, result.Sources.Select(x => x.Spec.Name));

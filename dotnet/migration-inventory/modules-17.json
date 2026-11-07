@@ -1306,8 +1306,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/World/Portals/OfflineEventPortalProjector.cs",
+      "dotnet/Lala.Core/World/Portals/OfflineEventPortalProjection.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1346,8 +1349,8 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
     },
@@ -1355,7 +1358,14 @@
       "desktop_source": "wlre/services/world/portal_evidence_1275.py",
       "identical_source": true,
       "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
-    }
+    },
+    "migrated_scope": [
+      "Only _projection_guard is reused for typed StageDataRow geometry in the event projector: sentinel width/height 65535 maps to 6992, nonpositive maximum dimensions reject, and rate 100*(1024-24)/max(width,height), offsets and height are retained. This does not authenticate the stage or establish image/route provenance.",
+      "105 actual retained-Python synthetic cases plus three contracts pass as 108 focused tests; 5,521 impacted Eve/World/RuntimeCandidate tests also passed. Source fingerprints for event, boundary, portal-evidence and door helpers and deterministic compressed/decoded fixture hashes are retained; independent review approved. Tests compare all source-present fields and row/array counts, while typed optional fields remain explicit. No full dynamic-Python object or official-resource/runtime acceptance is claimed."
+    ],
+    "outstanding_scope": [
+      "_packet_position, read_only_portal_evidence, read_only_door_link_routes and read_only_stage_portal_markers remain unported. No portal-link/image evidence loading, official-source acceptance, runtime/UI/session/Android activation or travel/packet permission. Typed ushort stage fields exclude arbitrary Python stage dictionaries."
+    ]
   },
   {
     "id": "android:wlre/services/world/portal_inspection_1275.py",
@@ -2349,8 +2359,10 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Catalogs/RuntimeCandidateBindings.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -2368,8 +2380,8 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
     },
@@ -2377,7 +2389,14 @@
       "desktop_source": "wlre/services/world/scene_names_1275.py",
       "identical_source": true,
       "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
-    }
+    },
+    "migrated_scope": [
+      "Only bind_scene_names for immutable parser-produced Stage/Text maps is implemented by internal RuntimeCandidateBindings.SceneNames and consumed by the ten-table candidate. Preserve source order; skip zero/missing NameId, empty/Python-whitespace-only names, names above 160 Unicode codepoints and characters below U+0020; use Python strip semantics and never invent fallback labels.",
+      "Actual Python binding cases are retained inside the 157-vector candidate corpus and the 166 candidate tests within 1,102 focused passes. These are offline typed binding checks, not navigation permission or runtime activation."
+    ],
+    "outstanding_scope": [
+      "source_scene_label is not implemented. The typed helper consumes only parser-produced maps, not arbitrary Python object/type combinations. No legacy-name fallback, destination inference, routes, runtime/UI/session/Android call site, resource admission or packet authority is supplied."
+    ]
   },
   {
     "id": "android:wlre/services/world/smallmaps.py",
