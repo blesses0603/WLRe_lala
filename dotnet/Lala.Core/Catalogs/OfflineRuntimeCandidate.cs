@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Lala.Core.World.Eve;
+using Lala.Core.World.Portals;
 
 namespace Lala.Core.Catalogs;
 
@@ -15,9 +16,9 @@ public sealed class OfflineRuntimeCandidate
         RuntimeRecipeCandidate recipes, IReadOnlyDictionary<ushort, StageDataRow> stages,
         EveDoorProjection doors, IReadOnlyDictionary<ushort, string> sceneNames,
         ExpeditionCatalogData expedition, IReadOnlyDictionary<ushort, ExpeditionNpcData> npcs,
-        IReadOnlyDictionary<string, string> hashes)
-        => (EveIndexes, Items, Talks, Texts, Recipes, Stages, Doors, SceneNames, Expedition, Npcs, SourceSha256) =
-            (indexes, items, talks, texts, recipes, stages, doors, sceneNames, expedition, npcs, hashes);
+        IReadOnlyDictionary<string, string> hashes, OfflineRuntimePortalObservations portalObservations)
+        => (EveIndexes, Items, Talks, Texts, Recipes, Stages, Doors, SceneNames, Expedition, Npcs, SourceSha256, PortalObservations) =
+            (indexes, items, talks, texts, recipes, stages, doors, sceneNames, expedition, npcs, hashes, portalObservations);
     public EveV115Indexes EveIndexes { get; }
     public IReadOnlyDictionary<ushort, ItemDataRow> Items { get; }
     public IReadOnlyDictionary<ushort, TalkDataRow> Talks { get; }
@@ -25,6 +26,7 @@ public sealed class OfflineRuntimeCandidate
     public RuntimeRecipeCandidate Recipes { get; }
     public IReadOnlyDictionary<ushort, StageDataRow> Stages { get; }
     public EveDoorProjection Doors { get; }
+    public OfflineRuntimePortalObservations PortalObservations { get; }
     public IReadOnlyDictionary<ushort, string> SceneNames { get; }
     public ExpeditionCatalogData Expedition { get; }
     public IReadOnlyDictionary<ushort, ExpeditionNpcData> Npcs { get; }
@@ -96,6 +98,11 @@ public static class OfflineRuntimeCandidateDecoder
         var recipes = RuntimeCandidateBindings.Recipes(sources["SmithData_C"], items, cancellationToken);
         var stages = StageDataParser.Parse(sources["ScenesData_C"], cancellationToken);
         var doors = EveDoorParser.ParseLayout(eve, cancellationToken);
+        // Python reconciles event exits even without optional StageMap/EveDoorLinks/route tables.
+        // Only owned decoded rows participate. No optional keys in supplied can inject evidence.
+        // Bind precharges per-door event expansion under its fixed default work budget.
+        var portals = OfflineBoundaryPortals.Bind(stageRaw: null, linkRaw: null, doors, stages,
+            cancellationToken: cancellationToken);
         // Typed OpenUsed is always an integer; Recipes already validates every product/material.
         if (stages.Count == 0 || talks.Count == 0 || texts.Count == 0)
             throw new CatalogDecodeException("1275 場景或對話原始資料缺失");
@@ -107,10 +114,13 @@ public static class OfflineRuntimeCandidateDecoder
         expeditionHashes["NpcCareerData_C"] = ExpeditionCatalogParser.Hash(sources["NpcCareerData_C"], cancellationToken);
         var hashes = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (string name in Sources) hashes.Add(name, ExpeditionCatalogParser.Hash(sources[name], cancellationToken));
+        // The coverage pass follows the required-table cross-checks, like the source runtime.
+        // Missing optional assets remain missing; event-only coverage is never full readiness.
+        var coverage = OfflinePortalCoverage.Audit(doors, stages, portals: portals, cancellationToken: cancellationToken);
         var candidate = new OfflineRuntimeCandidate(indexes, items, talks, texts, recipes, stages, doors,
             RuntimeCandidateBindings.SceneNames(stages, texts, cancellationToken),
             new(named, expedition.Levels, new OrderedCatalog<string, string>(expeditionHashes, expeditionHashes.Keys)),
-            expeditionNpcs, new OrderedCatalog<string, string>(hashes, hashes.Keys));
+            expeditionNpcs, new OrderedCatalog<string, string>(hashes, hashes.Keys), new(portals, coverage));
         cancellationToken.ThrowIfCancellationRequested();
         return candidate;
     }

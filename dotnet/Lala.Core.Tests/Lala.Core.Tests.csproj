@@ -18,4 +18,5 @@
 <ItemGroup><EmbeddedResource Include="Catalogs/RequiredTables/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.Catalogs.RequiredTables.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
 <ItemGroup><EmbeddedResource Include="Catalogs/RuntimeCandidate/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.Catalogs.RuntimeCandidate.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
 <ItemGroup><EmbeddedResource Include="Resources/RuntimeFlow/Fixtures/*" LogicalName="Lala.Core.Tests.Resources.RuntimeFlow.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Resources/DatabaseMatch/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.Resources.DatabaseMatch.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
 </Project>

@@ -685,8 +685,12 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/World/Portals/OfflinePortalCoverage.cs",
+      "dotnet/Lala.Core/World/Portals/OfflinePortalSources.cs",
+      "dotnet/Lala.Core/World/Portals/OfflinePortalReferences.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -709,11 +713,21 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Typed audit_portal_coverage now reports all source-defined scenes and sorted indices, duplicate/absent evidence, ordinary/unresolved categories, event/convey issues, conditional destinations, name presence and reference/route/hidden/cross-scene counts. Invalid optional StageMap/EveLinks become source status invalid rather than fabricated complete data; explicit null link indices and wide uint marker IDs remain distinct.",
+      "AllSourcesAvailable means only that two supplied optional layouts parsed. SourceRevision retains the legacy literal1275 and is not a verified current release. The report makes no readiness or permission claim.",
+      "Explicit comparison/retention work budgets default to 2,000,000 operations, configurable only from 1 to 10,000,000, and charge shared event-transfer copying and conflict candidate retention. Budget exhaustion is a safety restriction, not uncapped Python parity. Cancellation returns no partial projection or mutation of prior state. Names such as verified/official/source revision are source cross-check terminology, never provenance or travel permission.",
+      "The 6e44908 optional-portal slice passed 100 focused tests (95 actual-Python vectors plus five contracts) and 5,621 impacted tests. Deterministic fixture/source hashes and independent review cover parsers, typed references, physical bindings, repeated passes, route conflicts and coverage. Source-present JSON fields are compared; typed additional fields and PortalProjectionException messages are not arbitrary-Python/error-text/decorator parity.",
+      "The desktop ten-table candidate now consumes event-only coverage from its own decoded rows; both optional source statuses remain missing, AllSourcesAvailable is false and link/route reference counts remain zero. Extra optional input keys are ignored. No Android call site or optional catalog readiness is implied."
+    ],
+    "outstanding_scope": [
+      "Typed scalar/collection inputs exclude arbitrary Python values and mutation aliases. Reports may include source-compatible claims alongside retained issues; completeness is not conflict-free route validation. No automatic runtime installation, official-source proof, server-confirmed transfers, UI/session/Android wiring or packet authority."
+    ]
   },
   {
     "id": "desktop:wlre/services/world/portal_dedup_1275.py",
@@ -773,7 +787,9 @@
     "status": "partially_migrated",
     "target_files": [
       "dotnet/Lala.Core/World/Portals/OfflineEventPortalProjector.cs",
-      "dotnet/Lala.Core/World/Portals/OfflineEventPortalProjection.cs"
+      "dotnet/Lala.Core/World/Portals/OfflineEventPortalProjection.cs",
+      "dotnet/Lala.Core/World/Portals/OfflinePortalReferences.cs",
+      "dotnet/Lala.Core/World/Portals/OfflinePortalSources.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -819,11 +835,14 @@
       "live_server_acceptance": "not_run"
     },
     "migrated_scope": [
-      "Only _projection_guard is reused for typed StageDataRow geometry in the event projector: sentinel width/height 65535 maps to 6992, nonpositive maximum dimensions reject, and rate 100*(1024-24)/max(width,height), offsets and height are retained. This does not authenticate the stage or establish image/route provenance.",
-      "105 actual retained-Python synthetic cases plus three contracts pass as 108 focused tests; 5,521 impacted Eve/World/RuntimeCandidate tests also passed. Source fingerprints for event, boundary, portal-evidence and door helpers and deterministic compressed/decoded fixture hashes are retained; independent review approved. Tests compare all source-present fields and row/array counts, while typed optional fields remain explicit. No full dynamic-Python object or official-resource/runtime acceptance is claimed."
+      "Initial _projection_guard is reused for typed StageDataRow geometry in the event projector: sentinel width/height 65535 maps to 6992, nonpositive maximum dimensions reject, and rate 100*(1024-24)/max(width,height), offsets and height are retained. This does not authenticate the stage or establish image/route provenance.",
+      "105 actual retained-Python synthetic cases plus three contracts pass as 108 focused tests; 5,521 impacted Eve/World/RuntimeCandidate tests also passed. Source fingerprints for event, boundary, portal-evidence and door helpers and deterministic compressed/decoded fixture hashes are retained; independent review approved. Tests compare all source-present fields and row/array counts, while typed optional fields remain explicit. No full dynamic-Python object or official-resource/runtime acceptance is claimed.",
+      "Typed _packet_position and read_only_portal_evidence/read_only_door_link_routes/read_only_stage_portal_markers now produce immutable offline references. Preserve uncalibrated coordinates, undefined destinations, all source issue reasons, scene-local route ordinals, marker kinds 2/3/4 and source geometry. Stage marker projection rejects zero scenes even in otherwise ignored kinds, while the basic StageMap parser preserves its less strict source behavior.",
+      "Explicit comparison/retention work budgets default to 2,000,000 operations, configurable only from 1 to 10,000,000, and charge shared event-transfer copying and conflict candidate retention. Budget exhaustion is a safety restriction, not uncapped Python parity. Cancellation returns no partial projection or mutation of prior state. Names such as verified/official/source revision are source cross-check terminology, never provenance or travel permission.",
+      "The 6e44908 optional-portal slice passed 100 focused tests (95 actual-Python vectors plus five contracts) and 5,621 impacted tests. Deterministic fixture/source hashes and independent review cover parsers, typed references, physical bindings, repeated passes, route conflicts and coverage. Source-present JSON fields are compared; typed additional fields and PortalProjectionException messages are not arbitrary-Python/error-text/decorator parity."
     ],
     "outstanding_scope": [
-      "_packet_position, read_only_portal_evidence, read_only_door_link_routes and read_only_stage_portal_markers remain unported. No portal-link/image evidence loading, official-source acceptance, runtime/UI/session/Android activation or travel/packet permission. Typed ushort stage fields exclude arbitrary Python stage dictionaries."
+      "The bounded typed API is not arbitrary Python dictionaries, diagnostic decorators or exact source exception labels. Reference IDs/positions remain distinct from physical door identity; no actual-source provenance, verified runtime, image/UI/session/Android activation or travel/packet authority is established."
     ]
   },
   {
@@ -877,8 +896,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/World/Portals/OfflinePortalSources.cs",
+      "dotnet/Lala.Core/World/Portals/OfflineBoundaryPortals.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -931,11 +953,19 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "parse_stage_map_portals and parse_eve_door_links are ported as bounded typed readers. StageMap retains complete 18-byte rows and only unambiguous kind-2/3 marker keys; kind>5 rejects, zero scene/event marker keys are omitted and duplicate references are removed. Eve links require explicit scene headers and three fields, exact UTF-16LE, source BOM/line/whitespace behavior, Unicode decimal digits including supplementary characters, 4300-digit conversion bounds and ushort coordinates/destinations.",
+      "StageMap/route tables cap at 100,000 rows with exact complete lengths; EveDoorLinks caps at 4 MiB. Link ordinals are not door IDs. Physical position/destination binding is separately represented by OfflineBoundaryPortals, not an ordinal join.",
+      "The 6e44908 optional-portal slice passed 100 focused tests (95 actual-Python vectors plus five contracts) and 5,621 impacted tests. Deterministic fixture/source hashes and independent review cover parsers, typed references, physical bindings, repeated passes, route conflicts and coverage. Source-present JSON fields are compared; typed additional fields and PortalProjectionException messages are not arbitrary-Python/error-text/decorator parity."
+    ],
+    "outstanding_scope": [
+      "verified_portal_names, read_only_portal_destinations and the exact public verified_portal_positions/verified_portal_destinations wrappers are not yet mapped here. Parser diagnostics and exact source error messages remain unported; typed PortalProjectionException outcomes and bounded supplied bytes do not certify source authenticity, runtime admission or live transfer."
+    ]
   },
   {
     "id": "desktop:wlre/services/world/portal_policy.py",
@@ -1009,8 +1039,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/World/Portals/OfflinePortalSources.cs",
+      "dotnet/Lala.Core/World/Portals/OfflinePortalReferences.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1060,11 +1093,18 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Only reviewed table-validation components are represented: complete 18-byte StageMap shape/kind checks and strict nonzero-scene marker projection, plus parse_door_link_data 12-byte ordered route rows with nonzero endpoints. Count/complete-length checks and 100,000-row caps precede row traversal; routes are read-only references rather than event IDs.",
+      "The 6e44908 optional-portal slice passed 100 focused tests (95 actual-Python vectors plus five contracts) and 5,621 impacted tests. Deterministic fixture/source hashes and independent review cover parsers, typed references, physical bindings, repeated passes, route conflicts and coverage. Source-present JSON fields are compared; typed additional fields and PortalProjectionException messages are not arbitrary-Python/error-text/decorator parity."
+    ],
+    "outstanding_scope": [
+      "Full inspect_stage_map/inspect_eve_door_links/inspect_door_link_data report schemas, _failure_detail, recognize_portal_source dispatch and source diagnostic decorators are not implemented. PortalProjectionException wording is a typed boundary rather than exact Python diagnostic parity. No resource provenance, source acquisition, runtime admission or navigation authority."
+    ]
   },
   {
     "id": "desktop:wlre/services/world/portal_travel.py",
@@ -1575,8 +1615,11 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.world",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Resources/BundleSources/RuntimeDatabaseStructuralMatcher.cs",
+      "dotnet/Lala.Core/Resources/ManifestIdentity.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1640,11 +1683,22 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
-      "differential_tests": "not_run",
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Only the structural try-block checks inside database_matches_runtime are ported over owned supplied query observations. Require exactly the ten unsuffixed expected source names, preserving bounded expected-map iteration order, before active identity validation. Compare the active key to ManifestIdentity.Key, bound identity JSON to 4096 characters, require ASCII, hash the original stored text without reserialization, then retain parsed JSON equality.",
+      "For each expected source in order, require its exact name.bytes row at the active version, recorded digest equality, a non-null nonempty blob at most 16 MiB and freshly computed SHA-256 equality. Outcomes expose only examined names, not payloads. Empty/missing/null observations remain distinct; zero/negative version IDs are not newly rejected. Metadata-only CatalogKey is not manifest identity.",
+      "OwnedRuntimeDatabaseSnapshot copies only exact active-version slots and exact ReadOnlyMemory slices, without enumerating optional/stale rows or retaining oversized backing data. Ten 16-MiB payloads bound retained bytes to 160 MiB. Expected-map enumeration rejects an eleventh entry even if Count lies. Post-capture mutation cannot change owned data, but concurrent capture does not establish database coherence. Cancellation publishes no result.",
+      "128 actual-Python AST cases include 15 structural matches, exact resource-query prefixes and compact size-boundary recipes. The source AST runs on an inert scripted connection, not SQLite. Focused 140 tests and 2,018 impacted tests passed; independent review approved. Fixture/generator/source hashes are pinned with CRLF-only source normalization. Parsed-equality rejection is not falsely claimed independently reachable after the genuine canonical-key hash check.",
+      "MatchesSuppliedRuntime is only equality between supplied values. HasVerifiedProvenance, ProvesDatabaseTransaction, RuntimeAdmitted, AssetsReady and CanSendPackets remain false. ManifestIdentity exposes its existing CanonicalJson internally without changing key derivation or adding a custom key override."
+    ],
+    "outstanding_scope": [
+      "Filesystem preflight, read-only SQLite connection, BEGIN/transaction isolation, actual SQL joins/query errors, schema-aware storage-class checks and coherent transaction capture are not implemented. A future reader must reject non-BLOB values rather than coerce them. record_inventory, read_active_database_identity, read_catalog_tables, load_verified_tables and production database integration remain unported.",
+      "No official source/provenance/freshness, database admission capability, static 1275 gates, runtime installation/current globals, AccountSession confirmation, network/cache publication, Android or live acceptance. Typed supplied rows are not arbitrary Python objects/SQLite storage classes or a database with duplicate primary keys. Reviewed pins and existing resource gates remain unchanged."
+    ]
   },
   {
     "id": "desktop:wlre/services/world/resource_gap_diagnostics.py",

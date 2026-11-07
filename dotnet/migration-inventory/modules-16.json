@@ -1639,7 +1639,10 @@
     "scope": "runtime",
     "status": "partially_migrated",
     "target_files": [
-      "dotnet/Lala.Core/World/Portals/OfflineEventPortalProjector.cs"
+      "dotnet/Lala.Core/World/Portals/OfflineEventPortalProjector.cs",
+      "dotnet/Lala.Core/World/Portals/OfflineBoundaryPortals.cs",
+      "dotnet/Lala.Core/World/Portals/OfflinePortalReferences.cs",
+      "dotnet/Lala.Core/World/Portals/OfflinePortalSources.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -1697,11 +1700,15 @@
       "rule": "Reconcile behavior into the same Lala.Core implementation; do not port duplicate cores independently."
     },
     "migrated_scope": [
-      "Only touch_bounds and door_anchor geometry is reused inside the separate typed event projector: sign types 1/4 strict rectangles, ratio range 1–255 and 0–65535 positions. Signed long arithmetic converts uint coordinates before subtracting one, so zero cannot wrap; event-specific line and point fallback remains in the event projector.",
-      "105 actual retained-Python synthetic cases plus three contracts pass as 108 focused tests; 5,521 impacted Eve/World/RuntimeCandidate tests also passed. Source fingerprints for event, boundary, portal-evidence and door helpers and deterministic compressed/decoded fixture hashes are retained; independent review approved. Tests compare all source-present fields and row/array counts, while typed optional fields remain explicit. No full dynamic-Python object or official-resource/runtime acceptance is claimed."
+      "Initial touch_bounds and door_anchor geometry is reused inside the separate typed event projector: sign types 1/4 strict rectangles, ratio range 1–255 and 0–65535 positions. Signed long arithmetic converts uint coordinates before subtracting one, so zero cannot wrap; event-specific line and point fallback remains in the event projector.",
+      "105 actual retained-Python synthetic cases plus three contracts pass as 108 focused tests; 5,521 impacted Eve/World/RuntimeCandidate tests also passed. Source fingerprints for event, boundary, portal-evidence and door helpers and deterministic compressed/decoded fixture hashes are retained; independent review approved. Tests compare all source-present fields and row/array counts, while typed optional fields remain explicit. No full dynamic-Python object or official-resource/runtime acceptance is claimed.",
+      "Typed matching_doors, boundary_portal_bindings/rebuild behavior and reconcile_route_conflicts are now composed separately. Exact link points or StageMap markers must match one physical door with a valid unique door index/touch identity; link ordinals, marker EventIds and door IDs remain distinct. Repeated/unknown claims use source ambiguity rules and marker labels cannot restore ambiguous primary links.",
+      "Boundary Bind rebuilds positions/destinations and carries prior immutable Issues into the event pass. Source rebuild semantics can return a fresh link claim alongside an existing conflicting_event_destination issue because that event is skipped; presence alone is not conflict-free or actionable. Route conflicts remove incompatible claims and annotate matching link evidence, preserve conditional-event subsets, and never replace explicitly null LinkIndex with a door ID.",
+      "Explicit comparison/retention work budgets default to 2,000,000 operations, configurable only from 1 to 10,000,000, and charge shared event-transfer copying and conflict candidate retention. Budget exhaustion is a safety restriction, not uncapped Python parity. Cancellation returns no partial projection or mutation of prior state. Names such as verified/official/source revision are source cross-check terminology, never provenance or travel permission.",
+      "The 6e44908 optional-portal slice passed 100 focused tests (95 actual-Python vectors plus five contracts) and 5,621 impacted tests. Deterministic fixture/source hashes and independent review cover parsers, typed references, physical bindings, repeated passes, route conflicts and coverage. Source-present JSON fields are compared; typed additional fields and PortalProjectionException messages are not arbitrary-Python/error-text/decorator parity."
     ],
     "outstanding_scope": [
-      "matching_doors, boundary_portal_bindings, reconcile_touch_bindings and reconcile_route_conflicts remain unported. No StageMap/EveDoorLinks parser connection, boundary-route identity proof, route coverage, actual-resource acceptance, runtime/UI/session/Android integration or movement authority. The helper subset uses typed parser values, not arbitrary Python value combinations."
+      "Typed immutable rebuilding represents source mutation through returned snapshots, not public arbitrary-dictionary/in-place reconcile_touch_bindings behavior. Portal sources/bindings do not establish actual-source identity, authenticated resources, runtime admission/installation, UI/session/Android integration or movement permission. Python decorator/error-label and arbitrary-value equivalence are not claimed."
     ]
   },
   {
@@ -2559,12 +2566,12 @@
     "migrated_scope": [
       "Pure reconcile_event_portals is implemented for typed immutable EveDoorProjection/StageDataRow inputs and a carried-forward OfflineEventPortalProjection. Missing conveys or zero/unknown stage destinations revoke prior position/destination claims; all conditional targets are retained in sorted order and conditions are never executed. Multiple targets remain undecided rather than guessed.",
       "Preserves source geometry, duplicate/zero index behavior and prior point/metadata behavior, including retaining a prior point outside newly calculated bounds. An incompatible prior destination removes its claims and creates a conflicting_event_destination issue; immutable issue state must be retained on later passes to prevent resurrecting the claim. The source in-place door/dictionary mutation is replaced with detached immutable positions/destinations/issues, not persistent storage.",
-      "Source cross-check field names such as DestinationVerified are geometric/referential observations, not official provenance or permission. Candidate construction and owned-source preparation do not automatically invoke this separate projector. Cancellation returns no new state and never mutates prior snapshots.",
+      "Source cross-check field names such as DestinationVerified are geometric/referential observations, not official provenance or permission. The desktop ten-table candidate now invokes event-only reconciliation through the bounded boundary Bind path; the owned-source flow returns those observations. This is not an Android runtime call site. Cancellation returns no new state and never mutates prior snapshots.",
       "105 actual retained-Python synthetic cases plus three contracts pass as 108 focused tests; 5,521 impacted Eve/World/RuntimeCandidate tests also passed. Source fingerprints for event, boundary, portal-evidence and door helpers and deterministic compressed/decoded fixture hashes are retained; independent review approved. Tests compare all source-present fields and row/array counts, while typed optional fields remain explicit. No full dynamic-Python object or official-resource/runtime acceptance is claimed."
     ],
     "outstanding_scope": [
-      "The typed immutable API is not arbitrary Python dictionaries, mutation aliases or an open-ended metadata contract. Callers must carry the returned Issues state forward; discarding it is not source-equivalent repeated reconciliation. No optional portal-catalog promotion, runtime integration/admission, route execution, server-confirmed transfers, UI/Android call site, network, installation or travel/packet authority.",
-      "StageMap/EveDoorLinks bindings, boundary matching, broader reconcile_route_conflicts and route coverage are separate unported work; event-destination conflicts here do not complete those modules."
+      "The typed immutable API is not arbitrary Python dictionaries, mutation aliases or an open-ended metadata contract. Callers must carry the returned Issues state forward; discarding it is not source-equivalent repeated reconciliation. No optional portal-catalog promotion, active-runtime integration/admission, route execution, server-confirmed transfers, UI/Android call site, network, installation or travel/packet authority.",
+      "Standalone StageMap/EveDoorLinks parsing, physical binding, broader route conflicts and coverage now exist with their own bounded evidence. Their source acquisition/verification, actual-resource success, optional-table activation and live travel remain unimplemented; event-only candidate observations do not promote missing optional assets."
     ]
   },
   {

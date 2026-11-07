@@ -671,7 +671,7 @@ a separate conservative 32-MiB total owned-byte cap includes cache hits. Individ
 bundle metadata retains the 256-MiB cap. Final version and full-manifest rereads reject
 version changes and same-version manifest replacement; invalidated attempts cannot
 return stale handles. Content identity uses the existing canonical `ManifestIdentity`
-structure, whose API is unchanged, rather than observation-only `CatalogKey`.
+structure and unchanged key derivation, rather than observation-only `CatalogKey`.
 
 Only an injected cache-stream seam exists. Initial corruption is a miss, but a planned
 hit that changes is a hard failure rather than an unbudgeted download. Streams are
@@ -822,9 +822,10 @@ source provenance/freshness, database-byte admission and runtime installation re
 missing. The newer scripted flow below connects owned extraction-to-table decoding
 and post-decode reobservation without supplying those credentials. Optional SkillData,
 portal metadata, images, daily/guild/Ark/combat and other catalogs remain unavailable.
-A separate event-portal projector is now available below, but is not installed into
-this candidate. StageMap/EveDoorLinks bindings, broader route conflicts/coverage,
-session/UI/Android and command activation remain outstanding.
+The candidate now includes bounded event-only reconciliation and missing-optional
+coverage as described below. Standalone optional-portal binding/conflict/coverage
+calculations exist, but optional-source acquisition, active-runtime/session/UI/Android
+integration and command activation remain outstanding.
 
 **1,102 focused tests** passed (166 candidate and 936 door), then **11,247 impacted
 Catalogs + World.Eve tests**, without skips, using the process-only **3 GiB** heap cap.
@@ -876,11 +877,12 @@ create an immutable `conflicting_event_destination` issue. Callers must carry th
 returned issue state forward so repeated reconciliation cannot resurrect that claim.
 This replaces source in-place mutation with detached immutable state, not disk storage.
 
-Only `boundary_portals.py`'s `touch_bounds`/`door_anchor` and
-`portal_evidence_1275.py`'s `_projection_guard` are included. Broader boundary matching,
-StageMap/EveDoorLinks bindings, route conflicts and coverage remain unported. Fields
+The first event slice included only `boundary_portals.py`'s `touch_bounds`/`door_anchor`
+and `portal_evidence_1275.py`'s `_projection_guard`. The subsequent standalone optional
+parsers, boundary matching, route conflicts and coverage are described below. Fields
 such as `DestinationVerified` describe source cross-checks, not official trust or
-travel permission. The projector is not installed into the candidate or owned flow.
+travel permission. Bounded event-only observations now reach the candidate and owned
+flow, while actual optional portal sources remain unavailable.
 Typed optional fields and immutable maps do not promise arbitrary Python dictionary
 or mutation-alias parity. Cancellation preserves prior state and returns no partial
 projection. No runtime, transport, installation or Android call site is added.
@@ -891,6 +893,81 @@ portal-evidence and door sources; independent review approved. Tests retain ever
 source-present field and row/array counts, including multi-pass conflict cases.
 See [event projector tests](../dotnet/Lala.Core.Tests/World/Eve/OfflineEventPortalTests.cs)
 and [retained Python fixture generator](../dotnet/Lala.Core.Tests/World/Eve/generate_event_portal_vectors.py).
+
+The optional-portal readers now preserve complete 18-byte StageMap rows, unambiguous
+kind-2/3 marker keys, explicit UTF-16LE EveDoorLinks and 12-byte DoorLinkData routes.
+Counts are bounded to 100,000 rows, Eve links to 4 MiB, and whole-input lengths are
+checked. Unicode decimal digits, supplementary characters, Python whitespace/line
+boundaries and the 4,300-digit integer limit are explicit. Marker projection rejects
+zero scenes more strictly than the basic StageMap marker parser, matching their
+separate source functions. Typed `PortalProjectionException` messages and missing
+source decorators are not claimed as exact Python diagnostic parity.
+
+`OfflinePortalReferences` retains source link/route/marker observations and geometry.
+`OfflineBoundaryPortals` matches link points or markers to unique physical doors;
+link ordinals, marker EventIds and door identities never become interchangeable.
+Route-conflict reconciliation removes incompatible claims and annotates related link
+evidence, preserves compatible conditional-event subsets and keeps null LinkIndex
+separate from a door ID. Source rebuild semantics are deliberately retained: a repeated
+Bind can return a rebuilt link claim beside an existing conflict issue because the
+event pass skips that issue. A present claim is not automatically conflict-free.
+
+`OfflinePortalCoverage` reports all source-defined scenes, wide marker IDs, source
+statuses, unresolved/conditional details, names and reference counts. Its legacy
+`SourceRevision=1275` is not a verified current version; `AllSourcesAvailable` means
+only that supplied layouts parsed. Work/retention budgets default to 2,000,000
+operations and allow 1–10,000,000; shared event copies and conflict candidate retention
+are charged. Budget rejection is an explicit safety restriction, not uncapped Python
+parity. Cancellation preserves prior immutable state.
+
+This slice passed **100 focused tests** (**95 actual-Python vectors plus five
+contracts**) and **5,621 impacted tests**, with deterministic fixtures and independent
+review. It does not complete schema-recognition reports, source diagnostic decorators,
+actual-resource verification, runtime installation or travel authority.
+
+The ten-table candidate now exposes additive immutable `PortalObservations`, derived
+only from its own Eve and ScenesData rows. Bounded event-only binding runs after door
+projection and before nonempty required-table checks; coverage runs after the remaining
+required-table checks. The candidate fixes the default work budget rather than
+accepting a caller override. Optional input keys cannot inject projections or authority:
+StageMapData_C, EveDoorLinks and DoorLinkData_C remain explicitly unavailable, both
+coverage source statuses stay `missing`, `AllSourcesAvailable` is false and optional
+link/route reference counts stay zero. The owned-source flow returns these observations
+without changing provenance, database, static-1275 or installation gates.
+
+This integration passed **36 focused tests**: **14 actual-Python vectors**, three new
+contracts and 19 existing owned-flow contracts; **5,657 impacted tests** also passed.
+Independent review approved deterministic evidence, late-failure/cancellation/supersession
+ownership and a separately labeled source-valid amplification input rejected before
+large event output allocation. Presence of observations does not make a route actionable.
+See [candidate portal contracts](../dotnet/Lala.Core.Tests/Catalogs/RuntimeCandidate/CandidatePortalIntegrationTests.cs).
+
+`RuntimeDatabaseStructuralMatcher` separately checks detached supplied database
+observations against a supplied `ManifestIdentity` and expected digest map. It requires
+exactly ten unsuffixed expected names in supplied iteration order, then the active key,
+bounded ASCII identity JSON, SHA-256 of its **original stored text**, and parsed JSON
+equality. Each exact active-version `.bytes` row must have the matching recorded
+digest, a non-null 1–16-MiB blob and a matching freshly computed byte hash. The existing
+canonical identity string is now available internally; key derivation is unchanged.
+No custom identity-key override or metadata-only CatalogKey substitution exists.
+
+Capture copies only ten exact active-version slots and exact memory slices, ignores
+optional/stale rows without enumeration, and avoids retaining oversized backing data.
+The maximum retained payload is 160 MiB; expected-map iteration rejects an eleventh
+entry even when its Count lies. Post-capture mutation cannot alter the snapshot, but
+capture does not prove a coherent real database transaction or prevent concurrent
+mutation during supply. Zero/negative version IDs are not invented rejection rules.
+
+**140 focused tests** and **2,018 impacted tests** passed. The **128** retained Python
+AST cases include **15 structural matches**, exact query-check prefixes and compact
+boundary recipes. The oracle uses an inert scripted connection, not SQLite. Parsed
+JSON equality remains checked, but no independently reachable hash-matched negative
+case is claimed without a SHA collision. Independent review approved. Filesystem
+preflight, SQLite opens/transactions/storage-class validation, real query isolation,
+schema-aware loading and production storage remain unported. A future reader must
+reject non-BLOB values rather than coerce them. `HasVerifiedProvenance`,
+`ProvesDatabaseTransaction`, `RuntimeAdmitted`, `AssetsReady` and `CanSendPackets`
+remain false. See [database-match scope and evidence](../dotnet/Lala.Core.Tests/Resources/DatabaseMatch/README.md).
 
 Eve v115 parsing now validates all eleven scene sections before exposing immutable
 NPC/interaction indexes. Versions, offsets, record/scene limits, skipped layouts,
@@ -956,6 +1033,9 @@ acceptance follows from these offline suites.
 | `3338585` owned ten-table structural candidate and doors | `RuntimeCandidateTests.cs`, `RuntimeCandidateOracleCases.cs` and `README.md` under `Lala.Core.Tests/Catalogs/RuntimeCandidate`; `EveDoorTests.cs`, `EveDoorPythonVectors.cs` and `EveDoorREADME.md` under `Lala.Core.Tests/World/Eve` | 1,102 focused passes (166 candidate / 936 door) and 11,247 impacted passes, using the process-only 3-GiB cap. 157 candidate and 928 door Python vectors retain one explicit door-budget safety divergence; 53 related Python tests passed, independent review approved and three generators reproduced exactly. Structural completeness is not runtime admission; aggregate evidence follows below. |
 | `4d70eb0` owned source-to-runtime structural flow | `OfflineBundleRuntimePreparationTests.cs`, genuine owned UnityFS fixtures and `README.md` under `Lala.Core.Tests/Resources/RuntimeFlow` | 100 focused passes: 19 new contracts plus 81 existing BundleSource cases, under the process-only 3-GiB cap. Eleven retained fixture files regenerated identically; independent review approved. Post-decode scripted reobservation and owned extraction do not issue official provenance, admission or active-runtime authority. |
 | `1ebc354` separate immutable event-portal projection | `OfflineEventPortalTests.cs`, `EventPortalPythonVectors.cs` and `generate_event_portal_vectors.py` under `Lala.Core.Tests/World/Eve` | 108 focused passes (105 actual-Python vectors and three contracts), then 5,521 impacted passes; independent review and deterministic fixtures. Typed carried-forward issues preserve conflicts; no candidate installation, broader boundary reconciliation, route coverage or travel authority. |
+| `6e44908` optional portal parsers/bindings/coverage | `OfflineBoundaryPortalTests.cs`, `BoundaryPortalPythonVectors.cs` and `generate_boundary_portal_vectors.py` under `Lala.Core.Tests/World/Eve` | 100 focused passes (95 actual-Python vectors plus five contracts) and 5,621 impacted passes; deterministic source/fixture pins and independent review. Typed safety budgets, source-compatible repeated-conflict behavior and diagnostic gaps remain explicit. |
+| `7d04773` owned database structural matcher | `RuntimeDatabaseStructuralMatcherTests.cs`, `DatabaseMatchPythonVectors.cs`, fixture evidence and `README.md` under `Lala.Core.Tests/Resources/DatabaseMatch` | 140 focused passes and 2,018 impacted passes; 128 actual-Python AST cases include 15 matches. Independent review approved; scripted query traces and supplied snapshots do not prove real database transactions, source authority or admission. |
+| `3445831` event-only candidate observations | `CandidatePortalIntegrationTests.cs`, `CandidatePortalOracleCases.cs` and retained fixture generator under `Lala.Core.Tests/Catalogs/RuntimeCandidate`; owned-flow integration assertions | 36 focused passes include 14 actual-Python vectors, three new contracts and 19 existing flow contracts; 5,657 impacted passes. Independent review approved. Candidate budget is fixed; optional metadata stays missing and all authority flags remain false. |
 
 Inventory status remains partial for the subset modules below. Desktop `network/client.py`
 (internal receive only), `battle_commands.py`
@@ -975,7 +1055,7 @@ to partially migrated. `services/world/smith_candidate.py` is ported offline for
 three pure functions within the documented typed API. `services/world/catalog_adapters.py`
 is also ported offline for its bounded validation/composition surface; runtime
 integration and official-source acceptance remain separate. The summary is now
-560 not migrated, 132 partially migrated and 4 ported offline. Android inventory and
+555 not migrated, 137 partially migrated and 4 ported offline. Android inventory and
 reservation entries share identical source hashes and receive the same bounded evidence. Android network-client, combat-resource, battle-command,
 combat/display, Eve, expedition-data, preview, Smith-candidate, instance-catalog,
 ItemData and catalog-adapter hashes differ, so they stay unreconciled. The baseline has
@@ -993,7 +1073,10 @@ hashes also differ. The scene-name source hash is identical, so its narrow bindi
 subset is mirrored to Android without claiming an Android call site or device pass.
 The event projector, boundary geometry and projection-guard subsets are also partial;
 all three corresponding Android source hashes are identical, so the same bounded
-evidence is mirrored. Their remaining module functions and runtime work are not complete.
+evidence is mirrored. The later coverage module also has an identical Android hash
+and receives partial evidence. Portal-links, portal-schema and resource-database hashes
+differ, so those newer desktop partial entries are not mirrored. Remaining typed/API,
+source-diagnostic and runtime gaps are documented per module.
 `IsCompleteState` remains false. The offline store, arithmetic solver and reviewed resolver do not establish Ark runtime
 persistence or command activation, and none of these slices establishes full migration
 or full runtime acceptance. Current combined verification is recorded below.
@@ -1212,8 +1295,8 @@ completed with Windows and Ubuntu passing, but macOS failed the existing one-sec
 SQLite bounded-wait assertion: **1.009152792 seconds** exceeded **1.0 second**.
 The single [macOS retry job 128537032310](https://github.com/blesses0603/WLRe_lala/actions/runs/42416341769/job/128537032310)
 also failed that assertion at **1.171469625 seconds**. The Python workflow is not
-green. No further reruns or threshold/production changes are claimed; observational
-diagnosis is underway and the timing cause is not fixed. These published-commit receipts exclude
+green. No further reruns or threshold/production changes are claimed; later
+diagnostic observations are recorded below and the timing cause is not fixed. These published-commit receipts exclude
 `3338585` and the later flow/event slices.
 
 ### Integrated ten-table candidate verification through `3338585`
@@ -1230,10 +1313,10 @@ No new lifecycle/Desktop result for `3338585` is asserted here. A complete struc
 candidate still does not establish verified source extraction, runtime admission/activation,
 official-resource success or live acceptance. `IsCompleteState` remains false.
 
-### Integrated owned-flow and event-projector verification through `f4b8eb9` (8.0.18 candidate)
+### Integrated verification for published commit `19430f5` (8.0.18)
 
-The integrated tree includes `4d70eb0` and `1ebc354` and passes **40,575 Core Release
-tests**, with **zero failures/skips** and **zero build warnings/errors**, under the
+The integrated tree through `f4b8eb9`, published as `19430f5`, includes `4d70eb0`
+and `1ebc354` and passes **40,575 Core Release tests**, with **zero failures/skips** and **zero build warnings/errors**, under the
 process-only `DOTNET_GCHeapHardLimit=0xC0000000` (**3 GiB**). This remains a local
 capped aggregate, not a standard-setting local or new remote CI pass. The earlier
 **40,448** total excludes both increments; focused/impacted counts are separate.
@@ -1242,7 +1325,8 @@ Final local checks pass **59/59 lifecycle tests**, Desktop Release with **zero
 warnings/errors** and **9 offline self-tests**. The retained Python suite runs
 **2,273 tests** with **216 existing skips**; strict repository audit passes with
 **289 checked links**. These results do not resolve the published 8.0.17 macOS
-Python CI failures above, and no 8.0.18 remote CI receipt is claimed yet.
+Python CI failures on the earlier commit above; the newer published CI receipt
+follows below.
 
 Diagnostic-only `f4b8eb9` adds a macOS pretest observation step using a fresh temporary
 SQLite database, a bounded worker, SQLite build options and measured busy/sleep times.
@@ -1253,3 +1337,36 @@ it is not a timing fix or proof of a unique root cause.
 Structural flow and separate geometric evidence still do not establish official
 provenance, database admission, runtime installation/activation, actual-game extraction,
 Android/AOT or live acceptance. `IsCompleteState` remains false.
+
+Published `19430f5` [.NET CI run 42417788093](https://github.com/blesses0603/WLRe_lala/actions/runs/42417788093)
+and [Python CI run 42417788272](https://github.com/blesses0603/WLRe_lala/actions/runs/42417788272)
+are both green. Windows, macOS and Linux each pass **40,575 Core tests**, **59 lifecycle
+tests** and **9 Desktop self-tests**, with Desktop builds reporting zero warnings/errors;
+the Android validation APK job passes. These remote receipts exclude the newer
+optional-portal and supplied-database-matcher increments.
+
+The macOS diagnostic step reports SQLite **3.49.1**. A configured **250-ms** busy
+budget took approximately **0.786–0.956 seconds** of elapsed time, and a requested
+**1-ms** `sqlite3_sleep` took approximately **10 ms**, not a whole-second fallback.
+These observations and the successful newer Python run do not establish a unique
+cause or fix for the two earlier 8.0.17 timing failures. Existing assertions and
+production behavior remain unchanged.
+
+### Integrated optional-portal/database-matcher verification through `3445831` (8.0.19 candidate)
+
+The tree including `6e44908`, `7d04773` and `3445831` passes **40,832 Core Release
+tests**, with **zero failures/skips** and **zero build warnings/errors**, under the
+process-only `DOTNET_GCHeapHardLimit=0xC0000000` (**3 GiB**). This is a local capped
+aggregate, not a standard-setting local pass or a new remote CI result. The published
+**40,575** receipt excludes these increments; focused/impacted counts remain separate.
+
+Final local checks pass **59/59 lifecycle tests**, Desktop Release with **zero
+warnings/errors** and **9 offline self-tests**. The retained Python suite runs
+**2,273 tests** with **216 existing skips**; strict repository audit passes with
+**293 checked links**. Repository GC policy, Python timing assertions and production
+SQLite behavior remain unchanged. No 8.0.19 remote CI pass is claimed yet.
+
+Candidate event-only observations and supplied database matches remain separate from
+official provenance, real transaction coherence, admission or runtime installation.
+Optional portal sources remain unavailable through the owned candidate flow, and
+actual-game/device/live acceptance is not established. `IsCompleteState` remains false.

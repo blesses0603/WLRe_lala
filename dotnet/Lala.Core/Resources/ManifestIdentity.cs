@@ -18,6 +18,7 @@ internal sealed class ManifestIdentity
     internal string ExeVersion { get; }
     internal IReadOnlyList<ManifestPackageIdentity> Packages { get; }
     internal string Key { get; }
+    internal string CanonicalJson { get; }
     private ManifestIdentity(OfficialVersionSnapshot snapshot, List<ManifestPackageIdentity> packages, CancellationToken cancellationToken)
     {
         DataVersion = snapshot.DataVersion; ExeVersion = snapshot.ExeVersion; Packages = packages.AsReadOnly();
@@ -25,6 +26,7 @@ internal sealed class ManifestIdentity
             ",\"packages\":[" + string.Join(',', packages.Select(p => "{\"full_version\":" + ResourceValidation.Quote(p.FullVersion) +
                 ",\"manifest_crc32_le\":" + ResourceValidation.Quote(p.ManifestCrc32Le) + ",\"manifest_sha256\":" + ResourceValidation.Quote(p.ManifestSha256) +
                 ",\"name\":" + ResourceValidation.Quote(p.Name) + "}")) + "],\"schema_version\":1}";
+        CanonicalJson = identity;
         Key = ResourceValidation.Digest(Encoding.ASCII.GetBytes(identity), cancellationToken);
     }
     internal static ManifestIdentity Derive(OfficialVersionSnapshot snapshot, IReadOnlyDictionary<string, ManifestIdentityInput> manifests, CancellationToken cancellationToken = default)

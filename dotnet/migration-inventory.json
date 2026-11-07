@@ -74,8 +74,8 @@
       "Lala.Android": 113
     },
     "by_status": {
-      "not_migrated": 560,
-      "partially_migrated": 132,
+      "not_migrated": 555,
+      "partially_migrated": 137,
       "ported_offline": 4
     }
   },

@@ -1,0 +1,29 @@
+{
+  "case_count": 128,
+  "excluded": [
+    "filesystem preflight",
+    "SQLite I/O",
+    "SQL transaction implementation",
+    "official manifest authenticity",
+    "table schema validity",
+    "runtime activation"
+  ],
+  "fixture": {
+    "compressed_bytes": 10821,
+    "compressed_sha256": "2bbc575b94d9f87208a53cc0222b75e3f5004ccae4bf52ad95c00a04f5ac9e96",
+    "decoded_bytes": 656315,
+    "decoded_sha256": "882783975613d870062cbcfa8b63e639e81d49edf3c7c675e0da4b9818a35c85",
+    "name": "database-match.json.gz"
+  },
+  "generator_sha256": "7ef318690902b77b7adef92c19a22aad5cc9dc111e3e4644be3a3bf651077634",
+  "matching_cases": 15,
+  "oracle": "Unchanged AST try statement from database_matches_runtime; inert path and exact-query scripted connection; real OfficialCatalogIdentity.",
+  "schema_version": 1,
+  "source_line_endings": "CRLF normalized to LF only; bare CR is preserved",
+  "source_sha256": {
+    "wlre/services/official_resource_sync.py": "d1ea4177c5935df451dd2c991ae700a8f46ce848c016f4c79be07759d9709aae",
+    "wlre/services/world/bundle_runtime_1275.py": "ab44be1c49d6d6f0c51e5bcde1479ca600d44e4ec343fdeecf2c80377c61564e",
+    "wlre/services/world/catalog_identity.py": "a620f441f2f7c497316db47f7f77560f04f2e5d5773f8d292285c6988a9724f3",
+    "wlre/services/world/resource_database.py": "45c2203971c7224dd08932d1c8c2cb901c1332841ca036eee40bed4a843732be"
+  }
+}

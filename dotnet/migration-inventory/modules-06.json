@@ -2270,7 +2270,10 @@
     "scope": "runtime",
     "status": "partially_migrated",
     "target_files": [
-      "dotnet/Lala.Core/World/Portals/OfflineEventPortalProjector.cs"
+      "dotnet/Lala.Core/World/Portals/OfflineEventPortalProjector.cs",
+      "dotnet/Lala.Core/World/Portals/OfflineBoundaryPortals.cs",
+      "dotnet/Lala.Core/World/Portals/OfflinePortalReferences.cs",
+      "dotnet/Lala.Core/World/Portals/OfflinePortalSources.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -2323,11 +2326,15 @@
       "live_server_acceptance": "not_run"
     },
     "migrated_scope": [
-      "Only touch_bounds and door_anchor geometry is reused inside the separate typed event projector: sign types 1/4 strict rectangles, ratio range 1–255 and 0–65535 positions. Signed long arithmetic converts uint coordinates before subtracting one, so zero cannot wrap; event-specific line and point fallback remains in the event projector.",
-      "105 actual retained-Python synthetic cases plus three contracts pass as 108 focused tests; 5,521 impacted Eve/World/RuntimeCandidate tests also passed. Source fingerprints for event, boundary, portal-evidence and door helpers and deterministic compressed/decoded fixture hashes are retained; independent review approved. Tests compare all source-present fields and row/array counts, while typed optional fields remain explicit. No full dynamic-Python object or official-resource/runtime acceptance is claimed."
+      "Initial touch_bounds and door_anchor geometry is reused inside the separate typed event projector: sign types 1/4 strict rectangles, ratio range 1–255 and 0–65535 positions. Signed long arithmetic converts uint coordinates before subtracting one, so zero cannot wrap; event-specific line and point fallback remains in the event projector.",
+      "105 actual retained-Python synthetic cases plus three contracts pass as 108 focused tests; 5,521 impacted Eve/World/RuntimeCandidate tests also passed. Source fingerprints for event, boundary, portal-evidence and door helpers and deterministic compressed/decoded fixture hashes are retained; independent review approved. Tests compare all source-present fields and row/array counts, while typed optional fields remain explicit. No full dynamic-Python object or official-resource/runtime acceptance is claimed.",
+      "Typed matching_doors, boundary_portal_bindings/rebuild behavior and reconcile_route_conflicts are now composed separately. Exact link points or StageMap markers must match one physical door with a valid unique door index/touch identity; link ordinals, marker EventIds and door IDs remain distinct. Repeated/unknown claims use source ambiguity rules and marker labels cannot restore ambiguous primary links.",
+      "Boundary Bind rebuilds positions/destinations and carries prior immutable Issues into the event pass. Source rebuild semantics can return a fresh link claim alongside an existing conflicting_event_destination issue because that event is skipped; presence alone is not conflict-free or actionable. Route conflicts remove incompatible claims and annotate matching link evidence, preserve conditional-event subsets, and never replace explicitly null LinkIndex with a door ID.",
+      "Explicit comparison/retention work budgets default to 2,000,000 operations, configurable only from 1 to 10,000,000, and charge shared event-transfer copying and conflict candidate retention. Budget exhaustion is a safety restriction, not uncapped Python parity. Cancellation returns no partial projection or mutation of prior state. Names such as verified/official/source revision are source cross-check terminology, never provenance or travel permission.",
+      "The 6e44908 optional-portal slice passed 100 focused tests (95 actual-Python vectors plus five contracts) and 5,621 impacted tests. Deterministic fixture/source hashes and independent review cover parsers, typed references, physical bindings, repeated passes, route conflicts and coverage. Source-present JSON fields are compared; typed additional fields and PortalProjectionException messages are not arbitrary-Python/error-text/decorator parity."
     ],
     "outstanding_scope": [
-      "matching_doors, boundary_portal_bindings, reconcile_touch_bindings and reconcile_route_conflicts remain unported. No StageMap/EveDoorLinks parser connection, boundary-route identity proof, route coverage, actual-resource acceptance, runtime/UI/session/Android integration or movement authority. The helper subset uses typed parser values, not arbitrary Python value combinations."
+      "Typed immutable rebuilding represents source mutation through returned snapshots, not public arbitrary-dictionary/in-place reconcile_touch_bindings behavior. Portal sources/bindings do not establish actual-source identity, authenticated resources, runtime admission/installation, UI/session/Android integration or movement permission. Python decorator/error-label and arbitrary-value equivalence are not claimed."
     ]
   },
   {
@@ -2351,7 +2358,8 @@
       "dotnet/Lala.Core/World/Eve/EveDoorParser.cs",
       "dotnet/Lala.Core/World/Eve/EveDoorProjection.cs",
       "dotnet/Lala.Core/World/Eve/EveDoorCp950.cs",
-      "dotnet/Lala.Core/Resources/BundleSources/OfflineBundleRuntimePreparation.cs"
+      "dotnet/Lala.Core/Resources/BundleSources/OfflineBundleRuntimePreparation.cs",
+      "dotnet/Lala.Core/Catalogs/OfflineRuntimePortalObservations.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -2446,11 +2454,13 @@
       "Internal OfflineBundleRuntimePreparation now connects the actual scripted source preparer, owned VerifiedBundleSource handles, native UnityTextAssetExtractor and all ten structural table decoders, without replacement decoder callbacks. Each asset uses only its exact manifest root plus listed complete dependency set, not recursive traversal or the union of all selected roots. Every table is extracted before raw decoding; original cache/source mutation cannot change owned bytes.",
       "After decoding, versions are freshly observed, both complete manifest hash/byte responses are reread and compared, then versions are observed again. Same-owner/attempt checks and a final generation-lock return prevent invalidated/superseded late results. Returned data is only a historical scripted-source observation, not continuing server stability or official provenance.",
       "A separate 32-MiB aggregate extracted-table ownership cap supplements 16-MiB per-table and 32-MiB acquired-source limits. This may reject source-valid large tables and is an explicit safety restriction. Missing/duplicate paths, late table errors, cancellation and stale attempts return no partial candidate. External PPtrs reject because this orchestrator does not infer an allowlist from dependency names.",
-      "100 focused Release passes comprise 19 new owned-flow contracts plus 81 existing BundleSource cases, with no skips, using the process-only 3-GiB cap. Ten genuine original UnityPy 1.25.4 writer/LZ4HC bundles plus evidence (11 files) regenerated identically; original ten payload hashes are pinned to the retained candidate fixture. Independent source/security review approved. This is orchestration evidence, not real-game/CDN/runtime admission or a new aggregate count."
+      "100 focused Release passes comprise 19 new owned-flow contracts plus 81 existing BundleSource cases, with no skips, using the process-only 3-GiB cap. Ten genuine original UnityPy 1.25.4 writer/LZ4HC bundles plus evidence (11 files) regenerated identically; original ten payload hashes are pinned to the retained candidate fixture. Independent source/security review approved. This is orchestration evidence, not real-game/CDN/runtime admission or a new aggregate count.",
+      "The 3445831 candidate now attaches immutable PortalObservations derived only from its owned Eve/ScenesData rows. It invokes bounded event-only Bind with absent StageMap/EveLinks immediately after doors and before nonempty required-table checks, then coverage after remaining required-table checks. The default expansion budget is fixed at the candidate API and charged before shared transfer arrays. Optional extra input keys cannot inject portal evidence; StageMapData_C, EveDoorLinks and DoorLinkData_C remain explicitly unavailable and coverage AllSourcesAvailable is false.",
+      "Candidate portal integration passed 36 focused tests (14 actual-Python vectors, three new contracts and 19 existing owned-flow contracts) plus 5,657 impacted tests. Independent review approved deterministic fixtures, source order, exact event-only observations, ownership, immutable prior results after late failures/cancellation/supersession and a separately labeled source-valid amplification rejection. These receipts do not establish admission, optional-resource acquisition or a new aggregate count."
     ],
     "outstanding_scope": [
       "The scripted owned-byte flow is connected, but no production HTTPS/filesystem source, official-origin/freshness credential, database-byte admission, static 1275 runtime hash/audited-count/recipe-count gates, persisted receipts, cache publication, optional catalogs or production runtime installation/current globals/activation is supplied. SourceStability is historical scripted reobservation; OfficialProvenance, DatabaseAdmission, RuntimeInstallation and Static1275Admission remain unavailable. No AccountSession, resource confirmation, login, command, Android/AOT or actual-game acceptance.",
-      "Offline event-portal reconciliation now exists separately, but is not installed into the ten-table candidate or owned-source flow. StageMap/EveDoorLinks bindings, broader route conflicts/coverage and travel authority remain outstanding. Caller maps/package labels/content hashes never override existing pins or grant admission."
+      "Event-only reconciliation and missing-optional coverage are attached to the ten-table candidate and the scripted owned-source flow. Standalone optional-portal parsers/bindings/conflicts/coverage now exist, but real optional-source acquisition/verification/binding and optional catalog activation remain unavailable through this flow. Source-compatible claims can coexist with conflict issues and never grant travel authority. Caller maps/package labels/content hashes do not override existing pins or grant admission."
     ]
   },
   {
@@ -2611,7 +2621,8 @@
       "live_server_acceptance": "not_run"
     },
     "migrated_scope": [
-      "Internal post-parser package/header CRC/SHA identity derivation and stale-source checks."
+      "Internal post-parser package/header CRC/SHA identity derivation and stale-source checks.",
+      "The existing manifest-content identity now exposes its canonical JSON internally for the non-authorizing supplied-database matcher. Key derivation and canonical encoding are unchanged, with no custom-key override; observation-only CatalogKey is never substituted. This does not establish official provenance or a real database transaction."
     ],
     "outstanding_scope": [
       "No public verified-source factory or trusted production manifest fetch/provenance issuance. The internal bounded YooAsset parser and scripted source-preparation path now compute the same canonical content identity from parsed bytes, but do not change ManifestIdentity APIs or mint source/admission authority."

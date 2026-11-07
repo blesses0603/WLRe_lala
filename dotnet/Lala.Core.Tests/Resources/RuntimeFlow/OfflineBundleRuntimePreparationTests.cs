@@ -1,3 +1,4 @@
+using Lala.Core.Tests.Catalogs.RuntimeCandidate;
 using System.Collections;
 using System.Globalization;
 using System.Reflection;
@@ -92,6 +93,7 @@ public sealed class OfflineBundleRuntimePreparationTests
         };
         var result = await new OfflineBundleRuntimePreparation().PrepareAsync(source);
         var candidate = result.Candidate;
+        CandidatePortalIntegrationTests.AssertOwnedFlowObservations(candidate);
         Assert.Equal(6, source.Observations);
         Assert.Equal(3, source.Requests.Count(url => url.EndsWith("DataPackage.bytes", StringComparison.Ordinal)));
         Assert.Equal(3, source.Requests.Count(url => url.EndsWith("MainPackage.bytes", StringComparison.Ordinal)));
@@ -131,6 +133,7 @@ public sealed class OfflineBundleRuntimePreparationTests
         Array.Fill(source.Data, (byte)0); Array.Fill(source.Main, (byte)0);
         Assert.Equal("任務", result.Candidate.Expedition.Tasks[1].Name);
         Assert.Equal(3, result.Candidate.Items.Count); Assert.False(result.Candidate.SourceSha256 is IDictionary);
+        CandidatePortalIntegrationTests.AssertOwnedFlowObservations(result.Candidate);
     }
 
     [Fact]
@@ -215,6 +218,7 @@ public sealed class OfflineBundleRuntimePreparationTests
         var error = await Assert.ThrowsAsync<BundleSourceException>(() => old);
         Assert.Equal(BundleSourceFailure.StaleAttempt, error.Failure); Assert.Equal(2, latest.Attempt);
         Assert.Equal("任務", latest.Candidate.Expedition.Tasks[1].Name);
+        CandidatePortalIntegrationTests.AssertOwnedFlowObservations(latest.Candidate);
     }
 
     [Theory]
@@ -226,6 +230,8 @@ public sealed class OfflineBundleRuntimePreparationTests
         foreach (bool cancel in new[] { false, true })
         {
             var pipeline = new OfflineBundleRuntimePreparation(); var source = new Script();
+            var prior = await pipeline.PrepareAsync(new Script());
+            var observations = prior.Candidate.PortalObservations;
             using var cancellation = new CancellationTokenSource();
             source.BeforeObserve = count =>
             {
@@ -236,6 +242,8 @@ public sealed class OfflineBundleRuntimePreparationTests
             else Assert.Equal(BundleSourceFailure.StaleAttempt,
                 (await Assert.ThrowsAsync<BundleSourceException>(() => pipeline.PrepareAsync(source))).Failure);
             Assert.All(source.Streams, s => Assert.True(s.Disposed));
+            Assert.Same(observations, prior.Candidate.PortalObservations);
+            CandidatePortalIntegrationTests.AssertOwnedFlowObservations(prior.Candidate);
         }
     }
 
@@ -261,6 +269,7 @@ public sealed class OfflineBundleRuntimePreparationTests
         }
         Assert.Equal(4, source.Observations); // No fake successful final reobservation after failure.
         Assert.Equal("任務", prior.Candidate.Expedition.Tasks[1].Name);
+        CandidatePortalIntegrationTests.AssertOwnedFlowObservations(prior.Candidate);
         Assert.All(source.Streams, s => Assert.True(s.Disposed));
     }
 
