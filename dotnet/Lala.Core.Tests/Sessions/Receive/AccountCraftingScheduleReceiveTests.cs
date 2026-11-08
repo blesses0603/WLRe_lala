@@ -156,6 +156,52 @@ public sealed class AccountCraftingScheduleReceiveTests
         Assert.Equal((ushort?)42, before.Crafting.Crafting.Queue[1].RecipeId);
     }
 
+    // An invalid payload retires the local socket without a peer-led half-close.
+    // Windows may report a reset rather than EOF. Only that explicit path accepts it.
+    private static async Task AssertPeerClosure(Func<Task<int>> read, bool retiredInvalidPayload)
+    {
+        int received;
+        try { received = await read().WaitAsync(Limit); }
+        catch (IOException error) when (retiredInvalidPayload && error.InnerException is
+            SocketException { SocketErrorCode: SocketError.ConnectionReset or SocketError.ConnectionAborted })
+        {
+            return;
+        }
+        Assert.Equal(0, received);
+    }
+
+    [Theory]
+    [InlineData(SocketError.ConnectionReset)]
+    [InlineData(SocketError.ConnectionAborted)]
+    public async Task OnlyInvalidRetirementAcceptsTypedReset(SocketError code)
+    {
+        var error = new IOException("synthetic closure", new SocketException((int)code));
+        await AssertPeerClosure(() => Task.FromException<int>(error), true);
+        Assert.Same(error, await Assert.ThrowsAsync<IOException>(() =>
+            AssertPeerClosure(() => Task.FromException<int>(error), false)));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ClosureAlwaysRejectsBytesAndUnrelatedFailures(bool retired)
+    {
+        await AssertPeerClosure(() => Task.FromResult(0), retired);
+        await Assert.ThrowsAnyAsync<Xunit.Sdk.XunitException>(() =>
+            AssertPeerClosure(() => Task.FromResult(1), retired));
+        Exception[] failures = [new IOException("other IO"),
+            new IOException("other socket", new SocketException((int)SocketError.TimedOut)),
+            new IOException("not immediate socket", new IOException("nested", new SocketException((int)SocketError.ConnectionReset))),
+            new SocketException((int)SocketError.ConnectionReset), new TimeoutException(),
+            new OperationCanceledException(), new Xunit.Sdk.XunitException("assertion")];
+        foreach (var error in failures)
+        {
+            var observed = await Record.ExceptionAsync(() =>
+                AssertPeerClosure(() => Task.FromException<int>(error), retired));
+            Assert.Same(error, observed);
+        }
+    }
+
     private sealed class HeldReceive : IAsyncDisposable
     {
         private readonly TcpClient peer;
@@ -231,15 +277,15 @@ public sealed class AccountCraftingScheduleReceiveTests
         {
             var result = await run.WaitAsync(Limit);
             Assert.Equal(ReceiveEnd.InvalidPayload, result.End);
-            await AssertNoOutbound(result);
+            await AssertNoOutbound(result, retiredInvalidPayload: true);
             return result;
         }
 
-        private async Task AssertNoOutbound(ReceiveResult result)
+        private async Task AssertNoOutbound(ReceiveResult result, bool retiredInvalidPayload = false)
         {
             Assert.True(result.ResourcesReleased); // Transport cleanup, not resource-gate release.
             AssertHeld(result.Publication.Snapshot);
-            Assert.Equal(0, await peerStream.ReadAsync(new byte[1]).AsTask().WaitAsync(Limit));
+            await AssertPeerClosure(() => peerStream.ReadAsync(new byte[1]).AsTask(), retiredInvalidPayload);
         }
 
         public async ValueTask DisposeAsync()
