@@ -1,34 +1,40 @@
-# Avalonia desktop migration host
+# LaLa Desktop 桌面介面移植
 
-This is a working **offline diagnostic increment**, not the completed LaLa client.
-It compiles against Lala.Core, validates hexadecimal frames with the same codec as
-the C# parity tests, and shows only command headers and payload lengths. It does
-not load Python, open sockets, store input, or authenticate game accounts.
+PR #79 的 C#／Avalonia 桌面宿主加入登入、主畫面、背包、特技、戰場陣形、地圖、遠征及自動戰鬥設定介面。版面、原圖、色彩與操作入口以 Python 桌面版 v7.3.1 的實際程式為基準。
 
-Avalonia 12.1.5 is pinned; its official NuGet package includes a net10.0 target.
-The same `Shared/` source is compiled into Lala.Android. Desktop-specific startup
-and window lifetime remain here. Future game pages must use the core's commands
-and state snapshots, never duplicate protocol or game rules in UI code.
+**依本次新要求，「包包」改名「背包」，背包與特技各自使用獨立視窗、搜尋與選取狀態。** 超空間袋仍在背包視窗內，分為儲藏室與雜物櫃。
 
-## Build and run
+目前可操作介面、顯示 Core 不可變快照、搜尋／分頁／檢視細節、編輯及保存本機設定草稿。**正式登入、遊戲連線、官方資料啟用與遊戲操作尚未接入 Desktop**；這個宿主還不能取代 Python 客戶端。沒有用假登入切換畫面，也不以離線 `world_ready`／`Ready` 旗標啟用送出權限。
 
-    dotnet build dotnet/Lala.Desktop/Lala.Desktop.csproj
-    dotnet run --project dotnet/Lala.Desktop -- --self-test
-    dotnet run --project dotnet/Lala.Desktop
+## 開啟與檢查
 
-The self-test covers valid sample, whitespace, joined frames, invalid hex, empty
-input, truncated frame, size limits and cancellation. It is not a native UI test.
+```bash
+dotnet build dotnet/Lala.Desktop/Lala.Desktop.csproj -c Release
+dotnet run --project dotnet/Lala.Desktop -c Release --no-build
+```
 
-Input is capped, decoding runs off the UI thread, repeated work is canceled,
-late results cannot replace a newer request, and closing/detaching cancels work.
-Only the first 100 packet headers are rendered. Payload contents are never shown.
+啟動先顯示「登入／選角」。按 **檢視桌面介面** 開啟未連線的主畫面。角色卡有獨立的 **背包** 與 **特技** 入口；右側可切換 **事件紀錄／戰場陣形**，小地圖下方開啟導航預覽；遠征圖示與 AI 齒輪開啟原有獨立設定視窗。
 
-## Current verification
+登入、密碼記憶、施放、補給、儲藏存取、實際移動、派遣與聊天送出等尚無宿主接點的操作維持停用並顯示原因。登入欄位不持久化；離開登入畫面、切換輸入身分或關閉視窗時清除密碼。
 
-- Linux .NET 10 build: passed, zero warnings/errors.
-- Inspector self-test: nine checks passed.
-- Isolated Xvfb 1024×768 launch: Chinese text and dark-blue layout inspected;
-  loading the synthetic sample, decoding it and canceling were exercised.
-- Native Windows/macOS startup, rendering, packaging and signing: not verified.
-- Android native host and mobile touch/lifecycle acceptance: tracked separately.
-- Login, inventory/skills, battle, maps and automation screens: not migrated here.
+```bash
+# 不需要圖形環境：原封包自測＋桌面設定與資料邊界自測。
+dotnet run --project dotnet/Lala.Desktop -c Release --no-build -- --self-test
+
+# 需要實際原生顯示環境，或 Linux Xvfb。
+dotnet run --project dotnet/Lala.Desktop -c Release --no-build -- --ui-self-test --screenshots /tmp/lala-desktop-ui
+```
+
+UI 自測使用獨立臨時設定目錄，合成資料名稱標示「介面測試」，結束後清除設定與快照，不連線遊戲。截圖是實際 Avalonia 控件渲染；原生 Windows／macOS 安裝包、裝置縮放與正式伺服器驗收需另外執行。
+
+## 架構與整合
+
+- `DesktopApplication` 是 Desktop 專用入口，集中管理主視窗、登入與功能視窗的關閉／隱藏行為。
+- `Shared/App.cs`、`Shared/ProtocolInspectorView.cs` 與 Android 的連線生命週期保留原路徑；登入頁仍可開啟原有離線封包檢查器。
+- `DesktopSession.ReadView()` 一次取得 generation、publication sequence、快照與文字標籤；過期／重複 publication 被拒絕，切換身分後清除舊資料與選取。
+- `ServiceStateSnapshot` 是顯示來源；UI 不建立第二套戰鬥、背包、遠征 reducer，不直接操作 socket、封包或 Core 可變狀態。
+- 設定沿用 Python JSON 的欄位、列數及預設值；只檢查草稿結構，不代表技能／道具的正式可用性已核對。匯入、匯出與取消不會套用，儲存不會啟動 AI。
+- `DesktopPreferencesStore` 在 `LocalApplicationData/LaLa/DesktopPreview` 依身分雜湊分檔。預覽身分與後續遊戲帳號分開；原 Python 設定不被覆寫，無帳密、Token、遊戲快照或授權旗標落盤。
+- 官方原圖由 `wlre/resources/assets/` 直接嵌入 Desktop assembly，沒有另一套重複素材或 Android 資源變更。
+
+詳細來源映射、驗收與限制見 [桌面介面移植與驗收](../../docs/DESKTOP_INTERFACE_MIGRATION.md)。

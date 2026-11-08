@@ -6,4 +6,11 @@
     <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.5" />
     <ProjectReference Include="../Lala.Core/Lala.Core.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Reference the exact existing artwork without copying or re-encoding it. Android
+         only links Shared/*.cs and therefore does not acquire desktop-only resources. -->
+    <EmbeddedResource Include="../../wlre/resources/assets/**/*.png;../../wlre/resources/assets/app.ico">
+      <LogicalName>DesktopAssets.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
 </Project>

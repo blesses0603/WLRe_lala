@@ -1,5 +1,7 @@
 # WLRe:LaLa | v7.3.1
 
+> **PR #79 C# Desktop 介面（開發中）**：依既有桌面配置建立登入、主畫面、背包、特技、戰場陣形、地圖、遠征與設定；依新要求「背包」與「特技」各自獨立視窗。可操作本機介面、顯示共用核心快照及編輯設定草稿，正式登入、遊戲操作與官方資源接入仍未完成。原 Python 桌面版本與 Android 版本不變，詳見 [Desktop 啟動方式](dotnet/Lala.Desktop/README.md)及[介面驗收](docs/DESKTOP_INTERFACE_MIGRATION.md)。
+
 > **v7.3.1 桌面發行（2026-11-07）**：以 main `8aa7a684` 為基底，包含 PR #74 的舊導航資料隔離、無種子啟動及官方預覽修正。程式、介面與封裝共用 `wlre.__version__ = 7.3.1`；由版本 Tag 觸發 Windows x64、macOS arm64／x64 建置，成功後發布 ZIP 與 SHA-256。正式服完整端到端、全地圖導航／實際移動與使用者電腦實機驗收仍未完成；官方導航預覽不授權正式移動。macOS Intel CI 不驗證 GUI，Apple Developer ID 公證亦未完成。Android 不在本次發行範圍。下列舊版段落保留歷史狀態，不代表本次驗收結果。
 
 > **PR79 C#／Avalonia Android 生命週期（預計 v0.2.0，未正式發布）**：新 `dotnet/Lala.Android` 已加入前景服務、通知停止、畫面重新綁定、網路等待及有限重連的架構；共用登入／TCP 核心尚未接入，不能登入遊戲。Android C# host 的版本獨立於本頁 Python 桌面版 `7.3.1`，也不更動舊 Android 倉庫。實作、測試邊界與待驗收項目見 [Android 生命週期](dotnet/Lala.Android/README.md)。
