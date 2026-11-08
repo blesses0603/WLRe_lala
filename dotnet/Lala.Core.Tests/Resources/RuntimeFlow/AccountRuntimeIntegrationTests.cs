@@ -80,6 +80,14 @@ public sealed partial class ResourceRuntimeBootstrapTests
                 offset += count;
             }
         }
+        internal async Task ExpectClosedAfterRetirement()
+        {
+            Assert.Empty(pending); decoder.Finish();
+            // Explicit client retirement can close/reset the socket rather than negotiate
+            // a peer-initiated FIN. Do not send a FIN into an already-retired connection.
+            try { Assert.Equal(0, await socket.ReceiveAsync(new byte[1], SocketFlags.None, token)); }
+            catch (SocketException error) when (error.SocketErrorCode is SocketError.ConnectionReset or SocketError.ConnectionAborted) { }
+        }
         internal async Task CloseSendAndExpectEof()
         {
             socket.Shutdown(SocketShutdown.Send);
@@ -286,7 +294,9 @@ public sealed partial class ResourceRuntimeBootstrapTests
         var first = verification.Run(AccountVerify);
         var second = formal.Run(async client =>
         {
-            await AccountEnterWorld(client); await client.WaitFor(finish.Task); await client.CloseSendAndExpectEof();
+            await AccountEnterWorld(client); await client.WaitFor(finish.Task);
+            if (revoke == "eof") await client.CloseSendAndExpectEof();
+            else await client.ExpectClosedAfterRetirement();
         });
         var resources = AccountResourceRuntime.CreateForOfflineTests(session,
             ResourceRuntimeOwner.CreateForOfflineTests(fixture.Root, source));

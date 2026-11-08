@@ -117,6 +117,8 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
             try { count = await formal!.ReadAsync(destination, linked.Token).ConfigureAwait(false); }
             catch (TcpTransportException error) when (error.Reason == TcpTransportEnd.ReadFailed)
             { Record(HeldConnectionFailure.ReadFailed); throw; }
+            catch (TcpTransportException error) when (error.Reason is TcpTransportEnd.Cancelled or TcpTransportEnd.Disposed)
+            { Record(HeldConnectionFailure.CancelledOrHeld); throw; }
             catch (Exception) { Record(HeldConnectionFailure.IncompleteLoginOrUnknown); throw; }
             if (count == 0) { lock (gate) inputEnded = true; Record(HeldConnectionFailure.RemoteEof); }
             return count;

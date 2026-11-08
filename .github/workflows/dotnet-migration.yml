@@ -26,6 +26,8 @@ jobs:
         run: dotnet test dotnet/Lala.Android.Lifecycle.Tests/Lala.Android.Lifecycle.Tests.csproj -c Release
       - name: Check public Core consumer contract
         run: dotnet run --project dotnet/Lala.Core.PublicContract.Check/Lala.Core.PublicContract.Check.csproj -c Release
+      - name: Check bounded cloud acceptance harness offline
+        run: dotnet run --project dotnet/Lala.Cloud.Acceptance/Lala.Cloud.Acceptance.csproj -c Release -- --self-test
       - name: Build Avalonia desktop
         run: dotnet build dotnet/Lala.Desktop/Lala.Desktop.csproj -c Release
       - name: Check offline inspector

@@ -1078,8 +1078,13 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.official_server_list",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Sessions/Discovery/OfficialServerDiscovery.cs",
+      "dotnet/Lala.Core/Sessions/Discovery/HttpOfficialServerDiscoverySource.cs",
+      "dotnet/Lala.Core/Sessions/Discovery/OfficialServerListParser.cs",
+      "dotnet/Lala.Core/Sessions/Discovery/OfficialServerCandidates.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1146,11 +1151,19 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
+      "csharp_build": "passed_for_listed_subset",
       "differential_tests": "not_run",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Inert official HTTPS server-line discovery with bounded exact-URL fetch, before/after version identity checks, immutable historical candidates and explicit line selection.",
+      "Strict bounded server/group/port parsing with canonical public IPv4 only; metadata never authorizes login or supplies a verification endpoint."
+    ],
+    "outstanding_scope": [
+      "SQLite server-list cache persistence and last-success restoration, IPv6 compatibility, parser diagnostic parity, host/UI integration and official-server acceptance remain.",
+      "Synthetic handler tests establish local contracts only; official endpoint freshness, secure credential delivery and live transmission still require separate verification."
+    ]
   },
   {
     "id": "desktop:wlre/services/official_source.py",

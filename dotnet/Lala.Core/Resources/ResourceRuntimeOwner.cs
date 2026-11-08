@@ -152,6 +152,8 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
             mine.ThrowIfCancellationRequested();
             if (_afterAdmission is not null) await _afterAdmission().ConfigureAwait(false);
             EnsureCurrent(generation, mine);
+            var baseline = bootstrap ? await CaptureWriteBaselineAsync(mine.Token).ConfigureAwait(false) : null;
+            EnsureCurrent(generation, mine);
             var prepared = await _preparation.PrepareAsync(_source, cancellationToken: mine.Token).ConfigureAwait(false);
             EnsureCurrent(generation, mine);
             if (bootstrap)
@@ -167,7 +169,7 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
                 try
                 {
                     receipt = await ResourceInventoryStore.RecordAsync(writer, prepared.InventoryInput, mine.Token,
-                        () => AdmitCommit(generation, mine)).ConfigureAwait(false);
+                        () => AdmitCommit(generation, mine), baseline).ConfigureAwait(false);
                     storage = receipt.Outcome;
                 }
                 catch (Exception error)
@@ -227,6 +229,22 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
             }
         }
     }
+    private async Task<ResourceInventoryWriteBaseline> CaptureWriteBaselineAsync(CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        try
+        {
+            if ((File.GetAttributes(_inventory) & FileAttributes.Directory) != 0)
+                throw new InvalidDataException("Inventory location is not a file");
+        }
+        catch (FileNotFoundException) { return ResourceInventoryWriteBaseline.Empty; }
+        catch (DirectoryNotFoundException) { return ResourceInventoryWriteBaseline.Empty; }
+        // Missing is distinct from unreadable/malformed. Never create storage to capture a
+        // baseline, and complete read cleanup before source acquisition or writer creation.
+        var connection = await CreateConnectionAsync(SqliteOpenMode.ReadOnly).ConfigureAwait(false);
+        return await ResourceInventoryWriteBaseline.CaptureAsync(connection, token).ConfigureAwait(false);
+    }
+
     private async Task<DbConnection> CreateConnectionAsync(SqliteOpenMode mode)
     {
         var connection = new SqliteConnection(new SqliteConnectionStringBuilder

@@ -28,7 +28,7 @@ internal sealed record HeldConnectionOutcome(HeldConnectionFailure Failure, bool
             if (facts.Contains(failure)) return Stop(failure);
         foreach (var failure in facts)
             if (failure is not (HeldConnectionFailure.ConnectFailed or HeldConnectionFailure.ConnectTimedOut or
-                HeldConnectionFailure.RemoteEof or HeldConnectionFailure.ReadFailed)) return Stop(failure);
+                HeldConnectionFailure.RemoteEof or HeldConnectionFailure.ReadFailed or HeldConnectionFailure.CancelledOrHeld)) return Stop(failure);
         switch (result.End)
         {
             case ReceiveEnd.Cancelled: case ReceiveEnd.Disposed: return Stop(HeldConnectionFailure.CancelledOrHeld);
@@ -39,6 +39,9 @@ internal sealed record HeldConnectionOutcome(HeldConnectionFailure Failure, bool
             case ReceiveEnd.ReductionFailed: return Stop(HeldConnectionFailure.ReductionFailed);
             case ReceiveEnd.EventHandlerFailed: return Stop(HeldConnectionFailure.EventHandlerFailed);
         }
+        // Cancellation caused by receive retirement is secondary evidence: a decoder or
+        // observer failure that triggered it must remain visible, not resemble a clean stop.
+        if (facts.Contains(HeldConnectionFailure.CancelledOrHeld)) return Stop(HeldConnectionFailure.CancelledOrHeld);
         if (result.End == ReceiveEnd.ReadFailed)
         {
             if (facts.Contains(HeldConnectionFailure.ConnectFailed)) return new(HeldConnectionFailure.ConnectFailed, loginCompleted, true);

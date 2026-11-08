@@ -75,3 +75,8 @@ read-only review found no blocker. Full combined-head/platform verification rema
 For explicit local recovery after Committed/Unknown outcomes, see
 [read-only inventory inspection](dotnet-resource-inventory-inspection.md). It checks fresh
 persisted self-consistency without retrying preparation or granting resource admission.
+
+Bootstrap also enforces an [active-inventory write precondition](dotnet-resource-inventory-concurrency.md)
+to avoid overwriting another owner's changed active selector after source preparation. A conflict
+is a failed preparation, not a queued or automatic retry; storage outcome still distinguishes
+confirmed non-commit from cleanup uncertainty.

@@ -18,7 +18,8 @@ internal static class ResourceInventoryStore
     ];
 
     internal static async Task<ResourceInventoryReceipt> RecordAsync(DbConnection connection, ResourceInventoryInput input,
-        CancellationToken cancellationToken = default, Action? admitCommit = null)
+        CancellationToken cancellationToken = default, Action? admitCommit = null,
+        ResourceInventoryWriteBaseline? expectedBaseline = null)
     {
         ArgumentNullException.ThrowIfNull(connection);
         var db = new ResourceInventoryDatabase(connection, cancellationToken);
@@ -28,6 +29,7 @@ internal static class ResourceInventoryStore
             ArgumentNullException.ThrowIfNull(input);
             await db.OpenAsync().ConfigureAwait(false);
             await ResourceInventorySchema.EnsureAsync(db).ConfigureAwait(false);
+            if (expectedBaseline is not null) await expectedBaseline.EnsureUnchangedAsync(db).ConfigureAwait(false);
             receipt = await RecordBodyAsync(db, input).ConfigureAwait(false);
             await db.CommitAsync(admitCommit).ConfigureAwait(false);
         }

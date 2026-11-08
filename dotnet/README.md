@@ -69,3 +69,13 @@ This does not activate host UI wiring, command sending, or live-server validatio
 `AccountRuntime` now joins connection and resource lifetimes: login first, one
 bootstrap, read-only refresh after reconnect, and current catalog observations in
 the held receive pipeline. See [ordering and validation limits](../docs/dotnet-integrated-account-runtime.md).
+
+### Cloud acceptance readiness
+
+`Lala.Cloud.Acceptance` exercises the public connection API without friend-assembly
+access. Run its synthetic loopback checks with
+`dotnet run --project dotnet/Lala.Cloud.Acceptance -c Release -- --self-test`.
+The executable does not accept real credentials through command-line arguments,
+environment variables or files. A future live host still needs a verified target
+profile, approved secure credential delivery and authorized network access; raw TCP
+XOR does not encrypt passwords. Offline checks are not official-server acceptance.

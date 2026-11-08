@@ -58,6 +58,21 @@ public sealed class HeldConnectionOutcomeTests
             [HeldConnectionFailure.ConnectFailed]).CanReconnect);
     }
 
+    [Theory]
+    [InlineData((int)ReceiveEnd.InvalidFrame, (int)HeldConnectionFailure.InvalidProtocol)]
+    [InlineData((int)ReceiveEnd.TruncatedFrame, (int)HeldConnectionFailure.InvalidProtocol)]
+    [InlineData((int)ReceiveEnd.InvalidPayload, (int)HeldConnectionFailure.InvalidProtocol)]
+    [InlineData((int)ReceiveEnd.ObservationInputFailed, (int)HeldConnectionFailure.ObservationFailed)]
+    [InlineData((int)ReceiveEnd.MissingArkRuntime, (int)HeldConnectionFailure.ObservationFailed)]
+    [InlineData((int)ReceiveEnd.ReductionFailed, (int)HeldConnectionFailure.ReductionFailed)]
+    [InlineData((int)ReceiveEnd.EventHandlerFailed, (int)HeldConnectionFailure.EventHandlerFailed)]
+    public void RetirementCancellationCannotHideTheFailureThatCausedIt(int end, int failure)
+    {
+        var outcome = HeldConnectionOutcome.Classify(Result((ReceiveEnd)end), true, [HeldConnectionFailure.CancelledOrHeld]);
+        Assert.Equal((HeldConnectionFailure)failure, outcome.Failure);
+        Assert.False(outcome.CanReconnect);
+    }
+
     private static HeldAccountConnection Attach(IPEndPoint endpoint, Func<HandshakeLeg, Packet> provider)
     {
         var session = new AccountSession(); var generation = session.Begin("synthetic", "loopback").Generation;

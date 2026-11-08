@@ -55,7 +55,9 @@ attempt stays occupied through the entire write, readback, final reobservation a
 callback retirement. A later call is rejected while it is running or retiring; invalidation
 revokes publication immediately but does not release the writer slot. This prevents an older
 writer from overtaking a newer attempt **in the same owner**. There is no cross-owner/process
-serialization or filesystem replacement claim.
+serialization or filesystem replacement claim. A later increment adds an optimistic active
+selector/identity precondition across independent owners before inventory DML; see
+[write concurrency](../../../../../docs/dotnet-resource-inventory-concurrency.md).
 
 After all store DML/report/integrity work and COMMIT command construction, the owner performs
 one final admission check under its publication gate. It checks the exact attempt, generation,

@@ -1,6 +1,7 @@
 using System.Net;
 using Lala.Core.Resources;
 using Lala.Core.Sessions;
+using Lala.Core.Sessions.Discovery;
 
 // Deliberately no InternalsVisibleTo: this is a real external Core consumer.
 var session = new AccountSession();
@@ -38,6 +39,14 @@ await using (var account = AccountRuntime.Create(session, generation, profile, s
 var inspection = await ResourceInventoryInspector.InspectAsync(root);
 Require(inspection.Status == ResourceInventoryInspectionStatus.Missing && !inspection.CanLogin && !inspection.CanSendPackets);
 Require(!Directory.Exists(root));
+using (var discovery = OfficialServerDiscovery.Create())
+{
+    Require(discovery.Current is null);
+    bool cancelled = false;
+    try { await discovery.RefreshAsync(cancel.Token); }
+    catch (OperationCanceledException) { cancelled = true; }
+    Require(cancelled && discovery.Current is null);
+}
 Console.WriteLine("Public Core contract check passed; no network or resource writes were requested.");
 static void Require(bool condition) { if (!condition) throw new InvalidOperationException("Public Core contract check failed."); }
 sealed class DecliningSource : IAccountCredentialSource

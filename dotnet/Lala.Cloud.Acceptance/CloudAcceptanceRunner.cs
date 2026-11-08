@@ -1,0 +1,217 @@
+using System.Diagnostics;
+using Lala.Core.Sessions;
+
+namespace Lala.Cloud.Acceptance;
+
+/// <summary>
+/// Inert, one-shot public-API consumer for an explicitly authorized host. Every new runner
+/// owns a fresh session and exactly one connection attempt. It never discovers endpoints,
+/// bootstraps resources, sends gameplay commands, or disposes the caller's credential source.
+/// The host must supply its own secure credential adapter. Raw TCP/XOR is not encryption.
+/// </summary>
+public sealed class CloudAcceptanceRunner
+{
+    private readonly object gate = new();
+    private readonly AcceptanceOptions options;
+    private AccountConnectionProfile? profile;
+    private IAccountCredentialSource? source;
+    private Task<AcceptanceResult>? running;
+    private readonly TaskCompletionSource stopRequested = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private AcceptanceProgress progress = new(AcceptancePhase.Created, AcceptanceStopReason.None,
+        LoginProtocolEvidence.NotObserved, ReceiveEvidence.NoBaseline, 0, null, null);
+
+    public CloudAcceptanceRunner(AccountConnectionProfile profile, IAccountCredentialSource source,
+        AcceptanceOptions? options = null)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+        ArgumentNullException.ThrowIfNull(source);
+        this.options = options ?? new();
+        this.options.Validate();
+        this.profile = profile;
+        this.source = source;
+    }
+
+    public AcceptanceProgress Snapshot { get { lock (gate) return progress; } }
+
+    /// <summary>Repeated calls return the same task; only the first token owns cancellation.
+    /// Stop requests revoke further admission promptly, but return waits for RunAsync and
+    /// DisposeAsync, including admitted noncooperative callbacks. No cleanup is abandoned.</summary>
+    public Task<AcceptanceResult> RunAsync(CancellationToken cancellationToken = default)
+    {
+        lock (gate) return running ??= ExecuteAsync(cancellationToken);
+    }
+
+    private async Task<AcceptanceResult> ExecuteAsync(CancellationToken cancellationToken)
+    {
+        var session = new AccountSession();
+        // These are ownership labels, never an account name or a network destination.
+        var generation = session.Begin("acceptance", "explicit-profile").Generation;
+        var runtime = new AccountConnectionRuntime(session, generation, profile!, source!, new()
+        {
+            MaximumAttempts = 1,
+            // The harness owns its overall bound even after protocol login completes.
+            MaximumRecoveryTime = TimeSpan.FromMinutes(30),
+            LoginTimeout = options.LoginTimeout,
+            ConnectTimeout = options.ConnectTimeout,
+            ReadTimeout = options.ReadTimeout,
+            WriteTimeout = options.WriteTimeout
+        });
+        lock (gate) progress = progress with { Phase = AcceptancePhase.WaitingForLogin };
+
+        using var deadline = new CancellationTokenSource();
+        using var deadlineRegistration = deadline.Token.Register(() => RequestStop(runtime, AcceptanceStopReason.OverallDeadline));
+        using var callerRegistration = cancellationToken.Register(() => RequestStop(runtime, AcceptanceStopReason.CallerCancellation));
+        deadline.CancelAfter(options.OverallTimeout);
+        Task<AccountConnectionResult>? operation = null;
+        AccountConnectionResult? connectionResult = null;
+        bool runnerFailed = false, cleanupFailed = false;
+        Guid? baselineAttempt = null;
+        long? observationStarted = null;
+        try
+        {
+            operation = runtime.RunAsync();
+            while (!operation.IsCompleted && !stopRequested.Task.IsCompleted)
+            {
+                var status = runtime.Snapshot;
+                var publication = runtime.Publication;
+                lock (gate)
+                {
+                    if (progress.StopReason == AcceptanceStopReason.None)
+                    {
+                        progress = progress with { PollCount = checked(progress.PollCount + 1) };
+                        if (status.Phase == AccountConnectionPhase.ReceivingHeld)
+                        {
+                            progress = progress with { Login = LoginProtocolEvidence.Completed };
+                            // ReceivingHeld is published by the pre-commit login handler.
+                            // Require both final handshake facts to be committed before taking
+                            // the baseline, so its own final commit is not receive progress.
+                            if (publication is { Phase: AccountReceivePhase.Running } &&
+                                publication.State.Player is not null && publication.State.Local.Session.InitialDataComplete)
+                            {
+                                if (baselineAttempt is null)
+                                {
+                                    baselineAttempt = publication.Attempt;
+                                    observationStarted = Stopwatch.GetTimestamp();
+                                    progress = progress with
+                                    {
+                                        Phase = AcceptancePhase.ObservingHeldReceive,
+                                        Receive = ReceiveEvidence.BaselineObserved,
+                                        BaselineRevision = publication.Revision,
+                                        LatestRevision = publication.Revision
+                                    };
+                                }
+                                else if (publication.Attempt == baselineAttempt &&
+                                    progress.LatestRevision is { } latest && publication.Revision > latest)
+                                {
+                                    progress = progress with
+                                    {
+                                        Receive = ReceiveEvidence.RevisionAdvanced,
+                                        LatestRevision = publication.Revision
+                                    };
+                                }
+                            }
+                        }
+                    }
+                }
+                if (observationStarted is { } started && Stopwatch.GetElapsedTime(started) >= options.ObservationWindow)
+                    RequestStop(runtime, AcceptanceStopReason.ObservationWindowElapsed);
+                if (!stopRequested.Task.IsCompleted && !operation.IsCompleted)
+                {
+                    using var tickStop = new CancellationTokenSource();
+                    var tick = Task.Delay(options.PollInterval, tickStop.Token);
+                    await Task.WhenAny(operation, stopRequested.Task, tick).ConfigureAwait(false);
+                    await tickStop.CancelAsync().ConfigureAwait(false);
+                    try { await tick.ConfigureAwait(false); }
+                    catch (OperationCanceledException) when (tickStop.IsCancellationRequested) { }
+                }
+            }
+            if (operation.IsCompleted) RequestStop(runtime, AcceptanceStopReason.ConnectionEnded);
+        }
+        catch (Exception)
+        {
+            // Exception objects/messages can contain source data. Never retain or print them.
+            runnerFailed = true;
+            RequestStop(runtime, AcceptanceStopReason.RunnerFailure);
+        }
+        finally
+        {
+            // Neither await has a timeout: timing limits request stop, never detach work.
+            runtime.Stop();
+            if (operation is not null)
+                try { connectionResult = await operation.ConfigureAwait(false); }
+                catch (Exception) { runnerFailed = true; }
+            try { await runtime.DisposeAsync().ConfigureAwait(false); }
+            catch (Exception) { cleanupFailed = true; }
+            // Stop callbacks cannot change the final evidence once completion is frozen.
+            deadline.CancelAfter(Timeout.InfiniteTimeSpan);
+            lock (gate)
+            {
+                profile = null;
+                source = null;
+            }
+            session.Disconnect();
+        }
+
+        var statusAtEnd = connectionResult?.Status ?? runtime.Snapshot;
+        var failure = statusAtEnd.History.IsEmpty ? (AccountConnectionFailure?)null : statusAtEnd.History[^1].Failure;
+        cleanupFailed |= connectionResult is { ResourcesReleased: false } ||
+            statusAtEnd.EndReason == AccountConnectionEndReason.CleanupFailed;
+        AcceptanceProgress final;
+        lock (gate)
+        {
+            if (statusAtEnd.History.Any(attempt => attempt.LoginProtocolCompleted))
+                progress = progress with { Login = LoginProtocolEvidence.Completed };
+            progress = progress with { Phase = AcceptancePhase.Completed };
+            final = progress;
+        }
+        return new(Classify(final, statusAtEnd.EndReason, failure, cleanupFailed, runnerFailed),
+            final.StopReason, final.Login, final.Receive,
+            cleanupFailed ? CleanupDisposition.Failed : CleanupDisposition.Released,
+            statusAtEnd.AttemptNumber, final.PollCount, final.BaselineRevision, final.LatestRevision,
+            statusAtEnd.EndReason, failure);
+    }
+
+    private void RequestStop(AccountConnectionRuntime runtime, AcceptanceStopReason reason)
+    {
+        lock (gate)
+        {
+            if (progress.Phase == AcceptancePhase.Completed || progress.StopReason != AcceptanceStopReason.None) return;
+            runtime.Stop();
+            // This publication is a barrier: admission has been revoked before it is visible.
+            progress = progress with { Phase = AcceptancePhase.Stopping, StopReason = reason };
+            stopRequested.TrySetResult();
+        }
+    }
+
+    internal static AcceptanceOutcome Classify(AcceptanceProgress progress,
+        AccountConnectionEndReason? end, AccountConnectionFailure? failure, bool cleanupFailed, bool runnerFailed)
+    {
+        if (cleanupFailed || end == AccountConnectionEndReason.CleanupFailed || failure == AccountConnectionFailure.CleanupFailed)
+            return AcceptanceOutcome.CleanupFailed;
+        if (runnerFailed) return AcceptanceOutcome.RunnerFailed;
+        if (progress.StopReason == AcceptanceStopReason.CallerCancellation) return AcceptanceOutcome.Cancelled;
+        if (progress.StopReason == AcceptanceStopReason.OverallDeadline ||
+            end == AccountConnectionEndReason.RecoveryDeadline || failure == AccountConnectionFailure.LoginDeadline)
+            return AcceptanceOutcome.DeadlineExpired;
+        if (end == AccountConnectionEndReason.CredentialsUnavailable) return AcceptanceOutcome.CredentialsUnavailable;
+        if (end == AccountConnectionEndReason.ProviderFailed) return AcceptanceOutcome.CredentialProviderFailed;
+        if (progress.Login == LoginProtocolEvidence.Completed)
+        {
+            // Login/read evidence survives a later error, but does not turn an incomplete
+            // observation window or failed protocol/write/receive path into acceptance.
+            if (progress.StopReason != AcceptanceStopReason.ObservationWindowElapsed ||
+                end != AccountConnectionEndReason.Stopped ||
+                failure is not (null or AccountConnectionFailure.CancelledOrHeld))
+                return AcceptanceOutcome.ObservationInterrupted;
+            return progress.Receive == ReceiveEvidence.RevisionAdvanced
+                ? AcceptanceOutcome.ProtocolCompleteWithReceiveProgress
+                : AcceptanceOutcome.ProtocolCompleteWithoutReceiveProgress;
+        }
+        return failure switch
+        {
+            AccountConnectionFailure.LoginProtocolFailed or AccountConnectionFailure.InvalidProtocol => AcceptanceOutcome.LoginProtocolFailed,
+            AccountConnectionFailure.ConnectFailed or AccountConnectionFailure.ConnectTimedOut => AcceptanceOutcome.ConnectionFailed,
+            _ => AcceptanceOutcome.IncompleteLogin
+        };
+    }
+}

@@ -17,14 +17,14 @@ internal sealed class ResourceInventoryDatabase(DbConnection connection, Cancell
     internal int TextByteMultiplier => encoding == Encoding.UTF8 ? 1 : 2;
     internal CancellationToken Token => token;
 
-    internal async Task OpenAsync()
+    internal async Task OpenAsync(bool write = true)
     {
         token.ThrowIfCancellationRequested();
         if (connection.State != ConnectionState.Closed) throw new InvalidOperationException("Inventory requires a closed, exclusively owned SQLite connection");
         await connection.OpenAsync(token).ConfigureAwait(false); token.ThrowIfCancellationRequested();
         if (connection.State != ConnectionState.Open) throw Invalid("Inventory provider did not open the connection");
         beginAttempted = true;
-        await ExecuteAsync("BEGIN IMMEDIATE").ConfigureAwait(false);
+        await ExecuteAsync(write ? "BEGIN IMMEDIATE" : "BEGIN").ConfigureAwait(false);
         var rows = await ReadAsync("PRAGMA main.encoding", 1).ConfigureAwait(false);
         if (rows.Count != 1 || rows[0].Length != 1) throw Invalid("Database encoding is unavailable");
         encoding = Text(rows[0][0]) switch { "UTF-8" => Encoding.UTF8, "UTF-16le" => Encoding.Unicode, "UTF-16be" => Encoding.BigEndianUnicode,

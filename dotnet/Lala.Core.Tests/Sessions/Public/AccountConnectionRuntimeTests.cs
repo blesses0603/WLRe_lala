@@ -133,6 +133,7 @@ public sealed class AccountConnectionRuntimeTests
         Assert.False(session.ConfirmResources(generation, "v", "v", true));
         runtime.Stop(); Assert.Null(runtime.Publication);
         var result = await run.WaitAsync(Guard);
+        Assert.Equal(AccountConnectionFailure.CancelledOrHeld, Assert.Single(result.Status.History).Failure);
         Assert.Equal(AccountConnectionEndReason.Stopped, result.Status.EndReason); Assert.True(result.ResourcesReleased);
         finish.SetResult(); await Task.WhenAll(first, second).WaitAsync(Guard);
     }
