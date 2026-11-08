@@ -55,6 +55,7 @@ internal sealed class HeldAccountReconnect : IAsyncDisposable
     private readonly Func<TimeSpan, CancellationToken, Task> delay;
     private readonly HeldLoginLimits loginLimits;
     private readonly AccountLoginAdmission? loginAdmission;
+    private readonly IAccountRoleSelector? roleSelector;
     private readonly ReconnectLimits limits;
     private readonly CancellationTokenSource stop = new();
     private ReconnectView view;
@@ -72,7 +73,7 @@ internal sealed class HeldAccountReconnect : IAsyncDisposable
         int readSize = 4096, int bufferedChunks = 4,
         Func<TimeSpan, CancellationToken, Task>? delay = null,
         Func<int, CancellationToken, ValueTask<IHandshakeLoginProvider?>>? ownedCredentials = null,
-        AccountLoginAdmission? loginAdmission = null)
+        AccountLoginAdmission? loginAdmission = null, IAccountRoleSelector? roleSelector = null)
     {
         ArgumentNullException.ThrowIfNull(session);
         if ((credentials is null) == (ownedCredentials is null))
@@ -83,7 +84,7 @@ internal sealed class HeldAccountReconnect : IAsyncDisposable
         if (readSize is < 1 or > 65536) throw new ArgumentOutOfRangeException(nameof(readSize));
         if (bufferedChunks is < 1 or > 256) throw new ArgumentOutOfRangeException(nameof(bufferedChunks));
         WireCodec.ValidateKey(txXor); WireCodec.ValidateKey(rxXor);
-        this.loginAdmission = loginAdmission;
+        this.loginAdmission = loginAdmission; this.roleSelector = roleSelector;
         this.loginLimits = loginLimits ?? new(); this.loginLimits.Validate();
         this.limits = limits ?? new(); this.limits.Validate();
         this.verification = CopyEndpoint(verification); this.formal = CopyEndpoint(formal);
@@ -201,7 +202,7 @@ internal sealed class HeldAccountReconnect : IAsyncDisposable
                             else
                             {
                                 owner = HeldAccountConnection.TryAttach(session, generation, verification, formal,
-                                    txXor, rxXor, roleIndex, provider, clock, observe, loginLimits, readSize, bufferedChunks, ownedProvider, loginAdmission);
+                                    txXor, rxXor, roleIndex, provider, clock, observe, loginLimits, readSize, bufferedChunks, ownedProvider, loginAdmission, roleSelector);
                                 provider = null;
                                 if (owner is null)
                                     RetireLocked(session.Snapshot.Generation == generation ? ReconnectEnd.AdmissionBlocked : ReconnectEnd.Superseded);

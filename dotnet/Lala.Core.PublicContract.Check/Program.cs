@@ -21,9 +21,17 @@ var input = new DecliningInput();
 await using (var preparation = new AccountLoginPreparation(session, generation, Guid.NewGuid(), profile, input))
 {
     Require(ReferenceEquals(preparation.Disclosure.Profile, profile) && preparation.Disclosure.Generation == generation);
+    Require(preparation.Disclosure.RoleSelectionMode == AccountRoleSelectionMode.Fixed && preparation.Disclosure.FixedRoleIndex == 1);
     Require(preparation.Disclosure.AttemptNumber == 1 && !preparation.Snapshot.CanSendCommands);
     var result = await preparation.RunAsync(cancel.Token);
     Require(input.Calls == 0 && result.ResourcesReleased && preparation.Publication is null && !preparation.Snapshot.CanSendCommands);
+}
+await using (var preparation = new AccountLoginPreparation(session, generation, Guid.NewGuid(), profile, input,
+    roleSelector: new DecliningRoleSelector()))
+{
+    Require(preparation.Disclosure.RoleSelectionMode == AccountRoleSelectionMode.Interactive && preparation.Disclosure.FixedRoleIndex is null);
+    var result = await preparation.RunAsync(cancel.Token);
+    Require(result.ResourcesReleased && !preparation.Snapshot.CanSendCommands);
 }
 using (var credentials = new AccountLoginCredentials("synthetic", "synthetic"))
     Require(!credentials.IsDisposed && !credentials.ToString().Contains("synthetic", StringComparison.Ordinal));
@@ -37,7 +45,7 @@ await using (var resources = AccountResourceRuntime.Create(session, root))
     Require(!result.CanLogin && !result.CanSendPackets && !Directory.Exists(root));
 }
 Require(!Directory.Exists(root));
-await using (var account = AccountRuntime.Create(session, generation, profile, source, root))
+await using (var account = AccountRuntime.Create(session, generation, profile, source, root, roleSelector: new DecliningRoleSelector()))
 {
     var created = account.Snapshot;
     Require(ReferenceEquals(created, account.Snapshot) && !created.IsCompleted);
@@ -76,4 +84,14 @@ sealed class DecliningInput : IAccountLoginInput
     public int Calls { get; private set; }
     public ValueTask<AccountLoginCredentials?> AcquireAsync(AccountLoginDisclosure disclosure, CancellationToken token)
     { Calls++; throw new InvalidOperationException("Pre-cancelled preparation must not acquire."); }
+}
+
+sealed class DecliningRoleSelector : IAccountRoleSelector
+{
+    public ValueTask<AccountRoleSelectionChoice?> SelectAsync(AccountRoleSelectionRequest request, CancellationToken token)
+    {
+        _ = request.Generation; _ = request.HandshakeAttempt; _ = request.RequestId; _ = request.Roles;
+        _ = request.Choose(1);
+        throw new InvalidOperationException("Pre-cancelled preparation must not select.");
+    }
 }

@@ -56,11 +56,11 @@ public sealed class AccountRuntime : IAsyncDisposable
     private ImmutableArray<AccountResourceAttempt> history = [];
 
     public static AccountRuntime Create(AccountSession session, long generation, AccountConnectionProfile profile,
-        IAccountCredentialSource source, string absoluteDataRoot, AccountConnectionOptions? options = null)
+        IAccountCredentialSource source, string absoluteDataRoot, AccountConnectionOptions? options = null, IAccountRoleSelector? roleSelector = null)
     {
         ArgumentNullException.ThrowIfNull(session);
         // Validate connection arguments before constructing owned resources; both factories are inert.
-        return new(session, generation, profile, source, absoluteDataRoot, options, null, null);
+        return new(session, generation, profile, source, absoluteDataRoot, options, null, null, roleSelector);
     }
     internal static AccountRuntime CreateForOfflineTests(AccountSession session, long generation,
         AccountConnectionProfile profile, IAccountCredentialSource source, AccountResourceRuntime resources,
@@ -68,11 +68,11 @@ public sealed class AccountRuntime : IAsyncDisposable
         => new(session, generation, profile, source, null, options, resources, beforePreparationAdmission);
 
     private AccountRuntime(AccountSession session, long generation, AccountConnectionProfile profile,
-        IAccountCredentialSource source, string? root, AccountConnectionOptions? options, AccountResourceRuntime? supplied, Func<CancellationToken, Task>? beforePreparationAdmission)
+        IAccountCredentialSource source, string? root, AccountConnectionOptions? options, AccountResourceRuntime? supplied, Func<CancellationToken, Task>? beforePreparationAdmission, IAccountRoleSelector? roleSelector = null)
     {
         this.session = session;
         this.beforePreparationAdmission = beforePreparationAdmission;
-        connection = new(session, generation, profile, source, options, Observe);
+        connection = new(session, generation, profile, source, options, Observe, roleSelector);
         resources = supplied ?? AccountResourceRuntime.Create(session, root!);
     }
     /// <summary>Stable assignment identity until visible lifecycle, resource selection,

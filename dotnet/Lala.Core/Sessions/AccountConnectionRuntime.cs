@@ -24,17 +24,19 @@ public sealed class AccountConnectionRuntime : IAsyncDisposable
 
     public AccountConnectionRuntime(AccountSession session, long generation, AccountConnectionProfile profile,
         IAccountCredentialSource credentialSource, AccountConnectionOptions? options = null,
-        Func<ServiceStateSnapshot, double, ServiceObservationInputs>? observationInputs = null)
-        : this(session, generation, profile, credentialSource, options, observationInputs, null) { }
+        Func<ServiceStateSnapshot, double, ServiceObservationInputs>? observationInputs = null, IAccountRoleSelector? roleSelector = null)
+        : this(session, generation, profile, credentialSource, options, observationInputs, null, roleSelector) { }
 
     internal AccountConnectionRuntime(AccountSession session, long generation, AccountConnectionProfile profile,
         IAccountCredentialSource credentialSource, AccountConnectionOptions? options,
-        Func<ServiceStateSnapshot, double, ServiceObservationInputs>? observationInputs, AccountLoginAdmission? loginAdmission)
+        Func<ServiceStateSnapshot, double, ServiceObservationInputs>? observationInputs, AccountLoginAdmission? loginAdmission, IAccountRoleSelector? roleSelector = null)
     {
         ArgumentNullException.ThrowIfNull(session); ArgumentNullException.ThrowIfNull(profile);
         ArgumentNullException.ThrowIfNull(credentialSource);
         this.profile = profile; this.credentialSource = credentialSource;
         options ??= new();
+        if (roleSelector is not null && options.MaximumAttempts != 1)
+            throw new ArgumentException("Interactive role selection allows exactly one attempt.", nameof(options));
         var login = new HeldLoginLimits
         {
             LoginTimeout = options.LoginTimeout,
@@ -48,7 +50,7 @@ public sealed class AccountConnectionRuntime : IAsyncDisposable
         connection = new(session, generation, profile.VerificationEndpoint, profile.FormalEndpoint,
             profile.TransmitXor, profile.ReceiveXor, profile.RoleIndex, null,
             () => Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency,
-            observationInputs ?? ((_, now) => new(now)), login, retry, ownedCredentials: AcquireAsync, loginAdmission: loginAdmission);
+            observationInputs ?? ((_, now) => new(now)), login, retry, ownedCredentials: AcquireAsync, loginAdmission: loginAdmission, roleSelector: roleSelector);
     }
 
     private ReconnectView? observedView;

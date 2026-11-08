@@ -111,3 +111,33 @@ A separate acceptance `--terminal-self-test` now exercises intercepted local ter
 input through the prepared runner with only the fixed fake pair and embedded loopback
 peers. It is not a real-account host, authenticated permission or secure OS handoff.
 See [interactive synthetic acceptance](../dotnet/Lala.Cloud.Acceptance/README.md#interactive-terminal-synthetic-acceptance).
+
+## Opt-in interactive role selection
+
+Pass `roleSelector: IAccountRoleSelector` to `AccountLoginPreparation` or
+`AccountConnectionRuntime` (also forwarded by `AccountRuntime.Create`) before starting the login. The preparation's frozen disclosure
+then has `RoleSelectionMode.Interactive` and `FixedRoleIndex == null`; otherwise it retains
+fixed selection with `FixedRoleIndex == Profile.RoleIndex`. In interactive mode the legacy
+profile role index is only a compatibility placeholder, never a fallback selection.
+The host must obtain permission for this mode before acquiring/sending credentials.
+The callback is not proof of consent. Interactive runtime options require one attempt.
+
+After formal authentication and a validated server role list, Core invokes `SelectAsync`
+with immutable roles, session generation, `HandshakeAttempt` and a unique request ID. The handshake identifier is distinct from
+the receive publication attempt identifier.
+Return `request.Choose(index)` for an offered unlocked role or null to decline. A choice
+created from another request is rejected even if its index matches. Declining, returning
+an invalid choice or throwing ends the attempt with `EventHandlerFailed`; callback
+exception messages are not published. There is no role fallback or retry. Empty, duplicate,
+locked-only or invalid role lists fail closed. No game-command send API is introduced.
+
+The callback runs outside lifecycle locks and outside the receive writer. The existing
+single decoder continues receiving and replying to heartbeats while selection is pending;
+protocol observations and the eventual selection write remain serialized. Stop, session
+replacement, protocol failure and the login deadline invalidate late choices. Completion
+and disposal include the callback's completion, so a callback that ignores cancellation
+keeps cleanup pending rather than being abandoned. Hosts should honor its cancellation
+token and must not await disposal from inside their own callback.
+
+Validation uses synthetic credentials and loopback peers only; it does not establish
+live-server acceptance or change Desktop behavior or resource/gameplay holds.

@@ -1792,3 +1792,18 @@ terminal behavior remains unverified. This is not authenticated consent or secur
 startup echo, OS/runtime copies and forced-process-exit cleanup are outside guarantees.
 Only the overall PR marker advances once to 8.0.26; same-batch corrections retain it.
 Platform and Core/Desktop project version settings are unchanged.
+
+
+### Overall PR development marker 8.0.27: interactive login role selection
+
+Explicit opt-in role selection is wired through login preparation, connection runtime
+and integrated AccountRuntime. Pre-Run disclosure distinguishes interactive selection
+from the unchanged fixed-role default. Interactive mode permits one attempt only.
+Immutable requests and opaque choices bind the exact server role list and handshake epoch;
+late choices after cancellation/retirement cannot admit selection writes. Heartbeats continue
+while a selector waits, and noncooperative callbacks remain owned until cleanup completes.
+
+Final verification: 43,345 Core tests (21 new), public consumer, 36 acceptance and 76 lifecycle
+checks passed. These are synthetic checks, not trusted consent, Desktop integration or live
+server validation. No UI or gameplay command authority changed. Only the overall PR marker
+advances once to 8.0.27; same-batch corrections and platform/project versions stay unchanged.

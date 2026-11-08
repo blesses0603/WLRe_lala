@@ -37,6 +37,10 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
     private readonly int txKey, rxXor, roleIndex;
     private readonly HeldLoginLimits limits;
     private readonly ScriptedHandshake handshake;
+    private readonly IAccountRoleSelector? roleSelector;
+    private readonly long generation;
+    private readonly SemaphoreSlim protocolGate = new(1, 1);
+    private Task? selectionOperation;
     private IHandshakeLoginProvider? loginProvider;
     private readonly AccountLoginAdmission? loginAdmission;
     private readonly List<BoundedTcpTransport> transports = [];
@@ -61,12 +65,12 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
 
     internal HeldLoginTransport(IPEndPoint verification, IPEndPoint formal, int txXor, int rxXor,
         int roleIndex, Func<HandshakeLeg, Packet>? loginProvider, HeldLoginLimits? limits = null,
-        IHandshakeLoginProvider? ownedProvider = null, AccountLoginAdmission? loginAdmission = null)
+        IHandshakeLoginProvider? ownedProvider = null, AccountLoginAdmission? loginAdmission = null, IAccountRoleSelector? roleSelector = null, long generation = 0)
     {
         if (loginProvider is null && ownedProvider is null) throw new ArgumentNullException(nameof(loginProvider));
         if (loginProvider is not null && ownedProvider is not null)
             throw new ArgumentException("Exactly one login provider is required.");
-        this.loginAdmission = loginAdmission;
+        this.loginAdmission = loginAdmission; this.roleSelector = roleSelector; this.generation = generation;
         verificationEndpoint = CopyEndpoint(verification); formalEndpoint = CopyEndpoint(formal);
         WireCodec.ValidateKey(txXor); WireCodec.ValidateKey(rxXor);
         if (roleIndex is not (1 or 2)) throw new ArgumentOutOfRangeException(nameof(roleIndex));
@@ -205,49 +209,95 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
             using var linked = CancellationTokenSource.CreateLinkedTokenSource(token, stop.Token, deadline.Token);
             linked.Token.ThrowIfCancellationRequested();
             var transport = formal ?? throw new HeldLoginException();
-            if (handshake.Snapshot.Phase == HandshakePhase.ScriptedComplete)
+            await protocolGate.WaitAsync(linked.Token).ConfigureAwait(false);
+            try
             {
-                if (observation is LoginResultEvent or ServerLayoutEvent { Event: RoleListAvailableEvent })
+                if (handshake.Snapshot.Phase == HandshakePhase.ScriptedComplete)
                 {
-                    Record(HeldConnectionFailure.LoginProtocolFailed);
-                    throw new HeldLoginException(); // Never silently accept a second login epoch.
+                    if (observation is LoginResultEvent or ServerLayoutEvent { Event: RoleListAvailableEvent })
+                    {
+                        Record(HeldConnectionFailure.LoginProtocolFailed);
+                        throw new HeldLoginException(); // Never silently accept a second login epoch.
+                    }
+                    if (observation is HeartbeatRequestEvent)
+                    {
+                        // Exact fixed protocol reply only. No general send API is exposed.
+                        byte[] bytes = WireCodec.Encode(new Packet(63, 5), txKey);
+                        try { await WriteExactAsync(transport, bytes, linked.Token).ConfigureAwait(false); }
+                        finally { System.Security.Cryptography.CryptographicOperations.ZeroMemory(bytes); }
+                    }
+                    return;
                 }
-                if (observation is HeartbeatRequestEvent)
+                await FlushAsync(transport, handshake.Observe(handshake.Snapshot.Attempt,
+                    HandshakeLeg.Formal, observation), linked.Token).ConfigureAwait(false);
+                if (handshake.Snapshot.Phase == HandshakePhase.Selection && selectionOperation is null)
                 {
-                    // Exact fixed protocol reply only. No general send API is exposed.
-                    byte[] bytes = WireCodec.Encode(new Packet(63, 5), txKey);
-                    try { await WriteExactAsync(transport, bytes, linked.Token).ConfigureAwait(false); }
-                    finally { System.Security.Cryptography.CryptographicOperations.ZeroMemory(bytes); }
+                    if (roleSelector is null)
+                        await FlushAsync(transport, handshake.SelectRole(handshake.Snapshot.Attempt, roleIndex), linked.Token).ConfigureAwait(false);
+                    else
+                    {
+                        if (observation is not ServerLayoutEvent { Event: RoleListAvailableEvent list } ||
+                            list.Roles.IsEmpty || !list.Roles.Any(r => !r.Locked)) throw new HeldLoginException();
+                        var request = new AccountRoleSelectionRequest(generation, handshake.Snapshot.Attempt, list.Roles);
+                        lock (gate)
+                        {
+                            if (retired) throw new HeldLoginException();
+                            selectionOperation = Task.Run(() => SelectInteractiveAsync(request, token));
+                        }
+                    }
                 }
-                return;
+                if (handshake.Snapshot.Phase == HandshakePhase.ScriptedComplete)
+                {
+                    deadline.CancelAfter(Timeout.InfiniteTimeSpan);
+                    linked.Token.ThrowIfCancellationRequested();
+                    lock (gate)
+                    {
+                        if (retired) throw new HeldLoginException();
+                        loginCompleted = true;
+                        login.TrySetResult(handshake.Snapshot);
+                    }
+                }
             }
-            await FlushAsync(transport, handshake.Observe(handshake.Snapshot.Attempt,
-                HandshakeLeg.Formal, observation), linked.Token).ConfigureAwait(false);
-            if (handshake.Snapshot.Phase == HandshakePhase.Selection)
-                await FlushAsync(transport, handshake.SelectRole(handshake.Snapshot.Attempt, roleIndex), linked.Token).ConfigureAwait(false);
-            if (handshake.Snapshot.Phase == HandshakePhase.ScriptedComplete)
-            {
-                deadline.CancelAfter(Timeout.InfiniteTimeSpan);
-                linked.Token.ThrowIfCancellationRequested();
-                lock (gate)
-                {
-                    if (retired) throw new HeldLoginException();
-                    loginCompleted = true;
-                    login.TrySetResult(handshake.Snapshot);
-                }
-            }
+            finally { protocolGate.Release(); }
         }
         catch (Exception) { Record(HeldConnectionFailure.EventHandlerFailed); RecordDeadline(); EndHandshake(token.IsCancellationRequested || stop.IsCancellationRequested); throw new HeldLoginException(); }
     }
 
-    private async Task FlushAsync(BoundedTcpTransport transport, ScriptedHandshakeWrite? write, CancellationToken token, bool credentialWrite = false)
+    private async Task SelectInteractiveAsync(AccountRoleSelectionRequest request, CancellationToken token)
+    {
+        try
+        {
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(token, stop.Token, deadline.Token);
+            linked.Token.ThrowIfCancellationRequested();
+            var choice = await roleSelector!.SelectAsync(request, linked.Token).ConfigureAwait(false);
+            linked.Token.ThrowIfCancellationRequested();
+            await protocolGate.WaitAsync(linked.Token).ConfigureAwait(false);
+            try
+            {
+                linked.Token.ThrowIfCancellationRequested();
+                if (choice is null || !ReferenceEquals(choice.Request, request) || !request.Roles.Any(r => r.Index == choice.Index && !r.Locked))
+                    throw new HeldLoginException();
+                await FlushAsync(formal!, handshake.SelectRole(request.HandshakeAttempt, choice.Index), linked.Token, roleSelection: true).ConfigureAwait(false);
+            }
+            finally { protocolGate.Release(); }
+        }
+        catch (Exception)
+        {
+            Record(HeldConnectionFailure.EventHandlerFailed); RecordDeadline();
+            EndHandshake(token.IsCancellationRequested || stop.IsCancellationRequested);
+            // Wake a pending read so receive retirement starts even without another server event.
+            try { await stop.CancelAsync().ConfigureAwait(false); } catch (Exception) { }
+        }
+    }
+
+    private async Task FlushAsync(BoundedTcpTransport transport, ScriptedHandshakeWrite? write, CancellationToken token, bool credentialWrite = false, bool roleSelection = false)
     {
         while (write is not null)
         {
             ScriptedHandshakeWrite? next;
             using (write)
             {
-                await WriteExactAsync(transport, write.Bytes, token, credentialWrite ? write.Leg : null).ConfigureAwait(false);
+                await WriteExactAsync(transport, write.Bytes, token, credentialWrite ? write.Leg : null, roleSelection).ConfigureAwait(false);
                 credentialWrite = false;
                 next = handshake.CompleteWrite(write.Attempt, write.Leg, write.Operation,
                     write.Bytes, ScriptedWriteOutcome.Complete);
@@ -261,7 +311,7 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
         }
     }
 
-    private async Task WriteExactAsync(BoundedTcpTransport transport, byte[] bytes, CancellationToken token, HandshakeLeg? credentialLeg = null)
+    private async Task WriteExactAsync(BoundedTcpTransport transport, byte[] bytes, CancellationToken token, HandshakeLeg? credentialLeg = null, bool roleSelection = false)
     {
         // Every failure in this operation is sticky, independently of the TCP terminal
         // reason, which may already have been set by a racing read/EOF.
@@ -273,7 +323,7 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
                 lock (gate)
                 {
                     token.ThrowIfCancellationRequested();
-                    if (retired) throw new HeldLoginException();
+                    if (retired || (roleSelection && inputEnded)) throw new HeldLoginException();
                     return transport.WriteAsync(bytes, token);
                 }
             }
@@ -358,7 +408,7 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
         lock (gate)
         {
             owned = transports.ToArray();
-            operations = new Task?[] { readOperation, handlerOperation }.OfType<Task>().ToArray();
+            operations = new Task?[] { readOperation, handlerOperation, selectionOperation }.OfType<Task>().ToArray();
         }
         foreach (var transport in owned)
             try { await transport.DisposeAsync().ConfigureAwait(false); } catch (Exception) { failed = true; }
@@ -368,7 +418,7 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
         // Initialization may already have detached the provider and observed its failure.
         // Draining operations above ensures that evidence cannot arrive after this check.
         lock (gate) failed |= providerCleanupFailed;
-        stop.Dispose(); deadline.Dispose(); handshake.Dispose();
+        stop.Dispose(); deadline.Dispose(); handshake.Dispose(); protocolGate.Dispose();
         if (failed) throw new HeldLoginCleanupException();
     }
 

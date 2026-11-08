@@ -11,11 +11,14 @@ public sealed class AccountLoginDisclosure
     public AccountConnectionProfile Profile { get; }
     public TimeSpan Validity { get; }
     public int AttemptNumber => 1;
+    public AccountRoleSelectionMode RoleSelectionMode { get; }
+    public int? FixedRoleIndex => RoleSelectionMode == AccountRoleSelectionMode.Fixed ? Profile.RoleIndex : null;
     public string Purpose => "One account login through verification and formal TCP recipients.";
     public string Risk => "Account and password are sent to both named recipients. Fixed XOR is reversible " +
         "obfuscation, not TLS or secure encryption; network observers may recover them. No automatic retry.";
-    internal AccountLoginDisclosure(Guid identity, long generation, AccountConnectionProfile profile, TimeSpan validity)
-        => (SelectedIdentity, Generation, Profile, Validity) = (identity, generation, profile, validity);
+    internal AccountLoginDisclosure(Guid identity, long generation, AccountConnectionProfile profile, TimeSpan validity,
+        AccountRoleSelectionMode roleSelectionMode)
+        => (SelectedIdentity, Generation, Profile, Validity, RoleSelectionMode) = (identity, generation, profile, validity, roleSelectionMode);
     public override string ToString() => "Account login disclosure (identity redacted)";
 }
 
@@ -50,12 +53,12 @@ public sealed class AccountLoginPreparation : IAsyncDisposable
 
     public AccountLoginPreparation(AccountSession session, long generation, Guid selectedIdentity,
         AccountConnectionProfile profile, IAccountLoginInput input,
-        AccountConnectionOptions? options = null, TimeSpan? validity = null)
-        : this(session, generation, selectedIdentity, profile, input, options, validity, TimeProvider.System) { }
+        AccountConnectionOptions? options = null, TimeSpan? validity = null, IAccountRoleSelector? roleSelector = null)
+        : this(session, generation, selectedIdentity, profile, input, options, validity, TimeProvider.System, roleSelector) { }
 
     internal AccountLoginPreparation(AccountSession session, long generation, Guid selectedIdentity,
         AccountConnectionProfile profile, IAccountLoginInput input, AccountConnectionOptions? options,
-        TimeSpan? validity, TimeProvider clock)
+        TimeSpan? validity, TimeProvider clock, IAccountRoleSelector? roleSelector = null)
     {
         ArgumentNullException.ThrowIfNull(session); ArgumentNullException.ThrowIfNull(profile);
         ArgumentNullException.ThrowIfNull(input); ArgumentNullException.ThrowIfNull(clock);
@@ -68,9 +71,9 @@ public sealed class AccountLoginPreparation : IAsyncDisposable
         if (snapshot.Generation != generation || snapshot.Phase != SessionPhase.Preparing)
             throw new InvalidOperationException("A current preparing session is required.");
         this.session = session; this.input = input; this.clock = clock;
-        Disclosure = new(selectedIdentity, generation, profile, duration);
+        Disclosure = new(selectedIdentity, generation, profile, duration, roleSelector is null ? AccountRoleSelectionMode.Fixed : AccountRoleSelectionMode.Interactive);
         admission = new(session, snapshot, profile, duration, clock);
-        runtime = new(session, generation, profile, new InputSource(this), options, null, admission);
+        runtime = new(session, generation, profile, new InputSource(this), options, null, admission, roleSelector);
     }
 
     /// <summary>Call only after the host independently obtains permission for Disclosure.
