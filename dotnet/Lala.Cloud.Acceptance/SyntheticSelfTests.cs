@@ -6,7 +6,7 @@ using Lala.Core.Sessions;
 
 namespace Lala.Cloud.Acceptance;
 
-internal static class SyntheticSelfTests
+internal static partial class SyntheticSelfTests
 {
     private static readonly TimeSpan Guard = TimeSpan.FromSeconds(15);
     private static AcceptanceOptions Quick => new()
@@ -95,7 +95,20 @@ internal static class SyntheticSelfTests
             (Scenario.IntegratedRejectedLogin, () => IntegratedBeforeLogin(3)),
             (Scenario.IntegratedIncompleteLogin, () => IntegratedBeforeLogin(4)),
             (Scenario.IntegratedLateCredentials, () => IntegratedBeforeLogin(5)),
-            (Scenario.IntegratedRootValidation, IntegratedRootValidation)
+            (Scenario.IntegratedRootValidation, IntegratedRootValidation),
+            (Scenario.PreparedCompleted, PreparedCompleted),
+            (Scenario.PreparedDeclined, () => PreparedUnused(0)),
+            (Scenario.PreparedStoppedBeforeRun, () => PreparedUnused(1)),
+            (Scenario.PreparedDisposedBeforeRun, () => PreparedUnused(2)),
+            (Scenario.PreparedExpiredBeforeRun, () => PreparedUnused(3)),
+            (Scenario.PreparedProviderFailure, () => PreparedUnused(4)),
+            (Scenario.PreparedPreCancelled, () => PreparedUnused(5)),
+            (Scenario.PreparedLateInputStop, () => PreparedLateInput(false)),
+            (Scenario.PreparedLateInputExpiry, () => PreparedLateInput(true)),
+            (Scenario.PreparedStopBetweenLegs, () => PreparedStopBetweenLegs(false)),
+            (Scenario.PreparedExpiryBetweenLegs, () => PreparedStopBetweenLegs(true)),
+            (Scenario.PreparedReentrantStop, PreparedReentrantStop),
+            (Scenario.PreparedConcurrentRetirement, PreparedConcurrentRetirement)
         ];
         int passed = 0, failed = 0;
         foreach (var test in cases)
@@ -534,6 +547,10 @@ internal static class SyntheticSelfTests
         IncompleteLogin, OverallDeadline, CallerCancellation, LateCredentialAfterDeadline,
         PreCancelled, ProviderErrorRedaction, CredentialDeclined, FreshSingleAttempts,
         CleanupFailureClassification, OptionBounds,
+        PreparedCompleted, PreparedDeclined, PreparedStoppedBeforeRun, PreparedDisposedBeforeRun,
+        PreparedExpiredBeforeRun, PreparedProviderFailure, PreparedPreCancelled,
+        PreparedLateInputStop, PreparedLateInputExpiry, PreparedStopBetweenLegs,
+        PreparedExpiryBetweenLegs, PreparedReentrantStop, PreparedConcurrentRetirement,
         IntegratedPreCancelled, IntegratedCredentialDeclined, IntegratedProviderError,
         IntegratedRejectedLogin, IntegratedIncompleteLogin, IntegratedLateCredentials, IntegratedRootValidation
     }

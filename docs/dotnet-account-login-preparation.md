@@ -94,3 +94,14 @@ login continues receiving/answering the existing heartbeat after preparation exp
 without friend-assembly access, input acquisition or network requests. These checks are
 not proof of a secure host, authenticated human approval, official-server compatibility,
 or production security acceptance.
+
+## Opt-in acceptance consumer
+
+`Lala.Cloud.Acceptance` now offers `CloudAcceptanceRunner.CreatePrepared` as an
+inert public-API consumer. It freezes its private session/generation and preparation
+at construction and exposes the exact `Disclosure` before Run. It does not acquire
+input, authenticate permission, export a reusable source, accept a replacement profile,
+or implicitly enable resource bootstrap. The original constructor and resource factory
+remain legacy raw-source routes without these guarantees. See the
+[acceptance host contract](../dotnet/Lala.Cloud.Acceptance/README.md#opt-in-prepared-login-host)
+for lifecycle and synthetic coverage.

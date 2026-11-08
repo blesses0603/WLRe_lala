@@ -1761,3 +1761,19 @@ Existing direct runtime callers and integrated resource composition do not autom
 use this boundary. See `dotnet-account-login-preparation.md` for limits.
 Only the overall PR marker advances to 8.0.24; platform/project versions are unchanged.
 Same-batch test, CI, documentation or push corrections do not advance it again.
+
+
+### Overall PR development marker 8.0.25: prepared acceptance integration
+
+The acceptance runner now offers an explicit CreatePrepared route. Construction fixes
+its private session, selected identity, profile and AccountLoginPreparation and exposes
+the exact disclosure before Run. It uses the existing two credential-write guards;
+construction-time validity is not restarted. Stop/disposal retain one-shot ownership
+and join late input cleanup. Legacy raw-source/resource routes retain their distinct limits.
+
+Synthetic acceptance: 36/36 (13 new); full Core: 43,324/43,324; lifecycle: 76/76;
+public consumer passed. These are loopback checks, not trusted human permission, secure
+input, safe raw-TCP transport or live-server validation. No resource download is implicit.
+See the acceptance README for disclosure and lifecycle contracts. This new feature advances
+only the overall PR marker once to 8.0.25; same-batch corrections retain it. Platform and
+Core/Desktop project version settings remain unchanged.

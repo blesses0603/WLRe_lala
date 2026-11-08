@@ -9,7 +9,7 @@ namespace Lala.Cloud.Acceptance;
 /// sends gameplay commands or disposes the caller's credential source.
 /// The host must supply its own secure credential adapter. Raw TCP/XOR is not encryption.
 /// </summary>
-public sealed class CloudAcceptanceRunner
+public sealed class CloudAcceptanceRunner : IAsyncDisposable
 {
     private readonly object gate = new();
     private readonly AcceptanceOptions options;
@@ -17,10 +17,62 @@ public sealed class CloudAcceptanceRunner
     private IAccountCredentialSource? source;
     private string? dataRoot;
     private Task<AcceptanceResult>? running;
+    private Task? disposal;
+    private AccountSession? preparedSession;
+    private AccountLoginPreparation? preparation;
+    private readonly CancellationTokenSource hostStop = new();
+    private int stopClaimed;
+    /// <summary>Exact prepared disclosure; null for legacy raw-source routes. Not proof of consent.</summary>
+    public AccountLoginDisclosure? Disclosure { get; private init; }
+
+    /// <summary>Inert opt-in. The host must independently authenticate permission for
+    /// Disclosure before RunAsync, and bind the opaque selection to actual input.
+    /// No reusable source, second profile, resource bootstrap, or approval assertion.</summary>
+    public static CloudAcceptanceRunner CreatePrepared(AccountConnectionProfile profile,
+        Guid selectedIdentity, IAccountLoginInput input, AcceptanceOptions? options = null,
+        TimeSpan? validity = null) => new(profile, selectedIdentity, input, options, validity);
+
+    private CloudAcceptanceRunner(AccountConnectionProfile profile, Guid selectedIdentity,
+        IAccountLoginInput input, AcceptanceOptions? options, TimeSpan? validity)
+    {
+        this.options = options ?? new();
+        this.options.Validate();
+        preparedSession = new();
+        var generation = preparedSession.Begin("acceptance", "explicit-profile").Generation;
+        preparation = new(preparedSession, generation, selectedIdentity, profile, input,
+            ConnectionOptions(), validity);
+        Disclosure = preparation.Disclosure;
+    }
+
+    private AccountConnectionOptions ConnectionOptions() => new()
+    {
+        MaximumAttempts = 1, MaximumRecoveryTime = TimeSpan.FromMinutes(30),
+        LoginTimeout = options.LoginTimeout, ConnectTimeout = options.ConnectTimeout,
+        ReadTimeout = options.ReadTimeout, WriteTimeout = options.WriteTimeout
+    };
+
+    /// <summary>Revokes prepared admission even before Run. Input remains caller-owned.</summary>
+    public void Stop()
+    {
+        preparation?.Stop();
+        hostStop.Cancel();
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        Stop();
+        lock (gate) return new(disposal ??= Task.Run(async () =>
+        {
+            // Run after Stop performs no input acquisition and owns final cleanup.
+            await RunAsync().ConfigureAwait(false);
+        }));
+    }
+
     private readonly TaskCompletionSource stopRequested = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private AcceptanceProgress progress = new(AcceptancePhase.Created, AcceptanceStopReason.None,
         LoginProtocolEvidence.NotObserved, ReceiveEvidence.NoBaseline, 0, null, null);
 
+    /// <summary>Legacy raw-source route without preparation disclosure/binding guarantees.</summary>
     public CloudAcceptanceRunner(AccountConnectionProfile profile, IAccountCredentialSource source,
         AcceptanceOptions? options = null)
     {
@@ -32,7 +84,7 @@ public sealed class CloudAcceptanceRunner
         this.source = source;
     }
 
-    /// <summary>Explicit opt-in to AccountRuntime. After protocol login, RunAsync may
+    /// <summary>Legacy raw-source opt-in to AccountRuntime, without preparation guarantees. After protocol login, RunAsync may
     /// download official HTTPS resources and create/update the fixed local resource inventory.
     /// The caller must authorize both operations and the connection/account separately.
     /// Construction is inert and is not authorization. No resource success is implied by login.</summary>
@@ -55,32 +107,25 @@ public sealed class CloudAcceptanceRunner
     /// DisposeAsync, including admitted noncooperative callbacks. No cleanup is abandoned.</summary>
     public Task<AcceptanceResult> RunAsync(CancellationToken cancellationToken = default)
     {
-        lock (gate) return running ??= ExecuteAsync(cancellationToken);
+        lock (gate) return running ??= Task.Run(() => ExecuteAsync(cancellationToken));
     }
 
     private async Task<AcceptanceResult> ExecuteAsync(CancellationToken cancellationToken)
     {
-        var session = new AccountSession();
-        // These are ownership labels, never an account name or a network destination.
-        var generation = session.Begin("acceptance", "explicit-profile").Generation;
-        var connectionOptions = new AccountConnectionOptions()
-        {
-            MaximumAttempts = 1,
-            // The harness owns its overall bound even after protocol login completes.
-            MaximumRecoveryTime = TimeSpan.FromMinutes(30),
-            LoginTimeout = options.LoginTimeout,
-            ConnectTimeout = options.ConnectTimeout,
-            ReadTimeout = options.ReadTimeout,
-            WriteTimeout = options.WriteTimeout
-        };
-        IAcceptanceRuntime runtime = dataRoot is null
-            ? new ConnectionAcceptanceRuntime(new(session, generation, profile!, source!, connectionOptions))
-            : new IntegratedAcceptanceRuntime(AccountRuntime.Create(session, generation, profile!, source!, dataRoot, connectionOptions));
+        var session = preparedSession ?? new AccountSession();
+        var generation = preparedSession is null
+            ? session.Begin("acceptance", "explicit-profile").Generation : Disclosure!.Generation;
+        IAcceptanceRuntime runtime = preparation is not null
+            ? new PreparedAcceptanceRuntime(preparation)
+            : dataRoot is null
+                ? new ConnectionAcceptanceRuntime(new(session, generation, profile!, source!, ConnectionOptions()))
+                : new IntegratedAcceptanceRuntime(AccountRuntime.Create(session, generation, profile!, source!, dataRoot, ConnectionOptions()));
         lock (gate) progress = progress with { Phase = AcceptancePhase.WaitingForLogin };
 
         using var deadline = new CancellationTokenSource();
         using var deadlineRegistration = deadline.Token.Register(() => RequestStop(runtime, AcceptanceStopReason.OverallDeadline));
         using var callerRegistration = cancellationToken.Register(() => RequestStop(runtime, AcceptanceStopReason.CallerCancellation));
+        using var hostRegistration = hostStop.Token.Register(() => RequestStop(runtime, AcceptanceStopReason.CallerCancellation));
         deadline.CancelAfter(options.OverallTimeout);
         Task<AccountConnectionResult>? operation = null;
         AccountConnectionResult? connectionResult = null;
@@ -174,6 +219,7 @@ public sealed class CloudAcceptanceRunner
             session.Disconnect();
         }
 
+        await stopRequested.Task.ConfigureAwait(false);
         var statusAtEnd = connectionResult?.Status ?? runtime.Snapshot;
         var failure = statusAtEnd.History.IsEmpty ? (AccountConnectionFailure?)null : statusAtEnd.History[^1].Failure;
         cleanupFailed |= !runtime.ResourcesReleased || connectionResult is { ResourcesReleased: false } ||
@@ -196,12 +242,13 @@ public sealed class CloudAcceptanceRunner
 
     private void RequestStop(IAcceptanceRuntime runtime, AcceptanceStopReason reason)
     {
+        // Stop may synchronously invoke host cancellation callbacks. Never hold gate.
+        if (Interlocked.CompareExchange(ref stopClaimed, 1, 0) != 0) return;
+        runtime.Stop();
         lock (gate)
         {
-            if (progress.Phase == AcceptancePhase.Completed || progress.StopReason != AcceptanceStopReason.None) return;
-            runtime.Stop();
-            // This publication is a barrier: admission has been revoked before it is visible.
-            progress = progress with { Phase = AcceptancePhase.Stopping, StopReason = reason };
+            if (progress.Phase != AcceptancePhase.Completed)
+                progress = progress with { Phase = AcceptancePhase.Stopping, StopReason = reason };
             stopRequested.TrySetResult();
         }
     }

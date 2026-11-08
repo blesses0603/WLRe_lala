@@ -48,3 +48,14 @@ internal sealed class IntegratedAcceptanceRuntime(AccountRuntime runtime) : IAcc
             last?.ReadbackMatched ?? false, last?.SourcesRechecked ?? false);
     }
 }
+
+internal sealed class PreparedAcceptanceRuntime(AccountLoginPreparation preparation) : IAcceptanceRuntime
+{
+    public AccountConnectionStatus Snapshot => preparation.Snapshot;
+    public AccountReceivePublication? Publication => preparation.Publication;
+    public bool ResourcesReleased => true; // Connection result independently reports cleanup.
+    public Task<AccountConnectionResult> RunAsync() => preparation.RunAsync();
+    public void Stop() => preparation.Stop();
+    public ValueTask DisposeAsync() => preparation.DisposeAsync();
+    public ResourceEvidence ObserveResources(ResourceEvidence previous) => previous;
+}

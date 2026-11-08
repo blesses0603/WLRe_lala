@@ -12,8 +12,10 @@ internal static class Program
 
         There is deliberately no live CLI mode, default target, profile discovery, or credential input
         through arguments, environment variables, files, stdin, or logs. A future authorized secure host
-        must supply an explicit AccountConnectionProfile and its own IAccountCredentialSource directly
-        to CloudAcceptanceRunner. Host-only CreateWithResources additionally requires an explicit absolute
+        may use CreatePrepared with an explicit profile, opaque selected identity and IAccountLoginInput.
+        Read Disclosure before Run and independently authenticate permission for those exact facts.
+        The raw-source constructor and CreateWithResources remain legacy routes without preparation guarantees.
+        Host-only CreateWithResources additionally requires an explicit absolute
         data root and authorization for official HTTPS downloads and fixed local SQLite inventory writes.
         That secure credential adapter is not included here. The host must
         authorize the endpoints/account and arrange a trusted network: raw TCP/XOR is not encryption.

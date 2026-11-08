@@ -44,7 +44,51 @@ the runner publishes its baseline, and its exact reply is checked at the peer.
 Synthetic received frames and caller-owned credential buffers are explicitly cleared.
 No result logs include exceptions, account details, destinations, state or packets.
 
-## Future authorized secure host
+## Opt-in prepared login host
+
+`CloudAcceptanceRunner.CreatePrepared(profile, selectedIdentity, input, options, validity)`
+constructs an inert, private `AccountLoginPreparation` with a fresh private preparing
+session/generation. `input` implements `IAccountLoginInput`, not a reusable credential
+source. Read the exact non-null `Disclosure` **before** calling `RunAsync`. The host
+must independently authenticate action-time permission for both named TCP recipients,
+profile bytes, opaque selection, generation, purpose, lifetime and raw-TCP/XOR risk.
+The host must bind the opaque selection to actual input. There is no approval enum,
+authenticated UI, identity proof or permission supplied by this runner.
+
+The validity interval starts at factory construction, not Run or input completion,
+and is capped at 60 seconds. It is distinct from the acceptance observation/overall
+time limits. Input receives the identical disclosure. This route accepts no second
+profile, exports no reusable credential source, and never enables resource bootstrap.
+A host selection/profile change must `Stop`/dispose the old runner and create a fresh
+one with fresh disclosure and permission. The private session cannot be externally
+mutated; Core's preparation guards its own session transitions and both actual writes.
+See [Core preparation details](../../docs/dotnet-account-login-preparation.md).
+
+`Stop` revokes prepared admission even before Run. `DisposeAsync` requests stop and
+joins the same one-shot run/cleanup task, including when never run previously; it
+cannot acquire input in that case. Concurrent/repeated Run calls share one task and
+only its first token owns cancellation. Stop/disposal remain independent cancellation
+paths. Host callbacks do not execute under the runner lifecycle lock. Input is always
+caller-owned; transferred credential buffers are cleared by Core. Late noncooperative
+input keeps Run/disposal pending until it returns and is cleared. A stopped write may
+already have reached the socket, and cancellation does not prove cleanup or undo bytes.
+Preparation expiry is not reported as a proven acceptance overall deadline: the Core
+public status can report a stopped/incomplete attempt without exposing an expiry cause.
+
+Prepared synthetic tests cover exact two-leg packets, late heartbeat/held receive,
+inert disclosure construction, decline, sanitized input failure, repeated Run,
+pre-cancellation, Stop/dispose before Run, expiry before Run and during pending input,
+noncooperative late input, callback access to runner status, and context retirement
+between legs, second-leg expiry, reentrant Stop and concurrent Run/Stop/disposal.
+These are local loopback tests, not authenticated approval or live-server
+acceptance. No real account input or platform input host is introduced.
+
+## Legacy raw-source host
+
+The original constructor and `CreateWithResources` remain **legacy raw-source routes**.
+Their `Disclosure` is null; they do not gain preparation binding, disclosure lifetime,
+or per-write consent/context admission guarantees. They are not upgraded to a permission
+boundary by sharing runner lifecycle/observation code.
 
 The runnable CLI has no secure credential adapter. A host may reference this assembly
 and construct `CloudAcceptanceRunner` with an explicitly selected

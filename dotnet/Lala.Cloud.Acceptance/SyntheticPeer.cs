@@ -69,6 +69,14 @@ internal sealed class SyntheticClient(Socket socket, CancellationToken token) : 
             for (int i = 0; i < body.Length; i++) body[i] ^= Xor;
             SyntheticSelfTests.Check(body[0] == main && body[1] == sub);
             if (first is { } value) SyntheticSelfTests.Check(body.Length > 2 && body[2] == value);
+            if (main == 63 && sub == 7 && first is 0 or 2)
+            {
+                // Exact synthetic login body, including both recipient legs and profile bytes.
+                byte[] expected = [63, 7, first.Value, 0, 1, 2, 9,
+                    .. "synthetic"u8.ToArray(), 11, .. "fake_secret"u8.ToArray()];
+                try { SyntheticSelfTests.Check(body.AsSpan().SequenceEqual(expected)); }
+                finally { CryptographicOperations.ZeroMemory(expected); }
+            }
             if (payloadLength is { } count) SyntheticSelfTests.Check(body.Length == count + 2);
         }
         finally
