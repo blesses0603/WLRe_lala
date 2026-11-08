@@ -142,3 +142,35 @@ with no failures/skips using a process-only 3 GiB GC heap cap. Independent read-
 found no blocking issue. This is focused cloud evidence, not a full-suite or live-platform pass;
 the earlier unbounded build was cancelled after shared-executor memory pressure and is not
 counted as a pass. Concurrent activation interleavings have not been separately stress-tested.
+
+## Account-scoped catalog binding
+
+`AccountResourceBinding.TryBind` joins the caller's expected account generation, the exact
+current `SessionSnapshot` object and the exact current owner-issued resource activation.
+It performs no I/O and never calls `Begin`, `Hold` or `ConfirmResources`. Disconnected and
+wrong-generation sessions, absent/stale/fabricated/foreign/offline resource publications
+fail closed. A failed bind does not revoke resource selection belonging to another account.
+
+`IsCurrent` and `TryReadCatalogs` bracket the resource-owner access with exact account-snapshot
+checks, without nesting the account and resource locks. `Begin`, `Disconnect`, `Hold`, resource
+confirmation and receive attachment replace the snapshot. This retires prior bindings even
+when a repeated Hold preserves the generation and phase. Resource refresh, invalidation and
+disposal independently revoke catalog access. A new explicit bind may select current resources
+for the new snapshot, including a held snapshot, but cannot clear its hold or enable packets.
+
+This is read-only account-lifetime integration, not an authenticated connection/attempt binding
+or a background version monitor. A receive transport ending without a session snapshot change
+is not itself a resource revocation event. A later account or resource change cannot erase
+catalog data already returned by a successful point-in-time read. Consumers must not use those
+retained references as action authority. Login and packet flags remain false; no Desktop or
+Android host installs this binding in this increment.
+
+New offline tests cover each owner lifecycle independently, repeated same-generation Hold,
+receive attachment, explicit rebind after resource replacement, multiple accounts sharing one
+resource owner, untrusted or absent publications, and disconnected/wrong-generation accounts. Positive tests reuse the test-only private-field
+state setup described above, not a production trust bypass or live-source validation.
+
+Account-binding increment verification: **96/96** owner/bootstrap/account-receive focused
+Release tests passed, with no failures/skips and a process-only 3 GiB GC heap cap. Independent
+read-only review found no blocking issue. This is focused cloud evidence; full combined-head
+Core/platform checks and concurrent-race stress coverage are not established by this run.

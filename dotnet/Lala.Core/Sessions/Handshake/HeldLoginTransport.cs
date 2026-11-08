@@ -44,7 +44,19 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
     private BoundedTcpTransport? formal;
     private Task<int>? readOperation;
     private Task? handlerOperation, disposal;
-    private bool initialized, retired, inputEnded;
+    private bool initialized, retired, inputEnded, loginCompleted;
+    private readonly HashSet<HeldConnectionFailure> failures = [];
+
+    private void Record(HeldConnectionFailure failure) { lock (gate) failures.Add(failure); }
+    internal HeldConnectionOutcome GetOutcome(ReceiveResult result)
+    {
+        lock (gate) return HeldConnectionOutcome.Classify(result, loginCompleted, failures);
+    }
+
+    private void RecordDeadline()
+    {
+        if (deadline.IsCancellationRequested) Record(HeldConnectionFailure.LoginDeadline);
+    }
 
     internal HeldLoginTransport(IPEndPoint verification, IPEndPoint formal, int txXor, int rxXor,
         int roleIndex, Func<HandshakeLeg, Packet> loginProvider, HeldLoginLimits? limits = null)
@@ -98,11 +110,15 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
                 await InitializeAsync(linked.Token).ConfigureAwait(false);
                 initialized = true;
             }
-            int count = await formal!.ReadAsync(destination, linked.Token).ConfigureAwait(false);
-            if (count == 0) { lock (gate) inputEnded = true; }
+            int count;
+            try { count = await formal!.ReadAsync(destination, linked.Token).ConfigureAwait(false); }
+            catch (TcpTransportException error) when (error.Reason == TcpTransportEnd.ReadFailed)
+            { Record(HeldConnectionFailure.ReadFailed); throw; }
+            catch (Exception) { Record(HeldConnectionFailure.IncompleteLoginOrUnknown); throw; }
+            if (count == 0) { lock (gate) inputEnded = true; Record(HeldConnectionFailure.RemoteEof); }
             return count;
         }
-        catch (Exception) { EndHandshake(token.IsCancellationRequested || stop.IsCancellationRequested); throw new HeldLoginException(); }
+        catch (Exception) { RecordDeadline(); EndHandshake(token.IsCancellationRequested || stop.IsCancellationRequested); throw new HeldLoginException(); }
     }
 
     private async Task InitializeAsync(CancellationToken token)
@@ -120,7 +136,7 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
                 while (handshake.Snapshot.Phase != HandshakePhase.Verified)
                 {
                     int count = await verification.ReadAsync(buffer, token).ConfigureAwait(false);
-                    if (count == 0) throw new HeldLoginException();
+                    if (count == 0) { Record(HeldConnectionFailure.IncompleteLoginOrUnknown); throw new HeldLoginException(); }
                     total = checked(total + count);
                     if (total > limits.MaximumVerificationBytes) throw new HeldLoginException();
                     bool verified = false;
@@ -137,6 +153,7 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
                     // connection immediately. No suffix is transferred to the formal stream.
                 }
             }
+            catch (ProtocolException) { Record(HeldConnectionFailure.InvalidProtocol); throw; }
             finally { await verification.DisposeAsync().ConfigureAwait(false); }
             token.ThrowIfCancellationRequested();
             formal = CreateTransport(formalEndpoint);
@@ -155,11 +172,15 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
             if (retired) throw new HeldLoginException();
             provider = loginProvider ?? throw new HeldLoginException();
         }
-        var packet = provider(leg);
+        Packet packet;
+        try { packet = provider(leg); }
+        catch (Exception) { Record(HeldConnectionFailure.ProviderFailed); throw new HeldLoginException(); }
         lock (gate)
         {
             if (retired) throw new HeldLoginException();
-            return handshake.BeginLogin(handshake.Snapshot.Attempt, leg, packet) ?? throw new HeldLoginException();
+            var write = handshake.BeginLogin(handshake.Snapshot.Attempt, leg, packet);
+            if (write is null) { Record(HeldConnectionFailure.LoginProtocolFailed); throw new HeldLoginException(); }
+            return write;
         }
     }
 
@@ -173,7 +194,10 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
             if (handshake.Snapshot.Phase == HandshakePhase.ScriptedComplete)
             {
                 if (observation is LoginResultEvent or ServerLayoutEvent { Event: RoleListAvailableEvent })
+                {
+                    Record(HeldConnectionFailure.LoginProtocolFailed);
                     throw new HeldLoginException(); // Never silently accept a second login epoch.
+                }
                 if (observation is HeartbeatRequestEvent)
                 {
                     // Exact fixed protocol reply only. No general send API is exposed.
@@ -191,10 +215,15 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
             {
                 deadline.CancelAfter(Timeout.InfiniteTimeSpan);
                 linked.Token.ThrowIfCancellationRequested();
-                login.TrySetResult(handshake.Snapshot);
+                lock (gate)
+                {
+                    if (retired) throw new HeldLoginException();
+                    loginCompleted = true;
+                    login.TrySetResult(handshake.Snapshot);
+                }
             }
         }
-        catch (Exception) { EndHandshake(token.IsCancellationRequested || stop.IsCancellationRequested); throw new HeldLoginException(); }
+        catch (Exception) { Record(HeldConnectionFailure.EventHandlerFailed); RecordDeadline(); EndHandshake(token.IsCancellationRequested || stop.IsCancellationRequested); throw new HeldLoginException(); }
     }
 
     private async Task FlushAsync(BoundedTcpTransport transport, ScriptedHandshakeWrite? write, CancellationToken token)
@@ -211,32 +240,52 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
             write = next;
         }
         if (handshake.Snapshot.Phase is HandshakePhase.Failed or HandshakePhase.Cancelled or HandshakePhase.Held)
+        {
+            Record(HeldConnectionFailure.LoginProtocolFailed);
             throw new HeldLoginException();
+        }
     }
 
     private async Task WriteExactAsync(BoundedTcpTransport transport, byte[] bytes, CancellationToken token)
     {
-        token.ThrowIfCancellationRequested();
-        Task<TcpWriteResult> operation;
-        lock (gate)
+        // Every failure in this operation is sticky, independently of the TCP terminal
+        // reason, which may already have been set by a racing read/EOF.
+        try
         {
-            if (retired) throw new HeldLoginException();
-            // Admission and synchronous retirement share this lock. Already-admitted writes
-            // may have reached the socket and are never replayed; no new write starts later.
-            operation = transport.WriteAsync(bytes, token);
+            token.ThrowIfCancellationRequested();
+            Task<TcpWriteResult> operation;
+            lock (gate)
+            {
+                if (retired) throw new HeldLoginException();
+                operation = transport.WriteAsync(bytes, token);
+            }
+            var receipt = await operation.ConfigureAwait(false);
+            if (receipt.Outcome == TcpWriteOutcome.PartialOrUncertain)
+                Record(HeldConnectionFailure.WriteUncertain);
+            if (receipt.Connection != transport.Snapshot.Connection || receipt.Outcome != TcpWriteOutcome.Complete ||
+                receipt.ConfirmedLocalBytes != bytes.Length || receipt.End is not null)
+                throw new HeldLoginException();
+            token.ThrowIfCancellationRequested();
         }
-        var receipt = await operation.ConfigureAwait(false);
-        token.ThrowIfCancellationRequested();
-        if (receipt.Connection != transport.Snapshot.Connection || receipt.Outcome != TcpWriteOutcome.Complete ||
-            receipt.ConfirmedLocalBytes != bytes.Length || receipt.End is not null) throw new HeldLoginException();
+        catch (Exception) { Record(HeldConnectionFailure.WriteFailed); throw; }
     }
 
-    private Task ConnectAsync(BoundedTcpTransport transport, CancellationToken token)
+    private async Task ConnectAsync(BoundedTcpTransport transport, CancellationToken token)
     {
-        lock (gate)
+        try
         {
-            if (retired) throw new HeldLoginException();
-            return transport.ConnectAsync(token);
+            Task operation;
+            lock (gate)
+            {
+                if (retired) throw new HeldLoginException();
+                operation = transport.ConnectAsync(token);
+            }
+            await operation.ConfigureAwait(false);
+        }
+        catch (TcpTransportException error) when (error.Reason is TcpTransportEnd.ConnectFailed or TcpTransportEnd.TimedOut)
+        {
+            Record(error.Reason == TcpTransportEnd.TimedOut ? HeldConnectionFailure.ConnectTimedOut : HeldConnectionFailure.ConnectFailed);
+            throw;
         }
     }
 

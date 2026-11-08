@@ -47,6 +47,23 @@ public sealed partial class AccountSession
         }
     }
 
+    /// <summary>Retry-only compare-and-replace. An explicit Hold removes receive ownership
+    /// and cannot be reversed here. Old termination and successful cleanup are mandatory.</summary>
+    internal SessionSnapshot? TryBeginReconnect(long generation, Guid attempt)
+    {
+        lock (gate)
+        {
+            if (current.Generation != generation || current.Phase != SessionPhase.Held ||
+                receive is null || receive.Latest.Attempt != attempt || receive.Latest.Stage != ReceiveStage.Ended)
+                return null;
+            RetireReceiveLocked();
+            if (receiveCleanup is not { IsCompletedSuccessfully: true }) return null;
+            current = current with { Generation = checked(current.Generation + 1),
+                Phase = SessionPhase.Preparing, ResourceVersion = null };
+            return current;
+        }
+    }
+
     private void RetireReceiveLocked()
     {
         if (receive is null) return;

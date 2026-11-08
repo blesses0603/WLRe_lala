@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using Lala.Core.Resources;
+using Lala.Core.Sessions;
 using Microsoft.Data.Sqlite;
 using Xunit;
 
@@ -426,6 +427,135 @@ public sealed class ResourceRuntimeOwnerTests
         Assert.False(owner.TryActivate(next, out activation)); Assert.Null(activation);
         await owner.DisposeAsync();
         Assert.False(owner.TryActivate(next, out activation)); Assert.Null(activation);
+    }
+    [Theory]
+    [InlineData("begin")]
+    [InlineData("disconnect")]
+    [InlineData("hold")]
+    [InlineData("confirm")]
+    [InlineData("receive")]
+    [InlineData("invalidate")]
+    [InlineData("dispose")]
+    [InlineData("refresh")]
+    public async Task Account_resource_binding_retires_on_either_owner_lifecycle(string change)
+    {
+        using var fixture = new Fixture();
+        var prepared = await new OfflineBundleRuntimePreparation().PrepareAsync(new Source());
+        await using var owner = ResourceRuntimeOwner.Create(fixture.Root);
+        var publication = new ResourceRuntimePublication(owner, 0, prepared);
+        // Test-only admitted-state setup. This proves binding mechanics, not production trust.
+        typeof(ResourceRuntimeOwner).GetField("_current", System.Reflection.BindingFlags.NonPublic |
+            System.Reflection.BindingFlags.Instance)!.SetValue(owner, publication);
+        var session = new AccountSession();
+        var snapshot = session.Begin("synthetic-account", "synthetic-endpoint");
+        Assert.True(AccountResourceBinding.TryBind(session, snapshot.Generation, owner, publication, out var binding));
+        Assert.NotNull(binding); Assert.True(binding.IsCurrent);
+        Assert.Equal(snapshot.Generation, binding.AccountGeneration);
+        Assert.Equal(publication.Generation, binding.ResourceGeneration); Assert.Same(publication.Identity, binding.Identity);
+        Assert.True(binding.TryReadCatalogs(out var catalogs)); Assert.Same(publication.Candidate, catalogs);
+        Assert.Same(snapshot, session.Snapshot); Assert.Equal(SessionPhase.Preparing, session.Snapshot.Phase);
+        Assert.False(binding.CanLogin); Assert.False(binding.CanSendPackets);
+        switch (change)
+        {
+            case "begin": session.Begin("synthetic-account", "synthetic-endpoint"); break;
+            case "disconnect": session.Disconnect(); break;
+            case "hold": session.Hold(snapshot.Generation); break;
+            case "confirm": session.ConfirmResources(snapshot.Generation, "synthetic", "synthetic", true); break;
+            case "receive":
+                await using (var receive = session.AttachHeldReceive(snapshot.Generation, new EmptyReceiveTransport(),
+                    0xAD, () => 0, (_, now) => new(now))) Assert.NotNull(receive);
+                break;
+            case "invalidate": owner.Invalidate(); break;
+            case "dispose": await owner.DisposeAsync(); break;
+            case "refresh":
+                using (var cancelled = new CancellationTokenSource())
+                {
+                    cancelled.Cancel();
+                    await Assert.ThrowsAnyAsync<OperationCanceledException>(() => owner.RefreshAsync(cancelled.Token));
+                }
+                break;
+        }
+        Assert.False(binding.IsCurrent); Assert.False(binding.TryReadCatalogs(out catalogs)); Assert.Null(catalogs);
+        Assert.False(Directory.Exists(fixture.Root));
+    }
+    private sealed class EmptyReceiveTransport : Lala.Core.Sessions.Receive.IReceiveTransport
+    {
+        public ValueTask<int> ReadAsync(Memory<byte> destination, CancellationToken cancellationToken)
+            => ValueTask.FromResult(0);
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+    [Fact]
+    public async Task Account_resource_binding_requires_explicit_rebind_after_resource_replacement()
+    {
+        using var fixture = new Fixture();
+        var prepared = await new OfflineBundleRuntimePreparation().PrepareAsync(new Source());
+        await using var owner = ResourceRuntimeOwner.Create(fixture.Root);
+        var currentField = typeof(ResourceRuntimeOwner).GetField("_current", System.Reflection.BindingFlags.NonPublic |
+            System.Reflection.BindingFlags.Instance)!;
+        var publication = new ResourceRuntimePublication(owner, 0, prepared);
+        currentField.SetValue(owner, publication); // Test state only; no production trust claim.
+        var session = new AccountSession(); var snapshot = session.Begin("synthetic", "synthetic");
+        Assert.True(AccountResourceBinding.TryBind(session, snapshot.Generation, owner, publication, out var prior));
+        Assert.NotNull(prior);
+        owner.Invalidate();
+        var replacement = new ResourceRuntimePublication(owner, 1, prepared);
+        currentField.SetValue(owner, replacement);
+        Assert.False(prior.IsCurrent); Assert.False(prior.TryReadCatalogs(out _));
+        Assert.False(AccountResourceBinding.TryBind(session, snapshot.Generation, owner, publication, out var rejected));
+        Assert.Null(rejected);
+        Assert.True(AccountResourceBinding.TryBind(session, snapshot.Generation, owner, replacement, out var next));
+        Assert.NotNull(next); Assert.True(next.TryReadCatalogs(out _)); Assert.True(next.ResourceGeneration > prior.ResourceGeneration);
+        Assert.Same(snapshot, session.Snapshot); Assert.False(next.CanSendPackets);
+    }
+    [Fact]
+    public async Task Account_resource_binding_rejects_disconnected_wrong_generation_and_untrusted_publications()
+    {
+        using var fixture = new Fixture(); var source = new Source(); await fixture.PopulateAsync(source);
+        await using var offline = ResourceRuntimeOwner.CreateForOfflineTests(fixture.Root, source);
+        var observed = await offline.RefreshAsync();
+        var session = new AccountSession(); var snapshot = session.Begin("synthetic", "synthetic");
+        Assert.False(AccountResourceBinding.TryBind(session, snapshot.Generation, offline, observed, out var binding));
+        Assert.Null(binding); Assert.Same(snapshot, session.Snapshot);
+        var prepared = await new OfflineBundleRuntimePreparation().PrepareAsync(new Source());
+        await using var owner = ResourceRuntimeOwner.Create(fixture.Root);
+        var publication = new ResourceRuntimePublication(owner, 0, prepared);
+        Assert.False(AccountResourceBinding.TryBind(session, snapshot.Generation, owner, publication, out binding));
+        Assert.Null(binding);
+        typeof(ResourceRuntimeOwner).GetField("_current", System.Reflection.BindingFlags.NonPublic |
+            System.Reflection.BindingFlags.Instance)!.SetValue(owner, publication);
+        Assert.False(AccountResourceBinding.TryBind(session, snapshot.Generation + 1, owner, publication, out binding));
+        Assert.Null(binding);
+        Assert.False(AccountResourceBinding.TryBind(session, snapshot.Generation, owner, observed, out binding));
+        Assert.Null(binding);
+        Assert.False(AccountResourceBinding.TryBind(session, snapshot.Generation, owner, null, out binding));
+        Assert.Null(binding);
+        session.Disconnect();
+        Assert.False(AccountResourceBinding.TryBind(session, session.Snapshot.Generation, owner, publication, out binding));
+        Assert.Null(binding);
+    }
+    [Fact]
+    public async Task Held_account_binding_is_read_only_and_other_accounts_cannot_keep_retired_binding_alive()
+    {
+        using var fixture = new Fixture();
+        var prepared = await new OfflineBundleRuntimePreparation().PrepareAsync(new Source());
+        await using var owner = ResourceRuntimeOwner.Create(fixture.Root);
+        var publication = new ResourceRuntimePublication(owner, 0, prepared);
+        typeof(ResourceRuntimeOwner).GetField("_current", System.Reflection.BindingFlags.NonPublic |
+            System.Reflection.BindingFlags.Instance)!.SetValue(owner, publication);
+        var first = new AccountSession(); var second = new AccountSession();
+        long generation = first.Begin("first", "synthetic").Generation;
+        first.Hold(generation); second.Begin("second", "synthetic");
+        Assert.True(AccountResourceBinding.TryBind(first, generation, owner, publication, out var firstBinding));
+        Assert.True(AccountResourceBinding.TryBind(second, second.Snapshot.Generation, owner, publication, out var secondBinding));
+        Assert.NotNull(firstBinding); Assert.NotNull(secondBinding);
+        Assert.Equal(SessionPhase.Held, first.Snapshot.Phase);
+        first.Hold(generation); // Same generation and phase still replace the lifecycle snapshot.
+        Assert.False(firstBinding.IsCurrent); Assert.False(firstBinding.TryReadCatalogs(out _));
+        Assert.True(secondBinding.IsCurrent); Assert.True(secondBinding.TryReadCatalogs(out _));
+        Assert.True(AccountResourceBinding.TryBind(first, generation, owner, publication, out var rebound));
+        Assert.NotNull(rebound); Assert.True(rebound.IsCurrent);
+        Assert.Equal(SessionPhase.Held, first.Snapshot.Phase);
+        Assert.False(rebound.CanSendPackets); Assert.False(rebound.CanLogin);
     }
     [Theory]
     [InlineData("invalidate")]

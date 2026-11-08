@@ -19,6 +19,8 @@ internal sealed class HeldAccountConnection : IAsyncDisposable
     private readonly long generation;
     private readonly HeldLoginTransport transport;
     private readonly ReceiveAttempt receive;
+    private readonly object outcomeGate = new();
+    private Task<ReceiveResult>? running;
     private HeldAccountConnection(AccountSession session, long generation,
         HeldLoginTransport transport, ReceiveAttempt receive)
         => (this.session, this.generation, this.transport, this.receive) = (session, generation, transport, receive);
@@ -58,6 +60,18 @@ internal sealed class HeldAccountConnection : IAsyncDisposable
     internal IReadOnlyList<Transport.TcpTransportView> Connections => transport.Connections;
     internal bool ResourceHeld => true;
     internal bool CanSendCommands => false;
-    internal Task<ReceiveResult> RunAsync(CancellationToken cancellationToken = default) => receive.RunAsync(cancellationToken);
+    internal Task<ReceiveResult> RunAsync(CancellationToken cancellationToken = default)
+    {
+        lock (outcomeGate) return running ??= receive.RunAsync(cancellationToken);
+    }
+    internal HeldConnectionOutcome GetOutcome(ReceiveResult result)
+    {
+        lock (outcomeGate)
+        {
+            if (running is not { IsCompletedSuccessfully: true } || !ReferenceEquals(running.Result, result))
+                throw new InvalidOperationException("Outcome requires this connection's completed receive result.");
+            return transport.GetOutcome(result);
+        }
+    }
     public ValueTask DisposeAsync() => receive.DisposeAsync();
 }
