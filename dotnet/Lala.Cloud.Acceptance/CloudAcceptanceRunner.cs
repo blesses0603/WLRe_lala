@@ -6,7 +6,7 @@ namespace Lala.Cloud.Acceptance;
 /// <summary>
 /// Inert, one-shot public-API consumer for an explicitly authorized host. Every new runner
 /// owns a fresh session and exactly one connection attempt. It never discovers endpoints,
-/// bootstraps resources, sends gameplay commands, or disposes the caller's credential source.
+/// sends gameplay commands or disposes the caller's credential source.
 /// The host must supply its own secure credential adapter. Raw TCP/XOR is not encryption.
 /// </summary>
 public sealed class CloudAcceptanceRunner
@@ -15,6 +15,7 @@ public sealed class CloudAcceptanceRunner
     private readonly AcceptanceOptions options;
     private AccountConnectionProfile? profile;
     private IAccountCredentialSource? source;
+    private string? dataRoot;
     private Task<AcceptanceResult>? running;
     private readonly TaskCompletionSource stopRequested = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private AcceptanceProgress progress = new(AcceptancePhase.Created, AcceptanceStopReason.None,
@@ -29,6 +30,22 @@ public sealed class CloudAcceptanceRunner
         this.options.Validate();
         this.profile = profile;
         this.source = source;
+    }
+
+    /// <summary>Explicit opt-in to AccountRuntime. After protocol login, RunAsync may
+    /// download official HTTPS resources and create/update the fixed local resource inventory.
+    /// The caller must authorize both operations and the connection/account separately.
+    /// Construction is inert and is not authorization. No resource success is implied by login.</summary>
+    public static CloudAcceptanceRunner CreateWithResources(AccountConnectionProfile profile,
+        IAccountCredentialSource source, string absoluteDataRoot, AcceptanceOptions? options = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(absoluteDataRoot);
+        if (!Path.IsPathFullyQualified(absoluteDataRoot))
+            throw new ArgumentException("An absolute data root is required", nameof(absoluteDataRoot));
+        var root = Path.GetFullPath(absoluteDataRoot);
+        var runner = new CloudAcceptanceRunner(profile, source, options) { dataRoot = root };
+        runner.progress = runner.progress with { Resources = new(ResourceObservation.NotObserved, 0, null, null, false, false) };
+        return runner;
     }
 
     public AcceptanceProgress Snapshot { get { lock (gate) return progress; } }
@@ -46,7 +63,7 @@ public sealed class CloudAcceptanceRunner
         var session = new AccountSession();
         // These are ownership labels, never an account name or a network destination.
         var generation = session.Begin("acceptance", "explicit-profile").Generation;
-        var runtime = new AccountConnectionRuntime(session, generation, profile!, source!, new()
+        var connectionOptions = new AccountConnectionOptions()
         {
             MaximumAttempts = 1,
             // The harness owns its overall bound even after protocol login completes.
@@ -55,7 +72,10 @@ public sealed class CloudAcceptanceRunner
             ConnectTimeout = options.ConnectTimeout,
             ReadTimeout = options.ReadTimeout,
             WriteTimeout = options.WriteTimeout
-        });
+        };
+        IAcceptanceRuntime runtime = dataRoot is null
+            ? new ConnectionAcceptanceRuntime(new(session, generation, profile!, source!, connectionOptions))
+            : new IntegratedAcceptanceRuntime(AccountRuntime.Create(session, generation, profile!, source!, dataRoot, connectionOptions));
         lock (gate) progress = progress with { Phase = AcceptancePhase.WaitingForLogin };
 
         using var deadline = new CancellationTokenSource();
@@ -78,7 +98,8 @@ public sealed class CloudAcceptanceRunner
                 {
                     if (progress.StopReason == AcceptanceStopReason.None)
                     {
-                        progress = progress with { PollCount = checked(progress.PollCount + 1) };
+                        progress = progress with { PollCount = checked(progress.PollCount + 1),
+                            Resources = runtime.ObserveResources(progress.Resources) };
                         if (status.Phase == AccountConnectionPhase.ReceivingHeld)
                         {
                             progress = progress with { Login = LoginProtocolEvidence.Completed };
@@ -148,30 +169,32 @@ public sealed class CloudAcceptanceRunner
             {
                 profile = null;
                 source = null;
+                dataRoot = null;
             }
             session.Disconnect();
         }
 
         var statusAtEnd = connectionResult?.Status ?? runtime.Snapshot;
         var failure = statusAtEnd.History.IsEmpty ? (AccountConnectionFailure?)null : statusAtEnd.History[^1].Failure;
-        cleanupFailed |= connectionResult is { ResourcesReleased: false } ||
+        cleanupFailed |= !runtime.ResourcesReleased || connectionResult is { ResourcesReleased: false } ||
             statusAtEnd.EndReason == AccountConnectionEndReason.CleanupFailed;
         AcceptanceProgress final;
         lock (gate)
         {
             if (statusAtEnd.History.Any(attempt => attempt.LoginProtocolCompleted))
                 progress = progress with { Login = LoginProtocolEvidence.Completed };
-            progress = progress with { Phase = AcceptancePhase.Completed };
+            progress = progress with { Phase = AcceptancePhase.Completed,
+                Resources = runtime.ObserveResources(progress.Resources) };
             final = progress;
         }
         return new(Classify(final, statusAtEnd.EndReason, failure, cleanupFailed, runnerFailed),
             final.StopReason, final.Login, final.Receive,
             cleanupFailed ? CleanupDisposition.Failed : CleanupDisposition.Released,
             statusAtEnd.AttemptNumber, final.PollCount, final.BaselineRevision, final.LatestRevision,
-            statusAtEnd.EndReason, failure);
+            statusAtEnd.EndReason, failure) { Resources = final.Resources };
     }
 
-    private void RequestStop(AccountConnectionRuntime runtime, AcceptanceStopReason reason)
+    private void RequestStop(IAcceptanceRuntime runtime, AcceptanceStopReason reason)
     {
         lock (gate)
         {

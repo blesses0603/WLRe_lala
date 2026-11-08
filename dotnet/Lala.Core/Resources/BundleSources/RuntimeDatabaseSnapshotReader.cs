@@ -116,8 +116,9 @@ internal static class RuntimeDatabaseSnapshotReader
         return WithResourceAsync(command, () => command.ExecuteNonQueryAsync(token));
     }
 
-    private static Task<bool> CheckSchemaAsync(DbConnection connection, CancellationToken token) =>
-        QueryAsync(connection, SchemaSql, null, async reader =>
+    private static async Task CheckSchemaAsync(DbConnection connection, CancellationToken token)
+    {
+        await QueryAsync(connection, SchemaSql, null, async reader =>
         {
             var required = new HashSet<string>(["sync_state", "versions", "version_identities", "resources"], StringComparer.Ordinal);
             if (reader.FieldCount != 3) throw Invalid("Unexpected resource schema projection");
@@ -132,7 +133,11 @@ internal static class RuntimeDatabaseSnapshotReader
             if (required.Count != 0 || await reader.NextResultAsync(token).ConfigureAwait(false))
                 throw Invalid("Required resource schema is missing or ambiguous");
             return true;
-        }, token);
+        }, token).ConfigureAwait(false);
+        foreach (string table in ResourceInventoryReadShape.SnapshotTables)
+            await QueryAsync(connection, ResourceInventoryReadShape.ColumnsSql(table), null,
+                reader => ResourceInventoryReadShape.ValidateReaderAsync(reader, table, token), token).ConfigureAwait(false);
+    }
 
     private static Task<Encoding> ReadEncodingAsync(DbConnection connection, CancellationToken token) =>
         QueryAsync(connection, EncodingSql, null, async reader =>

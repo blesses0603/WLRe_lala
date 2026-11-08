@@ -9,7 +9,9 @@ Bootstrap now captures a local active-inventory baseline **before source acquisi
 absent file/directory yields an empty baseline without creating storage. Existing inventory is
 opened ReadOnly in one deferred read transaction. The baseline retains the active row ID and
 bounded exact stored catalog-key/identity bytes (hex encoded), not provider-decoded approximations.
-Read commands, rollback and connection cleanup finish before any source request or writer opens.
+Required baseline columns are [validated as ordinary stored columns](dotnet-resource-read-shape.md)
+before values are selected. Read commands, rollback and connection cleanup finish before any
+source request or writer opens.
 Unreadable, ambiguous, oversized or malformed active state does not become an empty baseline.
 
 Inside the existing `BEGIN IMMEDIATE` writer transaction, after safe schema validation/additive

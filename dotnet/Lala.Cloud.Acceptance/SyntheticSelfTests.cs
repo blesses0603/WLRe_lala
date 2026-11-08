@@ -88,7 +88,14 @@ internal static class SyntheticSelfTests
             (Scenario.CredentialDeclined, () => SourceFailure(throws: false)),
             (Scenario.FreshSingleAttempts, FreshAttempts),
             (Scenario.CleanupFailureClassification, Classification),
-            (Scenario.OptionBounds, OptionBounds)
+            (Scenario.OptionBounds, OptionBounds),
+            (Scenario.IntegratedPreCancelled, () => IntegratedBeforeLogin(0)),
+            (Scenario.IntegratedCredentialDeclined, () => IntegratedBeforeLogin(1)),
+            (Scenario.IntegratedProviderError, () => IntegratedBeforeLogin(2)),
+            (Scenario.IntegratedRejectedLogin, () => IntegratedBeforeLogin(3)),
+            (Scenario.IntegratedIncompleteLogin, () => IntegratedBeforeLogin(4)),
+            (Scenario.IntegratedLateCredentials, () => IntegratedBeforeLogin(5)),
+            (Scenario.IntegratedRootValidation, IntegratedRootValidation)
         ];
         int passed = 0, failed = 0;
         foreach (var test in cases)
@@ -150,6 +157,7 @@ internal static class SyntheticSelfTests
             Check(result.Outcome == (heartbeat ? AcceptanceOutcome.ProtocolCompleteWithReceiveProgress : AcceptanceOutcome.ProtocolCompleteWithoutReceiveProgress), result);
             Check(result.StopReason == AcceptanceStopReason.ObservationWindowElapsed);
             Check(result.Login == LoginProtocolEvidence.Completed);
+            Check(result.Resources == ResourceEvidence.Disabled && runner.Snapshot.Resources == ResourceEvidence.Disabled);
             Check(result.BaselineRevision == 4 && result.RevisionAdvanceCount == (heartbeat ? 1 : 0));
             Check(result.Receive == (heartbeat ? ReceiveEvidence.RevisionAdvanced : ReceiveEvidence.BaselineObserved));
             Check(!verification.HasPending && !formal.HasPending);
@@ -383,6 +391,95 @@ internal static class SyntheticSelfTests
         finally { foreach (var value in credentials) value.Dispose(); }
     }
 
+    // Never completes protocol login. The production resource factory is intentionally
+    // not replaced: successful login here would initiate official HTTPS acquisition.
+    private static async Task IntegratedBeforeLogin(int scenario)
+    {
+        using var guard = new CancellationTokenSource(Guard);
+        await using var verification = new SyntheticPeer(guard.Token);
+        await using var formal = new SyntheticPeer(guard.Token);
+        using var credentials = Credentials();
+        var entered = Signal(); var release = Signal();
+        using var source = new Source(async (_, _) =>
+        {
+            if (scenario == 2) throw new InvalidOperationException("synthetic-private-marker-fake_secret");
+            if (scenario == 5)
+            {
+                entered.TrySetResult();
+                await release.Task.ConfigureAwait(false);
+            }
+            return scenario == 1 ? null : credentials;
+        });
+        string root = Path.Combine(Path.GetTempPath(), "acceptance-uncreated-" + Guid.NewGuid().ToString("N"));
+        var runner = CloudAcceptanceRunner.CreateWithResources(Profile(verification, formal), source, root,
+            scenario == 5 ? Quick with { OverallTimeout = TimeSpan.FromMilliseconds(250), ObservationWindow = TimeSpan.FromMilliseconds(100) } : Quick);
+        Check(!Directory.Exists(root) && source.Calls == 0);
+        Task? server = scenario is 3 or 4 ? verification.Run(async client =>
+        {
+            await client.Expect(63, 7, 0).ConfigureAwait(false);
+            if (scenario == 3) await client.Send(63, 7, [1, 0]).ConfigureAwait(false);
+            await client.ExpectEof(closeSend: true).ConfigureAwait(false);
+        }) : null;
+        var operation = runner.RunAsync(scenario == 0 ? new CancellationToken(true) : guard.Token);
+        try
+        {
+            if (scenario == 5)
+            {
+                await entered.Task.WaitAsync(guard.Token).ConfigureAwait(false);
+                await WaitFor(() => runner.Snapshot.StopReason == AcceptanceStopReason.OverallDeadline, guard.Token).ConfigureAwait(false);
+                Check(!operation.IsCompleted && !verification.HasPending && !Directory.Exists(root));
+                release.TrySetResult();
+            }
+            var result = await operation.ConfigureAwait(false);
+            if (server is not null) await server.ConfigureAwait(false);
+            Check(ReferenceEquals(operation, runner.RunAsync()));
+            Released(result, source, scenario is 3 or 4 or 5 ? credentials : null);
+            Check(result.Outcome == (scenario switch
+            {
+                0 => AcceptanceOutcome.Cancelled,
+                1 => AcceptanceOutcome.CredentialsUnavailable,
+                2 => AcceptanceOutcome.CredentialProviderFailed,
+                3 => AcceptanceOutcome.LoginProtocolFailed,
+                4 => AcceptanceOutcome.IncompleteLogin,
+                _ => AcceptanceOutcome.DeadlineExpired
+            }), result);
+            Check(source.Calls == (scenario == 0 ? 0 : 1));
+            Check(result.Login == LoginProtocolEvidence.NotObserved && result.Receive == ReceiveEvidence.NoBaseline);
+            Check(result.Resources == new ResourceEvidence(ResourceObservation.NotObserved, 0, null, null, false, false));
+            Check(runner.Snapshot.Resources == result.Resources && runner.Snapshot.Phase == AcceptancePhase.Completed);
+            Check(!Directory.Exists(root) && !verification.HasPending && !formal.HasPending);
+            foreach (var text in new[] { result.ToString(), JsonSerializer.Serialize(result), runner.Snapshot.ToString(), JsonSerializer.Serialize(runner.Snapshot) })
+            {
+                Check(!text.Contains(root, StringComparison.Ordinal));
+                Check(!text.Contains("synthetic", StringComparison.OrdinalIgnoreCase));
+                Check(!text.Contains("fake_secret", StringComparison.Ordinal));
+                Check(!text.Contains("127.0.0.1", StringComparison.Ordinal));
+                Check(!text.Contains("InvalidOperationException", StringComparison.Ordinal));
+            }
+        }
+        finally
+        {
+            release.TrySetResult();
+            await guard.CancelAsync().ConfigureAwait(false);
+            await operation.ConfigureAwait(false);
+        }
+    }
+
+    private static async Task IntegratedRootValidation()
+    {
+        using var guard = new CancellationTokenSource(Guard);
+        await using var verification = new SyntheticPeer(guard.Token);
+        await using var formal = new SyntheticPeer(guard.Token);
+        using var source = new Source((_, _) => throw new SyntheticTestFailure());
+        foreach (var root in new[] { "", "relative-root" })
+        {
+            bool rejected = false;
+            try { CloudAcceptanceRunner.CreateWithResources(Profile(verification, formal), source, root, Quick); }
+            catch (ArgumentException) { rejected = true; }
+            Check(rejected && source.Calls == 0 && !verification.HasPending && !formal.HasPending);
+        }
+    }
+
     private static Task Classification()
     {
         var progress = new AcceptanceProgress(AcceptancePhase.Completed, AcceptanceStopReason.CallerCancellation,
@@ -436,6 +533,8 @@ internal static class SyntheticSelfTests
         LateHeartbeat, LateHeartbeatReversedWorldOrder, CompletedSilent, EarlyPostLoginEof, PostLoginProtocolFailure, RejectedLogin,
         IncompleteLogin, OverallDeadline, CallerCancellation, LateCredentialAfterDeadline,
         PreCancelled, ProviderErrorRedaction, CredentialDeclined, FreshSingleAttempts,
-        CleanupFailureClassification, OptionBounds
+        CleanupFailureClassification, OptionBounds,
+        IntegratedPreCancelled, IntegratedCredentialDeclined, IntegratedProviderError,
+        IntegratedRejectedLogin, IntegratedIncompleteLogin, IntegratedLateCredentials, IntegratedRootValidation
     }
 }

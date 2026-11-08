@@ -16,7 +16,9 @@ not protection against hostile symlinks or filesystem replacement.
 
 ## Local checks and limits
 
-- Four required ordinary main-database tables and unambiguous active/required-row projections.
+- Four required ordinary main-database tables, ordinary stored projected columns and unambiguous
+  active/required-row projections. [Generated-column guards](dotnet-resource-read-shape.md) run
+  before identity/payload value queries.
 - Canonical schema-1 identity JSON with exactly two ordered package entries, supported version
   syntax, bounded lowercase digest/CRC text, no duplicate/extra keys or alternate serialization.
 - SHA256 of the actual identity representation equals its stored catalog key.

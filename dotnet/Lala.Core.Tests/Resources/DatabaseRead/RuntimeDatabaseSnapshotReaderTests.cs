@@ -19,7 +19,9 @@ public sealed class RuntimeDatabaseSnapshotReaderTests
         var match = RuntimeDatabaseStructuralMatcher.Match(result.Snapshot, DatabaseReadTestDatabase.Identity(), DatabaseReadTestDatabase.Digests());
         Assert.True(match.MatchesSuppliedRuntime); Assert.False(match.ProvesDatabaseTransaction); Assert.False(match.RuntimeAdmitted);
         Assert.Equal(before, File.ReadAllBytes(db.FileName));
-        Assert.Equal(new[] { "BEGIN", RuntimeDatabaseSnapshotReader.SchemaSql, RuntimeDatabaseSnapshotReader.EncodingSql, RuntimeDatabaseSnapshotReader.ActiveSql }
+        Assert.Equal(new[] { "BEGIN", RuntimeDatabaseSnapshotReader.SchemaSql }
+            .Concat(ResourceInventoryReadShape.SnapshotTables.Select(ResourceInventoryReadShape.ColumnsSql))
+            .Concat(new[] { RuntimeDatabaseSnapshotReader.EncodingSql, RuntimeDatabaseSnapshotReader.ActiveSql })
             .Concat(Enumerable.Repeat(RuntimeDatabaseSnapshotReader.TableSql, 10)).Append("ROLLBACK"), connection.Commands);
         Assert.All(connection.CreatedCommands, command => { Assert.True(command.WasDisposed); Assert.Equal(5, command.CommandTimeout); });
         Assert.All(connection.Readers, reader => Assert.True(reader.WasDisposed)); Assert.True(connection.WasDisposed);

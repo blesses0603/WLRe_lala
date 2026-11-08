@@ -42,6 +42,8 @@ internal sealed record ResourceInventoryWriteBaseline(long? ActiveId, string? Ca
             if (row.Length != 3 || !present.Add(ResourceInventoryDatabase.Text(row[0])) ||
                 ResourceInventoryDatabase.Text(row[1]) != "table" || ResourceInventoryDatabase.Number(row[2]) <= 0)
                 throw new InvalidDataException("Invalid inventory baseline schema");
+        foreach (string table in present)
+            await ResourceInventoryReadShape.ValidateAsync(db, table).ConfigureAwait(false);
         // Preserve the store's supported additive schema creation: no selector is Empty,
         // and an absent identity table is equivalent to a missing identity row. An existing
         // active selector without its versions table is malformed, not an empty inventory.

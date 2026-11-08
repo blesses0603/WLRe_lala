@@ -1,8 +1,10 @@
-# Bounded held-connection acceptance consumer
+# Bounded held-account acceptance consumer
 
 This executable references **only Lala.Core**, has no friend-assembly access, and uses
-only Core's public APIs. It exercises explicit login plus held receive without
-resource bootstrap, catalog downloads, UI, game commands, retry, or profile discovery.
+only Core's public APIs. Its default connection-only mode exercises explicit login
+plus held receive without resource bootstrap or catalog downloads. An explicit
+host-only factory also composes `AccountRuntime` connection and resource ownership.
+Neither mode adds UI, game commands, retry, or profile discovery.
 It is not official-server or live-account validation.
 
 ## Run synthetic checks
@@ -27,6 +29,14 @@ fresh credentials and a single attempt per new runner, source ownership, redacti
 bounded options, and cleanup-failure **classification**. Real transport cleanup
 failure is not injectable through the concrete public Core API; that last check is
 a pure classification test, not an end-to-end failure injection.
+
+Seven additional integrated-mode checks exercise pre-cancellation, credential decline,
+provider exception redaction, rejected/incomplete verification login, noncooperative
+credentials after deadline, and absolute-root validation. They use the real public
+`AccountRuntime.Create` factory and assert no resource history, no readiness, no
+formal connection and no data-root creation. They deliberately cannot finish login:
+finishing even synthetic login would admit the production official HTTP source.
+No public resource-source injection or fake authority is used.
 
 The peers assert exact allowed login/selection/map/appear/heartbeat frame headers and
 reject all extra client traffic before EOF. The late heartbeat is sent only after
@@ -83,3 +93,47 @@ baseline and is never retained in the public result.
 The default observation window is 5 seconds, the overall stop budget 45 seconds,
 and the polling interval 20 milliseconds. Options have finite upper bounds. Tests
 use short windows and a separate 15-second diagnostic guard per scenario.
+
+## Explicit integrated host mode
+
+A separately authorized secure host may call
+`CloudAcceptanceRunner.CreateWithResources(profile, source, absoluteDataRoot, options)`.
+The absolute root is validated before any source invocation. Construction remains
+inert, but is **not authorization**. After login, `RunAsync` may download official
+HTTPS resources and create or update the fixed SQLite inventory at
+`official_sync/derived_catalogs/resource_inventory.sqlite3` beneath that root.
+The host must authorize those network and database operations as well as the
+account/connection. The executable offers no integrated live CLI and no default root.
+
+Both modes use the same single-attempt, observation, stop and cleanup loop. Overall
+and observation bounds still request stop, and admitted resource work is joined.
+Cleanup failure from either connection or resource ownership overrides the outcome.
+The observation window is not extended to wait for resources: a slow preparation
+may be cancelled when the connection observation finishes.
+The observed operation includes resource draining. If the connection ends before a
+baseline is sampled but admitted resource cleanup is still pending, the overall
+stop budget may expire before aggregate completion is observed. That result remains
+conservative deadline evidence, not proof that the connection stayed open.
+
+`Outcome`, `Login` and `Receive` describe **connection observation only**, not overall
+account/resource acceptance. `Resources` is separate sanitized evidence:
+
+- `Disabled` identifies the original connection-only mode.
+- `NotObserved` means current resource readiness was never observed. It does not
+  assert that no preparation started; only completed preparations enter history.
+- `CurrentReadinessObserved` is historical: current resources were observed at
+  least once. Cleanup revokes them, so the final result never claims resources
+  remain current or grants command authority.
+- Preparation count and last status/storage/readback/source-recheck facts describe
+  completed preparation history, including work drained during shutdown. A database
+  commit is not rolled back merely because the run later stops or fails.
+
+Polling can miss short-lived readiness. Protocol completion does not imply resource
+readiness; successful preparation history does not imply currently usable catalogs.
+No raw paths, sources, versions, catalog contents or exception details enter evidence.
+
+**Public consumer resource success is untested offline.** Successful connection plus
+resource joins, revocation and inventory operations are tested separately by Core's
+internal `AccountRuntimeIntegrationTests.cs` fixture suite. Those tests do not prove
+production HTTP success or official-account acceptance. A public-only synthetic
+successful resource run is intentionally unavailable without real official fetching.

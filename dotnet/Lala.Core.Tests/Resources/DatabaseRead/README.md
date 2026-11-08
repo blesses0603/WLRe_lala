@@ -50,7 +50,10 @@ The selected source schema is the four ordinary tables `sync_state`, `versions`,
 All queries explicitly select the main database. A bounded `main.sqlite_schema`
 projection rejects missing tables, views, virtual tables and duplicate names;
 ordinary tables require a positive root page. No schema is repaired. Additional
-unrelated tables are ignored. Missing/renamed columns fail through the provider.
+unrelated tables are ignored. Before value queries, bounded `pragma_table_xinfo` checks require
+every selected identity/payload column to be an ordinary stored column (`hidden=0`). Missing,
+renamed, generated or hidden required columns reject without evaluating their values; unrelated
+extra columns remain outside the read contract. See [stored-column validation](../../../../../docs/dotnet-resource-read-shape.md).
 
 The active join follows the Python relationship exactly. At most two joined rows
 are requested, and more than one is rejected. Each exact `<source>.bytes` lookup

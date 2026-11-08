@@ -1,10 +1,22 @@
 using Lala.Core.Sessions;
+using Lala.Core.Resources;
 
 namespace Lala.Cloud.Acceptance;
 
 public enum AcceptancePhase { Created, WaitingForLogin, ObservingHeldReceive, Stopping, Completed }
 public enum AcceptanceStopReason { None, ObservationWindowElapsed, OverallDeadline, CallerCancellation, ConnectionEnded, RunnerFailure }
 public enum LoginProtocolEvidence { NotObserved, Completed }
+public enum ResourceObservation { Disabled, NotObserved, CurrentReadinessObserved }
+
+/// <summary>Historical evidence only. Final cleanup revokes current resources. Preparation
+/// completion/status is independent of protocol completion and never authorizes commands.</summary>
+public sealed record ResourceEvidence(ResourceObservation Observation, int PreparationCount,
+    AccountResourcePreparationStatus? LastPreparation, AccountResourceStorageOutcome? LastStorage,
+    bool LastReadbackMatched, bool LastSourcesRechecked)
+{
+    public static ResourceEvidence Disabled { get; } = new(ResourceObservation.Disabled, 0, null, null, false, false);
+}
+
 public enum ReceiveEvidence { NoBaseline, BaselineObserved, RevisionAdvanced }
 public enum CleanupDisposition { Released, Failed }
 public enum AcceptanceOutcome
@@ -25,6 +37,8 @@ public sealed record AcceptanceProgress(
     long? BaselineRevision,
     long? LatestRevision)
 {
+    public ResourceEvidence Resources { get; init; } = ResourceEvidence.Disabled;
+
     public long RevisionAdvanceCount => BaselineRevision is { } first && LatestRevision is { } last
         ? Math.Max(0, last - first) : 0;
 }
@@ -44,6 +58,8 @@ public sealed record AcceptanceResult(
     AccountConnectionEndReason? ConnectionEnd,
     AccountConnectionFailure? ConnectionFailure)
 {
+    public ResourceEvidence Resources { get; init; } = ResourceEvidence.Disabled;
+
     public long RevisionAdvanceCount => BaselineRevision is { } first && LatestRevision is { } last
         ? Math.Max(0, last - first) : 0;
 }

@@ -7,12 +7,15 @@ internal static class Program
         Usage: dotnet run --project dotnet/Lala.Cloud.Acceptance -c Release -- --self-test
 
         --self-test runs synthetic, loopback-only login/held-receive checks with fake credentials.
+        Integrated pre-login failure checks also use the public AccountRuntime factory without completing login.
         This is not official-server or live-account validation. No gameplay or resource bootstrap runs.
 
         There is deliberately no live CLI mode, default target, profile discovery, or credential input
         through arguments, environment variables, files, stdin, or logs. A future authorized secure host
         must supply an explicit AccountConnectionProfile and its own IAccountCredentialSource directly
-        to CloudAcceptanceRunner. That secure credential adapter is not included here. The host must
+        to CloudAcceptanceRunner. Host-only CreateWithResources additionally requires an explicit absolute
+        data root and authorization for official HTTPS downloads and fixed local SQLite inventory writes.
+        That secure credential adapter is not included here. The host must
         authorize the endpoints/account and arrange a trusted network: raw TCP/XOR is not encryption.
 
         Every runner is one-shot with one attempt. Observation/overall limits request Stop; cleanup
