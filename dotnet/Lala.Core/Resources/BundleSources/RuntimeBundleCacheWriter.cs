@@ -3,7 +3,7 @@ using System.Security.Cryptography;
 
 namespace Lala.Core.Resources;
 
-internal enum RuntimeBundleCacheWriteStage { TemporaryCreated, ChunkCopied, BeforePublish, Published }
+internal enum RuntimeBundleCacheWriteStage { TemporaryCreated, ChunkCopied, BeforePublish, BeforeMove, Published }
 
 /// <summary>Persists owned downloaded bytes in the Python-compatible cache. Every file is
 /// verified before atomic, same-directory publication and rechecked before successful return.
@@ -122,8 +122,30 @@ internal sealed class RuntimeBundleCacheWriter
             CheckDirectories(directory, create: false, token);
             if (!CheckLeaf(temporary)) throw new IOException("Staged bundle disappeared before publication");
             CheckLeaf(destination);
-            token.ThrowIfCancellationRequested();
-            File.Move(temporary, destination, overwrite: true);
+            Checkpoint(RuntimeBundleCacheWriteStage.BeforeMove, token);
+            try
+            {
+                File.Move(temporary, destination, overwrite: true);
+            }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+            {
+                // The destination check above is not atomic with replacement. On Windows,
+                // replacing a competitor's newly installed file can fail while it is open.
+                // Only a fresh, complete verification can turn this publication failure
+                // into success. Keep ownership of our stage so finally removes only it.
+                try
+                {
+                    if (await MatchesAsync(destination, source, token).ConfigureAwait(false)) return;
+                }
+                catch (OperationCanceledException) { throw; }
+                catch (Exception)
+                {
+                    // Failed recovery must not obscure the original publication error.
+                    // Cancellation still takes precedence if it arrived during that check.
+                    token.ThrowIfCancellationRequested();
+                }
+                throw;
+            }
             ownsTemporary = false;
             Checkpoint(RuntimeBundleCacheWriteStage.Published, token);
             if (!await MatchesAsync(destination, source, token).ConfigureAwait(false))

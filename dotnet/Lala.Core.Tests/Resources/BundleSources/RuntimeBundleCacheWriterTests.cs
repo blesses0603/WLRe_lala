@@ -90,6 +90,7 @@ public sealed class RuntimeBundleCacheWriterTests
     [InlineData("TemporaryCreated")]
     [InlineData("ChunkCopied")]
     [InlineData("BeforePublish")]
+    [InlineData("BeforeMove")]
     public async Task CancellationBeforePublicationCleansOnlyOwnedTemporaryFile(string cancelAtName)
     {
         var cancelAt = Enum.Parse<RuntimeBundleCacheWriteStage>(cancelAtName);
@@ -138,6 +139,74 @@ public sealed class RuntimeBundleCacheWriterTests
         Assert.Equal(new byte[1024 * 1024], await File.ReadAllBytesAsync(Destination(directory.Root, source)));
         Assert.Single(Directory.GetFiles(directory.Root, "*", SearchOption.AllDirectories));
         AssertNoTemporaryFiles(directory.Root);
+    }
+
+    [Theory]
+    [InlineData("valid")]
+    [InlineData("corrupt")]
+    [InlineData("missing")]
+    public async Task FailedMoveAcceptsOnlyFullyVerifiedCompetitor(string competitor)
+    {
+        using var directory = new TestDirectory();
+        var source = FixtureSource();
+        byte[] expected = BundleSourceFixtures.Payload(source.Spec.Name);
+        string destination = Destination(directory.Root, source);
+        bool published = false;
+        var writer = new RuntimeBundleCacheWriter(directory.Root, stage =>
+        {
+            if (stage == RuntimeBundleCacheWriteStage.Published) published = true;
+            if (stage != RuntimeBundleCacheWriteStage.BeforeMove) return;
+            // Force the actual filesystem move to fail on every OS, after staging was
+            // verified and the destination check missed. A winner may have arrived.
+            File.Delete(Assert.Single(Directory.GetFiles(directory.Root, "*.partial", SearchOption.AllDirectories)));
+            if (competitor != "missing")
+                File.WriteAllBytes(destination, competitor == "valid" ? expected : new byte[expected.Length]);
+        });
+        if (competitor == "valid") await writer.StoreAsync([source]);
+        else await Assert.ThrowsAnyAsync<IOException>(() => writer.StoreAsync([source]));
+        Assert.False(published);
+        if (competitor == "missing") Assert.False(File.Exists(destination));
+        else Assert.Equal(competitor == "valid" ? expected : new byte[expected.Length], await File.ReadAllBytesAsync(destination));
+        AssertNoTemporaryFiles(directory.Root);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task WindowsBlockedReplacementAcceptsOnlyVerifiedCompetitor(bool readOnly, bool corrupt)
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        using var directory = new TestDirectory();
+        var source = FixtureSource();
+        byte[] expected = BundleSourceFixtures.Payload(source.Spec.Name);
+        byte[] competingBytes = corrupt ? new byte[expected.Length] : expected;
+        string destination = Destination(directory.Root, source);
+        FileStream? competingReader = null;
+        bool published = false;
+        try
+        {
+            var writer = new RuntimeBundleCacheWriter(directory.Root, stage =>
+            {
+                if (stage == RuntimeBundleCacheWriteStage.Published) published = true;
+                if (stage != RuntimeBundleCacheWriteStage.BeforeMove) return;
+                File.WriteAllBytes(destination, competingBytes);
+                if (readOnly) File.SetAttributes(destination, FileAttributes.ReadOnly);
+                else competingReader = new FileStream(destination, FileMode.Open, FileAccess.Read, FileShare.Read);
+            });
+            if (!corrupt) await writer.StoreAsync([source]);
+            else if (readOnly) await Assert.ThrowsAsync<UnauthorizedAccessException>(() => writer.StoreAsync([source]));
+            else await Assert.ThrowsAnyAsync<IOException>(() => writer.StoreAsync([source]));
+            Assert.False(published);
+            Assert.Equal(competingBytes, await File.ReadAllBytesAsync(destination));
+            AssertNoTemporaryFiles(directory.Root);
+        }
+        finally
+        {
+            competingReader?.Dispose();
+            if (File.Exists(destination)) File.SetAttributes(destination, FileAttributes.Normal);
+        }
     }
 
     [Theory]
