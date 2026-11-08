@@ -385,8 +385,12 @@ public sealed class BoundedTcpTransportTests
     public async Task RefusedLoopbackConnectionIsTerminalWithoutRetry()
     {
         using var reserved = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-        reserved.Bind(new IPEndPoint(IPAddress.Loopback, 0)); // Reserved but deliberately not listening.
+        reserved.Bind(new IPEndPoint(IPAddress.Loopback, 0));
         await using var client = new BoundedTcpTransport((IPEndPoint)reserved.LocalEndPoint!);
+        // A bound non-listener can silently drop SYNs on macOS rather than refuse them.
+        // Close our reservation immediately before dialing the captured endpoint. As with
+        // any real closed-port fixture, another process could reuse the port after release.
+        reserved.Dispose();
         var first = client.ConnectAsync();
         var error = await Assert.ThrowsAsync<TcpTransportException>(() => first.WaitAsync(Deadline));
         Assert.Equal(TcpTransportEnd.ConnectFailed, error.Reason);
