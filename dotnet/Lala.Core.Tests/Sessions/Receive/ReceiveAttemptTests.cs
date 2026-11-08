@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Lala.Core.Tests.Sessions.Receive;
 
-public sealed class ReceiveAttemptTests
+public sealed partial class ReceiveAttemptTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(10);
     private static readonly Packet Ping = new(1, 23);

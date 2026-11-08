@@ -1858,3 +1858,21 @@ Final offline verification passed: 15 focused, 43,401 Core, external public cons
 blockers. No Desktop UI, real credentials or official-server acceptance was involved.
 Only the overall PR marker advances once to 8.0.30; same-batch corrections and all
 platform/Core/Desktop project version settings remain unchanged.
+
+
+### Overall PR development marker 8.0.31: runtime battle receive context
+
+The actual receive writer now stages full service reduction followed by the narrow
+Python SessionLogic.receive battle overlay, committing canonical state and pending
+context together. An announced S11-10 style survives the next S11-250 start and is
+consumed once; the first qualifying own exit clears pending style and records inactive
+battle state. Fresh attempts never import pending announcements from old snapshots.
+Standalone service/battle reducer behavior stays unchanged. No post-battle timer,
+event continuation, cooperative count consumption, scheduling or sending is added.
+
+Final offline verification passed: 342 focused, 43,422 Core, external public consumer,
+76 lifecycle, 36 acceptance and 17 Linux PTY checks. Thirteen actual Python receive
+sequences produced 112 matching snapshots, and public loopback exercises reconnect.
+Independent review found no blockers. No UI, real credentials or official-server
+acceptance was involved. Only the overall PR marker advances once to 8.0.31;
+same-batch corrections and platform/Core/Desktop versions remain unchanged.

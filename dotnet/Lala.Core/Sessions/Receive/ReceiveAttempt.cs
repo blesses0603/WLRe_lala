@@ -242,7 +242,7 @@ internal sealed class ReceiveAttempt : IAsyncDisposable
         try
         {
             var decoder = new FrameDecoder(rxXor);
-            var state = new ServiceStateCoordinator(Latest.Snapshot);
+            var state = new ReceiveStateCoordinator(Latest.Snapshot);
             while (chunks.Reader.WaitToReadAsync(stop.Token).AsTask().GetAwaiter().GetResult())
             {
                 while (chunks.Reader.TryRead(out var chunk))
@@ -277,7 +277,7 @@ internal sealed class ReceiveAttempt : IAsyncDisposable
         finally { publications.Writer.TryComplete(); done.TrySetResult(); }
     }
 
-    private bool Apply(ServiceStateCoordinator state, Packet packet)
+    private bool Apply(ReceiveStateCoordinator state, Packet packet)
     {
         var basis = state.Snapshot();
         ServiceObservationInputs inputs;
@@ -317,7 +317,7 @@ internal sealed class ReceiveAttempt : IAsyncDisposable
         }
     }
 
-    private bool CommitLocked(ServiceStateCoordinator state, ServerEvent decoded,
+    private bool CommitLocked(ReceiveStateCoordinator state, ServerEvent decoded,
         ServiceStateSnapshot basis, ServiceObservationInputs inputs)
     {
         ServiceStateSnapshot next;

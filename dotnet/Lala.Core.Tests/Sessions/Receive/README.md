@@ -103,3 +103,38 @@ its unread suffix and state through login remains a separate integration increme
 Deliberate conservative difference: attachment starts in Held and continues receiving,
 but a later explicit AccountSession.Hold retires its receive owner. This is not Python
 resource-hold parity and is not intended as a live-session hold/resume implementation.
+
+## Bounded runtime battle context
+
+`ReceiveStateCoordinator` adds only the battle-style/own-exit subset of
+`SessionLogic.receive` (`wlre/network/client.py:225-250`). It stages the complete
+service reduction first, then restores a pending S11-10 announcement after the
+S11-250 battle reset. The overlay and its private context commit together. The
+next observation-input callback, the canonical coordinator and the published
+snapshot share the same immutable result; nothing mutates after publication.
+Standalone `BattleEventReducer` and `ServiceStateCoordinator` still clear style
+on every start.
+
+- Last announcement wins, including zero. Each start consumes it once; no
+  announcement means unknown, regardless of prior style or unit layout style.
+- The first own exit for `(battle count, current role)` clears a pending
+  announcement and marks battle inactive, only when the count is positive.
+  Role exits match the current non-null role (including zero); unit exits use
+  the post-service exact slot's PID, never its master or NPC identity.
+- Duplicate exits do not clear a later announcement. Winner, event end, role
+  list and world-player packets do not reset this context. A new receive attempt
+  starts empty, including when initialized from a historical service snapshot.
+- Post-event status, deadlines, pending event continuation, event-flow mutation,
+  cooperative fight-count consumption, scheduler work and sends are **not**
+  ported here. Resource hold and command authority remain unchanged.
+
+`BattleReceiveGenerateVectors.py` executes actual Python `State.apply` followed
+by `SessionLogic.receive`, with dormant services and a fixed clock. Its 13
+retained synthetic sequences cover 112 snapshots, including historical snapshot
+immutability and fresh context on retained state. `BattleReceiveContextTests`
+also exercises stale-input/reduction rollback; `ReceiveBattleAttemptTests` covers
+exact publication/input basis, invalid payloads, failed hooks and fresh attempts.
+`AccountBattleReceiveTests` uses the public API and real local TCP sockets to
+exercise style restrictions, unknowns, own/duplicate exits, next battles, and an
+actual two-attempt reconnect with fresh synthetic credentials. It is not
+official-server or real-account validation.
