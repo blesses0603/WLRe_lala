@@ -28,6 +28,10 @@ public sealed record ServiceObservationInputs(double ObservedAt)
     public ImmutableHashSet<ushort> DeclaredMainCatalogMapIds { get; init; } = ImmutableHashSet<ushort>.Empty;
     public DailyCatalogInput DailyCatalog { get; init; } = new(null, null);
     public CraftingScheduleContext? CraftingSchedules { get; init; }
+    /// <summary>Opt into recording skipped S64-1/16 as an uncertain schedule. A later
+    /// login barrier or catalog arrival cannot repair the missing snapshot. Defaults
+    /// to false to preserve standalone Python reducer behavior; never replays packets.</summary>
+    public bool TrackUnsupportedCraftingSchedules { get; init; }
     public ImmutableDictionary<ushort, bool>? ItemStackRules { get; init; }
     public ImmutableDictionary<uint, ImmutableArray<uint>>? NpcSkills { get; init; }
     /// <summary>Opt into the runtime-owned current NPC skill projection for this observation.
@@ -252,6 +256,18 @@ public sealed class ServiceStateCoordinator
         var guild = GuildEventReducer.Apply(state.Guild, observation, before.Player?.RoleId);
         var activities = ApplyActivities(state.Activities, observation, before.Player?.RoleId);
         var crafting = CraftingReducer.Apply(state.Crafting, observation, before.Player?.RoleId, inputs.ObservedAt);
+        if (inputs.TrackUnsupportedCraftingSchedules && inputs.CraftingSchedules is null &&
+            observation is UnsupportedServerDecoderEvent { Main: 64, Sub: 1 or 16, Decoder: "crafting" })
+        {
+            // Retain historical rows but stop claiming a complete or running schedule.
+            // S1-11 and later deltas cannot fill the gap; a fresh S64-1 clears uncertainty.
+            crafting = crafting with { Crafting = crafting.Crafting with
+            {
+                Ready = false, Uncertain = true, Running = false, StartedAt = null,
+                AutoContinue = false, CompletionRequested = false,
+                Status = "製作排程未解析，請重新同步", Revision = crafting.Crafting.Revision + 1
+            } };
+        }
         var storage = RoomStorageReducer.Apply(state.Storage, observation);
         // apply_storage writes the same inventory.server_stackable map consumed by
         // apply_live. Import it even for empty/invalid material receipts, before bag reduction.

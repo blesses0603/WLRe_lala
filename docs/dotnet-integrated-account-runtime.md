@@ -57,6 +57,29 @@ read-only point-in-time receive/catalog pair and becomes null after stop. Catalo
 and receive state must not be logged wholesale. The runtime exposes no command-send
 operation and does not call `ConfirmResources`.
 
+### Crafting schedule identities
+
+A current binding also projects the complete parsed `SmithData_C` recipe catalog into
+`CraftingSchedules`. The identity pair is `RecipeId`/`ItemId`; the product-only lookup
+is deliberately not used because different recipes can produce the same item. Timed
+and read-only recipe rows remain part of this receive identity map. Parsed legacy rows
+explicitly select item-ID schedules; recipe-keyed rows use the existing strict identity
+validation. No wire-packet length selects the layout, and unknown recipe IDs are rejected
+without a partial receive commit or a fallback to item IDs.
+
+Missing, empty, or revoked catalogs leave schedule context unknown. S64-1 and S64-16
+packets received before the binding or after revocation remain unsupported. They are not
+buffered or replayed when resources arrive; a later binding alone does not establish a
+received schedule snapshot. The integrated runtime explicitly enables
+`TrackUnsupportedCraftingSchedules` on both bound and unbound observations. A skipped
+S64-1/16 retains the historical queue but marks it uncertain/not ready and stops its
+running clock. S1-11, a later catalog, and S64-16 deltas cannot repair that gap; a fresh
+decoded S64-1 is needed. The independent furniture login barrier remains unchanged.
+Standalone observations default the policy to false, preserving Python parity.
+Previously published snapshots remain immutable historical observations, never command
+permission. This adds no resource download, database write, UI, command, or automatic
+crafting behavior.
+
 ## Validation limits
 
 Integration tests combine synthetic TCP peers, fixture bundles and actual temporary
@@ -64,3 +87,11 @@ SQLite writes/readback. White-box binding tests explicitly simulate only the pri
 owner trust bit and do not prove official provenance or live acceptance. The ordinary
 fixture source continues to fail resource admission. No Desktop/Android host UI is
 changed, and no official server or real credential is used by these tests.
+
+Crafting-context verification on the restored cloud .NET 10.0.403 SDK passed 2,241
+focused cases and all 43,223 Core tests, with no skips. This includes 22 new projection,
+framed receive, and service-policy cases, plus the existing AccountRuntime binding tests
+extended to decode S64 and withdraw context. The first compile exposed two test-fixture
+constructor calls missing the nullable reviewed-details argument; those were corrected
+to `null`, without changing production behavior. Independent review found no blocker.
+Platform host builds and CI remain separate checks; no live server was used.

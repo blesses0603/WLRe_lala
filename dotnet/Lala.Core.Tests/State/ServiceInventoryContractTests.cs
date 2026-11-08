@@ -36,6 +36,7 @@ public sealed class ServiceInventoryContractTests
         Assert.False(snapshot.IsCompleteState);
         Assert.True(snapshot.Observation!.Inputs.ResourceHeld);
         Assert.Null(snapshot.Observation.Inputs.CraftingSchedules);
+        Assert.False(snapshot.Observation.Inputs.TrackUnsupportedCraftingSchedules);
         Assert.Null(snapshot.Observation.Inputs.ItemStackRules);
         Assert.Null(snapshot.Observation.Inputs.NpcSkills);
     }
@@ -111,6 +112,28 @@ public sealed class ServiceInventoryContractTests
         Assert.Throws<ProtocolException>(() => state.Apply(packet, Context(state, new(100)
             { CraftingSchedules = CraftingScheduleContext.FromRuntimeRows([new(1, 500)]) })));
         Assert.Same(before, state.Snapshot());
+    }
+
+    [Theory]
+    [InlineData(false, 1)]
+    [InlineData(false, 16)]
+    [InlineData(true, 1)]
+    [InlineData(true, 16)]
+    public void SkippedScheduleTrackingIsExplicitAndDoesNotBlockFurnitureBarrier(bool track, byte sub)
+    {
+        var state = new ServiceStateCoordinator(new(crafting: new()
+            { Furniture = new() { Owner = 17, PersonalBatch = true } }));
+        state.Apply(World(17), Context(state));
+        var inputs = new ServiceObservationInputs(100) { TrackUnsupportedCraftingSchedules = track };
+        var skipped = state.Apply(new Packet(64, sub, []), Context(state, inputs));
+        Assert.Equal("unsupported_decoder", skipped.Observation!.EventType);
+        Assert.Equal(track, skipped.Crafting.Crafting.Uncertain);
+        Assert.False(skipped.Crafting.Crafting.Ready);
+        var barrier = state.Apply(new InitialDataCompleteEvent(), Context(state, inputs));
+        Assert.Equal(!track, barrier.Crafting.Crafting.Ready);
+        Assert.Equal(track, barrier.Crafting.Crafting.Uncertain);
+        Assert.True(barrier.Crafting.Furniture.Ready);
+        Assert.Empty(barrier.Crafting.Crafting.Queue);
     }
 
     [Fact]

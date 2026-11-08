@@ -487,12 +487,13 @@ public sealed partial class ResourceRuntimeBootstrapTests
         long generation = session.Begin("synthetic", "loopback").Generation;
         await using var verification = new AccountPeer(); await using var formal = new AccountPeer();
         var sendBound = AccountSignal(); var sendRevoked = AccountSignal(); var finish = AccountSignal();
+        Packet? schedules = null;
         var first = verification.Run(AccountVerify);
         var second = formal.Run(async client =>
         {
             await AccountEnterWorld(client);
-            await client.WaitFor(sendBound.Task); await client.Send(new Packet(26, 4, [42, 0, 0, 0]));
-            await client.WaitFor(sendRevoked.Task); await client.Send(new Packet(26, 4, [43, 0, 0, 0]));
+            await client.WaitFor(sendBound.Task); await client.Send(schedules!);
+            await client.WaitFor(sendRevoked.Task); await client.Send(schedules!);
             await client.WaitFor(finish.Task); await client.CloseSendAndExpectEof();
         });
         var owner = ResourceRuntimeOwner.CreateForOfflineTests(fixture.Root, source);
@@ -509,6 +510,15 @@ public sealed partial class ResourceRuntimeBootstrapTests
             await AccountWaitFor(() => runtime.Snapshot.HasCurrentResources);
             var bound = runtime.Publication!; Assert.NotNull(bound.Catalogs);
             Assert.True(Assert.Single(runtime.Snapshot.ResourceHistory).Preparation.WasBound);
+            var scheduleRows = bound.Catalogs.Recipes.Catalog;
+            Assert.NotEmpty(scheduleRows);
+            var writer = new PacketWriter();
+            for (int i = 0; i < scheduleRows.Length; i++)
+            {
+                var row = scheduleRows[i].Recipe;
+                writer.U8(checked((byte)(i + 1))).U16(row.RecipeId ?? row.ItemId).U32(2500).U8(2).U32(60);
+            }
+            schedules = new Packet(64, 1, writer.U8(0).Build());
             long revision = bound.Receive.Revision; sendBound.SetResult();
             await AccountWaitFor(() => runtime.Publication!.Receive.Revision > revision);
             var observed = runtime.Publication!; var inputs = observed.Receive.State.Observation!.Inputs;
@@ -519,6 +529,15 @@ public sealed partial class ResourceRuntimeBootstrapTests
                 Assert.Equal(pair.Value.ReviewedDetails!.Stackable, inputs.ItemStackRules[pair.Key]));
             Assert.Null(inputs.KnowledgeCatalog); Assert.Null(inputs.NpcSkills); Assert.True(inputs.ResourceHeld);
             Assert.True(inputs.ReconcileNpcSkills);
+            Assert.NotNull(inputs.CraftingSchedules);
+            Assert.True(inputs.TrackUnsupportedCraftingSchedules);
+            Assert.Equal(scheduleRows.Length, observed.Receive.State.Crafting.Crafting.Queue.Count);
+            for (int i = 0; i < scheduleRows.Length; i++)
+            {
+                var row = observed.Receive.State.Crafting.Crafting.Queue[(byte)(i + 1)];
+                Assert.Equal(scheduleRows[i].Recipe.ItemId, row.ItemId);
+                Assert.Equal(scheduleRows[i].Recipe.RecipeId, row.RecipeId);
+            }
             if (includeInstances)
             {
                 Assert.NotNull(bound.Catalogs.OptionalInstances);
@@ -536,6 +555,15 @@ public sealed partial class ResourceRuntimeBootstrapTests
             Assert.Null(revoked.WorldCatalog); Assert.Null(revoked.ItemStackRules); Assert.True(revoked.ResourceHeld);
             Assert.Empty(revoked.DeclaredMainCatalogMapIds);
             Assert.Null(revoked.NpcSkills); Assert.True(revoked.ReconcileNpcSkills);
+            Assert.Null(revoked.CraftingSchedules);
+            Assert.True(revoked.TrackUnsupportedCraftingSchedules);
+            Assert.Equal("unsupported_decoder", runtime.Publication!.Receive.State.Observation!.EventType);
+            var revokedCrafting = runtime.Publication.Receive.State.Crafting.Crafting;
+            Assert.Same(observed.Receive.State.Crafting.Crafting.Queue, revokedCrafting.Queue);
+            Assert.False(revokedCrafting.Ready); Assert.True(revokedCrafting.Uncertain);
+            Assert.False(revokedCrafting.Running); Assert.Null(revokedCrafting.StartedAt);
+            Assert.True(observed.Receive.State.Crafting.Crafting.Ready);
+            Assert.NotNull(inputs.CraftingSchedules);
             Assert.NotNull(observed.Catalogs); Assert.NotNull(inputs.WorldCatalog); // Retained values are historical only.
             runtime.Stop(); Assert.Null(runtime.Publication);
             var result = await run.WaitAsync(AccountGuard); Assert.True(result.ResourcesReleased);

@@ -105,7 +105,7 @@ public sealed class AccountRuntime : IAsyncDisposable
         lock (gate)
             return CurrentCatalogsLocked(out _) && projected is not null
                 ? projected with { ObservedAt = now, ResourceHeld = true }
-                : new(now) { ReconcileNpcSkills = true };
+                : new(now) { ReconcileNpcSkills = true, TrackUnsupportedCraftingSchedules = true };
     }
     public Task<AccountRuntimeResult> RunAsync(CancellationToken token = default)
     {
@@ -265,6 +265,8 @@ public sealed class AccountRuntime : IAsyncDisposable
                     DeclaredMainCatalogMapIds = catalogs.OptionalInstances?.DeclaredMainMapIds ?? ImmutableHashSet<ushort>.Empty,
                     ItemStackRules = catalogs.Items.Where(p => p.Value.ReviewedDetails is not null)
                         .ToImmutableDictionary(p => p.Key, p => p.Value.ReviewedDetails!.Stackable),
+                    CraftingSchedules = ProjectCraftingSchedules(catalogs.Recipes),
+                    TrackUnsupportedCraftingSchedules = true,
                     KnowledgeCatalog = ProjectKnowledgeCatalog(catalogs.Items, catalogs.OptionalSkills),
                     NpcSkills = ProjectNpcSkills(catalogs.ReviewedNpcs),
                     ReconcileNpcSkills = true
@@ -272,6 +274,14 @@ public sealed class AccountRuntime : IAsyncDisposable
             }
         }
     }
+
+    // Only a current parsed Smith catalog selects the schedule layout. Use every recipe,
+    // including distinct recipe IDs producing the same item; Products omits those rows.
+    // Missing rows never imply legacy, and packet contents do not select a schema.
+    internal static CraftingScheduleContext? ProjectCraftingSchedules(RuntimeRecipeCandidate? recipes)
+        => recipes is null || recipes.Catalog.IsDefaultOrEmpty ? null
+            : CraftingScheduleContext.FromRuntimeRows(recipes.Catalog.Select(row =>
+                new CraftingRecipeIdentity(row.Recipe.RecipeId, row.Recipe.ItemId)));
 
     // NPC slot IDs come from the required table's independently reviewed layout.
     // Optional skill definitions and Lua constants are not required for observed slot identity.
