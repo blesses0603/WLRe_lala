@@ -55,6 +55,8 @@ public sealed class AccountConnectionRuntime : IAsyncDisposable
 
     private ReconnectView? observedView;
     private AccountConnectionStatus? observedStatus;
+    private ReceivePublication? observedReceive;
+    private AccountReceivePublication? observedPublication;
     public AccountConnectionStatus Snapshot
     {
         get
@@ -96,18 +98,31 @@ public sealed class AccountConnectionRuntime : IAsyncDisposable
     internal ReconnectView Lifetime => connection.Snapshot;
     internal Task<ReconnectView> WaitForLifetimeChangeAsync(ReconnectView expected, CancellationToken token)
         => connection.WaitForChangeAsync(expected, token);
-    /// <summary>Current connection only. Returns null after stop, replacement, or between
-    /// attempts. Custom observation inputs run on the receive writer, not a UI thread.</summary>
-    public AccountReceivePublication? Publication
+    /// <summary>Current connection only. Stable identity until receive state changes;
+    /// null after stop, replacement, or between attempts. Retained values are historical.
+    /// Custom observation inputs run on the receive writer, not a UI thread.</summary>
+    public AccountReceivePublication? Publication => ReadPublication().Publication;
+    internal Task? PublicationChanged => connection.PublicationChanged;
+    internal (AccountConnectionStatus Connection, AccountReceivePublication? Publication) ReadPublication()
     {
-        get
+        lock (gate)
         {
-            var value = connection.Publication;
-            return value is null ? null : new(value.Attempt, value.Revision, value.Stage switch
+            var (view, value) = connection.ReadPublication();
+            if (!ReferenceEquals(view, observedView))
             {
-                ReceiveStage.Created => AccountReceivePhase.Created, ReceiveStage.Running => AccountReceivePhase.Running,
-                ReceiveStage.Ending => AccountReceivePhase.Ending, _ => AccountReceivePhase.Ended
-            }, value.Snapshot);
+                observedView = view;
+                observedStatus = Map(view);
+            }
+            if (!ReferenceEquals(value, observedReceive))
+            {
+                observedReceive = value;
+                observedPublication = value is null ? null : new(value.Attempt, value.Revision, value.Stage switch
+                {
+                    ReceiveStage.Created => AccountReceivePhase.Created, ReceiveStage.Running => AccountReceivePhase.Running,
+                    ReceiveStage.Ending => AccountReceivePhase.Ending, _ => AccountReceivePhase.Ended
+                }, value.Snapshot);
+            }
+            return (observedStatus!, observedPublication);
         }
     }
     /// <summary>One-shot lifetime; the first token owns cancellation. Repeated calls return

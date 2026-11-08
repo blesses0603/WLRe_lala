@@ -36,6 +36,34 @@ public sealed class ReceiveAttemptTests
         for (var split = 1; split < length; split++) yield return [split];
     }
 
+    [Fact]
+    public async Task PublicationSignalCoversCommitsAndLifecycleWithoutMissedPullWakeups()
+    {
+        var transport = new PushTransport();
+        await using var attempt = Attempt(transport);
+        var createdSignal = attempt.PublicationChanged;
+        Assert.Same(createdSignal, attempt.PublicationChanged); Assert.False(createdSignal.IsCompleted);
+        var run = attempt.RunAsync(); await createdSignal.WaitAsync(Timeout);
+        Assert.Equal(ReceiveStage.Running, attempt.Latest.Stage);
+        for (int i = 1; i <= 16; i++)
+        {
+            var signal = attempt.PublicationChanged;
+            var before = attempt.Latest;
+            Assert.False(signal.IsCompleted);
+            transport.Push(Wire([Ping]));
+            await signal.WaitAsync(Timeout);
+            Assert.Equal(i, attempt.Latest.Revision); Assert.Equal(i - 1, before.Revision);
+            Assert.NotSame(signal, attempt.PublicationChanged);
+        }
+        var retiring = attempt.PublicationChanged;
+        await attempt.DisposeAsync(); await retiring.WaitAsync(Timeout);
+        var result = await run.WaitAsync(Timeout);
+        Assert.Equal(ReceiveStage.Ended, result.Publication.Stage); Assert.Equal(16, result.Publication.Revision);
+        var endedSignal = attempt.PublicationChanged;
+        await attempt.DisposeAsync();
+        Assert.Same(endedSignal, attempt.PublicationChanged); Assert.False(endedSignal.IsCompleted);
+    }
+
     [Theory]
     [MemberData(nameof(SplitPoints))]
     public async Task EveryHeaderAndBodySplitMatchesDirectComposition(int split)

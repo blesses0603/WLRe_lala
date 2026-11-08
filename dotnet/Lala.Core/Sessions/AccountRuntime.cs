@@ -30,6 +30,16 @@ public sealed record AccountRuntimePublication(AccountReceivePublication Receive
     public override string ToString() => nameof(AccountRuntimePublication);
 }
 
+/// <summary>Stable observation token for this runtime's connection and receive/catalog
+/// publication, including absence and aggregate completion. Historical and read-only.</summary>
+public sealed record AccountRuntimePublicationSnapshot(AccountConnectionStatus Connection,
+    AccountRuntimePublication? Publication, bool IsCompleted)
+{
+    public bool ResourceHeld => true;
+    public bool CanSendCommands => false;
+    public override string ToString() => nameof(AccountRuntimePublicationSnapshot);
+}
+
 /// <summary>
 /// Owns one connection and resource lifetime. Starts resource preparation only after protocol
 /// login; reconnect refreshes read-only instead of replaying a database write. Every attempt
@@ -53,6 +63,8 @@ public sealed class AccountRuntime : IAsyncDisposable
     private bool retired, completed;
     private AccountRuntimeStatus? observedStatus;
     private TaskCompletionSource statusChanged = NewStatusSignal();
+    private AccountRuntimePublicationSnapshot? observedPublication;
+    private TaskCompletionSource publicationChanged = NewStatusSignal();
     private readonly Func<CancellationToken, Task>? beforePreparationAdmission;
     private SessionSnapshot? resourceAccount;
     private Guid? resourceAttempt;
@@ -119,8 +131,8 @@ public sealed class AccountRuntime : IAsyncDisposable
     private static TaskCompletionSource NewStatusSignal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
     private AccountRuntimeStatus RefreshStatusLocked()
     {
-        var currentConnection = connection.Snapshot;
-        bool currentResources = CurrentCatalogsLocked(out _);
+        var (currentConnection, receive) = connection.ReadPublication();
+        bool currentResources = CurrentCatalogsLocked(currentConnection, receive, out var catalogs);
         if (observedStatus is null || !ReferenceEquals(observedStatus.Connection, currentConnection) ||
             observedStatus.HasCurrentResources != currentResources || observedStatus.ResourceHistory != history ||
             observedStatus.IsCompleted != completed)
@@ -130,7 +142,25 @@ public sealed class AccountRuntime : IAsyncDisposable
             statusChanged = NewStatusSignal();
             previous.SetResult();
         }
+        RefreshPublicationLocked(currentConnection, receive, catalogs);
         return observedStatus;
+    }
+    private void RefreshPublicationLocked(AccountConnectionStatus currentConnection,
+        AccountReceivePublication? receive, OfflineRuntimeCandidate? catalogs)
+    {
+        if (retired) receive = null;
+        var value = observedPublication?.Publication;
+        if (receive is null) value = null;
+        else if (!ReferenceEquals(value?.Receive, receive) || !ReferenceEquals(value?.Catalogs, catalogs))
+            value = new(receive, catalogs);
+        if (observedPublication is null || !ReferenceEquals(observedPublication.Connection, currentConnection) ||
+            !ReferenceEquals(observedPublication.Publication, value) || observedPublication.IsCompleted != completed)
+        {
+            var previous = publicationChanged;
+            observedPublication = new(currentConnection, value, completed);
+            publicationChanged = NewStatusSignal();
+            previous.SetResult();
+        }
     }
     /// <summary>Wait for a change from this runtime's exact Snapshot. Stale, cloned, or
     /// foreign snapshots return the current state immediately. Aggregate completion also
@@ -167,13 +197,15 @@ public sealed class AccountRuntime : IAsyncDisposable
                 var view = connection.Lifetime;
                 var accountChanged = session.SnapshotChanged;
                 var bindingChanged = resources.BindingChanged;
+                var receiveChanged = connection.PublicationChanged;
                 lock (gate) RefreshStatusLocked();
                 using var pending = CancellationTokenSource.CreateLinkedTokenSource(token);
-                var waits = new[]
+                var waits = new List<Task>(4)
                 {
                     connection.WaitForLifetimeChangeAsync(view, pending.Token),
                     accountChanged.WaitAsync(pending.Token), bindingChanged.WaitAsync(pending.Token)
                 };
+                if (receiveChanged is not null) waits.Add(receiveChanged.WaitAsync(pending.Token));
                 try { await Task.WhenAny(waits).ConfigureAwait(false); }
                 finally
                 {
@@ -187,28 +219,50 @@ public sealed class AccountRuntime : IAsyncDisposable
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
     }
-    public AccountRuntimePublication? Publication
+    /// <summary>Current read-only receive/catalog pair. Stable identity until either
+    /// component changes; null after stop or when no owned receive attempt is current.</summary>
+    public AccountRuntimePublication? Publication => PublicationSnapshot.Publication;
+    /// <summary>Non-null observation token, including intervals without a receive attempt.
+    /// Stable identity until connection, receive/catalog selection, or completion changes.</summary>
+    public AccountRuntimePublicationSnapshot PublicationSnapshot
     {
-        get
+        get { lock (gate) { RefreshStatusLocked(); return observedPublication!; } }
+    }
+    /// <summary>Wait for receive commits, receive lifecycle, catalog selection/revocation,
+    /// connection changes, or aggregate completion. Pass this runtime's exact snapshot;
+    /// stale, cloned, foreign, and completed snapshots return the current value immediately.
+    /// Changes coalesce, not a lossless packet/event stream. Cancellation belongs only to
+    /// this waiter and is checked before returning. No callbacks or authority are granted.</summary>
+    public async Task<AccountRuntimePublicationSnapshot> WaitForPublicationChangeAsync(
+        AccountRuntimePublicationSnapshot expected, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(expected);
+        cancellationToken.ThrowIfCancellationRequested();
+        Task changed;
+        lock (gate)
         {
-            lock (gate)
-            {
-                if (retired) return null;
-                var value = connection.Publication;
-                if (value is null) return null;
-                CurrentCatalogsLocked(out var catalogs);
-                // A reconnect can race the first pull. Never join catalogs to another attempt.
-                if (catalogs is not null && resourceAttempt != value.Attempt) catalogs = null;
-                return new(value, catalogs);
-            }
+            RefreshStatusLocked();
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!ReferenceEquals(observedPublication, expected) || completed) return observedPublication!;
+            changed = publicationChanged.Task;
         }
+        await changed.WaitAsync(cancellationToken).ConfigureAwait(false);
+        var updated = PublicationSnapshot;
+        cancellationToken.ThrowIfCancellationRequested();
+        return updated;
     }
     private bool CurrentCatalogsLocked(out OfflineRuntimeCandidate? catalogs)
     {
+        var (currentConnection, receive) = connection.ReadPublication();
+        return CurrentCatalogsLocked(currentConnection, receive, out catalogs);
+    }
+    private bool CurrentCatalogsLocked(AccountConnectionStatus currentConnection,
+        AccountReceivePublication? receive, out OfflineRuntimeCandidate? catalogs)
+    {
         catalogs = null;
         if (retired || resourceAccount is null || !ReferenceEquals(resourceAccount, session.Snapshot) ||
-            connection.Snapshot.Phase != AccountConnectionPhase.ReceivingHeld ||
-            connection.Publication is not { Phase: AccountReceivePhase.Running } receive || receive.Attempt != resourceAttempt) return false;
+            currentConnection.Phase != AccountConnectionPhase.ReceivingHeld ||
+            receive is not { Phase: AccountReceivePhase.Running } || receive.Attempt != resourceAttempt) return false;
         bool current = resources.TryReadCatalogs(out catalogs) && ReferenceEquals(resourceAccount, session.Snapshot);
         if (!current) catalogs = null;
         return current;

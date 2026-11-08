@@ -70,6 +70,7 @@ internal sealed class ReceiveAttempt : IAsyncDisposable
     private readonly CancellationTokenSource stop = new();
     private readonly TaskCompletionSource retiring = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private ReceivePublication latest;
+    private TaskCompletionSource publicationChanged = NewPublicationSignal();
     private Task<ReceiveResult>? completion;
     private Task? disposalCompletion;
     private Task? transportDisposal;
@@ -99,6 +100,17 @@ internal sealed class ReceiveAttempt : IAsyncDisposable
     }
 
     public ReceivePublication Latest { get { lock (gate) return latest; } }
+    // Subscribe before pulling Latest. One rotating signal observes commits and lifecycle
+    // assignments without retaining a packet queue or running callbacks under the gate.
+    internal Task PublicationChanged { get { lock (gate) return publicationChanged.Task; } }
+    private static TaskCompletionSource NewPublicationSignal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private void SetPublicationLocked(ReceivePublication next)
+    {
+        var previous = publicationChanged;
+        latest = next;
+        publicationChanged = NewPublicationSignal();
+        previous.SetResult();
+    }
     /// <summary>One-shot ending notification, before transport/callback cleanup completes.</summary>
     internal Task Retiring => retiring.Task;
     public bool IsCurrent(Guid attempt)
@@ -112,7 +124,7 @@ internal sealed class ReceiveAttempt : IAsyncDisposable
         {
             if (completion is not null) return completion;
             runRequested = true;
-            latest = latest with { Stage = ReceiveStage.Running };
+            SetPublicationLocked(latest with { Stage = ReceiveStage.Running });
             return completion = Task.Run(() => ExecuteAsync(cancellationToken));
         }
     }
@@ -149,7 +161,8 @@ internal sealed class ReceiveAttempt : IAsyncDisposable
 
     private void PublishEndingLocked()
     {
-        latest = latest with { Stage = ReceiveStage.Ending, End = end };
+        if (latest.Stage != ReceiveStage.Ending || latest.End != end)
+            SetPublicationLocked(latest with { Stage = ReceiveStage.Ending, End = end });
         retiring.TrySetResult();
     }
 
@@ -199,7 +212,7 @@ internal sealed class ReceiveAttempt : IAsyncDisposable
         {
             retired = true;
             end = released ? end ?? ReceiveEnd.Completed : ReceiveEnd.CleanupFailed;
-            latest = latest with { Stage = ReceiveStage.Ended, End = end };
+            SetPublicationLocked(latest with { Stage = ReceiveStage.Ended, End = end });
             return new(latest, end.Value, released);
         }
     }
@@ -310,7 +323,7 @@ internal sealed class ReceiveAttempt : IAsyncDisposable
         ServiceStateSnapshot next;
         try { next = state.Apply(decoded, new(basis, inputs)); }
         catch (Exception) { RetireLocked(ReceiveEnd.ReductionFailed); return false; }
-        latest = latest with { Revision = checked(latest.Revision + 1), Snapshot = next };
+        SetPublicationLocked(latest with { Revision = checked(latest.Revision + 1), Snapshot = next });
         publications.Writer.TryWrite(latest);
         return true;
     }

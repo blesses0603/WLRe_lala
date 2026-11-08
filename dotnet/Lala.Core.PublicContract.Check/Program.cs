@@ -50,12 +50,22 @@ await using (var account = AccountRuntime.Create(session, generation, profile, s
     var created = account.Snapshot;
     Require(ReferenceEquals(created, account.Snapshot) && !created.IsCompleted);
     Require(!created.HasCurrentResources && account.Publication is null);
+    var publication = account.PublicationSnapshot;
+    Require(ReferenceEquals(publication, account.PublicationSnapshot) && publication.Publication is null);
+    Require(ReferenceEquals(publication.Connection, created.Connection) && !publication.IsCompleted);
+    Require(ReferenceEquals(publication, await account.WaitForPublicationChangeAsync(publication with { })));
+    var published = account.WaitForPublicationChangeAsync(publication);
     var changed = account.WaitForChangeAsync(created);
-    Require(!changed.IsCompleted);
+    Require(!changed.IsCompleted && !published.IsCompleted);
     var result = await account.RunAsync(cancel.Token);
     Require(!ReferenceEquals(created, await changed));
     var completed = account.Snapshot;
     Require(completed.IsCompleted && ReferenceEquals(completed, await account.WaitForChangeAsync(completed)));
+    Require(!ReferenceEquals(publication, await published));
+    var finalPublication = account.PublicationSnapshot;
+    Require(finalPublication.IsCompleted && finalPublication.Publication is null);
+    Require(ReferenceEquals(finalPublication, await account.WaitForPublicationChangeAsync(finalPublication)));
+    Require(finalPublication.ResourceHeld && !finalPublication.CanSendCommands);
     Require(result.ResourcesReleased && result.ResourceHistory.IsEmpty);
     Require(source.Calls == 0 && !Directory.Exists(root) && !account.Snapshot.CanSendCommands);
 }

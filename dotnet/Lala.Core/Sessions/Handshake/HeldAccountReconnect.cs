@@ -120,7 +120,13 @@ internal sealed class HeldAccountReconnect : IAsyncDisposable
         // Retain only one pending signal, and never invoke observer continuations inline.
         previous.SetResult(next);
     }
-    internal ReceivePublication? Publication { get { lock (gate) return retired ? null : current?.Publication; } }
+    internal ReceivePublication? Publication => ReadPublication().Publication;
+    internal (ReconnectView View, ReceivePublication? Publication) ReadPublication()
+    {
+        // The view and receive attempt cannot be replaced between these reads.
+        lock (gate) return (view, retired ? null : current?.Publication);
+    }
+    internal Task? PublicationChanged { get { lock (gate) return retired ? null : current?.PublicationChanged; } }
     internal Task<ReconnectResult> RunAsync(CancellationToken cancellationToken = default)
     {
         lock (gate)

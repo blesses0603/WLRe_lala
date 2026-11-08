@@ -53,9 +53,9 @@ pump together with connection/resource work. Construction and waiting before Run
 not start login, resource acquisition, or database writes.
 
 Changes may coalesce, so this is a status notification API, not an event queue or
-receive-packet stream. Read `Publication` separately for a point-in-time receive/catalog
-pair, and recheck current selection whenever using it. Retained snapshots and catalogs
-remain historical observations and never grant command authority.
+receive-packet stream. Receive commits alone do not change this status or release its
+waiters. Use the separate publication API below to observe receive changes. Retained
+snapshots and catalogs remain historical observations and never grant command authority.
 
 `AccountRuntimeStatus.IsCompleted` means the entire run, including pending resource
 history and owned cleanup, has finished. `Connection.Phase == Ended` can occur earlier
@@ -64,6 +64,58 @@ while a resource callback or cleanup is still draining. Continue waiting until
 already completed integrated status returns immediately, including after disposal.
 Completion does not mean cleanup succeeded: inspect the Run result's
 `ResourcesReleased`, or await Dispose, which reports cleanup failure.
+
+## Awaiting receive publications
+
+`PublicationSnapshot` is a non-null `AccountRuntimePublicationSnapshot` containing
+`Connection`, nullable `Publication`, and aggregate `IsCompleted`. It retains its exact
+object identity until one of those visible components changes. `Connection.RuntimeId`
+identifies the owning connection lifetime; its `Generation` and the receive `Attempt`
+identify a replacement. A receive revision counts committed packets within one attempt,
+not across reconnects. Lifecycle-only changes do not increment that revision.
+
+`WaitForPublicationChangeAsync(snapshot, cancellationToken)` waits for receive commits,
+receive lifecycle changes, catalog binding or revocation, connection changes, and final
+aggregate completion. Pass the exact snapshot returned by this runtime. Stale snapshots,
+value-equal clones, and snapshots from another runtime return its current snapshot
+immediately. A canceled token takes precedence even on that fast path. Each waiter can
+be canceled independently. An already completed snapshot returns immediately, so hosts
+should exit their observation loop on `IsCompleted`:
+
+```csharp
+var snapshot = account.PublicationSnapshot;
+while (true)
+{
+    RenderReadOnly(snapshot); // Host-selected UI/logging policy; do not dump raw state.
+    if (snapshot.IsCompleted) break;
+    snapshot = await account.WaitForPublicationChangeAsync(snapshot, cancellationToken);
+}
+```
+
+The wrapper remains non-null before Run, between attempts, and after Stop even when
+`Publication` is null. Thus connection creation/retirement and final cleanup cannot be
+mistaken for an unchanged absent publication. Stop revokes the current publication at
+the read boundary before returning; pending cleanup still keeps `IsCompleted` false.
+Dispose-before-Run wakes observers without acquiring credentials or resources. Like the
+status API, completion is not proof that cleanup succeeded.
+
+`Publication` is also a stable wrapper until its receive or catalog reference changes.
+The connection status and receive attempt are captured under the same ownership lock;
+catalogs are joined only against the exact current account snapshot and that attempt.
+Receive and resource production are independent: this is not a shared transaction or a
+promise that the receive state's historical observations already used the newly bound
+catalogs. They are used on subsequent commits. Revocation does not mutate retained
+snapshots or replay old packets. A returned snapshot may already be historical when the
+host consumes it and is never permission to act.
+
+The existing owned notification pump also observes one rotating receive signal. It
+subscribes before pulling the joined view, cancels and observes losing waits each cycle,
+and is drained with the runtime. There are no per-host pumps, new user callbacks, polling,
+or per-packet notification queues. Signals run continuations asynchronously. Changes can
+coalesce and intermediate states may not be observed; this is not a lossless event log.
+Resource history changes without a visible catalog change still belong to the separate
+status API. Constructing the runtime, reading snapshots, or awaiting a change does not
+start network or resource work.
 
 ## Receive observations
 
@@ -139,3 +191,12 @@ The final cloud Release Core suite passed all 43,237 tests with no skips. The ex
 public-contract smoke check also passed without network access or resource writes.
 Independent review found no blocker; these remain offline checks, not host UI or live
 server acceptance.
+
+Receive-publication notifications add 12 focused cases: real framed loopback commits
+without waking status-only waiters, exact/cloned/foreign snapshot identity, cancellation
+and asynchronous fanout, catalog-only binding/revocation, Stop/Hold/Begin/Disconnect,
+reconnect generation/attempt joins, and delayed or failed aggregate cleanup. The final
+cloud .NET 10 Release suite passed all **43,384 Core tests with no skips**, and the
+external public-contract check passed without network access or resource writes. These
+checks use synthetic peers and owned fixtures; they do not prove production resource
+provenance, host UI behavior, or official-server acceptance.

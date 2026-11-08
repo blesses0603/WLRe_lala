@@ -1823,3 +1823,20 @@ Final frozen offline verification passed: 26 focused, 43,364 Core, external publ
 white-box synthetic provenance, not official-source or live-account evidence. Actual-input
 Desktop/Android hosts remain unconnected. Overall PR advances once to 8.0.28; same-batch
 corrections and all platform/Core/Desktop version settings remain unchanged.
+
+
+### Overall PR development marker 8.0.29: receive publication notifications
+
+AccountRuntime now exposes a stable PublicationSnapshot and cancellable
+WaitForPublicationChangeAsync for receive commits, catalog selection/revocation,
+connection changes and aggregate cleanup completion. The existing lifecycle wait
+remains independent of packet traffic. Asynchronous rotating signals and bounded
+owned waits replace host polling without introducing a lossless event queue.
+Exact attempt/generation joins remain mandatory; retained snapshots are historical,
+read-only observations and never gameplay command authority.
+
+Final offline verification passed: 12 focused, 43,384 Core, external public consumer,
+76 lifecycle, 36 acceptance and 17 actual Linux PTY checks. Independent review found
+no blockers. No Desktop UI, trusted-input host or live-server acceptance is implied.
+Only the overall PR marker advances once to 8.0.29; same-batch corrections and all
+platform/Core/Desktop project version settings remain unchanged.
