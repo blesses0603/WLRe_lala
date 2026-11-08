@@ -29,6 +29,38 @@ Neither successful login nor valid catalogs enable game commands.
 - Receive retirement publishes `Draining` before transport cleanup completes, so
   resources are revoked even when that cleanup is slow or noncooperative.
 
+## Awaiting integrated status
+
+`Snapshot` retains its exact object identity until the visible connection status,
+current-resource selection, resource history, or aggregate completion changes.
+`WaitForChangeAsync(snapshot, cancellationToken)` accepts the exact observed instance.
+A stale, value-equal clone, or another runtime's snapshot returns the current state
+immediately. A canceled token is checked even for stale or completed snapshots, and
+canceling one wait does not stop the runtime or other observers.
+
+The integrated wait covers connection lifecycle changes, resource readiness and
+revocation without a connection change, historical preparation outcomes, and cleanup
+completion. Account `Begin`, `Hold`, and `Disconnect` changes use internal identity
+signals to invalidate a joined binding; no polling or extra received packet is needed.
+Source signals and the integrated signal run continuations asynchronously, never user
+callbacks under their lifetime locks. One owned notification pump retains at most one
+wait per source and cancels and observes losing waits each cycle. Dispose drains this
+pump together with connection/resource work. Construction and waiting before Run do
+not start login, resource acquisition, or database writes.
+
+Changes may coalesce, so this is a status notification API, not an event queue or
+receive-packet stream. Read `Publication` separately for a point-in-time receive/catalog
+pair, and recheck current selection whenever using it. Retained snapshots and catalogs
+remain historical observations and never grant command authority.
+
+`AccountRuntimeStatus.IsCompleted` means the entire run, including pending resource
+history and owned cleanup, has finished. `Connection.Phase == Ended` can occur earlier
+while a resource callback or cleanup is still draining. Continue waiting until
+`IsCompleted` rather than looping on the connection's terminal phase. A wait on an
+already completed integrated status returns immediately, including after disposal.
+Completion does not mean cleanup succeeded: inspect the Run result's
+`ResourcesReleased`, or await Dispose, which reports cleanup failure.
+
 ## Receive observations
 
 A current resource binding supplies decoded stage IDs, reviewed item stackability and
@@ -95,3 +127,11 @@ extended to decode S64 and withdraw context. The first compile exposed two test-
 constructor calls missing the nullable reviewed-details argument; those were corrected
 to `null`, without changing production behavior. Independent review found no blocker.
 Platform host builds and CI remain separate checks; no live server was used.
+
+Integrated-status notification validation adds 11 cases covering exact snapshot
+identity, independent/racing cancellation, asynchronous fanout, resource-only readiness
+and history, account replacement/hold/disconnect, and late history/cleanup completion.
+The final cloud Release Core suite passed all 43,237 tests with no skips. The external
+public-contract smoke check also passed without network access or resource writes.
+Independent review found no blocker; these remain offline checks, not host UI or live
+server acceptance.

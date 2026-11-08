@@ -30,7 +30,7 @@ public sealed partial class AccountSession
             var next = new ReceiveAttempt(transport, rxXor, clock, observe,
                 readSize: readSize, bufferedChunks: bufferedChunks, beforeCommit: beforeCommit);
             receive = next;
-            current = current with { Phase = SessionPhase.Held, ResourceVersion = null };
+            SetSnapshotLocked(current with { Phase = SessionPhase.Held, ResourceVersion = null });
             return next;
         }
     }
@@ -58,8 +58,8 @@ public sealed partial class AccountSession
                 return null;
             RetireReceiveLocked();
             if (receiveCleanup is not { IsCompletedSuccessfully: true }) return null;
-            current = current with { Generation = checked(current.Generation + 1),
-                Phase = SessionPhase.Preparing, ResourceVersion = null };
+            SetSnapshotLocked(current with { Generation = checked(current.Generation + 1),
+                Phase = SessionPhase.Preparing, ResourceVersion = null });
             return current;
         }
     }

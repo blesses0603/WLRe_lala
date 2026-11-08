@@ -13,6 +13,16 @@ public sealed partial class AccountSession
     private readonly object gate = new();
     private SessionSnapshot current = new(0, null, null, SessionPhase.Disconnected, null);
     public SessionSnapshot Snapshot { get { lock (gate) return current; } }
+    private TaskCompletionSource snapshotChanged = NewSnapshotSignal();
+    internal Task SnapshotChanged { get { lock (gate) return snapshotChanged.Task; } }
+    private static TaskCompletionSource NewSnapshotSignal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private void SetSnapshotLocked(SessionSnapshot next)
+    {
+        var previous = snapshotChanged;
+        current = next;
+        snapshotChanged = NewSnapshotSignal();
+        previous.SetResult();
+    }
 
     public SessionSnapshot Begin(string accountId, string endpoint)
     {
@@ -21,7 +31,7 @@ public sealed partial class AccountSession
         lock (gate)
         {
             RetireReceiveLocked();
-            current = new(checked(current.Generation + 1), accountId, endpoint, SessionPhase.Preparing, null);
+            SetSnapshotLocked(new(checked(current.Generation + 1), accountId, endpoint, SessionPhase.Preparing, null));
             return current;
         }
     }
@@ -34,10 +44,10 @@ public sealed partial class AccountSession
             if (generation != current.Generation || current.Phase != SessionPhase.Preparing) return false;
             if (!integrityVerified || string.IsNullOrWhiteSpace(officialVersion) || officialVersion != databaseVersion)
             {
-                current = current with { Phase = SessionPhase.Held };
+                SetSnapshotLocked(current with { Phase = SessionPhase.Held });
                 return false;
             }
-            current = current with { Phase = SessionPhase.Verified, ResourceVersion = officialVersion };
+            SetSnapshotLocked(current with { Phase = SessionPhase.Verified, ResourceVersion = officialVersion });
             return true;
         }
     }
@@ -48,7 +58,7 @@ public sealed partial class AccountSession
         {
             if (generation != current.Generation || current.Phase == SessionPhase.Disconnected) return false;
             RetireReceiveLocked();
-            current = current with { Phase = SessionPhase.Held };
+            SetSnapshotLocked(current with { Phase = SessionPhase.Held });
             return true;
         }
     }
@@ -58,7 +68,7 @@ public sealed partial class AccountSession
         lock (gate)
         {
             RetireReceiveLocked();
-            current = new(checked(current.Generation + 1), null, null, SessionPhase.Disconnected, null);
+            SetSnapshotLocked(new(checked(current.Generation + 1), null, null, SessionPhase.Disconnected, null));
         }
     }
 

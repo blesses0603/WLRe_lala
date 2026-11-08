@@ -31,6 +31,17 @@ public sealed class AccountResourceRuntime : IAsyncDisposable
     private AccountResourceBinding? _binding;
     private bool _running, _disposed;
     private long _revision;
+    private TaskCompletionSource _bindingChanged = NewBindingSignal();
+    internal Task BindingChanged { get { lock (_gate) return _bindingChanged.Task; } }
+    private static TaskCompletionSource NewBindingSignal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private void SetBindingLocked(AccountResourceBinding? binding)
+    {
+        if (ReferenceEquals(_binding, binding)) return;
+        var previous = _bindingChanged;
+        _binding = binding;
+        _bindingChanged = NewBindingSignal();
+        previous.SetResult();
+    }
 
     private AccountResourceRuntime(AccountSession session, ResourceRuntimeOwner owner)
         => (_session, _owner) = (session, owner);
@@ -72,7 +83,7 @@ public sealed class AccountResourceRuntime : IAsyncDisposable
             snapshot = _session.Snapshot;
             if (snapshot.Generation != expectedGeneration || snapshot.Phase == SessionPhase.Disconnected)
                 throw new InvalidOperationException("A current active account generation is required");
-            _running = true; revision = _revision; _binding = null;
+            _running = true; revision = _revision; SetBindingLocked(null);
         }
         ResourceRuntimeBootstrapResult? result = null;
         Exception? failure = null;
@@ -98,7 +109,7 @@ public sealed class AccountResourceRuntime : IAsyncDisposable
                 else if (AccountResourceBinding.TryBind(_session, expectedGeneration, _owner, result?.Publication, out var binding)
                     && ReferenceEquals(_session.Snapshot, snapshot))
                 {
-                    _binding = binding;
+                    SetBindingLocked(binding);
                     status = AccountResourcePreparationStatus.Bound;
                 }
                 else status = ReferenceEquals(_session.Snapshot, snapshot)
@@ -136,7 +147,7 @@ public sealed class AccountResourceRuntime : IAsyncDisposable
         lock (_gate)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
-            _revision = checked(_revision + 1); _binding = null;
+            _revision = checked(_revision + 1); SetBindingLocked(null);
             // This owner operation only changes internal state and schedules cancellation;
             // it performs no I/O or synchronous caller callbacks.
             _owner.Invalidate();
@@ -147,7 +158,7 @@ public sealed class AccountResourceRuntime : IAsyncDisposable
     /// preparation may still deliver its historical result, but cannot publish after disposal.</summary>
     public ValueTask DisposeAsync()
     {
-        lock (_gate) { _disposed = true; _binding = null; }
+        lock (_gate) { _disposed = true; SetBindingLocked(null); }
         return _owner.DisposeAsync();
     }
 }

@@ -31,8 +31,15 @@ await using (var resources = AccountResourceRuntime.Create(session, root))
 Require(!Directory.Exists(root));
 await using (var account = AccountRuntime.Create(session, generation, profile, source, root))
 {
-    Require(!account.Snapshot.HasCurrentResources && account.Publication is null);
+    var created = account.Snapshot;
+    Require(ReferenceEquals(created, account.Snapshot) && !created.IsCompleted);
+    Require(!created.HasCurrentResources && account.Publication is null);
+    var changed = account.WaitForChangeAsync(created);
+    Require(!changed.IsCompleted);
     var result = await account.RunAsync(cancel.Token);
+    Require(!ReferenceEquals(created, await changed));
+    var completed = account.Snapshot;
+    Require(completed.IsCompleted && ReferenceEquals(completed, await account.WaitForChangeAsync(completed)));
     Require(result.ResourcesReleased && result.ResourceHistory.IsEmpty);
     Require(source.Calls == 0 && !Directory.Exists(root) && !account.Snapshot.CanSendCommands);
 }

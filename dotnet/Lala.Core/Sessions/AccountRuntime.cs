@@ -16,6 +16,9 @@ public sealed record AccountRuntimeResult(AccountConnectionResult Connection,
 public sealed record AccountRuntimeStatus(AccountConnectionStatus Connection, bool HasCurrentResources,
     ImmutableArray<AccountResourceAttempt> ResourceHistory)
 {
+    /// <summary>Connection, resource preparation, and owned cleanup have all finished.
+    /// Connection.Ended alone does not imply resource history is final.</summary>
+    public bool IsCompleted { get; init; }
     public bool ResourceHeld => true;
     public bool CanSendCommands => false;
 }
@@ -43,7 +46,9 @@ public sealed class AccountRuntime : IAsyncDisposable
     private readonly CancellationTokenSource stop = new();
     private Task<AccountRuntimeResult>? running;
     private Task? disposal, cancellation;
-    private bool retired;
+    private bool retired, completed;
+    private AccountRuntimeStatus? observedStatus;
+    private TaskCompletionSource statusChanged = NewStatusSignal();
     private readonly Func<CancellationToken, Task>? beforePreparationAdmission;
     private SessionSnapshot? resourceAccount;
     private Guid? resourceAttempt;
@@ -70,9 +75,82 @@ public sealed class AccountRuntime : IAsyncDisposable
         connection = new(session, generation, profile, source, options, Observe);
         resources = supplied ?? AccountResourceRuntime.Create(session, root!);
     }
+    /// <summary>Stable assignment identity until visible lifecycle, resource selection,
+    /// history, or aggregate completion changes. Retained values are historical only.</summary>
     public AccountRuntimeStatus Snapshot
     {
-        get { lock (gate) return new(connection.Snapshot, CurrentCatalogsLocked(out _), history); }
+        get { lock (gate) return RefreshStatusLocked(); }
+    }
+    private static TaskCompletionSource NewStatusSignal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private AccountRuntimeStatus RefreshStatusLocked()
+    {
+        var currentConnection = connection.Snapshot;
+        bool currentResources = CurrentCatalogsLocked(out _);
+        if (observedStatus is null || !ReferenceEquals(observedStatus.Connection, currentConnection) ||
+            observedStatus.HasCurrentResources != currentResources || observedStatus.ResourceHistory != history ||
+            observedStatus.IsCompleted != completed)
+        {
+            var previous = statusChanged;
+            observedStatus = new(currentConnection, currentResources, history) { IsCompleted = completed };
+            statusChanged = NewStatusSignal();
+            previous.SetResult();
+        }
+        return observedStatus;
+    }
+    /// <summary>Wait for a change from this runtime's exact Snapshot. Stale, cloned, or
+    /// foreign snapshots return the current state immediately. Aggregate completion also
+    /// returns immediately, even after disposal. Cancellation affects only this waiter and
+    /// is checked before returning. Changes may coalesce; this is not a packet/event stream
+    /// and grants no callbacks, resource authority, or permission to send commands.</summary>
+    public async Task<AccountRuntimeStatus> WaitForChangeAsync(AccountRuntimeStatus expected,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(expected);
+        cancellationToken.ThrowIfCancellationRequested();
+        Task changed;
+        lock (gate)
+        {
+            var current = RefreshStatusLocked();
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!ReferenceEquals(current, expected) || completed) return current;
+            changed = statusChanged.Task;
+        }
+        await changed.WaitAsync(cancellationToken).ConfigureAwait(false);
+        var updated = Snapshot;
+        cancellationToken.ThrowIfCancellationRequested();
+        return updated;
+    }
+    private async Task ObserveChangesAsync(CancellationToken token)
+    {
+        try
+        {
+            while (true)
+            {
+                token.ThrowIfCancellationRequested();
+                // Subscribe before pulling joined state, so changes during the pull cannot
+                // be lost. One owned pump, with at most one wait per source, serves all hosts.
+                var view = connection.Lifetime;
+                var accountChanged = session.SnapshotChanged;
+                var bindingChanged = resources.BindingChanged;
+                lock (gate) RefreshStatusLocked();
+                using var pending = CancellationTokenSource.CreateLinkedTokenSource(token);
+                var waits = new[]
+                {
+                    connection.WaitForLifetimeChangeAsync(view, pending.Token),
+                    accountChanged.WaitAsync(pending.Token), bindingChanged.WaitAsync(pending.Token)
+                };
+                try { await Task.WhenAny(waits).ConfigureAwait(false); }
+                finally
+                {
+                    // Cancel and observe losers each cycle; resource-only changes must not
+                    // accumulate unobserved connection/account waits until retirement.
+                    await pending.CancelAsync().ConfigureAwait(false);
+                    try { await Task.WhenAll(waits).ConfigureAwait(false); }
+                    catch (OperationCanceledException) when (pending.IsCancellationRequested) { }
+                }
+            }
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
     }
     public AccountRuntimePublication? Publication
     {
@@ -121,6 +199,7 @@ public sealed class AccountRuntime : IAsyncDisposable
             resources.Invalidate();
             // Cancellation callbacks are never invoked synchronously under the lifetime gate.
             cancellation = stop.CancelAsync();
+            RefreshStatusLocked();
         }
     }
     public ValueTask DisposeAsync()
@@ -146,6 +225,10 @@ public sealed class AccountRuntime : IAsyncDisposable
         bool preparedOnce = false, cleaned = true;
         AccountConnectionResult? result = null;
         using var waiterStop = new CancellationTokenSource();
+        using var observerStop = new CancellationTokenSource();
+        var observing = ObserveChangesAsync(observerStop.Token);
+        Task<ReconnectView>? changed = null;
+        ReconnectView? waitingView = null;
         try
         {
             while (!receiving.IsCompleted)
@@ -193,9 +276,15 @@ public sealed class AccountRuntime : IAsyncDisposable
                         }
                     }
                 }
-                var changed = connection.WaitForLifetimeChangeAsync(view, waiterStop.Token);
-                if (preparation is null) await Task.WhenAny(receiving, changed).ConfigureAwait(false);
-                else if (await Task.WhenAny(receiving, changed, preparation).ConfigureAwait(false) == preparation)
+                if (!ReferenceEquals(view, waitingView))
+                {
+                    // A preparation completion can win while the lifetime is unchanged.
+                    // Reuse that pending wait instead of retaining another cancellation registration.
+                    waitingView = view;
+                    changed = connection.WaitForLifetimeChangeAsync(view, waiterStop.Token);
+                }
+                if (preparation is null) await Task.WhenAny(receiving, changed!).ConfigureAwait(false);
+                else if (await Task.WhenAny(receiving, changed!, preparation).ConfigureAwait(false) == preparation)
                 {
                     await FinishPreparationAsync(preparation, generation, attemptNumber, account!, attempt!.Value).ConfigureAwait(false);
                     preparation = null;
@@ -207,6 +296,9 @@ public sealed class AccountRuntime : IAsyncDisposable
         finally
         {
             waiterStop.Cancel();
+            if (changed is not null)
+                try { await changed.ConfigureAwait(false); }
+                catch (OperationCanceledException) when (waiterStop.IsCancellationRequested) { }
             Stop();
             var pendingCancellation = preparationStop?.CancelAsync() ?? Task.CompletedTask;
             if (preparation is not null)
@@ -218,7 +310,10 @@ public sealed class AccountRuntime : IAsyncDisposable
             try { await resources.DisposeAsync().ConfigureAwait(false); } catch { cleaned = false; }
             if (cancellation is not null)
                 try { await cancellation.ConfigureAwait(false); } catch { cleaned = false; }
+            await observerStop.CancelAsync().ConfigureAwait(false);
+            await observing.ConfigureAwait(false);
             stop.Dispose();
+            lock (gate) { completed = true; RefreshStatusLocked(); }
         }
         lock (gate) return new(result!, history, cleaned && result!.ResourcesReleased);
     }
@@ -241,6 +336,7 @@ public sealed class AccountRuntime : IAsyncDisposable
         {
             resourceAccount = null; resourceAttempt = null; projected = null;
             if (!retired) resources.Invalidate();
+            RefreshStatusLocked();
         }
     }
     private async Task FinishPreparationAsync(Task<AccountResourcePreparationResult> work, long generation,
@@ -272,6 +368,7 @@ public sealed class AccountRuntime : IAsyncDisposable
                     ReconcileNpcSkills = true
                 };
             }
+            RefreshStatusLocked();
         }
     }
 
