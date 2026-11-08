@@ -31,10 +31,25 @@ public sealed class HeldConnectionOutcomeTests
     }
 
     [Fact]
+    public void ReadTimeoutRequiresCompletedLoginReadFailureAndReleasedResources()
+    {
+        foreach (var end in Enum.GetValues<ReceiveEnd>())
+            foreach (bool login in new[] { false, true })
+                foreach (bool released in new[] { false, true })
+                {
+                    var outcome = HeldConnectionOutcome.Classify(Result(end, released), login,
+                        [HeldConnectionFailure.ReadTimedOut]);
+                    Assert.Equal(login && released && end == ReceiveEnd.ReadFailed, outcome.CanReconnect);
+                    if (released && end == ReceiveEnd.ReadFailed)
+                        Assert.Equal(HeldConnectionFailure.ReadTimedOut, outcome.Failure);
+                }
+    }
+
+    [Fact]
     public void EveryUnsafeFactOverridesBothTransientEvidenceAndItsOrdering()
     {
         var safe = new[] { HeldConnectionFailure.ConnectFailed, HeldConnectionFailure.ConnectTimedOut,
-            HeldConnectionFailure.RemoteEof, HeldConnectionFailure.ReadFailed };
+            HeldConnectionFailure.RemoteEof, HeldConnectionFailure.ReadFailed, HeldConnectionFailure.ReadTimedOut };
         var terminal = Enum.GetValues<HeldConnectionFailure>().Except(safe);
         foreach (var bad in terminal)
             foreach (var good in safe)
@@ -44,7 +59,7 @@ public sealed class HeldConnectionOutcomeTests
                     Assert.False(HeldConnectionOutcome.Classify(Result(end), true, [bad, good]).CanReconnect);
                 }
         var uncertain = HeldConnectionOutcome.Classify(Result(ReceiveEnd.ReadFailed), true,
-            [HeldConnectionFailure.ReadFailed, HeldConnectionFailure.WriteFailed, HeldConnectionFailure.WriteUncertain]);
+            [HeldConnectionFailure.ReadTimedOut, HeldConnectionFailure.WriteFailed, HeldConnectionFailure.WriteUncertain]);
         Assert.Equal(HeldConnectionFailure.WriteUncertain, uncertain.Failure);
     }
 

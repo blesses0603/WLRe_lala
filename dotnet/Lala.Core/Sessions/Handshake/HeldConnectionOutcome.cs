@@ -7,7 +7,7 @@ internal enum HeldConnectionFailure
     ConnectFailed, ConnectTimedOut, RemoteEof, ReadFailed,
     IncompleteLoginOrUnknown, LoginProtocolFailed, ProviderFailed, LoginDeadline,
     WriteFailed, WriteUncertain, CancelledOrHeld, CleanupFailed, InvalidProtocol,
-    ObservationFailed, ReductionFailed, EventHandlerFailed
+    ObservationFailed, ReductionFailed, EventHandlerFailed, ReadTimedOut
 }
 
 /// <summary>Historical retry evidence only. Never grants login or resource authority.</summary>
@@ -28,7 +28,7 @@ internal sealed record HeldConnectionOutcome(HeldConnectionFailure Failure, bool
             if (facts.Contains(failure)) return Stop(failure);
         foreach (var failure in facts)
             if (failure is not (HeldConnectionFailure.ConnectFailed or HeldConnectionFailure.ConnectTimedOut or
-                HeldConnectionFailure.RemoteEof or HeldConnectionFailure.ReadFailed or HeldConnectionFailure.CancelledOrHeld)) return Stop(failure);
+                HeldConnectionFailure.RemoteEof or HeldConnectionFailure.ReadFailed or HeldConnectionFailure.ReadTimedOut or HeldConnectionFailure.CancelledOrHeld)) return Stop(failure);
         switch (result.End)
         {
             case ReceiveEnd.Cancelled: case ReceiveEnd.Disposed: return Stop(HeldConnectionFailure.CancelledOrHeld);
@@ -46,6 +46,7 @@ internal sealed record HeldConnectionOutcome(HeldConnectionFailure Failure, bool
         {
             if (facts.Contains(HeldConnectionFailure.ConnectFailed)) return new(HeldConnectionFailure.ConnectFailed, loginCompleted, true);
             if (facts.Contains(HeldConnectionFailure.ConnectTimedOut)) return new(HeldConnectionFailure.ConnectTimedOut, loginCompleted, true);
+            if (facts.Contains(HeldConnectionFailure.ReadTimedOut)) return new(HeldConnectionFailure.ReadTimedOut, loginCompleted, loginCompleted);
             if (loginCompleted && facts.Contains(HeldConnectionFailure.ReadFailed)) return new(HeldConnectionFailure.ReadFailed, true, true);
         }
         if (result.End == ReceiveEnd.Completed && loginCompleted && facts.Contains(HeldConnectionFailure.RemoteEof))

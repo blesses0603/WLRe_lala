@@ -139,6 +139,34 @@ public sealed class AccountConnectionRuntimeTests
     }
 
     [Fact]
+    public async Task PublicReadTimeoutIsTypedAndDefaultAttemptBudgetStaysOne()
+    {
+        await using var verification = new Peer(); await using var formal = new Peer();
+        var first = verification.Run(Verify);
+        var second = formal.Run(async client =>
+        {
+            await EnterWorld(client);
+            // Keep the send side open: only the client's configured read timeout ends it.
+            await Assert.ThrowsAsync<IOException>(() => client.Next());
+        });
+        var session = new AccountSession(); var generation = session.Begin("synthetic", "loopback").Generation;
+        var credentials = new AccountLoginCredentials("synthetic", "fake_password"); int requests = 0;
+        await using var runtime = new AccountConnectionRuntime(session, generation, Profile(verification, formal),
+            new Source((_, _) => { requests++; return ValueTask.FromResult<AccountLoginCredentials?>(credentials); }),
+            new() { ReadTimeout = TimeSpan.FromSeconds(1) });
+        var result = await runtime.RunAsync().WaitAsync(Guard);
+        await Task.WhenAll(first, second).WaitAsync(Guard);
+        Assert.True(result.ResourcesReleased); Assert.True(credentials.IsDisposed); Assert.Equal(1, requests);
+        Assert.Equal(AccountConnectionEndReason.AttemptsExhausted, result.Status.EndReason);
+        var history = Assert.Single(result.Status.History);
+        Assert.Equal(AccountConnectionFailure.ReadTimedOut, history.Failure);
+        Assert.True(history.LoginProtocolCompleted); Assert.True(history.RetryEligible);
+        Assert.Equal(generation, history.Generation);
+        Assert.True(result.Status.ResourceHeld); Assert.False(result.Status.CanSendCommands);
+        Assert.Null(runtime.Publication);
+    }
+
+    [Fact]
     public async Task RejectedVerificationClearsCredentialsAndStops()
     {
         await using var verification = new Peer(); await using var formal = new Peer();

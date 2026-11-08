@@ -14,7 +14,7 @@ public sealed partial class ResourceRuntimeBootstrapTests
         internal byte[] Bundle = RuntimeFlowFixtures.Read("all-ten.bundle");
         internal byte[] Main = BundleSourceFixtures.Bytes("main-valid");
         internal byte[] Data;
-        internal int Observations, Disposals;
+        internal int Observations, Disposals, BundleRequests;
         internal Func<int, Task>? BeforeObserve;
         internal Action<CancellationToken>? OnToken;
         internal Func<int, OfficialVersionSnapshot> Snapshot = _ => RuntimeFlowFixtures.Snapshot();
@@ -31,6 +31,7 @@ public sealed partial class ResourceRuntimeBootstrapTests
         {
             token.ThrowIfCancellationRequested();
             string name = url[(url.LastIndexOf('/') + 1)..];
+            if (name == "all-ten.bundle") BundleRequests++;
             byte[] bytes = name switch
             {
                 "DataPackage.bytes" => Data, "MainPackage.bytes" => Main,

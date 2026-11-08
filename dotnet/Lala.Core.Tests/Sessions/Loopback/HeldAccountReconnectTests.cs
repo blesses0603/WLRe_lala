@@ -78,6 +78,11 @@ public sealed class HeldAccountReconnectTests
                 offset += count;
             }
         }
+        internal async Task ExpectEof()
+        {
+            Assert.Empty(pending); decoder.Finish();
+            Assert.Equal(0, await socket.ReceiveAsync(new byte[1], SocketFlags.None, token));
+        }
         internal async Task CloseSendAndExpectEof()
         {
             socket.Shutdown(SocketShutdown.Send);
@@ -161,6 +166,114 @@ public sealed class HeldAccountReconnectTests
         Assert.Equal(new[] { (1, HandshakeLeg.Verification), (1, HandshakeLeg.Formal),
             (2, HandshakeLeg.Verification), (2, HandshakeLeg.Formal) }, providers);
         Assert.Equal(initial.Generation + 1, session.Snapshot.Generation);
+    }
+
+    [Fact]
+    public async Task CompletedLoginTimeoutRetriesOnlyAfterCleanupWithFreshCredentialsAndGeneration()
+    {
+        await using var verification = new Peer(); await using var formal = new Peer();
+        var firstClosed = Signal(); var delayEntered = Signal(); var release = Signal();
+        var first = verification.RunMany(2, (_, client) => Verify(client));
+        var second = formal.RunMany(2, async (number, client) =>
+        {
+            await EnterWorld(client); await client.ExpectEof();
+            if (number == 1) firstClosed.SetResult();
+        });
+        var session = new AccountSession(); var generation = session.Begin("synthetic", "loopback").Generation;
+        var providers = new List<(int Number, HandshakeLeg Leg)>(); int requests = 0;
+        await using var controller = new HeldAccountReconnect(session, generation,
+            verification.Endpoint, formal.Endpoint, 0xAD, 0xAD, 1,
+            (number, _) =>
+            {
+                requests++;
+                return ValueTask.FromResult<Func<HandshakeLeg, Packet>?>(leg =>
+                { providers.Add((number, leg)); return Provider()(leg); });
+            }, () => 123, (_, now) => new(now),
+            loginLimits: new() { Tcp = new() { ReadTimeout = TimeSpan.FromSeconds(1) } },
+            limits: new() { MaximumAttempts = 2 },
+            delay: (_, _) => { delayEntered.SetResult(); return release.Task; });
+        var run = controller.RunAsync();
+        try
+        {
+            await delayEntered.Task.WaitAsync(Guard); await firstClosed.Task.WaitAsync(Guard);
+            Assert.Equal(1, requests); Assert.False(verification.HasPending); Assert.False(formal.HasPending);
+            Assert.Null(controller.Publication);
+            Assert.Equal(ReconnectPhase.Waiting, controller.Snapshot.Phase);
+            Assert.Equal(generation, session.Snapshot.Generation);
+            release.SetResult();
+            var result = await run.WaitAsync(Guard);
+            await Task.WhenAll(first, second).WaitAsync(Guard);
+            Assert.True(result.ResourcesReleased); Assert.Equal(ReconnectEnd.AttemptsExhausted, result.View.End);
+            Assert.Equal(2, requests); Assert.Equal(2, result.View.History.Length);
+            Assert.All(result.View.History, h =>
+            {
+                Assert.Equal(ReceiveEnd.ReadFailed, h.End);
+                Assert.Equal(HeldConnectionFailure.ReadTimedOut, h.Outcome.Failure);
+                Assert.True(h.Outcome.LoginCompleted); Assert.True(h.Outcome.CanReconnect);
+            });
+            Assert.Equal(new[] { generation, generation + 1 }, result.View.History.Select(h => h.Generation));
+            Assert.Equal(2, result.View.History.Select(h => h.Attempt).Distinct().Count());
+            Assert.Equal(new[] { (1, HandshakeLeg.Verification), (1, HandshakeLeg.Formal),
+                (2, HandshakeLeg.Verification), (2, HandshakeLeg.Formal) }, providers);
+            Assert.True(result.View.ResourceHeld); Assert.False(result.View.CanSendCommands);
+            Assert.False(session.AllowsResourceGate(session.Snapshot.Generation, "walk"));
+        }
+        finally { release.TrySetResult(); controller.Stop(); }
+    }
+
+    [Fact]
+    public async Task FormalReadTimeoutBeforeLoginNeverRetries()
+    {
+        await using var verification = new Peer(); await using var formal = new Peer();
+        var first = verification.Run(Verify);
+        var second = formal.Run(async client => { await client.Expect(63, 7, 2); await client.ExpectEof(); });
+        var session = new AccountSession(); var generation = session.Begin("synthetic", "loopback").Generation;
+        int requests = 0;
+        await using var controller = new HeldAccountReconnect(session, generation,
+            verification.Endpoint, formal.Endpoint, 0xAD, 0xAD, 1,
+            (_, _) => { requests++; return ValueTask.FromResult<Func<HandshakeLeg, Packet>?>(Provider()); },
+            () => 123, (_, now) => new(now),
+            loginLimits: new() { Tcp = new() { ReadTimeout = TimeSpan.FromSeconds(1) } });
+        var result = await controller.RunAsync().WaitAsync(Guard);
+        await Task.WhenAll(first, second).WaitAsync(Guard);
+        Assert.True(result.ResourcesReleased); Assert.Equal(ReconnectEnd.ConnectionEnded, result.View.End);
+        Assert.Equal(1, requests); Assert.Equal(generation, session.Snapshot.Generation);
+        var history = Assert.Single(result.View.History);
+        Assert.Equal(ReceiveEnd.ReadFailed, history.End);
+        Assert.Equal(HeldConnectionFailure.ReadTimedOut, history.Outcome.Failure);
+        Assert.False(history.Outcome.LoginCompleted); Assert.False(history.Outcome.CanReconnect);
+        Assert.False(verification.HasPending); Assert.False(formal.HasPending);
+    }
+
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public async Task StopOrHoldDuringReadTimeoutRetryDelayCannotReconnect(bool hold)
+    {
+        await using var verification = new Peer(); await using var formal = new Peer();
+        var first = verification.Run(Verify);
+        var second = formal.Run(async client => { await EnterWorld(client); await client.ExpectEof(); });
+        var entered = Signal(); var release = Signal(); int requests = 0;
+        var session = new AccountSession(); var generation = session.Begin("synthetic", "loopback").Generation;
+        await using var controller = new HeldAccountReconnect(session, generation,
+            verification.Endpoint, formal.Endpoint, 0xAD, 0xAD, 1,
+            (_, _) => { requests++; return ValueTask.FromResult<Func<HandshakeLeg, Packet>?>(Provider()); },
+            () => 123, (_, now) => new(now),
+            loginLimits: new() { Tcp = new() { ReadTimeout = TimeSpan.FromSeconds(1) } },
+            delay: (_, _) => { entered.SetResult(); return release.Task; });
+        var run = controller.RunAsync();
+        try
+        {
+            await entered.Task.WaitAsync(Guard); await Task.WhenAll(first, second).WaitAsync(Guard);
+            Assert.Equal(HeldConnectionFailure.ReadTimedOut, Assert.Single(controller.Snapshot.History).Outcome.Failure);
+            if (hold) Assert.True(session.Hold(generation)); else controller.Stop();
+            var expected = session.Snapshot;
+            release.SetResult(); var result = await run.WaitAsync(Guard);
+            Assert.Equal(hold ? ReconnectEnd.Superseded : ReconnectEnd.Stopped, result.View.End);
+            Assert.True(result.ResourcesReleased); Assert.Equal(1, requests);
+            Assert.Equal(expected, session.Snapshot); Assert.Null(controller.Publication);
+            Assert.False(verification.HasPending); Assert.False(formal.HasPending);
+        }
+        finally { release.TrySetResult(); controller.Stop(); }
     }
 
     [Theory]

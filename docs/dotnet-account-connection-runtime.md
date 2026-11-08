@@ -24,8 +24,15 @@ is represented by a sanitized result or `AccountConnectionCleanupException`.
 One attempt is the default. Set `MaximumAttempts` explicitly if Core owns retries;
 do not nest this inside another automatic retry policy. Each attempt requires fresh
 credentials. Only classified safe connection failures or completed-login read/EOF
-failures can retry; uncertain writes, malformed protocol, provider failures and
-read timeouts are terminal. Account replacement or an explicit hold stops recovery.
+failures, including typed formal read timeouts, can retry after successful cleanup.
+Read timeouts before completed login, uncertain writes, malformed protocol and
+provider failures remain terminal. Account replacement or an explicit hold stops recovery.
+
+The C# read timeout intentionally retires the connection; it is not Python-style
+idle polling or a new keepalive. Recovery uses a fresh connection and credentials,
+requires an explicitly configured multi-attempt policy, and can exhaust that budget
+after repeated quiet periods. The default remains one attempt. No production
+heartbeat interval or live-server compatibility is inferred from this policy.
 
 `Snapshot` exposes bounded, sanitized lifecycle history. `Publication` is current
 receive state only and becomes null on stop/replacement or between attempts. State

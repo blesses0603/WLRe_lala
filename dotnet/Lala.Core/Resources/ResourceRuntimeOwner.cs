@@ -34,6 +34,7 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
     private readonly IResourceSource _source;
     private readonly bool _production;
     private readonly string _inventory;
+    private readonly IBundleSourceCacheReader _cache;
     private readonly OfflineBundleRuntimePreparation _preparation = new();
     private Attempt? _attempt;
     private ResourceRuntimePublication? _current;
@@ -56,6 +57,7 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
         if (!Path.IsPathFullyQualified(dataRoot)) throw new ArgumentException("An absolute data root is required", nameof(dataRoot));
         // Python game_version_gate.py selects data_root()/official_sync/derived_catalogs/resource_inventory.sqlite3.
         string root = Path.GetFullPath(dataRoot);
+        _cache = new RuntimeBundleCacheReader(root);
         _inventory = Path.Combine(root, "official_sync", "derived_catalogs", "resource_inventory.sqlite3");
         _afterAdmission = afterAdmission;
         _cleanupEntered = cleanupEntered;
@@ -154,7 +156,7 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
             EnsureCurrent(generation, mine);
             var baseline = bootstrap ? await CaptureWriteBaselineAsync(mine.Token).ConfigureAwait(false) : null;
             EnsureCurrent(generation, mine);
-            var prepared = await _preparation.PrepareAsync(_source, cancellationToken: mine.Token).ConfigureAwait(false);
+            var prepared = await _preparation.PrepareAsync(_source, cache: _cache, cancellationToken: mine.Token).ConfigureAwait(false);
             EnsureCurrent(generation, mine);
             if (bootstrap)
             {

@@ -26,7 +26,7 @@ handler, provider, candidate, or claimed digest map.
 Default HTTPS uses OS certificate validation and ordinary OS trust roots. This is
 origin evidence, not a publisher signature or proof against compromised roots or
 servers. Checksums bind the acquired content; they do not provide signatures.
-This first owner does not reuse disk bundle caches.
+The owner now reuses existing verified disk bundles through the [read-only cache integration](dotnet-resource-bundle-cache.md); it does not populate the cache.
 
 Both complete current package versions, DataVer and ExeVer must remain identical
 through preparation and a final post-database reobservation. The owner does not

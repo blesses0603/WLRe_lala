@@ -115,6 +115,10 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
             }
             int count;
             try { count = await formal!.ReadAsync(destination, linked.Token).ConfigureAwait(false); }
+            // TCP retains the first terminal reason, including a racing write timeout.
+            // Independent sticky write evidence still vetoes retry after all operations drain.
+            catch (TcpTransportException error) when (error.Reason == TcpTransportEnd.TimedOut)
+            { Record(HeldConnectionFailure.ReadTimedOut); throw; }
             catch (TcpTransportException error) when (error.Reason == TcpTransportEnd.ReadFailed)
             { Record(HeldConnectionFailure.ReadFailed); throw; }
             catch (TcpTransportException error) when (error.Reason is TcpTransportEnd.Cancelled or TcpTransportEnd.Disposed)

@@ -68,7 +68,7 @@ public enum AccountConnectionEndReason { ConnectionEnded, AttemptsExhausted, Cre
     AdmissionBlocked, Superseded, Cancelled, Stopped, Disposed, RecoveryDeadline, CleanupFailed, DelayFailed }
 public enum AccountConnectionFailure { ConnectFailed, ConnectTimedOut, RemoteEof, ReadFailed,
     IncompleteLoginOrUnknown, LoginProtocolFailed, ProviderFailed, LoginDeadline, WriteFailed,
-    WriteUncertain, CancelledOrHeld, CleanupFailed, InvalidProtocol, ObservationFailed, ReductionFailed, EventHandlerFailed }
+    WriteUncertain, CancelledOrHeld, CleanupFailed, InvalidProtocol, ObservationFailed, ReductionFailed, EventHandlerFailed, ReadTimedOut }
 public sealed record AccountConnectionAttempt(long Generation, Guid Attempt, AccountConnectionFailure Failure,
     bool LoginProtocolCompleted, bool RetryEligible);
 public sealed record AccountConnectionStatus(Guid RuntimeId, long Generation, int AttemptNumber,

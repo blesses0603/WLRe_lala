@@ -12,7 +12,10 @@ overwrite a write failure/uncertainty, provider failure, deadline, or protocol e
 A historical world-ACK completion witness is distinct from current connection state.
 
 Retries are limited to proven TCP connect failures (including connect timeout),
-or completed-login remote EOF/read failure. Read timeout is conservatively terminal.
+or completed-login remote EOF/read failure, including typed formal read timeout.
+Timeout before completed login remains terminal. Unlike Python's idle polling,
+this timeout retires the socket and may consume another configured attempt; no
+production heartbeat interval or healthy-idle compatibility is inferred.
 Incomplete login, rejection, malformed data, observation/reducer/pre-commit failures,
 any failed/uncertain write, cancellation and cleanup failure never authorize retry.
 

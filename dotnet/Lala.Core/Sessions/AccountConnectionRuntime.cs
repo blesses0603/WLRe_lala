@@ -140,6 +140,7 @@ public sealed class AccountConnectionRuntime : IAsyncDisposable
         HeldConnectionFailure.ConnectTimedOut => AccountConnectionFailure.ConnectTimedOut,
         HeldConnectionFailure.RemoteEof => AccountConnectionFailure.RemoteEof,
         HeldConnectionFailure.ReadFailed => AccountConnectionFailure.ReadFailed,
+        HeldConnectionFailure.ReadTimedOut => AccountConnectionFailure.ReadTimedOut,
         HeldConnectionFailure.LoginProtocolFailed => AccountConnectionFailure.LoginProtocolFailed,
         HeldConnectionFailure.ProviderFailed => AccountConnectionFailure.ProviderFailed,
         HeldConnectionFailure.LoginDeadline => AccountConnectionFailure.LoginDeadline,
