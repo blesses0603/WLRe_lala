@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Lala.Core.Tests.Sessions.Public;
 
-public sealed class AccountConnectionRuntimeTests
+public sealed partial class AccountConnectionRuntimeTests
 {
     private static readonly TimeSpan Guard = TimeSpan.FromSeconds(30);
     private static Packet Roles => new(63, 1, new PacketWriter().U8(1).U8(0).U8(1).U8(1)

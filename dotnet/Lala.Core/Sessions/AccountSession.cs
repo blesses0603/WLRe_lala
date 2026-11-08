@@ -13,6 +13,9 @@ public sealed partial class AccountSession
     private readonly object gate = new();
     private SessionSnapshot current = new(0, null, null, SessionPhase.Disconnected, null);
     public SessionSnapshot Snapshot { get { lock (gate) return current; } }
+    // Core-only admission callback. Never pass host/user code into the session gate.
+    internal T WithLoginSnapshot<T>(Func<SessionSnapshot, T> operation)
+    { lock (gate) return operation(current); }
     private TaskCompletionSource snapshotChanged = NewSnapshotSignal();
     internal Task SnapshotChanged { get { lock (gate) return snapshotChanged.Task; } }
     private static TaskCompletionSource NewSnapshotSignal() => new(TaskCreationOptions.RunContinuationsAsynchronously);

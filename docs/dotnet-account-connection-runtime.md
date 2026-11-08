@@ -59,3 +59,11 @@ dotnet run --project dotnet/Lala.Core.PublicContract.Check -c Release
 The CI desktop matrix runs this consumer check in addition to the full Core suite,
 Android lifecycle suite, and existing Desktop build/self-tests. No Desktop UI or
 Android host integration is implied by this API boundary.
+
+## Optional one-attempt preparation
+
+`AccountLoginPreparation` privately composes the exact profile, selected identity marker,
+current session snapshot and one input acquisition with per-credential-leg write admission.
+It does not authenticate permission or install an input host. See
+[preparation binding and limits](dotnet-account-login-preparation.md). Existing direct
+runtime callers retain their own authorization, retry and credential-source responsibilities.

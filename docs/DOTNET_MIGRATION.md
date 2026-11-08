@@ -1745,3 +1745,19 @@ multi-file rollback, power-loss durability, eviction or live-source acceptance i
 See `dotnet-resource-bundle-cache.md` for the exact contract. This new feature advances
 only the overall PR marker once; subsequent fixes retain 8.0.23. Platform versions and
 Core/Desktop project version settings remain unchanged.
+
+
+### Overall PR development marker 8.0.24: single-attempt login preparation
+
+The opt-in preparation composition privately binds a fixed profile, opaque selected identity,
+exact account snapshot and credential input. Both credential-bearing TCP write admissions
+recheck lifetime, cancellation and account revocation. Already-admitted writes cannot be
+recalled; noncooperative input keeps cleanup pending. No automatic retry or reacquisition.
+
+Frozen Release verification: 41 focused / 43,324 full Core tests passed, including 30 new
+synthetic cases; public consumer check passed and independent review found no blocker.
+This is not authenticated human consent, a secure-input host, or live-server validation.
+Existing direct runtime callers and integrated resource composition do not automatically
+use this boundary. See `dotnet-account-login-preparation.md` for limits.
+Only the overall PR marker advances to 8.0.24; platform/project versions are unchanged.
+Same-batch test, CI, documentation or push corrections do not advance it again.

@@ -38,6 +38,7 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
     private readonly HeldLoginLimits limits;
     private readonly ScriptedHandshake handshake;
     private IHandshakeLoginProvider? loginProvider;
+    private readonly AccountLoginAdmission? loginAdmission;
     private readonly List<BoundedTcpTransport> transports = [];
     private readonly CancellationTokenSource stop = new(), deadline = new();
     private readonly TaskCompletionSource<HandshakeView> login = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -60,11 +61,12 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
 
     internal HeldLoginTransport(IPEndPoint verification, IPEndPoint formal, int txXor, int rxXor,
         int roleIndex, Func<HandshakeLeg, Packet>? loginProvider, HeldLoginLimits? limits = null,
-        IHandshakeLoginProvider? ownedProvider = null)
+        IHandshakeLoginProvider? ownedProvider = null, AccountLoginAdmission? loginAdmission = null)
     {
         if (loginProvider is null && ownedProvider is null) throw new ArgumentNullException(nameof(loginProvider));
         if (loginProvider is not null && ownedProvider is not null)
             throw new ArgumentException("Exactly one login provider is required.");
+        this.loginAdmission = loginAdmission;
         verificationEndpoint = CopyEndpoint(verification); formalEndpoint = CopyEndpoint(formal);
         WireCodec.ValidateKey(txXor); WireCodec.ValidateKey(rxXor);
         if (roleIndex is not (1 or 2)) throw new ArgumentOutOfRangeException(nameof(roleIndex));
@@ -138,7 +140,7 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
             try
             {
                 await ConnectAsync(verification, token).ConfigureAwait(false);
-                await FlushAsync(verification, MakeLogin(HandshakeLeg.Verification, token), token).ConfigureAwait(false);
+                await FlushAsync(verification, MakeLogin(HandshakeLeg.Verification, token), token, credentialWrite: true).ConfigureAwait(false);
                 var decoder = new FrameDecoder(rxXor);
                 var buffer = new byte[Math.Min(4096, limits.Tcp.MaximumReadBytes)];
                 int total = 0, events = 0;
@@ -167,7 +169,7 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
             token.ThrowIfCancellationRequested();
             formal = CreateTransport(formalEndpoint);
             await ConnectAsync(formal, token).ConfigureAwait(false);
-            await FlushAsync(formal, MakeLogin(HandshakeLeg.Formal, token), token).ConfigureAwait(false);
+            await FlushAsync(formal, MakeLogin(HandshakeLeg.Formal, token), token, credentialWrite: true).ConfigureAwait(false);
         }
         finally { ReleaseProvider(); }
     }
@@ -175,6 +177,7 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
     private ScriptedHandshakeWrite MakeLogin(HandshakeLeg leg, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
+        loginAdmission?.Check(token);
         IHandshakeLoginProvider provider;
         lock (gate)
         {
@@ -237,14 +240,15 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
         catch (Exception) { Record(HeldConnectionFailure.EventHandlerFailed); RecordDeadline(); EndHandshake(token.IsCancellationRequested || stop.IsCancellationRequested); throw new HeldLoginException(); }
     }
 
-    private async Task FlushAsync(BoundedTcpTransport transport, ScriptedHandshakeWrite? write, CancellationToken token)
+    private async Task FlushAsync(BoundedTcpTransport transport, ScriptedHandshakeWrite? write, CancellationToken token, bool credentialWrite = false)
     {
         while (write is not null)
         {
             ScriptedHandshakeWrite? next;
             using (write)
             {
-                await WriteExactAsync(transport, write.Bytes, token).ConfigureAwait(false);
+                await WriteExactAsync(transport, write.Bytes, token, credentialWrite ? write.Leg : null).ConfigureAwait(false);
+                credentialWrite = false;
                 next = handshake.CompleteWrite(write.Attempt, write.Leg, write.Operation,
                     write.Bytes, ScriptedWriteOutcome.Complete);
             }
@@ -257,19 +261,27 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
         }
     }
 
-    private async Task WriteExactAsync(BoundedTcpTransport transport, byte[] bytes, CancellationToken token)
+    private async Task WriteExactAsync(BoundedTcpTransport transport, byte[] bytes, CancellationToken token, HandshakeLeg? credentialLeg = null)
     {
         // Every failure in this operation is sticky, independently of the TCP terminal
         // reason, which may already have been set by a racing read/EOF.
         try
         {
             token.ThrowIfCancellationRequested();
-            Task<TcpWriteResult> operation;
-            lock (gate)
+            Task<TcpWriteResult> Admit()
             {
-                if (retired) throw new HeldLoginException();
-                operation = transport.WriteAsync(bytes, token);
+                lock (gate)
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (retired) throw new HeldLoginException();
+                    return transport.WriteAsync(bytes, token);
+                }
             }
+            // Guard the actual write admission, not only packet creation/acquisition.
+            // Session changes retire synchronously with this session-first lock order.
+            var operation = credentialLeg is { } leg && loginAdmission is not null
+                ? loginAdmission.Admit(leg, leg == HandshakeLeg.Verification ? verificationEndpoint : formalEndpoint, token, Admit)
+                : Admit();
             var receipt = await operation.ConfigureAwait(false);
             if (receipt.Outcome == TcpWriteOutcome.PartialOrUncertain)
                 Record(HeldConnectionFailure.WriteUncertain);

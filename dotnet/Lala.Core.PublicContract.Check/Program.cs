@@ -17,6 +17,14 @@ await using (var connection = new AccountConnectionRuntime(session, generation, 
     Require(result.Status.EndReason == AccountConnectionEndReason.Cancelled);
     Require(source.Calls == 0 && connection.Publication is null && !connection.Snapshot.CanSendCommands);
 }
+var input = new DecliningInput();
+await using (var preparation = new AccountLoginPreparation(session, generation, Guid.NewGuid(), profile, input))
+{
+    Require(ReferenceEquals(preparation.Disclosure.Profile, profile) && preparation.Disclosure.Generation == generation);
+    Require(preparation.Disclosure.AttemptNumber == 1 && !preparation.Snapshot.CanSendCommands);
+    var result = await preparation.RunAsync(cancel.Token);
+    Require(input.Calls == 0 && result.ResourcesReleased && preparation.Publication is null && !preparation.Snapshot.CanSendCommands);
+}
 using (var credentials = new AccountLoginCredentials("synthetic", "synthetic"))
     Require(!credentials.IsDisposed && !credentials.ToString().Contains("synthetic", StringComparison.Ordinal));
 var root = Path.Combine(Path.GetTempPath(), "lala-public-contract-" + Guid.NewGuid().ToString("N"));
@@ -61,4 +69,11 @@ sealed class DecliningSource : IAccountCredentialSource
     public int Calls { get; private set; }
     public ValueTask<AccountLoginCredentials?> AcquireAsync(AccountCredentialRequest request, CancellationToken token)
     { Calls++; return ValueTask.FromResult<AccountLoginCredentials?>(null); }
+}
+
+sealed class DecliningInput : IAccountLoginInput
+{
+    public int Calls { get; private set; }
+    public ValueTask<AccountLoginCredentials?> AcquireAsync(AccountLoginDisclosure disclosure, CancellationToken token)
+    { Calls++; throw new InvalidOperationException("Pre-cancelled preparation must not acquire."); }
 }

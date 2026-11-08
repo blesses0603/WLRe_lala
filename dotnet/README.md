@@ -79,3 +79,12 @@ The executable does not accept real credentials through command-line arguments,
 environment variables or files. A future live host still needs a verified target
 profile, approved secure credential delivery and authorized network access; raw TCP
 XOR does not encrypt passwords. Offline checks are not official-server acceptance.
+
+### One-attempt login preparation
+
+`AccountLoginPreparation` adds an inert host composition over exact recipient/profile,
+opaque selected identity, session snapshot and one credential acquisition. Both credential
+legs recheck cancellation, context and finite lifetime at actual write admission.
+[Host obligations and synthetic scope](../docs/dotnet-account-login-preparation.md) explain
+why this is not authenticated consent, a safe input host or official-server acceptance.
+The default UI, resource hold and absence of game-command authority are unchanged.

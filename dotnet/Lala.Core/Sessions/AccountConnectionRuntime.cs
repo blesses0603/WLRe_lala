@@ -25,6 +25,11 @@ public sealed class AccountConnectionRuntime : IAsyncDisposable
     public AccountConnectionRuntime(AccountSession session, long generation, AccountConnectionProfile profile,
         IAccountCredentialSource credentialSource, AccountConnectionOptions? options = null,
         Func<ServiceStateSnapshot, double, ServiceObservationInputs>? observationInputs = null)
+        : this(session, generation, profile, credentialSource, options, observationInputs, null) { }
+
+    internal AccountConnectionRuntime(AccountSession session, long generation, AccountConnectionProfile profile,
+        IAccountCredentialSource credentialSource, AccountConnectionOptions? options,
+        Func<ServiceStateSnapshot, double, ServiceObservationInputs>? observationInputs, AccountLoginAdmission? loginAdmission)
     {
         ArgumentNullException.ThrowIfNull(session); ArgumentNullException.ThrowIfNull(profile);
         ArgumentNullException.ThrowIfNull(credentialSource);
@@ -43,7 +48,7 @@ public sealed class AccountConnectionRuntime : IAsyncDisposable
         connection = new(session, generation, profile.VerificationEndpoint, profile.FormalEndpoint,
             profile.TransmitXor, profile.ReceiveXor, profile.RoleIndex, null,
             () => Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency,
-            observationInputs ?? ((_, now) => new(now)), login, retry, ownedCredentials: AcquireAsync);
+            observationInputs ?? ((_, now) => new(now)), login, retry, ownedCredentials: AcquireAsync, loginAdmission: loginAdmission);
     }
 
     private ReconnectView? observedView;

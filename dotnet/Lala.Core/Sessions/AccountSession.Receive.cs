@@ -1,4 +1,5 @@
 using Lala.Core.Protocol;
+using Lala.Core.Sessions.Handshake;
 using Lala.Core.Sessions.Receive;
 using Lala.Core.State;
 
@@ -20,7 +21,7 @@ public sealed partial class AccountSession
     internal ReceiveAttempt? AttachHeldReceive(long generation, IReceiveTransport transport, int rxXor,
         Func<double> clock, Func<ServiceStateSnapshot, double, ServiceObservationInputs> observe,
         int readSize = 4096, int bufferedChunks = 4,
-        Func<ServerEvent, CancellationToken, ValueTask>? beforeCommit = null)
+        Func<ServerEvent, CancellationToken, ValueTask>? beforeCommit = null, AccountLoginAdmission? loginAdmission = null)
     {
         lock (gate)
         {
@@ -29,8 +30,10 @@ public sealed partial class AccountSession
             // Validate construction before changing the session or accepting ownership.
             var next = new ReceiveAttempt(transport, rxXor, clock, observe,
                 readSize: readSize, bufferedChunks: bufferedChunks, beforeCommit: beforeCommit);
+            var attached = current with { Phase = SessionPhase.Held, ResourceVersion = null };
+            if (loginAdmission is not null && !loginAdmission.TryAttach(current, attached)) return null;
             receive = next;
-            SetSnapshotLocked(current with { Phase = SessionPhase.Held, ResourceVersion = null });
+            SetSnapshotLocked(attached);
             return next;
         }
     }

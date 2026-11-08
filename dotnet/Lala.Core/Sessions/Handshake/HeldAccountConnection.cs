@@ -30,15 +30,15 @@ internal sealed class HeldAccountConnection : IAsyncDisposable
         Func<HandshakeLeg, Packet>? loginProvider,
         Func<double> clock, Func<ServiceStateSnapshot, double, ServiceObservationInputs> observe,
         HeldLoginLimits? limits = null, int readSize = 4096, int bufferedChunks = 4,
-        IHandshakeLoginProvider? ownedProvider = null)
+        IHandshakeLoginProvider? ownedProvider = null, AccountLoginAdmission? loginAdmission = null)
     {
         ArgumentNullException.ThrowIfNull(session);
-        var transport = new HeldLoginTransport(verification, formal, txXor, rxXor, roleIndex, loginProvider, limits, ownedProvider);
+        var transport = new HeldLoginTransport(verification, formal, txXor, rxXor, roleIndex, loginProvider, limits, ownedProvider, loginAdmission);
         ReceiveAttempt? attempt;
         try
         {
             attempt = session.AttachHeldReceive(generation, transport, rxXor, clock, observe,
-                readSize, bufferedChunks, transport.BeforeCommitAsync);
+                readSize, bufferedChunks, transport.BeforeCommitAsync, loginAdmission);
         }
         catch
         {
