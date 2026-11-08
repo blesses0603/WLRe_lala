@@ -175,7 +175,7 @@ public sealed partial class AccountConnectionRuntimeTests
         {
             await ExpectPreparedLogin(client, 0); received.SetResult(); await client.WaitFor(release.Task);
             if (action == "expiry") await client.Send(new Packet(63, 7, [0, 0]));
-            await client.CloseSendAndExpectEof();
+            await client.ExpectClosedAfterRetirement();
         });
         var run = preparation.RunAsync(cancellation.Token); await received.Task.WaitAsync(Guard);
         switch (action)
