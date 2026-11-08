@@ -42,6 +42,10 @@ public sealed class AccountRuntime : IAsyncDisposable
     private readonly object gate = new();
     private readonly AccountSession session;
     private readonly AccountConnectionRuntime connection;
+    private readonly AccountLoginPreparation? preparedLogin;
+    /// <summary>Present only for CreatePrepared. Hosts must obtain independent permission
+    /// for both login recipients and resource operations before RunAsync.</summary>
+    public AccountRuntimeDisclosure? Disclosure { get; }
     private readonly AccountResourceRuntime resources;
     private readonly CancellationTokenSource stop = new();
     private Task<AccountRuntimeResult>? running;
@@ -55,6 +59,7 @@ public sealed class AccountRuntime : IAsyncDisposable
     private ServiceObservationInputs? projected;
     private ImmutableArray<AccountResourceAttempt> history = [];
 
+    /// <summary>Legacy raw-source route. It does not provide prepared admission or disclosure.</summary>
     public static AccountRuntime Create(AccountSession session, long generation, AccountConnectionProfile profile,
         IAccountCredentialSource source, string absoluteDataRoot, AccountConnectionOptions? options = null, IAccountRoleSelector? roleSelector = null)
     {
@@ -74,6 +79,36 @@ public sealed class AccountRuntime : IAsyncDisposable
         this.beforePreparationAdmission = beforePreparationAdmission;
         connection = new(session, generation, profile, source, options, Observe, roleSelector);
         resources = supplied ?? AccountResourceRuntime.Create(session, root!);
+    }
+    /// <summary>Construct an inert, single-attempt account with prepared credential admission
+    /// and the existing resource/receive lifetime. The host must independently authorize both
+    /// parts of Disclosure before RunAsync. No credential source or connection is exported.</summary>
+    public static AccountRuntime CreatePrepared(AccountSession session, long generation, Guid selectedIdentity,
+        AccountConnectionProfile profile, IAccountLoginInput input, string absoluteDataRoot,
+        AccountConnectionOptions? options = null, TimeSpan? validity = null, IAccountRoleSelector? roleSelector = null)
+        => new(session, generation, selectedIdentity, profile, input, absoluteDataRoot, options, validity,
+            roleSelector, TimeProvider.System, null);
+
+    internal static AccountRuntime CreatePreparedForOfflineTests(AccountSession session, long generation,
+        Guid selectedIdentity, AccountConnectionProfile profile, IAccountLoginInput input, string absoluteDataRoot,
+        AccountResourceRuntime resources, AccountConnectionOptions? options = null, TimeSpan? validity = null,
+        IAccountRoleSelector? roleSelector = null, TimeProvider? clock = null)
+        => new(session, generation, selectedIdentity, profile, input, absoluteDataRoot, options, validity,
+            roleSelector, clock ?? TimeProvider.System, resources);
+
+    private AccountRuntime(AccountSession session, long generation, Guid selectedIdentity,
+        AccountConnectionProfile profile, IAccountLoginInput input, string absoluteDataRoot,
+        AccountConnectionOptions? options, TimeSpan? validity, IAccountRoleSelector? roleSelector,
+        TimeProvider clock, AccountResourceRuntime? supplied)
+    {
+        // Validate/normalize paths before taking ownership of input or resources. All construction is inert.
+        var resourceDisclosure = new AccountResourceDisclosure(absoluteDataRoot);
+        this.session = session;
+        preparedLogin = new(session, generation, selectedIdentity, profile, input, options, validity,
+            clock, roleSelector, Observe);
+        connection = preparedLogin.Connection;
+        resources = supplied ?? AccountResourceRuntime.Create(session, resourceDisclosure.AbsoluteDataRoot);
+        Disclosure = new(preparedLogin.Disclosure, resourceDisclosure);
     }
     /// <summary>Stable assignment identity until visible lifecycle, resource selection,
     /// history, or aggregate completion changes. Retained values are historical only.</summary>
@@ -185,6 +220,11 @@ public sealed class AccountRuntime : IAsyncDisposable
                 ? projected with { ObservedAt = now, ResourceHeld = true }
                 : new(now) { ReconcileNpcSkills = true, TrackUnsupportedCraftingSchedules = true };
     }
+    /// <summary>Start the single owned lifetime. For CreatePrepared, the host must first
+    /// independently authorize both Disclosure.Login and Disclosure.Resources. Repeated
+    /// calls return the same task; only the first token owns cancellation. Completion
+    /// includes late input/role callbacks and resource cleanup. Dispose-before-Run retires
+    /// this lifetime without acquiring credentials or starting resource operations.</summary>
     public Task<AccountRuntimeResult> RunAsync(CancellationToken token = default)
     {
         lock (gate) return running ??= Task.Run(() => RunCoreAsync(token));
@@ -195,7 +235,8 @@ public sealed class AccountRuntime : IAsyncDisposable
         {
             if (retired) return;
             retired = true; resourceAccount = null; resourceAttempt = null; projected = null;
-            connection.Stop();
+            if (preparedLogin is not null) preparedLogin.Stop();
+            else connection.Stop();
             resources.Invalidate();
             // Cancellation callbacks are never invoked synchronously under the lifetime gate.
             cancellation = stop.CancelAsync();
@@ -217,7 +258,8 @@ public sealed class AccountRuntime : IAsyncDisposable
     private async Task<AccountRuntimeResult> RunCoreAsync(CancellationToken token)
     {
         using var cancel = token.UnsafeRegister(_ => Stop(), null);
-        Task<AccountConnectionResult> receiving = connection.RunAsync(stop.Token);
+        Task<AccountConnectionResult> receiving = preparedLogin is not null
+            ? preparedLogin.RunAsync(stop.Token) : connection.RunAsync(stop.Token);
         Task<AccountResourcePreparationResult>? preparation = null;
         CancellationTokenSource? preparationStop = null;
         long generation = 0; int attemptNumber = 0; Guid? attempt = null;
@@ -270,8 +312,11 @@ public sealed class AccountRuntime : IAsyncDisposable
                             var preparationToken = preparationStop.Token;
                             var expectedAccount = account;
                             var expectedAttempt = attempt.Value;
+                            // Stop/revoke uses this same aggregate gate. Carry the resource
+                            // revision into delayed work so retirement cannot admit a new owner attempt.
+                            var expectedResourceRevision = resources.Revision;
                             preparation = Task.Run(() => PrepareAsync(refresh, requestedGeneration,
-                                expectedAccount, expectedAttempt, preparationToken));
+                                expectedAccount, expectedAttempt, expectedResourceRevision, preparationToken));
                             preparedOnce = true;
                         }
                     }
@@ -306,7 +351,12 @@ public sealed class AccountRuntime : IAsyncDisposable
                 catch { cleaned = false; }
             try { await pendingCancellation.ConfigureAwait(false); } catch { cleaned = false; }
             preparationStop?.Dispose();
-            try { await connection.DisposeAsync().ConfigureAwait(false); } catch { cleaned = false; }
+            try
+            {
+                if (preparedLogin is not null) await preparedLogin.DisposeAsync().ConfigureAwait(false);
+                else await connection.DisposeAsync().ConfigureAwait(false);
+            }
+            catch { cleaned = false; }
             try { await resources.DisposeAsync().ConfigureAwait(false); } catch { cleaned = false; }
             if (cancellation is not null)
                 try { await cancellation.ConfigureAwait(false); } catch { cleaned = false; }
@@ -318,7 +368,7 @@ public sealed class AccountRuntime : IAsyncDisposable
         lock (gate) return new(result!, history, cleaned && result!.ResourcesReleased);
     }
     private async Task<AccountResourcePreparationResult> PrepareAsync(bool refresh, long generation,
-        SessionSnapshot account, Guid attempt, CancellationToken token)
+        SessionSnapshot account, Guid attempt, long expectedResourceRevision, CancellationToken token)
     {
         // Internal test barrier is outside all gates and cannot grant production source trust.
         if (beforePreparationAdmission is not null) await beforePreparationAdmission(token).ConfigureAwait(false);
@@ -327,8 +377,8 @@ public sealed class AccountRuntime : IAsyncDisposable
         if (!ReferenceEquals(account, session.Snapshot) || connection.Snapshot.Phase != AccountConnectionPhase.ReceivingHeld ||
             connection.Publication is not { Phase: AccountReceivePhase.Running } receive || receive.Attempt != attempt)
             return new(generation, AccountResourcePreparationStatus.AccountChanged, AccountResourceStorageOutcome.NotAttempted, false, false);
-        return refresh ? await resources.RefreshAsync(generation, token).ConfigureAwait(false)
-            : await resources.BootstrapAsync(generation, token).ConfigureAwait(false);
+        return refresh ? await resources.RefreshAsync(account, token, expectedResourceRevision).ConfigureAwait(false)
+            : await resources.BootstrapAsync(account, token, expectedResourceRevision).ConfigureAwait(false);
     }
     private void RevokeResources()
     {

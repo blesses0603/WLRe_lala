@@ -1,4 +1,5 @@
 using Lala.Core.Sessions.Handshake;
+using Lala.Core.State;
 
 namespace Lala.Core.Sessions;
 
@@ -47,6 +48,7 @@ public sealed class AccountLoginPreparation : IAsyncDisposable
     private Task<AccountConnectionResult>? running;
     private Task? disposal;
     private readonly TimeProvider clock;
+    internal AccountConnectionRuntime Connection => runtime;
     public AccountLoginDisclosure Disclosure { get; }
     public AccountConnectionStatus Snapshot => runtime.Snapshot;
     public AccountReceivePublication? Publication => runtime.Publication;
@@ -58,7 +60,8 @@ public sealed class AccountLoginPreparation : IAsyncDisposable
 
     internal AccountLoginPreparation(AccountSession session, long generation, Guid selectedIdentity,
         AccountConnectionProfile profile, IAccountLoginInput input, AccountConnectionOptions? options,
-        TimeSpan? validity, TimeProvider clock, IAccountRoleSelector? roleSelector = null)
+        TimeSpan? validity, TimeProvider clock, IAccountRoleSelector? roleSelector = null,
+        Func<ServiceStateSnapshot, double, ServiceObservationInputs>? observationInputs = null)
     {
         ArgumentNullException.ThrowIfNull(session); ArgumentNullException.ThrowIfNull(profile);
         ArgumentNullException.ThrowIfNull(input); ArgumentNullException.ThrowIfNull(clock);
@@ -73,7 +76,7 @@ public sealed class AccountLoginPreparation : IAsyncDisposable
         this.session = session; this.input = input; this.clock = clock;
         Disclosure = new(selectedIdentity, generation, profile, duration, roleSelector is null ? AccountRoleSelectionMode.Fixed : AccountRoleSelectionMode.Interactive);
         admission = new(session, snapshot, profile, duration, clock);
-        runtime = new(session, generation, profile, new InputSource(this), options, null, admission, roleSelector);
+        runtime = new(session, generation, profile, new InputSource(this), options, observationInputs, admission, roleSelector);
     }
 
     /// <summary>Call only after the host independently obtains permission for Disclosure.

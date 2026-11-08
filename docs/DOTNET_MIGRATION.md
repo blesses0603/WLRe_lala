@@ -1807,3 +1807,19 @@ Final verification: 43,345 Core tests (21 new), public consumer, 36 acceptance a
 checks passed. These are synthetic checks, not trusted consent, Desktop integration or live
 server validation. No UI or gameplay command authority changed. Only the overall PR marker
 advances once to 8.0.27; same-batch corrections and platform/project versions stay unchanged.
+
+
+### Overall PR development marker 8.0.28: prepared integrated account lifetime
+
+AccountRuntime.CreatePrepared joins the private single-attempt credential admission,
+optional interactive role selection and existing long-lived receive/resource lifecycle on
+one connection. Separate immutable login/resource disclosures identify recipients and
+normalized inventory/cache paths before Run; they are not authenticated permission.
+A captured revision and exact-snapshot owner reservation close retirement admission gaps;
+deferred work checks epoch before I/O and retains cleanup ownership with one-shot execution.
+
+Final frozen offline verification passed: 26 focused, 43,364 Core, external public consumer,
+76 lifecycle, 36 acceptance and 17 actual Linux PTY checks. Successful catalog binding uses
+white-box synthetic provenance, not official-source or live-account evidence. Actual-input
+Desktop/Android hosts remain unconnected. Overall PR advances once to 8.0.28; same-batch
+corrections and all platform/Core/Desktop version settings remain unchanged.

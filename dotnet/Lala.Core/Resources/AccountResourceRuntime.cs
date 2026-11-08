@@ -32,6 +32,7 @@ public sealed class AccountResourceRuntime : IAsyncDisposable
     private bool _running, _disposed;
     private long _revision;
     private TaskCompletionSource _bindingChanged = NewBindingSignal();
+    internal long Revision { get { lock (_gate) return _revision; } }
     internal Task BindingChanged { get { lock (_gate) return _bindingChanged.Task; } }
     private static TaskCompletionSource NewBindingSignal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
     private void SetBindingLocked(AccountResourceBinding? binding)
@@ -72,29 +73,59 @@ public sealed class AccountResourceRuntime : IAsyncDisposable
     public Task<AccountResourcePreparationResult> RefreshAsync(long expectedAccountGeneration,
         CancellationToken cancellationToken = default) => RunAsync(expectedAccountGeneration, false, cancellationToken);
 
-    private async Task<AccountResourcePreparationResult> RunAsync(long expectedGeneration, bool bootstrap, CancellationToken token)
+    internal Task<AccountResourcePreparationResult> BootstrapAsync(SessionSnapshot expected, CancellationToken token,
+        long? expectedRevision = null)
+        => RunAsync(expected.Generation, true, token, expected, expectedRevision);
+    internal Task<AccountResourcePreparationResult> RefreshAsync(SessionSnapshot expected, CancellationToken token,
+        long? expectedRevision = null)
+        => RunAsync(expected.Generation, false, token, expected, expectedRevision);
+
+    private async Task<AccountResourcePreparationResult> RunAsync(long expectedGeneration, bool bootstrap, CancellationToken token,
+        SessionSnapshot? expectedSnapshot = null, long? expectedRevision = null)
     {
         SessionSnapshot snapshot;
         long revision;
+        Func<Task<ResourceRuntimeBootstrapResult>>? execute = null;
+        Exception? failure = null;
         lock (_gate)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
             if (_running) throw new InvalidOperationException("A resource preparation is already running or retiring");
+            if (expectedRevision is not null && expectedRevision != _revision)
+                return new(expectedGeneration, AccountResourcePreparationStatus.Revoked,
+                    AccountResourceStorageOutcome.NotAttempted, false, false);
             snapshot = _session.Snapshot;
+            if (expectedSnapshot is not null && !ReferenceEquals(snapshot, expectedSnapshot))
+                return new(expectedGeneration, AccountResourcePreparationStatus.AccountChanged,
+                    AccountResourceStorageOutcome.NotAttempted, false, false);
             if (snapshot.Generation != expectedGeneration || snapshot.Phase == SessionPhase.Disconnected)
                 throw new InvalidOperationException("A current active account generation is required");
+            // Reserve the owner's attempt while both this revision and the exact account
+            // snapshot are protected. This is Core-owned synchronous state only; callbacks,
+            // cancellation registration and I/O begin through execute after releasing gates.
+            try
+            {
+                execute = _session.WithLoginSnapshot(current => ReferenceEquals(current, snapshot)
+                    ? _owner.Reserve(bootstrap, token) : null);
+            }
+            catch (Exception error) { failure = error; }
+            if (execute is null && failure is null)
+                return new(expectedGeneration, AccountResourcePreparationStatus.AccountChanged,
+                    AccountResourceStorageOutcome.NotAttempted, false, false);
             _running = true; revision = _revision; SetBindingLocked(null);
         }
         ResourceRuntimeBootstrapResult? result = null;
-        Exception? failure = null;
         try
         {
             try
             {
-                result = bootstrap
-                    ? await _owner.BootstrapAndRefreshAsync(token).ConfigureAwait(false)
-                    : await _owner.RefreshWithResultAsync(token).ConfigureAwait(false);
-                failure = result.Failure;
+                // Every successful reservation is executed/drained exactly once, even if
+                // retirement won since admission. The owner checks its epoch before I/O.
+                if (execute is not null)
+                {
+                    result = await execute().ConfigureAwait(false);
+                    failure = result.Failure;
+                }
             }
             catch (Exception error) { failure = error; }
             lock (_gate)

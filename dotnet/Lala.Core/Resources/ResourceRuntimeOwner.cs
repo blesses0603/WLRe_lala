@@ -132,6 +132,13 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
         => RunAsync(bootstrap: false, cancellationToken);
 
     private async Task<ResourceRuntimeBootstrapResult> RunAsync(bool bootstrap, CancellationToken cancellationToken)
+        => await Reserve(bootstrap, cancellationToken)().ConfigureAwait(false);
+
+    // Pure synchronous admission: no I/O, cancellation registration, callbacks or async
+    // execution. The caller must execute the returned work exactly once outside its gates.
+    // The reserved slot is visible to Invalidate/Dispose even before execution begins;
+    // retirement continues to await its ordinary cleanup and Retired signal.
+    internal Func<Task<ResourceRuntimeBootstrapResult>> Reserve(bool bootstrap, CancellationToken cancellationToken)
     {
         Attempt mine;
         long generation;
@@ -144,6 +151,16 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
             // cleanup. A newer attempt in this owner cannot overtake an older retiring writer.
             mine = new Attempt(this); _attempt = mine;
         }
+        int executed = 0;
+        return () => Interlocked.Exchange(ref executed, 1) == 0
+            ? ExecuteAsync(bootstrap, cancellationToken, generation, mine)
+            : Task.FromException<ResourceRuntimeBootstrapResult>(
+                new InvalidOperationException("A reserved resource attempt can execute only once"));
+    }
+
+    private async Task<ResourceRuntimeBootstrapResult> ExecuteAsync(bool bootstrap,
+        CancellationToken cancellationToken, long generation, Attempt mine)
+    {
         var execution = new OwnerExecution(this);
         OfflinePreparedRuntimeCandidate? preparedResult = null;
         OfflineRuntimeCandidate? readbackCandidate = null;
@@ -156,7 +173,9 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
         try
         {
             mine.RegisterCaller(cancellationToken);
-            mine.ThrowIfCancellationRequested();
+            // Invalidation between reservation and execution must reject before any hook
+            // or I/O, independently of asynchronous cancellation callback delivery.
+            EnsureCurrent(generation, mine);
             if (_afterAdmission is not null) await _afterAdmission().ConfigureAwait(false);
             EnsureCurrent(generation, mine);
             var baseline = bootstrap ? await CaptureWriteBaselineAsync(mine.Token).ConfigureAwait(false) : null;

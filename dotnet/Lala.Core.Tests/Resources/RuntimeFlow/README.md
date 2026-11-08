@@ -183,3 +183,23 @@ outcomes, offline tests and the limits of this new composition.
 
 [Dungeon/co-op catalogs](../../../../docs/dotnet-optional-instance-resources.md) now add a
 third optional feature pair with same-version references and independent persisted readback.
+
+Prepared integrated account coverage (`PreparedAccountRuntimeTests.cs`) reuses
+one prepared login/interactive-role connection with the real resource inventory
+bootstrap/readback and catalog binding machinery. The successful-binding test
+uses the existing explicitly labeled white-box private production-bit technique
+with owned synthetic sources. This is intended to exercise composition, not establish official provenance;
+no public factory accepts a trust flag or arbitrary resource source. The test source covers
+inert public disclosure/disposal, expiry before acquisition, receive after the
+credential validity window, same-generation Hold and Stop retirement, and exact
+resource-snapshot rejection before I/O.
+
+Final offline receipt (2026-11-08): after the earlier cancelled run, the final
+resource reservation/revision and one-shot changes passed 26 focused checks and
+the full Release Core suite (43,364 passed, no failures or skips). This includes
+the noncooperative callback cases and deterministic reservation regressions:
+stale bootstrap/refresh revision; invalidation or disposal before deferred
+execution; and duplicate execution while the first attempt remains blocked.
+The public consumer, 76 lifecycle tests, 36 synthetic acceptance cases and 17
+actual Linux PTY cases also passed. No official-resource, real-account or other
+platform acceptance is implied. See the [shared-Core contract receipt](../../../../docs/dotnet-account-connection-runtime.md#resource-admission-and-verification-status).

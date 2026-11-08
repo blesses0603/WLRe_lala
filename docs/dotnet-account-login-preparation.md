@@ -141,3 +141,15 @@ token and must not await disposal from inside their own callback.
 
 Validation uses synthetic credentials and loopback peers only; it does not establish
 live-server acceptance or change Desktop behavior or resource/gameplay holds.
+
+## Prepared integrated resource lifetime
+
+For the shared-Core account that also owns resource acquisition, inventory and
+catalog publication, use `AccountRuntime.CreatePrepared`, rather than extracting
+or recreating a connection from `AccountLoginPreparation`. The integrated
+runtime exposes separate `Disclosure.Login` and `Disclosure.Resources` objects
+before Run, and requires independent host authorization for both scopes. It uses
+one prepared connection, the same interactive role callback contract, and the
+existing aggregate status/publication/cleanup lifetime. See the
+[prepared integrated contract and current verification limits](dotnet-account-connection-runtime.md#prepared-integrated-account-lifetime).
+This does not change the connection-only acceptance runner or install a real host.
