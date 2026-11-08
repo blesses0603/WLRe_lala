@@ -36,6 +36,7 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
     private readonly bool _production;
     private readonly string _inventory;
     private readonly IBundleSourceCacheReader _cache;
+    private readonly RuntimeBundleCacheWriter _cacheWriter;
     private readonly OfflineBundleRuntimePreparation _preparation = new();
     private Attempt? _attempt;
     private ResourceRuntimePublication? _current;
@@ -59,6 +60,7 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
         // Python game_version_gate.py selects data_root()/official_sync/derived_catalogs/resource_inventory.sqlite3.
         string root = Path.GetFullPath(dataRoot);
         _cache = new RuntimeBundleCacheReader(root);
+        _cacheWriter = new RuntimeBundleCacheWriter(root);
         _inventory = Path.Combine(root, "official_sync", "derived_catalogs", "resource_inventory.sqlite3");
         _afterAdmission = afterAdmission;
         _cleanupEntered = cleanupEntered;
@@ -119,7 +121,8 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
     }
 
     /// <summary>New composition of ten-table preparation and the existing inventory writer,
-    /// independent readback, then fresh-source reobservation. Not full rebuild/ZIP parity.
+    /// independent readback, bounded verified bundle caching, then fresh-source reobservation.
+    /// Not full rebuild/ZIP parity. Refresh remains strictly read-only.
     /// Rejected admission (busy/disposed) throws before an attempt; admitted failures are retained
     /// in the historical result, including cancellation after a durable or uncertain write.</summary>
     internal Task<ResourceRuntimeBootstrapResult> BootstrapAndRefreshAsync(CancellationToken cancellationToken = default)
@@ -212,6 +215,18 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
                 prepared.InventoryInput.Tables.Single(table => table.Name == "CooperateEventData_C.bytes").Sha256, mine.Token))
                 readbackCandidate = readbackCandidate.WithoutOptionalInstances();
             readback = ResourceRuntimeReadback.Matched;
+            if (bootstrap)
+            {
+                if (_bootstrapHooks?.BeforeCacheWrite is not null) await _bootstrapHooks.BeforeCacheWrite().ConfigureAwait(false);
+                EnsureCurrent(generation, mine);
+                // Cache files are only version-keyed byte candidates, never database or
+                // runtime authority. A later failure cannot undo already atomic file writes
+                // or the committed inventory. Keep the final source recheck after disk work.
+                await _cacheWriter.StoreAsync(prepared.VerifiedSources, mine.Token).ConfigureAwait(false);
+                EnsureCurrent(generation, mine);
+                if (_bootstrapHooks?.AfterCacheWrite is not null) await _bootstrapHooks.AfterCacheWrite().ConfigureAwait(false);
+                EnsureCurrent(generation, mine);
+            }
             await _preparation.ConfirmUnchangedAsync(_source, prepared, mine.Token).ConfigureAwait(false);
             sourcesRechecked = true;
             preparedResult = prepared;

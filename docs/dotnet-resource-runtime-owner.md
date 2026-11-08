@@ -13,10 +13,11 @@ concrete Microsoft.Data.Sqlite read-only connection only during refresh. Constru
 performs no HTTP or database I/O. The fixed inventory location is
 `official_sync/derived_catalogs/resource_inventory.sqlite3` beneath the root, matching
 Python `resource_rebuilder._roots` and `game_version_gate._run_dynamic_check`.
-Missing inventory fails closed; this owner does not bootstrap or write it.
+Missing inventory fails closed on ordinary `RefreshAsync`. The explicit
+`BootstrapAndRefreshAsync` route may create/update it, then independently read it back.
 Path normalization is lexical, not protection against symlinks, hostile local
 filesystem replacement, or a compromised process. SQLite is opened without pooling,
-with a private cache and read-only mode.
+with a private cache and read-only mode for refresh/readback; only bootstrap opens a writer.
 
 `CreateForOfflineTests(root, source)` exercises the same preparation, concrete SQLite
 reader, byte matcher and publication sequence, but its publication always reports
@@ -26,7 +27,10 @@ handler, provider, candidate, or claimed digest map.
 Default HTTPS uses OS certificate validation and ordinary OS trust roots. This is
 origin evidence, not a publisher signature or proof against compromised roots or
 servers. Checksums bind the acquired content; they do not provide signatures.
-The owner now reuses existing verified disk bundles through the [read-only cache integration](dotnet-resource-bundle-cache.md); it does not populate the cache.
+The owner reuses verified disk bundles through the [bundle cache integration](dotnet-resource-bundle-cache.md).
+After matching independent database readback, bootstrap saves newly downloaded verified
+snapshots for required and successfully decoded optional closures. Ordinary refresh never
+populates or repairs the cache. The final source reobservation still follows all disk work.
 
 Both complete current package versions, DataVer and ExeVer must remain identical
 through preparation and a final post-database reobservation. The owner does not
@@ -88,8 +92,11 @@ callback, dispatcher or source disposal implementation to terminate.
 Retirement completes before another source acquisition begins. Disposal revokes
 Current immediately, cancels outside the lock, waits for retirement, and disposes the
 owned source. A cancellation callback exception does not skip resource cleanup.
-No filesystem cache writes or cache-global mutations occur; consumers must key any
-derived cache by publication generation and discard it when Current is absent.
+Ordinary refresh performs no filesystem cache writes. Bootstrap's version-keyed bundle files
+are non-authorizing byte candidates and may remain after later cancellation, source drift or
+failure, just as a committed inventory remains durable. Cache failure is reported without
+rewriting the database outcome or publishing resources. Consumers must key any derived catalog
+cache by publication generation and discard it when Current is absent.
 
 ## Dependency and verification limits
 

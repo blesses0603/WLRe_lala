@@ -1729,3 +1729,19 @@ This documentation alignment does not establish live-server or device acceptance
 Python 7.3.1 and Android 0.2.0 / versionCode 2 remain independent. Core and Desktop
 project version settings are unchanged; no independent Core version is introduced.
 See the root version history for the same-batch policy and current PR marker.
+
+
+### Overall PR development marker 8.0.23: verified bundle cache population
+
+Bootstrap now persists owned verified bundle bytes after inventory readback and before
+final source revalidation. Refresh remains read-only. Per-file staging, integrity checks,
+atomic publication, cancellation and cooperative-writer protections are bounded to 24 files
+and 32 MiB per batch. Cache failure retains the truthful database storage outcome and
+prevents publication. No cache entry grants source freshness or action authority.
+
+Focused Resources/Sessions: 2,780 passed; full Core: 43,294 passed. Unix link cases are
+platform-conditional, not proof of Windows reparse behavior. No hostile-filesystem,
+multi-file rollback, power-loss durability, eviction or live-source acceptance is claimed.
+See `dotnet-resource-bundle-cache.md` for the exact contract. This new feature advances
+only the overall PR marker once; subsequent fixes retain 8.0.23. Platform versions and
+Core/Desktop project version settings remain unchanged.

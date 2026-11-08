@@ -16,19 +16,24 @@ internal sealed class OfflinePreparedRuntimeCandidate
     internal int DownloadCount { get; }
     internal long DownloadBytes { get; }
     internal ImmutableArray<string> ExtractedTables { get; }
+    // Immutable references to private verified snapshots, never cache paths or source buffers.
+    // Failed optional decodes do not retain extra bundles solely for cache population.
+    internal ImmutableArray<VerifiedBundleSource> VerifiedSources { get; }
     internal string SourceStability => "observed versions and manifest bytes reobserved after decoding";
     internal string OfficialProvenance => "unavailable";
     internal string DatabaseAdmission => "unavailable";
     internal string RuntimeInstallation => "unavailable";
     internal string Static1275Admission => "unavailable";
     internal OfflinePreparedRuntimeCandidate(OfflineRuntimeCandidate candidate, RequiredBundleSources sources,
-        ResourceInventoryInput inventory, ManifestIdentity identity, BundleDownloadTotals? downloads = null)
+        ResourceInventoryInput inventory, ManifestIdentity identity, BundleDownloadTotals? downloads = null,
+        IEnumerable<VerifiedBundleSource>? verifiedSources = null)
     {
         RecheckContext = sources;
         Identity = identity; InventoryInput = inventory;
         Candidate = candidate; ManifestContentIdentity = sources.ManifestContentIdentity; Attempt = sources.Attempt;
         DownloadCount = downloads?.Count ?? sources.DownloadCount; DownloadBytes = downloads?.Bytes ?? sources.DownloadBytes;
         ExtractedTables = inventory.Tables.Select(table => table.Name[..^6]).ToImmutableArray();
+        VerifiedSources = (verifiedSources ?? sources.Sources).ToImmutableArray();
     }
 }
 
@@ -88,6 +93,7 @@ internal sealed class OfflineBundleRuntimePreparation
                 candidate = candidate.WithOptionalSkills(skillRaw, cancellationToken);
                 tables.Add("SkillData_C", skillRaw);
                 extractedBytes += skillRaw.Length;
+                foreach (var handle in skillSources) handles.TryAdd(handle.Spec.Name, handle);
             }
             catch (Exception error) when (IsOptionalFailure(error))
             {
@@ -112,6 +118,8 @@ internal sealed class OfflineBundleRuntimePreparation
                 tables.Add("DungeonData_C", dungeonRaw);
                 tables.Add("CooperateEventData_C", cooperativeRaw);
                 extractedBytes += dungeonRaw.Length + cooperativeRaw.Length;
+                foreach (var handle in instanceSources.Values.SelectMany(group => group))
+                    handles.TryAdd(handle.Spec.Name, handle);
             }
             catch (Exception error) when (IsOptionalFailure(error)) { }
             _preparation.EnsureCurrent(prepared, cancellationToken);
@@ -135,6 +143,8 @@ internal sealed class OfflineBundleRuntimePreparation
                 tables.Add("DailyTaskData_C", taskRaw);
                 tables.Add("DailyTaskRewardData_C", rewardRaw);
                 extractedBytes += taskRaw.Length + rewardRaw.Length;
+                foreach (var handle in dailySources.Values.SelectMany(group => group))
+                    handles.TryAdd(handle.Spec.Name, handle);
             }
             catch (Exception error) when (IsOptionalFailure(error)) { }
             _preparation.EnsureCurrent(prepared, cancellationToken);
@@ -160,7 +170,8 @@ internal sealed class OfflineBundleRuntimePreparation
         // No readiness, provenance, active state, persisted receipt or partial result is published.
         _preparation.EnsureCurrent(prepared, cancellationToken);
         await _preparation.ConfirmUnchangedAsync(source, prepared, cancellationToken).ConfigureAwait(false);
-        return _preparation.ReturnCurrent(prepared, new OfflinePreparedRuntimeCandidate(candidate, prepared, inventory, identity, downloads), cancellationToken);
+        return _preparation.ReturnCurrent(prepared, new OfflinePreparedRuntimeCandidate(candidate, prepared, inventory, identity,
+            downloads, handles.Values), cancellationToken);
     }
     private static bool IsOptionalFailure(Exception error) => !error.Data.Contains(ResourceCleanup.FailureMarker) &&
         error is not ResourceTransportException { Failure: ResourceTransportFailure.Cleanup } &&

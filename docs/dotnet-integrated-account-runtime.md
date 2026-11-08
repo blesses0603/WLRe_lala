@@ -3,7 +3,8 @@
 `AccountRuntime.Create` joins the public connection and resource runtimes for one
 account generation. It is inert until `RunAsync`, which can send login credentials
 to the explicit TCP profile, fetch official HTTPS resources, and write the fixed
-SQLite resource inventory. Callers must authorize those effects before starting.
+SQLite resource inventory and verified version-keyed bundle cache during bootstrap.
+Callers must authorize those effects before starting.
 Neither successful login nor valid catalogs enable game commands.
 
 ## Lifetime and ordering
@@ -13,6 +14,9 @@ Neither successful login nor valid catalogs enable game commands.
 - The first receiving attempt gets one bootstrap operation. Later receiving
   attempts use read-only refresh, never an automatic replay of the database write.
   This remains conservative even when the first bootstrap failed or was cancelled.
+  Bootstrap populates the [bundle cache](dotnet-resource-bundle-cache.md) after independent
+  inventory readback and before final source reobservation. Later refreshes reuse verified
+  bundles, but missing/corrupt cache downloads are not saved by refresh.
 - Lifecycle changes use asynchronous identity-based signals rather than polling.
   Stop/reconnect revokes catalog selection immediately at the read boundary and
   requests cancellation of resource preparation. A pending, noncooperative resource

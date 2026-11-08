@@ -34,4 +34,6 @@ internal sealed class ResourceRuntimeBootstrapTestHooks
     internal Func<Task>? BeforeWrite { get; init; }
     internal Action? BeforeCommitAdmission { get; init; }
     internal Func<Task>? BeforeReadback { get; init; }
+    internal Func<Task>? BeforeCacheWrite { get; init; }
+    internal Func<Task>? AfterCacheWrite { get; init; }
 }

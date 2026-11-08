@@ -14,6 +14,7 @@ public sealed partial class ResourceRuntimeBootstrapTests
         internal byte[] Bundle = RuntimeFlowFixtures.Read("all-ten.bundle");
         internal byte[] Main = BundleSourceFixtures.Bytes("main-valid");
         internal byte[] Data;
+        internal readonly Dictionary<string, byte[]> AdditionalBundles = new(StringComparer.Ordinal);
         internal int Observations, Disposals, BundleRequests;
         internal Func<int, Task>? BeforeObserve;
         internal Action<CancellationToken>? OnToken;
@@ -31,13 +32,15 @@ public sealed partial class ResourceRuntimeBootstrapTests
         {
             token.ThrowIfCancellationRequested();
             string name = url[(url.LastIndexOf('/') + 1)..];
-            if (name == "all-ten.bundle") BundleRequests++;
+            if (name.EndsWith(".bundle", StringComparison.Ordinal)) BundleRequests++;
             byte[] bytes = name switch
             {
                 "DataPackage.bytes" => Data, "MainPackage.bytes" => Main,
                 "DataPackage.hash" => Encoding.ASCII.GetBytes(ManifestIdentity.Crc32LittleEndian(Data)),
                 "MainPackage.hash" => Encoding.ASCII.GetBytes(ManifestIdentity.Crc32LittleEndian(Main)),
-                "all-ten.bundle" => Bundle, _ => throw new InvalidDataException("Unexpected owned fixture request")
+                "all-ten.bundle" => Bundle,
+                _ => AdditionalBundles.TryGetValue(name, out var additional) ? additional
+                    : throw new InvalidDataException("Unexpected owned fixture request")
             };
             return ValueTask.FromResult(new ResourceResponse(url, 200,
                 name == "all-ten.bundle" && BundleLength is not null ? BundleLength : bytes.Length.ToString(CultureInfo.InvariantCulture), new MemoryStream(bytes, false)));
@@ -90,7 +93,9 @@ public sealed partial class ResourceRuntimeBootstrapTests
         Assert.DoesNotContain(reader.Commands, sql => sql.StartsWith("INSERT", StringComparison.Ordinal) || sql.StartsWith("CREATE", StringComparison.Ordinal) || sql.StartsWith("UPDATE", StringComparison.Ordinal));
         Assert.Equal(6L, fixture.Sql("SELECT count(*) FROM sqlite_schema WHERE type='table'"));
         Assert.Equal(10L, fixture.Sql("SELECT count(*) FROM resources"));
-        Assert.Equal(new[] { fixture.Inventory }, Directory.GetFiles(fixture.Root, "*", SearchOption.AllDirectories));
+        var files = Directory.GetFiles(fixture.Root, "*", SearchOption.AllDirectories);
+        Assert.Equal(2, files.Length); Assert.Contains(fixture.Inventory, files);
+        Assert.Single(files, path => path.EndsWith("all-ten.bundle", StringComparison.Ordinal));
     }
     [Fact]
     public async Task Repeat_bootstrap_is_idempotent_and_preserves_unrelated_user_table()
@@ -228,6 +233,7 @@ public sealed partial class ResourceRuntimeBootstrapTests
         Assert.Equal(ResourceInventoryWriteOutcome.Committed, result.StorageOutcome); Assert.True(result.CommitAdmitted);
         Assert.Equal(ResourceRuntimeReadback.Failed, result.Readback); Assert.False(result.WasPublished); Assert.Null(owner.Current); Assert.NotNull(result.Failure);
         Assert.Equal(10L, fixture.Sql("SELECT count(*) FROM resources"));
+        Assert.False(Directory.Exists(Path.Combine(fixture.Root, "official_sync", "bundles")));
     }
     [Theory]
     [InlineData(false)]

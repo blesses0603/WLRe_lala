@@ -14,8 +14,10 @@ already have a non-disconnected current generation. Wrong-generation/disconnecte
 disposed calls reject before work. The public facade is not installed into Desktop or Android.
 
 The fixed path remains `official_sync/derived_catalogs/resource_inventory.sqlite3` beneath the
-absolute root. Bootstrap writes resource tables, not credentials, an account database or game
-state. Existing source bounds, schema validation, immutable collision checks and read-only
+absolute root. After successful independent readback, bootstrap also populates the
+[version-keyed bundle cache](dotnet-resource-bundle-cache.md) from owned verified downloads;
+refresh does not populate or repair it. Bootstrap writes resource tables and bundles, not
+credentials, an account database or game state. Existing source bounds, schema validation, immutable collision checks and read-only
 readback remain unchanged. Lexical containment is not protection against symlinks or hostile
 filesystem replacement; no cross-process writer serialization is claimed.
 
@@ -27,6 +29,9 @@ runs prevents binding its late result. These account changes do not automaticall
 shared-resource write. The historical result preserves NotAttempted, NotCommitted, Committed
 or Unknown storage even when a later step fails. No automatic retry, compensating deletion,
 rollback claim or account-gate change is made.
+Cache I/O failure likewise denies binding while preserving the database storage outcome.
+Already atomically installed version-keyed bundle files can remain after a failed attempt;
+they are never resource or account authority.
 
 One operation remains admitted through the entire resource-owner attempt and result selection.
 Concurrent calls reject rather than queue or share caller cancellation. Invalidate synchronously
