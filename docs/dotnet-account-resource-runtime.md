@@ -84,7 +84,8 @@ confirmed non-commit from cleanup uncertainty.
 The integrated `AccountRuntime` projects available reviewed optional skill rows into
 the current receive attempt's read-only `KnowledgeCatalog.SkillKeys`. Zero keys are
 ignored; duplicate nonzero keys or inconsistent row IDs leave the mapping unknown.
-No item-fit values, names, skill effects or command authority are inferred. Revocation
+Names, skill effects and command authority are not inferred. Reviewed item-fit values
+are independently projected as described below. Revocation
 removes the mapping on subsequent observations through the same exact-attempt catalog
 join. Synthetic projection tests verify mapping only; no successful acquisition of
 the actual pinned skill payload or live-account skill behavior has been validated.
@@ -95,3 +96,30 @@ not activate planners or command permissions.
 
 Dungeon/co-op definitions and declared normal-dungeon map IDs are covered by
 [optional instance resources](dotnet-optional-instance-resources.md), with no room/entry permission.
+
+## Reviewed equipment fit observations
+
+`AccountRuntime` now joins `KnowledgeCatalog.ItemFitTypes` from the already prepared and
+read-back `ItemData_C` rows, independently of optional skill availability. Only nonnull
+`ReviewedDetails` supplies a fit value; those fields still require the existing fixed reviewed
+ItemData fingerprint. Legacy/unreviewed rows remain unknown. Inconsistent item identities
+make the item mapping unavailable without erasing independent valid skill mappings.
+
+Fit values are retained exactly, including zero. The existing receive reducer alone applies
+its source-compatible fit 11 to slot 7 rule; the projection does not invent or clamp slots.
+This lets received equipment snapshots and damage/break observations use known item slots
+while preserving unresolved/deferred behavior for unknown items. No extra database writes,
+downloads, UI, automation, equipment commands or resource-hold changes are introduced.
+
+The same exact-account/receive-attempt/resource-currentness checks govern every observation.
+Revocation removes the mapping for new observations; already returned state remains historical.
+Synthetic reviewed-row tests establish projection/receive mechanics, not successful acquisition
+of the actual pinned ItemData bytes or live equipment acceptance.
+
+Equipment-fit focused Release verification passed 1,238/1,238 cases with no skips, including
+Sessions, combat knowledge and resource bootstrap/facade coverage. Eighteen new cases cover
+independent maps, real held S23/S15 packets, late mapping plus deferred damage/break replay,
+withdrawal, historical immutability and strict zero-outbound EOF. Initial fixture-only issues
+(target-typed constructors in params calls and reopening a stream after half-close) were fixed;
+production code and expected behavior were unchanged. Independent review found no blocker.
+Full combined-head/platform verification remains separate.

@@ -31,8 +31,9 @@ Neither successful login nor valid catalogs enable game commands.
 
 ## Receive observations
 
-A current resource binding supplies decoded stage IDs and reviewed item stackability
-rules to the actual receive observer. Missing aliases, skill maps and optional tables
+A current resource binding supplies decoded stage IDs, reviewed item stackability and
+reviewed equipment-fit rules to the actual receive observer. Item fits are independent
+of optional skill availability and use the existing equipment reducer without action authority. Missing aliases, skill maps and optional tables
 stay unknown. Older receive snapshots can retain historical observations; they never
 permit actions. Resource hold remains true at every receive commit.
 

@@ -257,17 +257,43 @@ public sealed class AccountRuntime : IAsyncDisposable
             {
                 resourceAccount = account; resourceAttempt = attempt;
                 // Only decoded current tables feed read-only observations. Optional skill
-                // mappings remain unknown unless reviewed rows survived resource readback.
+                // mappings and item fits remain unknown unless reviewed rows survived resource readback.
                 projected = new(0)
                 {
                     WorldCatalog = new WorldSceneCatalog(catalogs!.Stages.Keys.ToImmutableHashSet()),
                     DeclaredMainCatalogMapIds = catalogs.OptionalInstances?.DeclaredMainMapIds ?? ImmutableHashSet<ushort>.Empty,
                     ItemStackRules = catalogs.Items.Where(p => p.Value.ReviewedDetails is not null)
                         .ToImmutableDictionary(p => p.Key, p => p.Value.ReviewedDetails!.Stackable),
-                    KnowledgeCatalog = ProjectSkillKeys(catalogs.OptionalSkills)
+                    KnowledgeCatalog = ProjectKnowledgeCatalog(catalogs.Items, catalogs.OptionalSkills)
                 };
             }
         }
+    }
+
+    // The required ItemData readback is independent of optional SkillData availability.
+    // Only pinned reviewed details carry fit semantics; legacy rows remain unresolved.
+    internal static CombatKnowledgeCatalog? ProjectKnowledgeCatalog(
+        IReadOnlyDictionary<ushort, ItemDataRow> items, IReadOnlyDictionary<ushort, SkillDataRow>? skills)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        var skillCatalog = ProjectSkillKeys(skills);
+        var fits = ImmutableDictionary.CreateBuilder<ushort, int>();
+        foreach (var (id, row) in items)
+        {
+            if (id == 0 || row is null || id != row.ItemId)
+            {
+                // Malformed item identity cannot select a slot. Preserve independently
+                // valid skill knowledge instead of guessing or retiring the receive loop.
+                fits.Clear(); break;
+            }
+            if (row.ReviewedDetails is { } details) fits.Add(id, details.FitType);
+        }
+        if (skillCatalog is null && fits.Count == 0) return null;
+        return new()
+        {
+            SkillKeys = skillCatalog?.SkillKeys ?? ImmutableDictionary<ushort, uint>.Empty,
+            ItemFitTypes = fits.ToImmutable()
+        };
     }
 
     internal static CombatKnowledgeCatalog? ProjectSkillKeys(IReadOnlyDictionary<ushort, SkillDataRow>? skills)
