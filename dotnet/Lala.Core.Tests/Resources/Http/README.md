@@ -63,3 +63,78 @@ HTTP tests passed 86/86, impacted Resources tests passed 687/687 (no skips).
 The retained Python reference suites passed 44/44; fixture `--check` and
 `git diff --check` passed. Independent static review found no confirmed blocker.
 The integrating task owns the complete combined Core regression.
+
+## Cleanup failure contract
+
+Cleanup is not assumed successful merely because disposal began. Source disposal
+attempts cancellation, client disposal, independently owned handler disposal and
+CTS disposal even if an earlier action throws. Response disposal attempts its
+response/content, falls back to an already-acquired body if response disposal
+throws, and still retires the request lifetime. It does not read a rejected body
+just to obtain an inaccessible nested resource for cleanup. Such failures remain
+explicitly incomplete rather than claiming every nested resource was released.
+
+Any incomplete cleanup produces a stable `ResourceTransportException(Cleanup)`
+after the remaining attempts, without hostile exception messages or inner
+exceptions. Failed repeated disposal still fails. A concurrent/reentrant call
+while disposal is in progress fails explicitly instead of returning false
+completion or waiting into a callback cycle. Successful completed disposal is
+idempotent. `CleanupIncomplete` is additional sticky evidence, not a substitute
+for the failure. `DisposalAttemptsComplete` describes source-owned attempts only;
+returned responses remain their caller's responsibility.
+
+The HTTP version-read and open-failure scopes and bundle preparation's response
+scope explicitly preserve an existing primary error. They attach only
+`Data["resource_cleanup_failure"] = "Cleanup"` if finalization also fails. An
+arbitrary external caller's own `using` block cannot automatically preserve its
+pending exception when Dispose throws; that caller must use the same explicit
+primary-preserving pattern if needed.
+
+Request timeout no longer uses unguarded `CancelAfter`. Each request owns a
+tracked lifetime with guarded caller/shutdown cancellation forwarding and a timer.
+Throwing user cancellation callbacks cannot escape the timer thread. Disposal
+stops future callbacks, unregisters forwarding and waits for admitted cancellation
+callbacks to finish before disposing the CTS. No internal lock is held while
+calling arbitrary cancellation/disposal code. A cancellation callback attempting
+to dispose its own lifetime receives explicit Cleanup/pending failure; final CTS
+cleanup is deferred to that callback's exit rather than waiting on itself. A
+failed timer/registration disposal also remains incomplete, even if the stopped
+entry gate prevents later queued callbacks from touching the CTS.
+
+Cleanup regression validation: Release compiled cleanly; 12 cleanup tests passed
+in the initial focused run and three consecutive repeats; all 785 impacted
+Resources tests passed with no skips. No unhandled timer-thread exception or
+reentrant deadlock was observed. The blocking/reentrant tests use deterministic
+entry gates and five-second assertion bounds. Ordinary cleanup deliberately
+waits for admitted callbacks; it cannot force an arbitrary external callback or
+Dispose implementation that never returns to terminate. This is not a claim of
+a universal finite cleanup deadline. Independent static review approved the
+ownership/retirement contract. Fixture and diff checks passed.
+
+The shutdown/throwing-callback regression uses an explicit callback-entry barrier:
+`Task.Delay` installs a later cancellation registration, so LIFO cancellation can
+complete it and schedule handler unwinding before the earlier hostile callback
+runs. The handler must not dispose that registration until callback entry is
+observed. Tests assert actual invocation and retain the strict primary Cleanup
+marker assertion. A separate deterministic LIFO-unregistration test proves that
+a callback removed before invocation legitimately produces no callback failure;
+this distinguishes the test synchronization bug from a lost production marker.
+The barrier correction passed 13/13 focused cleanup tests and 786/786 impacted
+Resources Release tests (no skips), after parent independent review. Both
+telemetry opt-outs were set for each .NET invocation. Production cleanup code
+and the strict primary cleanup-marker assertion were not changed.
+
+## Response-callback regression synchronization
+
+The recovered aggregate rerun exposed the same LIFO registration race in the response-disposal
+case: `Task.Delay` could resume first and exit the `using` scope, unregistering the earlier
+callback before it ran. This was a test-harness failure, not evidence that production disposal
+completed successfully. The test now awaits a callback-finished signal before unregistering,
+requires exactly one invocation, and bounds its waits. Existing timeout, incomplete-cleanup,
+source-state and disposal-count assertions are unchanged; production code is unchanged.
+The deterministic unregister-before-invocation test remains as the negative control.
+
+After the fix, all **13 cleanup tests passed in four independent runs**, followed by
+**41,546 full Core tests** and **59 lifecycle tests**, with zero failures/skips. The full Core
+run used the documented process-only 3 GiB heap limit. Repeated runs are not extra cases.
+Independent review approved the synchronization; standard remote CI remains a separate gate.

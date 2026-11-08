@@ -604,7 +604,9 @@
     "target_files": [
       "dotnet/Lala.Core/Resources/BundleSources/BundleSourcePlan.cs",
       "dotnet/Lala.Core/Resources/BundleSources/BundleSourcePreparation.cs",
-      "dotnet/Lala.Core/Resources/Http/HttpOfficialResourceSource.cs"
+      "dotnet/Lala.Core/Resources/Http/HttpOfficialResourceSource.cs",
+      "dotnet/Lala.Core/Resources/Http/ResourceCleanup.cs",
+      "dotnet/Lala.Core/Resources/Http/ResourceRequestLifetime.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -678,7 +680,9 @@
       "Cache candidates are checked during planning and acquisition. Initial corruption is a miss; a planned hit that changes is a hard failure, not an implicit extra download. Every opened stream is disposed on success/failure/cancellation/stale attempts. An independent 32-MiB total owned-source bound includes cache hits.",
       "Combined source-preparation evidence: 37 retained actual-Python manifest/plan cases plus 44 contracts, totaling 81 new focused tests. The 350-test Resources pass includes existing tests; these are not 350 new cases. Six CRLF-only source hashes, complete manifest fields, exact plan order and synthetic byte checksums are retained. Invalid cases use typed failures rather than claiming exact Python exception text; no newer full Core receipt is implied.",
       "HTTP slice verification passed 86 focused tests and 687 impacted Resources tests, with 44 original Python regressions. Its 44 retained actual-Python raw-parser vectors and five CRLF-only source pins regenerated identically; independent review found no confirmed blocker. All transport tests use owned fake handlers, including full ten-table preparation and post-decode reobservation. These counts overlap and are not additive new coverage or live HTTP/TLS acceptance.",
-      "The uninstalled HTTP adapter now supplies constrained bundle streams with no redirect/retry, a 20-second full-body lifetime, strict ASCII Content-Length, bounded reads and response/timeout ownership. Existing exact size/MD5/little-endian CRC checks, 24-download/32-MiB quotas and retained-source cap still apply. Cache acquisition remains injected streams only; matching bytes are not publisher signatures."
+      "The uninstalled HTTP adapter now supplies constrained bundle streams with no redirect/retry, a 20-second full-body lifetime, strict ASCII Content-Length, bounded reads and response/timeout ownership. Existing exact size/MD5/little-endian CRC checks, 24-download/32-MiB quotas and retained-source cap still apply. Cache acquisition remains injected streams only; matching bytes are not publisher signatures.",
+      "3b68ac7 extends only the existing uninstalled HTTP/preparation adapter: every owned cancellation/client/handler/response/body/CTS cleanup step is attempted despite earlier failures. Stable Cleanup failure and sticky incomplete evidence prevent false release; failed/reentrant disposal stays explicit. Version-read, open-failure and preparation scopes retain the primary exception with a fixed secondary cleanup marker. Tracked request timers and caller/shutdown forwarding contain throwing cancellation callbacks and wait for admitted callbacks before CTS disposal; arbitrary callback/disposal code runs outside internal locks. There is no universal finite cleanup deadline.",
+      "Cleanup evidence: 12 adversarial tests and three additional repeats, plus 785 impacted Resources passes, with a clean Release build and independent ownership/retirement review. Deterministic callback-entry gates cover reentrancy, failure precedence and timer retirement. Repetitions/overlapping suites are not new case counts; fake-handler checks do not prove live HTTPS/TLS or production installation."
     ],
     "outstanding_scope": [
       "Production registration/live TLS evidence, trusted source receipts, filesystem cache acquisition/paths, cache receipts, previous-version reuse, atomic publication and persisted writes remain absent. Safe cancellable regular-file opening and anchored no-follow writes remain platform work. The adapter is not an installation or source-authority service; checksums do not authorize runtime/login or packet sending."
@@ -871,7 +875,9 @@
       "dotnet/Lala.Core/Resources/BundleSources/YooAssetManifest.cs",
       "dotnet/Lala.Core/Resources/BundleSources/BundleSourcePreparation.cs",
       "dotnet/Lala.Core/Resources/BundleSources/OfflineBundleRuntimePreparation.cs",
-      "dotnet/Lala.Core/Resources/Http/HttpOfficialResourceSource.cs"
+      "dotnet/Lala.Core/Resources/Http/HttpOfficialResourceSource.cs",
+      "dotnet/Lala.Core/Resources/Http/ResourceCleanup.cs",
+      "dotnet/Lala.Core/Resources/Http/ResourceRequestLifetime.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -972,7 +978,9 @@
       "Combined source-preparation evidence: 37 retained actual-Python manifest/plan cases plus 44 contracts, totaling 81 new focused tests. The 350-test Resources pass includes existing tests; these are not 350 new cases. Six CRLF-only source hashes, complete manifest fields, exact plan order and synthetic byte checksums are retained. Invalid cases use typed failures rather than claiming exact Python exception text; no newer full Core receipt is implied.",
       "After decoding, versions are freshly observed, both complete manifest hash/byte responses are reread and compared, then versions are observed again. Same-owner/attempt checks and a final generation-lock return prevent invalidated/superseded late results. Returned data is only a historical source observation, not continuing server stability or official provenance.",
       "HTTP slice verification passed 86 focused tests and 687 impacted Resources tests, with 44 original Python regressions. Its 44 retained actual-Python raw-parser vectors and five CRLF-only source pins regenerated identically; independent review found no confirmed blocker. All transport tests use owned fake handlers, including full ten-table preparation and post-decode reobservation. These counts overlap and are not additive new coverage or live HTTP/TLS acceptance.",
-      "The uninstalled HTTP adapter now supplies exact manifest/hash streams through IResourceSource with normal TLS configuration, no redirects/retries/cache fallback, 20-second header-plus-body lifetimes, 16-KiB headers, eight-byte hash and 8-MiB manifest bounds, strict ASCII Content-Length and owned disposal. Existing CRC/header/package/version/identity checks and final full-manifest reobservations remain unchanged."
+      "The uninstalled HTTP adapter now supplies exact manifest/hash streams through IResourceSource with normal TLS configuration, no redirects/retries/cache fallback, 20-second header-plus-body lifetimes, 16-KiB headers, eight-byte hash and 8-MiB manifest bounds, strict ASCII Content-Length and owned disposal. Existing CRC/header/package/version/identity checks and final full-manifest reobservations remain unchanged.",
+      "3b68ac7 extends only the existing uninstalled HTTP/preparation adapter: every owned cancellation/client/handler/response/body/CTS cleanup step is attempted despite earlier failures. Stable Cleanup failure and sticky incomplete evidence prevent false release; failed/reentrant disposal stays explicit. Version-read, open-failure and preparation scopes retain the primary exception with a fixed secondary cleanup marker. Tracked request timers and caller/shutdown forwarding contain throwing cancellation callbacks and wait for admitted callbacks before CTS disposal; arbitrary callback/disposal code runs outside internal locks. There is no universal finite cleanup deadline.",
+      "Cleanup evidence: 12 adversarial tests and three additional repeats, plus 785 impacted Resources passes, with a clean Release build and independent ownership/retirement review. Deterministic callback-entry gates cover reentrancy, failure precedence and timer retirement. Repetitions/overlapping suites are not new case counts; fake-handler checks do not prove live HTTPS/TLS or production installation."
     ],
     "outstanding_scope": [
       "Production startup registration, live network/TLS validation, trusted origin/freshness receipts, cached-manifest receipt reads/writes, atomic persistence and provenance issuance remain absent. The uninstalled adapter and matching CRC/hash values do not establish authenticity or runtime admission. No filesystem cache adapter/publication is supplied; fake-handler tests compose native extraction and required decoders without granting authority."
@@ -991,7 +999,9 @@
     "target_files": [
       "dotnet/Lala.Core/Resources/OfficialVersionSnapshot.cs",
       "dotnet/Lala.Core/Resources/Http/HttpOfficialResourceSource.cs",
-      "dotnet/Lala.Core/Resources/Http/RawOfficialVersionParser.cs"
+      "dotnet/Lala.Core/Resources/Http/RawOfficialVersionParser.cs",
+      "dotnet/Lala.Core/Resources/Http/ResourceCleanup.cs",
+      "dotnet/Lala.Core/Resources/Http/ResourceRequestLifetime.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -1051,7 +1061,9 @@
     "migrated_scope": [
       "Bounded snapshot shape/identity parsing and comparison, cancellable pure checks.",
       "HTTP slice verification passed 86 focused tests and 687 impacted Resources tests, with 44 original Python regressions. Its 44 retained actual-Python raw-parser vectors and five CRLF-only source pins regenerated identically; independent review found no confirmed blocker. All transport tests use owned fake handlers, including full ten-table preparation and post-decode reobservation. These counts overlap and are not additive new coverage or live HTTP/TLS acceptance.",
-      "observe_official_versions now has an uninstalled internal HTTP implementation: parse ResourcePath_PC.dat then both exact package version endpoints, require complete manifest revisions and create the bounded snapshot with assets_ready=false. One selected host is bound to preparation; fetch/parse failure never falls back to cached metadata. This identical Python module mapping applies to the shared Core subset, not an Android host callsite."
+      "observe_official_versions now has an uninstalled internal HTTP implementation: parse ResourcePath_PC.dat then both exact package version endpoints, require complete manifest revisions and create the bounded snapshot with assets_ready=false. One selected host is bound to preparation; fetch/parse failure never falls back to cached metadata. This identical Python module mapping applies to the shared Core subset, not an Android host callsite.",
+      "3b68ac7 extends only the existing uninstalled HTTP/preparation adapter: every owned cancellation/client/handler/response/body/CTS cleanup step is attempted despite earlier failures. Stable Cleanup failure and sticky incomplete evidence prevent false release; failed/reentrant disposal stays explicit. Version-read, open-failure and preparation scopes retain the primary exception with a fixed secondary cleanup marker. Tracked request timers and caller/shutdown forwarding contain throwing cancellation callbacks and wait for admitted callbacks before CTS disposal; arbitrary callback/disposal code runs outside internal locks. There is no universal finite cleanup deadline.",
+      "Cleanup evidence: 12 adversarial tests and three additional repeats, plus 785 impacted Resources passes, with a clean Release build and independent ownership/retirement review. Deterministic callback-entry gates cover reentrancy, failure precedence and timer retirement. Repetitions/overlapping suites are not new case counts; fake-handler checks do not prove live HTTPS/TLS or production installation."
     ],
     "outstanding_scope": [
       "read_snapshot/save_snapshot, path ownership, persistence, startup registration and production source synchronization/runtime activation remain unported. Adapter tests use fake handlers only; origin label, timestamps, matching versions/checksums and SourceStability observations do not prove publisher provenance or grant admission/readiness."
@@ -1152,7 +1164,9 @@
     "status": "partially_migrated",
     "target_files": [
       "dotnet/Lala.Core/Resources/ResourceValidation.cs",
-      "dotnet/Lala.Core/Resources/Http/HttpOfficialResourceSource.cs"
+      "dotnet/Lala.Core/Resources/Http/HttpOfficialResourceSource.cs",
+      "dotnet/Lala.Core/Resources/Http/ResourceCleanup.cs",
+      "dotnet/Lala.Core/Resources/Http/ResourceRequestLifetime.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -1179,7 +1193,9 @@
     "migrated_scope": [
       "Exact approved host/default selection, no environment reads or automatic fallback.",
       "HTTP slice verification passed 86 focused tests and 687 impacted Resources tests, with 44 original Python regressions. Its 44 retained actual-Python raw-parser vectors and five CRLF-only source pins regenerated identically; independent review found no confirmed blocker. All transport tests use owned fake handlers, including full ten-table preparation and post-decode reobservation. These counts overlap and are not additive new coverage or live HTTP/TLS acceptance.",
-      "Selected approved host is now bound to the uninstalled HTTP source and checked against the preparation host before observation. Original URL text must stay on that one HTTPS origin; no environment reads, arbitrary preconfigured client, host fallback, credentials, cookies or automatic redirect/decompression. Normal TLS validation is configured, not replaced by an accept-all callback."
+      "Selected approved host is now bound to the uninstalled HTTP source and checked against the preparation host before observation. Original URL text must stay on that one HTTPS origin; no environment reads, arbitrary preconfigured client, host fallback, credentials, cookies or automatic redirect/decompression. Normal TLS validation is configured, not replaced by an accept-all callback.",
+      "3b68ac7 extends only the existing uninstalled HTTP/preparation adapter: every owned cancellation/client/handler/response/body/CTS cleanup step is attempted despite earlier failures. Stable Cleanup failure and sticky incomplete evidence prevent false release; failed/reentrant disposal stays explicit. Version-read, open-failure and preparation scopes retain the primary exception with a fixed secondary cleanup marker. Tracked request timers and caller/shutdown forwarding contain throwing cancellation callbacks and wait for admitted callbacks before CTS disposal; arbitrary callback/disposal code runs outside internal locks. There is no universal finite cleanup deadline.",
+      "Cleanup evidence: 12 adversarial tests and three additional repeats, plus 785 impacted Resources passes, with a clean Release build and independent ownership/retirement review. Deterministic callback-entry gates cover reentrancy, failure precedence and timer retirement. Repetitions/overlapping suites are not new case counts; fake-handler checks do not prove live HTTPS/TLS or production installation."
     ],
     "outstanding_scope": [
       "Python environment-driven selection remains deliberately absent. The adapter is unregistered and only fake-handler tested; actual network/TLS acceptance, trusted origin/freshness receipts, source-authority issuance and runtime installation remain unestablished."
@@ -1198,7 +1214,9 @@
     "target_files": [
       "dotnet/Lala.Core/Resources/ResourceCompatibility.cs",
       "dotnet/Lala.Core/Resources/Http/HttpOfficialResourceSource.cs",
-      "dotnet/Lala.Core/Resources/Http/RawOfficialVersionParser.cs"
+      "dotnet/Lala.Core/Resources/Http/RawOfficialVersionParser.cs",
+      "dotnet/Lala.Core/Resources/Http/ResourceCleanup.cs",
+      "dotnet/Lala.Core/Resources/Http/ResourceRequestLifetime.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -1298,7 +1316,9 @@
       "Pure revision and exact Manifest comparison from check_official_versions.",
       "HTTP slice verification passed 86 focused tests and 687 impacted Resources tests, with 44 original Python regressions. Its 44 retained actual-Python raw-parser vectors and five CRLF-only source pins regenerated identically; independent review found no confirmed blocker. All transport tests use owned fake handlers, including full ten-table preparation and post-decode reobservation. These counts overlap and are not additive new coverage or live HTTP/TLS acceptance.",
       "Bounded raw parse_version and parse_resource_path/_decode_resource_map subsets now parse UTF-8/BOM package text or selected JSON keys and UTF-8/BOM/UTF-16 resource maps with source-compatible latest-supported selection, exact data-version shapes and the final-array trailing-comma exception. Single-member gzip uses exact framing/CRC/ISIZE and one-byte compressed reads; compressed/inflated input caps are 16 KiB. Fixtures compare returned selections or rejection, not decorated diagnostics/exception text.",
-      "HTTP validate_source/fetch_bytes-related behavior constrains original URLs, numeric version cache-busters and at most three same-host/exact-path manual redirects. Only 400/403/404 receive one canonical query-free retry. Linked 12-second version timeouts cover headers and the full body; bounded headers, strict ASCII Content-Length and typed redacted failure categories intentionally narrow behavior. The adapter implements observe_official_versions flow, not the broader UI checker: HTTP 200 invalid bodies reject without InvalidResourceBody retry."
+      "HTTP validate_source/fetch_bytes-related behavior constrains original URLs, numeric version cache-busters and at most three same-host/exact-path manual redirects. Only 400/403/404 receive one canonical query-free retry. Linked 12-second version timeouts cover headers and the full body; bounded headers, strict ASCII Content-Length and typed redacted failure categories intentionally narrow behavior. The adapter implements observe_official_versions flow, not the broader UI checker: HTTP 200 invalid bodies reject without InvalidResourceBody retry.",
+      "3b68ac7 extends only the existing uninstalled HTTP/preparation adapter: every owned cancellation/client/handler/response/body/CTS cleanup step is attempted despite earlier failures. Stable Cleanup failure and sticky incomplete evidence prevent false release; failed/reentrant disposal stays explicit. Version-read, open-failure and preparation scopes retain the primary exception with a fixed secondary cleanup marker. Tracked request timers and caller/shutdown forwarding contain throwing cancellation callbacks and wait for admitted callbacks before CTS disposal; arbitrary callback/disposal code runs outside internal locks. There is no universal finite cleanup deadline.",
+      "Cleanup evidence: 12 adversarial tests and three additional repeats, plus 785 impacted Resources passes, with a clean Release build and independent ownership/retirement review. Deterministic callback-entry gates cover reentrancy, failure precedence and timer retirement. Repetitions/overlapping suites are not new case counts; fake-handler checks do not prove live HTTPS/TLS or production installation."
     ],
     "outstanding_scope": [
       "Broader check_official_game_resources/check_official_versions reports and UI workflow, source diagnostic decorators and exact public exception text remain unmapped. JSON-depth/HTTP-header safety restrictions and typed APIs are explicit differences; no arbitrary Python input parity. No startup registration, real HTTP/TLS evidence, persisted snapshots, trusted origin/freshness credentials or runtime/resource admission."

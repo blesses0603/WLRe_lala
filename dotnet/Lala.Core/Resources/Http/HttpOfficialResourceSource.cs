@@ -1,12 +1,13 @@
 using System.Globalization;
 using System.Net;
+using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace Lala.Core.Resources;
 
-internal enum ResourceTransportFailure { InvalidSource, Redirect, Status, Headers, Length, Timeout, Transport }
+internal enum ResourceTransportFailure { InvalidSource, Redirect, Status, Headers, Length, Timeout, Transport, Cleanup }
 internal sealed class ResourceTransportException(ResourceTransportFailure failure)
     : IOException("Resource request failed: " + failure)
 {
@@ -18,12 +19,17 @@ internal sealed class ResourceTransportException(ResourceTransportFailure failur
 internal sealed class HttpOfficialResourceSource : IResourceSource, IDisposable
 {
     private readonly HttpClient _client;
+    private readonly HttpMessageHandler _handler;
     private readonly string _host;
     private readonly TimeProvider _clock;
     private readonly TimeSpan _versionTimeout, _resourceTimeout;
     private readonly CancellationTokenSource _shutdown = new();
     private readonly CancellationToken _shutdownToken;
     private int _disposed;
+    private int _cleanupIncomplete;
+    internal bool CleanupIncomplete => Volatile.Read(ref _cleanupIncomplete) != 0;
+    // Completion of source-owned disposal ATTEMPTS, not a claim that cleanup succeeded.
+    internal bool DisposalAttemptsComplete => Volatile.Read(ref _disposed) == 2;
     private static readonly Regex PathPattern = new(@"\A/WLN/TW/(?<data>[0-9]{1,4}(?:\.[0-9]{1,4}){2,3})/ResourcesPC/AssetBundle/(?<file>(?:DataPackage|MainPackage)\.(?:version|hash|bytes)|[A-Za-z0-9][A-Za-z0-9_.-]{0,190}\.bundle)\z", RegexOptions.NonBacktracking);
     private static readonly Regex QueryPattern = new(@"\A[0-9]{1,20}(?:\.[0-9]{1,16})?\z", RegexOptions.NonBacktracking);
     private const int MaximumHeaders = 16 * 1024;
@@ -45,7 +51,10 @@ internal sealed class HttpOfficialResourceSource : IResourceSource, IDisposable
         if (_versionTimeout <= TimeSpan.Zero || _resourceTimeout <= TimeSpan.Zero ||
             _versionTimeout > TimeSpan.FromMinutes(1) || _resourceTimeout > TimeSpan.FromMinutes(1))
             throw new ArgumentOutOfRangeException(nameof(versionTimeout));
-        _client = new HttpClient(handler, disposeHandler: true) { Timeout = Timeout.InfiniteTimeSpan };
+        _handler = handler;
+        // Dispose handler independently: HttpClient cancellation callbacks can throw before it
+        // reaches handler disposal. Each separately owned cleanup must still be attempted.
+        _client = new HttpClient(handler, disposeHandler: false) { Timeout = Timeout.InfiniteTimeSpan };
     }
 
     public string? SelectedHost => _host;
@@ -62,6 +71,7 @@ internal sealed class HttpOfficialResourceSource : IResourceSource, IDisposable
             packages.Add(package, version);
         }
         cancellationToken.ThrowIfCancellationRequested();
+        EnsureCleanupSucceeded();
         return OfficialVersionSnapshot.Parse(JsonSerializer.SerializeToUtf8Bytes(new
         {
             schema_version = 1, origin = "official_pc_version_endpoint", data_ver = map.DataVersion,
@@ -82,10 +92,14 @@ internal sealed class HttpOfficialResourceSource : IResourceSource, IDisposable
         Validate(canonical, version: true);
         string query = _clock.GetUtcNow().ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture);
         string target = canonical + "?" + query;
-        using var response = await OpenCoreAsync(target, version: true, RawOfficialVersionParser.MaximumBytes, token, canonical);
         using var output = new MemoryStream();
-        await response.Body.CopyToAsync(output, token);
+        var response = await OpenCoreAsync(target, version: true, RawOfficialVersionParser.MaximumBytes, token, canonical);
+        Exception? primary = null;
+        try { await response.Body.CopyToAsync(output, token); }
+        catch (Exception ex) { primary = ex; throw; }
+        finally { ResourceCleanup.DisposePreservingFailure(response, primary); }
         token.ThrowIfCancellationRequested();
+        EnsureCleanupSucceeded();
         return output.ToArray();
     }
 
@@ -110,11 +124,14 @@ internal sealed class HttpOfficialResourceSource : IResourceSource, IDisposable
     {
         caller.ThrowIfCancellationRequested();
         string path = Validate(url, version);
-        ObjectDisposedException.ThrowIf(_disposed != 0, this);
-        var lifetime = CancellationTokenSource.CreateLinkedTokenSource(caller, _shutdownToken);
-        lifetime.CancelAfter(version ? _versionTimeout : _resourceTimeout);
+        EnsureCleanupSucceeded();
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
+        var lifetime = new ResourceRequestLifetime(caller, _shutdownToken,
+            version ? _versionTimeout : _resourceTimeout, _clock, MarkCleanupIncomplete);
         HttpResponseMessage? response = null;
+        Stream? acquiredBody = null;
         bool transferred = false, retried = false;
+        Exception? primary = null;
         int redirects = 0;
         try
         {
@@ -142,11 +159,15 @@ internal sealed class HttpOfficialResourceSource : IResourceSource, IDisposable
                     else if (location is not null && location.StartsWith("?", StringComparison.Ordinal)) location = "https://" + _host + path + location;
                     else if (location is not null && !location.Contains('/') && !location.Contains(':')) location = "https://" + _host + path[..(path.LastIndexOf('/') + 1)] + location;
                     if (location is null || Validate(location, version: true) != path) throw Error(ResourceTransportFailure.Redirect);
-                    response.Dispose(); response = null; url = location; continue;
+                    var rejected = response; response = null;
+                    CleanupResponse(rejected, null); EnsureCleanupSucceeded();
+                    url = location; continue;
                 }
                 if (version && !retried && canonical is not null && status is 400 or 403 or 404)
                 {
-                    retried = true; response.Dispose(); response = null; url = canonical; continue;
+                    retried = true; var rejected = response; response = null;
+                    CleanupResponse(rejected, null); EnsureCleanupSucceeded();
+                    url = canonical; continue;
                 }
                 if (status != 200) throw Error(ResourceTransportFailure.Status);
                 string? length = null;
@@ -162,18 +183,33 @@ internal sealed class HttpOfficialResourceSource : IResourceSource, IDisposable
                 if (response.Content.Headers.ContentEncoding.Count != 0 &&
                     !(version && path == "/WLN/TW/ResourcePath_PC.dat" && response.Content.Headers.ContentEncoding.SequenceEqual(new[] { "gzip" })))
                     throw Error(ResourceTransportFailure.Headers);
-                Stream body = await response.Content.ReadAsStreamAsync(lifetime.Token).ConfigureAwait(false);
+                Stream body = acquiredBody = await response.Content.ReadAsStreamAsync(lifetime.Token).ConfigureAwait(false);
                 lifetime.Token.ThrowIfCancellationRequested();
                 var owned = new ResponseStream(body, response, lifetime, caller, _shutdownToken, maximum,
-                    length is null ? null : long.Parse(length, CultureInfo.InvariantCulture));
+                    length is null ? null : long.Parse(length, CultureInfo.InvariantCulture), this);
                 transferred = true;
                 return new ResourceResponse(url, status, length, owned);
             }
         }
-        catch (OperationCanceledException) { caller.ThrowIfCancellationRequested(); if (_shutdownToken.IsCancellationRequested) throw new OperationCanceledException(_shutdownToken); throw Error(ResourceTransportFailure.Timeout); }
-        catch (Exception ex) when (ex is HttpRequestException or IOException or FormatException or InvalidOperationException)
-        { if (ex is ResourceTransportException) throw; throw Error(ResourceTransportFailure.Transport); }
-        finally { if (!transferred) { response?.Dispose(); lifetime.Dispose(); } }
+        catch (Exception ex)
+        {
+            primary = ex is OperationCanceledException
+                ? caller.IsCancellationRequested ? new OperationCanceledException(caller)
+                    : _shutdownToken.IsCancellationRequested ? new OperationCanceledException(_shutdownToken)
+                    : Error(ResourceTransportFailure.Timeout)
+                : ex is ResourceTransportException ? ex : Error(ResourceTransportFailure.Transport);
+            ExceptionDispatchInfo.Capture(primary).Throw();
+            throw; // Unreachable; keeps the original safe exception's dispatch information.
+        }
+        finally
+        {
+            if (!transferred)
+            {
+                bool failed = !CleanupResponse(response, acquiredBody);
+                failed |= !AttemptCleanup(lifetime.Dispose);
+                ResourceCleanup.Report(failed, primary);
+            }
+        }
     }
     private static ResourceTransportException Error(ResourceTransportFailure kind) => new(kind);
     private static void ValidateHeaders(HttpResponseMessage response)
@@ -191,26 +227,67 @@ internal sealed class HttpOfficialResourceSource : IResourceSource, IDisposable
             if (length > MaximumHeaders) throw Error(ResourceTransportFailure.Headers);
         }
     }
+    private bool AttemptCleanup(Action cleanup)
+    {
+        try { cleanup(); return true; }
+        catch (Exception)
+        {
+            // No remote exception text or inner exception escapes this boundary.
+            MarkCleanupIncomplete();
+            return false;
+        }
+    }
+    private void MarkCleanupIncomplete() => Interlocked.Exchange(ref _cleanupIncomplete, 1);
+    private bool CleanupResponse(HttpResponseMessage? response, Stream? acquiredBody)
+    {
+        // A response normally owns its content/body. If that disposal throws, explicitly
+        // attempt the acquired body as a fallback. It may have been partially disposed already.
+        if (response is null) return acquiredBody is null || AttemptCleanup(acquiredBody.Dispose);
+        bool success = AttemptCleanup(response.Dispose);
+        if (!success && acquiredBody is not null) AttemptCleanup(acquiredBody.Dispose);
+        return success;
+    }
+    private void EnsureCleanupSucceeded()
+    {
+        if (CleanupIncomplete) throw Error(ResourceTransportFailure.Cleanup);
+    }
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
-        _shutdown.Cancel(); _client.Dispose(); _shutdown.Dispose();
+        // Reentrant/concurrent callers do not run the same cleanup twice. While the winner
+        // is running, DisposalAttemptsComplete remains false; there is no success claim.
+        int prior = Interlocked.CompareExchange(ref _disposed, 1, 0);
+        if (prior != 0)
+        {
+            ResourceCleanup.Report(prior != 2 || CleanupIncomplete);
+            return;
+        }
+        try
+        {
+            AttemptCleanup(_shutdown.Cancel);
+            AttemptCleanup(_client.Dispose);
+            AttemptCleanup(_handler.Dispose);
+            AttemptCleanup(_shutdown.Dispose);
+        }
+        finally { Volatile.Write(ref _disposed, 2); }
+        ResourceCleanup.Report(CleanupIncomplete);
     }
 
-    private sealed class ResponseStream(Stream body, HttpResponseMessage response, CancellationTokenSource lifetime,
-        CancellationToken caller, CancellationToken shutdown, long maximum, long? declared) : Stream
+    private sealed class ResponseStream(Stream body, HttpResponseMessage response, ResourceRequestLifetime lifetime,
+        CancellationToken caller, CancellationToken shutdown, long maximum, long? declared, HttpOfficialResourceSource owner) : Stream
     {
         private long _length;
-        private bool _disposed;
-        public override bool CanRead => !_disposed;
+        private int _disposed;
+        private bool _cleanupIncomplete;
+        private readonly CancellationToken _lifetimeToken = lifetime.Token;
+        public override bool CanRead => Volatile.Read(ref _disposed) == 0;
         public override bool CanSeek => false;
         public override bool CanWrite => false;
         public override long Length => throw new NotSupportedException();
         public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            ObjectDisposedException.ThrowIf(_disposed, this);
-            using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, lifetime.Token);
+            ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _lifetimeToken);
             try
             {
                 linked.Token.ThrowIfCancellationRequested();
@@ -231,8 +308,21 @@ internal sealed class HttpOfficialResourceSource : IResourceSource, IDisposable
         public override int Read(byte[] buffer, int offset, int count) => ReadAsync(buffer.AsMemory(offset, count)).AsTask().GetAwaiter().GetResult();
         protected override void Dispose(bool disposing)
         {
-            if (!_disposed && disposing) { _disposed = true; response.Dispose(); lifetime.Dispose(); }
-            base.Dispose(disposing);
+            if (!disposing) return;
+            int prior = Interlocked.CompareExchange(ref _disposed, 1, 0);
+            if (prior != 0)
+            {
+                ResourceCleanup.Report(prior != 2 || _cleanupIncomplete);
+                return;
+            }
+            try
+            {
+                _cleanupIncomplete |= !owner.CleanupResponse(response, body);
+                _cleanupIncomplete |= !owner.AttemptCleanup(lifetime.Dispose);
+                _cleanupIncomplete |= !owner.AttemptCleanup(() => base.Dispose(disposing));
+            }
+            finally { Volatile.Write(ref _disposed, 2); }
+            ResourceCleanup.Report(_cleanupIncomplete);
         }
         public override void Flush() => throw new NotSupportedException();
         public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();

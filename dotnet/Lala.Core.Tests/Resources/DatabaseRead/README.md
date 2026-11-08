@@ -16,8 +16,10 @@ SQLite execution, connection exclusivity or isolation. The supplying adapter mus
 configure a reputable SQLite provider for read-only access and give this method
 exclusive connection ownership. No fallback interprets an arbitrary provider as
 SQLite. Tests use the already referenced official `Microsoft.Data.Sqlite` 10.0.14
-with `Mode=ReadOnly` and pooling disabled. Core adds no NuGet package or native
-SQLite dependency. Filesystem/symlink rules remain a separate future adapter gate.
+with `Mode=ReadOnly` and pooling disabled. The reader itself remains provider-neutral.
+The later `ResourceRuntimeOwner` now adds a concrete Microsoft.Data.Sqlite `[10.0.14]`
+dependency to Core, including transitive native SQLite assets. Filesystem/symlink
+rules remain a separate adapter responsibility.
 
 `CompletedSingleReadTransaction` means the reader completed its commands and
 cleanup under that provider contract. It is not a durable database certificate or
@@ -116,10 +118,10 @@ faults cover cancellation, uncertain BEGIN, late read failures, malformed types
 and materialized blob types/lengths, rollback failure, and preservation of primary errors when all
 cleanup stages also fail. Independent source/security review is required.
 
-Core continues targeting `net10.0`; it uses only cross-platform System.Data.Common
+Core continues targeting `net10.0`; this reader uses cross-platform System.Data.Common
 and other BCL APIs, with no Windows-only database adapters, provider reflection,
-P/Invoke or host API changes. Android can reference this Core assembly without a
-new provider dependency, but an Android SQLite adapter and device execution are
-not supplied or claimed by this increment. Production database selection,
-official provenance, fresh resource admission, static1275 gates and runtime
-installation remain separate work.
+P/Invoke or host API changes. The separate owner brings concrete SQLite/native assets
+into Core consumers; fresh Android restore, ABI packaging and native-load/device
+verification are required rather than implied by reader tests. The owner composes
+resource-only admission separately; production host registration, live-origin validation,
+gameplay compatibility and runtime installation are not established by this reader.

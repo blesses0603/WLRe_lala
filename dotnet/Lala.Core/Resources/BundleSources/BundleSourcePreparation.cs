@@ -236,23 +236,30 @@ internal sealed class BundleSourcePreparation
     private async Task<byte[]> FetchAsync(IResourceSource source, string url, long maximum, long? exact, long attempt, CancellationToken token)
     {
         Check(attempt, token);
-        using var response = await source.OpenAsync(url, token).ConfigureAwait(false);
-        Check(attempt, token);
-        // Source rejection must precede declared length and any body read, including redirects/status.
-        if (response.FinalUrl != url || response.Status != 200)
-            throw new BundleSourceException(BundleSourceFailure.ResponseSource, "Response location or status differs from requested source");
-        long? declared = null;
-        if (response.ContentLength is { } text)
+        var response = await source.OpenAsync(url, token).ConfigureAwait(false);
+        Exception? primary = null;
+        try
         {
-            if (text.Length is 0 or > 20 || text.Any(c => c is < '0' or > '9') ||
-                !long.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out long value) || value > maximum || (exact.HasValue && value != exact))
-                throw new BundleSourceException(BundleSourceFailure.ResponseLength, "Invalid response Content-Length");
-            declared = value;
+            Check(attempt, token);
+            // Source rejection must precede declared length and any body read, including redirects/status.
+            if (response.FinalUrl != url || response.Status != 200)
+                throw new BundleSourceException(BundleSourceFailure.ResponseSource, "Response location or status differs from requested source");
+            long? declared = null;
+            if (response.ContentLength is { } text)
+            {
+                if (text.Length is 0 or > 20 || text.Any(c => c is < '0' or > '9') ||
+                    !long.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out long value) || value > maximum || (exact.HasValue && value != exact))
+                    throw new BundleSourceException(BundleSourceFailure.ResponseLength, "Invalid response Content-Length");
+                declared = value;
+            }
+            byte[] bytes = await ReadBoundedAsync(response.Body, maximum, exact ?? declared, token).ConfigureAwait(false);
+            Check(attempt, token);
+            return bytes;
         }
-        byte[] bytes = await ReadBoundedAsync(response.Body, maximum, exact ?? declared, token).ConfigureAwait(false);
-        Check(attempt, token);
-        return bytes;
+        catch (Exception ex) { primary = ex; throw; }
+        finally { ResourceCleanup.DisposePreservingFailure(response, primary); }
     }
+
     private static async Task<bool> CacheMatchesAsync(IBundleSourceCacheReader cache, BundleSourceSpec spec, CancellationToken token)
     {
         using var stream = await cache.OpenReadAsync(spec, token).ConfigureAwait(false);

@@ -168,3 +168,13 @@ test constructor ambiguity/unassigned hook, and one initial test incorrectly rej
 FrozenDictionary's read-only IDictionary compatibility surface; both test issues
 were corrected before the passing run. Full integrated regression is delegated to
 the integrating branch and is not claimed by this focused receipt.
+
+## Owned inventory bootstrap continuation
+
+The prepared result now also retains an owned `ResourceInventoryInput` containing the exact
+extracted ten arrays and actual manifest identity. Its recomputed hashes are cross-checked
+against decoding. The offline preparation remains uninstalled and non-authorizing. The
+internal owner can explicitly bootstrap that ten-table inventory, independently read it back,
+recheck current sources and publish only after cleanup. Its ordinary refresh remains read-only.
+See [BOOTSTRAP.md](BOOTSTRAP.md) for source boundaries, commit-admission ordering, typed storage
+outcomes, offline tests and the limits of this new composition.

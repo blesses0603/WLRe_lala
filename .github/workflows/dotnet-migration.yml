@@ -5,6 +5,9 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+env:
+  AVALONIA_TELEMETRY_OPTOUT: '1'
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
 jobs:
   desktop:
     strategy:

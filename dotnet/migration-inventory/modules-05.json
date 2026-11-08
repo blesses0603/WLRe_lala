@@ -1231,8 +1231,13 @@
     "target_project": "Lala.Core",
     "target_subsystem": "Services.game_version_gate",
     "scope": "runtime",
-    "status": "not_migrated",
-    "target_files": [],
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Resources/ResourceRuntimeOwner.cs",
+      "dotnet/Lala.Core/Resources/ManifestIdentity.cs",
+      "dotnet/Lala.Core/Resources/BundleSources/RuntimeDatabaseSnapshotReader.cs",
+      "dotnet/Lala.Core/Resources/BundleSources/RuntimeDatabaseStructuralMatcher.cs"
+    ],
     "evidence": {
       "source_definitions": [
         {
@@ -1272,11 +1277,22 @@
     },
     "acceptance_profile": "service",
     "verification": {
-      "csharp_build": "not_run",
+      "csharp_build": "passed_for_listed_subset",
       "differential_tests": "not_run",
       "device_acceptance": "not_run",
       "live_server_acceptance": "not_run"
-    }
+    },
+    "migrated_scope": [
+      "Partial _run_dynamic_check/compare_database_identity responsibility only: cafdfb8 adds internal ResourceRuntimeOwner that composes current owned source preparation, exact dynamic DataVer/ExeVer/full package-manifest identity, an actual read-only SQLite byte match and a final post-database version/full-manifest recheck. Its fixed relative inventory path matches the Python dynamic gate. This is resource-only admission, not a direct port of Python login verdicts or the full function/module.",
+      "The production factory accepts an absolute data root, owns the default constrained HTTPS source and concrete Microsoft.Data.Sqlite read-only/private-cache/non-pooled connection, and accepts no injected source/provider/candidate/digest map. Construction performs no HTTP/database I/O; missing inventory fails closed. Source hashes are derived internally from decoded owned bytes. OS TLS trust is origin evidence, not publisher signature or protocol compatibility. Lexical path normalization is not a sandbox against symlinks/hostile replacement.",
+      "ResourceAdmitted/TlsOriginObserved require a production-created non-disposed owner, exact current publication reference and matching generation under its lock. Invalidation/disposal synchronously revoke authority. Offline factory publications always remain false. CanLogin/CanSendPackets are always false; existing detached candidate/preparation authority flags are unchanged. The owner is implemented but uninstalled and unpublished, not registered into a prelogin/UI/Android flow.",
+      "Accepted refreshes retain single-flight ownership through real retirement. Tracked cancellation callbacks execute outside locks; self-reentrant disposal requests cleanup but its self-join fails explicitly while external callers share the real disposal task. Logical-context loss with externally dispatched dependency cycles remains outside the self-join guard; non-returning external callbacks cannot be forced to terminate.",
+      "cafdfb8 resource-owner evidence is focused only: 24 tests passed in three runs and independent final source/lifecycle review approved. Owned bundle fixtures and temporary real SQLite cover non-authorizing success, absent/tampered inventory, final manifest replacement, stale generations, refresh-flood rejection, callback cancellation and self-reentrant/external disposal joins. No successful live TLS-origin acquisition, aggregate Core pass, production registration or Android SQLite packaging/native-load result is established."
+    ],
+    "outstanding_scope": [
+      "Full run_prelogin_check behavior, Python dictionary/status/message/progress contracts, configured sources/checker handling, baseline branch, actual login verdicts and complete dynamic-gate differential parity remain unported. No bootstrap/database write/cache reuse, production runtime-global installation, AccountSession/login/lifecycle registration, packet sending, Android activation or official-server acceptance.",
+      "The owner pins Microsoft.Data.Sqlite [10.0.14] in Core and introduces transitive SQLite/native assets. Fresh Android CI packaging and native-load/device acceptance remain unverified. Desktop and Android source hashes differ; the mapping is desktop/shared-Core subset evidence only, not Android source reconciliation or a full module completion."
+    ]
   },
   {
     "id": "desktop:wlre/services/instance_activity.py",

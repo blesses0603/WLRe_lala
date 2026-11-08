@@ -55,6 +55,21 @@ internal sealed class ManifestIdentity
         }
         return new(snapshot, packages, cancellationToken);
     }
+    // Only parser-produced immutable metadata, after the preparation owner checked response CRCs.
+    internal static ManifestIdentity FromParsed(OfficialVersionSnapshot snapshot,
+        IReadOnlyList<YooAssetManifest> manifests, CancellationToken token)
+    {
+        if (manifests.Count != 2) throw new ResourceValidationException("Both manifests required");
+        var packages = new List<ManifestPackageIdentity>();
+        foreach (string name in ResourceValidation.Packages)
+        {
+            token.ThrowIfCancellationRequested();
+            var manifest = manifests.Single(m => m.Header.PackageName == name);
+            manifest.ValidateIdentity(snapshot, name);
+            packages.Add(new(name, manifest.Header.PackageVersion, manifest.Sha256, manifest.Crc32Le));
+        }
+        return new(snapshot, packages, token);
+    }
     internal static void ConfirmStable(OfficialVersionSnapshot before, OfficialVersionSnapshot after,
         ManifestIdentity initial, IReadOnlyDictionary<string, ManifestIdentityInput> rereadManifests, CancellationToken cancellationToken = default)
     {

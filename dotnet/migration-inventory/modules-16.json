@@ -1025,7 +1025,9 @@
     "target_files": [
       "dotnet/Lala.Core/Resources/OfficialVersionSnapshot.cs",
       "dotnet/Lala.Core/Resources/Http/HttpOfficialResourceSource.cs",
-      "dotnet/Lala.Core/Resources/Http/RawOfficialVersionParser.cs"
+      "dotnet/Lala.Core/Resources/Http/RawOfficialVersionParser.cs",
+      "dotnet/Lala.Core/Resources/Http/ResourceCleanup.cs",
+      "dotnet/Lala.Core/Resources/Http/ResourceRequestLifetime.cs"
     ],
     "evidence": {
       "source_definitions": [
@@ -1089,7 +1091,9 @@
     "migrated_scope": [
       "Bounded snapshot shape/identity parsing and comparison, cancellable pure checks.",
       "HTTP slice verification passed 86 focused tests and 687 impacted Resources tests, with 44 original Python regressions. Its 44 retained actual-Python raw-parser vectors and five CRLF-only source pins regenerated identically; independent review found no confirmed blocker. All transport tests use owned fake handlers, including full ten-table preparation and post-decode reobservation. These counts overlap and are not additive new coverage or live HTTP/TLS acceptance.",
-      "observe_official_versions now has an uninstalled internal HTTP implementation: parse ResourcePath_PC.dat then both exact package version endpoints, require complete manifest revisions and create the bounded snapshot with assets_ready=false. One selected host is bound to preparation; fetch/parse failure never falls back to cached metadata. This identical Python module mapping applies to the shared Core subset, not an Android host callsite."
+      "observe_official_versions now has an uninstalled internal HTTP implementation: parse ResourcePath_PC.dat then both exact package version endpoints, require complete manifest revisions and create the bounded snapshot with assets_ready=false. One selected host is bound to preparation; fetch/parse failure never falls back to cached metadata. This identical Python module mapping applies to the shared Core subset, not an Android host callsite.",
+      "3b68ac7 extends only the existing uninstalled HTTP/preparation adapter: every owned cancellation/client/handler/response/body/CTS cleanup step is attempted despite earlier failures. Stable Cleanup failure and sticky incomplete evidence prevent false release; failed/reentrant disposal stays explicit. Version-read, open-failure and preparation scopes retain the primary exception with a fixed secondary cleanup marker. Tracked request timers and caller/shutdown forwarding contain throwing cancellation callbacks and wait for admitted callbacks before CTS disposal; arbitrary callback/disposal code runs outside internal locks. There is no universal finite cleanup deadline.",
+      "Cleanup evidence: 12 adversarial tests and three additional repeats, plus 785 impacted Resources passes, with a clean Release build and independent ownership/retirement review. Deterministic callback-entry gates cover reentrancy, failure precedence and timer retirement. Repetitions/overlapping suites are not new case counts; fake-handler checks do not prove live HTTPS/TLS or production installation."
     ],
     "outstanding_scope": [
       "read_snapshot/save_snapshot, path ownership, persistence, startup registration and production source synchronization/runtime activation remain unported. Adapter tests use fake handlers only; origin label, timestamps, matching versions/checksums and SourceStability observations do not prove publisher provenance or grant admission/readiness."

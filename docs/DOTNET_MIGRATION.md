@@ -106,7 +106,7 @@ Java sources are non-Python migration obligations and therefore documented separ
 
 ## Dependency decisions / risks
 
-1. **UnityPy 1.25.4 / UnityFS**: desktop `requirements-extractor.txt` and `wlre/services/world/unity_textasset.py`, `navigation_sync.py`, `auto_catalog.py`, `portrait_assets.py`, `item_image_database.py`, `emoji_database.py`. A bounded internal C# UnityFS/TextAsset subset now has genuine owned-writer fixture and independent-decoder evidence, with no runtime decoder package dependency. Actual-game C# extraction, unsupported layouts, image/other asset types, runtime pipeline wiring and Android/AOT remain unverified or unimplemented. The precise format and allocation limits are documented below; this is not a complete UnityPy replacement or a generic JSON substitute.
+1. **UnityPy 1.25.4 / UnityFS**: desktop `requirements-extractor.txt` and `wlre/services/world/unity_textasset.py`, `navigation_sync.py`, `auto_catalog.py`, `portrait_assets.py`, `item_image_database.py`, `emoji_database.py`. A bounded internal C# UnityFS/TextAsset subset now has genuine owned-writer fixture, independent-decoder and one real-bundle extraction receipt, with no runtime decoder package dependency. Wider actual-game extraction, unsupported layouts, image/other asset types, production runtime pipeline wiring and Android/AOT remain unverified or unimplemented. The precise format, allocation limits and single-sample boundary are documented below; this is not a complete UnityPy replacement or a generic JSON substitute.
 2. **Official Lua data**: `wlre/services/world/official_lua_codec.py` uses PyCryptodome AES-CBC and strict padding/round-trip verification; `official_lua_index.py` verifies path/hash inventories. Port only the reviewed data codec using .NET cryptography and deterministic tests. Never execute downloaded Lua as part of data loading. Do not publish or log secret key material in fixtures.
 3. **SQLite**: preserve schemas, version identity, transactions, read-only provenance and atomic rebuild behavior. Select a maintained .NET binding and validate native packaging on Windows, macOS arm64/x64 and Android arm64. Database load success does not establish schema compatibility.
 4. **Pillow/Tk/Kivy/PyJNIUS**: replace with Avalonia rendering and native .NET Android adapters, not a Python runtime hidden behind the interface. Decode/verify off the UI thread and marshal only UI-safe results. Preserve CJK font and image source metadata.
@@ -424,6 +424,31 @@ Independent review verified guards, reduced credential copying and owned-wire pa
 Completion is `ScriptedComplete`, never a production authenticated session. No readiness
 boolean, admission/installation hook, AccountSession/ReceiveAttempt integration or Android
 `onActive` callback is added. See [offline handshake boundary](dotnet/offline-handshake.md).
+
+### Bounded TCP owner and test-only handshake composition
+
+`a92e68b` adds internal `BoundedTcpTransport`: a one-shot numeric-endpoint socket
+owner with bounded read/write buffers and deadlines, one concurrent operation per
+direction, terminal retirement and disposal that waits for the actual admitted tasks.
+An uncertain write is never replayed. Local complete-byte submission is not peer
+receipt, command acceptance or authentication. Its receive-interface loopback tests
+retain `ResourceHeld=true`; it is not installed into production login or lifecycle.
+Plain TCP and game XOR do not secure credentials. Linux evidence is **33 focused**
+and **2,917 impacted Sessions/Protocol passes**, including bounded backpressure,
+reset/cancellation and admission races. Linux backlog assertions are not Windows/macOS
+evidence. See [bounded transport scope](dotnet/bounded-tcp-transport.md).
+
+`d529af0` adds a **test-only** two-leg harness, not a Core runtime feature. It composes
+the existing transport, handshake, decoder and dispatcher using owned loopback peers
+and fixed fake credentials. Each leg has a separate serialized decoder owner; exact
+write receipts precede later events, including events coalesced in one read. The
+verification leg fully ends and disposes before formal connection, and final EOF/tail
+checks deliberately define a local test protocol, not real-server behavior. Bounds
+cover bytes, events and total deadline. **29 focused** and **2,946 impacted passes**
+are Linux loopback evidence, not additional feature-completion counts. Bytewise
+decoding remains a throughput limitation. No decoder/socket handoff to `ReceiveAttempt`,
+secure credential path, authenticated account lifecycle, resource admission or Android
+activation is implemented. See [test-only composition limits](dotnet/test-only-loopback-handshake.md).
 
 Inventory allocation now returns read-only candidates; reservation validation returns
 a hypothetical immutable snapshot only after checking the entire batch. Slot ordering,
@@ -759,6 +784,18 @@ TLS-network/device/server acceptance or production startup registration is teste
 checksums and fresh observations still issue no official provenance, readiness, database
 admission or packet permission. See [HTTP scope and evidence](../dotnet/Lala.Core.Tests/Resources/Http/README.md).
 
+The later `3b68ac7` cleanup increment attempts every owned cancellation/disposal step
+even after an earlier failure, and preserves a primary version/open/preparation error
+with a fixed secondary cleanup marker. Incomplete or reentrant disposal reports stable
+`Cleanup` failure rather than false release; successful repeated disposal is idempotent.
+Tracked request lifetimes guard timer/caller/shutdown cancellation, prevent throwing
+callbacks escaping the timer thread and retire admitted callbacks before CTS disposal.
+No arbitrary callback runs under the internal lock. Cleanup can wait for an admitted
+callback; there is no universal finite cleanup-deadline claim. **12 adversarial cleanup
+tests**, repeated three additional times, and **785 impacted Resources tests** pass;
+repetitions and overlapping suites are not new test counts. Independent review approved
+the ownership contract. These are fake-handler lifecycle checks, not live TLS acceptance.
+
 `UnityTextAssetExtractor` adds a separate internal offline byte decoder over owned
 `VerifiedBundleSource` handles. It supports UnityFS 6/7/8, compression 0/2/3
 (uncompressed/raw LZ4/LZ4HC) and front/end block info. Canonical LZ4 termination is
@@ -800,6 +837,15 @@ extraction acceptance. Internal source-to-extraction orchestration is now connec
 as described below; production catalog/runtime installation, provenance/admission,
 Desktop application execution and Android/AOT remain unverified or unconnected. No resources, login or commands are enabled. See
 [Unity extraction scope and evidence](../dotnet/Lala.Core.Tests/Resources/UnityTextAssets/README.md).
+
+A separate local read-only check used the reviewed `a08c719` verification tool on
+Windows x64 / .NET **10.0.10**. It extracted `QuestionScoreData_C.bytes` (**94 bytes**)
+from **one 1,305-byte UnityFS 8 real bundle**, with both output length and SHA-256
+matching independent UnityPy extraction; the tool exited **0**. This is a single
+actual-sample extraction receipt, not acceptance of all 22 bundles, the ten-table
+pipeline, current HTTPS acquisition, resource admission or complete login. The
+standalone tool packaging is not a migrated application feature. No private local
+path, game payload or credential is recorded here or added to the repository.
 
 `TalkDataParser` now ports only `npc_talk.py`'s `parse_talk_data`: signed counts,
 UInt16 IDs/text lengths, strict UTF-16LE with trailing-NUL removal, voice IDs and all
@@ -1042,8 +1088,8 @@ reads the active identity and all ten exact required rows, captures detached byt
 then `ROLLBACK`s and disposes the connection. It never commits, discovers a provider,
 selects a user database, repairs schemas or writes resource data. The supplying adapter
 must configure read-only mode and exclusive ownership: generic `DbConnection` cannot
-prove filesystem restrictions, honest SQLite execution or isolation. Core adds no provider
-or native dependency. Tests use the existing Microsoft.Data.Sqlite 10.0.14 package with
+prove filesystem restrictions, honest SQLite execution or isolation. This reader slice
+adds no provider or native dependency. Tests use the existing Microsoft.Data.Sqlite 10.0.14 package with
 `Mode=ReadOnly`, pooling disabled and newly created temporary databases.
 
 Queries explicitly use `main`, require the four ordinary source-schema tables with
@@ -1086,6 +1132,36 @@ for which no timing fix is claimed. Filesystem/symlink preflight, production dat
 selection, other read/write APIs, binary table schema loading, official provenance,
 admission, static1275/runtime installation and Android/device acceptance remain open.
 See [read-only snapshot scope and evidence](../dotnet/Lala.Core.Tests/Resources/DatabaseRead/README.md).
+
+### Complete bounded inventory-write function, still an internal seam
+
+`6cebec4` ports the complete `record_inventory` function into internal
+`ResourceInventoryStore`, using an exclusively supplied closed `DbConnection` and
+the existing six-table schema. It preserves source member order/POSIX basenames,
+optional identity, omitted raw rows, active/previous/parent inventory state and all
+seven derived projections: items, Smith, Talk, Text, scenes, Eve NPCs and Eve interactions.
+Current/prior parse outcomes, nonempty saved-view collisions, Python scalar ordering
+and all report fields remain explicit. Inventory `active_id` is a database selection,
+not gameplay activation or permission to send.
+
+One `BEGIN IMMEDIATE` covers schema validation, the allowed `previous_id` evolution,
+raw/derived/state writes and commit. Transactional DDL, schema/trigger/index rejection,
+stored-byte rehashing and explicit ingestion/query limits are documented stricter Core
+contracts. Primary failures survive cleanup failures; a commit exception is `Unknown`,
+confirmed commit plus later cleanup failure is `Committed`, and no uncertain write is
+automatically retried. The seam chooses no path/provider, accesses no user database
+and installs no runtime. Existing parser restrictions, including reviewed ItemData
+pins and Eve duplicate-scene rejection, remain in force.
+
+The unchanged Python function, actual parsers and real temporary SQLite produce
+**134 scenarios / 234 calls**. Three Python-only invalid types and six stricter Core
+rejections are distinguished from ordinary full-report/six-table parity. **312 focused**
+and **12,557 impacted tests** pass with a clean Release build under a process-only
+3-GiB heap cap; these overlapping suite sizes are not feature counts or a full Core
+receipt. Independent source/security review approved the bounded projections. Other
+read/load APIs, broader schema migration, path ownership, trusted source admission,
+production writer registration and platform/live acceptance remain open. The module
+stays `partially_migrated`. See [inventory persistence scope and evidence](../dotnet/Lala.Core.Tests/Resources/Inventory/README.md).
 
 Eve v115 parsing now validates all eleven scene sections before exposing immutable
 NPC/interaction indexes. Versions, offsets, record/scene limits, skipped layouts,
@@ -1157,9 +1233,15 @@ acceptance follows from these offline suites.
 | `850b7af` isolated scripted handshake | `ScriptedHandshakeTests.cs`, seven `python-vectors.json` rows under `Lala.Core.Tests/Sessions/Handshake`, and `docs/dotnet/offline-handshake.md` | 86 focused and 2,884 impacted passes; deterministic actual-Python wire vectors and independent review. Strict synthetic phase/receipt ordering is not Python lifecycle parity, production login or transport ownership. |
 | `6d61601` uninstalled HTTP source/raw parsers | `HttpResourceSourceTests.cs`, `HttpPythonVectors.cs`, generator and `README.md` under `Lala.Core.Tests/Resources/Http` | 86 focused and 687 impacted Resources passes; 44 retained actual-Python parser vectors, five source pins and 44 original Python passes. Independent review and fake-handler full-flow checks do not establish live HTTP/TLS, official provenance or admission. |
 | `3848459` read-only transactional snapshot | `RuntimeDatabaseSnapshotReaderTests.cs`, `DatabaseReadPythonParityTests.cs`, fixture evidence and `README.md` under `Lala.Core.Tests/Resources/DatabaseRead` | 86 focused and 2,104 impacted passes; 52 real-SQLite Python cases distinguish original results and ten stricter capture rejections. Final review approved bounded GetValue provider regression, WAL coherence and failure/cleanup guards. Caller-configured read-only/exclusive provider contract is not provenance or admission. |
+| `a92e68b` uninstalled bounded TCP owner | `BoundedTcpTransportTests.cs` and `docs/dotnet/bounded-tcp-transport.md` | 33 focused and 2,917 impacted Linux loopback passes; numeric endpoint, bounded operations, uncertain writes, retirement and receive holds. No production login, secure credentials or Windows/macOS runtime acceptance. |
+| `d529af0` test-only two-leg handshake composition | `LocalHandshakeCompositionTests.cs`, `LocalHandshakeHarness.cs` and `docs/dotnet/test-only-loopback-handshake.md` | 29 focused and 2,946 impacted Linux loopback passes. Test-only ordered composition, synthetic peers/credentials and explicit EOF protocol; no runtime feature, lossless receive handoff or authenticated lifecycle. |
+| `6cebec4` complete bounded inventory-write function | Persistence/projection tests, fixture evidence and `README.md` under `Lala.Core.Tests/Resources/Inventory` | 134 unchanged-Python scenarios / 234 real-SQLite calls; 312 focused and 12,557 impacted passes under the process-only 3-GiB cap. Six-table writes and seven projections, with explicit stricter bounds/schema/transaction behavior; no production database writer or resource activation. |
+| `3b68ac7` exhaustive HTTP cleanup | `HttpCleanupTests.cs`, `ResourceRequestLifetime.cs` and HTTP test `README.md` | 12 adversarial cleanup tests plus three repeats and 785 impacted Resources passes. Independent review of exhaustive ownership, primary-error preservation and tracked callback retirement; no universal cleanup deadline or live TLS evidence. |
+| `cafdfb8` uninstalled resource-only admission owner | `ResourceRuntimeOwnerTests.cs` and `docs/dotnet-resource-runtime-owner.md` | 24 focused tests passed in three runs; independent final review approved. Owned default HTTPS, real read-only SQLite match and final manifest recheck are implemented, with exact current-reference/generation admission. Offline tests remain non-authorizing; no successful live TLS receipt, bootstrap, login/packets or Android native-load acceptance. Final aggregate is pending. |
 
 Inventory status remains partial for the subset modules below. Desktop `network/client.py`
-(internal receive and isolated scripted handshake), `network/commands.py`
+(internal receive, isolated scripted handshake and uninstalled bounded TCP owner;
+two-leg composition remains test-only), `network/commands.py`
 (select-role guards only), `battle_commands.py`
 (pure action/round planning), `storage/ark_questions.py` (explicit offline store),
 `services/ark_first_answer.py` (strict arithmetic), `services/ark_candidates.py` (pure
@@ -1177,7 +1259,7 @@ to partially migrated. `services/world/smith_candidate.py` is ported offline for
 three pure functions within the documented typed API. `services/world/catalog_adapters.py`
 is also ported offline for its bounded validation/composition surface; runtime
 integration and official-source acceptance remain separate. The summary is now
-554 not migrated, 138 partially migrated and 4 ported offline. Android inventory and
+553 not migrated, 139 partially migrated and 4 ported offline. Android inventory and
 reservation entries share identical source hashes and receive the same bounded evidence. Android network-client/commands/protocol, combat-resource, battle-command,
 combat/display, Eve, expedition-data, preview, Smith-candidate, instance-catalog,
 ItemData and catalog-adapter hashes differ, so they stay unreconciled. The baseline has
@@ -1206,8 +1288,16 @@ or full runtime acceptance. Current combined verification is recorded below.
 The new raw-version/HTTP mappings remain partial in `official_version.py`,
 `official_source.py`, `official_manifest_sync.py` and `official_bundle_download.py`;
 the source-preparation/runtime modules retain all admission and installation gaps.
-`resource_database.py` expands only its partial read-only transaction subset; its
-Android hash differs and is not mirrored.
+`resource_database.py` now includes the read-only transaction subset and complete
+bounded `record_inventory` function, not the remaining module APIs or runtime integration;
+its Android hash differs and is not mirrored. The HTTP cleanup increment expands only
+the existing partial adapter mappings, without changing module statuses.
+`game_version_gate.py` moves to partial only for the resource/database comparison
+composition in `cafdfb8`; its login verdicts and full source module are not ported.
+The same owner expands the existing partial `dynamic_bundle_runtime.py` and
+`resource_database.py` mappings without installing production runtime globals.
+All three actual desktop source hashes were checked against the unchanged inventoried
+files; their Android source hashes differ, so no owner mapping is mirrored.
 `official_resource_sync.py` has an identical Android hash and receives only the shared
 Core observation subset, not an Android host callsite. The other HTTP/handshake source
 hashes differ (or no matching Android module exists), so they are not mirrored.
@@ -1251,8 +1341,8 @@ use BINARY comparison, and trigger-owner matching follows SQLite's case-insensit
 identifier semantics. Nonquarantined and already-quarantined cases, unregistered
 attempts, all three identity columns and all three trigger owners are covered.
 The focused Storage suite is **371/371** (335 storage-specific plus 36 existing named
-matches), and independent source review approved the fixes. Core has no database
-provider dependency: Microsoft.Data.Sqlite is test-only; production connection/path,
+matches), and independent source review approved the fixes. At that increment Core had no
+database provider dependency: Microsoft.Data.Sqlite was test-only; production connection/path,
 current-session validation and memory-intent execution remain host integration gaps.
 
 All changed generated C# fixtures retain the existing 500,000-byte limit under both
@@ -1510,9 +1600,10 @@ slices and the later read-only database reader. They do not change the capped se
 of the local aggregate, resolve historical SQLite timing failures or establish live/resource/runtime acceptance.
 
 
-### Integrated handshake/HTTP/database-reader verification through `3848459` (8.0.20 candidate)
+### Integrated handshake/HTTP/database-reader verification for published `a08c719` (8.0.20)
 
-The integrated tree includes `850b7af`, `6d61601` and `3848459` and passes **41,090
+The integrated tree through `3848459`, published as `a08c719`, includes `850b7af`
+and `6d61601` and passes **41,090
 Core Release tests**, with **zero failures/skips** and **zero build warnings/errors**,
 under the process-only `DOTNET_GCHeapHardLimit=0xC0000000` (**3 GiB**). This is a local
 capped aggregate, not a standard-setting local pass or a new remote CI result. Both
@@ -1522,11 +1613,102 @@ integration. Repository/CI GC and test execution policies remain unchanged.
 The retained Python suite runs **2,273 tests** with **216 existing skips**, and strict
 repository audit passes with **297 checked links**. Final lifecycle **59/59**, Desktop
 Release **zero warnings/errors** and **9 offline self-tests** also pass. The published
-8.0.19 results above exclude this newer combined slice; no 8.0.20 remote CI result is
-claimed yet.
+8.0.19 results above exclude this combined slice. Published `a08c719`
+[.NET CI run 42421049909](https://github.com/blesses0603/WLRe_lala/actions/runs/42421049909)
+and [Python CI run 42421049923](https://github.com/blesses0603/WLRe_lala/actions/runs/42421049923)
+are both green. These receipts apply only to published 8.0.20 and exclude the subsequent
+local increments above; 8.0.21 requires its own new CI verification.
 
 The scripted handshake, uninstalled HTTP adapter and caller-configured read-only
 transaction reader remain separate from production account transport, trusted source
 provenance, resource admission and runtime installation. The resolved reader provider
 regression does not fix or change the historical Python SQLite timing threshold.
 Android/device/live acceptance remains open; `IsCompleteState` remains false.
+
+### Read-only resource-owner increment (8.0.21)
+
+Local `cafdfb8` adds internal `ResourceRuntimeOwner` after the separately evidenced
+`a92e68b`, `d529af0`, `6cebec4` and `3b68ac7` slices. Its production factory owns the
+default constrained HTTPS source and a concrete read-only/private-cache/non-pooled
+SQLite connection. It accepts no caller-supplied source, provider, candidate or digest
+map on that route. Construction performs no HTTP/database I/O. Refresh decodes owned
+sources, compares real inventory blobs using internally derived hashes in one read
+transaction, waits for cleanup and rechecks versions and both complete manifests.
+Exact dynamic DataVer, ExeVer and complete package identities are required; no shipped
+1275/executable equality gate is silently added.
+
+Only a production-created, non-disposed owner can admit its exact current publication
+reference at its current generation. Invalidated, stale or fabricated publications
+cannot admit; `TlsOriginObserved` follows the same current-owner check. This uses normal
+OS TLS trust, not publisher signatures or proof of protocol compatibility. Offline-test
+publications always remain non-authorizing, and existing decoder/preparation flags stay
+false. The owner is **implemented but uninstalled and unpublished**, with no bootstrap,
+database writes, disk bundle-cache reuse, runtime-global installation, login/lifecycle
+registration, packet sending or Android activation. A missing inventory fails closed.
+Lexical path normalization is not hostile-filesystem/symlink protection.
+
+Refreshes are single-flight through real retirement. Invalidation/disposal revoke Current
+synchronously; cancellation callbacks run outside locks and all admitted work is joined.
+Self-reentrant disposal requests cleanup but fails its own join explicitly; external
+callers share the true cleanup task. The documented context-loss/externally dispatched
+dependency-cycle limitation remains, and arbitrary callbacks cannot be forced to return.
+**24 focused tests passed in three runs**, with independent final review. They exercise
+owned fixtures, real temporary SQLite, tampering, manifest replacement and adverse
+retirement/reentrancy, not successful live HTTPS-origin acquisition. See
+[resource-owner scope and limits](dotnet-resource-runtime-owner.md).
+
+Core now pins Microsoft.Data.Sqlite **[10.0.14]**, bringing transitive SQLite/native
+assets. Fresh Android CI packaging and native-load/device compatibility remain unverified;
+the source change and historical Android build receipts do not settle those gates.
+`2d7ba5b` only adds `AVALONIA_TELEMETRY_OPTOUT=1` and `DOTNET_CLI_TELEMETRY_OPTOUT=1`
+to CI. It does not change tests, assertions, GC policy, compilation or acceptance criteria.
+
+The initial combined Core run reported **41,500 total / 41,497 passed / 3 failed**:
+two HTTP cleanup-race failures and one older provider-independent architecture assertion.
+Those corrections are retained. Final combined validation now appears below; the historical
+failed/intermediate runs are not treated as successful acceptance evidence.
+
+### Owned inventory bootstrap and recovered 8.0.21 validation
+
+The internal, uninstalled `BootstrapAndRefreshAsync` now composes actual ten-table extraction
+with the existing bounded inventory writer, independent read-only snapshot and byte matcher,
+then final versions/manifest reobservation. It creates the fixed inventory only after source
+preparation succeeds. `RefreshAsync` remains read-only. The original native-extracted bytes,
+not reserialized catalogs, are retained with the internally derived manifest identity.
+
+Commit admission checks the owner generation, exact attempt, disposal and cancellation before
+uncancelled COMMIT execution. Confirmed commits and uncertain outcomes remain distinguishable
+from publication; later cancellation, readback/source drift or cleanup failure cannot pretend
+a durable write rolled back. The owner remains occupied through writer and callback retirement.
+No UI, AccountSession, Android adapter or real login uses this owner yet. Static 1275 pins,
+optional resources, archive publication, global runtime installation and live/platform acceptance
+remain separate. No login/packet authority is created. See the complete
+[bootstrap contract and validation](../dotnet/Lala.Core.Tests/Resources/RuntimeFlow/BOOTSTRAP.md).
+
+Final recovered cloud validation on 2026-11-08 UTC:
+
+- **41,546 Core tests passed**, zero failures/skips, using the existing process-only 3 GiB
+  heap limit. The preceding standard-settings run was aborted by a test-host crash, not a pass.
+  No tests, assertions, parallelism or CI GC policy were relaxed.
+- **59 lifecycle tests**, Desktop Release **zero warnings/errors**, **9 offline self-tests**.
+- Python **2,273 total, 216 existing platform skips**, no failures; strict repository audit
+  and all **six** repository-audit tests passed. Xvfb was unavailable; GUI acceptance is not claimed.
+- Independent review found no blocking implementation issues. Added final-cleanup cancellation
+  coverage confirms committed bytes and matched readback survive while publication is revoked.
+- These are local results. Fresh standard-settings remote CI and Android APK/native packaging
+  must still be checked against the exact published 8.0.21 commit. Prior APK/CI receipts do not
+  cover the newly introduced SQLite native dependency. No live source, game credentials,
+  user database, actual device or game-server acceptance is claimed. `IsCompleteState` stays false.
+
+After preserving concurrent Desktop commits `906fd2e` and `97ab83e` unchanged, the combined
+Desktop build again passed with zero warnings/errors, **9 inspector** and **54 presentation**
+self-test checks. The first final-location Core rerun had **41,545 passed / 1 failed** in the
+HTTP response-disposal test. Its independent review identified test-only LIFO callback
+unregistration, corrected with explicit callback completion and an exactly-once assertion.
+Production code and Desktop UI were not changed by that correction. After correction,
+all **13 HTTP cleanup cases passed in four independent runs** (initial plus three bounded
+repeats), and the final combined tree passed **41,546 Core / 59 lifecycle** again, with no
+failures or skips. Full Core used the documented process-only 3 GiB cap; repeats are not
+additional distinct test cases. Desktop's 9 + 54 self-tests and zero-warning/error build
+remain applicable because production/UI code did not change. Standard remote CI remains
+separate and must be verified against the pushed commit.

@@ -8,6 +8,9 @@ namespace Lala.Core.Resources;
 internal sealed class OfflinePreparedRuntimeCandidate
 {
     internal OfflineRuntimeCandidate Candidate { get; }
+    internal ManifestIdentity Identity { get; }
+    internal ResourceInventoryInput InventoryInput { get; }
+    internal RequiredBundleSources RecheckContext { get; }
     internal string ManifestContentIdentity { get; }
     internal long Attempt { get; }
     internal int DownloadCount { get; }
@@ -18,8 +21,11 @@ internal sealed class OfflinePreparedRuntimeCandidate
     internal string DatabaseAdmission => "unavailable";
     internal string RuntimeInstallation => "unavailable";
     internal string Static1275Admission => "unavailable";
-    internal OfflinePreparedRuntimeCandidate(OfflineRuntimeCandidate candidate, RequiredBundleSources sources)
+    internal OfflinePreparedRuntimeCandidate(OfflineRuntimeCandidate candidate, RequiredBundleSources sources,
+        ResourceInventoryInput inventory, ManifestIdentity identity)
     {
+        RecheckContext = sources;
+        Identity = identity; InventoryInput = inventory;
         Candidate = candidate; ManifestContentIdentity = sources.ManifestContentIdentity; Attempt = sources.Attempt;
         DownloadCount = sources.DownloadCount; DownloadBytes = sources.DownloadBytes;
         ExtractedTables = OfflineRuntimeCandidateDecoder.Sources;
@@ -36,6 +42,8 @@ internal sealed class OfflineBundleRuntimePreparation
     internal const long MaximumExtractedTableBytes = 32L * 1024 * 1024;
     private readonly BundleSourcePreparation _preparation = new();
     internal void Invalidate() => _preparation.Invalidate();
+    internal Task ConfirmUnchangedAsync(IResourceSource source, OfflinePreparedRuntimeCandidate prepared, CancellationToken token)
+        => _preparation.ConfirmUnchangedAsync(source, prepared.RecheckContext, token);
 
     internal async Task<OfflinePreparedRuntimeCandidate> PrepareAsync(IResourceSource source,
         IBundleSourceCacheReader? cache = null, BundleSourceBudget? budget = null,
@@ -65,9 +73,21 @@ internal sealed class OfflineBundleRuntimePreparation
         _preparation.EnsureCurrent(prepared, cancellationToken);
         string packageVersion = prepared.Snapshot.Packages["DataPackage"];
         var candidate = OfflineRuntimeCandidateDecoder.Decode(tables, packageVersion, cancellationToken);
+        var identity = ManifestIdentity.FromParsed(prepared.Snapshot, prepared.Manifests, cancellationToken);
+        // Persist precisely the native-extracted arrays, not reserialized decoded rows or
+        // caller-provided hashes. Capture detaches every payload under the original limits.
+        var inventory = ResourceInventoryInput.Capture(identity.Key, OfflineRuntimeCandidateDecoder.Sources
+            .Select(name => new ResourceInventoryMember("tables/" + name + ".bytes", tables[name])).ToArray(),
+            identity, cancellationToken);
+        foreach (var table in inventory.Tables)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (candidate.SourceSha256[table.Name[..^6]] != table.Sha256)
+                throw new ResourceValidationException("Decoded runtime differs from the owned extracted inventory");
+        }
         // No readiness, provenance, active state, persisted receipt or partial result is published.
         _preparation.EnsureCurrent(prepared, cancellationToken);
         await _preparation.ConfirmUnchangedAsync(source, prepared, cancellationToken).ConfigureAwait(false);
-        return _preparation.ReturnCurrent(prepared, new OfflinePreparedRuntimeCandidate(candidate, prepared), cancellationToken);
+        return _preparation.ReturnCurrent(prepared, new OfflinePreparedRuntimeCandidate(candidate, prepared, inventory, identity), cancellationToken);
     }
 }

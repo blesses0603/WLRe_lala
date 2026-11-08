@@ -243,10 +243,26 @@ public sealed class RuntimeDatabaseSnapshotReaderTests
     }
 
     [Fact]
-    public void Core_remains_provider_independent_internal_and_platform_neutral()
+    public void Reader_remains_provider_neutral_and_internal_with_concrete_owner_isolated()
     {
         Assert.False(typeof(RuntimeDatabaseSnapshotReader).IsPublic); Assert.False(typeof(RuntimeDatabaseReadObservation).IsPublic);
-        Assert.DoesNotContain(typeof(RuntimeDatabaseSnapshotReader).Assembly.GetReferencedAssemblies(), name => name.Name!.Contains("Sqlite", StringComparison.OrdinalIgnoreCase));
+        // Core now deliberately owns a concrete SQLite connection in ResourceRuntimeOwner.
+        // The reusable reader must still accept provider-neutral connections and expose no
+        // concrete provider types, so scripted providers exercise the identical reader path.
+        var reader = typeof(RuntimeDatabaseSnapshotReader);
+        foreach (var member in reader.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.DeclaredOnly))
+        {
+            Assert.DoesNotContain("Sqlite", member.ReturnType.ToString(), StringComparison.OrdinalIgnoreCase);
+            foreach (var parameter in member.GetParameters())
+                Assert.DoesNotContain("Sqlite", parameter.ParameterType.ToString(), StringComparison.OrdinalIgnoreCase);
+        }
+        Assert.False(typeof(ResourceRuntimeOwner).IsPublic);
+        var factory = typeof(ResourceRuntimeOwner).GetMethod("Create", BindingFlags.NonPublic | BindingFlags.Static)!;
+        Assert.Equal(typeof(string), Assert.Single(factory.GetParameters()).ParameterType);
+        Assert.DoesNotContain(reader.Assembly.GetReferencedAssemblies(), name =>
+            name.Name!.StartsWith("Avalonia", StringComparison.Ordinal) ||
+            name.Name.StartsWith("Mono.Android", StringComparison.Ordinal) ||
+            name.Name is "PresentationFramework" or "WindowsBase");
         MethodInfo method = typeof(RuntimeDatabaseSnapshotReader).GetMethod("ReadAsync", BindingFlags.NonPublic | BindingFlags.Static)!;
         Assert.Equal(typeof(DbConnection), method.GetParameters()[0].ParameterType);
         Assert.DoesNotContain(method.GetCustomAttributesData(), attribute => attribute.AttributeType.Name == "SupportedOSPlatformAttribute");
