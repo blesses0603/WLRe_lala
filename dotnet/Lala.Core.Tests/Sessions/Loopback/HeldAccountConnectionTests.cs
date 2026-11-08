@@ -73,6 +73,9 @@ public sealed class HeldAccountConnectionTests
                 offset += count;
             }
         }
+        internal Task ExpectClosedAfterRetirement() => RetiredPeerClosure.AssertAsync(pending, decoder,
+            () => socket.ReceiveAsync(new Memory<byte>(new byte[1]), SocketFlags.None, token));
+
         internal async Task CloseSendAndExpectEof()
         {
             socket.Shutdown(SocketShutdown.Send);
@@ -212,7 +215,7 @@ public sealed class HeldAccountConnectionTests
             var second = formal.Run(async client =>
             {
                 await EnterWorld(client); ready.SetResult();
-                await client.WaitFor(finish.Task); await client.CloseSendAndExpectEof();
+                await client.WaitFor(finish.Task); await client.ExpectClosedAfterRetirement();
             });
             var generation = session.Begin("synthetic", "loopback").Generation;
             int providers = 0;

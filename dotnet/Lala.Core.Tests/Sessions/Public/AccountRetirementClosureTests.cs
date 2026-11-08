@@ -9,9 +9,9 @@ public sealed partial class AccountConnectionRuntimeTests
     [Fact]
     public async Task PreparedRetirementClosureAcceptsEofAndRejectsAnyByte()
     {
-        await AssertRetiredPeerClosure(new(), new(), () => ValueTask.FromResult(0));
+        await RetiredPeerClosure.AssertAsync(new(), new(), () => ValueTask.FromResult(0));
         await Assert.ThrowsAnyAsync<Xunit.Sdk.XunitException>(() =>
-            AssertRetiredPeerClosure(new(), new(), () => ValueTask.FromResult(1)));
+            RetiredPeerClosure.AssertAsync(new(), new(), () => ValueTask.FromResult(1)));
     }
 
     [Theory]
@@ -19,7 +19,7 @@ public sealed partial class AccountConnectionRuntimeTests
     [InlineData(SocketError.ConnectionAborted)]
     public async Task PreparedRetirementClosureAcceptsOnlyTypedRetirementErrors(SocketError code)
     {
-        await AssertRetiredPeerClosure(new(), new(), () =>
+        await RetiredPeerClosure.AssertAsync(new(), new(), () =>
             ValueTask.FromException<int>(new SocketException((int)code)));
     }
 
@@ -35,10 +35,10 @@ public sealed partial class AccountConnectionRuntimeTests
         foreach (var error in failures)
         {
             Assert.Same(error, await Record.ExceptionAsync(() =>
-                AssertRetiredPeerClosure(new(), new(), () => ValueTask.FromException<int>(error))));
+                RetiredPeerClosure.AssertAsync(new(), new(), () => ValueTask.FromException<int>(error))));
             // Synchronous failures from the receive operation must also propagate unchanged.
             Assert.Same(error, await Record.ExceptionAsync(() =>
-                AssertRetiredPeerClosure(new(), new(), () => throw error)));
+                RetiredPeerClosure.AssertAsync(new(), new(), () => throw error)));
         }
     }
 
@@ -58,9 +58,9 @@ public sealed partial class AccountConnectionRuntimeTests
             return ValueTask.FromException<int>(new SocketException((int)SocketError.ConnectionReset));
         }
         if (incomplete)
-            await Assert.ThrowsAsync<ProtocolException>(() => AssertRetiredPeerClosure(pending, decoder, Receive));
+            await Assert.ThrowsAsync<ProtocolException>(() => RetiredPeerClosure.AssertAsync(pending, decoder, Receive));
         else
-            await Assert.ThrowsAnyAsync<Xunit.Sdk.XunitException>(() => AssertRetiredPeerClosure(pending, decoder, Receive));
+            await Assert.ThrowsAnyAsync<Xunit.Sdk.XunitException>(() => RetiredPeerClosure.AssertAsync(pending, decoder, Receive));
         Assert.False(received);
     }
 }

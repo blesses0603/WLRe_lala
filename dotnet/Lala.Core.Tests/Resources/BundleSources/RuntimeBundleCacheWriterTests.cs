@@ -196,8 +196,14 @@ public sealed class RuntimeBundleCacheWriterTests
                 else competingReader = new FileStream(destination, FileMode.Open, FileAccess.Read, FileShare.Read);
             });
             if (!corrupt) await writer.StoreAsync([source]);
-            else if (readOnly) await Assert.ThrowsAsync<UnauthorizedAccessException>(() => writer.StoreAsync([source]));
-            else await Assert.ThrowsAnyAsync<IOException>(() => writer.StoreAsync([source]));
+            else
+            {
+                var error = await Record.ExceptionAsync(() => writer.StoreAsync([source]));
+                Assert.NotNull(error);
+                // Windows reports a denied replacement as access denied or a sharing
+                // violation. Neither may become success for mismatching bytes.
+                Assert.Contains(error.GetType(), new[] { typeof(IOException), typeof(UnauthorizedAccessException) });
+            }
             Assert.False(published);
             Assert.Equal(competingBytes, await File.ReadAllBytesAsync(destination));
             AssertNoTemporaryFiles(directory.Root);

@@ -71,7 +71,7 @@ public sealed partial class AccountConnectionRuntimeTests
         var second = formal.Run(async client =>
         {
             await client.Expect(63, 7, 2); await client.Send(new Packet(63, 7, [0, 2]), Roles);
-            await Assert.ThrowsAsync<IOException>(() => client.Next());
+            await client.ExpectClosedAfterRetirement();
         });
         var session = new AccountSession(); var generation = session.Begin("synthetic", "interactive").Generation;
         await using var runtime = new AccountConnectionRuntime(session, generation, Profile(verification, formal),

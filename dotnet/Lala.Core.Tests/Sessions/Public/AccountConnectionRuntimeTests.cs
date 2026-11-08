@@ -71,7 +71,7 @@ public sealed partial class AccountConnectionRuntimeTests
                 offset += count;
             }
         }
-        internal Task ExpectClosedAfterRetirement() => AssertRetiredPeerClosure(pending, decoder,
+        internal Task ExpectClosedAfterRetirement() => RetiredPeerClosure.AssertAsync(pending, decoder,
             () => socket.ReceiveAsync(new Memory<byte>(new byte[1]), SocketFlags.None, token));
 
         internal async Task CloseSendAndExpectEof()
@@ -80,19 +80,6 @@ public sealed partial class AccountConnectionRuntimeTests
             Assert.Empty(pending); decoder.Finish();
             Assert.Equal(0, await socket.ReceiveAsync(new byte[1], SocketFlags.None, token));
         }
-    }
-    private static async Task AssertRetiredPeerClosure(Queue<Packet> pending, FrameDecoder decoder, Func<ValueTask<int>> receive)
-    {
-        Assert.Empty(pending); decoder.Finish();
-        // Explicit retirement may reset instead of negotiating a peer-led FIN on Windows.
-        // Observe closure without sending into an already-retired socket.
-        int count;
-        try { count = await receive(); }
-        catch (SocketException error) when (error.SocketErrorCode is SocketError.ConnectionReset or SocketError.ConnectionAborted)
-        {
-            return;
-        }
-        Assert.Equal(0, count);
     }
 
     private static TaskCompletionSource Signal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
