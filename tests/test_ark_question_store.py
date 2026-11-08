@@ -5,6 +5,7 @@ import sqlite3
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 from contextlib import closing
 
 from wlre.storage.ark_questions import QuestionStore, fingerprint
@@ -302,19 +303,60 @@ class QuestionStoreTests(unittest.TestCase):
                                                 allow_unregistered=1)
         self.assertFalse(self.path.exists())
 
-    def test_busy_database_fails_closed_with_bounded_wait(self):
+    def test_connection_configures_bounded_sqlite_busy_budget(self):
+        with self.store._connection() as db:
+            self.assertEqual(db.execute('PRAGMA busy_timeout').fetchone(), (250,))
+
+    def test_busy_database_fails_closed_without_retry(self):
+        self._assert_busy_database_fails_closed()
+
+    def test_slow_connection_does_not_change_busy_budget_or_retry(self):
+        # Controlled delay outside SQLite's busy handler, not a CI timing limit.
+        # A correct 250 ms busy budget cannot bound the whole operation's wall
+        # time (macOS SQLite sleep overshoot has also been observed in CI).
+        self._assert_busy_database_fails_closed(connection_delay=1.05)
+
+    def _assert_busy_database_fails_closed(self, connection_delay=0):
         self.store.observe(self.token, 1, self.question)
-        with closing(sqlite3.connect(self.path)) as blocker:
+        real_connect = sqlite3.connect
+        statements = []
+        busy_budgets = []
+        closed = []
+
+        class ObservedConnection(sqlite3.Connection):
+            def execute(connection, sql, *args, **kwargs):
+                statements.append(sql)
+                if sql == 'BEGIN IMMEDIATE':
+                    busy_budgets.append(super().execute('PRAGMA busy_timeout').fetchone()[0])
+                return super().execute(sql, *args, **kwargs)
+
+            def close(connection):
+                closed.append(connection.in_transaction)
+                return super().close()
+
+        def connect(*args, **kwargs):
+            connection = real_connect(*args, **kwargs, factory=ObservedConnection)
+            if connection_delay:
+                time.sleep(connection_delay)
+            return connection
+
+        with closing(real_connect(self.path)) as blocker:
             blocker.execute('BEGIN IMMEDIATE')
-            start = time.monotonic()
             try:
-                with self.assertRaisesRegex(sqlite3.OperationalError, 'locked'):
-                    self.record()
-                self.assertLess(time.monotonic() - start, 1.0)
+                with patch('wlre.storage.ark_questions.sqlite3.connect', side_effect=connect) as opened:
+                    with self.assertRaisesRegex(sqlite3.OperationalError, 'locked') as raised:
+                        self.record()
+                # Structured SQLite error codes were added in Python 3.11.
+                if hasattr(raised.exception, 'sqlite_errorcode'):
+                    self.assertEqual(raised.exception.sqlite_errorcode, sqlite3.SQLITE_BUSY)
+                opened.assert_called_once_with(self.path, timeout=0.25)
+                self.assertEqual(busy_budgets, [250])
+                self.assertEqual(statements, ['BEGIN IMMEDIATE'])
+                self.assertEqual(closed, [False])
             finally:
                 blocker.rollback()
         self.assertEqual(self.store.observe(self.token, 1, self.question), (None, 'unknown'))
-        with closing(sqlite3.connect(self.path)) as db:
+        with closing(real_connect(self.path)) as db:
             self.assertEqual(db.execute('SELECT count(*) FROM candidates').fetchone(), (0,))
 
     def test_concurrent_candidate_conflicts_are_not_lost(self):
