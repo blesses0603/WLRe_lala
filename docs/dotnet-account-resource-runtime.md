@@ -44,7 +44,7 @@ Account snapshots change when reconnect starts a new generation, so the host mus
 prepare/rebind for that generation. Transport termination without a snapshot change is not
 itself a resource revocation event. This is not a background source-version monitor. The
 facade never calls Begin, Hold or ConfirmResources, never sends packets, and does not grant
-login, protocol compatibility or game-action authority. Optional reviewed SkillData and the daily/weekly pair can now be acquired and read back; remaining optional catalogs stay unavailable. See [optional skill resources](dotnet-optional-skill-resources.md).
+login, protocol compatibility or game-action authority. Optional reviewed SkillData, daily/weekly definitions and dungeon/co-op definitions can now be acquired and read back; remaining optional catalogs stay unavailable. See [optional skill resources](dotnet-optional-skill-resources.md).
 
 ## Offline evidence
 
@@ -92,3 +92,6 @@ the actual pinned skill payload or live-account skill behavior has been validate
 Daily/weekly definitions are also integrated as one optional, cross-validated pair; see
 [optional daily resources](dotnet-optional-daily-resources.md). They remain read-only and do
 not activate planners or command permissions.
+
+Dungeon/co-op definitions and declared normal-dungeon map IDs are covered by
+[optional instance resources](dotnet-optional-instance-resources.md), with no room/entry permission.

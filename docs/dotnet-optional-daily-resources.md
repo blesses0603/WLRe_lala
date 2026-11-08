@@ -31,7 +31,7 @@ payload digests. A missing, malformed or mismatched member removes the whole dai
 the published candidate, without removing valid required catalogs or skills. The expected
 digests are supplied internally from the owned preparation, never by a host. Provider, cleanup
 and cancellation failures remain fatal. The existing 160 MiB readback payload budget is shared
-across required, skill and daily slots; no extra arbitrary-table query is introduced.
+across required, skill, daily and instance slots; no extra arbitrary-table query is introduced.
 
 `OfflineRuntimeCandidate.OptionalDailyCatalog` is a nullable `DailyTaskCatalogPreview`. It is
 immutable point-in-time data: null means the optional feature is unavailable. `SourceSha256`

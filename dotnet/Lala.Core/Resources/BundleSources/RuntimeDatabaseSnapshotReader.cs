@@ -45,7 +45,7 @@ internal static class RuntimeDatabaseSnapshotReader
     internal static async Task<RuntimeDatabaseReadObservation> ReadAsync(DbConnection connection,
         CancellationToken cancellationToken = default,
         long maximumAggregateBytes = OwnedRuntimeDatabaseSnapshot.MaximumOwnedTableBytes,
-        bool includeSkillData = false, bool includeDailyCatalog = false)
+        bool includeSkillData = false, bool includeDailyCatalog = false, bool includeInstanceCatalog = false)
     {
         ArgumentNullException.ThrowIfNull(connection);
         Exception? primary = null;
@@ -108,10 +108,24 @@ internal static class RuntimeDatabaseSnapshotReader
                     }
                 }
             }
+            if (includeInstanceCatalog)
+            {
+                foreach (string name in new[] { OwnedRuntimeDatabaseSnapshot.DungeonTableName, OwnedRuntimeDatabaseSnapshot.CooperativeTableName })
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var instance = await ReadTableAsync(connection, active.VersionId, name, encoding, cancellationToken, optional: true,
+                        maximumBytes: (int)Math.Min(OwnedRuntimeDatabaseSnapshot.MaximumTableBytes, maximumAggregateBytes - aggregateBytes)).ConfigureAwait(false);
+                    if (instance is not null)
+                    {
+                        rows.Add(name, instance);
+                        aggregateBytes += instance.Data!.Value.Length;
+                    }
+                }
+            }
             // Capture owns a second, detached copy before the transaction ends. At most 160 MiB
             // of temporary payloads plus 160 MiB retained payloads and a current provider value
             // of at most 16 MiB. Provider-internal caches/native buffers are external.
-            snapshot = OwnedRuntimeDatabaseSnapshot.Capture(active, rows, cancellationToken, includeSkillData, includeDailyCatalog);
+            snapshot = OwnedRuntimeDatabaseSnapshot.Capture(active, rows, cancellationToken, includeSkillData, includeDailyCatalog, includeInstanceCatalog);
             cancellationToken.ThrowIfCancellationRequested();
         }
         catch (Exception error) { primary = error; }

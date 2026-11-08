@@ -478,10 +478,12 @@ public sealed partial class ResourceRuntimeBootstrapTests
         await Task.WhenAll(first, second).WaitAsync(AccountGuard);
     }
 
-    [Fact]
-    public async Task Integrated_account_whitebox_trust_bit_projects_current_catalogs_into_real_receive_then_revokes()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Integrated_account_whitebox_trust_bit_projects_current_catalogs_into_real_receive_then_revokes(bool includeInstances)
     {
-        using var fixture = new Fixture(); var source = new Source(); var session = new AccountSession();
+        using var fixture = new Fixture(); var source = includeInstances ? WithInstanceCatalog() : new Source(); var session = new AccountSession();
         long generation = session.Begin("synthetic", "loopback").Generation;
         await using var verification = new AccountPeer(); await using var formal = new AccountPeer();
         var sendBound = AccountSignal(); var sendRevoked = AccountSignal(); var finish = AccountSignal();
@@ -516,6 +518,13 @@ public sealed partial class ResourceRuntimeBootstrapTests
             Assert.All(bound.Catalogs.Items.Where(pair => pair.Value.ReviewedDetails is not null), pair =>
                 Assert.Equal(pair.Value.ReviewedDetails!.Stackable, inputs.ItemStackRules[pair.Key]));
             Assert.Null(inputs.KnowledgeCatalog); Assert.Null(inputs.NpcSkills); Assert.True(inputs.ResourceHeld);
+            if (includeInstances)
+            {
+                Assert.NotNull(bound.Catalogs.OptionalInstances);
+                Assert.NotEmpty(inputs.DeclaredMainCatalogMapIds);
+                Assert.True(inputs.DeclaredMainCatalogMapIds.SetEquals(bound.Catalogs.OptionalInstances.DeclaredMainMapIds));
+            }
+            else Assert.Empty(inputs.DeclaredMainCatalogMapIds);
             Assert.True(observed.ResourceHeld); Assert.False(observed.CanSendCommands); Assert.False(bound.Catalogs.RuntimeAdmitted);
             Assert.Equal(nameof(AccountRuntimePublication), observed.ToString()); AccountHeld(runtime, session);
             resources.Invalidate();
@@ -524,6 +533,7 @@ public sealed partial class ResourceRuntimeBootstrapTests
             await AccountWaitFor(() => runtime.Publication!.Receive.Revision > revision);
             var revoked = runtime.Publication!.Receive.State.Observation!.Inputs;
             Assert.Null(revoked.WorldCatalog); Assert.Null(revoked.ItemStackRules); Assert.True(revoked.ResourceHeld);
+            Assert.Empty(revoked.DeclaredMainCatalogMapIds);
             Assert.NotNull(observed.Catalogs); Assert.NotNull(inputs.WorldCatalog); // Retained values are historical only.
             runtime.Stop(); Assert.Null(runtime.Publication);
             var result = await run.WaitAsync(AccountGuard); Assert.True(result.ResourcesReleased);

@@ -31,6 +31,8 @@ TABLES = (
     "NpcCareerData_C",
 )
 DAILY_TABLES = ("DailyTaskData_C", "DailyTaskRewardData_C")
+INSTANCE_TABLES = ("DungeonData_C", "CooperateEventData_C")
+PACKAGE_VERSION = "1286_2026_10_29_13_42_37_94"
 
 
 def daily_payloads(*, text_id=10, task_item=123, reward_item=99):
@@ -65,6 +67,54 @@ def check_daily(payloads, required):
                             parse_rewards(payloads[DAILY_TABLES[1]]),
                             parse_text_data(required["TextData_C"]),
                             parse_itemdata(required["ItemData_C"]))
+    finally:
+        sys.dont_write_bytecode = previous
+        sys.path.pop(0)
+
+
+def instance_payloads(*, map_id=500, text_id=10, reward_item=123,
+                      reward_kind=10, event_id=7, dungeon_event_id=7,
+                      duplicate_key=False, duplicate_map=False,
+                      duplicate_event=False, empty_award_id=0):
+    """Original rows, preserving the ten-table fixture's source bytes and IDs.
+
+    Its existing scene has zero member bounds. Both rows bind successfully but
+    correctly remain unsupported for creation; no fixture grants command authority.
+    """
+    p = lambda fmt, *values: struct.pack("<" + fmt, *values)
+    award = lambda kind, item, value: p("BII", kind, item, value)
+
+    def dungeon(identity, kind, variant, npc):
+        row = p("HBBHIBBBHHHB", identity, kind, variant, map_id,
+                999, 4, 5, 6, 101, 202, npc, 8)
+        row += award(reward_kind, reward_item, 2) + award(1, 0, 3)
+        row += award(0, empty_award_id, 0) + award(0, 0, 0) * 12
+        row += award(11, 99, 4) + p("BBBB", 0x01, 0x80, 0x02, 0x40)
+        return row
+
+    rows = [dungeon(1, 1, 1, 0), dungeon(2, 2, 2, dungeon_event_id)]
+    if duplicate_key:
+        rows.append(rows[0])
+    if duplicate_map:
+        rows.append(dungeon(3, 1, 1, 0))
+    event = p("BIHHBHHHHHHH", event_id, text_id, 303, 404, 5,
+              601, 602, 603, 11, 22, 33, 44) + award(11, 20, 6)
+    events = [event, event] if duplicate_event else [event]
+    return {INSTANCE_TABLES[0]: p("i", len(rows)) + b"".join(rows),
+            INSTANCE_TABLES[1]: p("i", len(events)) + b"".join(events)}
+
+
+def check_instances(payloads, required):
+    # Execute the genuine runtime binder and its production parsers on only
+    # synthetic in-memory inputs. Do not import another fixture generator.
+    root = TESTS.parent.parent
+    sys.path.insert(0, str(root))
+    previous = sys.dont_write_bytecode
+    try:
+        sys.dont_write_bytecode = True
+        from wlre.services.world.instance_runtime import build_catalog
+        inputs = {t: required[t] for t in ("ScenesData_C", "TextData_C", "ItemData_C")}
+        return build_catalog({**inputs, **payloads}, "owned-instance-flow", PACKAGE_VERSION)
     finally:
         sys.dont_write_bytecode = previous
         sys.path.pop(0)
@@ -271,6 +321,46 @@ def main():
                {daily_ids[t]: (t, invalid[t]) for t in DAILY_TABLES}, daily_mappings)
     retain("optional-daily-missing-task-path.bundle", daily_scripts, daily_mappings[1:])
     retain("optional-daily-missing-reward-path.bundle", daily_scripts, daily_mappings[:1])
+    instance_ids = {table: len(TABLES) + len(DAILY_TABLES) + 2 + index
+                    for index, table in enumerate(INSTANCE_TABLES)}
+    instance_mappings = [(asset_path(t), 0, instance_ids[t]) for t in INSTANCE_TABLES]
+    instance_valid = instance_payloads()
+    instance_expected = check_instances(instance_valid, payloads)
+    assert [row["name"] for row in instance_expected["records"]] == ["  場景😀  ", "任務"]
+    assert [row["creation_supported"] for row in instance_expected["records"]] == [False, False]
+    assert instance_expected["records"][0]["awards"] == [[1, 10, 123, 2], [2, 1, 0, 3], [16, 11, 99, 4]]
+    assert instance_expected["records"][1]["cooperative_event"]["id"] == 7
+    instance_scripts = {instance_ids[t]: (t, instance_valid[t]) for t in INSTANCE_TABLES}
+    retain("optional-instances.bundle", instance_scripts, instance_mappings)
+    retain("all-ten-instances.bundle", {**all_scripts, **instance_scripts}, all_mappings + instance_mappings)
+    retain("all-ten-daily-instances.bundle", {**all_scripts, **daily_scripts, **instance_scripts},
+           all_mappings + daily_mappings + instance_mappings)
+    instance_invalid = {
+        "missing-text": instance_payloads(text_id=999),
+        "missing-map": instance_payloads(map_id=999),
+        "missing-item": instance_payloads(reward_item=999),
+        "missing-kind11-item": instance_payloads(reward_kind=11, reward_item=999),
+        "missing-event": instance_payloads(dungeon_event_id=8),
+        "duplicate-key": instance_payloads(duplicate_key=True),
+        "duplicate-main-map": instance_payloads(duplicate_map=True),
+        "duplicate-event": instance_payloads(duplicate_event=True),
+        "zero-event": instance_payloads(event_id=0),
+        "invalid-empty-award": instance_payloads(empty_award_id=123),
+        "malformed-dungeon": {**instance_valid, INSTANCE_TABLES[0]: instance_valid[INSTANCE_TABLES[0]][:-1]},
+        "malformed-event": {**instance_valid, INSTANCE_TABLES[1]: instance_valid[INSTANCE_TABLES[1]][:-1]},
+    }
+    instance_errors = {}
+    for name, invalid in instance_invalid.items():
+        try:
+            check_instances(invalid, payloads)
+        except ValueError as error:
+            instance_errors[name] = str(error)
+        else:
+            raise AssertionError("Invalid synthetic instance fixture was accepted: " + name)
+        retain("optional-instances-" + name + ".bundle",
+               {instance_ids[t]: (t, invalid[t]) for t in INSTANCE_TABLES}, instance_mappings)
+    retain("optional-instances-missing-dungeon-path.bundle", instance_scripts, instance_mappings[1:])
+    retain("optional-instances-missing-event-path.bundle", instance_scripts, instance_mappings[:1])
     retain("split-root.bundle", {path_ids[t]: all_scripts[path_ids[t]] for t in TABLES[:6]},
            all_mappings[:6], dependencies=("split-dependency.bundle",))
     retain("split-dependency.bundle", {path_ids[t]: all_scripts[path_ids[t]] for t in TABLES[6:]},
@@ -335,6 +425,17 @@ def main():
             ],
             "expected": daily_expected,
             "invalid_python_errors": daily_errors,
+        },
+        "instances": {
+            "ownership": "Original main and cooperative rows. Exact production instance parsers and world.instance_runtime.build_catalog bind unchanged retained scene, text and item bytes. Both rows deliberately have creation_supported=false.",
+            "python_sources": ["wlre/services/instance_catalog.py", "wlre/services/world/instance_runtime.py"],
+            "tables": [
+                {"table": t, "asset_path": asset_path(t), "name": t, "path_id": instance_ids[t],
+                 "bytes": len(instance_valid[t]), "sha256": sha256(instance_valid[t])}
+                for t in INSTANCE_TABLES
+            ],
+            "expected": instance_expected,
+            "invalid_python_errors": instance_errors,
         },
         "scenarios": {
             "all-ten": {"asset_bundle": {t: "all-ten.bundle" for t in TABLES}},

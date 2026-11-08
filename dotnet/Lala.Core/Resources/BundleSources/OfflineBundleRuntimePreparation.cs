@@ -96,6 +96,26 @@ internal sealed class OfflineBundleRuntimePreparation
             }
             _preparation.EnsureCurrent(prepared, cancellationToken);
         }
+        if (prepared.Manifests[0].AssetBundles.ContainsKey(BundleSourcePlan.DungeonAssetPath) &&
+            prepared.Manifests[0].AssetBundles.ContainsKey(BundleSourcePlan.CooperativeAssetPath))
+        {
+            try
+            {
+                var instanceSources = await _preparation.PrepareInstancesAsync(source, prepared, cache, budget, downloads, cancellationToken).ConfigureAwait(false);
+                byte[] dungeonRaw = UnityTextAssetExtractor.Extract(BundleSourcePlan.DungeonAssetPath,
+                    instanceSources[BundleSourcePlan.DungeonAssetPath], cancellationToken: cancellationToken);
+                byte[] cooperativeRaw = UnityTextAssetExtractor.Extract(BundleSourcePlan.CooperativeAssetPath,
+                    instanceSources[BundleSourcePlan.CooperativeAssetPath], cancellationToken: cancellationToken);
+                if (extractedBytes + dungeonRaw.Length + cooperativeRaw.Length > MaximumExtractedTableBytes)
+                    throw new CatalogDecodeException("Optional instance payloads exceed retained table budget");
+                candidate = candidate.WithOptionalInstances(dungeonRaw, cooperativeRaw, cancellationToken);
+                tables.Add("DungeonData_C", dungeonRaw);
+                tables.Add("CooperateEventData_C", cooperativeRaw);
+                extractedBytes += dungeonRaw.Length + cooperativeRaw.Length;
+            }
+            catch (Exception error) when (IsOptionalFailure(error)) { }
+            _preparation.EnsureCurrent(prepared, cancellationToken);
+        }
         if (prepared.Manifests[0].AssetBundles.ContainsKey(BundleSourcePlan.DailyTaskAssetPath) &&
             prepared.Manifests[0].AssetBundles.ContainsKey(BundleSourcePlan.DailyRewardAssetPath))
         {
@@ -114,6 +134,7 @@ internal sealed class OfflineBundleRuntimePreparation
                 // failure enters inventory input or an exposed catalog.
                 tables.Add("DailyTaskData_C", taskRaw);
                 tables.Add("DailyTaskRewardData_C", rewardRaw);
+                extractedBytes += taskRaw.Length + rewardRaw.Length;
             }
             catch (Exception error) when (IsOptionalFailure(error)) { }
             _preparation.EnsureCurrent(prepared, cancellationToken);
@@ -130,7 +151,7 @@ internal sealed class OfflineBundleRuntimePreparation
             string expected = table.Name switch
             {
                 "SkillData_C.bytes" => SkillDataParser.ReviewedSha256,
-                "DailyTaskData_C.bytes" or "DailyTaskRewardData_C.bytes" => ResourceValidation.Digest(tables[table.Name[..^6]].Span, cancellationToken),
+                "DailyTaskData_C.bytes" or "DailyTaskRewardData_C.bytes" or "DungeonData_C.bytes" or "CooperateEventData_C.bytes" => ResourceValidation.Digest(tables[table.Name[..^6]].Span, cancellationToken),
                 _ => candidate.SourceSha256[table.Name[..^6]]
             };
             if (expected != table.Sha256)

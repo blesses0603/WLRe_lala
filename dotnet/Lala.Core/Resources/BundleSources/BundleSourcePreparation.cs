@@ -198,6 +198,12 @@ internal sealed class BundleSourcePreparation
         => PrepareOptionalAsync(source, required, cache, budget, totals,
             BundleSourcePlan.CreateDaily(required.Manifests[0], required.Snapshot.DataVersion, token), token);
 
+    internal Task<IReadOnlyDictionary<string, IReadOnlyList<VerifiedBundleSource>>> PrepareInstancesAsync(IResourceSource source,
+        RequiredBundleSources required, IBundleSourceCacheReader? cache, BundleSourceBudget? budget,
+        BundleDownloadTotals totals, CancellationToken token)
+        => PrepareOptionalAsync(source, required, cache, budget, totals,
+            BundleSourcePlan.CreateInstances(required.Manifests[0], required.Snapshot.DataVersion, token), token);
+
     private async Task<IReadOnlyDictionary<string, IReadOnlyList<VerifiedBundleSource>>> PrepareOptionalAsync(IResourceSource source,
         RequiredBundleSources required, IBundleSourceCacheReader? cache, BundleSourceBudget? budget,
         BundleDownloadTotals totals, BundleSourcePlan plan, CancellationToken token)

@@ -18,9 +18,9 @@ public sealed class OfflineRuntimeCandidate
         ExpeditionCatalogData expedition, IReadOnlyDictionary<ushort, ExpeditionNpcData> npcs,
         IReadOnlyDictionary<string, string> hashes, OfflineRuntimePortalObservations portalObservations,
         IReadOnlyDictionary<ushort, SkillDataRow>? optionalSkills = null,
-        DailyTaskCatalogPreview? optionalDailyCatalog = null)
-        => (EveIndexes, Items, Talks, Texts, Recipes, Stages, Doors, SceneNames, Expedition, Npcs, SourceSha256, PortalObservations, OptionalSkills, OptionalDailyCatalog) =
-            (indexes, items, talks, texts, recipes, stages, doors, sceneNames, expedition, npcs, hashes, portalObservations, optionalSkills, optionalDailyCatalog);
+        DailyTaskCatalogPreview? optionalDailyCatalog = null, InstanceCatalogPreview? optionalInstances = null)
+        => (EveIndexes, Items, Talks, Texts, Recipes, Stages, Doors, SceneNames, Expedition, Npcs, SourceSha256, PortalObservations, OptionalSkills, OptionalDailyCatalog, OptionalInstances) =
+            (indexes, items, talks, texts, recipes, stages, doors, sceneNames, expedition, npcs, hashes, portalObservations, optionalSkills, optionalDailyCatalog, optionalInstances);
     /// <summary>Reviewed optional skill rows, or null when missing, unsupported or not read back.
     /// Point-in-time catalog data only; never command authority.</summary>
     public IReadOnlyDictionary<ushort, SkillDataRow>? OptionalSkills { get; }
@@ -29,7 +29,7 @@ public sealed class OfflineRuntimeCandidate
     internal OfflineRuntimeCandidate WithoutOptionalSkills() => CopyWithSkills(null);
     private OfflineRuntimeCandidate CopyWithSkills(IReadOnlyDictionary<ushort, SkillDataRow>? skills)
         => new(EveIndexes, Items, Talks, Texts, Recipes, Stages, Doors, SceneNames, Expedition, Npcs,
-            SourceSha256, PortalObservations, skills, OptionalDailyCatalog);
+            SourceSha256, PortalObservations, skills, OptionalDailyCatalog, OptionalInstances);
     /// <summary>Same-version daily/weekly definitions, or null if either optional table or
     /// its cross-references are unavailable. No planner input token or command authority.</summary>
     public DailyTaskCatalogPreview? OptionalDailyCatalog { get; }
@@ -45,7 +45,19 @@ public sealed class OfflineRuntimeCandidate
     internal OfflineRuntimeCandidate WithoutOptionalDailyCatalog() => CopyWithDailyCatalog(null);
     private OfflineRuntimeCandidate CopyWithDailyCatalog(DailyTaskCatalogPreview? catalog)
         => new(EveIndexes, Items, Talks, Texts, Recipes, Stages, Doors, SceneNames, Expedition, Npcs,
-            SourceSha256, PortalObservations, OptionalSkills, catalog);
+            SourceSha256, PortalObservations, OptionalSkills, catalog, OptionalInstances);
+    /// <summary>Same-version dungeon/co-op definitions. Null means unavailable; entries
+    /// and declared normal-dungeon maps are read-only observations, never room/entry permission.</summary>
+    public InstanceCatalogPreview? OptionalInstances { get; }
+    internal OfflineRuntimeCandidate WithOptionalInstances(ReadOnlySpan<byte> dungeons, ReadOnlySpan<byte> cooperative,
+        CancellationToken token)
+        => CopyWithInstances(InstanceCatalogParser.Bind(dungeons, cooperative, Stages,
+            Texts.ToDictionary(pair => pair.Key, pair => (string?)pair.Value),
+            Items.Keys.Select(id => (uint)id).ToHashSet(), token));
+    internal OfflineRuntimeCandidate WithoutOptionalInstances() => CopyWithInstances(null);
+    private OfflineRuntimeCandidate CopyWithInstances(InstanceCatalogPreview? catalog)
+        => new(EveIndexes, Items, Talks, Texts, Recipes, Stages, Doors, SceneNames, Expedition, Npcs,
+            SourceSha256, PortalObservations, OptionalSkills, OptionalDailyCatalog, catalog);
     public EveV115Indexes EveIndexes { get; }
     public IReadOnlyDictionary<ushort, ItemDataRow> Items { get; }
     public IReadOnlyDictionary<ushort, TalkDataRow> Talks { get; }
@@ -67,7 +79,8 @@ public sealed class OfflineRuntimeCandidate
     public ImmutableArray<string> UnavailableOptionalSources =>
         [.. (OptionalSkills is null ? new[] { "SkillData" } : Array.Empty<string>()), "portal_metadata", "images",
             .. (OptionalDailyCatalog is null ? new[] { "daily" } : Array.Empty<string>()), "guild", "Ark", "combat", "normal_attacks",
-            "portraits", "emoji", "smallmaps", "battle_talk", "instances"];
+            "portraits", "emoji", "smallmaps", "battle_talk",
+            .. (OptionalInstances is null ? new[] { "instances" } : Array.Empty<string>())];
 }
 
 /// <summary>

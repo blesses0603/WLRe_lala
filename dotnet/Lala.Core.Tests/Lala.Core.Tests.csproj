@@ -22,4 +22,5 @@
 <ItemGroup><EmbeddedResource Include="Sessions/Handshake/python-vectors.json" LogicalName="Lala.Core.Tests.Sessions.Handshake.python-vectors.json" /></ItemGroup>
 <ItemGroup><EmbeddedResource Include="Resources/DatabaseRead/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.Resources.DatabaseRead.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
 <ItemGroup><EmbeddedResource Include="Resources/Inventory/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.Resources.Inventory.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Catalogs/Instance/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.Catalogs.Instance.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
 </Project>

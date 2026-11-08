@@ -249,6 +249,213 @@
       "malformed-reward": "DailyTaskData_C \u8cc7\u6599\u622a\u65b7"
     }
   },
+  "instances": {
+    "ownership": "Original main and cooperative rows. Exact production instance parsers and world.instance_runtime.build_catalog bind unchanged retained scene, text and item bytes. Both rows deliberately have creation_supported=false.",
+    "python_sources": [
+      "wlre/services/instance_catalog.py",
+      "wlre/services/world/instance_runtime.py"
+    ],
+    "tables": [
+      {
+        "table": "DungeonData_C",
+        "asset_path": "Assets/ResourcesBuild/Data/DungeonData_C.bytes",
+        "name": "DungeonData_C",
+        "path_id": 14,
+        "bytes": 340,
+        "sha256": "23b9d715bbbcc64ee9f088ffceb823fd3121539d2322444e8091e0d53cfe128d"
+      },
+      {
+        "table": "CooperateEventData_C",
+        "asset_path": "Assets/ResourcesBuild/Data/CooperateEventData_C.bytes",
+        "name": "CooperateEventData_C",
+        "path_id": 15,
+        "bytes": 37,
+        "sha256": "d82dd946c2071e63db5047b9fb6cb0fb74322b4cca4266ba50307aa06eb2578d"
+      }
+    ],
+    "expected": {
+      "catalog_key": "owned-instance-flow",
+      "package_version": "1286_2026_10_29_13_42_37_94",
+      "source": "verified_official_bundle",
+      "records": [
+        {
+          "id": 1,
+          "kind": 1,
+          "para_kind": 1,
+          "map_id": 500,
+          "description_id": 999,
+          "picture": 4,
+          "score_display": 5,
+          "award_group": 6,
+          "npc_x": 101,
+          "npc_y": 202,
+          "npc_id": 0,
+          "quick_id": 8,
+          "awards": [
+            [
+              1,
+              10,
+              123,
+              2
+            ],
+            [
+              2,
+              1,
+              0,
+              3
+            ],
+            [
+              16,
+              11,
+              99,
+              4
+            ]
+          ],
+          "double_award_slots": [
+            1,
+            16
+          ],
+          "special_award_slots": [
+            2,
+            15
+          ],
+          "variant": 1,
+          "name": "  \u5834\u666f\ud83d\ude00  ",
+          "min_level": 0,
+          "min_members": 0,
+          "max_members": 0,
+          "time_minutes": 0,
+          "room_count": 0,
+          "is_open": null,
+          "cooperative_event": null,
+          "creation_supported": false,
+          "catalog_key": "owned-instance-flow"
+        },
+        {
+          "id": 2,
+          "kind": 2,
+          "para_kind": 2,
+          "map_id": 500,
+          "description_id": 999,
+          "picture": 4,
+          "score_display": 5,
+          "award_group": 6,
+          "npc_x": 101,
+          "npc_y": 202,
+          "npc_id": 7,
+          "quick_id": 8,
+          "awards": [
+            [
+              1,
+              10,
+              123,
+              2
+            ],
+            [
+              2,
+              1,
+              0,
+              3
+            ],
+            [
+              16,
+              11,
+              99,
+              4
+            ]
+          ],
+          "double_award_slots": [
+            1,
+            16
+          ],
+          "special_award_slots": [
+            2,
+            15
+          ],
+          "variant": 2,
+          "name": "\u4efb\u52d9",
+          "min_level": 0,
+          "min_members": 0,
+          "max_members": 0,
+          "time_minutes": 0,
+          "room_count": 0,
+          "is_open": null,
+          "cooperative_event": {
+            "id": 7,
+            "text_id": 10,
+            "npc_x": 303,
+            "npc_y": 404,
+            "fight_count": 5,
+            "step_mark_id": 601,
+            "finish_mark_id": 602,
+            "sell_data_id": 603,
+            "follower_ids": [
+              11,
+              22,
+              33,
+              44
+            ],
+            "follower_reward": {
+              "kind": 11,
+              "id": 20,
+              "value": 6
+            }
+          },
+          "creation_supported": false,
+          "catalog_key": "owned-instance-flow"
+        }
+      ],
+      "cooperative_events": [
+        {
+          "id": 7,
+          "text_id": 10,
+          "npc_x": 303,
+          "npc_y": 404,
+          "fight_count": 5,
+          "step_mark_id": 601,
+          "finish_mark_id": 602,
+          "sell_data_id": 603,
+          "follower_ids": [
+            11,
+            22,
+            33,
+            44
+          ],
+          "follower_reward": {
+            "kind": 11,
+            "id": 20,
+            "value": 6
+          }
+        }
+      ],
+      "source_sha256": {
+        "ScenesData_C": "059a09e181f41d42d580f601da016ab73a30e92bb2a358e7197018efdad3f826",
+        "TextData_C": "467d8db1a91ae2e5666828886cca48439b8794f3aa5d4494920ede6e39009e55",
+        "ItemData_C": "0e88099bdbd408c604f464903f007ac08fa8e81228354ac8515f2b98da31b7e1",
+        "DungeonData_C": "23b9d715bbbcc64ee9f088ffceb823fd3121539d2322444e8091e0d53cfe128d",
+        "CooperateEventData_C": "d82dd946c2071e63db5047b9fb6cb0fb74322b4cca4266ba50307aa06eb2578d"
+      },
+      "counts": {
+        "dungeon_records": 2,
+        "scenes": 1,
+        "traditional_chinese_texts": 3
+      }
+    },
+    "invalid_python_errors": {
+      "missing-text": "\u526f\u672c\u7f3a\u5c11\u540c\u7248\u5b98\u65b9\u540d\u7a31",
+      "missing-map": "\u526f\u672c\u7f3a\u5c11\u540c\u7248\u5834\u666f",
+      "missing-item": "\u526f\u672c\u734e\u52f5\u7f3a\u5c11\u540c\u7248\u9053\u5177",
+      "missing-kind11-item": "\u526f\u672c\u734e\u52f5\u7f3a\u5c11\u540c\u7248\u9053\u5177",
+      "missing-event": "\u5177\u540d\u5354\u529b\u526f\u672c\u7f3a\u5c11\u540c\u7248\u4e8b\u4ef6",
+      "duplicate-key": "\u526f\u672c\u8907\u5408\u8b58\u5225\u78bc\u91cd\u8907\u6216\u7121\u6548",
+      "duplicate-main-map": "\u4e00\u822c\u526f\u672c\u5834\u666f\u7121\u6cd5\u552f\u4e00\u8b58\u5225",
+      "duplicate-event": "\u5354\u529b\u4e8b\u4ef6 ID \u91cd\u8907\u6216\u70ba\u96f6",
+      "zero-event": "\u5354\u529b\u4e8b\u4ef6 ID \u91cd\u8907\u6216\u70ba\u96f6",
+      "invalid-empty-award": "\u7a7a\u734e\u52f5\u69fd\u4f4d\u542b\u6709\u672a\u77e5\u8cc7\u6599",
+      "malformed-dungeon": "offset 339: need 1, have 0",
+      "malformed-event": "offset 33: need 4, have 3"
+    }
+  },
   "scenarios": {
     "all-ten": {
       "asset_bundle": {
@@ -1019,6 +1226,1020 @@
           "name": "DailyTaskRewardData_C",
           "bytes": 98,
           "sha256": "185da5ecddd2572d2df0415b558a1ff168c3a99b88c14d539a314a96ec3615f6"
+        }
+      ]
+    },
+    "optional-instances.bundle": {
+      "bytes": 1198,
+      "sha256": "6f6e50747dbb59bd4222d573bf3518330a9f1bd5a144083901a08becae879a27",
+      "serialized_sha256": "84490cbad9fb809ebfc9bd8a7b2694a5f5524aca113b0aef80f4d734b307a261",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [],
+      "externals": [],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/DungeonData_C.bytes",
+          "file_id": 0,
+          "path_id": 14
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/CooperateEventData_C.bytes",
+          "file_id": 0,
+          "path_id": 15
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 14,
+          "name": "DungeonData_C",
+          "bytes": 340,
+          "sha256": "23b9d715bbbcc64ee9f088ffceb823fd3121539d2322444e8091e0d53cfe128d"
+        },
+        {
+          "path_id": 15,
+          "name": "CooperateEventData_C",
+          "bytes": 37,
+          "sha256": "d82dd946c2071e63db5047b9fb6cb0fb74322b4cca4266ba50307aa06eb2578d"
+        }
+      ]
+    },
+    "all-ten-instances.bundle": {
+      "bytes": 2273,
+      "sha256": "5847a9a00c986a00e24b6ed1fc534c1cea430e8d98a6955b35eea195dc5ae044",
+      "serialized_sha256": "40b968a24291e115e35cceb993ea4925e915c1c27705caf016a3c780a30d4bc5",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [],
+      "externals": [],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/Eve.bytes",
+          "file_id": 0,
+          "path_id": 2
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/ItemData_C.bytes",
+          "file_id": 0,
+          "path_id": 3
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/TalkData_C.bytes",
+          "file_id": 0,
+          "path_id": 4
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/TextData_C.bytes",
+          "file_id": 0,
+          "path_id": 5
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/SmithData_C.bytes",
+          "file_id": 0,
+          "path_id": 6
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/ScenesData_C.bytes",
+          "file_id": 0,
+          "path_id": 7
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/AdventureData_C.bytes",
+          "file_id": 0,
+          "path_id": 8
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/AdventureLvData_C.bytes",
+          "file_id": 0,
+          "path_id": 9
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/NpcData_C.bytes",
+          "file_id": 0,
+          "path_id": 10
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/NpcCareerData_C.bytes",
+          "file_id": 0,
+          "path_id": 11
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/DungeonData_C.bytes",
+          "file_id": 0,
+          "path_id": 14
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/CooperateEventData_C.bytes",
+          "file_id": 0,
+          "path_id": 15
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 2,
+          "name": "Eve",
+          "bytes": 388,
+          "sha256": "85ae58e10b14bf7b29e84e2ad5af3381486dd607c6e3c9f2120412c69b5aae9e"
+        },
+        {
+          "path_id": 3,
+          "name": "ItemData_C",
+          "bytes": 745,
+          "sha256": "0e88099bdbd408c604f464903f007ac08fa8e81228354ac8515f2b98da31b7e1"
+        },
+        {
+          "path_id": 4,
+          "name": "TalkData_C",
+          "bytes": 53,
+          "sha256": "556463018833fd44b28175ccd0a8b77de5bac24f4ca8e8eb2d3beba4142094d3"
+        },
+        {
+          "path_id": 5,
+          "name": "TextData_C",
+          "bytes": 46,
+          "sha256": "467d8db1a91ae2e5666828886cca48439b8794f3aa5d4494920ede6e39009e55"
+        },
+        {
+          "path_id": 6,
+          "name": "SmithData_C",
+          "bytes": 109,
+          "sha256": "7089086eb8912c6005b27d4be141bd38210765b380b5ba80b62b48fcea2ac73b"
+        },
+        {
+          "path_id": 7,
+          "name": "ScenesData_C",
+          "bytes": 80,
+          "sha256": "059a09e181f41d42d580f601da016ab73a30e92bb2a358e7197018efdad3f826"
+        },
+        {
+          "path_id": 8,
+          "name": "AdventureData_C",
+          "bytes": 109,
+          "sha256": "dba15c67cce3a44682f711e67498e86c6b06aca5dc14f5b49c836c898d03ba7e"
+        },
+        {
+          "path_id": 9,
+          "name": "AdventureLvData_C",
+          "bytes": 19,
+          "sha256": "510055ebd43bbd4de4e2ddc8ce30bc861b73cfeb782a8e63e40dbdd6d9906835"
+        },
+        {
+          "path_id": 10,
+          "name": "NpcData_C",
+          "bytes": 219,
+          "sha256": "455c9f7e703663f58d0e864c9f3d3c024b0317692aa0c0d96e826ee35f535752"
+        },
+        {
+          "path_id": 11,
+          "name": "NpcCareerData_C",
+          "bytes": 21,
+          "sha256": "03e1af527b1c2c3aa1d5fe757a67e8cc374130ede2c5b5ebd66a3cae46747186"
+        },
+        {
+          "path_id": 14,
+          "name": "DungeonData_C",
+          "bytes": 340,
+          "sha256": "23b9d715bbbcc64ee9f088ffceb823fd3121539d2322444e8091e0d53cfe128d"
+        },
+        {
+          "path_id": 15,
+          "name": "CooperateEventData_C",
+          "bytes": 37,
+          "sha256": "d82dd946c2071e63db5047b9fb6cb0fb74322b4cca4266ba50307aa06eb2578d"
+        }
+      ]
+    },
+    "all-ten-daily-instances.bundle": {
+      "bytes": 2425,
+      "sha256": "c65b8571f90c881db4ebde219cebd38bff0301c4f3d130160d4d0e08e0079156",
+      "serialized_sha256": "a1e92a87c9365e19a6313da7ef1d6fc54562a3c6c778b71d44231cf82b4216d8",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [],
+      "externals": [],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/Eve.bytes",
+          "file_id": 0,
+          "path_id": 2
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/ItemData_C.bytes",
+          "file_id": 0,
+          "path_id": 3
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/TalkData_C.bytes",
+          "file_id": 0,
+          "path_id": 4
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/TextData_C.bytes",
+          "file_id": 0,
+          "path_id": 5
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/SmithData_C.bytes",
+          "file_id": 0,
+          "path_id": 6
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/ScenesData_C.bytes",
+          "file_id": 0,
+          "path_id": 7
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/AdventureData_C.bytes",
+          "file_id": 0,
+          "path_id": 8
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/AdventureLvData_C.bytes",
+          "file_id": 0,
+          "path_id": 9
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/NpcData_C.bytes",
+          "file_id": 0,
+          "path_id": 10
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/NpcCareerData_C.bytes",
+          "file_id": 0,
+          "path_id": 11
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/DailyTaskData_C.bytes",
+          "file_id": 0,
+          "path_id": 12
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/DailyTaskRewardData_C.bytes",
+          "file_id": 0,
+          "path_id": 13
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/DungeonData_C.bytes",
+          "file_id": 0,
+          "path_id": 14
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/CooperateEventData_C.bytes",
+          "file_id": 0,
+          "path_id": 15
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 2,
+          "name": "Eve",
+          "bytes": 388,
+          "sha256": "85ae58e10b14bf7b29e84e2ad5af3381486dd607c6e3c9f2120412c69b5aae9e"
+        },
+        {
+          "path_id": 3,
+          "name": "ItemData_C",
+          "bytes": 745,
+          "sha256": "0e88099bdbd408c604f464903f007ac08fa8e81228354ac8515f2b98da31b7e1"
+        },
+        {
+          "path_id": 4,
+          "name": "TalkData_C",
+          "bytes": 53,
+          "sha256": "556463018833fd44b28175ccd0a8b77de5bac24f4ca8e8eb2d3beba4142094d3"
+        },
+        {
+          "path_id": 5,
+          "name": "TextData_C",
+          "bytes": 46,
+          "sha256": "467d8db1a91ae2e5666828886cca48439b8794f3aa5d4494920ede6e39009e55"
+        },
+        {
+          "path_id": 6,
+          "name": "SmithData_C",
+          "bytes": 109,
+          "sha256": "7089086eb8912c6005b27d4be141bd38210765b380b5ba80b62b48fcea2ac73b"
+        },
+        {
+          "path_id": 7,
+          "name": "ScenesData_C",
+          "bytes": 80,
+          "sha256": "059a09e181f41d42d580f601da016ab73a30e92bb2a358e7197018efdad3f826"
+        },
+        {
+          "path_id": 8,
+          "name": "AdventureData_C",
+          "bytes": 109,
+          "sha256": "dba15c67cce3a44682f711e67498e86c6b06aca5dc14f5b49c836c898d03ba7e"
+        },
+        {
+          "path_id": 9,
+          "name": "AdventureLvData_C",
+          "bytes": 19,
+          "sha256": "510055ebd43bbd4de4e2ddc8ce30bc861b73cfeb782a8e63e40dbdd6d9906835"
+        },
+        {
+          "path_id": 10,
+          "name": "NpcData_C",
+          "bytes": 219,
+          "sha256": "455c9f7e703663f58d0e864c9f3d3c024b0317692aa0c0d96e826ee35f535752"
+        },
+        {
+          "path_id": 11,
+          "name": "NpcCareerData_C",
+          "bytes": 21,
+          "sha256": "03e1af527b1c2c3aa1d5fe757a67e8cc374130ede2c5b5ebd66a3cae46747186"
+        },
+        {
+          "path_id": 12,
+          "name": "DailyTaskData_C",
+          "bytes": 86,
+          "sha256": "8f981af4dd687b60da6f7e218ff270e580216d4d59fcf51036b4464ca24150dd"
+        },
+        {
+          "path_id": 13,
+          "name": "DailyTaskRewardData_C",
+          "bytes": 98,
+          "sha256": "185da5ecddd2572d2df0415b558a1ff168c3a99b88c14d539a314a96ec3615f6"
+        },
+        {
+          "path_id": 14,
+          "name": "DungeonData_C",
+          "bytes": 340,
+          "sha256": "23b9d715bbbcc64ee9f088ffceb823fd3121539d2322444e8091e0d53cfe128d"
+        },
+        {
+          "path_id": 15,
+          "name": "CooperateEventData_C",
+          "bytes": 37,
+          "sha256": "d82dd946c2071e63db5047b9fb6cb0fb74322b4cca4266ba50307aa06eb2578d"
+        }
+      ]
+    },
+    "optional-instances-missing-text.bundle": {
+      "bytes": 1198,
+      "sha256": "13fb423ea464565a767c4fbea0e5e1a2ad898563077db722a4504cbdc1b6466d",
+      "serialized_sha256": "f25cd0320e06baa679acd8db98cecb21a55f0a8dcd7a2e0220dbbad112a53715",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [],
+      "externals": [],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/DungeonData_C.bytes",
+          "file_id": 0,
+          "path_id": 14
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/CooperateEventData_C.bytes",
+          "file_id": 0,
+          "path_id": 15
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 14,
+          "name": "DungeonData_C",
+          "bytes": 340,
+          "sha256": "23b9d715bbbcc64ee9f088ffceb823fd3121539d2322444e8091e0d53cfe128d"
+        },
+        {
+          "path_id": 15,
+          "name": "CooperateEventData_C",
+          "bytes": 37,
+          "sha256": "d1acc2ca23a5d1f7c91ab2ee257b9cdce691d7eb8f551491105d8b5a1fd0ee4a"
+        }
+      ]
+    },
+    "optional-instances-missing-map.bundle": {
+      "bytes": 1198,
+      "sha256": "aba3f2865afa2766704ce44c3bd9e2c48c0a2bb2236a8d32dd58884615e71fe6",
+      "serialized_sha256": "6d9b79715b2fb2b896786e115cefe0fc9146806ef93674bcdfbe5964ba016fb5",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [],
+      "externals": [],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/DungeonData_C.bytes",
+          "file_id": 0,
+          "path_id": 14
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/CooperateEventData_C.bytes",
+          "file_id": 0,
+          "path_id": 15
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 14,
+          "name": "DungeonData_C",
+          "bytes": 340,
+          "sha256": "7e4cc55e8d0451dfed5c2eae4aa99d4dc8c03f099b5ce4347405ad9fc7a3e677"
+        },
+        {
+          "path_id": 15,
+          "name": "CooperateEventData_C",
+          "bytes": 37,
+          "sha256": "d82dd946c2071e63db5047b9fb6cb0fb74322b4cca4266ba50307aa06eb2578d"
+        }
+      ]
+    },
+    "optional-instances-missing-item.bundle": {
+      "bytes": 1198,
+      "sha256": "771084d20cf107406034de277750a9b72f2c1cadecde73e63ce4fb6ced4c87f2",
+      "serialized_sha256": "5d849be18b5dc7f5baa9e3bdc5e0d093ec9bc2548ca33d30d04d22443d2c040a",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [],
+      "externals": [],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/DungeonData_C.bytes",
+          "file_id": 0,
+          "path_id": 14
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/CooperateEventData_C.bytes",
+          "file_id": 0,
+          "path_id": 15
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 14,
+          "name": "DungeonData_C",
+          "bytes": 340,
+          "sha256": "93e2af3049eece428d28473169b78bc47acc3a144c80662d52bd8e33d1c95434"
+        },
+        {
+          "path_id": 15,
+          "name": "CooperateEventData_C",
+          "bytes": 37,
+          "sha256": "d82dd946c2071e63db5047b9fb6cb0fb74322b4cca4266ba50307aa06eb2578d"
+        }
+      ]
+    },
+    "optional-instances-missing-kind11-item.bundle": {
+      "bytes": 1198,
+      "sha256": "7bebcfc274672e46a46b8c74e066ea6140389e2428b15aea2a1359684972e0f4",
+      "serialized_sha256": "a886370742090b99afadf9117f5033c338550770d999f289c249acecf6ac5d7a",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [],
+      "externals": [],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/DungeonData_C.bytes",
+          "file_id": 0,
+          "path_id": 14
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/CooperateEventData_C.bytes",
+          "file_id": 0,
+          "path_id": 15
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 14,
+          "name": "DungeonData_C",
+          "bytes": 340,
+          "sha256": "2567797f186638ace3b2c5eb173c03b6015808ef568e25bc3bc4d60d2e812374"
+        },
+        {
+          "path_id": 15,
+          "name": "CooperateEventData_C",
+          "bytes": 37,
+          "sha256": "d82dd946c2071e63db5047b9fb6cb0fb74322b4cca4266ba50307aa06eb2578d"
+        }
+      ]
+    },
+    "optional-instances-missing-event.bundle": {
+      "bytes": 1198,
+      "sha256": "5c0939e73f19d481fbbd1c8619b2056cd6cbd4f2b6dd07478b9b4ea0be799667",
+      "serialized_sha256": "dc9cac2e7a8d61d2b1674920382c9ffafa11180397dcdeea3abbb87e08573010",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [],
+      "externals": [],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/DungeonData_C.bytes",
+          "file_id": 0,
+          "path_id": 14
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/CooperateEventData_C.bytes",
+          "file_id": 0,
+          "path_id": 15
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 14,
+          "name": "DungeonData_C",
+          "bytes": 340,
+          "sha256": "24016d54d4ff02ca3a6ccd5b2fbc100d14c07b04384f49377b346813ff5c9395"
+        },
+        {
+          "path_id": 15,
+          "name": "CooperateEventData_C",
+          "bytes": 37,
+          "sha256": "d82dd946c2071e63db5047b9fb6cb0fb74322b4cca4266ba50307aa06eb2578d"
+        }
+      ]
+    },
+    "optional-instances-duplicate-key.bundle": {
+      "bytes": 1203,
+      "sha256": "1f6cab1a21c42c2a7e6ebaf44ba5d2f1681d99a22faeba0155badf953c907b58",
+      "serialized_sha256": "814ad2e9fb61e8e19db5b31f5154e62981d19515b46a9a9d8c0bf54a2fa5e115",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [],
+      "externals": [],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/DungeonData_C.bytes",
+          "file_id": 0,
+          "path_id": 14
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/CooperateEventData_C.bytes",
+          "file_id": 0,
+          "path_id": 15
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 14,
+          "name": "DungeonData_C",
+          "bytes": 508,
+          "sha256": "4297bbfbbd40b5daef61a1bffbc3d8be3c7ce7016a2fd69fa92937739804c83f"
+        },
+        {
+          "path_id": 15,
+          "name": "CooperateEventData_C",
+          "bytes": 37,
+          "sha256": "d82dd946c2071e63db5047b9fb6cb0fb74322b4cca4266ba50307aa06eb2578d"
+        }
+      ]
+    },
+    "optional-instances-duplicate-main-map.bundle": {
+      "bytes": 1204,
+      "sha256": "e50a0d786cb21196c3e808d0ddb73466a59e6a0d4d3fb243bc6cb89b39e0be36",
+      "serialized_sha256": "9d4be70cd3b2b24576a9d61da730a46455e869d7b865f5f54d4f5de9a2df55a7",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [],
+      "externals": [],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/DungeonData_C.bytes",
+          "file_id": 0,
+          "path_id": 14
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/CooperateEventData_C.bytes",
+          "file_id": 0,
+          "path_id": 15
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 14,
+          "name": "DungeonData_C",
+          "bytes": 508,
+          "sha256": "4f371665b60ec0700c2360106c7c66286f267b445bbbde8439d5e4f93d3a9391"
+        },
+        {
+          "path_id": 15,
+          "name": "CooperateEventData_C",
+          "bytes": 37,
+          "sha256": "d82dd946c2071e63db5047b9fb6cb0fb74322b4cca4266ba50307aa06eb2578d"
+        }
+      ]
+    },
+    "optional-instances-duplicate-event.bundle": {
+      "bytes": 1199,
+      "sha256": "566a292aa3ae152115a25eb6e1d88da7e01a3ee7b3f5d311e8541c535240c52e",
+      "serialized_sha256": "1e7b8be2b13aea0c692fe07dd278cfd613ec37486f93842e96bfd1537fbea358",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [],
+      "externals": [],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/DungeonData_C.bytes",
+          "file_id": 0,
+          "path_id": 14
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/CooperateEventData_C.bytes",
+          "file_id": 0,
+          "path_id": 15
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 14,
+          "name": "DungeonData_C",
+          "bytes": 340,
+          "sha256": "23b9d715bbbcc64ee9f088ffceb823fd3121539d2322444e8091e0d53cfe128d"
+        },
+        {
+          "path_id": 15,
+          "name": "CooperateEventData_C",
+          "bytes": 70,
+          "sha256": "98b557023af8c1930c7d4ebf6e61db313d73be364f7d9bfcd5f515b9608d4731"
+        }
+      ]
+    },
+    "optional-instances-zero-event.bundle": {
+      "bytes": 1197,
+      "sha256": "9f1b824fd4d1d46cbeaac9bcb5c067d750ff44f66948febc3fe2bac37158a66b",
+      "serialized_sha256": "d71b909f1200530482de67c6d1b80f83af8c11de3820b168579fcdf181c17406",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [],
+      "externals": [],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/DungeonData_C.bytes",
+          "file_id": 0,
+          "path_id": 14
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/CooperateEventData_C.bytes",
+          "file_id": 0,
+          "path_id": 15
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 14,
+          "name": "DungeonData_C",
+          "bytes": 340,
+          "sha256": "23b9d715bbbcc64ee9f088ffceb823fd3121539d2322444e8091e0d53cfe128d"
+        },
+        {
+          "path_id": 15,
+          "name": "CooperateEventData_C",
+          "bytes": 37,
+          "sha256": "aa2341ee0bb267fad5eb44c5b65b39b0b86e6f8be0127e8abdd950992ad7c947"
+        }
+      ]
+    },
+    "optional-instances-invalid-empty-award.bundle": {
+      "bytes": 1200,
+      "sha256": "ac26bf6b39f04176fb0fbdb9c3b8ff2d8b0ab6f9c4070f6d659ffbcb0f9e856a",
+      "serialized_sha256": "8a33d2a8a37e80076a0412075616c903edbc6183fec47a15d7baddd045304674",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [],
+      "externals": [],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/DungeonData_C.bytes",
+          "file_id": 0,
+          "path_id": 14
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/CooperateEventData_C.bytes",
+          "file_id": 0,
+          "path_id": 15
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 14,
+          "name": "DungeonData_C",
+          "bytes": 340,
+          "sha256": "62be1826cd9bb528507f64dae6a461df3b0a8fa93d1cfd2eeb528854d0df1e74"
+        },
+        {
+          "path_id": 15,
+          "name": "CooperateEventData_C",
+          "bytes": 37,
+          "sha256": "d82dd946c2071e63db5047b9fb6cb0fb74322b4cca4266ba50307aa06eb2578d"
+        }
+      ]
+    },
+    "optional-instances-malformed-dungeon.bundle": {
+      "bytes": 1199,
+      "sha256": "27f11cf4480117529d45166a075ae8894f9bdd64c28e7ed3b377f59e9c4eaa91",
+      "serialized_sha256": "6fe07c181e180413397f41e11782d83540e71a005fba2d048de64fbecbd5a3ee",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [],
+      "externals": [],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/DungeonData_C.bytes",
+          "file_id": 0,
+          "path_id": 14
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/CooperateEventData_C.bytes",
+          "file_id": 0,
+          "path_id": 15
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 14,
+          "name": "DungeonData_C",
+          "bytes": 339,
+          "sha256": "f6c21bb6fcba599671736a63651e43063eadcf5d56f98f3b94dfb761657b3a9b"
+        },
+        {
+          "path_id": 15,
+          "name": "CooperateEventData_C",
+          "bytes": 37,
+          "sha256": "d82dd946c2071e63db5047b9fb6cb0fb74322b4cca4266ba50307aa06eb2578d"
+        }
+      ]
+    },
+    "optional-instances-malformed-event.bundle": {
+      "bytes": 1192,
+      "sha256": "dc78f171c34902be072f3e2f99b16b456a56f7ee175f308d50f7ced9362699a4",
+      "serialized_sha256": "0f34065f8e38d6ef050a06712994bbc87494c456d8d56772d334ee3334eb263e",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [],
+      "externals": [],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/DungeonData_C.bytes",
+          "file_id": 0,
+          "path_id": 14
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/CooperateEventData_C.bytes",
+          "file_id": 0,
+          "path_id": 15
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 14,
+          "name": "DungeonData_C",
+          "bytes": 340,
+          "sha256": "23b9d715bbbcc64ee9f088ffceb823fd3121539d2322444e8091e0d53cfe128d"
+        },
+        {
+          "path_id": 15,
+          "name": "CooperateEventData_C",
+          "bytes": 36,
+          "sha256": "d3b2122118f5f20ba05484bc2876db78b291ee11c3d139e8a629eb82e5c873f1"
+        }
+      ]
+    },
+    "optional-instances-missing-dungeon-path.bundle": {
+      "bytes": 1180,
+      "sha256": "854a151d534382b42dbb7069071774aa67765ef80524ef2b318fec108a831c17",
+      "serialized_sha256": "99500e0fec8675d68dca77e3be4b19ad0be21d45a92647de72c5a05bad986357",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [],
+      "externals": [],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/CooperateEventData_C.bytes",
+          "file_id": 0,
+          "path_id": 15
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 14,
+          "name": "DungeonData_C",
+          "bytes": 340,
+          "sha256": "23b9d715bbbcc64ee9f088ffceb823fd3121539d2322444e8091e0d53cfe128d"
+        },
+        {
+          "path_id": 15,
+          "name": "CooperateEventData_C",
+          "bytes": 37,
+          "sha256": "d82dd946c2071e63db5047b9fb6cb0fb74322b4cca4266ba50307aa06eb2578d"
+        }
+      ]
+    },
+    "optional-instances-missing-event-path.bundle": {
+      "bytes": 1181,
+      "sha256": "e78884d5f8d4ec121421b248bb0c18cf25832da367e27f844ef682ca7118f35a",
+      "serialized_sha256": "ebd3dfbbbfbdd69514a9f3ffd3a1b838f556cde80877a89a69a6f62d2ccd89e3",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [],
+      "externals": [],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/DungeonData_C.bytes",
+          "file_id": 0,
+          "path_id": 14
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 14,
+          "name": "DungeonData_C",
+          "bytes": 340,
+          "sha256": "23b9d715bbbcc64ee9f088ffceb823fd3121539d2322444e8091e0d53cfe128d"
+        },
+        {
+          "path_id": 15,
+          "name": "CooperateEventData_C",
+          "bytes": 37,
+          "sha256": "d82dd946c2071e63db5047b9fb6cb0fb74322b4cca4266ba50307aa06eb2578d"
         }
       ]
     },

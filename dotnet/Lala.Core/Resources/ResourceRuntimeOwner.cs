@@ -190,7 +190,8 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
             readback = ResourceRuntimeReadback.Failed;
             var connection = await CreateConnectionAsync(SqliteOpenMode.ReadOnly).ConfigureAwait(false);
             var database = await RuntimeDatabaseSnapshotReader.ReadAsync(connection, mine.Token, includeSkillData: prepared.Candidate.OptionalSkills is not null,
-                includeDailyCatalog: prepared.Candidate.OptionalDailyCatalog is not null).ConfigureAwait(false);
+                includeDailyCatalog: prepared.Candidate.OptionalDailyCatalog is not null,
+                includeInstanceCatalog: prepared.Candidate.OptionalInstances is not null).ConfigureAwait(false);
             EnsureCurrent(generation, mine);
             var hashes = prepared.Candidate.SourceSha256.ToDictionary(p => p.Key, p => (string?)p.Value, StringComparer.Ordinal);
             if (!RuntimeDatabaseStructuralMatcher.Match(database.Snapshot, prepared.Identity, hashes, mine.Token).MatchesSuppliedRuntime)
@@ -205,6 +206,11 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
                 prepared.InventoryInput.Tables.Single(table => table.Name == "DailyTaskData_C.bytes").Sha256,
                 prepared.InventoryInput.Tables.Single(table => table.Name == "DailyTaskRewardData_C.bytes").Sha256, mine.Token))
                 readbackCandidate = readbackCandidate.WithoutOptionalDailyCatalog();
+            if (readbackCandidate.OptionalInstances is not null && !RuntimeDatabaseStructuralMatcher.MatchInstanceCatalog(
+                database.Snapshot,
+                prepared.InventoryInput.Tables.Single(table => table.Name == "DungeonData_C.bytes").Sha256,
+                prepared.InventoryInput.Tables.Single(table => table.Name == "CooperateEventData_C.bytes").Sha256, mine.Token))
+                readbackCandidate = readbackCandidate.WithoutOptionalInstances();
             readback = ResourceRuntimeReadback.Matched;
             await _preparation.ConfirmUnchangedAsync(_source, prepared, mine.Token).ConfigureAwait(false);
             sourcesRechecked = true;

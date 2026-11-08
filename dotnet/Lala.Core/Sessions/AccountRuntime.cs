@@ -261,6 +261,7 @@ public sealed class AccountRuntime : IAsyncDisposable
                 projected = new(0)
                 {
                     WorldCatalog = new WorldSceneCatalog(catalogs!.Stages.Keys.ToImmutableHashSet()),
+                    DeclaredMainCatalogMapIds = catalogs.OptionalInstances?.DeclaredMainMapIds ?? ImmutableHashSet<ushort>.Empty,
                     ItemStackRules = catalogs.Items.Where(p => p.Value.ReviewedDetails is not null)
                         .ToImmutableDictionary(p => p.Key, p => p.Value.ReviewedDetails!.Stackable),
                     KnowledgeCatalog = ProjectSkillKeys(catalogs.OptionalSkills)

@@ -28,7 +28,7 @@ internal static class RuntimeFlowFixtures
     internal static byte[] Manifest(IReadOnlyDictionary<string, byte[]> bundles,
         IReadOnlyDictionary<string, string>? roots = null, IReadOnlyDictionary<string, string[]>? dependencies = null,
         string version = Version, bool includeSkill = false, bool includeDaily = false,
-        IReadOnlySet<string>? omittedTables = null)
+        IReadOnlySet<string>? omittedTables = null, bool includeInstances = false)
     {
         var index = BundleSourceFixtures.Index();
         index["header"]!["package_version"] = version;
@@ -38,6 +38,7 @@ internal static class RuntimeFlowFixtures
         IEnumerable<string> tables = BundleSourcePlan.RequiredTables;
         if (includeSkill) tables = tables.Append("SkillData_C");
         if (includeDaily) tables = tables.Concat(new[] { "DailyTaskData_C", "DailyTaskRewardData_C" });
+        if (includeInstances) tables = tables.Concat(new[] { "DungeonData_C", "CooperateEventData_C" });
         foreach (string name in tables)
         {
             if (omittedTables?.Contains(name) == true) continue;

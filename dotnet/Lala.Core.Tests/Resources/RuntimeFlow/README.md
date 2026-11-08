@@ -119,7 +119,7 @@ All existing input, download, native parsing and table limits remain mandatory.
 A new conservative 32 MiB ceiling bounds aggregate extracted table ownership in
 addition to the existing 16 MiB per-table limit and 32 MiB total acquired-source limit.
 This can reject unusually large source-valid tables and is an explicit safety
-restriction, not Python parity. There are at most thirteen extraction operations (ten required, one skill, two daily); each
+restriction, not Python parity. There are at most fifteen extraction operations (ten required, one skill, two daily, two instance); each
 retains the native extractor's independent compressed/expanded/object limits.
 
 After successful raw decoding, the flow performs a fresh version observation,
@@ -180,3 +180,6 @@ internal owner can explicitly bootstrap that ten-table inventory, independently 
 recheck current sources and publish only after cleanup. Its ordinary refresh remains read-only.
 See [BOOTSTRAP.md](BOOTSTRAP.md) for source boundaries, commit-admission ordering, typed storage
 outcomes, offline tests and the limits of this new composition.
+
+[Dungeon/co-op catalogs](../../../../docs/dotnet-optional-instance-resources.md) now add a
+third optional feature pair with same-version references and independent persisted readback.

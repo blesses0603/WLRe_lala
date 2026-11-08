@@ -70,6 +70,11 @@ internal sealed class BundleSourcePlan
     internal static BundleSourcePlan CreateDaily(YooAssetManifest current, string dataVersion, CancellationToken token)
         => CreateCore(current, dataVersion, null, new[] { DailyTaskAssetPath, DailyRewardAssetPath }, token);
 
+    internal const string DungeonAssetPath = "Assets/ResourcesBuild/Data/DungeonData_C.bytes";
+    internal const string CooperativeAssetPath = "Assets/ResourcesBuild/Data/CooperateEventData_C.bytes";
+    internal static BundleSourcePlan CreateInstances(YooAssetManifest current, string dataVersion, CancellationToken token)
+        => CreateCore(current, dataVersion, null, new[] { DungeonAssetPath, CooperativeAssetPath }, token);
+
     private static BundleSourcePlan CreateCore(YooAssetManifest current, string dataVersion,
         YooAssetManifest? previous, IReadOnlyList<string> assetPaths, CancellationToken cancellationToken)
     {

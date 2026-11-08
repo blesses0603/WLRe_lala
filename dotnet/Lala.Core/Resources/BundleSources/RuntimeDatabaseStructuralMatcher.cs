@@ -19,6 +19,8 @@ internal sealed class OwnedRuntimeDatabaseSnapshot
     internal const string SkillTableName = "SkillData_C.bytes";
     internal const string DailyTaskTableName = "DailyTaskData_C.bytes";
     internal const string DailyRewardTableName = "DailyTaskRewardData_C.bytes";
+    internal const string DungeonTableName = "DungeonData_C.bytes";
+    internal const string CooperativeTableName = "CooperateEventData_C.bytes";
     internal RuntimeDatabaseActiveInput? Active { get; }
     private readonly FrozenDictionary<string, OwnedTable> _tables;
 
@@ -45,7 +47,7 @@ internal sealed class OwnedRuntimeDatabaseSnapshot
 
     internal static OwnedRuntimeDatabaseSnapshot Capture(RuntimeDatabaseActiveInput? active,
         IReadOnlyDictionary<string, RuntimeDatabaseTableInput?>? rows, CancellationToken cancellationToken = default,
-        bool includeSkillData = false, bool includeDailyCatalog = false)
+        bool includeSkillData = false, bool includeDailyCatalog = false, bool includeInstanceCatalog = false)
     {
         cancellationToken.ThrowIfCancellationRequested();
         // Strings are immutable. Invalid oversized fields cannot match, so retain only null
@@ -54,7 +56,7 @@ internal sealed class OwnedRuntimeDatabaseSnapshot
             Bounded(active.CatalogKey, 64), Bounded(active.IdentityJson, MaximumIdentityCharacters));
         var owned = new Dictionary<string, OwnedTable>(StringComparer.Ordinal);
         // Default capture still reads exactly ten slots. Explicit optional capture adds only
-        // the three exact slots and shares the existing 160 MiB retained-payload budget.
+        // the five exact slots and shares the existing 160 MiB retained-payload budget.
         long ownedBytes = 0;
         foreach (string name in BundleSourcePlan.RequiredTables)
         {
@@ -73,6 +75,11 @@ internal sealed class OwnedRuntimeDatabaseSnapshot
         {
             CaptureOptional(DailyTaskTableName);
             CaptureOptional(DailyRewardTableName);
+        }
+        if (includeInstanceCatalog)
+        {
+            CaptureOptional(DungeonTableName);
+            CaptureOptional(CooperativeTableName);
         }
         cancellationToken.ThrowIfCancellationRequested();
         return new(ownedActive, owned);
@@ -115,6 +122,30 @@ internal sealed class RuntimeDatabaseStructuralMatch
 internal static class RuntimeDatabaseStructuralMatcher
 {
     private static readonly int MaximumSourceNameLength = BundleSourcePlan.RequiredTables.Max(name => name.Length);
+
+    /// <summary>Separate, non-authorizing equality check for both optional instance tables.
+    /// Expected digests must come from the owner's prepared raw candidate. Their origin,
+    /// required-resource matching and admission remain separate and are not proved here.</summary>
+    internal static bool MatchInstanceCatalog(OwnedRuntimeDatabaseSnapshot? snapshot,
+        string? expectedDungeonSha256, string? expectedCooperativeSha256, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        bool matches = expectedDungeonSha256 is { Length: 64 } && ResourceValidation.Sha256.IsMatch(expectedDungeonSha256) &&
+            expectedCooperativeSha256 is { Length: 64 } && ResourceValidation.Sha256.IsMatch(expectedCooperativeSha256) &&
+            Matches(OwnedRuntimeDatabaseSnapshot.DungeonTableName, expectedDungeonSha256) &&
+            Matches(OwnedRuntimeDatabaseSnapshot.CooperativeTableName, expectedCooperativeSha256);
+        cancellationToken.ThrowIfCancellationRequested();
+        return matches;
+
+        bool Matches(string name, string expectedDigest)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var row = snapshot?.Active is { } active ? snapshot.Table(active.VersionId, name) : null;
+            return row is not null && row.RecordedSha256 == expectedDigest && row.HasBlob &&
+                row.ByteLength is > 0 and <= OwnedRuntimeDatabaseSnapshot.MaximumTableBytes &&
+                ResourceValidation.Digest(row.Bytes, cancellationToken) == expectedDigest;
+        }
+    }
 
     /// <summary>Separate, non-authorizing equality check for both optional daily tables. The
     /// owner supplies digests from its prepared candidate and must separately establish their
