@@ -55,3 +55,13 @@ The following Core increment adds the typed server dispatcher, all live-data lay
 ## Android lifecycle increment (v0.2.0 candidate)
 
 The subsequent Android increment prepares foreground service ownership, reconnection/cancellation guards and platform status UI while Core continues independently. It does not modify Core APIs or implement its missing transport. The default adapter reports unavailable, process death never silently restores login, and all live-server/device acceptance remains separate. Desktop's Python version remains 7.3.1; Android C# host versions are independent.
+
+### Public host composition
+
+Core now exposes explicit, inert `AccountConnectionRuntime` and
+`AccountResourceRuntime` boundaries. See
+[connection ownership and limits](../docs/dotnet-account-connection-runtime.md) and
+[resource preparation](../docs/dotnet-account-resource-runtime.md).
+The no-friend-assembly consumer smoke check is:
+`dotnet run --project dotnet/Lala.Core.PublicContract.Check -c Release`.
+This does not activate host UI wiring, command sending, or live-server validation.

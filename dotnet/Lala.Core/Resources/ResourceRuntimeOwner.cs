@@ -122,6 +122,9 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
     internal Task<ResourceRuntimeBootstrapResult> BootstrapAndRefreshAsync(CancellationToken cancellationToken = default)
         => RunAsync(bootstrap: true, cancellationToken);
 
+    internal Task<ResourceRuntimeBootstrapResult> RefreshWithResultAsync(CancellationToken cancellationToken = default)
+        => RunAsync(bootstrap: false, cancellationToken);
+
     private async Task<ResourceRuntimeBootstrapResult> RunAsync(bool bootstrap, CancellationToken cancellationToken)
     {
         Attempt mine;

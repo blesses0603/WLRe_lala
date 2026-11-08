@@ -27,7 +27,7 @@ internal sealed class HeldLoginCleanupException() : IOException("Held login conn
 /// ReceiveAttempt, including every byte after the final world ACK: there is no decoder or
 /// state handoff. The serialized pre-commit hook sends only login/role/world/heartbeat
 /// protocol traffic; resource-dependent game commands are never exposed. Raw TCP/XOR is
-/// not credential encryption. Callers own the transient packet provider and its inputs.
+/// not credential encryption. Legacy callers own packet inputs; owned providers clear their transient credentials.
 /// No profile discovery, saved credentials, automatic retries, or production-host defaults.
 /// </summary>
 internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportRetirement
@@ -37,14 +37,14 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
     private readonly int txKey, rxXor, roleIndex;
     private readonly HeldLoginLimits limits;
     private readonly ScriptedHandshake handshake;
-    private Func<HandshakeLeg, Packet>? loginProvider;
+    private IHandshakeLoginProvider? loginProvider;
     private readonly List<BoundedTcpTransport> transports = [];
     private readonly CancellationTokenSource stop = new(), deadline = new();
     private readonly TaskCompletionSource<HandshakeView> login = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private BoundedTcpTransport? formal;
     private Task<int>? readOperation;
     private Task? handlerOperation, disposal;
-    private bool initialized, retired, inputEnded, loginCompleted;
+    private bool initialized, retired, inputEnded, loginCompleted, providerCleanupFailed;
     private readonly HashSet<HeldConnectionFailure> failures = [];
 
     private void Record(HeldConnectionFailure failure) { lock (gate) failures.Add(failure); }
@@ -59,14 +59,17 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
     }
 
     internal HeldLoginTransport(IPEndPoint verification, IPEndPoint formal, int txXor, int rxXor,
-        int roleIndex, Func<HandshakeLeg, Packet> loginProvider, HeldLoginLimits? limits = null)
+        int roleIndex, Func<HandshakeLeg, Packet>? loginProvider, HeldLoginLimits? limits = null,
+        IHandshakeLoginProvider? ownedProvider = null)
     {
-        ArgumentNullException.ThrowIfNull(loginProvider);
+        if (loginProvider is null && ownedProvider is null) throw new ArgumentNullException(nameof(loginProvider));
+        if (loginProvider is not null && ownedProvider is not null)
+            throw new ArgumentException("Exactly one login provider is required.");
         verificationEndpoint = CopyEndpoint(verification); formalEndpoint = CopyEndpoint(formal);
         WireCodec.ValidateKey(txXor); WireCodec.ValidateKey(rxXor);
         if (roleIndex is not (1 or 2)) throw new ArgumentOutOfRangeException(nameof(roleIndex));
         this.limits = limits ?? new(); this.limits.Validate();
-        this.txKey = txXor; this.rxXor = rxXor; this.roleIndex = roleIndex; this.loginProvider = loginProvider;
+        this.txKey = txXor; this.rxXor = rxXor; this.roleIndex = roleIndex; this.loginProvider = ownedProvider ?? new DelegateHandshakeLoginProvider(loginProvider!);
         handshake = new(txXor);
     }
 
@@ -160,25 +163,27 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
             await ConnectAsync(formal, token).ConfigureAwait(false);
             await FlushAsync(formal, MakeLogin(HandshakeLeg.Formal, token), token).ConfigureAwait(false);
         }
-        finally { loginProvider = null; }
+        finally { ReleaseProvider(); }
     }
 
     private ScriptedHandshakeWrite MakeLogin(HandshakeLeg leg, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
-        Func<HandshakeLeg, Packet> provider;
+        IHandshakeLoginProvider provider;
         lock (gate)
         {
             if (retired) throw new HeldLoginException();
             provider = loginProvider ?? throw new HeldLoginException();
         }
-        Packet packet;
-        try { packet = provider(leg); }
+        LoginPacketLease lease;
+        try { lease = provider.Create(leg); }
         catch (Exception) { Record(HeldConnectionFailure.ProviderFailed); throw new HeldLoginException(); }
+        using (lease)
         lock (gate)
         {
+            token.ThrowIfCancellationRequested();
             if (retired) throw new HeldLoginException();
-            var write = handshake.BeginLogin(handshake.Snapshot.Attempt, leg, packet);
+            var write = handshake.BeginLogin(handshake.Snapshot.Attempt, leg, lease.Packet);
             if (write is null) { Record(HeldConnectionFailure.LoginProtocolFailed); throw new HeldLoginException(); }
             return write;
         }
@@ -322,11 +327,6 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
             retired = true;
             if (inputEnded) handshake.EndInput(); else handshake.Cancel();
             login.TrySetResult(handshake.Snapshot);
-            if (disposal is null && readOperation is null && handlerOperation is null && transports.Count == 0)
-            {
-                loginProvider = null; stop.Dispose(); deadline.Dispose(); handshake.Dispose();
-                disposal = Task.CompletedTask;
-            }
             return new(disposal ??= Task.Run(DisposeCoreAsync));
         }
     }
@@ -346,9 +346,29 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
             try { await transport.DisposeAsync().ConfigureAwait(false); } catch (Exception) { failed = true; }
         foreach (var operation in operations)
             try { await operation.ConfigureAwait(false); } catch (Exception) { /* Terminal operation faults are expected. */ }
-        loginProvider = null;
+        try { ReleaseProvider(); } catch (Exception) { failed = true; }
+        // Initialization may already have detached the provider and observed its failure.
+        // Draining operations above ensures that evidence cannot arrive after this check.
+        lock (gate) failed |= providerCleanupFailed;
         stop.Dispose(); deadline.Dispose(); handshake.Dispose();
         if (failed) throw new HeldLoginCleanupException();
+    }
+
+    private void ReleaseProvider()
+    {
+        IHandshakeLoginProvider? provider;
+        lock (gate) { provider = loginProvider; loginProvider = null; }
+        // No provider or user code runs under the transport lifetime gate.
+        try { provider?.Dispose(); }
+        catch
+        {
+            lock (gate)
+            {
+                providerCleanupFailed = true;
+                failures.Add(HeldConnectionFailure.CleanupFailed);
+            }
+            throw;
+        }
     }
 
     private static IPEndPoint CopyEndpoint(IPEndPoint endpoint)

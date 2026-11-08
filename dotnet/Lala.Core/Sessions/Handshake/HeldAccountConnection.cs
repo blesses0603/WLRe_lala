@@ -27,12 +27,13 @@ internal sealed class HeldAccountConnection : IAsyncDisposable
 
     internal static HeldAccountConnection? TryAttach(AccountSession session, long generation,
         IPEndPoint verification, IPEndPoint formal, int txXor, int rxXor, int roleIndex,
-        Func<HandshakeLeg, Packet> loginProvider,
+        Func<HandshakeLeg, Packet>? loginProvider,
         Func<double> clock, Func<ServiceStateSnapshot, double, ServiceObservationInputs> observe,
-        HeldLoginLimits? limits = null, int readSize = 4096, int bufferedChunks = 4)
+        HeldLoginLimits? limits = null, int readSize = 4096, int bufferedChunks = 4,
+        IHandshakeLoginProvider? ownedProvider = null)
     {
         ArgumentNullException.ThrowIfNull(session);
-        var transport = new HeldLoginTransport(verification, formal, txXor, rxXor, roleIndex, loginProvider, limits);
+        var transport = new HeldLoginTransport(verification, formal, txXor, rxXor, roleIndex, loginProvider, limits, ownedProvider);
         ReceiveAttempt? attempt;
         try
         {

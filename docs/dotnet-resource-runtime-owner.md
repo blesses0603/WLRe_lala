@@ -1,9 +1,10 @@
 # Uninstalled resource runtime owner
 
-`Lala.Core.Resources.ResourceRuntimeOwner` is internal and is not connected to
-AccountSession, desktop login, Android, or packet sending. Its publication records
-resource admission only. Publisher signatures and protocol compatibility remain
-unverified. Existing offline decoder/preparation flags remain false.
+`Lala.Core.Resources.ResourceRuntimeOwner` is internal. The public
+[AccountResourceRuntime facade](dotnet-account-resource-runtime.md) now connects its preparation
+to an AccountSession's read-only catalog lifetime. No Desktop login, Android host or packet
+sender installs it. Its publication records resource admission only. Publisher signatures and
+protocol compatibility remain unverified. Existing offline decoder/preparation flags remain false.
 
 ## Construction and trust
 

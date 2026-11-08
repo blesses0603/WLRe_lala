@@ -65,6 +65,8 @@ public sealed class Packet
         if (main is < 0 or > 255 || sub is < 0 or > 255) throw new ProtocolException("main/sub must be bytes");
         Main = (byte)main; Sub = (byte)sub; this.payload = payload.ToArray();
     }
+    // Only an exclusive, internally owned credential packet lease may call this.
+    internal void ClearSensitivePayload() => System.Security.Cryptography.CryptographicOperations.ZeroMemory(payload);
     public byte[] Body() => new PacketWriter().U8(Main).U8(Sub).Raw(payload).Build();
     public static Packet FromBody(ReadOnlySpan<byte> body)
     {

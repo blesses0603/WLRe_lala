@@ -49,6 +49,7 @@ internal sealed class HeldAccountReconnect : IAsyncDisposable
     private readonly IPEndPoint verification, formal;
     private readonly int txXor, rxXor, roleIndex, readSize, bufferedChunks;
     private Func<int, CancellationToken, ValueTask<Func<HandshakeLeg, Packet>?>>? credentials;
+    private Func<int, CancellationToken, ValueTask<IHandshakeLoginProvider?>>? ownedCredentials;
     private readonly Func<double> clock;
     private readonly Func<ServiceStateSnapshot, double, ServiceObservationInputs> observe;
     private readonly Func<TimeSpan, CancellationToken, Task> delay;
@@ -63,13 +64,16 @@ internal sealed class HeldAccountReconnect : IAsyncDisposable
 
     internal HeldAccountReconnect(AccountSession session, long generation,
         IPEndPoint verification, IPEndPoint formal, int txXor, int rxXor, int roleIndex,
-        Func<int, CancellationToken, ValueTask<Func<HandshakeLeg, Packet>?>> credentials,
+        Func<int, CancellationToken, ValueTask<Func<HandshakeLeg, Packet>?>>? credentials,
         Func<double> clock, Func<ServiceStateSnapshot, double, ServiceObservationInputs> observe,
         HeldLoginLimits? loginLimits = null, ReconnectLimits? limits = null,
         int readSize = 4096, int bufferedChunks = 4,
-        Func<TimeSpan, CancellationToken, Task>? delay = null)
+        Func<TimeSpan, CancellationToken, Task>? delay = null,
+        Func<int, CancellationToken, ValueTask<IHandshakeLoginProvider?>>? ownedCredentials = null)
     {
-        ArgumentNullException.ThrowIfNull(session); ArgumentNullException.ThrowIfNull(credentials);
+        ArgumentNullException.ThrowIfNull(session);
+        if ((credentials is null) == (ownedCredentials is null))
+            throw new ArgumentException("Exactly one credential source is required.");
         ArgumentNullException.ThrowIfNull(clock); ArgumentNullException.ThrowIfNull(observe);
         if (generation < 1) throw new ArgumentOutOfRangeException(nameof(generation));
         if (roleIndex is not (1 or 2)) throw new ArgumentOutOfRangeException(nameof(roleIndex));
@@ -80,7 +84,7 @@ internal sealed class HeldAccountReconnect : IAsyncDisposable
         this.limits = limits ?? new(); this.limits.Validate();
         this.verification = CopyEndpoint(verification); this.formal = CopyEndpoint(formal);
         this.session = session; this.txXor = txXor; this.rxXor = rxXor; this.roleIndex = roleIndex;
-        this.credentials = credentials; this.clock = clock; this.observe = observe;
+        this.credentials = credentials; this.ownedCredentials = ownedCredentials; this.clock = clock; this.observe = observe;
         this.readSize = readSize; this.bufferedChunks = bufferedChunks;
         this.delay = delay ?? ((duration, token) => Task.Delay(duration, token));
         view = new(Guid.NewGuid(), generation, 0, ReconnectPhase.Created, null, null, []);
@@ -149,25 +153,42 @@ internal sealed class HeldAccountReconnect : IAsyncDisposable
                     number = checked(view.Attempts + 1); generation = view.Generation;
                     view = view with { Attempts = number, Phase = ReconnectPhase.AcquiringCredentials, NextDelay = null };
                 }
-                Func<HandshakeLeg, Packet>? provider;
-                try { provider = await credentials!(number, stop.Token).ConfigureAwait(false); }
-                catch (Exception) { Retire(ReconnectEnd.ProviderFailed); break; }
-                HeldAccountConnection? owner;
-                lock (gate)
+                Func<HandshakeLeg, Packet>? provider = null;
+                IHandshakeLoginProvider? ownedProvider = null;
+                try
                 {
-                    if (retired) break;
-                    if (provider is null) { RetireLocked(ReconnectEnd.CredentialsUnavailable); break; }
-                    owner = HeldAccountConnection.TryAttach(session, generation, verification, formal,
-                        txXor, rxXor, roleIndex, provider, clock, observe, loginLimits, readSize, bufferedChunks);
-                    provider = null;
-                    if (owner is null)
-                    {
-                        RetireLocked(session.Snapshot.Generation == generation ? ReconnectEnd.AdmissionBlocked : ReconnectEnd.Superseded);
-                        break;
-                    }
-                    current = owner;
-                    view = view with { Phase = ReconnectPhase.Connecting };
+                    if (ownedCredentials is not null)
+                        ownedProvider = await ownedCredentials(number, stop.Token).ConfigureAwait(false);
+                    else provider = await credentials!(number, stop.Token).ConfigureAwait(false);
                 }
+                catch (Exception) { Retire(ReconnectEnd.ProviderFailed); break; }
+                HeldAccountConnection? owner = null;
+                try
+                {
+                    lock (gate)
+                    {
+                        if (!retired)
+                        {
+                            if (provider is null && ownedProvider is null) RetireLocked(ReconnectEnd.CredentialsUnavailable);
+                            else
+                            {
+                                owner = HeldAccountConnection.TryAttach(session, generation, verification, formal,
+                                    txXor, rxXor, roleIndex, provider, clock, observe, loginLimits, readSize, bufferedChunks, ownedProvider);
+                                provider = null;
+                                if (owner is null)
+                                    RetireLocked(session.Snapshot.Generation == generation ? ReconnectEnd.AdmissionBlocked : ReconnectEnd.Superseded);
+                                else
+                                {
+                                    ownedProvider = null; // Ownership moved to the connection, including failure cleanup.
+                                    current = owner;
+                                    view = view with { Phase = ReconnectPhase.Connecting };
+                                }
+                            }
+                        }
+                    }
+                }
+                finally { ownedProvider?.Dispose(); } // Includes a late source response after stop/replacement.
+                if (owner is null) break;
                 ReceiveResult result;
                 HeldConnectionOutcome outcome;
                 try
@@ -229,7 +250,7 @@ internal sealed class HeldAccountReconnect : IAsyncDisposable
             await cancel.ConfigureAwait(false);
             if (cleanup is not null)
                 try { await cleanup.ConfigureAwait(false); } catch (Exception) { released = false; }
-            credentials = null;
+            credentials = null; ownedCredentials = null;
             stop.Dispose();
         }
         lock (gate)

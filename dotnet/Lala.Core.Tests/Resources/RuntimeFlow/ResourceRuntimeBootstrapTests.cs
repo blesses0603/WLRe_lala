@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Lala.Core.Tests.Resources;
 
-public sealed class ResourceRuntimeBootstrapTests
+public sealed partial class ResourceRuntimeBootstrapTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(15);
     private sealed class Source : IResourceSource, IDisposable
