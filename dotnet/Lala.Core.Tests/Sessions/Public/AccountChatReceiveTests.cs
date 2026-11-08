@@ -55,7 +55,8 @@ public sealed partial class AccountConnectionRuntimeTests
                 }
                 else await client.Send(new Packet(1, 23));
                 await client.Expect(63, 5); ready.SetResult();
-                await client.WaitFor(finish.Task); await client.CloseSendAndExpectEof();
+                // The runtime has already stopped and released the connection before finish.
+                await client.WaitFor(finish.Task); await client.ExpectClosedAfterRetirement();
             });
             long generation = session.Begin("synthetic", "loopback-chat").Generation;
             await using var runtime = new AccountConnectionRuntime(session, generation, Profile(verification, formal),
