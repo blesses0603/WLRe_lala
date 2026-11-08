@@ -5,10 +5,10 @@ public sealed record SessionSnapshot(long Generation, string? AccountId, string?
     SessionPhase Phase, string? ResourceVersion);
 
 /// <summary>
-/// Single account generation boundary. This is an offline state owner, not a live login implementation.
+/// Single account generation boundary with internal receive-only ownership, not a live login implementation.
 /// No credentials are retained. A safety hold is latched until a new session is begun.
 /// </summary>
-public sealed class AccountSession
+public sealed partial class AccountSession
 {
     private readonly object gate = new();
     private SessionSnapshot current = new(0, null, null, SessionPhase.Disconnected, null);
@@ -20,6 +20,7 @@ public sealed class AccountSession
         ArgumentException.ThrowIfNullOrWhiteSpace(endpoint);
         lock (gate)
         {
+            RetireReceiveLocked();
             current = new(checked(current.Generation + 1), accountId, endpoint, SessionPhase.Preparing, null);
             return current;
         }
@@ -46,6 +47,7 @@ public sealed class AccountSession
         lock (gate)
         {
             if (generation != current.Generation || current.Phase == SessionPhase.Disconnected) return false;
+            RetireReceiveLocked();
             current = current with { Phase = SessionPhase.Held };
             return true;
         }
@@ -53,7 +55,11 @@ public sealed class AccountSession
 
     public void Disconnect()
     {
-        lock (gate) current = new(checked(current.Generation + 1), null, null, SessionPhase.Disconnected, null);
+        lock (gate)
+        {
+            RetireReceiveLocked();
+            current = new(checked(current.Generation + 1), null, null, SessionPhase.Disconnected, null);
+        }
     }
 
     /// <summary>Resource gate only, not authentication or command validation. Dispatch must also check ownership, arguments and server state.</summary>

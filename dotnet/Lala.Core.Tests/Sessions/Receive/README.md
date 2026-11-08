@@ -9,7 +9,8 @@ This is an internal offline integration boundary, not a working game connection,
 full Python State replacement, authenticated account session or resource loader.
 No production transport implementation, socket dial, credentials, writes,
 verification/login handshake, command dispatcher, runtime installation or Android
-adapter is supplied. `AccountSession` and Android lifecycle APIs are unchanged.
+adapter is supplied by that original increment. The later internal AccountSession
+attachment is described below; Android lifecycle APIs remain unchanged.
 The `authenticated` string in a received reducer snapshot is observation data,
 not verified authentication or permission to activate anything.
 
@@ -76,3 +77,29 @@ operations, device acceptance or official-server compatibility. Source parity
 and existing domain vector suites remain separate evidence. In particular,
 Python resource hold continues receiving pending receipts; this pump does not
 map that hold onto Android's terminal `ResourceHeld` lifecycle result.
+
+## Account generation attachment
+
+`AccountReceiveTests` exercises the internal `AccountSession` receive-only attachment.
+It accepts a caller-created transport only for a current `Preparing` generation and
+immediately latches `Held`; login observations and matching version strings cannot
+admit resources. The returned `ReceiveAttempt` owns transport cleanup, and the caller
+must run and await/dispose it. Rejected attachment does not take transport ownership.
+
+`Begin`, `Disconnect`, and explicit `Hold` synchronously revoke publication identity
+and retire reception. A new generation cannot attach until the previous transport,
+writer, and callback cleanup succeeds. Pending or failed cleanup blocks replacement.
+Generation and attempt are checked together when pulling immutable publications.
+Terminal snapshots can be read until retirement and are not proof of an active session.
+
+One test uses actual loopback TCP with fragmented and repeated frames to demonstrate
+continuous receive/reduction before EOF. Other tests control disposal deterministically
+and cover stale identities, holds, duplicate admission, invalid construction, and failed
+cleanup. No production endpoint, credential, UI, Android adapter, handshake handoff,
+heartbeat writer, reconnection scheduler, or runtime activation is installed. In
+particular this does not transfer the existing login harness's decoder/state; preserving
+its unread suffix and state through login remains a separate integration increment.
+
+Deliberate conservative difference: attachment starts in Held and continues receiving,
+but a later explicit AccountSession.Hold retires its receive owner. This is not Python
+resource-hold parity and is not intended as a live-session hold/resume implementation.
