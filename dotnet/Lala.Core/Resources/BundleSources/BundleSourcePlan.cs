@@ -65,6 +65,11 @@ internal sealed class BundleSourcePlan
     internal static BundleSourcePlan CreateSkill(YooAssetManifest current, string dataVersion, CancellationToken token)
         => CreateCore(current, dataVersion, null, new[] { SkillAssetPath }, token);
 
+    internal const string DailyTaskAssetPath = "Assets/ResourcesBuild/Data/DailyTaskData_C.bytes";
+    internal const string DailyRewardAssetPath = "Assets/ResourcesBuild/Data/DailyTaskRewardData_C.bytes";
+    internal static BundleSourcePlan CreateDaily(YooAssetManifest current, string dataVersion, CancellationToken token)
+        => CreateCore(current, dataVersion, null, new[] { DailyTaskAssetPath, DailyRewardAssetPath }, token);
+
     private static BundleSourcePlan CreateCore(YooAssetManifest current, string dataVersion,
         YooAssetManifest? previous, IReadOnlyList<string> assetPaths, CancellationToken cancellationToken)
     {

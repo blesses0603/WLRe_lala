@@ -27,15 +27,20 @@ internal static class RuntimeFlowFixtures
     }
     internal static byte[] Manifest(IReadOnlyDictionary<string, byte[]> bundles,
         IReadOnlyDictionary<string, string>? roots = null, IReadOnlyDictionary<string, string[]>? dependencies = null,
-        string version = Version, bool includeSkill = false)
+        string version = Version, bool includeSkill = false, bool includeDaily = false,
+        IReadOnlySet<string>? omittedTables = null)
     {
         var index = BundleSourceFixtures.Index();
         index["header"]!["package_version"] = version;
         string[] names = bundles.Keys.ToArray();
         var ids = names.Select((name, id) => (name, id)).ToDictionary(pair => pair.name, pair => pair.id, StringComparer.Ordinal);
         var assets = new JsonArray(); var rows = new JsonArray();
-        foreach (string name in includeSkill ? BundleSourcePlan.RequiredTables.Append("SkillData_C") : BundleSourcePlan.RequiredTables)
+        IEnumerable<string> tables = BundleSourcePlan.RequiredTables;
+        if (includeSkill) tables = tables.Append("SkillData_C");
+        if (includeDaily) tables = tables.Concat(new[] { "DailyTaskData_C", "DailyTaskRewardData_C" });
+        foreach (string name in tables)
         {
+            if (omittedTables?.Contains(name) == true) continue;
             string path = AssetRoot + name + ".bytes";
             assets.Add(new JsonObject { ["address"] = "", ["path"] = path, ["guid"] = "", ["tags"] = new JsonArray(),
                 ["bundle_id"] = ids[roots?.GetValueOrDefault(name) ?? names[0]] });

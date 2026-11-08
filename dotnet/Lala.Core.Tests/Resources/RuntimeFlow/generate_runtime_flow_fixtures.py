@@ -30,6 +30,44 @@ TABLES = (
     "ScenesData_C", "AdventureData_C", "AdventureLvData_C", "NpcData_C",
     "NpcCareerData_C",
 )
+DAILY_TABLES = ("DailyTaskData_C", "DailyTaskRewardData_C")
+
+
+def daily_payloads(*, text_id=10, task_item=123, reward_item=99):
+    """Original version-agnostic daily/weekly rows, joined to the ten-table fixture."""
+    p = lambda fmt, *values: struct.pack("<" + fmt, *values)
+    award = lambda kind, item, value: p("BII", kind, item, value)
+    tasks = p("i", 2) + p("BBB", 1, 1, 1) + p("BBB", 1, 2, 2) + p("i", 2)
+    tasks += p("HBBIBHHHBBB", 1, 1, 1, text_id, 1, 3, 0, 0, 2, 3, 4)
+    tasks += award(10, task_item, 2) + award(1, 0, 5)
+    tasks += p("HBBIBHHHBBB", 2, 2, 12, 30, 13, 2, 3, 7, 4, 5, 6)
+    tasks += award(11, 20, 1) + award(0, 0, 0)
+    rewards = p("i", 2)
+    rewards += p("HBII", 1, 1, 10, 1) + award(10, reward_item, 3)
+    rewards += award(1, 0, 7) + award(0, 0, 0) * 2
+    rewards += p("HBII", 2, 2, 50, 8) + award(11, 20, 4) + award(0, 0, 0) * 3
+    return dict(zip(DAILY_TABLES, (tasks, rewards)))
+
+
+def check_daily(payloads, required):
+    # Import only the actual parsers/binder, never another fixture generator or
+    # runtime loader. These functions operate on the owned in-memory bytes only.
+    root = TESTS.parent.parent
+    sys.path.insert(0, str(root))
+    previous = sys.dont_write_bytecode
+    try:
+        sys.dont_write_bytecode = True
+        from wlre.services.world.daily_task_catalog import bind_catalog, parse_rewards
+        from wlre.services.world.daily_task_1275 import parse_daily_tasks
+        from wlre.services.expedition.data import parse_text_data
+        from wlre.services.world.itemdata_v1 import parse_itemdata
+        return bind_catalog(parse_daily_tasks(payloads[DAILY_TABLES[0]]),
+                            parse_rewards(payloads[DAILY_TABLES[1]]),
+                            parse_text_data(required["TextData_C"]),
+                            parse_itemdata(required["ItemData_C"]))
+    finally:
+        sys.dont_write_bytecode = previous
+        sys.path.pop(0)
 
 
 def sha256(data):
@@ -204,6 +242,35 @@ def main():
     skill = bytearray(125); struct.pack_into("<H", skill, 7, 1)
     retain("optional-skill.bundle", {2: ("SkillData_C", struct.pack("<I", 1) + skill)},
            [(asset_path("SkillData_C"), 0, 2)])
+    daily_ids = {table: len(TABLES) + 2 + index for index, table in enumerate(DAILY_TABLES)}
+    daily_mappings = [(asset_path(t), 0, daily_ids[t]) for t in DAILY_TABLES]
+    daily_valid = daily_payloads()
+    daily_expected = check_daily(daily_valid, payloads)
+    assert [row["name"] for row in daily_expected["tasks"]] == ["任務", "  場景😀  "]
+    assert [row["cycle"] for row in daily_expected["tasks"]] == [1, 2]
+    assert [row["goal"] for row in daily_expected["tasks"]] == [3, 7]
+    daily_scripts = {daily_ids[t]: (t, daily_valid[t]) for t in DAILY_TABLES}
+    retain("optional-daily.bundle", daily_scripts, daily_mappings)
+    retain("all-ten-daily.bundle", {**all_scripts, **daily_scripts}, all_mappings + daily_mappings)
+    daily_invalid = {
+        "missing-text": daily_payloads(text_id=999),
+        "missing-task-item": daily_payloads(task_item=999),
+        "missing-reward-item": daily_payloads(reward_item=999),
+        "malformed-task": {**daily_valid, DAILY_TABLES[0]: daily_valid[DAILY_TABLES[0]][:-1]},
+        "malformed-reward": {**daily_valid, DAILY_TABLES[1]: daily_valid[DAILY_TABLES[1]][:-1]},
+    }
+    daily_errors = {}
+    for name, invalid in daily_invalid.items():
+        try:
+            check_daily(invalid, payloads)
+        except ValueError as error:
+            daily_errors[name] = str(error)
+        else:
+            raise AssertionError("Invalid synthetic daily fixture was accepted: " + name)
+        retain("optional-daily-" + name + ".bundle",
+               {daily_ids[t]: (t, invalid[t]) for t in DAILY_TABLES}, daily_mappings)
+    retain("optional-daily-missing-task-path.bundle", daily_scripts, daily_mappings[1:])
+    retain("optional-daily-missing-reward-path.bundle", daily_scripts, daily_mappings[:1])
     retain("split-root.bundle", {path_ids[t]: all_scripts[path_ids[t]] for t in TABLES[:6]},
            all_mappings[:6], dependencies=("split-dependency.bundle",))
     retain("split-dependency.bundle", {path_ids[t]: all_scripts[path_ids[t]] for t in TABLES[6:]},
@@ -259,6 +326,16 @@ def main():
              "bytes": len(payloads[t]), "sha256": sha256(payloads[t])}
             for t in TABLES
         ],
+        "daily": {
+            "ownership": "Original synthetic daily and weekly rows. Text and item references are independently parsed from the retained all-ten payloads.",
+            "tables": [
+                {"table": t, "asset_path": asset_path(t), "name": t, "path_id": daily_ids[t],
+                 "bytes": len(daily_valid[t]), "sha256": sha256(daily_valid[t])}
+                for t in DAILY_TABLES
+            ],
+            "expected": daily_expected,
+            "invalid_python_errors": daily_errors,
+        },
         "scenarios": {
             "all-ten": {"asset_bundle": {t: "all-ten.bundle" for t in TABLES}},
             "split": {

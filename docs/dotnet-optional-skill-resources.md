@@ -30,7 +30,7 @@ remains unchanged and does not claim optional completeness.
 point-in-time data, not login or packet permission. `SourceSha256` keeps its existing ten-required-
 table contract. The unavailable-source list removes SkillData only when those optional rows are
 present. Receive integration remains a separate consumer of this catalog, with no command gate
-change. Other optional data, images and full offline startup remain unimplemented.
+change. Daily/weekly definitions are now covered by the [optional daily resource integration](dotnet-optional-daily-resources.md). Other optional data, images and full offline startup remain unimplemented.
 
 ## Evidence limits
 

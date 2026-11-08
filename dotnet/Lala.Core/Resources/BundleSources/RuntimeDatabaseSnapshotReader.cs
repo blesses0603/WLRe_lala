@@ -45,7 +45,7 @@ internal static class RuntimeDatabaseSnapshotReader
     internal static async Task<RuntimeDatabaseReadObservation> ReadAsync(DbConnection connection,
         CancellationToken cancellationToken = default,
         long maximumAggregateBytes = OwnedRuntimeDatabaseSnapshot.MaximumOwnedTableBytes,
-        bool includeSkillData = false)
+        bool includeSkillData = false, bool includeDailyCatalog = false)
     {
         ArgumentNullException.ThrowIfNull(connection);
         Exception? primary = null;
@@ -88,12 +88,30 @@ internal static class RuntimeDatabaseSnapshotReader
                 var skill = await ReadTableAsync(connection, active.VersionId, OwnedRuntimeDatabaseSnapshot.SkillTableName,
                     encoding, cancellationToken, optional: true,
                     maximumBytes: (int)Math.Min(OwnedRuntimeDatabaseSnapshot.MaximumTableBytes, maximumAggregateBytes - aggregateBytes)).ConfigureAwait(false);
-                if (skill is not null) rows.Add(OwnedRuntimeDatabaseSnapshot.SkillTableName, skill);
+                if (skill is not null)
+                {
+                    rows.Add(OwnedRuntimeDatabaseSnapshot.SkillTableName, skill);
+                    aggregateBytes += skill.Data!.Value.Length;
+                }
+            }
+            if (includeDailyCatalog)
+            {
+                foreach (string name in new[] { OwnedRuntimeDatabaseSnapshot.DailyTaskTableName, OwnedRuntimeDatabaseSnapshot.DailyRewardTableName })
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var daily = await ReadTableAsync(connection, active.VersionId, name, encoding, cancellationToken, optional: true,
+                        maximumBytes: (int)Math.Min(OwnedRuntimeDatabaseSnapshot.MaximumTableBytes, maximumAggregateBytes - aggregateBytes)).ConfigureAwait(false);
+                    if (daily is not null)
+                    {
+                        rows.Add(name, daily);
+                        aggregateBytes += daily.Data!.Value.Length;
+                    }
+                }
             }
             // Capture owns a second, detached copy before the transaction ends. At most 160 MiB
             // of temporary payloads plus 160 MiB retained payloads and a current provider value
             // of at most 16 MiB. Provider-internal caches/native buffers are external.
-            snapshot = OwnedRuntimeDatabaseSnapshot.Capture(active, rows, cancellationToken, includeSkillData);
+            snapshot = OwnedRuntimeDatabaseSnapshot.Capture(active, rows, cancellationToken, includeSkillData, includeDailyCatalog);
             cancellationToken.ThrowIfCancellationRequested();
         }
         catch (Exception error) { primary = error; }

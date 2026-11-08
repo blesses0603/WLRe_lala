@@ -189,16 +189,22 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
             // Never promote the write receipt itself to readback or runtime admission.
             readback = ResourceRuntimeReadback.Failed;
             var connection = await CreateConnectionAsync(SqliteOpenMode.ReadOnly).ConfigureAwait(false);
-            var database = await RuntimeDatabaseSnapshotReader.ReadAsync(connection, mine.Token, includeSkillData: prepared.Candidate.OptionalSkills is not null).ConfigureAwait(false);
+            var database = await RuntimeDatabaseSnapshotReader.ReadAsync(connection, mine.Token, includeSkillData: prepared.Candidate.OptionalSkills is not null,
+                includeDailyCatalog: prepared.Candidate.OptionalDailyCatalog is not null).ConfigureAwait(false);
             EnsureCurrent(generation, mine);
             var hashes = prepared.Candidate.SourceSha256.ToDictionary(p => p.Key, p => (string?)p.Value, StringComparer.Ordinal);
             if (!RuntimeDatabaseStructuralMatcher.Match(database.Snapshot, prepared.Identity, hashes, mine.Token).MatchesSuppliedRuntime)
                 throw new ResourceValidationException("Stored resource bytes differ from current decoded sources");
-            // Optional mismatch removes only skills. Required ten-table matching above still
-            // gates the complete publication; no database row can introduce new skill evidence.
+            // Optional mismatch removes only its feature. Required ten-table matching above still
+            // gates the complete publication; no database row can introduce new catalog evidence.
             readbackCandidate = prepared.Candidate.OptionalSkills is not null &&
                 !RuntimeDatabaseStructuralMatcher.MatchReviewedSkillData(database.Snapshot, mine.Token)
                 ? prepared.Candidate.WithoutOptionalSkills() : prepared.Candidate;
+            if (readbackCandidate.OptionalDailyCatalog is not null && !RuntimeDatabaseStructuralMatcher.MatchDailyCatalog(
+                database.Snapshot,
+                prepared.InventoryInput.Tables.Single(table => table.Name == "DailyTaskData_C.bytes").Sha256,
+                prepared.InventoryInput.Tables.Single(table => table.Name == "DailyTaskRewardData_C.bytes").Sha256, mine.Token))
+                readbackCandidate = readbackCandidate.WithoutOptionalDailyCatalog();
             readback = ResourceRuntimeReadback.Matched;
             await _preparation.ConfirmUnchangedAsync(_source, prepared, mine.Token).ConfigureAwait(false);
             sourcesRechecked = true;

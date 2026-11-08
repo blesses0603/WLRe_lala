@@ -119,7 +119,7 @@ All existing input, download, native parsing and table limits remain mandatory.
 A new conservative 32 MiB ceiling bounds aggregate extracted table ownership in
 addition to the existing 16 MiB per-table limit and 32 MiB total acquired-source limit.
 This can reject unusually large source-valid tables and is an explicit safety
-restriction, not Python parity. There are at most ten extraction operations; each
+restriction, not Python parity. There are at most thirteen extraction operations (ten required, one skill, two daily); each
 retains the native extractor's independent compressed/expanded/object limits.
 
 After successful raw decoding, the flow performs a fresh version observation,
@@ -135,15 +135,17 @@ historical observation, never a promise that remote versions will remain unchang
 
 All raw bundles and extracted tables are owned; cache streams are not reopened
 for extraction. Source/cache mutation after acquisition cannot change decoding.
-Every failure or cancellation returns no partial result and does not mutate a
-previous candidate. Responses are disposed through all exits. No active catalog,
+Required-table failure, cancellation or cleanup failure returns no partial result and does not
+mutate a previous candidate. Ordinary optional acquisition/decoding failures leave that feature unavailable. Responses are disposed through all exits. No active catalog,
 cache file, database receipt, source installation or AccountSession state changes.
 
 The flow deliberately rejects external PPtrs without guessing an allowlist from
 manifest dependency names. Official provenance, database-byte admission, static 1275
 runtime hash/count gates and runtime installation stay explicitly unavailable.
-Optional SkillData, portal metadata, images, daily/guild/Ark and other catalogs retain
-the ten-table candidate's unavailable status. Event-portal reconciliation/conflicts/
+[Optional SkillData](../../../../docs/dotnet-optional-skill-resources.md) and the
+[daily/weekly pair](../../../../docs/dotnet-optional-daily-resources.md) now have production
+acquisition/readback integration; portal metadata, images, guild/Ark and remaining optional
+catalogs stay unavailable. Event-portal reconciliation/conflicts/
 coverage, actual-source acceptance, Android/AOT and live-server readiness are not
 completed by this wiring.
 

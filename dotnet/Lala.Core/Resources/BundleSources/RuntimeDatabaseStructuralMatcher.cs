@@ -17,6 +17,8 @@ internal sealed class OwnedRuntimeDatabaseSnapshot
     internal const int MaximumTableBytes = 16 * 1024 * 1024;
     internal const long MaximumOwnedTableBytes = 10L * MaximumTableBytes;
     internal const string SkillTableName = "SkillData_C.bytes";
+    internal const string DailyTaskTableName = "DailyTaskData_C.bytes";
+    internal const string DailyRewardTableName = "DailyTaskRewardData_C.bytes";
     internal RuntimeDatabaseActiveInput? Active { get; }
     private readonly FrozenDictionary<string, OwnedTable> _tables;
 
@@ -43,7 +45,7 @@ internal sealed class OwnedRuntimeDatabaseSnapshot
 
     internal static OwnedRuntimeDatabaseSnapshot Capture(RuntimeDatabaseActiveInput? active,
         IReadOnlyDictionary<string, RuntimeDatabaseTableInput?>? rows, CancellationToken cancellationToken = default,
-        bool includeSkillData = false)
+        bool includeSkillData = false, bool includeDailyCatalog = false)
     {
         cancellationToken.ThrowIfCancellationRequested();
         // Strings are immutable. Invalid oversized fields cannot match, so retain only null
@@ -51,8 +53,8 @@ internal sealed class OwnedRuntimeDatabaseSnapshot
         var ownedActive = active is null ? null : new RuntimeDatabaseActiveInput(active.VersionId,
             Bounded(active.CatalogKey, 64), Bounded(active.IdentityJson, MaximumIdentityCharacters));
         var owned = new Dictionary<string, OwnedTable>(StringComparer.Ordinal);
-        // Default capture still reads exactly ten slots. Explicit skill capture adds only
-        // the exact optional slot and shares the existing 160 MiB retained-payload budget.
+        // Default capture still reads exactly ten slots. Explicit optional capture adds only
+        // the three exact slots and shares the existing 160 MiB retained-payload budget.
         long ownedBytes = 0;
         foreach (string name in BundleSourcePlan.RequiredTables)
         {
@@ -66,20 +68,28 @@ internal sealed class OwnedRuntimeDatabaseSnapshot
                 ownedBytes += table.Bytes.Length;
             }
         }
-        if (includeSkillData)
+        if (includeSkillData) CaptureOptional(SkillTableName);
+        if (includeDailyCatalog)
+        {
+            CaptureOptional(DailyTaskTableName);
+            CaptureOptional(DailyRewardTableName);
+        }
+        cancellationToken.ThrowIfCancellationRequested();
+        return new(ownedActive, owned);
+
+        void CaptureOptional(string name)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (rows is not null && rows.TryGetValue(SkillTableName, out var row) && row is not null &&
-                row.Name == SkillTableName && row.VersionId == ownedActive?.VersionId &&
+            if (rows is not null && rows.TryGetValue(name, out var row) && row is not null &&
+                row.Name == name && row.VersionId == ownedActive?.VersionId &&
                 row.Data is { } data && data.Length is > 0 and <= MaximumTableBytes &&
                 data.Length <= MaximumOwnedTableBytes - ownedBytes)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                owned.Add(SkillTableName, new(row));
+                owned.Add(name, new(row));
+                ownedBytes += data.Length;
             }
         }
-        cancellationToken.ThrowIfCancellationRequested();
-        return new(ownedActive, owned);
     }
 
     internal OwnedTable? Table(long activeVersion, string exactName) =>
@@ -105,6 +115,30 @@ internal sealed class RuntimeDatabaseStructuralMatch
 internal static class RuntimeDatabaseStructuralMatcher
 {
     private static readonly int MaximumSourceNameLength = BundleSourcePlan.RequiredTables.Max(name => name.Length);
+
+    /// <summary>Separate, non-authorizing equality check for both optional daily tables. The
+    /// owner supplies digests from its prepared candidate and must separately establish their
+    /// origin, required-resource matching and admission. This method proves none of those.</summary>
+    internal static bool MatchDailyCatalog(OwnedRuntimeDatabaseSnapshot? snapshot,
+        string? expectedTaskSha256, string? expectedRewardSha256, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        bool matches = expectedTaskSha256 is { Length: 64 } && ResourceValidation.Sha256.IsMatch(expectedTaskSha256) &&
+            expectedRewardSha256 is { Length: 64 } && ResourceValidation.Sha256.IsMatch(expectedRewardSha256) &&
+            Matches(OwnedRuntimeDatabaseSnapshot.DailyTaskTableName, expectedTaskSha256) &&
+            Matches(OwnedRuntimeDatabaseSnapshot.DailyRewardTableName, expectedRewardSha256);
+        cancellationToken.ThrowIfCancellationRequested();
+        return matches;
+
+        bool Matches(string name, string expectedDigest)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var row = snapshot?.Active is { } active ? snapshot.Table(active.VersionId, name) : null;
+            return row is not null && row.RecordedSha256 == expectedDigest && row.HasBlob &&
+                row.ByteLength is > 0 and <= OwnedRuntimeDatabaseSnapshot.MaximumTableBytes &&
+                ResourceValidation.Digest(row.Bytes, cancellationToken) == expectedDigest;
+        }
+    }
 
     /// <summary>Separate, non-authorizing optional check. The expected fingerprint is compiled
     /// from the reviewed source, never provided by a caller. Required-table matching remains

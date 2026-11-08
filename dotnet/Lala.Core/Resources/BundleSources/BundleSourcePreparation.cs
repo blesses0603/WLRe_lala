@@ -22,6 +22,8 @@ internal sealed class BundleDownloadTotals(int count, long bytes)
 {
     internal int Count = count;
     internal long Bytes = bytes;
+    internal RequiredBundleSources? Context;
+    internal Dictionary<string, VerifiedBundleSource> Owned { get; } = new(StringComparer.Ordinal);
 }
 internal interface IBundleSourceCacheReader
 {
@@ -185,16 +187,35 @@ internal sealed class BundleSourcePreparation
         RequiredBundleSources required, IBundleSourceCacheReader? cache, BundleSourceBudget? budget,
         BundleDownloadTotals totals, CancellationToken token)
     {
+        var plan = BundleSourcePlan.CreateSkill(required.Manifests[0], required.Snapshot.DataVersion, token);
+        var result = await PrepareOptionalAsync(source, required, cache, budget, totals, plan, token).ConfigureAwait(false);
+        return result[BundleSourcePlan.SkillAssetPath];
+    }
+
+    internal Task<IReadOnlyDictionary<string, IReadOnlyList<VerifiedBundleSource>>> PrepareDailyAsync(IResourceSource source,
+        RequiredBundleSources required, IBundleSourceCacheReader? cache, BundleSourceBudget? budget,
+        BundleDownloadTotals totals, CancellationToken token)
+        => PrepareOptionalAsync(source, required, cache, budget, totals,
+            BundleSourcePlan.CreateDaily(required.Manifests[0], required.Snapshot.DataVersion, token), token);
+
+    private async Task<IReadOnlyDictionary<string, IReadOnlyList<VerifiedBundleSource>>> PrepareOptionalAsync(IResourceSource source,
+        RequiredBundleSources required, IBundleSourceCacheReader? cache, BundleSourceBudget? budget,
+        BundleDownloadTotals totals, BundleSourcePlan plan, CancellationToken token)
+    {
         EnsureCurrent(required, token);
         budget ??= new(); budget.Validate();
-        var plan = BundleSourcePlan.CreateSkill(required.Manifests[0], required.Snapshot.DataVersion, token);
-        var owned = required.Sources.ToDictionary(x => x.Spec.Name, StringComparer.Ordinal);
+        if (totals.Context is null) totals.Context = required;
+        else if (!ReferenceEquals(totals.Context, required))
+            throw new BundleSourceException(BundleSourceFailure.StaleAttempt, "Optional acquisition belongs to another preparation");
+        var owned = totals.Owned;
+        foreach (var handle in required.Sources) owned.TryAdd(handle.Spec.Name, handle);
         var needed = plan.Entries.Where(x => !owned.ContainsKey(x.Spec.Name)).ToArray();
-        long retained = required.Sources.Sum(x => x.Spec.Size) + needed.Sum(x => x.Spec.Size);
+        long retained = owned.Values.Sum(x => x.Spec.Size) + needed.Sum(x => x.Spec.Size);
         if (retained > MaximumRetainedBytes)
             throw new BundleSourceException(BundleSourceFailure.Budget, "Optional closure exceeds owned-byte bound");
         var hits = new Dictionary<string, bool>(StringComparer.Ordinal);
-        int downloads = required.DownloadCount; long bytes = required.DownloadBytes;
+        int downloads = Math.Max(totals.Count, required.DownloadCount);
+        long bytes = Math.Max(totals.Bytes, required.DownloadBytes);
         foreach (var entry in needed)
         {
             EnsureCurrent(required, token);
@@ -227,7 +248,8 @@ internal sealed class BundleSourcePreparation
             }
         }
         EnsureCurrent(required, token);
-        return plan.AssetSourceNames[BundleSourcePlan.SkillAssetPath].Select(name => owned[name]).ToArray();
+        return plan.AssetSourceNames.ToDictionary(pair => pair.Key,
+            pair => (IReadOnlyList<VerifiedBundleSource>)pair.Value.Select(name => owned[name]).ToArray(), StringComparer.Ordinal);
     }
 
     private static async Task<VerifiedBundleSource?> ReadOptionalCacheAsync(IBundleSourceCacheReader cache,

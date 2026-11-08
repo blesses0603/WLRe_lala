@@ -28,8 +28,7 @@ internal sealed class OfflinePreparedRuntimeCandidate
         Identity = identity; InventoryInput = inventory;
         Candidate = candidate; ManifestContentIdentity = sources.ManifestContentIdentity; Attempt = sources.Attempt;
         DownloadCount = downloads?.Count ?? sources.DownloadCount; DownloadBytes = downloads?.Bytes ?? sources.DownloadBytes;
-        ExtractedTables = candidate.OptionalSkills is null ? OfflineRuntimeCandidateDecoder.Sources
-            : OfflineRuntimeCandidateDecoder.Sources.Add("SkillData_C");
+        ExtractedTables = inventory.Tables.Select(table => table.Name[..^6]).ToImmutableArray();
     }
 }
 
@@ -88,15 +87,35 @@ internal sealed class OfflineBundleRuntimePreparation
                     throw new CatalogDecodeException("Optional skill payload exceeds retained table budget");
                 candidate = candidate.WithOptionalSkills(skillRaw, cancellationToken);
                 tables.Add("SkillData_C", skillRaw);
+                extractedBytes += skillRaw.Length;
             }
-            catch (Exception error) when (!error.Data.Contains(ResourceCleanup.FailureMarker) &&
-                error is not ResourceTransportException { Failure: ResourceTransportFailure.Cleanup } &&
-                error is (BundleSourceException or UnityTextAssetException or
-                CatalogDecodeException or IOException or UnauthorizedAccessException or HttpRequestException))
+            catch (Exception error) when (IsOptionalFailure(error))
             {
                 // No optional row is persisted or exposed. Cancellation, stale attempt and
                 // final source drift are still checked outside this optional failure boundary.
             }
+            _preparation.EnsureCurrent(prepared, cancellationToken);
+        }
+        if (prepared.Manifests[0].AssetBundles.ContainsKey(BundleSourcePlan.DailyTaskAssetPath) &&
+            prepared.Manifests[0].AssetBundles.ContainsKey(BundleSourcePlan.DailyRewardAssetPath))
+        {
+            try
+            {
+                var dailySources = await _preparation.PrepareDailyAsync(source, prepared, cache, budget, downloads, cancellationToken).ConfigureAwait(false);
+                byte[] taskRaw = UnityTextAssetExtractor.Extract(BundleSourcePlan.DailyTaskAssetPath,
+                    dailySources[BundleSourcePlan.DailyTaskAssetPath], cancellationToken: cancellationToken);
+                byte[] rewardRaw = UnityTextAssetExtractor.Extract(BundleSourcePlan.DailyRewardAssetPath,
+                    dailySources[BundleSourcePlan.DailyRewardAssetPath], cancellationToken: cancellationToken);
+                if (taskRaw.Length > DailyTaskDataParser.MaxTaskBytes || rewardRaw.Length > DailyTaskDataParser.MaxRewardBytes ||
+                    extractedBytes + taskRaw.Length + rewardRaw.Length > MaximumExtractedTableBytes)
+                    throw new CatalogDecodeException("Optional daily payloads exceed retained table budget");
+                candidate = candidate.WithOptionalDailyCatalog(taskRaw, rewardRaw, cancellationToken);
+                // The two tables are a single feature: no partial pair or cross-reference
+                // failure enters inventory input or an exposed catalog.
+                tables.Add("DailyTaskData_C", taskRaw);
+                tables.Add("DailyTaskRewardData_C", rewardRaw);
+            }
+            catch (Exception error) when (IsOptionalFailure(error)) { }
             _preparation.EnsureCurrent(prepared, cancellationToken);
         }
         var identity = ManifestIdentity.FromParsed(prepared.Snapshot, prepared.Manifests, cancellationToken);
@@ -108,7 +127,13 @@ internal sealed class OfflineBundleRuntimePreparation
         foreach (var table in inventory.Tables)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if ((table.Name == "SkillData_C.bytes" ? SkillDataParser.ReviewedSha256 : candidate.SourceSha256[table.Name[..^6]]) != table.Sha256)
+            string expected = table.Name switch
+            {
+                "SkillData_C.bytes" => SkillDataParser.ReviewedSha256,
+                "DailyTaskData_C.bytes" or "DailyTaskRewardData_C.bytes" => ResourceValidation.Digest(tables[table.Name[..^6]].Span, cancellationToken),
+                _ => candidate.SourceSha256[table.Name[..^6]]
+            };
+            if (expected != table.Sha256)
                 throw new ResourceValidationException("Decoded runtime differs from the owned extracted inventory");
         }
         // No readiness, provenance, active state, persisted receipt or partial result is published.
@@ -116,4 +141,9 @@ internal sealed class OfflineBundleRuntimePreparation
         await _preparation.ConfirmUnchangedAsync(source, prepared, cancellationToken).ConfigureAwait(false);
         return _preparation.ReturnCurrent(prepared, new OfflinePreparedRuntimeCandidate(candidate, prepared, inventory, identity, downloads), cancellationToken);
     }
+    private static bool IsOptionalFailure(Exception error) => !error.Data.Contains(ResourceCleanup.FailureMarker) &&
+        error is not ResourceTransportException { Failure: ResourceTransportFailure.Cleanup } &&
+        error is (BundleSourceException or UnityTextAssetException or CatalogDecodeException or IOException or
+            UnauthorizedAccessException or HttpRequestException);
+
 }

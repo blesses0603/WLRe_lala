@@ -98,7 +98,7 @@ public sealed partial class OfflineBundleRuntimePreparationTests
         Assert.Equal(3, source.Requests.Count(url => url.EndsWith("DataPackage.bytes", StringComparison.Ordinal)));
         Assert.Equal(3, source.Requests.Count(url => url.EndsWith("MainPackage.bytes", StringComparison.Ordinal)));
         Assert.Equal(1, result.DownloadCount); Assert.Equal(source.Bundles.Values.Single().Length, result.DownloadBytes);
-        Assert.Equal(OfflineRuntimeCandidateDecoder.Sources, result.ExtractedTables);
+        Assert.Equal<string>(OfflineRuntimeCandidateDecoder.Sources, result.ExtractedTables);
         Assert.Equal("任務", candidate.Expedition.Tasks[1].Name); Assert.Equal("場景😀", candidate.SceneNames[500]);
         Assert.Equal("甲😀", candidate.Talks[1].Text); Assert.Equal(3, candidate.Items.Count);
         Assert.Equal(3, candidate.Recipes.Catalog.Length); Assert.Single(candidate.Recipes.Products);

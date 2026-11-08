@@ -99,6 +99,156 @@
       "sha256": "03e1af527b1c2c3aa1d5fe757a67e8cc374130ede2c5b5ebd66a3cae46747186"
     }
   ],
+  "daily": {
+    "ownership": "Original synthetic daily and weekly rows. Text and item references are independently parsed from the retained all-ten payloads.",
+    "tables": [
+      {
+        "table": "DailyTaskData_C",
+        "asset_path": "Assets/ResourcesBuild/Data/DailyTaskData_C.bytes",
+        "name": "DailyTaskData_C",
+        "path_id": 12,
+        "bytes": 86,
+        "sha256": "8f981af4dd687b60da6f7e218ff270e580216d4d59fcf51036b4464ca24150dd"
+      },
+      {
+        "table": "DailyTaskRewardData_C",
+        "asset_path": "Assets/ResourcesBuild/Data/DailyTaskRewardData_C.bytes",
+        "name": "DailyTaskRewardData_C",
+        "path_id": 13,
+        "bytes": 98,
+        "sha256": "185da5ecddd2572d2df0415b558a1ff168c3a99b88c14d539a314a96ec3615f6"
+      }
+    ],
+    "expected": {
+      "tasks": [
+        {
+          "index": 1,
+          "group": 1,
+          "id": 1,
+          "mission_name_text_id": 10,
+          "condition_kind": 1,
+          "condition_params": [
+            3,
+            0,
+            0
+          ],
+          "function_kind": 2,
+          "function_arg1": 3,
+          "function_arg2": 4,
+          "awards": [
+            {
+              "kind": 10,
+              "id": 123,
+              "value": 2
+            },
+            {
+              "kind": 1,
+              "id": 0,
+              "value": 5
+            }
+          ],
+          "name": "\u4efb\u52d9",
+          "cycle": 1,
+          "goal": 3
+        },
+        {
+          "index": 2,
+          "group": 2,
+          "id": 12,
+          "mission_name_text_id": 30,
+          "condition_kind": 13,
+          "condition_params": [
+            2,
+            3,
+            7
+          ],
+          "function_kind": 4,
+          "function_arg1": 5,
+          "function_arg2": 6,
+          "awards": [
+            {
+              "kind": 11,
+              "id": 20,
+              "value": 1
+            },
+            {
+              "kind": 0,
+              "id": 0,
+              "value": 0
+            }
+          ],
+          "name": "  \u5834\u666f\ud83d\ude00  ",
+          "cycle": 2,
+          "goal": 7
+        }
+      ],
+      "rewards": [
+        {
+          "id": 1,
+          "kind": 1,
+          "value": 10,
+          "mark": 1,
+          "awards": [
+            {
+              "kind": 10,
+              "id": 99,
+              "value": 3
+            },
+            {
+              "kind": 1,
+              "id": 0,
+              "value": 7
+            },
+            {
+              "kind": 0,
+              "id": 0,
+              "value": 0
+            },
+            {
+              "kind": 0,
+              "id": 0,
+              "value": 0
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "kind": 2,
+          "value": 50,
+          "mark": 8,
+          "awards": [
+            {
+              "kind": 11,
+              "id": 20,
+              "value": 4
+            },
+            {
+              "kind": 0,
+              "id": 0,
+              "value": 0
+            },
+            {
+              "kind": 0,
+              "id": 0,
+              "value": 0
+            },
+            {
+              "kind": 0,
+              "id": 0,
+              "value": 0
+            }
+          ]
+        }
+      ]
+    },
+    "invalid_python_errors": {
+      "missing-text": "\u4efb\u52d9\u7f3a\u5c11\u540c\u7248\u540d\u7a31",
+      "missing-task-item": "\u4efb\u52d9\u734e\u52f5\u7f3a\u5c11\u540c\u7248\u7269\u54c1",
+      "missing-reward-item": "\u5bf6\u7bb1\u734e\u52f5\u7f3a\u5c11\u540c\u7248\u7269\u54c1",
+      "malformed-task": "DailyTaskData_C \u8cc7\u6599\u622a\u65b7",
+      "malformed-reward": "DailyTaskData_C \u8cc7\u6599\u622a\u65b7"
+    }
+  },
   "scenarios": {
     "all-ten": {
       "asset_bundle": {
@@ -355,6 +505,520 @@
           "name": "SkillData_C",
           "bytes": 129,
           "sha256": "f21e48ae006a6a9293ab892898c98d64e94daa524188cd575d7e022974a1f32f"
+        }
+      ]
+    },
+    "optional-daily.bundle": {
+      "bytes": 1183,
+      "sha256": "52f197734cb55e4815c4a26a9f575df0c4e38bf86a7c38b08821264f95870574",
+      "serialized_sha256": "30f8957cc27011d7cca910529c5e9d1747b45ed93e4bf77061e556528c9cd9d1",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [],
+      "externals": [],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/DailyTaskData_C.bytes",
+          "file_id": 0,
+          "path_id": 12
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/DailyTaskRewardData_C.bytes",
+          "file_id": 0,
+          "path_id": 13
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 12,
+          "name": "DailyTaskData_C",
+          "bytes": 86,
+          "sha256": "8f981af4dd687b60da6f7e218ff270e580216d4d59fcf51036b4464ca24150dd"
+        },
+        {
+          "path_id": 13,
+          "name": "DailyTaskRewardData_C",
+          "bytes": 98,
+          "sha256": "185da5ecddd2572d2df0415b558a1ff168c3a99b88c14d539a314a96ec3615f6"
+        }
+      ]
+    },
+    "all-ten-daily.bundle": {
+      "bytes": 2264,
+      "sha256": "1f37253c67ebdc3a544ad828013190bcf843761f6cdd3f8372d0d93eb2efc9b4",
+      "serialized_sha256": "a8d8991abd9fa91c4c5d684be34b76a5bde4f74bc8f7014d56de31f10ecf9fe1",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [],
+      "externals": [],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/Eve.bytes",
+          "file_id": 0,
+          "path_id": 2
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/ItemData_C.bytes",
+          "file_id": 0,
+          "path_id": 3
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/TalkData_C.bytes",
+          "file_id": 0,
+          "path_id": 4
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/TextData_C.bytes",
+          "file_id": 0,
+          "path_id": 5
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/SmithData_C.bytes",
+          "file_id": 0,
+          "path_id": 6
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/ScenesData_C.bytes",
+          "file_id": 0,
+          "path_id": 7
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/AdventureData_C.bytes",
+          "file_id": 0,
+          "path_id": 8
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/AdventureLvData_C.bytes",
+          "file_id": 0,
+          "path_id": 9
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/NpcData_C.bytes",
+          "file_id": 0,
+          "path_id": 10
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/NpcCareerData_C.bytes",
+          "file_id": 0,
+          "path_id": 11
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/DailyTaskData_C.bytes",
+          "file_id": 0,
+          "path_id": 12
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/DailyTaskRewardData_C.bytes",
+          "file_id": 0,
+          "path_id": 13
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 2,
+          "name": "Eve",
+          "bytes": 388,
+          "sha256": "85ae58e10b14bf7b29e84e2ad5af3381486dd607c6e3c9f2120412c69b5aae9e"
+        },
+        {
+          "path_id": 3,
+          "name": "ItemData_C",
+          "bytes": 745,
+          "sha256": "0e88099bdbd408c604f464903f007ac08fa8e81228354ac8515f2b98da31b7e1"
+        },
+        {
+          "path_id": 4,
+          "name": "TalkData_C",
+          "bytes": 53,
+          "sha256": "556463018833fd44b28175ccd0a8b77de5bac24f4ca8e8eb2d3beba4142094d3"
+        },
+        {
+          "path_id": 5,
+          "name": "TextData_C",
+          "bytes": 46,
+          "sha256": "467d8db1a91ae2e5666828886cca48439b8794f3aa5d4494920ede6e39009e55"
+        },
+        {
+          "path_id": 6,
+          "name": "SmithData_C",
+          "bytes": 109,
+          "sha256": "7089086eb8912c6005b27d4be141bd38210765b380b5ba80b62b48fcea2ac73b"
+        },
+        {
+          "path_id": 7,
+          "name": "ScenesData_C",
+          "bytes": 80,
+          "sha256": "059a09e181f41d42d580f601da016ab73a30e92bb2a358e7197018efdad3f826"
+        },
+        {
+          "path_id": 8,
+          "name": "AdventureData_C",
+          "bytes": 109,
+          "sha256": "dba15c67cce3a44682f711e67498e86c6b06aca5dc14f5b49c836c898d03ba7e"
+        },
+        {
+          "path_id": 9,
+          "name": "AdventureLvData_C",
+          "bytes": 19,
+          "sha256": "510055ebd43bbd4de4e2ddc8ce30bc861b73cfeb782a8e63e40dbdd6d9906835"
+        },
+        {
+          "path_id": 10,
+          "name": "NpcData_C",
+          "bytes": 219,
+          "sha256": "455c9f7e703663f58d0e864c9f3d3c024b0317692aa0c0d96e826ee35f535752"
+        },
+        {
+          "path_id": 11,
+          "name": "NpcCareerData_C",
+          "bytes": 21,
+          "sha256": "03e1af527b1c2c3aa1d5fe757a67e8cc374130ede2c5b5ebd66a3cae46747186"
+        },
+        {
+          "path_id": 12,
+          "name": "DailyTaskData_C",
+          "bytes": 86,
+          "sha256": "8f981af4dd687b60da6f7e218ff270e580216d4d59fcf51036b4464ca24150dd"
+        },
+        {
+          "path_id": 13,
+          "name": "DailyTaskRewardData_C",
+          "bytes": 98,
+          "sha256": "185da5ecddd2572d2df0415b558a1ff168c3a99b88c14d539a314a96ec3615f6"
+        }
+      ]
+    },
+    "optional-daily-missing-text.bundle": {
+      "bytes": 1184,
+      "sha256": "83a0005cf0d3f207cb2cb2017dccda896085b06534baab8f3c19a2bb009c30ec",
+      "serialized_sha256": "0f1e07841602169ea4567e3d583169b8b86c7d08282bfb2f432b6c0a97f2e32d",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [],
+      "externals": [],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/DailyTaskData_C.bytes",
+          "file_id": 0,
+          "path_id": 12
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/DailyTaskRewardData_C.bytes",
+          "file_id": 0,
+          "path_id": 13
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 12,
+          "name": "DailyTaskData_C",
+          "bytes": 86,
+          "sha256": "c7aa64eefa7432e02227b07e9d5817f4f5872af59419cee202f192b8edafb95f"
+        },
+        {
+          "path_id": 13,
+          "name": "DailyTaskRewardData_C",
+          "bytes": 98,
+          "sha256": "185da5ecddd2572d2df0415b558a1ff168c3a99b88c14d539a314a96ec3615f6"
+        }
+      ]
+    },
+    "optional-daily-missing-task-item.bundle": {
+      "bytes": 1184,
+      "sha256": "a6a6c6e7e7a808be05a0852aa0272b213417e22bf158f24c180f58d3aa837caf",
+      "serialized_sha256": "f65f0c29f7a5755682aaab9e4672d849f5f26a3f7af243a7e81a6f599c3d2ecd",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [],
+      "externals": [],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/DailyTaskData_C.bytes",
+          "file_id": 0,
+          "path_id": 12
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/DailyTaskRewardData_C.bytes",
+          "file_id": 0,
+          "path_id": 13
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 12,
+          "name": "DailyTaskData_C",
+          "bytes": 86,
+          "sha256": "4e5672e30ac13872fff49293692d29e4c94bd5e54925ada9a0ccd266f9b2ffad"
+        },
+        {
+          "path_id": 13,
+          "name": "DailyTaskRewardData_C",
+          "bytes": 98,
+          "sha256": "185da5ecddd2572d2df0415b558a1ff168c3a99b88c14d539a314a96ec3615f6"
+        }
+      ]
+    },
+    "optional-daily-missing-reward-item.bundle": {
+      "bytes": 1184,
+      "sha256": "b28891bde4b8c7c7bd896aabb4d788f5181c860544c3b2300662daf911c53c6e",
+      "serialized_sha256": "273ce9da20bc3e86f84582c7b4c3781f4c05757e43025fa985e7a61432cc5ac4",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [],
+      "externals": [],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/DailyTaskData_C.bytes",
+          "file_id": 0,
+          "path_id": 12
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/DailyTaskRewardData_C.bytes",
+          "file_id": 0,
+          "path_id": 13
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 12,
+          "name": "DailyTaskData_C",
+          "bytes": 86,
+          "sha256": "8f981af4dd687b60da6f7e218ff270e580216d4d59fcf51036b4464ca24150dd"
+        },
+        {
+          "path_id": 13,
+          "name": "DailyTaskRewardData_C",
+          "bytes": 98,
+          "sha256": "2e60eafd7f098dbc2fa89d927ff564d0c5064c3aeec5119691df77cb4996ae4b"
+        }
+      ]
+    },
+    "optional-daily-malformed-task.bundle": {
+      "bytes": 1183,
+      "sha256": "f3ee93b2b426af763a557e83ac349f605bc313150c9dfd8f96cba1c5f27a2909",
+      "serialized_sha256": "c631f8b22bea40aefcfef62874ffc8c6b963312adafe0f3d2b0f8596638769dc",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [],
+      "externals": [],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/DailyTaskData_C.bytes",
+          "file_id": 0,
+          "path_id": 12
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/DailyTaskRewardData_C.bytes",
+          "file_id": 0,
+          "path_id": 13
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 12,
+          "name": "DailyTaskData_C",
+          "bytes": 85,
+          "sha256": "6ade68d297d2dff2b419ef47e5b5f10350c11635b4aa62c1361a53696553b628"
+        },
+        {
+          "path_id": 13,
+          "name": "DailyTaskRewardData_C",
+          "bytes": 98,
+          "sha256": "185da5ecddd2572d2df0415b558a1ff168c3a99b88c14d539a314a96ec3615f6"
+        }
+      ]
+    },
+    "optional-daily-malformed-reward.bundle": {
+      "bytes": 1185,
+      "sha256": "b0b3246d3e9f0983b54266759bc6cb3b001b4f61a79a4586ffaafd9d5e13c28e",
+      "serialized_sha256": "c2fb2f8c5b298f75fdeafab4420de286358e9852ce886699158d50f565eaae74",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [],
+      "externals": [],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/DailyTaskData_C.bytes",
+          "file_id": 0,
+          "path_id": 12
+        },
+        {
+          "path": "Assets/ResourcesBuild/Data/DailyTaskRewardData_C.bytes",
+          "file_id": 0,
+          "path_id": 13
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 12,
+          "name": "DailyTaskData_C",
+          "bytes": 86,
+          "sha256": "8f981af4dd687b60da6f7e218ff270e580216d4d59fcf51036b4464ca24150dd"
+        },
+        {
+          "path_id": 13,
+          "name": "DailyTaskRewardData_C",
+          "bytes": 97,
+          "sha256": "a60b26c97db5df347ce5b807f9329c8826791e77de31ed270cf701bf88e082d6"
+        }
+      ]
+    },
+    "optional-daily-missing-task-path.bundle": {
+      "bytes": 1176,
+      "sha256": "83c6da35169f51b265f7015e21e7d6ae2e0a39e80deb910f5d2514091d136543",
+      "serialized_sha256": "454be4216910abd91bb777c1fc428d1864638493301acd39623739a53b2b3aaf",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [],
+      "externals": [],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/DailyTaskRewardData_C.bytes",
+          "file_id": 0,
+          "path_id": 13
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 12,
+          "name": "DailyTaskData_C",
+          "bytes": 86,
+          "sha256": "8f981af4dd687b60da6f7e218ff270e580216d4d59fcf51036b4464ca24150dd"
+        },
+        {
+          "path_id": 13,
+          "name": "DailyTaskRewardData_C",
+          "bytes": 98,
+          "sha256": "185da5ecddd2572d2df0415b558a1ff168c3a99b88c14d539a314a96ec3615f6"
+        }
+      ]
+    },
+    "optional-daily-missing-reward-path.bundle": {
+      "bytes": 1172,
+      "sha256": "9a11fa01911b0a5dc45d729452d270135f3745f5759f29d46943aa2a86786032",
+      "serialized_sha256": "e42b35a23f205e7dd448145ca4e1b226d0ecb4b5b2c3aa3cb098f742765730ee",
+      "unityfs_version": 8,
+      "unity_version": "2021.3.45f2",
+      "serialized_version": 22,
+      "unityfs_flags": 195,
+      "directory": "CAB-runtime-flow",
+      "classes": [
+        142,
+        49
+      ],
+      "tree_nodes": [
+        58,
+        9
+      ],
+      "dependencies": [],
+      "externals": [],
+      "container": [
+        {
+          "path": "Assets/ResourcesBuild/Data/DailyTaskData_C.bytes",
+          "file_id": 0,
+          "path_id": 12
+        }
+      ],
+      "scripts": [
+        {
+          "path_id": 12,
+          "name": "DailyTaskData_C",
+          "bytes": 86,
+          "sha256": "8f981af4dd687b60da6f7e218ff270e580216d4d59fcf51036b4464ca24150dd"
+        },
+        {
+          "path_id": 13,
+          "name": "DailyTaskRewardData_C",
+          "bytes": 98,
+          "sha256": "185da5ecddd2572d2df0415b558a1ff168c3a99b88c14d539a314a96ec3615f6"
         }
       ]
     },
