@@ -72,7 +72,10 @@ public sealed class BattleReceiveContextTests
         var started = Apply(state, Start);
         var exited = Apply(state, new FightExitEvent(71, 0));
         Assert.False(exited.Local.Battle.Active);
-        Assert.Equal(started.Instances.Coop, exited.Instances.Coop);
+        Assert.Null(exited.Instances.Coop["fight_count"].ScalarValue);
+        Assert.Equal(started.Local.Battle.BattleCount, exited.Instances.Coop["fight_consumed_battle"].ScalarValue);
+        Assert.Null(exited.Instances.Coop["last_fight_victory"].ScalarValue);
+        Assert.Null(started.Instances.Coop["fight_consumed_battle"].ScalarValue);
         Assert.Equal(started.Local.Session.EventFlow, exited.Local.Session.EventFlow);
         Assert.True(exited.Observation!.Inputs.ResourceHeld);
         Assert.False(exited.IsCompleteState);

@@ -1876,3 +1876,21 @@ sequences produced 112 matching snapshots, and public loopback exercises reconne
 Independent review found no blockers. No UI, real credentials or official-server
 acceptance was involved. Only the overall PR marker advances once to 8.0.31;
 same-batch corrections and platform/Core/Desktop versions remain unchanged.
+
+
+### Overall PR development marker 8.0.32: cooperative fight bookkeeping
+
+The receive-owned first-own-exit overlay now records style-16 cooperative fight
+consumption after full service reduction. An independent battle marker prevents
+repeated consumption across role changes. Counts and own-side victory preserve
+Python's unknown and ambiguity rules, without introducing delay results, timers,
+continuation, readiness or sending. Standalone instance observers remain unchanged.
+Six Python delay-arithmetic failures outside this scope are explicitly documented;
+this is not full SessionLogic scheduler parity.
+
+Final offline verification passed: 1,305 focused, 43,473 Core, 86 Python regressions,
+external public consumer, 76 lifecycle, 36 acceptance and 17 Linux PTY checks.
+The 41-sequence / 302-snapshot Python oracle regenerates identically. Independent
+review found no blockers. No UI, real credentials or live-server acceptance was
+involved. Only the overall PR marker advances once to 8.0.32; same-batch corrections
+and platform/Core/Desktop project versions remain unchanged.

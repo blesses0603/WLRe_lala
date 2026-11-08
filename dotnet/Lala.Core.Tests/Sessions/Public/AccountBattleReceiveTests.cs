@@ -66,6 +66,11 @@ public sealed partial class AccountConnectionRuntimeTests
             Assert.Equal((byte)0, duplicate.State.Local.Battle.WarStyle); // Duplicate exits preserve later zero announcement.
             var next = await Observe(BattleStartPacket());
             Assert.Null(next.State.Local.Battle.WarStyle); // Announcement was consumed once.
+            var consumed = await Observe(new(186, 15, [3]), new(11, 10, [16]), BattleStartPacket(),
+                new(11, 12, [1]), new(11, 0, new PacketWriter().U32(17).U16(0).Build()));
+            Assert.Equal(new System.Numerics.BigInteger(2), consumed.State.Instances.Coop["fight_count"].ScalarValue);
+            Assert.NotNull(consumed.State.Instances.Coop["fight_consumed_battle"].ScalarValue);
+            Assert.Equal(true, consumed.State.Instances.Coop["last_fight_victory"].ScalarValue);
             await Observe(new Packet(11, 10, [16])); // Unconsumed context must not cross the actual retry.
             var firstAttempt = runtime.Publication!.Attempt;
             commands.Writer.Complete();
@@ -74,6 +79,10 @@ public sealed partial class AccountConnectionRuntimeTests
             var reconnected = runtime.Publication!;
             Assert.Null(reconnected.State.Local.Battle.WarStyle);
             Assert.Equal(1, reconnected.State.Local.Battle.BattleCount);
+            Assert.Null(reconnected.State.Instances.Coop["fight_count"].ScalarValue);
+            Assert.Null(reconnected.State.Instances.Coop["fight_consumed_battle"].ScalarValue);
+            Assert.Null(reconnected.State.Instances.Coop["last_fight_victory"].ScalarValue);
+            Assert.Equal(new System.Numerics.BigInteger(2), consumed.State.Instances.Coop["fight_count"].ScalarValue);
             Assert.Equal((byte)9, Assert.Single(reconnected.State.Local.Battle.Units).Layout.WarStyle);
             Assert.Equal((byte)16, restricted.State.Local.Battle.WarStyle);
             Assert.True(restricted.State.Local.Battle.Active);

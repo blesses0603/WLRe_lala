@@ -106,8 +106,8 @@ resource-hold parity and is not intended as a live-session hold/resume implement
 
 ## Bounded runtime battle context
 
-`ReceiveStateCoordinator` adds only the battle-style/own-exit subset of
-`SessionLogic.receive` (`wlre/network/client.py:225-250`). It stages the complete
+`ReceiveStateCoordinator` adds the battle-style/own-exit subset of
+`SessionLogic.receive` plus bounded cooperative fight bookkeeping. It stages the complete
 service reduction first, then restores a pending S11-10 announcement after the
 S11-250 battle reset. The overlay and its private context commit together. The
 next observation-input callback, the canonical coordinator and the published
@@ -124,9 +124,18 @@ on every start.
 - Duplicate exits do not clear a later announcement. Winner, event end, role
   list and world-player packets do not reset this context. A new receive attempt
   starts empty, including when initialized from a historical service snapshot.
-- Post-event status, deadlines, pending event continuation, event-flow mutation,
-  cooperative fight-count consumption, scheduler work and sends are **not**
-  ported here. Resource hold and command authority remain unchanged.
+- On the first qualifying own exit with observed style 16, the overlay records
+  the immutable `instance_combat.consume_coop_fight` bookkeeping after the full
+  service reduction. `fight_consumed_battle` independently prevents a second
+  decrement across role changes or a fresh private context on retained state.
+  Positive integer counts decrement once; unknown, zero, negative and non-integer
+  counts keep their original value and record null victory. Winner 1/2 and one
+  distinct own-PID column 1..4 are required for victory, including exited units.
+  PID zero can exit but cannot establish victory; Master never substitutes for PID.
+  Authoritative count/room receipts retain their source-owned marker reset rules.
+- Post-event status, deadlines, delay returns, pending event continuation,
+  event-flow mutation, scheduler work and sends are **not** ported here.
+  Resource hold and command authority remain unchanged.
 
 `BattleReceiveGenerateVectors.py` executes actual Python `State.apply` followed
 by `SessionLogic.receive`, with dormant services and a fixed clock. Its 13
@@ -138,3 +147,21 @@ exact publication/input basis, invalid payloads, failed hooks and fresh attempts
 exercise style restrictions, unknowns, own/duplicate exits, next battles, and an
 actual two-attempt reconnect with fresh synthetic credentials. It is not
 official-server or real-account validation.
+
+`CoopFightReceiveGenerateVectors.py` adds 41 actual Python `State.apply` then
+`SessionLogic.receive` sequences with 302 snapshots, comparing every instance
+field and the supported battle projection. Six explicitly recorded calls reach
+Python's second consumption guard, then raise `TypeError` in the excluded
+`time.monotonic() + None` delay calculation. The oracle checks the real state
+left by those calls; it neither replaces receive nor treats that scheduling
+failure as a Core requirement. Imported booleans/integral-float markers follow
+Python equality while fight-count validation remains strict.
+
+The cooperative coordinator tests also cover stale-input rejection and rollback
+when an invalid imported instance map fails only after the service layer stages
+an own-unit exit. Receive-attempt tests verify exact publication/input identity,
+failed hooks/payloads, retained-state fresh context and historical immutability.
+Public fragmented TCP tests cover full coop entry/room/count state, duplicate
+exits, role changes, known/unknown victory, non-cooperative battles and reset of
+consumed bookkeeping across a real new attempt. Peers permit only the existing
+login/heartbeat exchanges; no post-battle continuation or command is sent.
