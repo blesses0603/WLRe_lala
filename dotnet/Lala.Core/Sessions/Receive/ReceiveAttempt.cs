@@ -68,6 +68,7 @@ internal sealed class ReceiveAttempt : IAsyncDisposable
     private readonly Channel<ReceivePublication> publications = Channel.CreateBounded<ReceivePublication>(
         new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.DropOldest, SingleReader = true, SingleWriter = true });
     private readonly CancellationTokenSource stop = new();
+    private readonly TaskCompletionSource retiring = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private ReceivePublication latest;
     private Task<ReceiveResult>? completion;
     private Task? disposalCompletion;
@@ -98,6 +99,8 @@ internal sealed class ReceiveAttempt : IAsyncDisposable
     }
 
     public ReceivePublication Latest { get { lock (gate) return latest; } }
+    /// <summary>One-shot ending notification, before transport/callback cleanup completes.</summary>
+    internal Task Retiring => retiring.Task;
     public bool IsCurrent(Guid attempt)
     {
         lock (gate) return latest.Attempt == attempt && !retired && latest.Stage != ReceiveStage.Ended;
@@ -138,10 +141,16 @@ internal sealed class ReceiveAttempt : IAsyncDisposable
         retired = true;
         (transport as IReceiveTransportRetirement)?.Retire();
         end ??= reason;
-        latest = latest with { Stage = ReceiveStage.Ending, End = end };
+        PublishEndingLocked();
         // Task.Run keeps transport/cancellation callbacks outside gate, including synchronous ones.
         StartCancellationLocked();
         StartTransportDisposalLocked();
+    }
+
+    private void PublishEndingLocked()
+    {
+        latest = latest with { Stage = ReceiveStage.Ending, End = end };
+        retiring.TrySetResult();
     }
 
     private Task StartCancellationLocked() => cancellation ??= Task.Run(async () =>
@@ -174,7 +183,7 @@ internal sealed class ReceiveAttempt : IAsyncDisposable
         Task cancel;
         lock (gate)
         {
-            latest = latest with { Stage = ReceiveStage.Ending, End = end };
+            PublishEndingLocked();
             cleanup = StartTransportDisposalLocked();
             // Always establish this task before cleanup awaits. Retirement can race EOF
             // cleanup, and must never create an unawaited cancellation callback worker.
@@ -233,7 +242,7 @@ internal sealed class ReceiveAttempt : IAsyncDisposable
                         lock (gate)
                         {
                             end ??= ReceiveEnd.Completed;
-                            latest = latest with { Stage = ReceiveStage.Ending, End = end };
+                            PublishEndingLocked();
                         }
                         return;
                     }

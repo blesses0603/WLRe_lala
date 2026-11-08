@@ -58,6 +58,7 @@ internal sealed class HeldAccountConnection : IAsyncDisposable
     internal ReceivePublication? Publication => session.ReadHeldReceive(generation, Attempt);
     internal HandshakeView Handshake => transport.Handshake;
     internal Task<HandshakeView> Login => transport.Login;
+    internal Task Retiring => receive.Retiring;
     internal IReadOnlyList<Transport.TcpTransportView> Connections => transport.Connections;
     internal bool ResourceHeld => true;
     internal bool CanSendCommands => false;

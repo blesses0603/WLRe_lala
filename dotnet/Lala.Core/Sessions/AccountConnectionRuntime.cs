@@ -47,6 +47,9 @@ public sealed class AccountConnectionRuntime : IAsyncDisposable
     }
 
     public AccountConnectionStatus Snapshot => Map(connection.Snapshot);
+    internal ReconnectView Lifetime => connection.Snapshot;
+    internal Task<ReconnectView> WaitForLifetimeChangeAsync(ReconnectView expected, CancellationToken token)
+        => connection.WaitForChangeAsync(expected, token);
     /// <summary>Current connection only. Returns null after stop, replacement, or between
     /// attempts. Custom observation inputs run on the receive writer, not a UI thread.</summary>
     public AccountReceivePublication? Publication
@@ -109,6 +112,7 @@ public sealed class AccountConnectionRuntime : IAsyncDisposable
             ReconnectPhase.AcquiringCredentials => AccountConnectionPhase.AcquiringCredentials,
             ReconnectPhase.Connecting => AccountConnectionPhase.Connecting,
             ReconnectPhase.Receiving => AccountConnectionPhase.ReceivingHeld,
+            ReconnectPhase.Draining => AccountConnectionPhase.Draining,
             ReconnectPhase.Waiting => AccountConnectionPhase.RetryWaiting,
             ReconnectPhase.Ending => AccountConnectionPhase.Stopping,
             _ => AccountConnectionPhase.Ended

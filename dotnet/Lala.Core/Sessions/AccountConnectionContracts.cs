@@ -63,7 +63,7 @@ public interface IAccountCredentialSource
     ValueTask<AccountLoginCredentials?> AcquireAsync(AccountCredentialRequest request, CancellationToken cancellationToken);
 }
 
-public enum AccountConnectionPhase { Created, AcquiringCredentials, Connecting, ReceivingHeld, RetryWaiting, Stopping, Ended }
+public enum AccountConnectionPhase { Created, AcquiringCredentials, Connecting, ReceivingHeld, Draining, RetryWaiting, Stopping, Ended }
 public enum AccountConnectionEndReason { ConnectionEnded, AttemptsExhausted, CredentialsUnavailable, ProviderFailed,
     AdmissionBlocked, Superseded, Cancelled, Stopped, Disposed, RecoveryDeadline, CleanupFailed, DelayFailed }
 public enum AccountConnectionFailure { ConnectFailed, ConnectTimedOut, RemoteEof, ReadFailed,

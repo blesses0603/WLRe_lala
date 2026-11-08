@@ -71,3 +71,7 @@ used a process-only 3 GiB GC heap cap, two reported processors, single-node MSBu
 shared compilation. Earlier test-assembly compilation attempts terminated or exhausted a
 2 GiB compiler heap; they ran no assertions and are not counted as passing. Independent
 read-only review found no blocker. Full combined-head/platform verification remains separate.
+
+For explicit local recovery after Committed/Unknown outcomes, see
+[read-only inventory inspection](dotnet-resource-inventory-inspection.md). It checks fresh
+persisted self-consistency without retrying preparation or granting resource admission.

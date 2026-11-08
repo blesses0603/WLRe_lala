@@ -43,7 +43,8 @@ internal static class RuntimeDatabaseSnapshotReader
         "FROM main.resources WHERE version_id=@version AND name=@name LIMIT 2";
 
     internal static async Task<RuntimeDatabaseReadObservation> ReadAsync(DbConnection connection,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        long maximumAggregateBytes = OwnedRuntimeDatabaseSnapshot.MaximumOwnedTableBytes)
     {
         ArgumentNullException.ThrowIfNull(connection);
         Exception? primary = null;
@@ -53,6 +54,8 @@ internal static class RuntimeDatabaseSnapshotReader
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (maximumAggregateBytes is <= 0 or > OwnedRuntimeDatabaseSnapshot.MaximumOwnedTableBytes)
+                throw new ArgumentOutOfRangeException(nameof(maximumAggregateBytes));
             if (connection.State != ConnectionState.Closed)
                 throw new InvalidOperationException("A closed, exclusively owned read-only SQLite connection is required");
             await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
@@ -66,11 +69,15 @@ internal static class RuntimeDatabaseSnapshotReader
             var encoding = await ReadEncodingAsync(connection, cancellationToken).ConfigureAwait(false);
             var active = await ReadActiveAsync(connection, encoding, cancellationToken).ConfigureAwait(false);
             var rows = new Dictionary<string, RuntimeDatabaseTableInput?>(StringComparer.Ordinal);
+            long aggregateBytes = 0;
             foreach (string source in BundleSourcePlan.RequiredTables)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 string name = source + ".bytes";
-                rows.Add(name, await ReadTableAsync(connection, active.VersionId, name, encoding, cancellationToken).ConfigureAwait(false));
+                var row = await ReadTableAsync(connection, active.VersionId, name, encoding, cancellationToken).ConfigureAwait(false);
+                aggregateBytes = checked(aggregateBytes + row.Data!.Value.Length);
+                if (aggregateBytes > maximumAggregateBytes) throw Invalid("Resource snapshot exceeds aggregate payload limit");
+                rows.Add(name, row);
             }
             // Capture owns a second, detached copy before the transaction ends. At most 160 MiB
             // of temporary payloads plus 160 MiB retained payloads and a current provider value

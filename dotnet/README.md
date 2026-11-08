@@ -65,3 +65,7 @@ Core now exposes explicit, inert `AccountConnectionRuntime` and
 The no-friend-assembly consumer smoke check is:
 `dotnet run --project dotnet/Lala.Core.PublicContract.Check -c Release`.
 This does not activate host UI wiring, command sending, or live-server validation.
+
+`AccountRuntime` now joins connection and resource lifetimes: login first, one
+bootstrap, read-only refresh after reconnect, and current catalog observations in
+the held receive pipeline. See [ordering and validation limits](../docs/dotnet-integrated-account-runtime.md).

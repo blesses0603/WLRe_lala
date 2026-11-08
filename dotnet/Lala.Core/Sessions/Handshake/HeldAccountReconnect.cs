@@ -6,7 +6,7 @@ using Lala.Core.State;
 
 namespace Lala.Core.Sessions.Handshake;
 
-internal enum ReconnectPhase { Created, AcquiringCredentials, Connecting, Receiving, Waiting, Ending, Ended }
+internal enum ReconnectPhase { Created, AcquiringCredentials, Connecting, Receiving, Draining, Waiting, Ending, Ended }
 internal enum ReconnectEnd { ConnectionEnded, AttemptsExhausted, CredentialsUnavailable, ProviderFailed,
     AdmissionBlocked, Superseded, Cancelled, Stopped, Disposed, Deadline, CleanupFailed, DelayFailed }
 internal sealed record ReconnectLimits
@@ -57,6 +57,7 @@ internal sealed class HeldAccountReconnect : IAsyncDisposable
     private readonly ReconnectLimits limits;
     private readonly CancellationTokenSource stop = new();
     private ReconnectView view;
+    private TaskCompletionSource<ReconnectView> viewChanged = NewViewSignal();
     private HeldAccountConnection? current;
     private Task<ReconnectResult>? completion;
     private Task? disposal, cancellation, retirementCleanup;
@@ -91,6 +92,30 @@ internal sealed class HeldAccountReconnect : IAsyncDisposable
     }
 
     internal ReconnectView Snapshot { get { lock (gate) return view; } }
+    /// <summary>
+    /// Observes assignment identity, including same-phase updates. Comparing and subscribing
+    /// under the same gate prevents a missed transition between a snapshot read and this wait.
+    /// Cancellation belongs only to this waiter; it cannot retire the owner or other waits.
+    /// </summary>
+    internal Task<ReconnectView> WaitForChangeAsync(ReconnectView expectedView,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(expectedView);
+        lock (gate)
+            return !ReferenceEquals(view, expectedView)
+                ? Task.FromResult(view)
+                : viewChanged.Task.WaitAsync(cancellationToken);
+    }
+    private static TaskCompletionSource<ReconnectView> NewViewSignal() =>
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private void SetViewLocked(ReconnectView next)
+    {
+        var previous = viewChanged;
+        view = next;
+        viewChanged = NewViewSignal();
+        // Retain only one pending signal, and never invoke observer continuations inline.
+        previous.SetResult(next);
+    }
     internal ReceivePublication? Publication { get { lock (gate) return retired ? null : current?.Publication; } }
     internal Task<ReconnectResult> RunAsync(CancellationToken cancellationToken = default)
     {
@@ -120,7 +145,7 @@ internal sealed class HeldAccountReconnect : IAsyncDisposable
     {
         if (retired) return;
         retired = true;
-        view = view with { Phase = ReconnectPhase.Ending, End = reason, NextDelay = null };
+        SetViewLocked(view with { Phase = ReconnectPhase.Ending, End = reason, NextDelay = null });
         // This revokes network admission synchronously, before cancellation callbacks run.
         if (current is not null) retirementCleanup = current.DisposeAsync().AsTask();
         StartCancellationLocked();
@@ -151,7 +176,7 @@ internal sealed class HeldAccountReconnect : IAsyncDisposable
                     if (account.Generation != view.Generation || account.Phase != SessionPhase.Preparing)
                     { RetireLocked(ReconnectEnd.Superseded); break; }
                     number = checked(view.Attempts + 1); generation = view.Generation;
-                    view = view with { Attempts = number, Phase = ReconnectPhase.AcquiringCredentials, NextDelay = null };
+                    SetViewLocked(view with { Attempts = number, Phase = ReconnectPhase.AcquiringCredentials, NextDelay = null });
                 }
                 Func<HandshakeLeg, Packet>? provider = null;
                 IHandshakeLoginProvider? ownedProvider = null;
@@ -181,7 +206,7 @@ internal sealed class HeldAccountReconnect : IAsyncDisposable
                                 {
                                     ownedProvider = null; // Ownership moved to the connection, including failure cleanup.
                                     current = owner;
-                                    view = view with { Phase = ReconnectPhase.Connecting };
+                                    SetViewLocked(view with { Phase = ReconnectPhase.Connecting });
                                 }
                             }
                         }
@@ -201,8 +226,11 @@ internal sealed class HeldAccountReconnect : IAsyncDisposable
                             // A recovery budget must never disconnect a healthy session.
                             deadline.CancelAfter(Timeout.InfiniteTimeSpan);
                             if (deadline.IsCancellationRequested) RetireLocked(ReconnectEnd.Deadline);
-                            else view = view with { Phase = ReconnectPhase.Receiving };
+                            else SetViewLocked(view with { Phase = ReconnectPhase.Receiving });
                         }
+                    await Task.WhenAny(running, owner.Retiring).ConfigureAwait(false);
+                    lock (gate)
+                        if (!retired) SetViewLocked(view with { Phase = ReconnectPhase.Draining });
                     result = await running.ConfigureAwait(false);
                     await owner.DisposeAsync().ConfigureAwait(false);
                     outcome = owner.GetOutcome(result);
@@ -215,7 +243,7 @@ internal sealed class HeldAccountReconnect : IAsyncDisposable
                 lock (gate)
                 {
                     current = null;
-                    view = view with { History = view.History.Add(new(generation, owner.Attempt, result.End, outcome)) };
+                    SetViewLocked(view with { History = view.History.Add(new(generation, owner.Attempt, result.End, outcome)) });
                     if (!result.ResourcesReleased) { released = false; RetireLocked(ReconnectEnd.CleanupFailed); break; }
                     if (retired) break;
                     if (!outcome.CanReconnect) { RetireLocked(ReconnectEnd.ConnectionEnded); break; }
@@ -224,7 +252,7 @@ internal sealed class HeldAccountReconnect : IAsyncDisposable
                         checked(limits.InitialDelay.Ticks * (1L << (number - 1)))));
                     if (outcome.LoginCompleted) deadline.CancelAfter(limits.MaximumRecoveryTime);
                     if (deadline.IsCancellationRequested) { RetireLocked(ReconnectEnd.Deadline); break; }
-                    view = view with { Phase = ReconnectPhase.Waiting, NextDelay = wait };
+                    SetViewLocked(view with { Phase = ReconnectPhase.Waiting, NextDelay = wait });
                 }
                 try { await delay(wait, stop.Token).ConfigureAwait(false); }
                 catch (Exception) { Retire(ReconnectEnd.DelayFailed); break; }
@@ -233,7 +261,7 @@ internal sealed class HeldAccountReconnect : IAsyncDisposable
                     if (retired) break;
                     var replacement = session.TryBeginReconnect(generation, owner.Attempt);
                     if (replacement is null) { RetireLocked(ReconnectEnd.Superseded); break; }
-                    view = view with { Generation = replacement.Generation, Phase = ReconnectPhase.AcquiringCredentials, NextDelay = null };
+                    SetViewLocked(view with { Generation = replacement.Generation, Phase = ReconnectPhase.AcquiringCredentials, NextDelay = null });
                 }
             }
         }
@@ -256,8 +284,8 @@ internal sealed class HeldAccountReconnect : IAsyncDisposable
         lock (gate)
         {
             current = null;
-            view = view with { Phase = ReconnectPhase.Ended, NextDelay = null,
-                End = released ? view.End : ReconnectEnd.CleanupFailed };
+            SetViewLocked(view with { Phase = ReconnectPhase.Ended, NextDelay = null,
+                End = released ? view.End : ReconnectEnd.CleanupFailed });
             return new(view, released);
         }
     }

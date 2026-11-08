@@ -28,6 +28,16 @@ await using (var resources = AccountResourceRuntime.Create(session, root))
     Require(!result.CanLogin && !result.CanSendPackets && !Directory.Exists(root));
 }
 Require(!Directory.Exists(root));
+await using (var account = AccountRuntime.Create(session, generation, profile, source, root))
+{
+    Require(!account.Snapshot.HasCurrentResources && account.Publication is null);
+    var result = await account.RunAsync(cancel.Token);
+    Require(result.ResourcesReleased && result.ResourceHistory.IsEmpty);
+    Require(source.Calls == 0 && !Directory.Exists(root) && !account.Snapshot.CanSendCommands);
+}
+var inspection = await ResourceInventoryInspector.InspectAsync(root);
+Require(inspection.Status == ResourceInventoryInspectionStatus.Missing && !inspection.CanLogin && !inspection.CanSendPackets);
+Require(!Directory.Exists(root));
 Console.WriteLine("Public Core contract check passed; no network or resource writes were requested.");
 static void Require(bool condition) { if (!condition) throw new InvalidOperationException("Public Core contract check failed."); }
 sealed class DecliningSource : IAccountCredentialSource
