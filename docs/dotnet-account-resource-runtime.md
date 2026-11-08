@@ -123,3 +123,14 @@ withdrawal, historical immutability and strict zero-outbound EOF. Initial fixtur
 (target-typed constructors in params calls and reopening a stream after half-close) were fixed;
 production code and expected behavior were unchanged. Independent review found no blocker.
 Full combined-head/platform verification remains separate.
+
+### Reviewed companion skill slots
+
+The required `NpcData_C` readback can additionally expose `ReviewedNpcs` (names and five ordered skill IDs) only under the existing reviewed NPC SHA-256. Other supported required-table versions remain usable, with this metadata unavailable. This reuses the required raw table and transaction; it adds no download, database table, or full combat catalog activation.
+
+`AccountRuntime` passes the reviewed slot IDs into held companion observations independently of optional `SkillData_C` and Lua constants. Retained S15 slots can resolve when metadata arrives later; withdrawal removes metadata-derived skills on the next observation while keeping direct S8 evidence and raw slots. This supplies observed skill identity and level only, not skill definitions, combat readiness, or command permission. Synthetic parser/projection/framed receive tests do not establish live official-source acceptance.
+
+Late NPC-slot reconciliation is an explicit integrated-runtime observation mode. The default standalone reducer preserves the Python stored-profile behavior (mapping only on S15); opting in refreshes metadata evidence on subsequent packets, including withdrawal. It does not change direct S8 precedence or the separate learned-skill consumer.
+
+Verification: the focused Core regression run passed 8,204 cases, including existing Python parity fixtures, reviewed parser/candidate clone tests, direct and late S15 mapping, S8 overrides/removals, resource withdrawal, current-occupant identity, and strict zero-outbound loopback assertions. An initial change refreshed stored profiles by default; retained Python fixtures exposed that mismatch, so reconciliation is now explicitly opted into by `AccountRuntime` while the original default remains unchanged. Independent review found no blocker. Official NPC payload acceptance remains untested by these synthetic fixtures.
+The subsequent full Core run passed 43,201 tests with no skips on the same compiled tree. Platform host builds and CI remain separate verification steps.

@@ -1,8 +1,5 @@
-using System.Buffers.Binary;
 using System.Collections.Immutable;
 using System.Security.Cryptography;
-using System.Text;
-using Lala.Core.Diagnostics.Parsing;
 using Lala.Core.Inventory;
 
 namespace Lala.Core.Catalogs;
@@ -90,16 +87,8 @@ public static partial class CombatCatalogParser
         if (verifySource && Convert.ToHexStringLower(SHA256.HashData(itemSnapshot)) != ItemDataParser.Reviewed1296Sha256)
             throw new CatalogDecodeException("Unreviewed combat ItemData");
         token.ThrowIfCancellationRequested();
-        if (npcRaw.Length > NormalAttackCatalogParser.MaxNpcBytes)
-        {
-            // Reuse the source-decorated validator even on an oversized failure.
-            NormalAttackCatalogParser.ParseNpcs(npcRaw, token);
-            throw new InvalidOperationException("Unreachable NPC size acceptance");
-        }
-        byte[] npcSnapshot = npcRaw.ToArray();
-        if (verifySource) NormalAttackCatalogParser.ParseNpcs(npcSnapshot, token);
-        else NormalAttackCatalogParser.ParseNpcsLayout(npcSnapshot, token);
-        var npcs = ReadCombatNpcs(npcSnapshot, token);
+        var npcs = verifySource ? ReviewedNpcCatalogParser.Parse(npcRaw, token)
+            : ReviewedNpcCatalogParser.ParseLayout(npcRaw, token);
         var itemRows = verifySource ? ItemDataParser.Parse(itemSnapshot, includeSkillLink: true, cancellationToken: token)
             : ItemDataParser.ParseLayout(itemSnapshot, reviewed1296: true, includeSkillLink: true, cancellationToken: token);
         var items = ImmutableDictionary.CreateBuilder<ushort, CombatCatalogItem>();
@@ -133,36 +122,5 @@ public static partial class CombatCatalogParser
         var result = new CombatCatalogData(skills.ToImmutable(), keys.ToImmutable(), items.ToImmutable(), npcs, constants);
         token.ThrowIfCancellationRequested();
         return result;
-    }
-
-    private static ImmutableDictionary<uint, CombatResourceNpc> ReadCombatNpcs(ReadOnlySpan<byte> raw, CancellationToken token)
-    {
-        var reader = new CatalogReader(raw, token);
-        ParserDiagnostics.ReadCheckpoint(reader.Position, 4, reader.Remaining);
-        uint count = reader.UInt32();
-        var rows = ImmutableDictionary.CreateBuilder<uint, CombatResourceNpc>();
-        for (int index = 0; index < count; index++)
-        {
-            string name = ReadValidatedNpcText(ref reader);
-            ReadValidatedNpcText(ref reader);
-            ParserDiagnostics.ReadCheckpoint(reader.Position, NormalAttackCatalogParser.NpcFieldBytes, reader.Remaining);
-            var fields = reader.Take(NormalAttackCatalogParser.NpcFieldBytes);
-            ushort id = BinaryPrimitives.ReadUInt16LittleEndian(fields[1..]);
-            var skills = ImmutableArray.CreateBuilder<uint>(5);
-            for (int offset = 75; offset < 85; offset += 2) skills.Add(BinaryPrimitives.ReadUInt16LittleEndian(fields[offset..]));
-            rows.Add(id, new() { Name = name, Skills = skills.ToImmutable() });
-        }
-        return rows.ToImmutable();
-    }
-
-    private static readonly UnicodeEncoding StrictNpcUnicode = new(false, false, true);
-    private static string ReadValidatedNpcText(ref CatalogReader reader)
-    {
-        // The owned snapshot already passed the source-decorated NPC validator. These source
-        // Reader.take checkpoints still matter when the undecorated builder has a diagnosed parent.
-        ParserDiagnostics.ReadCheckpoint(reader.Position, 2, reader.Remaining);
-        ushort length = reader.UInt16();
-        ParserDiagnostics.ReadCheckpoint(reader.Position, length, reader.Remaining);
-        return StrictNpcUnicode.GetString(reader.Take(length)).TrimEnd('\0');
     }
 }

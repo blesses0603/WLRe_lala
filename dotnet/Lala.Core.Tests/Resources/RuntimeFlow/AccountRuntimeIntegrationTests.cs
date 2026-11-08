@@ -518,6 +518,7 @@ public sealed partial class ResourceRuntimeBootstrapTests
             Assert.All(bound.Catalogs.Items.Where(pair => pair.Value.ReviewedDetails is not null), pair =>
                 Assert.Equal(pair.Value.ReviewedDetails!.Stackable, inputs.ItemStackRules[pair.Key]));
             Assert.Null(inputs.KnowledgeCatalog); Assert.Null(inputs.NpcSkills); Assert.True(inputs.ResourceHeld);
+            Assert.True(inputs.ReconcileNpcSkills);
             if (includeInstances)
             {
                 Assert.NotNull(bound.Catalogs.OptionalInstances);
@@ -534,6 +535,7 @@ public sealed partial class ResourceRuntimeBootstrapTests
             var revoked = runtime.Publication!.Receive.State.Observation!.Inputs;
             Assert.Null(revoked.WorldCatalog); Assert.Null(revoked.ItemStackRules); Assert.True(revoked.ResourceHeld);
             Assert.Empty(revoked.DeclaredMainCatalogMapIds);
+            Assert.Null(revoked.NpcSkills); Assert.True(revoked.ReconcileNpcSkills);
             Assert.NotNull(observed.Catalogs); Assert.NotNull(inputs.WorldCatalog); // Retained values are historical only.
             runtime.Stop(); Assert.Null(runtime.Publication);
             var result = await run.WaitAsync(AccountGuard); Assert.True(result.ResourcesReleased);

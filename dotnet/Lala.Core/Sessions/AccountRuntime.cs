@@ -104,7 +104,8 @@ public sealed class AccountRuntime : IAsyncDisposable
     {
         lock (gate)
             return CurrentCatalogsLocked(out _) && projected is not null
-                ? projected with { ObservedAt = now, ResourceHeld = true } : new(now);
+                ? projected with { ObservedAt = now, ResourceHeld = true }
+                : new(now) { ReconcileNpcSkills = true };
     }
     public Task<AccountRuntimeResult> RunAsync(CancellationToken token = default)
     {
@@ -264,10 +265,28 @@ public sealed class AccountRuntime : IAsyncDisposable
                     DeclaredMainCatalogMapIds = catalogs.OptionalInstances?.DeclaredMainMapIds ?? ImmutableHashSet<ushort>.Empty,
                     ItemStackRules = catalogs.Items.Where(p => p.Value.ReviewedDetails is not null)
                         .ToImmutableDictionary(p => p.Key, p => p.Value.ReviewedDetails!.Stackable),
-                    KnowledgeCatalog = ProjectKnowledgeCatalog(catalogs.Items, catalogs.OptionalSkills)
+                    KnowledgeCatalog = ProjectKnowledgeCatalog(catalogs.Items, catalogs.OptionalSkills),
+                    NpcSkills = ProjectNpcSkills(catalogs.ReviewedNpcs),
+                    ReconcileNpcSkills = true
                 };
             }
         }
+    }
+
+    // NPC slot IDs come from the required table's independently reviewed layout.
+    // Optional skill definitions and Lua constants are not required for observed slot identity.
+    internal static ImmutableDictionary<uint, ImmutableArray<uint>>? ProjectNpcSkills(
+        IReadOnlyDictionary<uint, CombatResourceNpc>? npcs)
+    {
+        if (npcs is null) return null;
+        var skills = ImmutableDictionary.CreateBuilder<uint, ImmutableArray<uint>>();
+        foreach (var (id, row) in npcs)
+        {
+            if (id == 0 || id > ushort.MaxValue || row is null || row.Skills.IsDefault ||
+                row.Skills.Length != 5 || row.Skills.Any(skill => skill > ushort.MaxValue)) return null;
+            skills.Add(id, row.Skills);
+        }
+        return skills.ToImmutable();
     }
 
     // The required ItemData readback is independent of optional SkillData availability.

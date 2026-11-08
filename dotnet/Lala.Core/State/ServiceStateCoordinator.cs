@@ -30,6 +30,10 @@ public sealed record ServiceObservationInputs(double ObservedAt)
     public CraftingScheduleContext? CraftingSchedules { get; init; }
     public ImmutableDictionary<ushort, bool>? ItemStackRules { get; init; }
     public ImmutableDictionary<uint, ImmutableArray<uint>>? NpcSkills { get; init; }
+    /// <summary>Opt into the runtime-owned current NPC skill projection for this observation.
+    /// False preserves Python's stored S15/S8 profile; true resolves retained S15 slots and
+    /// revokes only metadata-derived skills when NpcSkills is absent or changed. No authority.</summary>
+    public bool ReconcileNpcSkills { get; init; }
     /// <summary>Per-observation, unverified skill-key/item-fit mappings. Omitted means
     /// unknown; these declarations neither activate catalogs nor authorize any action.</summary>
     public CombatKnowledgeCatalog? KnowledgeCatalog { get; init; }
@@ -261,7 +265,7 @@ public sealed class ServiceStateCoordinator
             state.Local.Battle, observation, before.Player?.RoleId, inputs.KnowledgeCatalog);
         bag = BagReceiveReducer.Apply(bag, observation, inputs.ItemStackRules);
         var companions = CompanionReceiveReducer.ApplyBeforeLocal(knowledge.Companions, observation,
-            before.Player?.RoleId, inputs.NpcSkills);
+            before.Player?.RoleId, inputs.NpcSkills, inputs.ReconcileNpcSkills);
         // apply_points_event sees this packet's updated knowledge, never raw local S8
         // buffers (which have not been dispatched yet). Widen without narrowing/clamping.
         var allocationContext = new AttributeAllocationContext

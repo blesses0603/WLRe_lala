@@ -4,22 +4,29 @@ using Lala.Core.Protocol;
 namespace Lala.Core.Inventory;
 
 /// <summary>Only S15 snapshots/add/delete, S19 active companion and companion S8 receive
-/// observations. S15 initial batches append, empty batches mark ready, and duplicates/late
+/// observations. Runtime owners can explicitly opt into resolving current NPC skill metadata
+/// from retained S15 slots on every observation; the default preserves Python's stored profile.
+/// S15 initial batches append, empty batches mark ready, and duplicates/late
 /// packets apply in arrival order. No player knowledge, battle/equipment updates, catalogs
 /// activation, commands, connection authority or session coordinator integration.</summary>
 public static class CompanionReceiveReducer
 {
+    private const string NpcSkillSource = "S15技能槽＋NpcData";
+
     public static CompanionReceiveSnapshot Apply(CompanionReceiveSnapshot state, ServerEvent observation,
-        uint? localRoleId = null, ImmutableDictionary<uint, ImmutableArray<uint>>? npcSkills = null)
-        => ObserveLocalAttribute(ApplyBeforeLocal(state, observation, localRoleId, npcSkills), observation);
+        uint? localRoleId = null, ImmutableDictionary<uint, ImmutableArray<uint>>? npcSkills = null,
+        bool reconcileNpcSkills = false)
+        => ObserveLocalAttribute(ApplyBeforeLocal(state, observation, localRoleId, npcSkills, reconcileNpcSkills), observation);
 
     /// <summary>The companion receive slice of apply_live, before dispatch_local writes S8.</summary>
     public static CompanionReceiveSnapshot ApplyBeforeLocal(CompanionReceiveSnapshot state, ServerEvent observation,
-        uint? localRoleId = null, ImmutableDictionary<uint, ImmutableArray<uint>>? npcSkills = null)
+        uint? localRoleId = null, ImmutableDictionary<uint, ImmutableArray<uint>>? npcSkills = null,
+        bool reconcileNpcSkills = false)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(observation);
-        if (observation is ServerLiveDataEvent live) return Apply(state, live.Event, localRoleId, npcSkills);
+        if (observation is ServerLiveDataEvent live) return Apply(state, live.Event, localRoleId, npcSkills, reconcileNpcSkills);
+        if (reconcileNpcSkills) state = ResolveNpcSkills(state, npcSkills);
         if (observation is not AttributeSetEvent { Index: { } index } attribute ||
             attribute.Entity != $"follow:{index}") return state;
         if (attribute.HumanKind == 4 && state.Companions.TryGetValue(index, out var profile))
@@ -46,12 +53,18 @@ public static class CompanionReceiveReducer
     }
 
     /// <param name="npcSkills">Explicit offline NpcData skill-ID projection; raw slots are
-    /// retained when a mapping is missing. No catalog loading or provenance is implied.</param>
+    /// retained when a mapping is missing. Null means unknown. By default only a fresh S15
+    /// consumes this mapping, matching Python's stored profile. No loading or provenance is implied.</param>
+    /// <param name="reconcileNpcSkills">Explicit runtime-owned projection opt-in for this observation.
+    /// Reconcile retained slots against the current mapping, revoking metadata-derived skills
+    /// when it is absent or changed while preserving S8 evidence. Never grants action authority.</param>
     public static CompanionReceiveSnapshot Apply(CompanionReceiveSnapshot state, LiveDataEvent observation,
-        uint? localRoleId = null, ImmutableDictionary<uint, ImmutableArray<uint>>? npcSkills = null)
+        uint? localRoleId = null, ImmutableDictionary<uint, ImmutableArray<uint>>? npcSkills = null,
+        bool reconcileNpcSkills = false)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(observation);
+        if (reconcileNpcSkills) state = ResolveNpcSkills(state, npcSkills);
         switch (observation)
         {
             case CompanionSnapshotEvent snapshot:
@@ -82,23 +95,65 @@ public static class CompanionReceiveReducer
         if (data.Index is not { } index) throw new ArgumentException("Companion snapshot requires a source slot index.", nameof(data));
         var exists = state.Companions.TryGetValue(index, out var previous);
         if (exists && previous!.Data.NpcId != data.NpcId) state = state with { Attributes = state.Attributes.Remove(index) };
-        var skills = ImmutableDictionary.CreateBuilder<uint, CompanionLearnedSkill>();
-        var order = ImmutableArray.CreateBuilder<uint>();
-        var mapping = npcSkills?.TryGetValue(data.NpcId, out var ids) == true && !ids.IsDefault ? ids : [];
-        for (var i = 0; i < Math.Min(mapping.Length, data.SkillSlots.Length); i++)
-            if (mapping[i] != 0 && data.SkillSlots[i].Level > 0)
-            {
-                if (!skills.ContainsKey(mapping[i])) order.Add(mapping[i]);
-                skills[mapping[i]] = new(data.SkillSlots[i].Level, data.SkillSlots[i].Exp, "S15技能槽＋NpcData");
-            }
-        var profile = new CompanionProfileSnapshot(data, skills.ToImmutable(), ImmutableDictionary<string, long>.Empty)
-            { SkillOrder = order.ToImmutable() };
+        var profile = ResolveNpcSkills(new CompanionProfileSnapshot(data,
+            ImmutableDictionary<uint, CompanionLearnedSkill>.Empty, ImmutableDictionary<string, long>.Empty), npcSkills);
         foreach (var attribute in state.Attributes.GetValueOrDefault(index, [])) profile = ApplyAttribute(profile, attribute, 0);
         return state with
         {
             Companions = state.Companions.SetItem(index, profile),
             CompanionOrder = exists ? state.CompanionOrder : state.CompanionOrder.Add(index)
         };
+    }
+
+    private static CompanionReceiveSnapshot ResolveNpcSkills(CompanionReceiveSnapshot state,
+        ImmutableDictionary<uint, ImmutableArray<uint>>? npcSkills)
+    {
+        var companions = state.Companions;
+        foreach (var (index, profile) in state.Companions)
+        {
+            var resolved = ResolveNpcSkills(profile, npcSkills);
+            if (!ReferenceEquals(resolved, profile)) companions = companions.SetItem(index, resolved);
+        }
+        return ReferenceEquals(companions, state.Companions) ? state : state with { Companions = companions };
+    }
+
+    private static CompanionProfileSnapshot ResolveNpcSkills(CompanionProfileSnapshot profile,
+        ImmutableDictionary<uint, ImmutableArray<uint>>? npcSkills)
+    {
+        var mapped = ImmutableDictionary.CreateBuilder<uint, CompanionLearnedSkill>();
+        var mappedOrder = ImmutableArray.CreateBuilder<uint>();
+        var mapping = npcSkills?.TryGetValue(profile.Data.NpcId, out var ids) == true && !ids.IsDefault ? ids : [];
+        for (var i = 0; i < Math.Min(mapping.Length, profile.Data.SkillSlots.Length); i++)
+            if (mapping[i] != 0 && profile.Data.SkillSlots[i].Level > 0)
+            {
+                // set_companion keeps the first insertion position and the last positive
+                // duplicate value. This stored receive evidence is not learned()'s view.
+                if (!mapped.ContainsKey(mapping[i])) mappedOrder.Add(mapping[i]);
+                mapped[mapping[i]] = new(profile.Data.SkillSlots[i].Level, profile.Data.SkillSlots[i].Exp, NpcSkillSource);
+            }
+
+        var skills = profile.Skills;
+        var order = profile.SkillOrder;
+        var removed = profile.RemovedSkillIds ?? [];
+        foreach (var (id, value) in profile.Skills)
+        {
+            if (value.Source != NpcSkillSource) continue;
+            if (!mapped.TryGetValue(id, out var replacement) || removed.Contains(id))
+            {
+                skills = skills.Remove(id);
+                order = order.Remove(id);
+            }
+            else if (value != replacement) skills = skills.SetItem(id, replacement);
+        }
+        foreach (var id in mappedOrder)
+            if (!skills.ContainsKey(id) && !removed.Contains(id))
+            {
+                skills = skills.Add(id, mapped[id]);
+                order = order.Add(id);
+            }
+        // Do not replay the raw S8 buffer here: a non-companion human_kind can have
+        // changed it without changing this occupant's live evidence. Only S15 replays it.
+        return ReferenceEquals(skills, profile.Skills) ? profile : profile with { Skills = skills, SkillOrder = order };
     }
 
     private static CompanionProfileSnapshot ApplyAttribute(CompanionProfileSnapshot profile, CompanionAttribute attribute, byte sub)
