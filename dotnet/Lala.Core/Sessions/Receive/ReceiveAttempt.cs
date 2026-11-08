@@ -11,11 +11,19 @@ internal interface IReceiveTransport : IAsyncDisposable
     ValueTask<int> ReadAsync(Memory<byte> destination, CancellationToken cancellationToken);
 }
 
+/// <summary>Optional synchronous revocation of send admission. Implementations must only
+/// change owned state: no I/O, user callbacks, waits for asynchronous work, or exceptions.
+/// Physical cancellation/disposal still runs outside the receive gate.</summary>
+internal interface IReceiveTransportRetirement
+{
+    void Retire();
+}
+
 internal enum ReceiveStage { Created, Running, Ending, Ended }
 internal enum ReceiveEnd
 {
     Completed, Cancelled, Disposed, ReadFailed, InvalidFrame, TruncatedFrame,
-    InvalidPayload, ObservationInputFailed, MissingArkRuntime, ReductionFailed, CleanupFailed
+    InvalidPayload, ObservationInputFailed, MissingArkRuntime, ReductionFailed, CleanupFailed, EventHandlerFailed
 }
 
 /// <summary>Revision counts successful commits only. Status is not the observed game phase.
@@ -37,7 +45,9 @@ internal sealed class ReceiveCleanupException() : Exception("Receive transport c
 /// Chunk buffering is bounded; observer delivery coalesces to one pending successful commit.
 /// Observers run separately, and their exceptions cannot stop reception. An already-admitted
 /// callback can finish after retirement; no queued callback is admitted after retirement.
-/// Completion waits for that callback too. Latest also exposes immutable lifecycle status;
+/// The optional pre-commit hook is lossless and serialized on the writer; it runs outside
+/// the state lock and must finish before commit. Retirement discards its late result.
+/// Completion waits for admitted hooks and observer callbacks too. Latest also exposes immutable lifecycle status;
 /// commit callbacks are not a lossless event log or a terminal-status notification channel.
 /// Cancellation/disposal retires identity synchronously, before cancellation callbacks or
 /// transport disposal run. Completion waits for actual read, writer-thread, observer and
@@ -52,6 +62,7 @@ internal sealed class ReceiveAttempt : IAsyncDisposable
     private readonly Func<double> clock;
     private readonly Func<ServiceStateSnapshot, double, ServiceObservationInputs> observe;
     private readonly Action<ReceivePublication>? observer;
+    private readonly Func<ServerEvent, CancellationToken, ValueTask>? beforeCommit;
     private readonly int readSize;
     private readonly Channel<Chunk> chunks;
     private readonly Channel<ReceivePublication> publications = Channel.CreateBounded<ReceivePublication>(
@@ -69,7 +80,8 @@ internal sealed class ReceiveAttempt : IAsyncDisposable
     public ReceiveAttempt(IReceiveTransport transport, int rxXor, Func<double> clock,
         Func<ServiceStateSnapshot, double, ServiceObservationInputs> observe,
         Action<ReceivePublication>? observer = null, ServiceStateSnapshot? initial = null,
-        int readSize = 4096, int bufferedChunks = 4)
+        int readSize = 4096, int bufferedChunks = 4,
+        Func<ServerEvent, CancellationToken, ValueTask>? beforeCommit = null)
     {
         ArgumentNullException.ThrowIfNull(transport);
         ArgumentNullException.ThrowIfNull(clock);
@@ -79,6 +91,7 @@ internal sealed class ReceiveAttempt : IAsyncDisposable
         if (bufferedChunks is < 1 or > 256) throw new ArgumentOutOfRangeException(nameof(bufferedChunks));
         this.transport = transport; this.rxXor = rxXor; this.clock = clock;
         this.observe = observe; this.observer = observer; this.readSize = readSize;
+        this.beforeCommit = beforeCommit;
         chunks = Channel.CreateBounded<Chunk>(new BoundedChannelOptions(bufferedChunks)
             { FullMode = BoundedChannelFullMode.Wait, SingleReader = true, SingleWriter = true });
         latest = new(Guid.NewGuid(), 0, ReceiveStage.Created, initial ?? new(), null);
@@ -123,6 +136,7 @@ internal sealed class ReceiveAttempt : IAsyncDisposable
     {
         if (latest.Stage == ReceiveStage.Ended) return;
         retired = true;
+        (transport as IReceiveTransportRetirement)?.Retire();
         end ??= reason;
         latest = latest with { Stage = ReceiveStage.Ending, End = end };
         // Task.Run keeps transport/cancellation callbacks outside gate, including synchronous ones.
@@ -254,10 +268,10 @@ internal sealed class ReceiveAttempt : IAsyncDisposable
                 throw new InvalidOperationException();
         }
         catch (Exception) { Retire(ReceiveEnd.ObservationInputFailed); return false; }
+        ServerEvent decoded;
         lock (gate)
         {
             if (retired) return false;
-            ServerEvent decoded;
             try { decoded = ServerProtocol.Decode(packet, basis.Player?.RoleId, inputs.CraftingSchedules); }
             catch (Exception) { RetireLocked(ReceiveEnd.InvalidPayload); return false; }
             if (inputs.ArkRuntime is null && decoded is ArkQuestionEvent or ArkAnswerResultEvent &&
@@ -267,13 +281,29 @@ internal sealed class ReceiveAttempt : IAsyncDisposable
                 RetireLocked(ReceiveEnd.MissingArkRuntime);
                 return false;
             }
-            ServiceStateSnapshot next;
-            try { next = state.Apply(decoded, new(basis, inputs)); }
-            catch (Exception) { RetireLocked(ReceiveEnd.ReductionFailed); return false; }
-            latest = latest with { Revision = checked(latest.Revision + 1), Snapshot = next };
-            publications.Writer.TryWrite(latest);
-            return true;
+            if (beforeCommit is null) return CommitLocked(state, decoded, basis, inputs);
+            // Admission is serialized with retirement, but user code must never hold gate.
+            // This dedicated writer waits for the admitted hook, preserving event order and
+            // ensuring completion/disposal includes even a noncooperative asynchronous hook.
         }
+        try { beforeCommit(decoded, stop.Token).AsTask().GetAwaiter().GetResult(); }
+        catch (Exception) { Retire(ReceiveEnd.EventHandlerFailed); return false; }
+        lock (gate)
+        {
+            if (retired) return false; // A late hook may finish, but can never commit.
+            return CommitLocked(state, decoded, basis, inputs);
+        }
+    }
+
+    private bool CommitLocked(ServiceStateCoordinator state, ServerEvent decoded,
+        ServiceStateSnapshot basis, ServiceObservationInputs inputs)
+    {
+        ServiceStateSnapshot next;
+        try { next = state.Apply(decoded, new(basis, inputs)); }
+        catch (Exception) { RetireLocked(ReceiveEnd.ReductionFailed); return false; }
+        latest = latest with { Revision = checked(latest.Revision + 1), Snapshot = next };
+        publications.Writer.TryWrite(latest);
+        return true;
     }
 
     private async Task DeliverAsync()

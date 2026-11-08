@@ -398,6 +398,89 @@ public sealed class ResourceRuntimeOwnerTests
         Assert.False(owner.IsCurrentAdmission(fabricated));
         production.Invalidate(); Assert.False(fabricated.ResourceAdmitted);
     }
+    [Fact]
+    public async Task Offline_current_publication_and_fabricated_handles_cannot_activate_catalogs()
+    {
+        using var fixture = new Fixture(); var source = new Source(); await fixture.PopulateAsync(source);
+        await using var owner = ResourceRuntimeOwner.CreateForOfflineTests(fixture.Root, source);
+        var publication = await owner.RefreshAsync();
+        Assert.False(owner.TryActivate(publication, out var activation)); Assert.Null(activation);
+        Assert.False(owner.TryActivate(null, out activation)); Assert.Null(activation);
+        var fabricated = new ResourceRuntimeActivation(owner, publication);
+        Assert.Equal(publication.Generation, fabricated.Generation);
+        Assert.Same(publication.Identity, fabricated.Identity);
+        Assert.False(fabricated.IsActive);
+        Assert.False(fabricated.TryReadCatalogs(out var catalogs)); Assert.Null(catalogs);
+        Assert.False(fabricated.CanLogin); Assert.False(fabricated.CanSendPackets);
+        await using var other = ResourceRuntimeOwner.Create(fixture.Root);
+        Assert.False(other.TryActivate(publication, out activation)); Assert.Null(activation);
+        var crossOwner = new ResourceRuntimeActivation(other, publication);
+        Assert.False(crossOwner.IsActive);
+        Assert.False(crossOwner.TryReadCatalogs(out catalogs)); Assert.Null(catalogs);
+        owner.Invalidate();
+        Assert.False(owner.TryActivate(publication, out activation)); Assert.Null(activation);
+        Assert.False(fabricated.TryReadCatalogs(out catalogs)); Assert.Null(catalogs);
+        var next = await owner.RefreshAsync();
+        Assert.True(next.Generation > publication.Generation);
+        Assert.False(owner.TryActivate(publication, out activation)); Assert.Null(activation);
+        Assert.False(owner.TryActivate(next, out activation)); Assert.Null(activation);
+        await owner.DisposeAsync();
+        Assert.False(owner.TryActivate(next, out activation)); Assert.Null(activation);
+    }
+    [Theory]
+    [InlineData("invalidate")]
+    [InlineData("dispose")]
+    [InlineData("refresh")]
+    public async Task Activation_state_machine_reuses_selection_and_revokes_on_retirement(string retirement)
+    {
+        using var fixture = new Fixture();
+        var prepared = await new OfflineBundleRuntimePreparation().PrepareAsync(new Source());
+        await using var owner = ResourceRuntimeOwner.Create(fixture.Root);
+        var publication = new ResourceRuntimePublication(owner, 0, prepared);
+        // White-box state-machine fixture ONLY. No production injection API is introduced,
+        // no HTTP is performed, and this does not establish production acquisition or trust.
+        typeof(ResourceRuntimeOwner).GetField("_current", System.Reflection.BindingFlags.NonPublic |
+            System.Reflection.BindingFlags.Instance)!.SetValue(owner, publication);
+        Assert.False(owner.IsCurrentAdmission(null));
+        Assert.False(owner.IsCurrentActivation(null!, publication));
+        Assert.False(owner.TryReadActivatedCatalogs(null!, publication, out var absent)); Assert.Null(absent);
+        Assert.True(owner.TryActivate(publication, out var selected)); Assert.NotNull(selected);
+        Assert.True(selected.IsActive);
+        Assert.True(selected.TryReadCatalogs(out var catalogs)); Assert.Same(publication.Candidate, catalogs);
+        Assert.True(owner.TryActivate(publication, out var repeated)); Assert.Same(selected, repeated);
+        var fabricated = new ResourceRuntimeActivation(owner, publication);
+        Assert.False(fabricated.IsActive); Assert.False(fabricated.TryReadCatalogs(out _));
+        var different = new ResourceRuntimePublication(owner, 0, prepared);
+        Assert.False(owner.TryActivate(different, out var rejected)); Assert.Null(rejected);
+        Assert.True(selected.IsActive); // Failed stale selection must not revoke the real one.
+        Assert.False(selected.CanLogin); Assert.False(selected.CanSendPackets);
+        if (retirement == "invalidate") owner.Invalidate();
+        else if (retirement == "dispose") await owner.DisposeAsync();
+        else
+        {
+            using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => owner.RefreshAsync(cancelled.Token));
+        }
+        Assert.Null(owner.Current); Assert.False(selected.IsActive);
+        Assert.False(selected.TryReadCatalogs(out catalogs)); Assert.Null(catalogs);
+        Assert.False(owner.TryActivate(publication, out rejected)); Assert.Null(rejected);
+        Assert.False(Directory.Exists(fixture.Root));
+    }
+    [Fact]
+    public async Task Fabricated_production_publication_cannot_activate_or_read_catalogs()
+    {
+        using var fixture = new Fixture();
+        var prepared = await new OfflineBundleRuntimePreparation().PrepareAsync(new Source());
+        await using var owner = ResourceRuntimeOwner.Create(fixture.Root);
+        var publication = new ResourceRuntimePublication(owner, 0, prepared);
+        Assert.False(owner.TryActivate(publication, out var activation)); Assert.Null(activation);
+        var fabricated = new ResourceRuntimeActivation(owner, publication);
+        Assert.False(fabricated.IsActive);
+        Assert.False(fabricated.TryReadCatalogs(out var catalogs)); Assert.Null(catalogs);
+        owner.Invalidate();
+        Assert.False(owner.TryActivate(publication, out activation)); Assert.Null(activation);
+        Assert.False(Directory.Exists(fixture.Root));
+    }
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

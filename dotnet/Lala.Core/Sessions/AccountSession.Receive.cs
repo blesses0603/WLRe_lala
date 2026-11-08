@@ -1,3 +1,4 @@
+using Lala.Core.Protocol;
 using Lala.Core.Sessions.Receive;
 using Lala.Core.State;
 
@@ -14,11 +15,12 @@ public sealed partial class AccountSession
     /// which the caller must run and await/dispose. On rejection ownership stays with the caller.
     /// Only a fresh Preparing generation can attach. It is immediately and permanently Held.
     /// Replacement cannot attach until old cleanup succeeds, even across Begin/Disconnect.
-    /// No callback is exposed: consumers must validate generation and attempt when reading.
+    /// The optional hook runs before each commit; readers must validate generation and attempt.
     /// </summary>
     internal ReceiveAttempt? AttachHeldReceive(long generation, IReceiveTransport transport, int rxXor,
         Func<double> clock, Func<ServiceStateSnapshot, double, ServiceObservationInputs> observe,
-        int readSize = 4096, int bufferedChunks = 4)
+        int readSize = 4096, int bufferedChunks = 4,
+        Func<ServerEvent, CancellationToken, ValueTask>? beforeCommit = null)
     {
         lock (gate)
         {
@@ -26,7 +28,7 @@ public sealed partial class AccountSession
                 receive is not null || receiveCleanup is { IsCompletedSuccessfully: false }) return null;
             // Validate construction before changing the session or accepting ownership.
             var next = new ReceiveAttempt(transport, rxXor, clock, observe,
-                readSize: readSize, bufferedChunks: bufferedChunks);
+                readSize: readSize, bufferedChunks: bufferedChunks, beforeCommit: beforeCommit);
             receive = next;
             current = current with { Phase = SessionPhase.Held, ResourceVersion = null };
             return next;

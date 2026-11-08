@@ -37,6 +37,7 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
     private readonly OfflineBundleRuntimePreparation _preparation = new();
     private Attempt? _attempt;
     private ResourceRuntimePublication? _current;
+    private ResourceRuntimeActivation? _activation;
     private long _generation;
     private bool _disposed;
 
@@ -62,9 +63,36 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
         _production = offlineSource is null;
         _source = offlineSource ?? new HttpOfficialResourceSource();
     }
-    internal bool IsCurrentAdmission(ResourceRuntimePublication publication)
+    internal bool IsCurrentAdmission(ResourceRuntimePublication? publication)
     {
-        lock (_gate) return _production && !_disposed && ReferenceEquals(_current, publication) && publication.Generation == _generation;
+        lock (_gate) return publication is not null && _production && !_disposed && ReferenceEquals(_current, publication) && publication.Generation == _generation;
+    }
+    /// <summary>Explicit resource-only activation of the caller's exact observed publication.
+    /// A stale receipt never silently selects newer resources. No callback, I/O or session
+    /// transition runs under the gate. Offline owners cannot create an activation.</summary>
+    internal bool TryActivate(ResourceRuntimePublication? expected, out ResourceRuntimeActivation? activation)
+    {
+        lock (_gate)
+        {
+            activation = null;
+            if (expected is null || !IsCurrentAdmission(expected)) return false;
+            _activation ??= new(this, expected);
+            activation = _activation;
+            return true;
+        }
+    }
+    internal bool IsCurrentActivation(ResourceRuntimeActivation activation, ResourceRuntimePublication publication)
+    {
+        lock (_gate) return activation is not null && ReferenceEquals(_activation, activation) && IsCurrentAdmission(publication);
+    }
+    internal bool TryReadActivatedCatalogs(ResourceRuntimeActivation activation, ResourceRuntimePublication publication,
+        out OfflineRuntimeCandidate? candidate)
+    {
+        lock (_gate)
+        {
+            candidate = IsCurrentActivation(activation, publication) ? publication.Candidate : null;
+            return candidate is not null;
+        }
     }
     internal ResourceRuntimePublication? Current { get { lock (_gate) return _current; } }
 
@@ -73,7 +101,7 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
         Attempt? previous;
         lock (_gate)
         {
-            _generation = checked(_generation + 1); _current = null; previous = _attempt;
+            _generation = checked(_generation + 1); _current = null; _activation = null; previous = _attempt;
             _preparation.Invalidate();
         }
         _ = previous?.RequestCancellation(); // Callbacks run asynchronously, never under publication lock.
@@ -102,7 +130,7 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
             if (_attempt is not null) throw new InvalidOperationException("A resource refresh is already retiring or running");
-            generation = _generation = checked(_generation + 1); _current = null;
+            generation = _generation = checked(_generation + 1); _current = null; _activation = null;
             // One slot remains occupied through writes, readback, cancellation callbacks and
             // cleanup. A newer attempt in this owner cannot overtake an older retiring writer.
             mine = new Attempt(this); _attempt = mine;
@@ -337,7 +365,7 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
         {
             if (_disposeTask is null)
             {
-                _disposed = true; _current = null; _generation = checked(_generation + 1);
+                _disposed = true; _current = null; _activation = null; _generation = checked(_generation + 1);
                 previous = _attempt;
                 completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
                 _disposeTask = completion.Task;

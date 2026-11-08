@@ -33,12 +33,13 @@ internal sealed class ScriptedHandshakeWrite : IDisposable
 }
 
 /// <summary>
-/// Internal offline state machine only. No sockets, credentials in state, runtime admission,
-/// Android callbacks or active-session authority. Every receipt is a synthetic assertion.
+/// Internal handshake state machine. It owns no sockets, credentials in state, runtime admission,
+/// Android callbacks or active-session authority. Standalone scripted receipts are assertions;
+/// HeldLoginTransport supplies exact bounded-transport receipts without granting live authority.
 /// Stronger than Python SessionLogic: authentication, role selection and both completed ACK
 /// writes are mandatory; early initialization observations cannot grant completion.
 /// All calls are serialized. Pending writes must be completed before another observation;
-/// a future transport must serialize/buffer responses, not discard or reorder them.
+/// transport composition must serialize/buffer responses, not discard or reorder them.
 /// </summary>
 internal sealed class ScriptedHandshake : IDisposable
 {

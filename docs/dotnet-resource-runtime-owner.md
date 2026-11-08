@@ -107,3 +107,38 @@ and captured contexts used after retirement. Callback observations are asserted 
 test itself rather than inside callbacks whose exceptions are deliberately aggregated.
 These tests do not contact official servers and cannot prove successful live TLS-origin
 acquisition.
+
+## Explicit resource-only activation selection
+
+`TryActivate(expectedPublication, out activation)` selects only the exact current production
+publication under the owner gate. It does not silently substitute a later publication for a
+historical bootstrap receipt. Repeating the selection is idempotent. Offline owners, null,
+stale, fabricated and cross-owner publications fail closed without changing the selection.
+There is no caller-supplied integrity boolean, digest, version override or source factory.
+
+`ResourceRuntimeActivation` retains the complete manifest identity and owner generation.
+`IsActive` and `TryReadCatalogs` check both the exact activation reference and current
+publication on every access. Refresh admission, invalidation and disposal clear the selection
+synchronously. Fabricating an internal handle cannot select it. These checks do not call
+external code, perform I/O or enter a session lock while holding the owner gate.
+
+Catalog reads return immutable point-in-time data. Revocation after a successful read cannot
+erase a caller's retained reference; neither that data nor the handle authorizes an external
+effect. Login and packet flags remain false. This is an internal resource-only composition
+boundary, not installation into an account, a background version monitor, protocol approval,
+optional-catalog completeness or a Desktop/Android change. Consumers needing action authority
+still require a separately reviewed account-generation and protocol admission boundary.
+
+Offline tests cover rejection of current synthetic publications, fabricated production
+publications and activation handles, cross-owner access, stale/replaced publications and
+disposal. White-box state-machine tests set the private current-publication field by reflection
+in the test assembly only, to exercise successful selection, idempotence and all three
+revocation paths without adding an injection seam to production or performing HTTP. These
+tests establish selection mechanics only, not source authenticity. Real successful production
+acquisition/activation remains unverified.
+
+Activation increment verification: owner + bootstrap focused Release selection passed **74/74**
+with no failures/skips using a process-only 3 GiB GC heap cap. Independent read-only review
+found no blocking issue. This is focused cloud evidence, not a full-suite or live-platform pass;
+the earlier unbounded build was cancelled after shared-executor memory pressure and is not
+counted as a pass. Concurrent activation interleavings have not been separately stress-tested.
