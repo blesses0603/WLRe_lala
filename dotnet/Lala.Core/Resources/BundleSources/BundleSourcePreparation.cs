@@ -17,6 +17,12 @@ internal sealed record ResourceResponse(string FinalUrl, int Status, string? Con
 {
     public void Dispose() => Body.Dispose();
 }
+// Planned/reserved acquisition totals, including optional attempts that later fail.
+internal sealed class BundleDownloadTotals(int count, long bytes)
+{
+    internal int Count = count;
+    internal long Bytes = bytes;
+}
 internal interface IBundleSourceCacheReader
 {
     ValueTask<Stream?> OpenReadAsync(BundleSourceSpec spec, CancellationToken cancellationToken);
@@ -171,6 +177,72 @@ internal sealed class BundleSourcePreparation
             Check(attempt, cancellationToken);
             return new(identity, attempt, plan, handles, downloadCount, downloadBytes, _owner, before, manifests, host);
         }
+    }
+
+    // Optional acquisition shares the required attempt, exact manifest and remaining budget.
+    // Already owned dependencies are reused; no second plan can reset the download quota.
+    internal async Task<IReadOnlyList<VerifiedBundleSource>> PrepareSkillAsync(IResourceSource source,
+        RequiredBundleSources required, IBundleSourceCacheReader? cache, BundleSourceBudget? budget,
+        BundleDownloadTotals totals, CancellationToken token)
+    {
+        EnsureCurrent(required, token);
+        budget ??= new(); budget.Validate();
+        var plan = BundleSourcePlan.CreateSkill(required.Manifests[0], required.Snapshot.DataVersion, token);
+        var owned = required.Sources.ToDictionary(x => x.Spec.Name, StringComparer.Ordinal);
+        var needed = plan.Entries.Where(x => !owned.ContainsKey(x.Spec.Name)).ToArray();
+        long retained = required.Sources.Sum(x => x.Spec.Size) + needed.Sum(x => x.Spec.Size);
+        if (retained > MaximumRetainedBytes)
+            throw new BundleSourceException(BundleSourceFailure.Budget, "Optional closure exceeds owned-byte bound");
+        var hits = new Dictionary<string, bool>(StringComparer.Ordinal);
+        int downloads = required.DownloadCount; long bytes = required.DownloadBytes;
+        foreach (var entry in needed)
+        {
+            EnsureCurrent(required, token);
+            bool hit = false;
+            if (cache is not null)
+            {
+                try { hit = await ReadOptionalCacheAsync(cache, entry.Spec, token).ConfigureAwait(false) is not null; }
+                catch (BundleSourceException error) when (!error.Data.Contains(ResourceCleanup.FailureMarker)) { }
+            }
+            hits.Add(entry.Spec.Name, hit);
+            if (!hit) { downloads++; bytes += entry.Spec.Size; }
+        }
+        if (downloads > budget.MaximumDownloads || bytes > budget.MaximumDownloadBytes)
+            throw new BundleSourceException(BundleSourceFailure.Budget, "Optional downloads exceed remaining quota");
+        totals.Count = downloads; totals.Bytes = bytes;
+        foreach (var entry in needed)
+        {
+            EnsureCurrent(required, token);
+            var spec = entry.Spec;
+            if (hits[spec.Name])
+            {
+                var handle = await ReadOptionalCacheAsync(cache!, spec, token).ConfigureAwait(false);
+                if (handle is null) throw new BundleSourceException(BundleSourceFailure.CacheChanged, "Optional cache disappeared");
+                owned.Add(spec.Name, handle);
+            }
+            else
+            {
+                byte[] raw = await FetchAsync(source, spec.Url(required.Host), spec.Size, spec.Size, required.Attempt, token).ConfigureAwait(false);
+                owned.Add(spec.Name, VerifiedBundleSource.Verify(spec, raw, BundleAcquisition.UntrustedSourceDownload, token));
+            }
+        }
+        EnsureCurrent(required, token);
+        return plan.AssetSourceNames[BundleSourcePlan.SkillAssetPath].Select(name => owned[name]).ToArray();
+    }
+
+    private static async Task<VerifiedBundleSource?> ReadOptionalCacheAsync(IBundleSourceCacheReader cache,
+        BundleSourceSpec spec, CancellationToken token)
+    {
+        var stream = await cache.OpenReadAsync(spec, token).ConfigureAwait(false);
+        if (stream is null) return null;
+        Exception? primary = null;
+        try
+        {
+            byte[] raw = await ReadBoundedAsync(stream, spec.Size, spec.Size, token).ConfigureAwait(false);
+            return VerifiedBundleSource.Verify(spec, raw, BundleAcquisition.Cache, token);
+        }
+        catch (Exception error) { primary = error; throw; }
+        finally { ResourceCleanup.DisposePreservingFailure(stream, primary); }
     }
 
     // Reobserve AFTER extraction/table decoding. Preparing owned bytes alone does not establish

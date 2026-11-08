@@ -44,7 +44,7 @@ Account snapshots change when reconnect starts a new generation, so the host mus
 prepare/rebind for that generation. Transport termination without a snapshot change is not
 itself a resource revocation event. This is not a background source-version monitor. The
 facade never calls Begin, Hold or ConfirmResources, never sends packets, and does not grant
-login, protocol compatibility or game-action authority. Optional catalogs remain unavailable.
+login, protocol compatibility or game-action authority. Optional reviewed SkillData can now be acquired and read back; other optional catalogs remain unavailable. See [optional skill resources](dotnet-optional-skill-resources.md).
 
 ## Offline evidence
 
@@ -80,3 +80,11 @@ Bootstrap also enforces an [active-inventory write precondition](dotnet-resource
 to avoid overwriting another owner's changed active selector after source preparation. A conflict
 is a failed preparation, not a queued or automatic retry; storage outcome still distinguishes
 confirmed non-commit from cleanup uncertainty.
+
+The integrated `AccountRuntime` projects available reviewed optional skill rows into
+the current receive attempt's read-only `KnowledgeCatalog.SkillKeys`. Zero keys are
+ignored; duplicate nonzero keys or inconsistent row IDs leave the mapping unknown.
+No item-fit values, names, skill effects or command authority are inferred. Revocation
+removes the mapping on subsequent observations through the same exact-attempt catalog
+join. Synthetic projection tests verify mapping only; no successful acquisition of
+the actual pinned skill payload or live-account skill behavior has been validated.

@@ -6,9 +6,10 @@ internal static class ConnectionStatusText
 {
     internal static string Describe(ConnectionSnapshot state) => state.Phase switch
     {
-        ConnectionPhase.Unavailable => "共用連線核心尚未接入；未連線遊戲。",
+        ConnectionPhase.Unavailable => "共用連線核心尚未啟用；未連線遊戲。",
         ConnectionPhase.WaitingForNetwork => "等待已驗證的網路；尚未確認伺服器連線。",
         ConnectionPhase.Connecting => "正在建立會話，等待核心確認。",
+        ConnectionPhase.ReceivingHeld => "登入協定已完成，正在接收資料；資源仍受限，不能執行遊戲操作。",
         ConnectionPhase.Active => "連線核心已確認會話啟用。",
         ConnectionPhase.RetryWaiting when state.Reason == ConnectionEndReason.ConnectTimedOut => "建立會話逾時，等待重試。",
         ConnectionPhase.RetryWaiting => $"連線中斷，等待第 {state.RetryCount + 1} 次重試。",

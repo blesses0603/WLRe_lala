@@ -12,8 +12,10 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="../Lala.Core/Lala.Core.csproj" />
     <Compile Include="../Lala.Android/Lifecycle/*.cs" Link="Lifecycle/%(Filename)%(Extension)" />
     <Compile Include="../Lala.Android/Platform/NetworkAvailability.cs" Link="Platform/NetworkAvailability.cs" />
+    <Compile Include="../Lala.Android/Platform/ConnectionStatusText.cs" Link="Platform/ConnectionStatusText.cs" />
     <Compile Include="../Lala.Android/Platform/ServiceCommandState.cs" Link="Platform/ServiceCommandState.cs" />
   </ItemGroup>
 </Project>

@@ -27,14 +27,14 @@ internal static class RuntimeFlowFixtures
     }
     internal static byte[] Manifest(IReadOnlyDictionary<string, byte[]> bundles,
         IReadOnlyDictionary<string, string>? roots = null, IReadOnlyDictionary<string, string[]>? dependencies = null,
-        string version = Version)
+        string version = Version, bool includeSkill = false)
     {
         var index = BundleSourceFixtures.Index();
         index["header"]!["package_version"] = version;
         string[] names = bundles.Keys.ToArray();
         var ids = names.Select((name, id) => (name, id)).ToDictionary(pair => pair.name, pair => pair.id, StringComparer.Ordinal);
         var assets = new JsonArray(); var rows = new JsonArray();
-        foreach (string name in BundleSourcePlan.RequiredTables)
+        foreach (string name in includeSkill ? BundleSourcePlan.RequiredTables.Append("SkillData_C") : BundleSourcePlan.RequiredTables)
         {
             string path = AssetRoot + name + ".bytes";
             assets.Add(new JsonObject { ["address"] = "", ["path"] = path, ["guid"] = "", ["tags"] = new JsonArray(),

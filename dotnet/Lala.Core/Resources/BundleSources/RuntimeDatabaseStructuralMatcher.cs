@@ -2,6 +2,7 @@ using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Text;
 using System.Text.Json;
+using Lala.Core.Catalogs;
 
 namespace Lala.Core.Resources;
 
@@ -15,6 +16,7 @@ internal sealed class OwnedRuntimeDatabaseSnapshot
     internal const int MaximumIdentityCharacters = 4096;
     internal const int MaximumTableBytes = 16 * 1024 * 1024;
     internal const long MaximumOwnedTableBytes = 10L * MaximumTableBytes;
+    internal const string SkillTableName = "SkillData_C.bytes";
     internal RuntimeDatabaseActiveInput? Active { get; }
     private readonly FrozenDictionary<string, OwnedTable> _tables;
 
@@ -40,7 +42,8 @@ internal sealed class OwnedRuntimeDatabaseSnapshot
     { Active = active; _tables = tables.ToFrozenDictionary(StringComparer.Ordinal); }
 
     internal static OwnedRuntimeDatabaseSnapshot Capture(RuntimeDatabaseActiveInput? active,
-        IReadOnlyDictionary<string, RuntimeDatabaseTableInput?>? rows, CancellationToken cancellationToken = default)
+        IReadOnlyDictionary<string, RuntimeDatabaseTableInput?>? rows, CancellationToken cancellationToken = default,
+        bool includeSkillData = false)
     {
         cancellationToken.ThrowIfCancellationRequested();
         // Strings are immutable. Invalid oversized fields cannot match, so retain only null
@@ -48,8 +51,9 @@ internal sealed class OwnedRuntimeDatabaseSnapshot
         var ownedActive = active is null ? null : new RuntimeDatabaseActiveInput(active.VersionId,
             Bounded(active.CatalogKey, 64), Bounded(active.IdentityJson, MaximumIdentityCharacters));
         var owned = new Dictionary<string, OwnedTable>(StringComparer.Ordinal);
-        // Exactly ten table slots bounds retained data to 160 MiB. Optional/other-version
-        // rows are not enumerated, matching the source's requested SQL projection.
+        // Default capture still reads exactly ten slots. Explicit skill capture adds only
+        // the exact optional slot and shares the existing 160 MiB retained-payload budget.
+        long ownedBytes = 0;
         foreach (string name in BundleSourcePlan.RequiredTables)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -57,7 +61,21 @@ internal sealed class OwnedRuntimeDatabaseSnapshot
                 row.Name == name + ".bytes" && row.VersionId == ownedActive?.VersionId)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                owned.Add(name + ".bytes", new(row));
+                var table = new OwnedTable(row);
+                owned.Add(name + ".bytes", table);
+                ownedBytes += table.Bytes.Length;
+            }
+        }
+        if (includeSkillData)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (rows is not null && rows.TryGetValue(SkillTableName, out var row) && row is not null &&
+                row.Name == SkillTableName && row.VersionId == ownedActive?.VersionId &&
+                row.Data is { } data && data.Length is > 0 and <= MaximumTableBytes &&
+                data.Length <= MaximumOwnedTableBytes - ownedBytes)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                owned.Add(SkillTableName, new(row));
             }
         }
         cancellationToken.ThrowIfCancellationRequested();
@@ -87,6 +105,22 @@ internal sealed class RuntimeDatabaseStructuralMatch
 internal static class RuntimeDatabaseStructuralMatcher
 {
     private static readonly int MaximumSourceNameLength = BundleSourcePlan.RequiredTables.Max(name => name.Length);
+
+    /// <summary>Separate, non-authorizing optional check. The expected fingerprint is compiled
+    /// from the reviewed source, never provided by a caller. Required-table matching remains
+    /// independent and must succeed before an owner can use this optional result.</summary>
+    internal static bool MatchReviewedSkillData(OwnedRuntimeDatabaseSnapshot? snapshot,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var row = snapshot?.Active is { } active ? snapshot.Table(active.VersionId, OwnedRuntimeDatabaseSnapshot.SkillTableName) : null;
+        bool matches = row is not null && row.RecordedSha256 == SkillDataParser.ReviewedSha256 && row.HasBlob &&
+            row.ByteLength is >= 4 and <= SkillDataParser.MaxBytes &&
+            ResourceValidation.Digest(row.Bytes, cancellationToken) == SkillDataParser.ReviewedSha256;
+        cancellationToken.ThrowIfCancellationRequested();
+        return matches;
+    }
+
     internal static RuntimeDatabaseStructuralMatch Match(OwnedRuntimeDatabaseSnapshot? snapshot,
         ManifestIdentity? expectedIdentity, IReadOnlyDictionary<string, string?>? expectedDigests,
         CancellationToken cancellationToken = default)

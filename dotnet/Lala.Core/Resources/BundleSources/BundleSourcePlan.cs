@@ -59,12 +59,20 @@ internal sealed class BundleSourcePlan
 
     internal static BundleSourcePlan Create(YooAssetManifest current, string dataVersion,
         YooAssetManifest? previous = null, CancellationToken cancellationToken = default)
+        => CreateCore(current, dataVersion, previous, RequiredAssetPaths, cancellationToken);
+
+    internal const string SkillAssetPath = "Assets/ResourcesBuild/Data/SkillData_C.bytes";
+    internal static BundleSourcePlan CreateSkill(YooAssetManifest current, string dataVersion, CancellationToken token)
+        => CreateCore(current, dataVersion, null, new[] { SkillAssetPath }, token);
+
+    private static BundleSourcePlan CreateCore(YooAssetManifest current, string dataVersion,
+        YooAssetManifest? previous, IReadOnlyList<string> assetPaths, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (current.Header.PackageName != "DataPackage" || (previous is not null && previous.Header.PackageName != current.Header.PackageName))
             throw new BundleSourceException(BundleSourceFailure.ManifestIdentity, "Required data tables require DataPackage");
         var roots = new HashSet<int>();
-        foreach (string path in RequiredAssetPaths)
+        foreach (string path in assetPaths)
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (!current.AssetBundles.TryGetValue(path, out int bundleId))
@@ -102,7 +110,7 @@ internal sealed class BundleSourcePlan
                 Array.AsReadOnly(bundle.DependencyIds.Select(dep => current.Bundles[dep].Name).ToArray())));
         }
         var assetSources = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
-        foreach (string path in RequiredAssetPaths)
+        foreach (string path in assetPaths)
         {
             cancellationToken.ThrowIfCancellationRequested();
             int root = current.AssetBundles[path];

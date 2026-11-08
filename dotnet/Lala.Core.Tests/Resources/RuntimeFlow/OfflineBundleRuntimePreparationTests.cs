@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Lala.Core.Tests.Resources;
 
-public sealed class OfflineBundleRuntimePreparationTests
+public sealed partial class OfflineBundleRuntimePreparationTests
 {
     private sealed class Script : IResourceSource
     {

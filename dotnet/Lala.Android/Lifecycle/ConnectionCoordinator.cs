@@ -206,7 +206,9 @@ public sealed class ConnectionCoordinator : IAsyncDisposable
             adapter = factory.Create(current.Target)
                 ?? throw new InvalidOperationException("Adapter factory returned no owner.");
             current.Cancellation.Token.ThrowIfCancellationRequested();
-            result = await adapter.RunAsync(() => MarkActive(current), current.Cancellation.Token).ConfigureAwait(false);
+            result = adapter is IHeldConnectionAdapter held
+                ? await held.RunHeldAsync(() => MarkConnected(current, ConnectionPhase.ReceivingHeld), () => MarkRetiring(current), current.Cancellation.Token).ConfigureAwait(false)
+                : await adapter.RunAsync(() => MarkConnected(current, ConnectionPhase.Active), current.Cancellation.Token).ConfigureAwait(false);
             if (!Enum.IsDefined(result) || result == ConnectionEndReason.None)
                 result = ConnectionEndReason.AdapterFailure;
         }
@@ -246,7 +248,17 @@ public sealed class ConnectionCoordinator : IAsyncDisposable
         }
     }
 
-    private void MarkActive(Attempt current)
+    private void MarkRetiring(Attempt current)
+    {
+        lock (gate)
+        {
+            if (!disposed && ReferenceEquals(attempt, current) && current.Generation == generation &&
+                !current.CleanupStarted && desiredTarget == current.Target)
+                BeginCleanupLocked(current); // Observe natural drain; do not cancel or manufacture a result.
+        }
+    }
+
+    private void MarkConnected(Attempt current, ConnectionPhase phase)
     {
         lock (gate)
         {
@@ -255,7 +267,7 @@ public sealed class ConnectionCoordinator : IAsyncDisposable
             {
                 current.Activated = true;
                 CancelWithoutBlocking(current.ConnectTimer);
-                PublishLocked(ConnectionPhase.Active, ConnectionEndReason.None);
+                PublishLocked(phase, phase == ConnectionPhase.ReceivingHeld ? ConnectionEndReason.ResourceHeld : ConnectionEndReason.None);
             }
         }
     }

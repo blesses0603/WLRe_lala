@@ -175,3 +175,9 @@ Account-binding increment verification: **96/96** owner/bootstrap/account-receiv
 Release tests passed, with no failures/skips and a process-only 3 GiB GC heap cap. Independent
 read-only review found no blocking issue. This is focused cloud evidence; full combined-head
 Core/platform checks and concurrent-race stress coverage are not established by this run.
+
+## Optional skill acquisition
+
+See [optional reviewed skill resources](dotnet-optional-skill-resources.md) for bounded
+SkillData acquisition, pinned decoding, same-transaction persistence/readback, and
+explicit optional-unavailable behavior. Required ten-table matching remains unchanged.

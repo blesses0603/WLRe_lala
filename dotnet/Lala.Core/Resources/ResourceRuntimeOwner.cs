@@ -18,8 +18,9 @@ internal sealed class ResourceRuntimePublication
     internal string ProtocolCompatibility => "unverified";
     internal bool CanLogin => false;
     internal bool CanSendPackets => false;
-    internal ResourceRuntimePublication(ResourceRuntimeOwner owner, long generation, OfflinePreparedRuntimeCandidate prepared)
-        => (_owner, Generation, Identity, Candidate) = (owner, generation, prepared.Identity, prepared.Candidate);
+    internal ResourceRuntimePublication(ResourceRuntimeOwner owner, long generation, OfflinePreparedRuntimeCandidate prepared,
+        OfflineRuntimeCandidate? readbackCandidate = null)
+        => (_owner, Generation, Identity, Candidate) = (owner, generation, prepared.Identity, readbackCandidate ?? prepared.Candidate);
 }
 
 /// <summary>Uninstalled resource-only owner. Construction does no network or database I/O.
@@ -142,6 +143,7 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
         }
         var execution = new OwnerExecution(this);
         OfflinePreparedRuntimeCandidate? preparedResult = null;
+        OfflineRuntimeCandidate? readbackCandidate = null;
         ResourceInventoryReceipt? receipt = null;
         ResourceInventoryWriteOutcome storage = ResourceInventoryWriteOutcome.NotCommitted;
         bool storageAttempted = false, sourcesRechecked = false;
@@ -187,11 +189,16 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
             // Never promote the write receipt itself to readback or runtime admission.
             readback = ResourceRuntimeReadback.Failed;
             var connection = await CreateConnectionAsync(SqliteOpenMode.ReadOnly).ConfigureAwait(false);
-            var database = await RuntimeDatabaseSnapshotReader.ReadAsync(connection, mine.Token).ConfigureAwait(false);
+            var database = await RuntimeDatabaseSnapshotReader.ReadAsync(connection, mine.Token, includeSkillData: prepared.Candidate.OptionalSkills is not null).ConfigureAwait(false);
             EnsureCurrent(generation, mine);
             var hashes = prepared.Candidate.SourceSha256.ToDictionary(p => p.Key, p => (string?)p.Value, StringComparer.Ordinal);
             if (!RuntimeDatabaseStructuralMatcher.Match(database.Snapshot, prepared.Identity, hashes, mine.Token).MatchesSuppliedRuntime)
                 throw new ResourceValidationException("Stored resource bytes differ from current decoded sources");
+            // Optional mismatch removes only skills. Required ten-table matching above still
+            // gates the complete publication; no database row can introduce new skill evidence.
+            readbackCandidate = prepared.Candidate.OptionalSkills is not null &&
+                !RuntimeDatabaseStructuralMatcher.MatchReviewedSkillData(database.Snapshot, mine.Token)
+                ? prepared.Candidate.WithoutOptionalSkills() : prepared.Candidate;
             readback = ResourceRuntimeReadback.Matched;
             await _preparation.ConfirmUnchangedAsync(_source, prepared, mine.Token).ConfigureAwait(false);
             sourcesRechecked = true;
@@ -213,7 +220,7 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         EnsureCurrent(generation, mine);
-                        publication = _current = new(this, generation, preparedResult!);
+                        publication = _current = new(this, generation, preparedResult!, readbackCandidate);
                     }
                 }
                 catch (Exception error) { failure = error; }

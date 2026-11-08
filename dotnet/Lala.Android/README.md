@@ -109,3 +109,32 @@ adb shell pm revoke io.lala.migration android.permission.POST_NOTIFICATIONS
 ```
 
 完整登入、正式服連線、多帳號等價、實機前景服務、簽章／安全儲存及舊資料遷移全部保留未驗收狀態。
+
+### Opt-in Core lifecycle adapter (cloud integration)
+
+`CoreConnectionAdapterFactory` now bridges the lifecycle coordinator to the public
+`AccountConnectionRuntime`. `Create` is inert. A caller-supplied
+`ICoreConnectionSelectionResolver` resolves opaque selection keys only during Run,
+providing an explicit endpoint/profile and a caller-owned credential source. The
+adapter never disposes that source; Core disposes each transferred credential object.
+No credentials belong in targets, Intent extras, environment variables, files or logs.
+
+Each lifecycle attempt uses exactly one Core attempt, regardless of supplied Core
+retry options. Only Core's typed retry eligibility permits a lifecycle retry; unknown
+or uncertain write outcomes are terminal. Cleanup must finish before replacement.
+Protocol login reports `ReceivingHeld`, cancels the connect watchdog and **does not**
+report gameplay `Active`, bootstrap resources, or authorize commands. Network loss and
+stop drain that same owner; late callbacks cannot revive an obsolete generation.
+Natural Core retirement also starts the cleanup watchdog, without overwriting Core's
+final failure/retry evidence or pretending that a timeout proves resource release.
+
+The service's production default remains `UnavailableConnectionAdapterFactory` until
+secure selection/provider integration exists. Synthetic loopback tests cover real Core
+verification/login/receive and lifecycle cleanup, not official service login, Android
+hardware, database bootstrap, or release readiness. Existing verification totals above
+are historical and are not totals for this increment.
+
+Cloud checks for this increment: lifecycle **76 passed, 0 failed, 0 skipped**;
+focused public Core connection-runtime and optional-skill projection tests **14 passed,
+0 failed, 0 skipped**. These are focused checks, not a full Core suite or an Android APK,
+phone, official-server or release acceptance run.

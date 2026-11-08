@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Lala.Core.Catalogs;
+using Lala.Core.Inventory;
 using Lala.Core.Resources;
 using Lala.Core.Sessions.Handshake;
 using Lala.Core.State;
@@ -255,15 +256,29 @@ public sealed class AccountRuntime : IAsyncDisposable
                 connection.Publication is { Phase: AccountReceivePhase.Running } receive && receive.Attempt == attempt && resources.TryReadCatalogs(out var catalogs))
             {
                 resourceAccount = account; resourceAttempt = attempt;
-                // Only decoded current tables feed read-only observations. Unavailable aliases,
-                // skills and other optional tables remain unknown; no inferred action authority.
+                // Only decoded current tables feed read-only observations. Optional skill
+                // mappings remain unknown unless reviewed rows survived resource readback.
                 projected = new(0)
                 {
                     WorldCatalog = new WorldSceneCatalog(catalogs!.Stages.Keys.ToImmutableHashSet()),
                     ItemStackRules = catalogs.Items.Where(p => p.Value.ReviewedDetails is not null)
-                        .ToImmutableDictionary(p => p.Key, p => p.Value.ReviewedDetails!.Stackable)
+                        .ToImmutableDictionary(p => p.Key, p => p.Value.ReviewedDetails!.Stackable),
+                    KnowledgeCatalog = ProjectSkillKeys(catalogs.OptionalSkills)
                 };
             }
         }
+    }
+
+    internal static CombatKnowledgeCatalog? ProjectSkillKeys(IReadOnlyDictionary<ushort, SkillDataRow>? skills)
+    {
+        if (skills is null) return null;
+        var keys = ImmutableDictionary.CreateBuilder<ushort, uint>();
+        foreach (var (id, row) in skills)
+        {
+            // Match combat_catalog: zero is not a mapping; ambiguity must never pick
+            // a skill arbitrarily. This projection grants no command authority.
+            if (id != row.Id || (row.Key != 0 && !keys.TryAdd(row.Key, id))) return null;
+        }
+        return new() { SkillKeys = keys.ToImmutable() };
     }
 }

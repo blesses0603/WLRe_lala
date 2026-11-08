@@ -46,7 +46,46 @@ public sealed class AccountConnectionRuntime : IAsyncDisposable
             observationInputs ?? ((_, now) => new(now)), login, retry, ownedCredentials: AcquireAsync);
     }
 
-    public AccountConnectionStatus Snapshot => Map(connection.Snapshot);
+    private ReconnectView? observedView;
+    private AccountConnectionStatus? observedStatus;
+    public AccountConnectionStatus Snapshot
+    {
+        get
+        {
+            lock (gate)
+            {
+                var view = connection.Snapshot;
+                if (!ReferenceEquals(view, observedView))
+                {
+                    observedView = view;
+                    observedStatus = Map(view);
+                }
+                return observedStatus!;
+            }
+        }
+    }
+    /// <summary>Wait for a change from this runtime's exact observed snapshot. Stale or
+    /// foreign snapshots return the current state immediately; ended state returns
+    /// immediately. Cancellation is checked before returning an observed change.
+    /// No callbacks or authority are granted.</summary>
+    public async Task<AccountConnectionStatus> WaitForChangeAsync(AccountConnectionStatus expected,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(expected);
+        cancellationToken.ThrowIfCancellationRequested();
+        ReconnectView view;
+        lock (gate)
+        {
+            var current = Snapshot;
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!ReferenceEquals(current, expected) || current.Phase == AccountConnectionPhase.Ended)
+                return current;
+            view = observedView!;
+        }
+        await connection.WaitForChangeAsync(view, cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        return Snapshot;
+    }
     internal ReconnectView Lifetime => connection.Snapshot;
     internal Task<ReconnectView> WaitForLifetimeChangeAsync(ReconnectView expected, CancellationToken token)
         => connection.WaitForChangeAsync(expected, token);

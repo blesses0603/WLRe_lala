@@ -262,9 +262,7 @@ public sealed class ConnectionService : Service
         }
     }
 
-    internal static bool IsRunning(ConnectionPhase phase) => phase is ConnectionPhase.WaitingForNetwork
-        or ConnectionPhase.Connecting or ConnectionPhase.Active or ConnectionPhase.RetryWaiting
-        or ConnectionPhase.Stopping or ConnectionPhase.CleanupBlocked;
+    internal static bool IsRunning(ConnectionPhase phase) => ConnectionPhaseState.IsRunning(phase);
 
     private void BeginOperation(Func<Task> beginOperation, long epoch, bool completingStart = false, bool stopping = false)
     {

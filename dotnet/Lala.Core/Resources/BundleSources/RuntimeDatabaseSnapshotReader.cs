@@ -44,7 +44,8 @@ internal static class RuntimeDatabaseSnapshotReader
 
     internal static async Task<RuntimeDatabaseReadObservation> ReadAsync(DbConnection connection,
         CancellationToken cancellationToken = default,
-        long maximumAggregateBytes = OwnedRuntimeDatabaseSnapshot.MaximumOwnedTableBytes)
+        long maximumAggregateBytes = OwnedRuntimeDatabaseSnapshot.MaximumOwnedTableBytes,
+        bool includeSkillData = false)
     {
         ArgumentNullException.ThrowIfNull(connection);
         Exception? primary = null;
@@ -75,14 +76,24 @@ internal static class RuntimeDatabaseSnapshotReader
                 cancellationToken.ThrowIfCancellationRequested();
                 string name = source + ".bytes";
                 var row = await ReadTableAsync(connection, active.VersionId, name, encoding, cancellationToken).ConfigureAwait(false);
-                aggregateBytes = checked(aggregateBytes + row.Data!.Value.Length);
+                aggregateBytes = checked(aggregateBytes + row!.Data!.Value.Length);
                 if (aggregateBytes > maximumAggregateBytes) throw Invalid("Resource snapshot exceeds aggregate payload limit");
                 rows.Add(name, row);
+            }
+            if (includeSkillData)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                // Optional malformed/missing rows are represented by absence, not a failed
+                // required snapshot. Provider calls, cancellation and disposal still throw.
+                var skill = await ReadTableAsync(connection, active.VersionId, OwnedRuntimeDatabaseSnapshot.SkillTableName,
+                    encoding, cancellationToken, optional: true,
+                    maximumBytes: (int)Math.Min(OwnedRuntimeDatabaseSnapshot.MaximumTableBytes, maximumAggregateBytes - aggregateBytes)).ConfigureAwait(false);
+                if (skill is not null) rows.Add(OwnedRuntimeDatabaseSnapshot.SkillTableName, skill);
             }
             // Capture owns a second, detached copy before the transaction ends. At most 160 MiB
             // of temporary payloads plus 160 MiB retained payloads and a current provider value
             // of at most 16 MiB. Provider-internal caches/native buffers are external.
-            snapshot = OwnedRuntimeDatabaseSnapshot.Capture(active, rows, cancellationToken);
+            snapshot = OwnedRuntimeDatabaseSnapshot.Capture(active, rows, cancellationToken, includeSkillData);
             cancellationToken.ThrowIfCancellationRequested();
         }
         catch (Exception error) { primary = error; }
@@ -167,7 +178,8 @@ internal static class RuntimeDatabaseSnapshotReader
             return new RuntimeDatabaseActiveInput(version, key, identity);
         }, token);
 
-    private static Task<RuntimeDatabaseTableInput> ReadTableAsync(DbConnection connection, long version, string name, Encoding encoding, CancellationToken token) =>
+    private static Task<RuntimeDatabaseTableInput?> ReadTableAsync(DbConnection connection, long version, string name, Encoding encoding,
+        CancellationToken token, bool optional = false, int maximumBytes = OwnedRuntimeDatabaseSnapshot.MaximumTableBytes) =>
         QueryAsync(connection, TableSql, command =>
         {
             AddParameter(command, "@version", DbType.Int64, version);
@@ -175,17 +187,19 @@ internal static class RuntimeDatabaseSnapshotReader
         }, async reader =>
         {
             token.ThrowIfCancellationRequested();
-            if (reader.FieldCount != 6 || !await reader.ReadAsync(token).ConfigureAwait(false)) throw Invalid("A required resource row is missing or malformed");
-            string digest = BoundedText(reader, 0, 1, 2, 256, 64, encoding);
-            if (Text(reader, 3) != "blob" || reader.GetValue(4) is not long length ||
-                length is <= 0 or > OwnedRuntimeDatabaseSnapshot.MaximumTableBytes)
-                throw Invalid("Resource payload must be a nonempty bounded SQLite blob");
+            if (reader.FieldCount != 6 || !await reader.ReadAsync(token).ConfigureAwait(false))
+                return RejectTable(optional, "A required resource row is missing or malformed");
+            if (!TryBoundedText(reader, 0, 1, 2, 256, 64, encoding, out string? digest))
+                return RejectTable(optional, "Resource digest differs from the bounded SQLite projection");
+            if (reader.GetValue(3) is not string storageType || storageType != "blob" || reader.GetValue(4) is not long length ||
+                length <= 0 || length > maximumBytes)
+                return RejectTable(optional, "Resource payload must be a nonempty bounded SQLite blob");
             token.ThrowIfCancellationRequested();
             // Use the documented bounded value API, not GetBytes/GetStream. Some SQLite
             // providers probe origin metadata in those streaming APIs; CASE-derived columns
             // have no table/column origin. The SQL guard already bounds this materialization.
             if (reader.GetValue(5) is not byte[] supplied || supplied.LongLength != length)
-                throw Invalid("Provider blob type or length differs from the SQLite projection");
+                return RejectTable(optional, "Provider blob type or length differs from the SQLite projection");
             byte[] bytes = new byte[(int)length];
             for (int position = 0; position < bytes.Length;)
             {
@@ -195,11 +209,13 @@ internal static class RuntimeDatabaseSnapshotReader
                 position += count;
             }
             token.ThrowIfCancellationRequested();
-            if (await reader.ReadAsync(token).ConfigureAwait(false)) throw Invalid("Required resource row is ambiguous");
-            if (await reader.NextResultAsync(token).ConfigureAwait(false)) throw Invalid("Unexpected resource result set");
+            if (await reader.ReadAsync(token).ConfigureAwait(false)) return RejectTable(optional, "Required resource row is ambiguous");
+            if (await reader.NextResultAsync(token).ConfigureAwait(false)) return RejectTable(optional, "Unexpected resource result set");
             token.ThrowIfCancellationRequested();
             return new RuntimeDatabaseTableInput(version, name, digest, bytes);
         }, token);
+
+    private static RuntimeDatabaseTableInput? RejectTable(bool optional, string message) => optional ? null : throw Invalid(message);
 
     private static Task<T> QueryAsync<T>(DbConnection connection, string sql, Action<DbCommand>? configure,
         Func<DbDataReader, Task<T>> action, CancellationToken token)
@@ -257,6 +273,17 @@ internal static class RuntimeDatabaseSnapshotReader
         if (reader.GetValue(data) is not string value || value.Length > maximumCharacters ||
             encoding.GetByteCount(value) != size) throw Invalid("Provider text differs from the bounded SQLite projection");
         return value;
+    }
+    private static bool TryBoundedText(DbDataReader reader, int type, int length, int data, int maximumBytes,
+        int maximumCharacters, Encoding encoding, out string? value)
+    {
+        value = null;
+        if (reader.GetValue(type) is not string storageType || storageType != "text" ||
+            reader.GetValue(length) is not long size || size < 0 || size > maximumBytes ||
+            reader.GetValue(data) is not string text || text.Length > maximumCharacters || encoding.GetByteCount(text) != size)
+            return false;
+        value = text;
+        return true;
     }
     private static string Text(DbDataReader reader, int ordinal) => reader.GetValue(ordinal) is string value ? value : throw Invalid("Provider storage type is not text");
     private static InvalidDataException Invalid(string message) => new(message);

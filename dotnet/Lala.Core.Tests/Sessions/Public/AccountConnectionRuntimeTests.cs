@@ -274,4 +274,32 @@ public sealed class AccountConnectionRuntimeTests
             Assert.False(verification.HasPending);
         }
     }
+    [Fact]
+    public async Task PublicWaitUsesExactSnapshotIdentityAndHandlesStaleForeignCancelledAndEndedStates()
+    {
+        await using var verification = new Peer(); await using var formal = new Peer();
+        var session = new AccountSession(); var generation = session.Begin("a", "b").Generation;
+        var entered = Signal(); var release = Signal();
+        await using var runtime = new AccountConnectionRuntime(session, generation, Profile(verification, formal),
+            new Source(async (_, token) => { entered.SetResult(); await release.Task.WaitAsync(token); return null; }));
+        var created = runtime.Snapshot;
+        Assert.Same(created, runtime.Snapshot);
+        using var cancelled = new CancellationTokenSource();
+        var waiting = runtime.WaitForChangeAsync(created, cancelled.Token);
+        Assert.False(waiting.IsCompleted); cancelled.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => waiting);
+        var run = runtime.RunAsync(); await entered.Task.WaitAsync(Guard);
+        var current = runtime.Snapshot;
+        Assert.Same(current, await runtime.WaitForChangeAsync(created).WaitAsync(Guard));
+        Assert.Same(current, await runtime.WaitForChangeAsync(current with { RuntimeId = Guid.NewGuid() }).WaitAsync(Guard));
+        Assert.Same(current, await runtime.WaitForChangeAsync(current with { }).WaitAsync(Guard));
+        using var changedStop = new CancellationTokenSource();
+        var changed = runtime.WaitForChangeAsync(current, changedStop.Token);
+        Assert.False(changed.IsCompleted);
+        release.SetResult(); await changed.WaitAsync(Guard); await run.WaitAsync(Guard);
+        var ended = runtime.Snapshot;
+        Assert.Equal(AccountConnectionPhase.Ended, ended.Phase);
+        Assert.Same(ended, await runtime.WaitForChangeAsync(ended).WaitAsync(Guard));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => runtime.WaitForChangeAsync(ended, cancelled.Token));
+    }
 }

@@ -16,7 +16,14 @@ public sealed record ConnectionTarget(string AccountKey, string Endpoint)
 public enum ConnectionPhase
 {
     Stopped, Unavailable, WaitingForNetwork, Connecting, Active,
-    RetryWaiting, Stopping, CleanupBlocked, Failed
+    RetryWaiting, Stopping, CleanupBlocked, Failed, ReceivingHeld
+}
+
+internal static class ConnectionPhaseState
+{
+    internal static bool IsRunning(ConnectionPhase phase) => phase is ConnectionPhase.WaitingForNetwork
+        or ConnectionPhase.Connecting or ConnectionPhase.Active or ConnectionPhase.ReceivingHeld
+        or ConnectionPhase.RetryWaiting or ConnectionPhase.Stopping or ConnectionPhase.CleanupBlocked;
 }
 
 public enum ConnectionEndReason
@@ -59,7 +66,7 @@ public interface IConnectionDelay
 
 public interface IConnectionAdapterFactory
 {
-    /// <summary>Read once by the coordinator. False means the Core transport has not been integrated.</summary>
+    /// <summary>Read once by the coordinator. False means no configured usable Core adapter is available.</summary>
     bool IsAvailable { get; }
 
     /// <summary>Create one owner without opening a socket. No Android objects or credentials cross this boundary.</summary>
@@ -77,7 +84,16 @@ public interface IConnectionAdapter : IAsyncDisposable
     Task<ConnectionEndReason> RunAsync(Action onActive, CancellationToken cancellationToken);
 }
 
-/// <summary>Production default until the actual shared-Core adapter exists. It never simulates a connection.</summary>
+/// <summary>Protocol login with receive running, but resource authority remains held.
+/// The callback cancels the login watchdog, never authorizes gameplay or commands.</summary>
+public interface IHeldConnectionAdapter : IConnectionAdapter
+{
+    /// <summary>onRetiring starts the cleanup watchdog without changing the final
+    /// outcome or cancelling the attempt. It is not proof that resources are released.</summary>
+    Task<ConnectionEndReason> RunHeldAsync(Action onReceivingHeld, Action onRetiring, CancellationToken cancellationToken);
+}
+
+/// <summary>Production default until secure account/profile/credential selection is configured. It never simulates a connection.</summary>
 public sealed class UnavailableConnectionAdapterFactory : IConnectionAdapterFactory
 {
     public bool IsAvailable => false;

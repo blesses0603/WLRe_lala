@@ -22,13 +22,14 @@ internal sealed class OfflinePreparedRuntimeCandidate
     internal string RuntimeInstallation => "unavailable";
     internal string Static1275Admission => "unavailable";
     internal OfflinePreparedRuntimeCandidate(OfflineRuntimeCandidate candidate, RequiredBundleSources sources,
-        ResourceInventoryInput inventory, ManifestIdentity identity)
+        ResourceInventoryInput inventory, ManifestIdentity identity, BundleDownloadTotals? downloads = null)
     {
         RecheckContext = sources;
         Identity = identity; InventoryInput = inventory;
         Candidate = candidate; ManifestContentIdentity = sources.ManifestContentIdentity; Attempt = sources.Attempt;
-        DownloadCount = sources.DownloadCount; DownloadBytes = sources.DownloadBytes;
-        ExtractedTables = OfflineRuntimeCandidateDecoder.Sources;
+        DownloadCount = downloads?.Count ?? sources.DownloadCount; DownloadBytes = downloads?.Bytes ?? sources.DownloadBytes;
+        ExtractedTables = candidate.OptionalSkills is null ? OfflineRuntimeCandidateDecoder.Sources
+            : OfflineRuntimeCandidateDecoder.Sources.Add("SkillData_C");
     }
 }
 
@@ -73,21 +74,46 @@ internal sealed class OfflineBundleRuntimePreparation
         _preparation.EnsureCurrent(prepared, cancellationToken);
         string packageVersion = prepared.Snapshot.Packages["DataPackage"];
         var candidate = OfflineRuntimeCandidateDecoder.Decode(tables, packageVersion, cancellationToken);
+        var downloads = new BundleDownloadTotals(prepared.DownloadCount, prepared.DownloadBytes);
+        // Optional acquisition/decoding failures leave required preparation intact. It uses
+        // the same manifest/attempt and remaining quota; unknown digests never become rows.
+        if (prepared.Manifests[0].AssetBundles.ContainsKey(BundleSourcePlan.SkillAssetPath))
+        {
+            try
+            {
+                var skillSources = await _preparation.PrepareSkillAsync(source, prepared, cache, budget, downloads, cancellationToken).ConfigureAwait(false);
+                byte[] skillRaw = UnityTextAssetExtractor.Extract(BundleSourcePlan.SkillAssetPath, skillSources,
+                    cancellationToken: cancellationToken);
+                if (skillRaw.Length > SkillDataParser.MaxBytes || extractedBytes + skillRaw.Length > MaximumExtractedTableBytes)
+                    throw new CatalogDecodeException("Optional skill payload exceeds retained table budget");
+                candidate = candidate.WithOptionalSkills(skillRaw, cancellationToken);
+                tables.Add("SkillData_C", skillRaw);
+            }
+            catch (Exception error) when (!error.Data.Contains(ResourceCleanup.FailureMarker) &&
+                error is not ResourceTransportException { Failure: ResourceTransportFailure.Cleanup } &&
+                error is (BundleSourceException or UnityTextAssetException or
+                CatalogDecodeException or IOException or UnauthorizedAccessException or HttpRequestException))
+            {
+                // No optional row is persisted or exposed. Cancellation, stale attempt and
+                // final source drift are still checked outside this optional failure boundary.
+            }
+            _preparation.EnsureCurrent(prepared, cancellationToken);
+        }
         var identity = ManifestIdentity.FromParsed(prepared.Snapshot, prepared.Manifests, cancellationToken);
         // Persist precisely the native-extracted arrays, not reserialized decoded rows or
         // caller-provided hashes. Capture detaches every payload under the original limits.
-        var inventory = ResourceInventoryInput.Capture(identity.Key, OfflineRuntimeCandidateDecoder.Sources
+        var inventory = ResourceInventoryInput.Capture(identity.Key, tables.Keys
             .Select(name => new ResourceInventoryMember("tables/" + name + ".bytes", tables[name])).ToArray(),
             identity, cancellationToken);
         foreach (var table in inventory.Tables)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (candidate.SourceSha256[table.Name[..^6]] != table.Sha256)
+            if ((table.Name == "SkillData_C.bytes" ? SkillDataParser.ReviewedSha256 : candidate.SourceSha256[table.Name[..^6]]) != table.Sha256)
                 throw new ResourceValidationException("Decoded runtime differs from the owned extracted inventory");
         }
         // No readiness, provenance, active state, persisted receipt or partial result is published.
         _preparation.EnsureCurrent(prepared, cancellationToken);
         await _preparation.ConfirmUnchangedAsync(source, prepared, cancellationToken).ConfigureAwait(false);
-        return _preparation.ReturnCurrent(prepared, new OfflinePreparedRuntimeCandidate(candidate, prepared, inventory, identity), cancellationToken);
+        return _preparation.ReturnCurrent(prepared, new OfflinePreparedRuntimeCandidate(candidate, prepared, inventory, identity, downloads), cancellationToken);
     }
 }

@@ -7,7 +7,7 @@ namespace Lala.Core.Catalogs;
 /// <summary>
 /// Immutable structural composition of ten supplied table payloads. Neither this object nor its
 /// hashes establish official provenance, fresh-source stability, database admission or readiness.
-/// Optional catalogs are unavailable; event/convey observations never authorize routes or packets.
+/// Optional skills require separately reviewed bytes; event/convey observations never authorize routes or packets.
 /// </summary>
 public sealed class OfflineRuntimeCandidate
 {
@@ -16,9 +16,19 @@ public sealed class OfflineRuntimeCandidate
         RuntimeRecipeCandidate recipes, IReadOnlyDictionary<ushort, StageDataRow> stages,
         EveDoorProjection doors, IReadOnlyDictionary<ushort, string> sceneNames,
         ExpeditionCatalogData expedition, IReadOnlyDictionary<ushort, ExpeditionNpcData> npcs,
-        IReadOnlyDictionary<string, string> hashes, OfflineRuntimePortalObservations portalObservations)
-        => (EveIndexes, Items, Talks, Texts, Recipes, Stages, Doors, SceneNames, Expedition, Npcs, SourceSha256, PortalObservations) =
-            (indexes, items, talks, texts, recipes, stages, doors, sceneNames, expedition, npcs, hashes, portalObservations);
+        IReadOnlyDictionary<string, string> hashes, OfflineRuntimePortalObservations portalObservations,
+        IReadOnlyDictionary<ushort, SkillDataRow>? optionalSkills = null)
+        => (EveIndexes, Items, Talks, Texts, Recipes, Stages, Doors, SceneNames, Expedition, Npcs, SourceSha256, PortalObservations, OptionalSkills) =
+            (indexes, items, talks, texts, recipes, stages, doors, sceneNames, expedition, npcs, hashes, portalObservations, optionalSkills);
+    /// <summary>Reviewed optional skill rows, or null when missing, unsupported or not read back.
+    /// Point-in-time catalog data only; never command authority.</summary>
+    public IReadOnlyDictionary<ushort, SkillDataRow>? OptionalSkills { get; }
+    internal OfflineRuntimeCandidate WithOptionalSkills(ReadOnlySpan<byte> raw, CancellationToken token)
+        => CopyWithSkills(SkillDataParser.Parse(raw, token));
+    internal OfflineRuntimeCandidate WithoutOptionalSkills() => CopyWithSkills(null);
+    private OfflineRuntimeCandidate CopyWithSkills(IReadOnlyDictionary<ushort, SkillDataRow>? skills)
+        => new(EveIndexes, Items, Talks, Texts, Recipes, Stages, Doors, SceneNames, Expedition, Npcs,
+            SourceSha256, PortalObservations, skills);
     public EveV115Indexes EveIndexes { get; }
     public IReadOnlyDictionary<ushort, ItemDataRow> Items { get; }
     public IReadOnlyDictionary<ushort, TalkDataRow> Talks { get; }
@@ -38,7 +48,7 @@ public sealed class OfflineRuntimeCandidate
     public bool AssetsReady => false;
     public bool CanSendPackets => false;
     public ImmutableArray<string> UnavailableOptionalSources =>
-        ["SkillData", "portal_metadata", "images", "daily", "guild", "Ark", "combat", "normal_attacks",
+        [.. (OptionalSkills is null ? new[] { "SkillData" } : Array.Empty<string>()), "portal_metadata", "images", "daily", "guild", "Ark", "combat", "normal_attacks",
             "portraits", "emoji", "smallmaps", "battle_talk", "instances"];
 }
 

@@ -200,6 +200,10 @@ def main():
         bundle_bytes[name] = data
 
     retain("all-ten.bundle", all_scripts, all_mappings)
+    # Valid synthetic one-row layout, deliberately NOT the reviewed production digest.
+    skill = bytearray(125); struct.pack_into("<H", skill, 7, 1)
+    retain("optional-skill.bundle", {2: ("SkillData_C", struct.pack("<I", 1) + skill)},
+           [(asset_path("SkillData_C"), 0, 2)])
     retain("split-root.bundle", {path_ids[t]: all_scripts[path_ids[t]] for t in TABLES[:6]},
            all_mappings[:6], dependencies=("split-dependency.bundle",))
     retain("split-dependency.bundle", {path_ids[t]: all_scripts[path_ids[t]] for t in TABLES[6:]},
