@@ -70,6 +70,7 @@
 | 實際視窗截圖 | 16／16 張可解碼，已檢視版面 | 登入、主畫面、戰場／地圖、背包與儲藏、獨立特技、導航、遠征及設定五頁 |
 | 相關 Core 回歸 | 6,322 項通過、0 失敗、0 略過 | Inventory、BattleEvent、WorldEvent、ExpeditionReceive、SessionEvent 測試群 |
 | Android 生命週期回歸 | 59 項通過、0 失敗、0 略過 | 純 .NET lifecycle 測試，並非 Android 裝置／APK 安裝驗收 |
+| Python 文件／倉庫檢查 | 5 項通過 | 發行摘要順序、版本限制、Markdown 連結、重複檔及既有回歸入口 |
 | `git diff --check` | 通過 | 無補丁空白錯誤 |
 
 Core 回歸重現指令：
@@ -80,5 +81,7 @@ dotnet test dotnet/Lala.Android.Lifecycle.Tests/Lala.Android.Lifecycle.Tests.csp
 ```
 
 原生 UI 測試驗證背包與特技能同時存在、搜尋互不影響、格位重用清除舊選取、戰場目標失效、導航輸入、設定取消／保存、換帳清除，以及遠征隱藏後換帳重建視窗。合成快照明確標示「介面測試」；一般啟動不會載入這些資料。截圖先在記憶體編碼、檢查非空並實際解碼尺寸，通過後才寫檔。
+
+提交後 CI 曾檢出 README 的 Desktop 新增說明擠到發行摘要之前，違反既有文件段落契約。已將說明移到 v7.3.1 發行摘要後，保留原摘要及測試，並實際重跑 `python -m unittest discover -s tests -p test_repository_hygiene.py -v`，5 項通過。
 
 Windows／macOS GUI、安裝包、真實登入及正式伺服器遊戲操作尚未驗收。PR 沿用既有預計版本 **v8.0.20**；本輪未另行加版，Python 桌面 **v7.3.1** 與 Android **v0.2.0** 不變。PR 保持 Draft，不合併 main、不建立正式 Release／Tag。
