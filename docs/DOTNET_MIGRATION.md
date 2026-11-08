@@ -1777,3 +1777,18 @@ input, safe raw-TCP transport or live-server validation. No resource download is
 See the acceptance README for disclosure and lifecycle contracts. This new feature advances
 only the overall PR marker once to 8.0.25; same-batch corrections retain it. Platform and
 Core/Desktop project version settings remain unchanged.
+
+
+### Overall PR development marker 8.0.26: interactive terminal synthetic acceptance
+
+The terminal self-test now exercises real intercepted input through the prepared runner,
+two fixed loopback peers, held receive, heartbeat and cleanup. Only the displayed fixed
+fake pair is admitted; other input is cleared/rejected before transmission. There is no
+arbitrary destination, live mode, Desktop UI change or user-machine deployment.
+
+Frozen validation: 43,324 Core, 76 lifecycle, 36 acceptance and 17 actual Linux PTY
+checks passed, plus the public consumer. Linux PTY coverage is added to CI. Windows/macOS
+terminal behavior remains unverified. This is not authenticated consent or secure OS input;
+startup echo, OS/runtime copies and forced-process-exit cleanup are outside guarantees.
+Only the overall PR marker advances once to 8.0.26; same-batch corrections retain it.
+Platform and Core/Desktop project version settings are unchanged.

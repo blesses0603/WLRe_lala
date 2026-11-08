@@ -1,7 +1,7 @@
 name: .NET migration verification
 on:
   pull_request:
-    paths: ['dotnet/**', '.github/workflows/dotnet-migration.yml']
+    paths: ['dotnet/**', 'tools/check_terminal_acceptance.py', '.github/workflows/dotnet-migration.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -28,6 +28,9 @@ jobs:
         run: dotnet run --project dotnet/Lala.Core.PublicContract.Check/Lala.Core.PublicContract.Check.csproj -c Release
       - name: Check bounded cloud acceptance harness offline
         run: dotnet run --project dotnet/Lala.Cloud.Acceptance/Lala.Cloud.Acceptance.csproj -c Release -- --self-test
+      - name: Check synthetic terminal acceptance with Linux PTYs
+        if: runner.os == 'Linux'
+        run: python3 tools/check_terminal_acceptance.py
       - name: Build Avalonia desktop
         run: dotnet build dotnet/Lala.Desktop/Lala.Desktop.csproj -c Release
       - name: Check offline inspector

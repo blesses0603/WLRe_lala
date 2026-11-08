@@ -105,3 +105,9 @@ or implicitly enable resource bootstrap. The original constructor and resource f
 remain legacy raw-source routes without these guarantees. See the
 [acceptance host contract](../dotnet/Lala.Cloud.Acceptance/README.md#opt-in-prepared-login-host)
 for lifecycle and synthetic coverage.
+
+
+A separate acceptance `--terminal-self-test` now exercises intercepted local terminal
+input through the prepared runner with only the fixed fake pair and embedded loopback
+peers. It is not a real-account host, authenticated permission or secure OS handoff.
+See [interactive synthetic acceptance](../dotnet/Lala.Cloud.Acceptance/README.md#interactive-terminal-synthetic-acceptance).

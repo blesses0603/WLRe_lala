@@ -15,7 +15,7 @@ From the repository root with the .NET 10 SDK:
 dotnet run --project dotnet/Lala.Cloud.Acceptance -c Release -- --self-test
 ```
 
-No arguments, `--help`, or `-h` prints prerequisites without opening sockets. All
+No arguments, `--help`, or `-h` prints prerequisites without opening sockets. The separate `--terminal-self-test` mode below requires an interactive terminal. All
 other arguments fail without being echoed. `--self-test` binds synthetic peers only
 to IPv4 loopback with ephemeral ports and uses fake transient credentials. It does
 not load configuration or credentials from arguments, environment variables, files,
@@ -81,7 +81,7 @@ pre-cancellation, Stop/dispose before Run, expiry before Run and during pending 
 noncooperative late input, callback access to runner status, and context retirement
 between legs, second-leg expiry, reentrant Stop and concurrent Run/Stop/disposal.
 These are local loopback tests, not authenticated approval or live-server
-acceptance. No real account input or platform input host is introduced.
+acceptance. No real-account input host is introduced. The terminal fixture below accepts only two fixed synthetic values.
 
 ## Legacy raw-source host
 
@@ -181,3 +181,56 @@ resource joins, revocation and inventory operations are tested separately by Cor
 internal `AccountRuntimeIntegrationTests.cs` fixture suite. Those tests do not prove
 production HTTP success or official-account acceptance. A public-only synthetic
 successful resource run is intentionally unavailable without real official fetching.
+
+
+## Interactive terminal synthetic acceptance
+
+Build Release, then run `dotnet run --project dotnet/Lala.Cloud.Acceptance -c Release --no-build -- --terminal-self-test`
+in a terminal. Use only the displayed fake account `synthetic` and fake password
+`fake_secret`. Never enter real credentials. The mode has no endpoint, profile, file,
+stdin, environment or live-account options. Both listeners bind exclusively to IPv4
+loopback on ephemeral ports; role 1, platform 1, language 2 and XOR AD are fixed fixture data.
+
+The exact prepared runner disclosure is displayed before a per-run Y acknowledgment.
+It includes both recipients, profile fields, local selection marker, generation, purpose,
+risk, attempt and validity. The input callback requires that same disclosure instance.
+The marker binds this fixture's input to one run; neither marker nor acknowledgment
+proves authenticated identity or secure human consent. No reusable live adapter is exposed.
+
+Account and password input use intercepted terminal keys and fixed 255-character mutable
+buffers. Both fields are masked. Enter finishes a nonempty field; backspace immediately
+clears the removed cell; Escape/Ctrl-C cancels. Nonprintable/non-ASCII input and overflow
+reject the attempt, rather than truncate. Only the exact fixed fake pair can return
+credentials to Core. All other input is rejected before any connection or credential transmission, and
+application-owned input buffers are cleared. The bound listeners exist for disclosure but do not accept until
+input validates. Each terminal stream must be interactive; redirection is refused before
+listeners are created. Unsupported arguments are not echoed.
+
+For matching input, real public `CreatePrepared`/`IAccountLoginInput`/`RunAsync` ownership
+carries both synthetic credential legs to the existing peers. They check exact packets,
+enter held receive, send a heartbeat after the baseline, verify its reply, and require EOF
+without extra traffic. PASS requires the expected outcome, disabled resources, disposed
+Core credentials, cleared original input arrays, and completed peer tasks. Runner and peers
+are disposed on all exits. No resource bootstrap, official network or gameplay is enabled.
+
+The input deadline is 60 seconds from before disclosure construction; the runner has a
+55-second overall stop budget and one-second held observation. These request cancellation,
+not hard process completion bounds. KeyAvailable polling avoids intentionally blocking
+on an idle ReadKey, but platform console operations can still block/fail. Ctrl-C/Escape
+remain observed after input until runner completion. Terminal mode is restored where the
+terminal remains available. Terminal loss/process kill, OS or managed input copies, swap
+and crash dumps cannot be securely erased by clearing owned arrays. Input typed before intercepted reads begin or queued by the terminal may already have been
+echoed or retained by the terminal/OS; tested non-echo applies only to intercepted reads,
+not startup/type-ahead or every terminal implementation. Masking is not an
+OS-secure handoff, and raw TCP/XOR remains recoverable even though this fixture is loopback.
+
+On Linux/POSIX with .NET on PATH, run `python3 tools/check_terminal_acceptance.py` after
+Release build. Actual PTY checks cover success/both legs/heartbeat, backspace, decline,
+wrong synthetic values with sentinel non-echo, empty/overflow/non-ASCII/control input,
+Escape, Ctrl-C during/after input, each redirected stream, terminal-state restoration
+on normal exits, and terminal hangup. The scripted acknowledgment is test input, not
+human authorization evidence. This is Linux execution evidence only; Windows/macOS
+terminal behavior and real desktop/platform/security acceptance remain unverified.
+
+The existing .NET migration workflow runs the PTY checker only on its Linux job.
+Adding this CI step is not evidence that hosted CI or other OS terminals already passed.

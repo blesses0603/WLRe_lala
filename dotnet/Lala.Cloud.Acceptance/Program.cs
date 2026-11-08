@@ -6,12 +6,13 @@ internal static class Program
         Lala.Cloud.Acceptance
         Usage: dotnet run --project dotnet/Lala.Cloud.Acceptance -c Release -- --self-test
 
+        --terminal-self-test uses an interactive terminal and fixed fake credentials with loopback peers only.
         --self-test runs synthetic, loopback-only login/held-receive checks with fake credentials.
         Integrated pre-login failure checks also use the public AccountRuntime factory without completing login.
         This is not official-server or live-account validation. No gameplay or resource bootstrap runs.
 
         There is deliberately no live CLI mode, default target, profile discovery, or credential input
-        through arguments, environment variables, files, stdin, or logs. A future authorized secure host
+        through arguments, environment variables, files, redirected stdin, or logs. Terminal mode accepts only fixed fake values. A future authorized secure host
         may use CreatePrepared with an explicit profile, opaque selected identity and IAccountLoginInput.
         Read Disclosure before Run and independently authenticate permission for those exact facts.
         The raw-source constructor and CreateWithResources remain legacy routes without preparation guarantees.
@@ -32,10 +33,11 @@ internal static class Program
             Console.WriteLine(Help);
             return 0;
         }
+        if (args is ["--terminal-self-test"]) return await TerminalSyntheticCheck.RunAsync().ConfigureAwait(false);
         if (args is not ["--self-test"])
         {
             // Never echo unknown arguments: an operator might accidentally pass a secret.
-            Console.Error.WriteLine("Unsupported arguments. Only --self-test and help are available.");
+            Console.Error.WriteLine("Unsupported arguments. Only --self-test, --terminal-self-test and help are available.");
             return 2;
         }
         return await SyntheticSelfTests.RunAsync().ConfigureAwait(false);
