@@ -1840,3 +1840,21 @@ Final offline verification passed: 12 focused, 43,384 Core, external public cons
 no blockers. No Desktop UI, trusted-input host or live-server acceptance is implied.
 Only the overall PR marker advances once to 8.0.29; same-batch corrections and all
 platform/Core/Desktop project version settings remain unchanged.
+
+
+### Overall PR development marker 8.0.30: bounded received chat state
+
+Decoded chat is now composed into the actual service snapshot before its atomic
+commit. The latest 200 full message/announcement receipts and 4096 scoped names,
+plus latest feedback/profile observations, survive coalesced receive notifications.
+New receive attempts start empty; scene and resource updates do not erase history.
+Raw content remains explicitly accessible for literal host display while default
+diagnostics are redacted. This adds no sending, link execution or command authority.
+Python comparison and the deliberate deterministic name-order/profile-learning
+completions are documented in dotnet-received-chat.md.
+
+Final offline verification passed: 15 focused, 43,401 Core, external public consumer,
+76 lifecycle, 36 acceptance and 17 Linux PTY checks. Independent review found no
+blockers. No Desktop UI, real credentials or official-server acceptance was involved.
+Only the overall PR marker advances once to 8.0.30; same-batch corrections and all
+platform/Core/Desktop project version settings remain unchanged.

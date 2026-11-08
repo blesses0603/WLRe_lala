@@ -1,9 +1,24 @@
 using System.Net;
 using Lala.Core.Resources;
+using Lala.Core.Protocol;
+using Lala.Core.Social;
+using Lala.Core.State;
 using Lala.Core.Sessions;
 using Lala.Core.Sessions.Discovery;
 
 // Deliberately no InternalsVisibleTo: this is a real external Core consumer.
+var receiveState = new ServiceStateCoordinator();
+var chatState = receiveState.Apply(new ServerSocialEvent(new ChatMessageEvent(1, "世界", 7, [], "synthetic chat", 0)),
+    new(receiveState.Snapshot(), new(1)));
+var chatPublication = new AccountReceivePublication(Guid.NewGuid(), 1, AccountReceivePhase.Running, chatState);
+Require(chatPublication.State.Chat.Messages.Length == 1 && chatPublication.ResourceHeld);
+var integratedChatPublication = new AccountRuntimePublication(chatPublication, null);
+Require(ReferenceEquals(chatState.Chat, integratedChatPublication.Receive.State.Chat));
+Require(chatPublication.State.Chat.Messages[0].Name == "7");
+Require(chatPublication.State.Chat.Messages[0].Receipt.Event is ChatMessageEvent { Text: "synthetic chat" });
+Require(chatPublication.State.Chat.DroppedMessageCount == 0 && chatPublication.State.Chat.Names.Names.IsEmpty);
+Require(ChatNameScope.Local != ChatNameScope.Server(0) && ChatNameScope.CrossUnknown != ChatNameScope.Server(0));
+Require(!chatPublication.ToString().Contains("synthetic chat", StringComparison.Ordinal));
 var session = new AccountSession();
 var generation = session.Begin("synthetic", "offline-contract-check").Generation;
 var source = new DecliningSource();

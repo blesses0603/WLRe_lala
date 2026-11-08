@@ -97,7 +97,7 @@ public sealed class ServiceStateSnapshot
         PartyEventSnapshot? party = null, InstanceReceiveSnapshot? instances = null, TentReceiveSnapshot? tent = null,
         PlayerKnowledgeSnapshot? playerKnowledge = null, AttributeAllocationSnapshot? attributeAllocation = null,
         NpcShopEvidenceSnapshot? shopEvidence = null, EfficiencySnapshot? efficiency = null,
-        GuildActionsReceiveSnapshot? guildActions = null, ArkReceiveSnapshot? ark = null)
+        GuildActionsReceiveSnapshot? guildActions = null, ArkReceiveSnapshot? ark = null, ChatReceiveSnapshot? chat = null)
     {
         Companions = companions ?? CompanionReceiveSnapshot.Empty;
         var attributes = CompanionAttributes(Companions);
@@ -129,6 +129,7 @@ public sealed class ServiceStateSnapshot
         Efficiency = efficiency ?? EfficiencySnapshot.Empty;
         GuildActions = guildActions ?? GuildActionsReceiveSnapshot.Empty;
         Ark = ark ?? ArkReceiveSnapshot.Empty;
+        Chat = chat ?? ChatReceiveSnapshot.Empty;
         Observation = observation;
     }
 
@@ -152,6 +153,7 @@ public sealed class ServiceStateSnapshot
     public EfficiencySnapshot Efficiency { get; }
     public GuildActionsReceiveSnapshot GuildActions { get; }
     public ArkReceiveSnapshot Ark { get; }
+    public ChatReceiveSnapshot Chat { get; }
     public ServiceObservationEvidence? Observation { get; }
 
     private static bool SameMap<TKey, TValue>(ImmutableDictionary<TKey, TValue> left,
@@ -333,6 +335,9 @@ public sealed class ServiceStateCoordinator
             QuestionRuntime = inputs.ArkQuestionRuntime, MemoryAvailability = inputs.ArkMemoryAvailability
         };
         var ark = ArkReceiveReducer.Apply(state.Ark, observation, arkContext);
+        // ChatPanel/NameBook are a separate receive projection, not another State.apply
+        // source observer. Retain content before runtime publication notifications coalesce.
+        var chat = ChatReceiveReducer.Apply(state.Chat, observation, inputs.ObservedAt, local.Player, party, guild);
         var after = new ServiceLocalEvidence(local.Phase, local.Player, local.PacketCount);
         var next = new ServiceStateSnapshot(local, daily, cube, recovery, guild, activities, storage,
             expedition, new(observation.Type, before, after, inputs)
@@ -343,7 +348,7 @@ public sealed class ServiceStateCoordinator
                 GuildActionsContext = guildActionsContext, ArkContext = readsArkRuntime ? arkContext : null,
                 ArkMemoryIntent = ark.MemoryIntent
             }, crafting, bag, companions, party, instances, tent, knowledge.Player, allocation,
-            shop, efficiency, guildActions, ark.State);
+            shop, efficiency, guildActions, ark.State, chat);
         state = next;
         return next;
     }

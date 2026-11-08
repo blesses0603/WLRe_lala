@@ -88,3 +88,10 @@ legs recheck cancellation, context and finite lifetime at actual write admission
 [Host obligations and synthetic scope](../docs/dotnet-account-login-preparation.md) explain
 why this is not authenticated consent, a safe input host or official-server acceptance.
 The default UI, resource hold and absence of game-command authority are unchanged.
+
+### Bounded received chat
+
+Public receive snapshots now retain the latest 200 chat messages/announcements,
+4096 scoped names, and separate latest feedback/profile observations, so coalesced
+notifications do not discard chat content. See [bounds, privacy and Python differences](../docs/dotnet-received-chat.md).
+This is receive-only; no host UI, chat sending, catalog trust or command authority is added.
