@@ -1712,3 +1712,20 @@ failures or skips. Full Core used the documented process-only 3 GiB cap; repeats
 additional distinct test cases. Desktop's 9 + 54 self-tests and zero-warning/error build
 remain applicable because production/UI code did not change. Standard remote CI remains
 separate and must be verified against the pushed commit.
+
+
+### Overall PR development marker 8.0.22: integrated account notifications
+
+The user confirmed that the 8.x sequence belongs to the overall PR, not a separately
+versioned Core package. Existing commit `d9ce54f` and the 8.0.21 entries above establish
+the prior marker. The integrated-notification feature published as `493ba3e` advances
+that overall marker once to 8.0.22; same-batch test, CI, documentation and push corrections
+do not advance it again. No retrospective versions are invented for intervening commits.
+
+The exact published feature passed 43,238 Core tests on Windows, macOS and Linux,
+76 lifecycle cases, the public contract, 23 synthetic acceptance cases, Desktop build
+and 9 + 54 offline checks; Android build and Python CI also passed.
+This documentation alignment does not establish live-server or device acceptance.
+Python 7.3.1 and Android 0.2.0 / versionCode 2 remain independent. Core and Desktop
+project version settings are unchanged; no independent Core version is introduced.
+See the root version history for the same-batch policy and current PR marker.
