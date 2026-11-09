@@ -19,7 +19,7 @@ internal sealed class AtlasPixelCandidate
 internal static class AtlasSpritePixels
 {
     internal static AtlasPixelCandidate Extract(UnitySelectedObjects selected,UnityFileIdentity atlasFile,long atlasId,
-        UnityFileIdentity spriteFile,long spriteId,string expectedName,CancellationToken token=default)
+        UnityFileIdentity spriteFile,long spriteId,string expectedName,CancellationToken token=default,UnityImageArchive? imageArchive=null)
     {
         token.ThrowIfCancellationRequested();
         var atlasObject=selected.Resolve(atlasFile,new(0,atlasId),687078895)!;
@@ -39,18 +39,18 @@ internal static class AtlasSpritePixels
         Require(atlas.RenderData.TryGetValue(sprite.RenderKey!.Value,out var entry),"Atlas render key missing");
         var textureObject=selected.Resolve(atlasFile,entry!.Texture,28)!;
         var alphaObject=selected.Resolve(atlasFile,entry.Alpha,28,true);
-        var texture=UnityImageObjects.Texture(textureObject.Object.Bytes,token);
-        var alpha=alphaObject is null?null:UnityImageObjects.Texture(alphaObject.Object.Bytes,token);
+        var texture=UnityImageObjects.Texture(textureObject.Object.Bytes,token,imageArchive,textureObject.File);
+        var alpha=alphaObject is null?null:UnityImageObjects.Texture(alphaObject.Object.Bytes,token,imageArchive,alphaObject.File);
         // Include complete immutable object bytes and identities, not just cropped pixels.
         object Stamp(UnityResolvedObject o)=>new{o.File,o.PathId,Hash=SpritePng.Hash(o.Object.Bytes.Span)};
-        string inputs=SpritePng.Hash(JsonSerializer.SerializeToUtf8Bytes(new{Atlas=Stamp(atlasObject),Sprite=Stamp(spriteObject),Texture=Stamp(textureObject),Alpha=alphaObject is null?null:Stamp(alphaObject)}));
+        string inputs=SpritePng.Hash(JsonSerializer.SerializeToUtf8Bytes(new{Archive=imageArchive is null?null:new{imageArchive.BundleName,imageArchive.SourceSha256},Atlas=Stamp(atlasObject),Sprite=Stamp(spriteObject),Texture=Stamp(textureObject),Alpha=alphaObject is null?null:Stamp(alphaObject)}));
         return Decode(sprite.Name,sprite.LogicalRect!,entry,texture,alpha,inputs,token);
     }
     internal static AtlasPixelCandidate Decode(string name,SpritePixelRect logical,UnityAtlasData entry,UnityTexturePixels texture,
         UnityTexturePixels? alpha,string inputs,CancellationToken token=default)
     {
         token.ThrowIfCancellationRequested();
-        Require(entry.Settings is 3 or 7 or 11 or 15 or 19 && entry.Downscale==1,"Unreviewed atlas packing/rotation/downscale");
+        Require((entry.Settings & ~0x7fU)==0 && (entry.Settings & 3)==3 && ((entry.Settings>>2)&15)<=4 && entry.Downscale==1,"Unreviewed atlas packing/rotation/downscale");
         Require((entry.Alpha.PathId!=0)==(alpha is not null),"Atlas alpha presence mismatch");
         static int Integral(float f){Require(float.IsFinite(f)&&f>=0&&f<=2048&&f==MathF.Truncate(f),"Invalid atlas crop");return (int)f;}
         int x=Integral(entry.Rect.X),y=Integral(entry.Rect.Y),w=Integral(entry.Rect.Width),h=Integral(entry.Rect.Height);
@@ -65,8 +65,9 @@ internal static class AtlasSpritePixels
         }
         var raw=Raw(texture);byte[]? mask=null;
         if(alpha is not null){Require(alpha.Layout.Width==texture.Layout.Width&&alpha.Layout.Height==texture.Layout.Height,"Atlas alpha geometry mismatch");mask=Raw(alpha);}
-        int rotation=(int)(entry.Settings>>2),width=rotation==4?h:w,height=rotation==4?w:h;
-        Require(logical.Width==width&&logical.Height==height,"Trimmed or mismatched logical atlas Sprite unsupported");
+        int rotation=(int)((entry.Settings>>2)&15),width=rotation==4?h:w,height=rotation==4?w:h;
+        Require(logical.Width>=width&&logical.Height>=height&&logical.Width<=512&&logical.Height<=512&&logical.Width==MathF.Truncate(logical.Width)&&logical.Height==MathF.Truncate(logical.Height),"Invalid logical atlas Sprite size");
+        // Python returns the transformed atlas crop, without padding to the logical rect.
         var pixels=new byte[width*height*4];
         for(int row=0;row<height;row++)
         {

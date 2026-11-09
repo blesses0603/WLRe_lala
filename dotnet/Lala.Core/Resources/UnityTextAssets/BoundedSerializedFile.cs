@@ -14,7 +14,7 @@ internal sealed class BoundedSerializedFile
     internal required Dictionary<long, UnityObject> Objects { get; init; }
     internal required IReadOnlyList<string> Externals { get; init; }
     internal required List<UnityContainerEntry> Container { get; init; }
-    internal static BoundedSerializedFile Read(UnityFileIdentity identity, ReadOnlyMemory<byte> bytes, UnityExtractionBudget budget, CancellationToken token, bool allowImages = false, bool allowMaterials = false, bool allowShaders = false, bool allowAtlases = false)
+    internal static BoundedSerializedFile Read(UnityFileIdentity identity, ReadOnlyMemory<byte> bytes, UnityExtractionBudget budget, CancellationToken token, bool allowImages = false, bool allowMaterials = false, bool allowShaders = false, bool allowAtlases = false, UnityImageArchive? imageArchive = null)
     {
         token.ThrowIfCancellationRequested(); var header = new UnityReadCursor(bytes, true);
         Require(header.U32() == 0 && header.U32() == 0 && header.U32() == 22 && header.U32() == 0 && header.U8() == 0,
@@ -67,7 +67,7 @@ internal sealed class BoundedSerializedFile
             else if (obj.ClassId == 48) UnityShaderObjects.Read(obj.Bytes, obj.ShaderLayout!, token);
             else if (obj.ClassId == 687078895) UnityAtlasObjects.Read(obj.Bytes, token);
             else if (obj.ClassId == 21) UnityMaterialObjects.Read(obj.Bytes, token);
-            else if (obj.ClassId == 28) UnityImageObjects.Texture(obj.Bytes, token);
+            else if (obj.ClassId == 28) UnityImageObjects.Texture(obj.Bytes, token, imageArchive, identity);
             else if (obj.ClassId == 213) UnityImageObjects.Sprite(obj.Bytes, token, allowAtlases);
             else ValidateText(obj.Bytes, token); // Also validate unused objects; no unchecked layout escapes.
         }

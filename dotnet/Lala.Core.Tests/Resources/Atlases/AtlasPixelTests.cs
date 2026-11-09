@@ -7,7 +7,7 @@ public sealed class AtlasPixelTests
 {
     private static readonly UnityFileIdentity Id=new("owned","CAB-owned");
     private static JsonDocument Fixture()=>JsonDocument.Parse(typeof(AtlasPixelTests).Assembly.GetManifestResourceStream("Lala.Core.Tests.Resources.Atlases.pixels.json")!);
-    public static IEnumerable<object[]> Cases(){using var d=Fixture();for(int i=0;i<30;i++)yield return [i];}
+    public static IEnumerable<object[]> Cases(){using var d=Fixture();for(int i=0;i<d.RootElement.GetProperty("cases").GetArrayLength();i++)yield return [i];}
     private static BoundedSerializedFile File(int index=0)
     {
         using var d=Fixture();var objects=new Dictionary<long,UnityObject>();long id=0;
@@ -63,11 +63,27 @@ public sealed class AtlasPixelTests
         var f=File();var a=Extract(f);var bytes=f.Objects[3].Bytes.ToArray();bytes[4]=(byte)'X';f.Objects[3]=f.Objects[3] with{Bytes=bytes};var b=Extract(f);
         Assert.Equal(a.CopyPixels(),b.CopyPixels());Assert.NotEqual(a.InputFingerprint,b.InputFingerprint);
     }
-    [Theory][InlineData(0)][InlineData(2)][InlineData(23)][InlineData(67)][InlineData(131)]
+    [Theory][InlineData(0)][InlineData(2)][InlineData(23)][InlineData(87)][InlineData(131)]
     public void Unsupported_packing_does_not_reach_pixels(uint settings)
     {
         var f=File();var atlas=UnityAtlasObjects.Read(f.Objects[1].Bytes);var data=atlas.RenderData.Values.Single() with{Settings=settings};var texture=UnityImageObjects.Texture(f.Objects[3].Bytes,default);
         Assert.Throws<UnityTextAssetException>(()=>AtlasSpritePixels.Decode("owned",new(0,0,3,5),data,texture,null,"owned"));
+    }
+    [Fact]
+    public void Atlas_physics_arrays_remain_bounded_and_finite()
+    {
+        var f=File();int offset=Offset(213,"m_PhysicsShape");
+        Change(f,2,offset,65);Assert.Throws<UnityTextAssetException>(()=>Extract(f));
+        var original=File().Objects[2].Bytes.ToArray();
+        foreach(int count in new[]{4097,1})
+        {
+            var body=new byte[original.Length+12];original.AsSpan(0,offset).CopyTo(body);
+            BinaryPrimitives.WriteInt32LittleEndian(body.AsSpan(offset),1);
+            BinaryPrimitives.WriteInt32LittleEndian(body.AsSpan(offset+4),count);
+            BinaryPrimitives.WriteInt32LittleEndian(body.AsSpan(offset+8),BitConverter.SingleToInt32Bits(float.NaN));
+            original.AsSpan(offset+4).CopyTo(body.AsSpan(offset+16));
+            f=File();f.Objects[2]=f.Objects[2] with{Bytes=body};Assert.Throws<UnityTextAssetException>(()=>Extract(f));
+        }
     }
     [Fact]
     public void Crop_alpha_geometry_color_layout_and_cancellation_are_checked()

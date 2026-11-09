@@ -41,7 +41,7 @@ internal static class UnityImageObjects
     { var p = Pointer(r); Require(p.FileId == 0 && p.PathId == 0, "Unsupported image pointer"); }
     private static SpritePixelRect Rect(UnityReadCursor r) => new(Float(r), Float(r), Float(r), Float(r));
     private static void EmptyAlignedArray(UnityReadCursor r) { Require(r.Count(0) == 0, "Unsupported optional image array"); r.Align(); }
-    internal static UnityTexturePixels Texture(ReadOnlyMemory<byte> bytes, CancellationToken token)
+    internal static UnityTexturePixels Texture(ReadOnlyMemory<byte> bytes, CancellationToken token, UnityImageArchive? archive = null, UnityFileIdentity? owner = null)
     {
         token.ThrowIfCancellationRequested(); var r = new UnityReadCursor(bytes); string name = r.String(1024, false);
         r.I32(); Require(!Bool(r), "Downscaled fallback unsupported"); Bool(r); r.Align();
@@ -54,7 +54,13 @@ internal static class UnityImageObjects
         r.I32(); int colorSpace = r.I32(); Require(colorSpace is 0 or 1, "Unreviewed texture color space");
         EmptyAlignedArray(r); // platform blob
         int length = r.Count(16 * 1024 * 1024, 1); var payload = r.Take(length); r.Align();
-        Require(r.I64() == 0 && r.U32() == 0 && r.String(1024) == "", "Streamed image resource unsupported"); r.End();
+        long streamOffset=r.I64(); uint streamSize=r.U32(); string streamPath=r.String(1024);r.End();
+        if(streamPath.Length!=0)
+        {
+            Require(archive is not null && owner is not null && length==0,"Streamed image requires exact archive binding and no inline payload");
+            payload=archive!.CopyResource(owner!,streamPath,streamOffset,streamSize,token);length=payload.Length;
+        }
+        else Require(streamOffset==0 && streamSize==0,"Unbound stream span");
         Require(width is > 0 and <= 2048 && height is > 0 and <= 2048 && mips == 1 && images == 1 && dimension == 2,
             "Unsupported image dimensions/mips/array");
         int expected;
@@ -88,7 +94,18 @@ internal static class UnityImageObjects
         var rect = Rect(r); Floats(r, 2); Floats(r, 2); uint settings = r.U32(); Floats(r, 4);
         float downscale=Float(r);
         Require(atlasMode || downscale == 1 && settings == 2, "Unreviewed downscale/packing/tight mesh"); r.Align();
-        EmptyAlignedArray(r); EmptyAlignedArray(r); r.End(); // physics shapes / bones
+        if(atlasMode)
+        {
+            int shapes=r.Count(64,4), points=0;
+            for(int i=0;i<shapes;i++)
+            {
+                token.ThrowIfCancellationRequested();int count=r.Count(4096,8);points+=count;
+                Require(points<=4096,"Sprite physics points exceed bound");Floats(r,count*2);r.Align();
+            }
+            r.Align();
+        }
+        else EmptyAlignedArray(r);
+        EmptyAlignedArray(r); r.End(); // bones remain unsupported
         if(atlasMode)
         {
             Require(main.Width is >0 and <=512 && main.Height is >0 and <=512 && main.Width==MathF.Truncate(main.Width)&&main.Height==MathF.Truncate(main.Height),"Invalid atlas Sprite logical size");

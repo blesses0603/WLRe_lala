@@ -37,4 +37,5 @@
 <ItemGroup><EmbeddedResource Include="Resources/Atlases/atlases.json" LogicalName="Lala.Core.Tests.Resources.Atlases.atlases.json" /></ItemGroup>
 <ItemGroup><EmbeddedResource Include="Resources/Atlases/pixels.json" LogicalName="Lala.Core.Tests.Resources.Atlases.pixels.json" /></ItemGroup>
 <ItemGroup><EmbeddedResource Include="Resources/Atlases/mapping.json" LogicalName="Lala.Core.Tests.Resources.Atlases.mapping.json" /></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Resources/Atlases/streams.json" LogicalName="Lala.Core.Tests.Resources.Atlases.streams.json" /></ItemGroup>
 </Project>

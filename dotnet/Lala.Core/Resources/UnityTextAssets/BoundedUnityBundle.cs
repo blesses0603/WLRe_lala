@@ -17,10 +17,19 @@ internal static class BoundedUnityBundle
     internal const int MaximumBundleBytes = 64 * 1024 * 1024;
     internal const int MaximumBlockInfoBytes = 4 * 1024 * 1024;
     internal const long MaximumTotalBytes = 128L * 1024 * 1024;
-    internal sealed record Entry(string Name, ReadOnlyMemory<byte> Bytes);
+    internal sealed record Entry(string Name, ReadOnlyMemory<byte> Bytes, bool IsResource = false);
 
     internal static List<Entry> Read(ReadOnlyMemory<byte> input, UnityExtractionBudget budget, CancellationToken token)
+        => ReadCore(input, budget, token, false);
+
+    // Explicit image-only entry: legacy TextAsset and Sprite callers keep their old bounds.
+    internal static List<Entry> ReadImageArchive(ReadOnlyMemory<byte> input, UnityExtractionBudget budget, CancellationToken token)
+        => ReadCore(input, budget, token, true);
+
+    private static List<Entry> ReadCore(ReadOnlyMemory<byte> input, UnityExtractionBudget budget, CancellationToken token, bool resources)
     {
+        token.ThrowIfCancellationRequested();
+        int expandedLimit = resources ? 96 * 1024 * 1024 : MaximumBundleBytes;
         var r = new UnityReadCursor(input, true);
         Require(input.Length is > 0 and <= MaximumBundleBytes && r.NullString(7) == "UnityFS", "Unsupported UnityFS signature or size");
         uint version = r.U32(); Require(version is 6 or 7 or 8, "Unsupported UnityFS version");
@@ -51,27 +60,30 @@ internal static class BoundedUnityBundle
             Require(plain is > 0 and <= MaximumBundleBytes && size is > 0 and <= MaximumBundleBytes && (blockFlags & ~0x3fU) == 0, "Unsupported UnityFS data block");
             CheckCompression(blockFlags & 0x3f);
             plainTotal += plain; packedTotal += size;
-            Require(plainTotal <= MaximumBundleBytes && budget.ExpandedBytes + plainTotal <= MaximumTotalBytes, "UnityFS expansion limit");
+            Require(plainTotal <= expandedLimit && budget.ExpandedBytes + plainTotal <= MaximumTotalBytes, "UnityFS expansion limit");
             blocks.Add(((int)plain, (int)size, blockFlags & 0x3f));
         }
         Require(packedTotal == dataEnd - r.Position, "UnityFS data span mismatch");
         budget.ExpandedBytes += plainTotal;
         int fileCount = ir.Count(128, 21); budget.Files += fileCount;
         Require(fileCount > 0 && budget.Files <= 128, "UnityFS directory limit");
-        var directory = new List<(string Name, int Offset, int Size)>(fileCount);
+        var directory = new List<(string Name, int Offset, int Size, bool Resource)>(fileCount);
         var names = new HashSet<string>(StringComparer.Ordinal);
         long priorEnd = 0;
         for (int i = 0; i < fileCount; i++)
         {
             token.ThrowIfCancellationRequested();
             long offset = ir.I64(), size = ir.I64(); uint fileFlags = ir.U32(); string name = ir.NullString(255);
-            Require(offset >= priorEnd && size > 0 && offset <= plainTotal && size <= plainTotal - offset && fileFlags == 4,
+            Require(offset >= priorEnd && size > 0 && offset <= plainTotal && size <= plainTotal - offset && (fileFlags == 4 || resources && fileFlags == 0),
                 "Unsupported UnityFS directory span or entry flags");
             Require(name.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.') && name is not "." and not ".." && names.Add(name),
                 "Invalid or duplicate UnityFS file identity");
-            directory.Add((name, (int)offset, (int)size)); priorEnd = offset + size;
+            directory.Add((name, (int)offset, (int)size, fileFlags == 0)); priorEnd = offset + size;
         }
         ir.End();
+        if (resources)
+            foreach (var entry in directory.Where(e => e.Resource))
+                Require(entry.Name.EndsWith(".resS", StringComparison.Ordinal) && directory.Any(e => !e.Resource && e.Name == entry.Name[..^5]), "Unpaired image resource entry");
         byte[] expanded = new byte[(int)plainTotal]; int write = 0;
         foreach (var block in blocks)
         {
@@ -79,7 +91,7 @@ internal static class BoundedUnityBundle
             ExpandInto(r.Take(block.Packed).Span, expanded.AsSpan(write, block.Plain), block.Compression, token);
             write += block.Plain;
         }
-        return directory.Select(x => new Entry(x.Name, expanded.AsMemory(x.Offset, x.Size))).ToList();
+        return directory.Select(x => new Entry(x.Name, expanded.AsMemory(x.Offset, x.Size), x.Resource)).ToList();
     }
 
     private static void CheckCompression(uint compression) => Require(compression is 0 or 2 or 3, "Unsupported compression; LZMA/encryption disabled");
