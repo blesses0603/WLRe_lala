@@ -1,4 +1,4 @@
-# PR #79 ver 8.0.57：Python 桌面介面對照盤點
+# PR #79 ver 8.0.58：Python 桌面介面對照盤點
 
 範圍是全部桌面畫面及其子視窗，保留使用者較新的「背包／特技各自獨立視窗」要求。參照 PR 原 head `59416bde817f39035176ae9c1e2eeb5b23896d58` 中 Python 7.3.1 原始碼；本批未改 Python，也未聲稱已全部移植完成。
 
@@ -186,3 +186,7 @@ C# 原本只有技能 ID 的名稱查找也接入目前已驗證可選技能目�
 ## 8.0.57 Shader 與選定指標
 
 加入固定 schema Shader 解析、頭像 blob／預設值驗證及精確選定檔案 PPtr resolver，仍待完整來源批次與顯示組合。詳見 [證據與未完成範圍](DOTNET_PORTRAIT_SHADER_POINTERS.md)。
+
+## 8.0.58 獨立 Texture 與頭像批次
+
+完整 Texture 像素與色域檢查已加入，頭像批次先驗證來源／Shader／精確指標再逐張處理；尚未接儲存與顯示。詳見 [批次驗證與限制](DOTNET_PORTRAIT_BATCH.md)。v8.0.57 macOS Python 因 hosted runner 未取得而取消，未算通過。

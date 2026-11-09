@@ -25,7 +25,7 @@ internal static class UnityImageShapes
         Require(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(canonical))) == hash, "Unreviewed image type tree");
     }
 }
-internal sealed record UnityTexturePixels(string Name, TexturePixelLayout Layout, ReadOnlyMemory<byte> Payload);
+internal sealed record UnityTexturePixels(string Name, TexturePixelLayout Layout, ReadOnlyMemory<byte> Payload, int ColorSpace);
 internal sealed record UnitySpritePixels(string Name, UnityContainerPointer Texture, SpritePixelRect Rect);
 
 internal static class UnityImageObjects
@@ -49,7 +49,7 @@ internal static class UnityImageObjects
         Require(!Bool(r), "Streaming mipmaps unsupported"); r.Align(); r.I32(); r.Align();
         int images = r.I32(), dimension = r.I32();
         r.I32(); r.I32(); Float(r); r.I32(); r.I32(); r.I32(); // GLTextureSettings
-        r.I32(); Require(r.I32() is 0 or 1, "Unreviewed texture color space");
+        r.I32(); int colorSpace = r.I32(); Require(colorSpace is 0 or 1, "Unreviewed texture color space");
         EmptyAlignedArray(r); // platform blob
         int length = r.Count(16 * 1024 * 1024, 1); var payload = r.Take(length); r.Align();
         Require(r.I64() == 0 && r.U32() == 0 && r.String(1024) == "", "Streamed image resource unsupported"); r.End();
@@ -59,7 +59,7 @@ internal static class UnityImageObjects
         try { expected = BlockTexturePixels.PayloadLength(width, height, format); }
         catch (SpritePixelException) { throw new UnityTextAssetException("Unreviewed texture compression/format"); }
         Require(length == expected && complete == length, "Texture image size mismatch");
-        token.ThrowIfCancellationRequested(); return new(name, new(width, height, format), payload);
+        token.ThrowIfCancellationRequested(); return new(name, new(width, height, format), payload, colorSpace);
     }
     internal static UnitySpritePixels Sprite(ReadOnlyMemory<byte> bytes, CancellationToken token)
     {
