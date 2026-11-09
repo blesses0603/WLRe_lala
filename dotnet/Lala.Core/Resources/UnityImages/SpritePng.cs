@@ -65,6 +65,36 @@ internal static class SpritePng
         Chunk(png, "IHDR"u8, header); Chunk(png, "IDAT"u8, zlib.ToArray()); Chunk(png, "IEND"u8, []);
         token.ThrowIfCancellationRequested(); return png.ToArray();
     }
+    // Only private PNG bytes already independently matched by PortraitPngStore reach this
+    // path in production. Still bound structure and decompressed bytes before rendering.
+    internal static byte[] DecodePortrait(ReadOnlySpan<byte> png, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        BoundedSpritePixels.Check(png.Length is >=57 and <=524288 && png[..8].SequenceEqual(new byte[]{137,80,78,71,13,10,26,10}), "Invalid owned portrait PNG");
+        int offset=8; byte[]? compressed=null;
+        foreach (string expected in new[]{"IHDR","IDAT","IEND"})
+        {
+            BoundedSpritePixels.Check(offset<=png.Length-12,"Truncated owned portrait PNG");
+            uint length=BinaryPrimitives.ReadUInt32BigEndian(png[offset..]);
+            BoundedSpritePixels.Check(length<=(uint)(png.Length-offset-12),"Portrait PNG chunk exceeds bound");
+            int size=(int)length; var kind=png.Slice(offset+4,4); var data=png.Slice(offset+8,size);
+            BoundedSpritePixels.Check(System.Text.Encoding.ASCII.GetString(kind)==expected,"Unexpected portrait PNG chunk");
+            uint crc=uint.MaxValue; foreach(byte b in kind)crc=Update(crc,b); foreach(byte b in data)crc=Update(crc,b);
+            BoundedSpritePixels.Check(~crc==BinaryPrimitives.ReadUInt32BigEndian(png[(offset+8+size)..]),"Portrait PNG CRC mismatch");
+            if(expected=="IHDR") BoundedSpritePixels.Check(size==13 && BinaryPrimitives.ReadUInt32BigEndian(data)==256 &&
+                BinaryPrimitives.ReadUInt32BigEndian(data[4..])==256 && data[8..].SequenceEqual(new byte[]{8,6,0,0,0}),"Portrait PNG geometry mismatch");
+            else if(expected=="IDAT") compressed=data.ToArray();
+            else BoundedSpritePixels.Check(size==0,"Invalid portrait PNG end");
+            offset+=size+12;
+        }
+        BoundedSpritePixels.Check(offset==png.Length,"Trailing portrait PNG data");
+        using var input=new MemoryStream(compressed!,false); using var z=new ZLibStream(input,CompressionMode.Decompress);
+        byte[] scanlines=new byte[256*1025]; z.ReadExactly(scanlines);
+        BoundedSpritePixels.Check(z.ReadByte()==-1,"Portrait PNG expands beyond geometry");
+        var pixels=new byte[256*256*4];
+        for(int y=0;y<256;y++) { token.ThrowIfCancellationRequested(); BoundedSpritePixels.Check(scanlines[y*1025]==0,"Unsupported portrait PNG filter"); scanlines.AsSpan(y*1025+1,1024).CopyTo(pixels.AsSpan(y*1024)); }
+        return pixels;
+    }
     internal static string Hash(ReadOnlySpan<byte> bytes) => Convert.ToHexStringLower(SHA256.HashData(bytes));
     private static void Chunk(Stream stream, ReadOnlySpan<byte> type, ReadOnlySpan<byte> data)
     {

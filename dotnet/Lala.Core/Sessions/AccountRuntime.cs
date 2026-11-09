@@ -286,6 +286,33 @@ public sealed class AccountRuntime : IAsyncDisposable
             png = bytes; return true;
         }
     }
+    /// <summary>Acquire visual input only for the exact receive snapshot shown by the host.
+    /// Each currentness check reselects from live state; no work or callbacks run under render.</summary>
+    public bool TryGetPortrait(ServiceStateSnapshot expected,bool companion,out PortraitRenderRequest? request)
+    {
+        lock(gate)
+        {
+            request=null;
+            var (status,receive)=connection.ReadPublication();
+            if(!CurrentCatalogsLocked(status,receive,out _) || receive is null || !ReferenceEquals(receive.State,expected) ||
+                !resources.TrySelectPortrait(expected.Player,expected.Companions,companion,out var selection,out var image))return false;
+            uint role=expected.Player!.RoleId;uint? active=companion?expected.Companions.ActiveNpcId:null;
+            request=new(image!,selection!,role,active,()=>PortraitIsCurrent(image!,selection!,role,active,companion));
+            return true;
+        }
+    }
+    private bool PortraitIsCurrent(PortraitCachedImage image,PortraitSelection selection,uint role,uint? active,bool companion)
+    {
+        lock(gate)
+        {
+            var (status,receive)=connection.ReadPublication();
+            if(!CurrentCatalogsLocked(status,receive,out _) || receive is null || receive.State.Player?.RoleId!=role ||
+                (companion && receive.State.Companions.ActiveNpcId!=active) ||
+                !resources.TrySelectPortrait(receive.State.Player,receive.State.Companions,companion,out var next,out var actual))return false;
+            return ReferenceEquals(image,actual) && next!.Key==selection.Key && next.Palettes.Count==selection.Palettes.Count &&
+                next.Palettes.All(p=>selection.Palettes.TryGetValue(p.Key,out int value)&&value==p.Value);
+        }
+    }
     private bool CurrentCatalogsLocked(out OfflineRuntimeCandidate? catalogs)
     {
         var (currentConnection, receive) = connection.ReadPublication();

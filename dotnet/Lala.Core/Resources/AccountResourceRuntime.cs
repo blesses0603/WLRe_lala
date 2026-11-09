@@ -171,6 +171,11 @@ public sealed class AccountResourceRuntime : IAsyncDisposable
     {
         lock (_gate) { png = null; return !_disposed && _binding is not null && _binding.TryReadItemImage(itemId, out png); }
     }
+    internal bool TrySelectPortrait(Lala.Core.Protocol.WorldPlayer? player,Lala.Core.Inventory.CompanionReceiveSnapshot companions,
+        bool companion,out PortraitSelection? selection,out PortraitCachedImage? image)
+    {
+        lock(_gate) { selection=null;image=null;return !_disposed && _binding is not null && _binding.TrySelectPortrait(player,companions,companion,out selection,out image); }
+    }
     public bool TryReadCatalogs(out OfflineRuntimeCandidate? catalogs)
     {
         lock (_gate)

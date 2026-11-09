@@ -26,7 +26,9 @@ public sealed class DashboardWindow : DesktopWindow
     private readonly TextBox chatInput = new() { Name = "ChatInput", MaxLength = 512, PlaceholderText = "登入後即可聊天" };
     private readonly TextBox whisperTarget = new() { Name = "ChatTarget", Width = 120, MaxLength = 128, PlaceholderText = "名稱/ID", IsVisible = false };
     private long generation;
-    private bool closed;
+    private bool closed, closingStarted, closingReady;
+    private readonly PortraitView playerPortrait=new(){Name="PlayerPortrait"};
+    private readonly PortraitView companionPortrait=new(){Name="CompanionPortrait"};
 
     public DashboardWindow(DesktopSession session, DesktopWindows windows)
         : base("飄流Re:LaLa  =By赤寧= · C# 桌面開發版", 1280, 800)
@@ -67,6 +69,13 @@ public sealed class DashboardWindow : DesktopWindow
         Ui.At(right, activityTabs, 0, 1); Ui.At(content, right, 1);
         Ui.At(body, content, 0, 1); SetBody(body, dashboard: true);
         session.Changed += SessionChanged;
+        Closing += async (_, e) =>
+        {
+            if(closingReady)return;e.Cancel=true;if(closingStarted)return;
+            closingStarted=true;closed=true;session.Changed-=SessionChanged;
+            await Task.WhenAll(playerPortrait.DisposeAsync().AsTask(),companionPortrait.DisposeAsync().AsTask());
+            closingReady=true;Avalonia.Threading.Dispatcher.UIThread.Post(Close);
+        };
         Closed += (_, _) => { closed = true; session.Changed -= SessionChanged; chatInput.Text = ""; whisperTarget.Text = ""; };
         Refresh();
     }
@@ -112,7 +121,7 @@ public sealed class DashboardWindow : DesktopWindow
         var roleTools = Ui.Row(Ui.Button("背包", () => windows.OpenInventory(), "OpenInventory"),
             Ui.Button("特技", () => windows.OpenSkills(), "OpenSkills"), Ui.Button("配點", () => windows.OpenPythonFeature("attributes"), "OpenAttributes"));
         var portraits = new Grid { RowDefinitions = new RowDefinitions("*,*") };
-        Ui.At(portraits, Portrait(role), 0); Ui.At(portraits, Portrait(companion), 0, 1);
+        Ui.At(portraits, Portrait(role,playerPortrait), 0); Ui.At(portraits, Portrait(companion,companionPortrait), 0, 1);
         Ui.At(grid, Card("角色與夥伴", portraits, roleTools), 0, 0, 3);
         var activityTools = Ui.Row(Ui.Unavailable("展開帳篷"), Ui.Unavailable("進入"), Ui.Unavailable("暫停自動接續"));
         Ui.At(grid, Card("目前活動", activity, activityTools), 3, 0, 3);
@@ -128,12 +137,10 @@ public sealed class DashboardWindow : DesktopWindow
         return grid;
     }
 
-    private static Control Portrait(TextBlock text)
+    private static Control Portrait(TextBlock text,PortraitView portrait)
     {
         var row = new Grid { ColumnDefinitions = new ColumnDefinitions("40,*"), ColumnSpacing = 7 };
-        Ui.At(row, new Border { Width = 36, Height = 36, CornerRadius = new CornerRadius(18), BorderBrush = Ui.BorderBrush,
-            BorderThickness = new Thickness(1), Child = new TextBlock { Text = "待", Foreground = Ui.Muted,
-                HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center } }, 0);
+        Ui.At(row, portrait, 0);
         text.FontSize = 13; Ui.At(row, text, 1); return row;
     }
     private static Button Play(string label) => Ui.IconButton(label, "automation-controls/Auto_Play.png", null, 26, false);
@@ -175,6 +182,8 @@ public sealed class DashboardWindow : DesktopWindow
         }
         var snapshot = view.Snapshot;
         var player = snapshot.Player;
+        playerPortrait.Update(session.ReadPortrait(snapshot,false));
+        companionPortrait.Update(session.ReadPortrait(snapshot,true),player is not null && snapshot.Companions.ActiveNpcId is null or 0);
         var current = snapshot.Local.World.Location;
         position.Text = player is null ? "尚未收到角色位置" :
             current.ConfirmedIsCurrent && current.Confirmed is { } confirmed && confirmed.Scene == player.Scene

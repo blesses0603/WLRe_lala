@@ -25,6 +25,9 @@ internal sealed class PortraitCachedImage
     private readonly byte[] basis,mask;
     private readonly PortraitRenderSettings settings;
     internal string Fingerprint { get; }
+    internal byte[] RenderPng(IReadOnlyDictionary<int,int> palettes,CancellationToken token)
+        => SpritePng.EncodePortrait(PortraitRenderer.Render(SpritePng.DecodePortrait(basis,token),
+            SpritePng.DecodePortrait(mask,token),palettes,settings,token),token);
     internal byte[] CopyBasePng()=>basis.ToArray();
     internal byte[] CopyMaskPng()=>mask.ToArray();
     internal PortraitRenderSettings CopyRenderSettings()=>settings with { Colors=settings.Colors.ToDictionary(p=>p.Key,p=>p.Value.ToArray(),StringComparer.Ordinal) };

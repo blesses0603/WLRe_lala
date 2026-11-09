@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using Lala.Core.State;
 using Lala.Core.Catalogs;
+using Lala.Core.Resources;
 
 namespace Lala.Desktop;
 
@@ -19,6 +20,7 @@ public sealed class DesktopSession : IDisposable
     private string identityKey = "desktop-preview";
     private DesktopLabels labels = new();
     private Func<ushort, byte[]?>? itemImageReader;
+    private Func<ServiceStateSnapshot,bool,PortraitRenderRequest?>? portraitReader;
 
     public DesktopSession(DesktopPreferencesStore? preferences = null) =>
         Preferences = preferences ?? new DesktopPreferencesStore();
@@ -48,6 +50,17 @@ public sealed class DesktopSession : IDisposable
         lock (gate) { if (disposed) return null; reader = itemImageReader; expected = generation; }
         var png = reader?.Invoke(itemId); // Core rechecks owner/account; no callback under presentation gate.
         lock (gate) return !disposed && generation == expected && ReferenceEquals(reader, itemImageReader) ? png : null;
+    }
+    internal void SetPortraitReader(long expectedGeneration,Func<ServiceStateSnapshot,bool,PortraitRenderRequest?>? reader)
+    {
+        lock(gate){if(disposed||generation!=expectedGeneration)return;portraitReader=reader;}Changed?.Invoke();
+    }
+    internal PortraitRenderRequest? ReadPortrait(ServiceStateSnapshot expected,bool companion)
+    {
+        Func<ServiceStateSnapshot,bool,PortraitRenderRequest?>? reader;long captured;
+        lock(gate){if(disposed||!ReferenceEquals(expected,snapshot))return null;reader=portraitReader;captured=generation;}
+        var request=reader?.Invoke(expected,companion);
+        lock(gate)return !disposed&&generation==captured&&ReferenceEquals(reader,portraitReader)&&ReferenceEquals(expected,snapshot)?request:null;
     }
     public DesktopLabels Labels { get { lock (gate) return labels; } }
     public DesktopPublication ReadView()
@@ -81,7 +94,7 @@ public sealed class DesktopSession : IDisposable
             publication = -1;
             connectionText = "尚未連線";
             snapshot = new();
-            labels = new(); itemImageReader = null;
+            labels = new(); itemImageReader = null; portraitReader = null;
             identityKey = presentationIdentity;
         }
         Changed?.Invoke();
@@ -127,7 +140,7 @@ public sealed class DesktopSession : IDisposable
             disposed = true;
             generation = checked(generation + 1);
             snapshot = new();
-            labels = new(); itemImageReader = null;
+            labels = new(); itemImageReader = null; portraitReader = null;
             changed = Changed; Changed = null;
         }
         changed?.Invoke();
