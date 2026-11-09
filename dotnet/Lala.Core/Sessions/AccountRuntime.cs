@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using Lala.Core.Catalogs;
 using Lala.Core.Inventory;
+using Lala.Core.Expedition;
 using Lala.Core.Resources;
 using Lala.Core.Sessions.Handshake;
 using Lala.Core.State;
@@ -227,6 +228,15 @@ public sealed class AccountRuntime : IAsyncDisposable
     public AccountRuntimePublicationSnapshot PublicationSnapshot
     {
         get { lock (gate) { RefreshStatusLocked(); return observedPublication!; } }
+    }
+    /// <summary>Inspect one catalog task and 1–4 explicitly selected role slots. Capture the
+    /// exact current publication once; all calculations occur after leaving the runtime gate.
+    /// The result is historical, not a current-at-return promise or authority to reserve,
+    /// restore, claim, dispatch, activate resources or send commands.</summary>
+    public ExpeditionTaskAssessment InspectExpeditionTask(ushort taskId, ImmutableArray<byte> selectedRoleIndices)
+    {
+        var basis = PublicationSnapshot;
+        return ExpeditionTaskInspection.Inspect(basis, taskId, selectedRoleIndices);
     }
     /// <summary>Wait for receive commits, receive lifecycle, catalog selection/revocation,
     /// connection changes, or aggregate completion. Pass this runtime's exact snapshot;

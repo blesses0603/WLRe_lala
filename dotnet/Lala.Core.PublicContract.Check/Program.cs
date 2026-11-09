@@ -1,5 +1,6 @@
 using System.Net;
 using Lala.Core.Resources;
+using Lala.Core.Expedition;
 using Lala.Core.Protocol;
 using Lala.Core.Social;
 using Lala.Core.State;
@@ -65,6 +66,12 @@ await using (var account = AccountRuntime.Create(session, generation, profile, s
     var created = account.Snapshot;
     Require(ReferenceEquals(created, account.Snapshot) && !created.IsCompleted);
     Require(!created.HasCurrentResources && account.Publication is null);
+    var assessment = account.InspectExpeditionTask(1, [1]);
+    Require(ReferenceEquals(assessment.Basis, account.PublicationSnapshot));
+    Require(assessment.Issues.Contains(ExpeditionAssessmentIssue.NoPublication));
+    Require(assessment.DurationSeconds is null && assessment.RewardEmptySlots is null && assessment.Success is null);
+    Require(!assessment.RecoveryStockComplete && assessment.ResourceHeld && !assessment.CanSendCommands);
+    Require(account.InspectExpeditionTask(1, [1, 1]).Issues.Contains(ExpeditionAssessmentIssue.InvalidSelection));
     var publication = account.PublicationSnapshot;
     Require(ReferenceEquals(publication, account.PublicationSnapshot) && publication.Publication is null);
     Require(ReferenceEquals(publication.Connection, created.Connection) && !publication.IsCompleted);
@@ -81,6 +88,8 @@ await using (var account = AccountRuntime.Create(session, generation, profile, s
     Require(finalPublication.IsCompleted && finalPublication.Publication is null);
     Require(ReferenceEquals(finalPublication, await account.WaitForPublicationChangeAsync(finalPublication)));
     Require(finalPublication.ResourceHeld && !finalPublication.CanSendCommands);
+    Require(ReferenceEquals(finalPublication, account.InspectExpeditionTask(1, [1]).Basis));
+    Require(account.InspectExpeditionTask(1, [1]).Issues.Contains(ExpeditionAssessmentIssue.NoPublication));
     Require(result.ResourcesReleased && result.ResourceHistory.IsEmpty);
     Require(source.Calls == 0 && !Directory.Exists(root) && !account.Snapshot.CanSendCommands);
 }

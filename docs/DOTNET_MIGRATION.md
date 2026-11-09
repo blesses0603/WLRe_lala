@@ -1894,3 +1894,24 @@ The 41-sequence / 302-snapshot Python oracle regenerates identically. Independen
 review found no blockers. No UI, real credentials or live-server acceptance was
 involved. Only the overall PR marker advances once to 8.0.32; same-batch corrections
 and platform/Core/Desktop project versions remain unchanged.
+
+
+### Overall PR development marker 8.0.33: read-only expedition task assessment
+
+The assessment captures one exact account publication before calculating task duration,
+conservative reward space, explicitly selected members and observed recovery stock.
+Unknown or revoked evidence is not treated as zero or dispatch permission. Results
+remain historical and held; no team selection, reservation, item use, dispatch, claim,
+scheduler, packet or Desktop UI change is introduced.
+
+This batch is being reimplemented from remote 85d7c3f after the original worktree
+became inaccessible. Preserved blobs are reference artifacts, not proof that the
+original commit was restored. Previous test results do not validate this reconstruction;
+fresh Release verification passed 261 focused and 43,734 full Core tests, with no
+failures or skips. The external public consumer and 35 release/version checks also
+passed, followed by 76 lifecycle, 36 synthetic acceptance and 17 Linux PTY checks.
+Independent source review found no blockers. These are offline checks, not native
+Windows/macOS/Android device or official-server acceptance.
+No real credentials or official-server acceptance is involved. The overall PR marker
+advances to 8.0.33 once; reconstruction and same-batch repairs do not increment it
+again, and platform/Core/Desktop project version settings remain unchanged.
