@@ -190,3 +190,7 @@ C# 原本只有技能 ID 的名稱查找也接入目前已驗證可選技能目�
 ## 8.0.58 獨立 Texture 與頭像批次
 
 完整 Texture 像素與色域檢查已加入，頭像批次先驗證來源／Shader／精確指標再逐張處理；尚未接儲存與顯示。詳見 [批次驗證與限制](DOTNET_PORTRAIT_BATCH.md)。v8.0.57 macOS Python 因 hosted runner 未取得而取消，未算通過。
+
+## 8.0.59 頭像 PNG／SQLite 整批回讀
+
+新增壓縮 PNG 及交易式整批寫入／獨立重建回讀；保留容量與來源重查。尚未接 production 或顯示，詳見 [快取驗證與限制](DOTNET_PORTRAIT_CACHE.md)。

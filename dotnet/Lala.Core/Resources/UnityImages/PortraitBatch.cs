@@ -72,6 +72,7 @@ internal sealed class PortraitImageCandidate
     internal string Fingerprint { get; }
     internal bool UsesShaderDefaultMask { get; }
     internal bool HasVerifiedProvenance=>false; // No current publication/admission authority.
+    internal PortraitRenderSettings CopyRenderSettings()=>settings with { Colors=settings.Colors.ToDictionary(p=>p.Key,p=>p.Value.ToArray(),StringComparer.Ordinal) };
     internal byte[] CopyBase()=>basis.ToArray();
     internal byte[] CopyMask()=>mask.ToArray();
     internal byte[] Render(IReadOnlyDictionary<int,int> palettes,CancellationToken token=default)=>PortraitRenderer.Render(basis,mask,palettes,settings,token);

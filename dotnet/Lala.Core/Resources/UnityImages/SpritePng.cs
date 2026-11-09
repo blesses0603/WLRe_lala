@@ -1,9 +1,10 @@
 using System.Buffers.Binary;
 using System.Security.Cryptography;
+using System.IO.Compression;
 
 namespace Lala.Core.Resources;
 
-// Canonical cache encoding only: RGBA8, filter None, one IDAT, stored DEFLATE blocks.
+// Cache encoding: RGBA8, filter None, one IDAT; sprites use stored DEFLATE, portraits zlib.
 // Reads compare to a freshly encoded independent candidate; no untrusted PNG decompression.
 internal static class SpritePng
 {
@@ -15,6 +16,17 @@ internal static class SpritePng
         BoundedSpritePixels.Check(width is > 0 and <= 512 && height is > 0 and <= 512, "PNG dimensions exceed bounds");
         byte[] pixels = candidate.CopyPixels();
         BoundedSpritePixels.Check(pixels.Length == width * height * 4 && Hash(pixels) == candidate.PixelSha256, "PNG candidate pixel mismatch");
+        return EncodeOwnedRgba(width, height, pixels, false, token);
+    }
+    // Separate portrait entry; no invented Sprite context or relaxed Sprite dimensions.
+    internal static byte[] EncodePortrait(byte[] pixels, CancellationToken token = default)
+    {
+        BoundedSpritePixels.Check(pixels.Length == 256 * 256 * 4, "Portrait PNG geometry mismatch");
+        return EncodeOwnedRgba(256, 256, pixels.ToArray(), true, token);
+    }
+    private static byte[] EncodeOwnedRgba(int width, int height, byte[] pixels, bool compressed, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
         byte[] scanlines = new byte[(width * 4 + 1) * height];
         for (int y = 0; y < height; y++)
         {
@@ -22,6 +34,13 @@ internal static class SpritePng
             pixels.AsSpan(y * width * 4, width * 4).CopyTo(scanlines.AsSpan(y * (width * 4 + 1) + 1));
         }
         using var zlib = new MemoryStream();
+        if (compressed)
+        {
+            using var deflate = new ZLibStream(zlib, CompressionLevel.SmallestSize, leaveOpen: true);
+            deflate.Write(scanlines);
+        }
+        else
+        {
         zlib.Write([0x78, 0x01]); // RFC1950: DEFLATE, 32KiB window, no dictionary.
         uint a = 1, b = 0;
         for (int offset = 0; offset < scanlines.Length;)
@@ -36,6 +55,7 @@ internal static class SpritePng
             offset += length;
         }
         Write32(zlib, (b << 16) | a);
+        }
         using var png = new MemoryStream();
         png.Write([137, 80, 78, 71, 13, 10, 26, 10]);
         byte[] header = new byte[13];
