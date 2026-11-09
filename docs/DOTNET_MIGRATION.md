@@ -1950,3 +1950,21 @@ external public consumer, 76 lifecycle, 36 synthetic acceptance, 17 Linux PTY an
 independent review found no blockers. No Desktop UI, real credentials or official-server acceptance
 are involved. Only the overall PR marker advances once to 8.0.35; same-batch repairs
 and platform/Core/Desktop project versions remain unchanged.
+
+
+### Overall PR development marker 8.0.36: logical-map route preview
+
+Compose existing mesh routing with explicit logical-map stages, origin and height
+conversion, fixed compatibility pins, house-navigation exclusions and scene-scoped
+stale checks. Inputs are bounded immutable supplied observations; caller-claimed
+identity is not official provenance, current runtime freshness or movement authority.
+
+No cache downloading/import, dynamic obstacle rebuilding, UI, transport or movement
+is added. Synthetic alias tests must not weaken public fixed-order checks; a genuine
+reviewed-order positive fixture remains unavailable. Fresh checks passed: 67 focused,
+44,993 full Core, public consumer, 24 Python navigation regressions, 76 lifecycle,
+36 synthetic acceptance, 17 Linux PTY and 35 release/version checks. The 47 actual
+Python oracle cases regenerate identically; independent review found no blockers.
+No real credentials or official
+server acceptance are involved. Only the overall PR marker advances once to 8.0.36;
+same-batch repairs and platform/Core/Desktop project versions remain unchanged.

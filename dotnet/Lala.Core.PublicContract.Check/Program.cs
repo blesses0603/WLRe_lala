@@ -10,6 +10,7 @@ using Lala.Core.Sessions.Discovery;
 // Deliberately no InternalsVisibleTo: this is a real external Core consumer.
 AutoBattlePublicCheck.Run();
 CraftingPreflightPublicCheck.Run();
+LogicalNavigationPublicCheck.Run();
 var receiveState = new ServiceStateCoordinator();
 var chatState = receiveState.Apply(new ServerSocialEvent(new ChatMessageEvent(1, "世界", 7, [], "synthetic chat", 0)),
     new(receiveState.Snapshot(), new(1)));

@@ -153,6 +153,7 @@ public sealed class PreviewNavigationMesh : NavigationMesh
 {
     private readonly IReadOnlyList<NavigationConnection>[] connections;
     private readonly HashSet<int> walkable;
+    internal long ConnectionCount => connections.Sum(row => (long)row.Count);
     public string TravelMode { get; }
     public IReadOnlySet<int> Walkable { get; }
     public PreviewNavigationMesh(IEnumerable<NavigationTile> tiles, IEnumerable<IEnumerable<NavigationConnection>> connections,
