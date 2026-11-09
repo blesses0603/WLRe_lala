@@ -20,9 +20,10 @@ public sealed class OfflineRuntimeCandidate
         IReadOnlyDictionary<string, string> hashes, OfflineRuntimePortalObservations portalObservations,
         IReadOnlyDictionary<ushort, SkillDataRow>? optionalSkills = null,
         DailyTaskCatalogPreview? optionalDailyCatalog = null, InstanceCatalogPreview? optionalInstances = null,
-        ImmutableDictionary<uint, CombatResourceNpc>? reviewedNpcs = null)
-        => (EveIndexes, Items, Talks, Texts, Recipes, Stages, Doors, SceneNames, Expedition, Npcs, SourceSha256, PortalObservations, OptionalSkills, OptionalDailyCatalog, OptionalInstances, ReviewedNpcs) =
-            (indexes, items, talks, texts, recipes, stages, doors, sceneNames, expedition, npcs, hashes, portalObservations, optionalSkills, optionalDailyCatalog, optionalInstances, reviewedNpcs);
+        ImmutableDictionary<uint, CombatResourceNpc>? reviewedNpcs = null,
+        NormalAttackCatalogData? optionalNormalAttackCatalog = null)
+        => (EveIndexes, Items, Talks, Texts, Recipes, Stages, Doors, SceneNames, Expedition, Npcs, SourceSha256, PortalObservations, OptionalSkills, OptionalDailyCatalog, OptionalInstances, ReviewedNpcs, OptionalNormalAttackCatalog) =
+            (indexes, items, talks, texts, recipes, stages, doors, sceneNames, expedition, npcs, hashes, portalObservations, optionalSkills, optionalDailyCatalog, optionalInstances, reviewedNpcs, optionalNormalAttackCatalog);
     /// <summary>Reviewed optional skill rows, or null when missing, unsupported or not read back.
     /// Point-in-time catalog data only; never command authority.</summary>
     public IReadOnlyDictionary<ushort, SkillDataRow>? OptionalSkills { get; }
@@ -31,7 +32,7 @@ public sealed class OfflineRuntimeCandidate
     internal OfflineRuntimeCandidate WithoutOptionalSkills() => CopyWithSkills(null);
     private OfflineRuntimeCandidate CopyWithSkills(IReadOnlyDictionary<ushort, SkillDataRow>? skills)
         => new(EveIndexes, Items, Talks, Texts, Recipes, Stages, Doors, SceneNames, Expedition, Npcs,
-            SourceSha256, PortalObservations, skills, OptionalDailyCatalog, OptionalInstances, ReviewedNpcs);
+            SourceSha256, PortalObservations, skills, OptionalDailyCatalog, OptionalInstances, ReviewedNpcs, OptionalNormalAttackCatalog);
     /// <summary>Same-version daily/weekly definitions, or null if either optional table or
     /// its cross-references are unavailable. No planner input token or command authority.</summary>
     public DailyTaskCatalogPreview? OptionalDailyCatalog { get; }
@@ -47,7 +48,7 @@ public sealed class OfflineRuntimeCandidate
     internal OfflineRuntimeCandidate WithoutOptionalDailyCatalog() => CopyWithDailyCatalog(null);
     private OfflineRuntimeCandidate CopyWithDailyCatalog(DailyTaskCatalogPreview? catalog)
         => new(EveIndexes, Items, Talks, Texts, Recipes, Stages, Doors, SceneNames, Expedition, Npcs,
-            SourceSha256, PortalObservations, OptionalSkills, catalog, OptionalInstances, ReviewedNpcs);
+            SourceSha256, PortalObservations, OptionalSkills, catalog, OptionalInstances, ReviewedNpcs, OptionalNormalAttackCatalog);
     /// <summary>Same-version dungeon/co-op definitions. Null means unavailable; entries
     /// and declared normal-dungeon maps are read-only observations, never room/entry permission.</summary>
     public InstanceCatalogPreview? OptionalInstances { get; }
@@ -59,7 +60,7 @@ public sealed class OfflineRuntimeCandidate
     internal OfflineRuntimeCandidate WithoutOptionalInstances() => CopyWithInstances(null);
     private OfflineRuntimeCandidate CopyWithInstances(InstanceCatalogPreview? catalog)
         => new(EveIndexes, Items, Talks, Texts, Recipes, Stages, Doors, SceneNames, Expedition, Npcs,
-            SourceSha256, PortalObservations, OptionalSkills, OptionalDailyCatalog, catalog, ReviewedNpcs);
+            SourceSha256, PortalObservations, OptionalSkills, OptionalDailyCatalog, catalog, ReviewedNpcs, OptionalNormalAttackCatalog);
     public EveV115Indexes EveIndexes { get; }
     public IReadOnlyDictionary<ushort, ItemDataRow> Items { get; }
     public IReadOnlyDictionary<ushort, TalkDataRow> Talks { get; }
@@ -75,6 +76,9 @@ public sealed class OfflineRuntimeCandidate
     /// unsupported bytes. Derived from required source bytes, never a separate optional table.
     /// Point-in-time observations only; not source provenance or command permission.</summary>
     public ImmutableDictionary<uint, CombatResourceNpc>? ReviewedNpcs { get; }
+    /// <summary>Reviewed normal-attack and capture facts derived from both required NPC and item
+    /// payloads. Null for unsupported bytes. Observations only, never command permission.</summary>
+    public NormalAttackCatalogData? OptionalNormalAttackCatalog { get; }
     public IReadOnlyDictionary<string, string> SourceSha256 { get; }
     public string SourceKind => "supplied_offline_tables";
     public bool RequiredTablesStructurallyComplete => true;
@@ -84,7 +88,8 @@ public sealed class OfflineRuntimeCandidate
     public bool CanSendPackets => false;
     public ImmutableArray<string> UnavailableOptionalSources =>
         [.. (OptionalSkills is null ? new[] { "SkillData" } : Array.Empty<string>()), "portal_metadata", "images",
-            .. (OptionalDailyCatalog is null ? new[] { "daily" } : Array.Empty<string>()), "guild", "Ark", "combat", "normal_attacks",
+            .. (OptionalDailyCatalog is null ? new[] { "daily" } : Array.Empty<string>()), "guild", "Ark", "combat",
+            .. (OptionalNormalAttackCatalog is null ? new[] { "normal_attacks" } : Array.Empty<string>()),
             "portraits", "emoji", "smallmaps", "battle_talk",
             .. (OptionalInstances is null ? new[] { "instances" } : Array.Empty<string>())];
 }
@@ -172,11 +177,16 @@ public static class OfflineRuntimeCandidateDecoder
             try { reviewedNpcs = ReviewedNpcCatalogParser.Parse(sources["NpcData_C"], cancellationToken); }
             catch (CatalogDecodeException) { cancellationToken.ThrowIfCancellationRequested(); }
         }
+        // Both inputs are already-required owned bytes. The public parser retains both
+        // reviewed digest gates; optional rejection cannot weaken required-table validation.
+        NormalAttackCatalogData? normalAttacks = null;
+        try { normalAttacks = NormalAttackCatalogParser.BuildCatalog(sources["NpcData_C"], sources["ItemData_C"], cancellationToken); }
+        catch (CatalogDecodeException) { cancellationToken.ThrowIfCancellationRequested(); }
         var candidate = new OfflineRuntimeCandidate(indexes, items, talks, texts, recipes, stages, doors,
             RuntimeCandidateBindings.SceneNames(stages, texts, cancellationToken),
             new(named, expedition.Levels, new OrderedCatalog<string, string>(expeditionHashes, expeditionHashes.Keys)),
             expeditionNpcs, new OrderedCatalog<string, string>(hashes, hashes.Keys), new(portals, coverage),
-            reviewedNpcs: reviewedNpcs);
+            reviewedNpcs: reviewedNpcs, optionalNormalAttackCatalog: normalAttacks);
         cancellationToken.ThrowIfCancellationRequested();
         return candidate;
     }

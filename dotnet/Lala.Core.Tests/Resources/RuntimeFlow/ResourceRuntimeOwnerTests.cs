@@ -104,15 +104,19 @@ public sealed class ResourceRuntimeOwnerTests
         await Assert.ThrowsAnyAsync<Exception>(() => owner.RefreshAsync());
         Assert.Null(owner.Current); Assert.False(File.Exists(fixture.Inventory));
     }
-    [Fact]
-    public async Task Stored_blob_tampering_is_rejected_even_when_recorded_hash_is_unchanged()
+    [Theory]
+    [InlineData("Eve.bytes")]
+    [InlineData("NpcData_C.bytes")]
+    [InlineData("ItemData_C.bytes")]
+    public async Task Stored_blob_tampering_is_rejected_even_when_recorded_hash_is_unchanged(string table)
     {
         using var fixture = new Fixture(); var source = new Source(); await fixture.PopulateAsync(source);
         using (var connection = new SqliteConnection(new SqliteConnectionStringBuilder
         { DataSource = fixture.Inventory, Pooling = false }.ToString()))
         {
             connection.Open(); using var command = connection.CreateCommand();
-            command.CommandText = "UPDATE resources SET data=x'00000000' WHERE name='Eve.bytes'";
+            command.CommandText = "UPDATE resources SET data=x'00000000' WHERE name=@name";
+            command.Parameters.AddWithValue("@name", table);
             Assert.Equal(1, command.ExecuteNonQuery());
         }
         await using var owner = ResourceRuntimeOwner.CreateForOfflineTests(fixture.Root, source);

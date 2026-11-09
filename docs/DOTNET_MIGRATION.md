@@ -2019,3 +2019,20 @@ cases use explicit synthetic reviewed rows, while framed held fixtures test join
 and lifecycle rather than official provenance. No repair/sell/delete packets,
 reservation changes, scheduler, UI or real-server acceptance are added. Overall PR
 advances once to 8.0.39; same-batch fixes and platform/Core/Desktop versions do not.
+
+
+### Overall PR development marker 8.0.40: required-source normal attack catalog
+
+Compose the public reviewed normal-attack builder with owned required NPC/item
+bytes during runtime decoding. Normal attacks require no Lua. Nullable catalog
+availability follows existing candidate copies, exact required-source SQLite
+readback, source recheck and account revocation, without additional downloads.
+Unknown reviewed pins leave this optional feature unavailable; no gate is relaxed.
+
+Focused 1,072, final wiring 5, full Core 45,089 and public consumer passed;
+independent review found no blockers. Structural IL coverage proves the decoder
+calls the public pinned builder. Synthetic positive copies/rule consumption do
+not establish a successful reviewed raw-payload pair; that acceptance remains
+unavailable. Full Lua combat acquisition/persistence and command lifecycles remain
+unfinished. No UI, credential or official-server changes. Overall PR advances once
+to 8.0.40; same-batch fixes and platform/Core/Desktop versions remain unchanged.

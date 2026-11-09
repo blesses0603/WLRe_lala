@@ -66,6 +66,8 @@ public sealed partial class ResourceRuntimeBootstrapTests
         Assert.Equal(AccountResourcePreparationStatus.Bound, result.Status); Assert.True(result.WasBound);
         Assert.True(runtime.HasCurrentResources); Assert.True(runtime.TryReadCatalogs(out var catalogs)); Assert.NotNull(catalogs);
         Assert.False(catalogs.RuntimeAdmitted); Assert.False(catalogs.CanSendPackets);
+        Assert.Null(catalogs.OptionalNormalAttackCatalog);
+        Assert.Contains("normal_attacks", catalogs.UnavailableOptionalSources);
         Assert.Same(snapshot, session.Snapshot); Assert.False(runtime.CanLogin); Assert.False(runtime.CanSendPackets);
         switch (change)
         {

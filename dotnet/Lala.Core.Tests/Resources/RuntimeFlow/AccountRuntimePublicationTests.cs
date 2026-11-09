@@ -185,7 +185,9 @@ public sealed partial class ResourceRuntimeBootstrapTests
             resources.Invalidate(); var invalid = await revoked.WaitAsync(AccountGuard);
             Assert.Null(invalid.Publication!.Catalogs); Assert.Same(ready.Connection, invalid.Connection);
             Assert.Same(ready.Publication.Receive, invalid.Publication.Receive);
-            Assert.NotNull(ready.Publication.Catalogs); Assert.False(ready.Publication.Catalogs.RuntimeAdmitted);
+            Assert.NotNull(ready.Publication.Catalogs);
+            Assert.Null(ready.Publication.Catalogs.OptionalNormalAttackCatalog);
+            Assert.Contains("normal_attacks", ready.Publication.Catalogs.UnavailableOptionalSources); Assert.False(ready.Publication.Catalogs.RuntimeAdmitted);
             runtime.Stop(); Assert.True((await run.WaitAsync(AccountGuard)).ResourcesReleased);
         }
         finally { release.TrySetResult(); finish.TrySetResult(); runtime.Stop(); }
@@ -286,6 +288,8 @@ public sealed partial class ResourceRuntimeBootstrapTests
             var current = await bound.WaitAsync(AccountGuard);
             Assert.Same(receiving.Publication.Receive, current.Publication!.Receive);
             Assert.NotNull(current.Publication.Catalogs); Assert.NotNull(ready.Publication.Catalogs);
+            Assert.Null(ready.Publication.Catalogs.OptionalNormalAttackCatalog);
+            Assert.Contains("normal_attacks", ready.Publication.Catalogs.UnavailableOptionalSources);
             Assert.NotSame(ready.Publication.Catalogs, current.Publication.Catalogs);
             Assert.Equal(generation + 1, current.Connection.Generation);
             runtime.Stop(); Assert.True((await run.WaitAsync(AccountGuard)).ResourcesReleased);

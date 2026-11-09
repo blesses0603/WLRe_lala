@@ -2,7 +2,7 @@
 
 > **v7.3.1 桌面發行（2026-11-07）**：以 main `8aa7a684` 為基底，包含 PR #74 的舊導航資料隔離、無種子啟動及官方預覽修正。程式、介面與封裝共用 `wlre.__version__ = 7.3.1`；由版本 Tag 觸發 Windows x64、macOS arm64／x64 建置，成功後發布 ZIP 與 SHA-256。正式服完整端到端、全地圖導航／實際移動與使用者電腦實機驗收仍未完成；官方導航預覽不授權正式移動。macOS Intel CI 不驗證 GUI，Apple Developer ID 公證亦未完成。Android 不在本次發行範圍。下列舊版段落保留歷史狀態，不代表本次驗收結果。
 
-> **整體 PR #79 ver 8.0.39（開發中／未發布）**：接入已接收裝備、背包與已審查物品資料，計算維修條件、維修用品存量及來源選擇；保留未知耐久、原順序與保留格位限制，不執行維修或整理。focused 83、完整 Core 45,086 與公開 consumer 通過；各平台與 Core／Desktop 版本設定不變，詳見[版本歷史](版本歷史.md)。
+> **整體 PR #79 ver 8.0.40（開發中／未發布）**：普攻目錄接入必備 NPC／Item 資源解碼及帳號 publication，沿用 reviewed 雜湊、SQLite 回讀及撤銷檢查；未知資料保持不可用，不新增下載或發送。完整 Core 45,089 與公開 consumer 通過；正向 reviewed 原始資料仍未驗收，各平台與 Core／Desktop 版本設定不變，詳見[版本歷史](版本歷史.md)。
 
 > **PR #79 C# Desktop 介面（開發中）**：依既有桌面配置建立登入、主畫面、背包、特技、戰場陣形、地圖、遠征與設定；依新要求「背包」與「特技」各自獨立視窗。可操作本機介面、顯示共用核心快照及編輯設定草稿，正式登入、遊戲操作與官方資源接入仍未完成。原 Python 桌面版本與 Android 版本不變，詳見 [Desktop 啟動方式](dotnet/Lala.Desktop/README.md)及[介面驗收](docs/DESKTOP_INTERFACE_MIGRATION.md)。
 
