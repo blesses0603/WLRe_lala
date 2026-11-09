@@ -70,6 +70,12 @@ await using (var account = AccountRuntime.Create(session, generation, profile, s
     var created = account.Snapshot;
     Require(ReferenceEquals(created, account.Snapshot) && !created.IsCompleted);
     Require(!created.HasCurrentResources && account.Publication is null);
+    var maintenance = account.InspectMaintenance(50, [0, 0]);
+    Require(ReferenceEquals(maintenance.Basis, account.PublicationSnapshot));
+    Require(maintenance.Outcome == MaintenanceAssessmentOutcome.NoPublication);
+    Require(maintenance.Targets.IsEmpty && maintenance.RepairStock.IsEmpty && maintenance.RepairSupply is null);
+    Require(maintenance.RepairBelow == 50 && maintenance.RepairItems.Length == 2);
+    Require(maintenance.ResourceHeld && !maintenance.CanSendCommands);
     var materials = account.InspectCraftingMaterials(1, 1);
     Require(ReferenceEquals(materials.Basis, account.PublicationSnapshot));
     Require(materials.Outcome == CraftingMaterialAssessmentOutcome.NoPublication && materials.Preflight is null);
@@ -97,6 +103,8 @@ await using (var account = AccountRuntime.Create(session, generation, profile, s
     Require(finalPublication.IsCompleted && finalPublication.Publication is null);
     Require(ReferenceEquals(finalPublication, await account.WaitForPublicationChangeAsync(finalPublication)));
     Require(finalPublication.ResourceHeld && !finalPublication.CanSendCommands);
+    Require(ReferenceEquals(finalPublication, account.InspectMaintenance(50, [0, 0]).Basis));
+    Require(account.InspectMaintenance(50, [0, 0]).Outcome == MaintenanceAssessmentOutcome.NoPublication);
     Require(ReferenceEquals(finalPublication, account.InspectCraftingMaterials(1, 1).Basis));
     Require(account.InspectCraftingMaterials(1, 1).Preflight is null);
     Require(ReferenceEquals(finalPublication, account.InspectExpeditionTask(1, [1]).Basis));

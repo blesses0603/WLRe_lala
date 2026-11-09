@@ -246,6 +246,13 @@ public sealed class AccountRuntime : IAsyncDisposable
         var basis = PublicationSnapshot;
         return CraftingMaterialInspection.Inspect(basis, itemId, batchCount);
     }
+    /// <summary>Inspect ordinary worn equipment and repair supplies from one exact
+    /// publication. Calculates outside the gate; historical and never command authority.</summary>
+    public MaintenanceAssessment InspectMaintenance(int repairBelow, ImmutableArray<ushort> repairItems)
+    {
+        var basis = PublicationSnapshot;
+        return MaintenanceKnowledge.Inspect(basis, repairBelow, repairItems);
+    }
     /// <summary>Wait for receive commits, receive lifecycle, catalog selection/revocation,
     /// connection changes, or aggregate completion. Pass this runtime's exact snapshot;
     /// stale, cloned, foreign, and completed snapshots return the current value immediately.

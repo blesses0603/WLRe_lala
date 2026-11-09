@@ -2002,3 +2002,20 @@ allocation is separately covered by explicitly synthetic projection, not a recei
 open official recipe. No commands, UI, credentials or official server acceptance
 are added. Overall PR advances once to 8.0.38; same-batch repairs and platform/Core/
 Desktop project versions remain unchanged.
+
+
+### Overall PR development marker 8.0.39: runtime maintenance knowledge
+
+Port source maintenance repair-target ordering, equipment lookup, backpack repair
+stock, configured supply selection and cleanup restriction classification. The
+runtime captures one exact publication before evaluating reviewed item metadata
+and received equipment/bag observations outside the gate. Sparse durability,
+reservation exclusions, active-companion ordering and historical state remain
+explicit. Catalog binding alone does not resolve equipment before the next receive.
+
+78 actual-Python oracle cases regenerate identically. Focused 83, full Core 45,086
+and public consumer passed; independent review found no blockers. Positive metadata
+cases use explicit synthetic reviewed rows, while framed held fixtures test joins
+and lifecycle rather than official provenance. No repair/sell/delete packets,
+reservation changes, scheduler, UI or real-server acceptance are added. Overall PR
+advances once to 8.0.39; same-batch fixes and platform/Core/Desktop versions do not.
