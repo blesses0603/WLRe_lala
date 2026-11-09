@@ -5,6 +5,7 @@ using System.Reflection;
 using Lala.Core.Protocol;
 using Lala.Core.Resources;
 using Lala.Core.Sessions;
+using Lala.Core.Tests.Sessions;
 using Microsoft.Data.Sqlite;
 using Xunit;
 
@@ -80,14 +81,8 @@ public sealed partial class ResourceRuntimeBootstrapTests
                 offset += count;
             }
         }
-        internal async Task ExpectClosedAfterRetirement()
-        {
-            Assert.Empty(pending); decoder.Finish();
-            // Explicit client retirement can close/reset the socket rather than negotiate
-            // a peer-initiated FIN. Do not send a FIN into an already-retired connection.
-            try { Assert.Equal(0, await socket.ReceiveAsync(new byte[1], SocketFlags.None, token)); }
-            catch (SocketException error) when (error.SocketErrorCode is SocketError.ConnectionReset or SocketError.ConnectionAborted) { }
-        }
+        internal Task ExpectClosedAfterRetirement() => RetiredPeerClosure.AssertAsync(pending, decoder,
+            () => socket.ReceiveAsync(new Memory<byte>(new byte[1]), SocketFlags.None, token));
         internal async Task CloseSendAndExpectEof()
         {
             socket.Shutdown(SocketShutdown.Send);
@@ -422,7 +417,8 @@ public sealed partial class ResourceRuntimeBootstrapTests
         }, async client =>
         {
             await AccountEnterWorld(client); secondLogin.SetResult();
-            await client.WaitFor(finish.Task); await client.CloseSendAndExpectEof();
+            // Stop retires this connection before finish is released; only the first peer initiates EOF.
+            await client.WaitFor(finish.Task); await client.ExpectClosedAfterRetirement();
         });
         var modes = new ConcurrentQueue<SqliteOpenMode>();
         var resources = AccountResourceRuntime.CreateForOfflineTests(session,
@@ -474,7 +470,7 @@ public sealed partial class ResourceRuntimeBootstrapTests
             runtime.Stop(); var result = await run.WaitAsync(AccountGuard);
             Assert.True(result.ResourcesReleased); Assert.Equal(history, result.ResourceHistory);
         }
-        finally { releaseReadback.TrySetResult(); reconnect.TrySetResult(); finish.TrySetResult(); runtime.Stop(); }
+        finally { releaseReadback.TrySetResult(); reconnect.TrySetResult(); runtime.Stop(); finish.TrySetResult(); }
         await Task.WhenAll(first, second).WaitAsync(AccountGuard);
     }
 
