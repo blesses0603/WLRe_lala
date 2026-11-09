@@ -1985,3 +1985,20 @@ not a production combat pipeline. Complete combat/normal catalog constants and c
 scheduling remain unfinished. No live credentials, official server, UI or sends were
 used. Overall PR advances once to 8.0.37; same-batch fixes and platform/Core/Desktop
 project versions remain unchanged.
+
+
+### Overall PR development marker 8.0.38: runtime crafting material join
+
+AccountRuntime.InspectCraftingMaterials captures one exact publication and evaluates
+its joined recipe catalog, known role, furniture/schedule, bag and room storage
+outside the runtime lock. Missing publication/catalog/identity yields explicit
+unavailable outcomes, without cached fallback. Pending/uncertain observations and
+old results remain historical; material sufficiency never grants command authority.
+
+Focused 165, full Core 45,003 and the public consumer passed; independent review
+found no blockers. Framed runtime fixtures demonstrate closed-product results,
+source identity, retirement, resource revocation and reconnect. Successful material
+allocation is separately covered by explicitly synthetic projection, not a received
+open official recipe. No commands, UI, credentials or official server acceptance
+are added. Overall PR advances once to 8.0.38; same-batch repairs and platform/Core/
+Desktop project versions remain unchanged.

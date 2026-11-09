@@ -238,6 +238,14 @@ public sealed class AccountRuntime : IAsyncDisposable
         var basis = PublicationSnapshot;
         return ExpeditionTaskInspection.Inspect(basis, taskId, selectedRoleIndices);
     }
+    /// <summary>Inspect material requirements from one exact current publication.
+    /// Calculation runs outside the runtime gate. Results are historical, never a
+    /// current-at-return guarantee, reservation or command-wrapper gate.</summary>
+    public CraftingMaterialAssessment InspectCraftingMaterials(ushort itemId, int batchCount)
+    {
+        var basis = PublicationSnapshot;
+        return CraftingMaterialInspection.Inspect(basis, itemId, batchCount);
+    }
     /// <summary>Wait for receive commits, receive lifecycle, catalog selection/revocation,
     /// connection changes, or aggregate completion. Pass this runtime's exact snapshot;
     /// stale, cloned, foreign, and completed snapshots return the current value immediately.

@@ -1,5 +1,6 @@
 using System.Net;
 using Lala.Core.Resources;
+using Lala.Core.Inventory;
 using Lala.Core.Expedition;
 using Lala.Core.Protocol;
 using Lala.Core.Social;
@@ -69,6 +70,11 @@ await using (var account = AccountRuntime.Create(session, generation, profile, s
     var created = account.Snapshot;
     Require(ReferenceEquals(created, account.Snapshot) && !created.IsCompleted);
     Require(!created.HasCurrentResources && account.Publication is null);
+    var materials = account.InspectCraftingMaterials(1, 1);
+    Require(ReferenceEquals(materials.Basis, account.PublicationSnapshot));
+    Require(materials.Outcome == CraftingMaterialAssessmentOutcome.NoPublication && materials.Preflight is null);
+    Require(materials.ItemId == 1 && materials.BatchCount == 1 && materials.ResourceHeld && !materials.CanSendCommands);
+    Require(source.Calls == 0 && !Directory.Exists(root));
     var assessment = account.InspectExpeditionTask(1, [1]);
     Require(ReferenceEquals(assessment.Basis, account.PublicationSnapshot));
     Require(assessment.Issues.Contains(ExpeditionAssessmentIssue.NoPublication));
@@ -91,6 +97,8 @@ await using (var account = AccountRuntime.Create(session, generation, profile, s
     Require(finalPublication.IsCompleted && finalPublication.Publication is null);
     Require(ReferenceEquals(finalPublication, await account.WaitForPublicationChangeAsync(finalPublication)));
     Require(finalPublication.ResourceHeld && !finalPublication.CanSendCommands);
+    Require(ReferenceEquals(finalPublication, account.InspectCraftingMaterials(1, 1).Basis));
+    Require(account.InspectCraftingMaterials(1, 1).Preflight is null);
     Require(ReferenceEquals(finalPublication, account.InspectExpeditionTask(1, [1]).Basis));
     Require(account.InspectExpeditionTask(1, [1]).Issues.Contains(ExpeditionAssessmentIssue.NoPublication));
     Require(result.ResourcesReleased && result.ResourceHistory.IsEmpty);
