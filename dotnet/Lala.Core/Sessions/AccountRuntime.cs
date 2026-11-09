@@ -295,6 +295,16 @@ public sealed class AccountRuntime : IAsyncDisposable
             png=bytes;return true;
         }
     }
+    /// <summary>Current visible emoji gallery only; no chat send authority.</summary>
+    public bool TryGetEmojiGallery(out EmojiGalleryRequest? request)
+    {
+        lock(gate)
+        {
+            request=null;if(!CurrentCatalogsLocked(out _))return false;
+            var result=resources.ReadEmojiGallery();if(result is null||!result.IsCurrent||!CurrentCatalogsLocked(out _))return false;
+            request=result;return true;
+        }
+    }
     /// <summary>Acquire visual input only for the exact receive snapshot shown by the host.
     /// Each currentness check reselects from live state; no work or callbacks run under render.</summary>
     public bool TryGetPortrait(ServiceStateSnapshot expected,bool companion,out PortraitRenderRequest? request)

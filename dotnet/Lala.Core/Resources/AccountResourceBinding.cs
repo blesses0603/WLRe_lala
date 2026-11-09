@@ -55,6 +55,11 @@ internal sealed class AccountResourceBinding
         png=null;if(!HasSameAccountSnapshot||!_activation.TryReadEmoji(token,out var bytes)||!HasSameAccountSnapshot)return false;
         png=bytes;return true;
     }
+    internal EmojiGalleryRequest? ReadEmojiGallery()
+    {
+        if(!IsCurrent)return null;var result=_activation.CreateEmojiGallery(()=>IsCurrent);
+        return IsCurrent?result:null;
+    }
     internal bool TryReadPortrait(PortraitMaterialKey key, out PortraitCachedImage? image)
     {
         image = null;

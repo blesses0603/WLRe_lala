@@ -157,7 +157,7 @@ public sealed class LoginWindow : DesktopWindow, IAccountLoginInput, IAccountRol
     {
         stopping = true; enter.IsEnabled = false;
         discoveryStop.Cancel();
-        session.SetItemImageReader(presentationGeneration, null); session.SetPortraitReader(presentationGeneration, null);
+        session.SetItemImageReader(presentationGeneration, null); session.SetPortraitReader(presentationGeneration, null); session.SetEmojiReader(presentationGeneration, null);
         cancellation?.Cancel(); preparation?.Stop(); runtime?.Stop(); roleCompletion?.TrySetResult(null);
         confirmationWindow?.Close(false);
         if (operation is { } running) await running;
@@ -192,6 +192,7 @@ public sealed class LoginWindow : DesktopWindow, IAccountLoginInput, IAccountRol
                 cancellation.Token.ThrowIfCancellationRequested();
                 var imageRuntime = runtime;
                 session.SetItemImageReader(presentationGeneration, id => imageRuntime.TryReadItemImage(id, out var png) ? png : null);
+                session.SetEmojiReader(presentationGeneration, () => imageRuntime.TryGetEmojiGallery(out var gallery) ? gallery : null);
                 session.SetPortraitReader(presentationGeneration, (state, companion) => imageRuntime.TryGetPortrait(state, companion, out var request) ? request : null);
                 timer.Start();
                 var result = await runtime.RunAsync(cancellation.Token);
@@ -209,7 +210,7 @@ public sealed class LoginWindow : DesktopWindow, IAccountLoginInput, IAccountRol
         catch (Exception) { status.Text = "登入未完成：請重新版本檢測並選擇分流，確認 ASCII 帳密後重試。"; }
         finally
         {
-            timer.Stop(); session.SetItemImageReader(presentationGeneration, null); session.SetPortraitReader(presentationGeneration, null);
+            timer.Stop(); session.SetItemImageReader(presentationGeneration, null); session.SetPortraitReader(presentationGeneration, null); session.SetEmojiReader(presentationGeneration, null);
             try { if (runtime is not null) await runtime.DisposeAsync(); if (preparation is not null) await preparation.DisposeAsync(); }
             catch (Exception) { status.Text = "連線清理失敗；請關閉程式後再試。"; closed = true; }
             core?.Disconnect(); preparation = null; runtime = null; lastCatalogs = null;

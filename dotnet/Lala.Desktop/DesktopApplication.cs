@@ -113,13 +113,13 @@ public sealed class DesktopWindows : IDisposable
     {
         var window = Get("settings", () => new SettingsWindow(session, tab)); window.SelectTab(tab); return window;
     }
-    public PythonFeatureWindow OpenPythonFeature(string key) => Get("python-" + key, () => new PythonFeatureWindow(key, session, this), preserve: true);
+    public PythonFeatureWindow OpenPythonFeature(string key) => Get("python-" + key, () => new PythonFeatureWindow(key, session, this), preserve: key != "emoji");
     public Window OpenInspector() => Get("inspector", () => new InspectorWindow());
     internal void RequestShutdown()
     {
         if (disposed || shutdownRequested) return;
         shutdownRequested = true;
-        Dispatcher.UIThread.Post(async () => { await Version.StopAsync(); await Login.ShutdownAsync(); Dispose(); shutdown(); });
+        Dispatcher.UIThread.Post(async () => { await Version.StopAsync(); await Login.ShutdownAsync(); await Task.WhenAll(features.Values.Select(e=>e.Window).OfType<PythonFeatureWindow>().Select(w=>w.StopEmojiAsync()).ToArray()); Dispose(); shutdown(); });
     }
     private T Get<T>(string key, Func<T> create, bool preserve = false) where T : Window
     {

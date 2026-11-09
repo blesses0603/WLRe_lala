@@ -1,0 +1,31 @@
+{
+  "before_utc": "2026-11-09T20:16:07+00:00",
+  "after_utc": "2026-11-09T20:17:30+00:00",
+  "source_host": "wlreftpsrc.chinesegamer.net",
+  "data_version": "1.3.23",
+  "packages": {
+    "DataPackage": "1296_2026_11_04_13_34_19_13",
+    "MainPackage": "1296_2026_11_04_13_36_07_72"
+  },
+  "verified_files": 7,
+  "verified_bytes": 28364000,
+  "source_hashes_match": "emoji_source_1296_audit.json",
+  "method": "Exact HTTPS origin, no redirects/retries, full manifest parse + CRC, exact selected closure, Bundle size/MD5/CRC/SHA, manifest and version recheck; private cloud cache only",
+  "atlas_owner": "CAB-cea8ff565680c1d33e8f134c42bb48fe",
+  "atlas_path_id": -5275761793094416817,
+  "packed_sprites": 246,
+  "packed_sprite_owners": {
+    "CAB-cea8ff565680c1d33e8f134c42bb48fe": 246
+  },
+  "all_sprites_in_owner": 1946,
+  "emoji_named_first_frames_in_owner": 87,
+  "emoji_named_first_frame_max_physics_shapes": 6,
+  "emoji_named_first_frame_max_physics_points": 49,
+  "unrelated_over_quota_sprite": {
+    "name": "Icon_Grid01",
+    "path_id": -3018587981912517052,
+    "physics_shapes": 65,
+    "physics_points": 260
+  },
+  "csharp_result": "BoundedSerializedFile.Read rejects at UnityImageObjects.Sprite physics count bound 64. No limit changed; no C# full batch or production activation acceptance."
+}

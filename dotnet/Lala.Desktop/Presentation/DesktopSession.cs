@@ -22,6 +22,8 @@ public sealed class DesktopSession : IDisposable
     private Func<ushort, byte[]?>? itemImageReader;
     private Func<ServiceStateSnapshot,bool,PortraitRenderRequest?>? portraitReader;
 
+    private Func<EmojiGalleryRequest?>? emojiReader;
+
     public DesktopSession(DesktopPreferencesStore? preferences = null) =>
         Preferences = preferences ?? new DesktopPreferencesStore();
 
@@ -62,6 +64,15 @@ public sealed class DesktopSession : IDisposable
         var request=reader?.Invoke(expected,companion);
         lock(gate)return !disposed&&generation==captured&&ReferenceEquals(reader,portraitReader)&&ReferenceEquals(expected,snapshot)?request:null;
     }
+    internal void SetEmojiReader(long expectedGeneration,Func<EmojiGalleryRequest?>? reader)
+    {lock(gate){if(disposed||generation!=expectedGeneration)return;emojiReader=reader;}Changed?.Invoke();}
+    internal EmojiGalleryRequest? ReadEmojiGallery()
+    {
+        Func<EmojiGalleryRequest?>? reader;long expected;
+        lock(gate){if(disposed)return null;reader=emojiReader;expected=generation;}
+        var result=reader?.Invoke();if(result?.IsCurrent!=true)return null;
+        lock(gate)return !disposed&&generation==expected&&ReferenceEquals(reader,emojiReader)?result:null;
+    }
     public DesktopLabels Labels { get { lock (gate) return labels; } }
     public DesktopPublication ReadView()
     {
@@ -94,7 +105,7 @@ public sealed class DesktopSession : IDisposable
             publication = -1;
             connectionText = "尚未連線";
             snapshot = new();
-            labels = new(); itemImageReader = null; portraitReader = null;
+            labels = new(); itemImageReader = null; portraitReader = null; emojiReader = null;
             identityKey = presentationIdentity;
         }
         Changed?.Invoke();
@@ -140,7 +151,7 @@ public sealed class DesktopSession : IDisposable
             disposed = true;
             generation = checked(generation + 1);
             snapshot = new();
-            labels = new(); itemImageReader = null; portraitReader = null;
+            labels = new(); itemImageReader = null; portraitReader = null; emojiReader = null;
             changed = Changed; Changed = null;
         }
         changed?.Invoke();

@@ -224,9 +224,10 @@ public abstract class DesktopWindow : Window
         };
     }
 
-    protected void SetBody(Control content, bool dashboard = false)
+    protected void SetBody(Control content, bool dashboard = false, bool fluid = false)
     {
-        var layers = new Grid { Width = designWidth, Height = designHeight };
+        var layers = new Grid();
+        if(!fluid){layers.Width=designWidth;layers.Height=designHeight;}
         layers.Children.Add(new LegacyBackdrop { IsHitTestVisible = false });
         layers.Children.Add(new Border { Background = Brush.Parse(dashboard ? "#75071526" : "#99071526"), IsHitTestVisible = false });
         var layout = new Grid { RowDefinitions = new RowDefinitions("44,*") };
@@ -246,7 +247,7 @@ public abstract class DesktopWindow : Window
         content.Margin = new Thickness(dashboard ? 10 : 12);
         Ui.At(layout, content, 0, 1); layers.Children.Add(layout);
         layers.Children.Add(new Border { BorderBrush = Ui.Accent, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(20), IsHitTestVisible = false });
-        Content = new Viewbox { Child = layers, Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly };
+        Content = fluid ? layers : new Viewbox { Child = layers, Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly };
     }
 }
 

@@ -255,7 +255,13 @@ public sealed class ResourceRuntimeOwnerTests
         var session=new AccountSession();var snapshot=session.Begin("owned","offline");
         Assert.True(AccountResourceBinding.TryBind(session,snapshot.Generation,owner,publication,out var binding));
         Assert.True(binding!.TryReadEmoji(1,out _));Assert.False(binding.CanSendPackets);
+        var gallery=binding.ReadEmojiGallery();Assert.NotNull(gallery);Assert.True(gallery.IsCurrent);
+        Assert.Equal(result.Publication!.Emojis!.Batch.Mapping.Rows.Where(r=>r.ShowInList).Select(r=>r.Token),gallery.Entries.Select(e=>e.Token));
+        Assert.True(gallery.TryReadPng(1,out var galleryPng));galleryPng![0]=0;Assert.True(gallery.TryReadPng(1,out galleryPng));Assert.Equal(137,galleryPng![0]);
+        foreach(var hidden in result.Publication.Emojis.Batch.Mapping.Rows.Where(r=>!r.ShowInList))Assert.False(gallery.TryReadPng(hidden.Token,out _));
+
         session.Hold(snapshot.Generation);Assert.False(binding.TryReadEmoji(1,out var retired));Assert.Null(retired);
+        Assert.False(gallery.IsCurrent);Assert.False(gallery.TryReadPng(1,out galleryPng));Assert.Null(galleryPng);
         Assert.True(active.TryReadEmoji(1,out _)); // Account replacement does not revoke unrelated owner readers.
 
         Assert.False(active.TryReadEmoji(0, out _));

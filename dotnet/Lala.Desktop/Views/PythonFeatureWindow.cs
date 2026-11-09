@@ -22,6 +22,8 @@ public sealed class PythonFeatureWindow : DesktopWindow
     private readonly string key;
     private long generation;
     private bool closed;
+    private EmojiGalleryView? emoji;
+    private bool emojiClosing,emojiClosed;
     private readonly Dictionary<string, TextTable> tables = [];
     private TextBlock? cubeStatus, guildStatus, arkStatus;
     public PythonFeatureWindow(string key, DesktopSession session, DesktopWindows windows)
@@ -29,10 +31,20 @@ public sealed class PythonFeatureWindow : DesktopWindow
     {
         this.key = key; this.session = session; this.windows = windows; generation = session.Generation;
         Build(); session.Changed += Changed;
+        Closing += async (_,args)=>
+        {
+            if(emoji is null||emojiClosed)return;args.Cancel=true;if(emojiClosing)return;
+            emojiClosing=true;await StopEmojiAsync();
+            Avalonia.Threading.Dispatcher.UIThread.Post(Close);
+        };
         Closed += (_, _) => { closed = true; session.Changed -= Changed; };
         Refresh();
     }
-    private void Changed() => Ui.OnUi(() => { if (!closed) { if (generation != session.Generation) { generation = session.Generation; Build(); } Refresh(); } });
+    internal async Task StopEmojiAsync()
+    {
+        if(emoji is null)return;closed=true;session.Changed-=Changed;await emoji.DisposeAsync();emojiClosed=true;
+    }
+    private void Changed() => Ui.OnUi(() => { if (!closed) { if (generation != session.Generation) { generation = session.Generation; if(key!="emoji")Build(); } Refresh(); } });
     private void Build()
     {
         tables.Clear(); cubeStatus = guildStatus = arkStatus = null;
@@ -44,7 +56,19 @@ public sealed class PythonFeatureWindow : DesktopWindow
             "efficiency" => Efficiency(), "attributes" => Attributes(), "crafting-plan" => Plan(), "crafting-queue" => Queue(),
             "emoji" => Page("", Ui.Text("官方表情尚未就緒；聊天仍可使用文字。")), _ => throw new ArgumentOutOfRangeException(nameof(key))
         };
-        if (key == "emoji") { SetBody(Ui.Text("官方表情尚未接通；等待資源就緒。", 12, Ui.Muted)); return; }
+        if (key == "emoji")
+        {
+            CanResize=true;emoji=new();emoji.Selected+=token=>windows.Dashboard.InsertEmojiDraft(token,generation);
+            emoji.Ready+=count=>
+            {
+                var screen=Screens.Primary;double scale=screen?.Scaling??1;
+                double maxWidth=Math.Min(1240,(screen?.WorkingArea.Width??1280)/scale-48),maxHeight=Math.Min(760,(screen?.WorkingArea.Height??800)/scale-80);
+                var minimum=EmojiGalleryView.PreferredGrid(count,52,58,maxWidth,maxHeight);
+                var preferred=EmojiGalleryView.PreferredGrid(count,68,74,maxWidth,maxHeight)??minimum;
+                if(minimum is {} min&&preferred is {} size){MinWidth=min.Width+24;MinHeight=min.Height+68;Width=size.Width+24;Height=size.Height+68;}
+            };
+            SetBody(emoji,fluid:true);return;
+        }
         var body = new Grid { RowDefinitions = new("*,Auto"), RowSpacing = 5 };
         Ui.At(body, content, 0);
         Ui.At(body, Ui.Text("介面已補入；尚未接通的操作保持停用。資料僅顯示核心已接收內容，資源仍 Held。", 12, Ui.Muted), 0, 1);
@@ -179,6 +203,7 @@ public sealed class PythonFeatureWindow : DesktopWindow
     }
     private void Refresh()
     {
+        if(key=="emoji"){emoji?.Update(session.ReadEmojiGallery());return;}
         var view = session.ReadView(); var s = view.Snapshot;
         if (tables.TryGetValue("Companions", out var companions)) companions.SetRows(s.Companions.CompanionOrder
             .Where(s.Companions.Companions.ContainsKey).Select(i => { var c = s.Companions.Companions[i].Data; return (i.ToString(), new[] { i.ToString(), c.Name ?? $"夥伴 {c.NpcId}", c.Level.ToString(), c.Hp?.ToString() ?? "待同步", c.Sp?.ToString() ?? "待同步", s.Companions.ActiveNpcId == c.NpcId ? "出戰" : "休息" }); }));

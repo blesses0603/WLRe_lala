@@ -177,6 +177,8 @@ public sealed class AccountResourceRuntime : IAsyncDisposable
     {
         lock(_gate){png=null;return !_disposed&&_binding is not null&&_binding.TryReadEmoji(token,out png);}
     }
+    internal EmojiGalleryRequest? ReadEmojiGallery()
+    {lock(_gate)return !_disposed?_binding?.ReadEmojiGallery():null;}
     internal bool TrySelectPortrait(Lala.Core.Protocol.WorldPlayer? player,Lala.Core.Inventory.CompanionReceiveSnapshot companions,
         bool companion,out PortraitSelection? selection,out PortraitCachedImage? image)
     {

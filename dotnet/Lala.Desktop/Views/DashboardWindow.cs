@@ -154,6 +154,15 @@ public sealed class DashboardWindow : DesktopWindow
             CornerRadius = new CornerRadius(8), Padding = new Thickness(10, 4), ClipToBounds = true, Child = grid };
     }
 
+    internal void InsertEmojiDraft(byte token,long expectedGeneration)
+    {
+        if(closed||session.Generation!=expectedGeneration)return;
+        string literal="[Emoji"+token.ToString(System.Globalization.CultureInfo.InvariantCulture)+"]";
+        string text=chatInput.Text??"";int start=Math.Min(chatInput.SelectionStart,chatInput.SelectionEnd),end=Math.Max(chatInput.SelectionStart,chatInput.SelectionEnd);
+        start=Math.Clamp(start,0,text.Length);end=Math.Clamp(end,start,text.Length);
+        if(text.Length-(end-start)+literal.Length>chatInput.MaxLength)return;
+        chatInput.Text=text[..start]+literal+text[end..];chatInput.CaretIndex=start+literal.Length;chatInput.SelectionStart=chatInput.SelectionEnd=chatInput.CaretIndex;chatInput.Focus();
+    }
     private Control Chat()
     {
         var layout = new Grid { RowDefinitions = new RowDefinitions("Auto,*,Auto"), RowSpacing = 4 };

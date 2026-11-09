@@ -42,6 +42,7 @@ internal static class DesktopUiSmokeTest
                 await EmptyAndLoginAsync();
                 await DesktopLoginUiTest.RunAsync();
                 await DesktopPortraitUiTest.RunAsync();
+                await DesktopEmojiUiTest.RunAsync();
                 await VersionEntryAsync();
                 Publish(fixture.State, fixture.Labels);
                 await Settle(dashboard);
