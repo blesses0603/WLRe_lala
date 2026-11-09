@@ -1968,3 +1968,20 @@ Python oracle cases regenerate identically; independent review found no blockers
 No real credentials or official
 server acceptance are involved. Only the overall PR marker advances once to 8.0.36;
 same-batch repairs and platform/Core/Desktop project versions remain unchanged.
+
+
+### Overall PR development marker 8.0.37: received battle actor integration
+
+BattleUnitState.Actor and ordered BattleEventSnapshot.Actors now derive directly
+from committed receive state, without a second store or new inspection endpoint.
+Current HP/SP and appearance preserve received overrides; maxima remain original
+layout values, separate from owned profile knowledge. Missing fly/status evidence
+is not inferred. Replacements and retained historical snapshots preserve boundaries.
+
+Focused/Python transition parity 25, full Core 44,998, the existing public consumer,
+and an isolated external consumer of the new APIs passed; independent review found
+no blockers. The framed chooser compatibility case uses explicitly synthetic catalogs,
+not a production combat pipeline. Complete combat/normal catalog constants and chooser
+scheduling remain unfinished. No live credentials, official server, UI or sends were
+used. Overall PR advances once to 8.0.37; same-batch fixes and platform/Core/Desktop
+project versions remain unchanged.

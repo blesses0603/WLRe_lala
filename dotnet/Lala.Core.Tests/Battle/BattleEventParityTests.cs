@@ -60,6 +60,30 @@ public sealed class BattleEventParityTests
 
     private static void AssertSnapshot(JsonNode expected, BattleEventSnapshot actual, string label)
     {
+        Assert.Equal(expected["unit_order"]!.AsArray().Select(value => value!.GetValue<string>()), actual.Actors.Select(entry => entry.Slot));
+        foreach (var entry in actual.Actors)
+        {
+            var source = expected["battle_units"]![entry.Slot]!;
+            var actor = entry.Actor;
+            Assert.Equal(source["pid"]!.GetValue<uint>(), actor.Pid);
+            Assert.Equal(source["master_id"]!.GetValue<uint>(), actor.MasterId);
+            Assert.Equal(source["npc_index"]!.GetValue<ushort>(), actor.NpcIndex);
+            Assert.Equal(source["col"]!.GetValue<int>(), actor.Col); Assert.Equal(source["row"]!.GetValue<int>(), actor.Row);
+            Assert.Equal(source["change_body_id"]!.GetValue<uint>(), actor.ChangeBodyId);
+            Assert.Equal(source["sex"]!.GetValue<int>(), actor.Sex); Assert.Equal(source["head"]!.GetValue<int>(), actor.Head);
+            Assert.Equal(source["name"]!.GetValue<string>(), actor.Name);
+            Assert.Equal(source["exited"]?.GetValue<bool>() ?? false, actor.Exited);
+            Assert.False(actor.IsFly); Assert.Empty(actor.Statuses); Assert.Equal(8, actor.Stats.Count);
+            foreach (var key in new[] { "hp", "sp", "max_hp", "max_sp", "level", "element", "degree", "job" })
+                Assert.Equal(source[key]!.GetValue<long>(), actor.Stats[key]);
+            Assert.Equal(source["equips"]!.AsArray().Count, actor.Equips.Length);
+            for (var i = 0; i < actor.Equips.Length; i++)
+            {
+                Assert.Equal(source["equips"]![i]!["item_id"]!.GetValue<ushort>(), actor.Equips[i].ItemId);
+                Assert.Equal(source["equips"]![i]!["design_id"]!.GetValue<uint>(), actor.Equips[i].DesignId);
+                Assert.Null(actor.Equips[i].Damage); Assert.Null(actor.Equips[i].OriginalRecord);
+            }
+        }
         var projection = Project(actual);
         LazyAssert.True(JsonNode.DeepEquals(expected, projection), () => $"{label}: expected {expected}; actual {projection}");
     }

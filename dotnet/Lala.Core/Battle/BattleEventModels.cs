@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Numerics;
 using Lala.Core.Protocol;
+using Lala.Core.Inventory;
 
 namespace Lala.Core.Battle;
 
@@ -51,6 +52,20 @@ public sealed record BattleUnitState
     public ImmutableDictionary<byte, uint> Attributes { get; internal init; } =
         ImmutableDictionary<byte, uint>.Empty;
     public bool Exited { get; internal init; }
+
+    /// <summary>Receive-owned actor observation, derived without profile/catalog enrichment.
+    /// S51 maxima remain profile evidence: actor maxima come from the unit layout.
+    /// No received branch establishes fly/status flags or full equipment metadata.</summary>
+    public CombatResourceActor Actor => new()
+    {
+        Pid = Layout.Pid, MasterId = Layout.MasterId, NpcIndex = Layout.NpcIndex,
+        Col = Layout.Col, Row = Layout.Row, ChangeBodyId = Layout.ChangeBodyId,
+        Sex = Layout.Sex, Head = Layout.Head, Name = Layout.Name, Exited = Exited,
+        Equips = [.. Equips.Select(item => new KnowledgeEquipment(item.ItemId, item.DesignId))],
+        Stats = ImmutableDictionary<string, long>.Empty
+            .Add("hp", Hp).Add("sp", Sp).Add("max_hp", Layout.MaxHp).Add("max_sp", Layout.MaxSp)
+            .Add("level", Layout.Level).Add("element", Layout.Element).Add("degree", Layout.Degree).Add("job", Layout.Job)
+    };
 }
 
 /// <summary>A pure battle-domain publication, not a complete session or account State.
@@ -74,6 +89,12 @@ public sealed record BattleEventSnapshot
     public bool HasCommands { get; internal init; }
     public ImmutableArray<AttackAction> LastActions { get; internal init; } = [];
     public bool HasLastActions { get; internal init; }
+
+    /// <summary>Actor entries in received dictionary insertion order, including exited units.
+    /// Derived from this exact immutable publication; no independent cache or send authority.
+    /// A new battle start replaces entries, while lifecycle retirement retains historical evidence.</summary>
+    public ImmutableArray<CombatResourceBattleEntry> Actors =>
+        [.. Units.Select(unit => new CombatResourceBattleEntry(unit.Slot.ToString(), unit.Actor))];
 
     public BattleUnitState? UnitAt(BattleSlot slot) => Units.FirstOrDefault(unit => unit.Slot == slot);
     public BattleCommandSnapshot? CommandAt(BattleSlot slot) => Commands.FirstOrDefault(command => command.Slot == slot);
