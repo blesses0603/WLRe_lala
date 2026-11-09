@@ -32,7 +32,7 @@ internal static class UnityTreeShape
     // Normalize only those inert bits; type/name/depth/size/array/alignment must all match.
     internal static void Validate(int classId, IReadOnlyList<Node> nodes)
     {
-        if (classId is 21 or 28 or 213) { UnityImageShapes.Validate(classId, nodes); return; }
+        if (classId is 21 or 28 or 48 or 213) { UnityImageShapes.Validate(classId, nodes); return; }
         var expected = classId == 49 ? Text : Bundle;
         Require(nodes.SequenceEqual(expected), "Unsupported embedded Unity type tree layout");
     }

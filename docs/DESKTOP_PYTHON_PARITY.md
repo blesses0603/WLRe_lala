@@ -1,4 +1,4 @@
-# PR #79 ver 8.0.56：Python 桌面介面對照盤點
+# PR #79 ver 8.0.57：Python 桌面介面對照盤點
 
 範圍是全部桌面畫面及其子視窗，保留使用者較新的「背包／特技各自獨立視窗」要求。參照 PR 原 head `59416bde817f39035176ae9c1e2eeb5b23896d58` 中 Python 7.3.1 原始碼；本批未改 Python，也未聲稱已全部移植完成。
 
@@ -182,3 +182,7 @@ C# 原本只有技能 ID 的名稱查找也接入目前已驗證可選技能目�
 ## 8.0.56 受限 Material 解碼
 
 加入獨立 opt-in 的 Material class 21 解析與頭像候選投影，尚缺 Shader、外部指標及顯示接線；詳見 [材質解碼與證據限制](DOTNET_PORTRAIT_MATERIALS.md)。本批不宣稱新的繪製效能改善。
+
+## 8.0.57 Shader 與選定指標
+
+加入固定 schema Shader 解析、頭像 blob／預設值驗證及精確選定檔案 PPtr resolver，仍待完整來源批次與顯示組合。詳見 [證據與未完成範圍](DOTNET_PORTRAIT_SHADER_POINTERS.md)。
