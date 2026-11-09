@@ -1932,3 +1932,21 @@ consumer, 76 lifecycle, 36 synthetic acceptance, 17 Linux PTY and 35 release/ver
 checks. The 1,005 actual-Python vectors regenerate identically. No real credentials,
 game commands or official-server acceptance are involved. Only the overall PR marker advances once
 to 8.0.34; same-batch repairs and platform/Core/Desktop project versions are unchanged.
+
+
+### Overall PR development marker 8.0.35: crafting material preflight
+
+A bounded immutable preflight calculates explicit recipe/tool selection and ordered
+bag-first/material-cupboard allocations from supplied observations. It preserves the
+supported Python helper's gates and error order without building a packet, acquiring
+holds, enqueueing work, confirming consumption or enabling continuation. Existing
+pending/unknown observations remain evidence, not permission or verified ownership.
+
+The immutable catalog contract and typed-input bounds are documented separately from
+source-helper parity; packet construction and changing global catalog identity are
+outside this calculation. Fresh verification passed: 160 focused, 44,926 full Core,
+external public consumer, 76 lifecycle, 36 synthetic acceptance, 17 Linux PTY and
+35 release/version checks. The 154 actual-Python prefix vectors regenerate identically;
+independent review found no blockers. No Desktop UI, real credentials or official-server acceptance
+are involved. Only the overall PR marker advances once to 8.0.35; same-batch repairs
+and platform/Core/Desktop project versions remain unchanged.
