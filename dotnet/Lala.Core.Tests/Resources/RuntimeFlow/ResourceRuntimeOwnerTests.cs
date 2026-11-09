@@ -83,6 +83,99 @@ public sealed class ResourceRuntimeOwnerTests
         public void Dispose() { if (Directory.Exists(Root)) Directory.Delete(Root, true); }
     }
     [Fact]
+    public async Task Portrait_batch_writes_independently_reads_and_offline_owner_cannot_admit()
+    {
+        using var fixture = new Fixture();
+        int builds = 0;
+        var hooks = new ResourceRuntimeBootstrapTestHooks { PortraitsForOfflineTest = _ => PortraitRuntimeFixtures.Batch(() => { builds++; return 255; }) };
+        await using var owner = ResourceRuntimeOwner.CreateForOfflineTests(fixture.Root, new Source(), bootstrapHooks: hooks);
+        var result = await owner.BootstrapAndRefreshAsync();
+        Assert.Null(result.Failure); Assert.Equal(AccountResourceStorageOutcome.Committed, result.PortraitStorageOutcome);
+        Assert.NotNull(result.Publication!.Portraits); Assert.Equal(3, builds);
+        Assert.False(owner.TryActivate(result.Publication, out _));
+        var refresh = await owner.RefreshWithResultAsync();
+        Assert.Null(refresh.Failure); Assert.NotNull(refresh.Publication!.Portraits);
+        Assert.Equal(AccountResourceStorageOutcome.NotAttempted, refresh.PortraitStorageOutcome); Assert.Equal(5, builds);
+    }
+    [Fact]
+    public async Task Missing_portrait_cache_refresh_is_readonly_and_unreviewed_sources_are_absent()
+    {
+        using var fixture = new Fixture(); var source = new Source(); await fixture.PopulateAsync(source);
+        var prepared = await new OfflineBundleRuntimePreparation().PrepareAsync(new Source()); Assert.Null(prepared.Portraits);
+        var hooks = new ResourceRuntimeBootstrapTestHooks { PortraitsForOfflineTest = _ => PortraitRuntimeFixtures.Batch() };
+        await using var owner = ResourceRuntimeOwner.CreateForOfflineTests(fixture.Root, source, bootstrapHooks: hooks);
+        var result = await owner.RefreshWithResultAsync();
+        Assert.Null(result.Failure); Assert.Null(result.Publication!.Portraits);
+        Assert.Equal(AccountResourceStorageOutcome.NotAttempted, result.PortraitStorageOutcome);
+        Assert.False(File.Exists(Path.Combine(fixture.Root,"official_sync","derived_catalogs","core_portraits_v1.sqlite3")));
+    }
+    [Theory, InlineData(false), InlineData(true)]
+    public async Task Portrait_retirement_or_source_drift_preserves_exact_storage_outcome(bool drift)
+    {
+        using var fixture = new Fixture(); var source = new Source(); ResourceRuntimeOwner? owner = null;
+        var hooks = new ResourceRuntimeBootstrapTestHooks
+        {
+            PortraitsForOfflineTest = _ => PortraitRuntimeFixtures.Batch(),
+            BeforePortraitCommitAdmission = () =>
+            {
+                if (drift) { var main = BundleSourceFixtures.Index("main-valid"); main["header"]!["package_note"] = "changed"; source.Main = BundleSourceFixtures.Encode(main); }
+                else owner!.Invalidate();
+            }
+        };
+        await using (owner = ResourceRuntimeOwner.CreateForOfflineTests(fixture.Root, source, bootstrapHooks: hooks))
+        {
+            var result = await owner.BootstrapAndRefreshAsync(); Assert.NotNull(result.Failure); Assert.Null(owner.Current);
+            Assert.Equal(drift ? AccountResourceStorageOutcome.Committed : AccountResourceStorageOutcome.NotCommitted, result.PortraitStorageOutcome);
+        }
+    }
+    [Fact]
+    public async Task Portrait_pixel_drift_between_preparation_and_write_blocks_publication()
+    {
+        using var fixture = new Fixture(); int calls = 0;
+        var hooks = new ResourceRuntimeBootstrapTestHooks { PortraitsForOfflineTest = _ => PortraitRuntimeFixtures.Batch(() => ++calls) };
+        await using var owner = ResourceRuntimeOwner.CreateForOfflineTests(fixture.Root, new Source(), bootstrapHooks: hooks);
+        var result = await owner.BootstrapAndRefreshAsync();
+        Assert.NotNull(result.Failure); Assert.Null(result.Publication);
+        Assert.Equal(AccountResourceStorageOutcome.NotCommitted, result.PortraitStorageOutcome);
+    }
+    [Theory, InlineData("invalidate"), InlineData("dispose"), InlineData("refresh")]
+    public async Task Portrait_reads_require_exact_activation_and_revoke(string retirement)
+    {
+        using var fixture = new Fixture();
+        var hooks = new ResourceRuntimeBootstrapTestHooks { PortraitsForOfflineTest = _ => PortraitRuntimeFixtures.Batch() };
+        await using var offline = ResourceRuntimeOwner.CreateForOfflineTests(fixture.Root, new Source(), bootstrapHooks: hooks);
+        var result = await offline.BootstrapAndRefreshAsync(); Assert.Null(result.Failure);
+        var prepared = await new OfflineBundleRuntimePreparation().PrepareAsync(new Source());
+        await using var owner = ResourceRuntimeOwner.Create(fixture.Root);
+        var publication = new ResourceRuntimePublication(owner, 0, prepared, portraits: result.Publication!.Portraits);
+        // White-box lifetime fixture only; this does not assert official acquisition or acceptance.
+        typeof(ResourceRuntimeOwner).GetField("_current", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.SetValue(owner, publication);
+        Assert.True(owner.TryActivate(publication, out var active)); Assert.True(active!.HasPortraits);
+        Assert.True(active.TryReadPortrait(PortraitRuntimeFixtures.Key, out var image)); Assert.NotNull(image);
+        Assert.False(active.TryReadPortrait(new("player","9999"), out _));
+        Assert.False(new ResourceRuntimeActivation(owner, publication).TryReadPortrait(PortraitRuntimeFixtures.Key, out _));
+        var first = image!.CopyBasePng(); Array.Fill(first,(byte)0); Assert.NotEqual(first,image.CopyBasePng());
+        if (retirement == "invalidate") owner.Invalidate();
+        else if (retirement == "dispose") await owner.DisposeAsync();
+        else await Assert.ThrowsAnyAsync<OperationCanceledException>(() => owner.RefreshAsync(new(true)));
+        Assert.False(active.HasPortraits); Assert.False(active.TryReadPortrait(PortraitRuntimeFixtures.Key, out image)); Assert.Null(image);
+    }
+    [Fact]
+    public async Task Corrupt_portrait_cache_is_not_repaired_by_refresh()
+    {
+        using var fixture = new Fixture();
+        var hooks = new ResourceRuntimeBootstrapTestHooks { PortraitsForOfflineTest = _ => PortraitRuntimeFixtures.Batch() };
+        await using var owner = ResourceRuntimeOwner.CreateForOfflineTests(fixture.Root, new Source(), bootstrapHooks: hooks);
+        Assert.Null((await owner.BootstrapAndRefreshAsync()).Failure);
+        string path = Path.Combine(fixture.Root,"official_sync","derived_catalogs","core_portraits_v1.sqlite3");
+        using (var db = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource=path,Pooling=false }.ToString()))
+        { db.Open(); using var command=db.CreateCommand(); command.CommandText="UPDATE portrait_png_v1 SET base_png=zeroblob(16)"; command.ExecuteNonQuery(); }
+        byte[] before = File.ReadAllBytes(path);
+        var result = await owner.RefreshWithResultAsync(); Assert.NotNull(result.Failure); Assert.Null(owner.Current);
+        Assert.Equal(AccountResourceStorageOutcome.NotAttempted,result.PortraitStorageOutcome); Assert.Equal(before,File.ReadAllBytes(path));
+    }
+
+    [Fact]
     public async Task Readonly_refresh_does_not_create_a_missing_item_image_cache()
     {
         using var fixture = new Fixture(); var source = new Source(); await fixture.PopulateAsync(source);

@@ -12,6 +12,7 @@ internal sealed class ResourceRuntimePublication
     internal ManifestIdentity Identity { get; }
     internal OfflineRuntimeCandidate Candidate { get; }
     internal ItemImageReadback? ItemImages { get; }
+    internal PortraitPngReadback? Portraits { get; }
     private readonly ResourceRuntimeOwner _owner;
     internal bool ResourceAdmitted => _owner.IsCurrentAdmission(this);
     internal bool TlsOriginObserved => _owner.IsCurrentAdmission(this);
@@ -20,8 +21,8 @@ internal sealed class ResourceRuntimePublication
     internal bool CanLogin => false;
     internal bool CanSendPackets => false;
     internal ResourceRuntimePublication(ResourceRuntimeOwner owner, long generation, OfflinePreparedRuntimeCandidate prepared,
-        OfflineRuntimeCandidate? readbackCandidate = null, ItemImageReadback? itemImages = null)
-        => (_owner, Generation, Identity, Candidate, ItemImages) = (owner, generation, prepared.Identity, readbackCandidate ?? prepared.Candidate, itemImages);
+        OfflineRuntimeCandidate? readbackCandidate = null, ItemImageReadback? itemImages = null, PortraitPngReadback? portraits = null)
+        => (_owner, Generation, Identity, Candidate, ItemImages, Portraits) = (owner, generation, prepared.Identity, readbackCandidate ?? prepared.Candidate, itemImages, portraits);
 }
 
 /// <summary>Uninstalled resource-only owner. Construction does no network or database I/O.
@@ -37,6 +38,7 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
     private readonly bool _production;
     private readonly string _inventory;
     private readonly string _itemImages;
+    private readonly string _portraits;
     private readonly IBundleSourceCacheReader _cache;
     private readonly RuntimeBundleCacheWriter _cacheWriter;
     private readonly OfflineBundleRuntimePreparation _preparation = new();
@@ -65,6 +67,7 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
         _cacheWriter = new RuntimeBundleCacheWriter(root);
         _inventory = Path.Combine(root, "official_sync", "derived_catalogs", "resource_inventory.sqlite3");
         _itemImages = Path.Combine(root, "official_sync", "derived_catalogs", "core_item_images_v1.sqlite3");
+        _portraits = Path.Combine(root, "official_sync", "derived_catalogs", "core_portraits_v1.sqlite3");
         _afterAdmission = afterAdmission;
         _cleanupEntered = cleanupEntered;
         _bootstrapHooks = bootstrapHooks;
@@ -109,6 +112,16 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
         {
             png = IsCurrentActivation(activation, publication) ? publication.ItemImages?.CopyPng(itemId) : null;
             return png is not null;
+        }
+    }
+    internal bool TryReadPortrait(ResourceRuntimeActivation activation, ResourceRuntimePublication publication,
+        PortraitMaterialKey key, out PortraitCachedImage? image)
+    {
+        lock (_gate)
+        {
+            image = null;
+            return IsCurrentActivation(activation, publication) && publication.Portraits is not null &&
+                publication.Portraits.Images.TryGetValue(key, out image);
         }
     }
     internal ResourceRuntimePublication? Current { get { lock (_gate) return _current; } }
@@ -182,6 +195,8 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
         var readback = ResourceRuntimeReadback.NotAttempted;
         ResourceRuntimePublication? publication = null;
         ItemImageReadback? itemImages = null;
+        PortraitPngReadback? portraits = null;
+        var portraitStorage = AccountResourceStorageOutcome.NotAttempted;
         var imageStorage = AccountResourceStorageOutcome.NotAttempted;
         Exception? failure = null;
         try
@@ -296,6 +311,35 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
                     itemImages = new(batch, pngs);
                 }
             }
+            if ((_bootstrapHooks?.PortraitsForOfflineTest?.Invoke(prepared) ?? prepared.Portraits) is { } portraitBatch)
+            {
+                if (bootstrap)
+                {
+                    await _preparation.ConfirmUnchangedAsync(_source, prepared, mine.Token).ConfigureAwait(false);
+                    EnsureCurrent(generation, mine);
+                    portraitStorage = AccountResourceStorageOutcome.Unknown;
+                    try
+                    {
+                        await PortraitPngStore.WriteAsync(PortraitConnection(SqliteOpenMode.ReadWriteCreate), portraitBatch.Plan,
+                            portraitBatch.Rebuild, () => { _bootstrapHooks?.BeforePortraitCommitAdmission?.Invoke(); EnsureCurrent(generation, mine); }, mine.Token).ConfigureAwait(false);
+                        portraitStorage = AccountResourceStorageOutcome.Committed;
+                    }
+                    catch (Exception error)
+                    {
+                        portraitStorage = error.Data[ResourceInventoryDatabase.OutcomeKey] switch
+                        {
+                            ResourceInventoryWriteOutcome.NotCommitted => AccountResourceStorageOutcome.NotCommitted,
+                            ResourceInventoryWriteOutcome.Committed => AccountResourceStorageOutcome.Committed,
+                            _ => AccountResourceStorageOutcome.Unknown
+                        };
+                        throw;
+                    }
+                }
+                EnsureCurrent(generation, mine);
+                if (bootstrap || File.Exists(_portraits))
+                    portraits = await PortraitPngStore.ReadAsync(PortraitConnection(SqliteOpenMode.ReadOnly), portraitBatch.Plan,
+                        portraitBatch.Rebuild, () => EnsureCurrent(generation, mine), mine.Token).ConfigureAwait(false);
+            }
             await _preparation.ConfirmUnchangedAsync(_source, prepared, mine.Token).ConfigureAwait(false);
             sourcesRechecked = true;
             preparedResult = prepared;
@@ -316,13 +360,13 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         EnsureCurrent(generation, mine);
-                        publication = _current = new(this, generation, preparedResult!, readbackCandidate, itemImages);
+                        publication = _current = new(this, generation, preparedResult!, readbackCandidate, itemImages, portraits);
                     }
                 }
                 catch (Exception error) { failure = error; }
             }
             return new(storageAttempted, storage, mine.CommitAdmitted, receipt, readback,
-                sourcesRechecked, publication, failure) { ItemImageStorageOutcome = imageStorage };
+                sourcesRechecked, publication, failure) { ItemImageStorageOutcome = imageStorage, PortraitStorageOutcome = portraitStorage };
         }
         finally
         {
@@ -349,6 +393,9 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
         var connection = await CreateConnectionAsync(SqliteOpenMode.ReadOnly).ConfigureAwait(false);
         return await ResourceInventoryWriteBaseline.CaptureAsync(connection, token).ConfigureAwait(false);
     }
+
+    private SqliteConnection PortraitConnection(SqliteOpenMode mode) => new(new SqliteConnectionStringBuilder
+    { DataSource = _portraits, Mode = mode, Cache = SqliteCacheMode.Private, Pooling = false, DefaultTimeout = 5 }.ToString());
 
     private SqliteConnection ImageConnection(SqliteOpenMode mode) => new(new SqliteConnectionStringBuilder
     { DataSource = _itemImages, Mode = mode, Cache = SqliteCacheMode.Private, Pooling = false, DefaultTimeout = 5 }.ToString());

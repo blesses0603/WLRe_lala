@@ -223,7 +223,7 @@ internal sealed class BundleSourcePreparation
             pair => (IReadOnlyList<VerifiedBundleSource>)pair.Value.Select(name => owned[name]).ToArray(), StringComparer.Ordinal);
     }
 
-    // Uninstalled until the exact material/shader/PPtr decoder and publication are composed.
+    // Optional portrait acquisition for the exact reviewed projection.
     // Uses the same attempt, aggregate budget and cache; never loads a Unity dependency closure.
     internal async Task<PortraitSourcePlan.VerifiedPortraitSources> PreparePortraitSourcesAsync(IResourceSource source,
         RequiredBundleSources required, IBundleSourceCacheReader? cache, BundleSourceBudget? budget,

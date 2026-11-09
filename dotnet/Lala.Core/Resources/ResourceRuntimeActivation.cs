@@ -15,6 +15,9 @@ internal sealed class ResourceRuntimeActivation(ResourceRuntimeOwner owner, Reso
     internal bool IsActive => owner.IsCurrentActivation(this, publication);
     internal bool HasItemImages => IsActive && publication.ItemImages is not null;
     internal bool TryReadItemImage(ushort itemId, out byte[]? png) => owner.TryReadItemImage(this, publication, itemId, out png);
+    internal bool HasPortraits => IsActive && publication.Portraits is not null;
+    internal bool TryReadPortrait(PortraitMaterialKey key, out PortraitCachedImage? image)
+        => owner.TryReadPortrait(this, publication, key, out image);
     internal bool CanLogin => false;
     internal bool CanSendPackets => false;
 

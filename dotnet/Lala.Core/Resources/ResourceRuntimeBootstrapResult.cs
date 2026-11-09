@@ -13,6 +13,7 @@ internal sealed class ResourceRuntimeBootstrapResult(bool storageAttempted, Reso
     bool sourcesRechecked, ResourceRuntimePublication? publication, Exception? failure)
 {
     internal AccountResourceStorageOutcome ItemImageStorageOutcome { get; init; } = AccountResourceStorageOutcome.NotAttempted;
+    internal AccountResourceStorageOutcome PortraitStorageOutcome { get; init; } = AccountResourceStorageOutcome.NotAttempted;
     internal bool StorageAttempted { get; } = storageAttempted;
     internal ResourceInventoryWriteOutcome StorageOutcome { get; } = storageOutcome;
     internal bool CommitAdmitted { get; } = commitAdmitted;
@@ -33,6 +34,8 @@ internal sealed class ResourceRuntimeBootstrapTestHooks
 {
     // Owned synthetic image injection tests storage/revocation only; offline owners never admit.
     internal Func<OfflinePreparedRuntimeCandidate, ItemImageBatch>? ItemImagesForOfflineTest { get; init; }
+    internal Func<OfflinePreparedRuntimeCandidate, PortraitRuntimeBatch>? PortraitsForOfflineTest { get; init; }
+    internal Action? BeforePortraitCommitAdmission { get; init; }
     internal Action? BeforeImageCommitAdmission { get; init; }
     internal Func<SqliteConnection, DbConnection>? WrapConnection { get; init; }
     internal Func<Task>? BeforeWrite { get; init; }

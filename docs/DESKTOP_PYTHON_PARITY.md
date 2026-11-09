@@ -194,3 +194,7 @@ C# 原本只有技能 ID 的名稱查找也接入目前已驗證可選技能目�
 ## 8.0.59 頭像 PNG／SQLite 整批回讀
 
 新增壓縮 PNG 及交易式整批寫入／獨立重建回讀；保留容量與來源重查。尚未接 production 或顯示，詳見 [快取驗證與限制](DOTNET_PORTRAIT_CACHE.md)。
+
+## 8.0.60 頭像 production 準備與撤銷
+
+固定已審查來源接入背景準備、快取回讀與可撤銷 publication；下載確認顯示頭像資料庫路徑。角色映射、配色顯示、表情及小地圖仍待完成，詳見 [本批範圍與限制](DOTNET_PORTRAIT_PUBLICATION.md)。

@@ -50,6 +50,12 @@ internal sealed class AccountResourceBinding
         if (!HasSameAccountSnapshot || !_activation.TryReadItemImage(itemId, out var bytes) || !HasSameAccountSnapshot) return false;
         png = bytes; return true;
     }
+    internal bool TryReadPortrait(PortraitMaterialKey key, out PortraitCachedImage? image)
+    {
+        image = null;
+        if (!HasSameAccountSnapshot || !_activation.TryReadPortrait(key, out var selected) || !HasSameAccountSnapshot) return false;
+        image = selected; return true;
+    }
     internal bool TryReadCatalogs(out OfflineRuntimeCandidate? catalogs)
     {
         catalogs = null;

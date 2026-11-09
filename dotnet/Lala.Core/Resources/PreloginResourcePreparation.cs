@@ -8,6 +8,7 @@ public enum PreloginResourceStatus { Ready, NotAdmitted, Cancelled, Failed }
 public sealed record PreloginResourceResult(PreloginResourceStatus Status, AccountResourceStorageOutcome StorageOutcome,
     bool ReadbackMatched, bool SourcesRechecked)
 {
+    public AccountResourceStorageOutcome PortraitStorageOutcome { get; init; } = AccountResourceStorageOutcome.NotAttempted;
     public AccountResourceStorageOutcome ItemImageStorageOutcome { get; init; } = AccountResourceStorageOutcome.NotAttempted;
     public bool CanLogin => false;
     public bool CanSendPackets => false;
@@ -86,7 +87,7 @@ public sealed class PreloginResourcePreparation : IAsyncDisposable
                 _ => AccountResourceStorageOutcome.Unknown
             };
             return new(status, storage, result.Readback == ResourceRuntimeReadback.Matched, result.SourcesRechecked)
-                { ItemImageStorageOutcome = result.ItemImageStorageOutcome };
+                { ItemImageStorageOutcome = result.ItemImageStorageOutcome, PortraitStorageOutcome = result.PortraitStorageOutcome };
         }
     }
     public void Stop()

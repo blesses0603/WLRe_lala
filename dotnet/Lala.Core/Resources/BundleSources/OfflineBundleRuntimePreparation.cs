@@ -10,6 +10,7 @@ internal sealed class OfflinePreparedRuntimeCandidate
     internal OfflineRuntimeCandidate Candidate { get; }
     internal ManifestIdentity Identity { get; }
     internal ItemImageBatch? ItemImages { get; }
+    internal PortraitRuntimeBatch? Portraits { get; }
     internal ResourceInventoryInput InventoryInput { get; }
     internal RequiredBundleSources RecheckContext { get; }
     internal string ManifestContentIdentity { get; }
@@ -27,9 +28,9 @@ internal sealed class OfflinePreparedRuntimeCandidate
     internal string Static1275Admission => "unavailable";
     internal OfflinePreparedRuntimeCandidate(OfflineRuntimeCandidate candidate, RequiredBundleSources sources,
         ResourceInventoryInput inventory, ManifestIdentity identity, BundleDownloadTotals? downloads = null,
-        IEnumerable<VerifiedBundleSource>? verifiedSources = null, ItemImageBatch? itemImages = null)
+        IEnumerable<VerifiedBundleSource>? verifiedSources = null, ItemImageBatch? itemImages = null, PortraitRuntimeBatch? portraits = null)
     {
-        RecheckContext = sources; ItemImages = itemImages;
+        RecheckContext = sources; ItemImages = itemImages; Portraits = portraits;
         Identity = identity; InventoryInput = inventory;
         Candidate = candidate; ManifestContentIdentity = sources.ManifestContentIdentity; Attempt = sources.Attempt;
         DownloadCount = downloads?.Count ?? sources.DownloadCount; DownloadBytes = downloads?.Bytes ?? sources.DownloadBytes;
@@ -169,6 +170,21 @@ internal sealed class OfflineBundleRuntimePreparation
             catch (Exception error) when (IsOptionalFailure(error) || error is SpritePixelException) { }
             _preparation.EnsureCurrent(prepared, cancellationToken);
         }
+        PortraitRuntimeBatch? portraits = null;
+        // Only the reviewed fixed projection can fetch portrait sources; unknown versions
+        // leave this optional family absent without widening source or decode acceptance.
+        if (prepared.Snapshot.DataVersion == PortraitSourcePlan.DataVersion &&
+            imageManifest.Header.PackageVersion == PortraitSourcePlan.MainVersion)
+        {
+            try
+            {
+                var selected = await _preparation.PreparePortraitSourcesAsync(source, prepared, cache, budget, downloads, cancellationToken).ConfigureAwait(false);
+                portraits = PortraitRuntimeBatch.Create(selected, cancellationToken);
+                foreach (var handle in selected.Sources.Values) handles.TryAdd(handle.Spec.Name, handle);
+            }
+            catch (Exception error) when (IsOptionalFailure(error) || error is SpritePixelException) { }
+            _preparation.EnsureCurrent(prepared, cancellationToken);
+        }
         // Persist precisely the native-extracted arrays, not reserialized decoded rows or
         // caller-provided hashes. Capture detaches every payload under the original limits.
         var inventory = ResourceInventoryInput.Capture(identity.Key, tables.Keys
@@ -190,7 +206,7 @@ internal sealed class OfflineBundleRuntimePreparation
         _preparation.EnsureCurrent(prepared, cancellationToken);
         await _preparation.ConfirmUnchangedAsync(source, prepared, cancellationToken).ConfigureAwait(false);
         return _preparation.ReturnCurrent(prepared, new OfflinePreparedRuntimeCandidate(candidate, prepared, inventory, identity,
-            downloads, handles.Values, itemImages), cancellationToken);
+            downloads, handles.Values, itemImages, portraits), cancellationToken);
     }
     private static bool IsOptionalFailure(Exception error) => !error.Data.Contains(ResourceCleanup.FailureMarker) &&
         error is not ResourceTransportException { Failure: ResourceTransportFailure.Cleanup } &&

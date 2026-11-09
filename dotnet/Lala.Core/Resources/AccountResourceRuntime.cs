@@ -12,6 +12,7 @@ public sealed record AccountResourcePreparationResult(
     long AccountGeneration, AccountResourcePreparationStatus Status,
     AccountResourceStorageOutcome StorageOutcome, bool ReadbackMatched, bool SourcesRechecked)
 {
+    public AccountResourceStorageOutcome PortraitStorageOutcome { get; init; } = AccountResourceStorageOutcome.NotAttempted;
     public AccountResourceStorageOutcome ItemImageStorageOutcome { get; init; } = AccountResourceStorageOutcome.NotAttempted;
     public bool WasBound => Status == AccountResourcePreparationStatus.Bound;
     public bool CanLogin => false;
@@ -148,7 +149,8 @@ public sealed class AccountResourceRuntime : IAsyncDisposable
                     ? AccountResourcePreparationStatus.NotAdmitted : AccountResourcePreparationStatus.AccountChanged;
                 return new(expectedGeneration, status, StorageOutcome(result),
                     result?.Readback == ResourceRuntimeReadback.Matched, result?.SourcesRechecked == true)
-                    { ItemImageStorageOutcome = result?.ItemImageStorageOutcome ?? AccountResourceStorageOutcome.NotAttempted };
+                    { ItemImageStorageOutcome = result?.ItemImageStorageOutcome ?? AccountResourceStorageOutcome.NotAttempted,
+                        PortraitStorageOutcome = result?.PortraitStorageOutcome ?? AccountResourceStorageOutcome.NotAttempted };
             }
         }
         finally { lock (_gate) _running = false; }
