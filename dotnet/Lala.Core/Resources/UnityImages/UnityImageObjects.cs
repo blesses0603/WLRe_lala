@@ -27,7 +27,8 @@ internal static class UnityImageShapes
     }
 }
 internal sealed record UnityTexturePixels(string Name, TexturePixelLayout Layout, ReadOnlyMemory<byte> Payload, int ColorSpace);
-internal sealed record UnitySpritePixels(string Name, UnityContainerPointer Texture, SpritePixelRect Rect);
+internal sealed record UnitySpritePixels(string Name, UnityContainerPointer Texture, SpritePixelRect Rect,
+    UnityAtlasKey? RenderKey = null, UnityContainerPointer? Atlas = null, SpritePixelRect? LogicalRect = null);
 
 internal static class UnityImageObjects
 {
@@ -62,15 +63,19 @@ internal static class UnityImageObjects
         Require(length == expected && complete == length, "Texture image size mismatch");
         token.ThrowIfCancellationRequested(); return new(name, new(width, height, format), payload, colorSpace);
     }
-    internal static UnitySpritePixels Sprite(ReadOnlyMemory<byte> bytes, CancellationToken token)
+    internal static UnitySpritePixels Sprite(ReadOnlyMemory<byte> bytes, CancellationToken token, bool allowAtlas = false)
     {
         token.ThrowIfCancellationRequested(); var r = new UnityReadCursor(bytes); string name = r.String(1024, false);
         var main = Rect(r); Floats(r, 2); Floats(r, 4);
         Require(Float(r) > 0, "Invalid sprite pixels-to-units"); Floats(r, 2); r.U32();
         Require(!Bool(r), "Polygon sprite unsupported"); r.Align();
-        r.Take(24); // renderDataKey (never used for atlas fallback)
-        EmptyAlignedArray(r); ZeroPointer(r); r.Align(); // tags / atlas
-        var texture = Pointer(r); Require(texture.FileId == 0 && texture.PathId != 0, "Sprite texture must be same-file non-null PPtr");
+        var key = new UnityAtlasKey(r.U32(),r.U32(),r.U32(),r.U32(),r.I64());
+        int tags = r.Count(allowAtlas ? 16 : 0,4);
+        for(int i=0;i<tags;i++){token.ThrowIfCancellationRequested();r.String(1024,false);}r.Align();
+        var atlas = Pointer(r);r.Align();bool atlasMode = atlas.PathId != 0;
+        Require(atlas.FileId is >=0 and <=128 && (atlasMode ? allowAtlas : atlas.FileId==0&&tags==0), "Unreviewed atlas pointer or name fallback");
+        var texture = Pointer(r);
+        Require(atlasMode ? texture.FileId is >=0 and <=128 && (texture.PathId!=0||texture.FileId==0) : texture.FileId == 0 && texture.PathId != 0, "Unsupported Sprite texture pointer");
         ZeroPointer(r); EmptyAlignedArray(r); // alpha / secondaryTextures
         // Full-rect decoding does not use geometry. Bound all fields nonetheless; no mesh authority escapes.
         int meshes = r.Count(128, 48);
@@ -81,8 +86,14 @@ internal static class UnityImageObjects
         int vertices = r.Count(4 * 1024 * 1024, 1); r.Take(vertices); r.Align();
         EmptyAlignedArray(r); // bindpose
         var rect = Rect(r); Floats(r, 2); Floats(r, 2); uint settings = r.U32(); Floats(r, 4);
-        Require(Float(r) == 1 && settings == 2, "Unreviewed downscale/packing/tight mesh"); r.Align();
+        float downscale=Float(r);
+        Require(atlasMode || downscale == 1 && settings == 2, "Unreviewed downscale/packing/tight mesh"); r.Align();
         EmptyAlignedArray(r); EmptyAlignedArray(r); r.End(); // physics shapes / bones
+        if(atlasMode)
+        {
+            Require(main.Width is >0 and <=512 && main.Height is >0 and <=512 && main.Width==MathF.Truncate(main.Width)&&main.Height==MathF.Truncate(main.Height),"Invalid atlas Sprite logical size");
+            token.ThrowIfCancellationRequested();return new(name,texture,rect with { SettingsRaw=settings,HasAtlas=true },key,atlas,main);
+        }
         Require(main.Width == rect.Width && main.Height == rect.Height && rect.Width is > 0 and <= 512 && rect.Height is > 0 and <= 512,
             "Sprite logical/render dimensions differ or exceed limit");
         Require(rect.X >= 0 && rect.Y >= 0 && rect.X <= 2048 && rect.Y <= 2048 &&

@@ -68,7 +68,7 @@ internal sealed class BoundedSerializedFile
             else if (obj.ClassId == 687078895) UnityAtlasObjects.Read(obj.Bytes, token);
             else if (obj.ClassId == 21) UnityMaterialObjects.Read(obj.Bytes, token);
             else if (obj.ClassId == 28) UnityImageObjects.Texture(obj.Bytes, token);
-            else if (obj.ClassId == 213) UnityImageObjects.Sprite(obj.Bytes, token);
+            else if (obj.ClassId == 213) UnityImageObjects.Sprite(obj.Bytes, token, allowAtlases);
             else ValidateText(obj.Bytes, token); // Also validate unused objects; no unchecked layout escapes.
         }
         return new() { Identity = identity, Objects = objects, Externals = external.AsReadOnly(), Container = container };
