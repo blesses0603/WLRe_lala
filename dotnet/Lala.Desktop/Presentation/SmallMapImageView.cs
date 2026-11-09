@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using System.Security.Cryptography;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
@@ -10,6 +11,22 @@ namespace Lala.Desktop;
 internal sealed class SmallMapImageView:Grid,IAsyncDisposable
 {
     internal sealed record Input(string Identity,string Hash,Func<bool> Current,Func<byte[]?> Read);
+    private sealed class Marker:Control
+    {
+        internal SmallMapPixel? Pixel;
+        public override void Render(DrawingContext context)
+        {
+            base.Render(context);if(Pixel is not {} pixel)return;
+            double size=Math.Min(Bounds.Width,Bounds.Height);if(size<=0)return;
+            var center=new Point((Bounds.Width-size)/2+pixel.X*size/1024,(Bounds.Height-size)/2+pixel.Y*size/1024);
+            using(context.PushClip(new Rect(Bounds.Size)))context.DrawEllipse(Brushes.Red,new Pen(Brushes.White,1),center,6,6);
+        }
+    }
+    private readonly Marker marker=new(){IsHitTestVisible=false};private SmallMapPixel? position;
+    internal SmallMapPixel? DisplayedMarker=>marker.Pixel;
+    internal void SetMarker(SmallMapPixel? pixel)
+    {Dispatcher.UIThread.VerifyAccess();position=pixel is {} p&&double.IsFinite(p.X)&&double.IsFinite(p.Y)&&p.X>=0&&p.X<=1024&&p.Y>=0&&p.Y<=1024?p:null;UpdateMarker();}
+    private void UpdateMarker(){marker.Pixel=!closed&&DisplayedIdentity is not null&&desired is not null&&Current(desired)?position:null;marker.InvalidateVisual();}
     private readonly Image image=new(){Stretch=Stretch.Uniform};
     private readonly TextBlock status=Ui.Text("尚未同步小地圖",12,Ui.Muted);
     private readonly DispatcherTimer timer=new(){Interval=TimeSpan.FromMilliseconds(200)};
@@ -19,16 +36,16 @@ internal sealed class SmallMapImageView:Grid,IAsyncDisposable
     internal bool IsWorking {get;private set;}
     internal string? DisplayedIdentity {get;private set;}
     internal SmallMapImageView()
-    {Children.Add(image);Children.Add(status);timer.Tick+=(_,_)=>{if(desired is not null&&!Current(desired))Update((Input?)null);};timer.Start();}
+    {Children.Add(image);Children.Add(marker);Children.Add(status);timer.Tick+=(_,_)=>{if(desired is not null&&!Current(desired))Update((Input?)null);};timer.Start();}
     private static bool Current(Input input){try{return input.Current();}catch{return false;}}
     internal void Update(SmallMapRenderRequest? request)=>Update(request is null?(Input?)null:new Input(request.Identity,request.PngSha256,()=>request.IsCurrent,()=>request.TryReadPng(out var png)?png:null));
     internal void Update(Input? next)
     {
         Dispatcher.UIThread.VerifyAccess();if(closed)return;if(next is not null&&!Current(next))next=null;
         if(desired?.Identity!=next?.Identity||desired is not null&&!Current(desired)){stop?.Cancel();Clear();failed=null;}
-        desired=next;Start();
+        desired=next;UpdateMarker();Start();
     }
-    private void Clear(){image.Source=null;bitmap?.Dispose();bitmap=null;DisplayedIdentity=null;status.IsVisible=true;status.Text="尚未同步小地圖";}
+    private void Clear(){image.Source=null;bitmap?.Dispose();bitmap=null;DisplayedIdentity=null;UpdateMarker();status.IsVisible=true;status.Text="尚未同步小地圖";}
     private void Start()
     {
         if(desired is not null&&!Current(desired)){desired=null;Clear();}
@@ -51,7 +68,7 @@ internal sealed class SmallMapImageView:Grid,IAsyncDisposable
                 if(decoded.PixelSize.Width!=1024||decoded.PixelSize.Height!=1024)throw new InvalidDataException("Small map geometry differs");
             },cancellation.Token);
             if(!closed&&!cancellation.IsCancellationRequested&&desired?.Identity==input.Identity&&Current(input)&&Current(desired))
-            {Clear();bitmap=decoded;decoded=null;image.Source=bitmap;DisplayedIdentity=input.Identity;status.IsVisible=false;}
+            {Clear();bitmap=decoded;decoded=null;image.Source=bitmap;DisplayedIdentity=input.Identity;status.IsVisible=false;UpdateMarker();}
         }
         catch(OperationCanceledException) when(cancellation.IsCancellationRequested||!Current(input)){}
         catch(Exception){if(!closed&&desired?.Identity==input.Identity){failed=input.Identity;status.Text="小地圖未通過驗證，請重新準備資源。";}}

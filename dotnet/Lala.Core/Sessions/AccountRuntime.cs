@@ -302,7 +302,7 @@ public sealed class AccountRuntime : IAsyncDisposable
         {
             request=null;var(status,receive)=connection.ReadPublication();
             if(!CurrentCatalogsLocked(status,receive,out var catalogs)||receive?.State.Player?.Scene!=scene||!catalogs!.Stages.TryGetValue(scene,out var stage))return false;
-            var result=resources.ReadSmallMap(stage.ModelId,()=>SmallMapIsCurrent(scene,stage.ModelId));
+            var result=resources.ReadSmallMap(scene,()=>SmallMapIsCurrent(scene,stage.ModelId));
             if(result?.IsCurrent!=true)return false;request=result;return true;
         }
     }

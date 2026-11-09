@@ -19,8 +19,9 @@ internal sealed class ResourceRuntimeActivation(ResourceRuntimeOwner owner, Reso
     internal bool TryReadEmoji(byte token,out byte[]? png)=>owner.TryReadEmoji(this,publication,token,out png);
     internal EmojiGalleryRequest? CreateEmojiGallery(Func<bool> accountCurrent)
         => IsActive&&publication.Emojis is {} batch?new(batch,()=>IsActive&&accountCurrent()):null;
-    internal SmallMapRenderRequest? CreateSmallMap(int model,Func<bool> accountCurrent)
-        =>IsActive&&publication.SmallMaps is {} maps&&maps.Contains(model)?new(maps,model,()=>IsActive&&accountCurrent()):null;
+    internal SmallMapRenderRequest? CreateSmallMap(ushort scene,Func<bool> accountCurrent)
+        =>IsActive&&publication.SmallMaps is {} maps&&publication.Candidate.Stages.TryGetValue(scene,out var stage)&&maps.Contains(stage.ModelId)
+            ?new(maps,stage.ModelId,()=>IsActive&&accountCurrent(),SmallMapProjection.Create(stage)):null;
     internal bool HasPortraits => IsActive && publication.Portraits is not null;
     internal bool TryReadPortrait(PortraitMaterialKey key, out PortraitCachedImage? image)
         => owner.TryReadPortrait(this, publication, key, out image);

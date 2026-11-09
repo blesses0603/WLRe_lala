@@ -27,7 +27,7 @@ public sealed class AccountResourceDisclosure
     public string VersionMapUrl => $"https://{OfficialResourceOrigin.DefaultHost}/WLN/TW/ResourcePath_PC.dat";
     public string ResourceUrlPrefix => $"https://{OfficialResourceOrigin.DefaultHost}/WLN/TW/";
     public string Purpose => "Acquire official HTTPS version metadata, DataPackage and MainPackage " +
-        "manifests, required bundles and supported optional item-image and reviewed portrait and emoji bundles; bootstrap and independently read back the fixed SQLite resource inventory, item-image cache, portrait cache and emoji cache.";
+        "manifests, required bundles and supported optional item-image and reviewed portrait, emoji and small-map bundles; bootstrap and independently read back the fixed SQLite resource inventory, item-image cache, portrait cache, emoji cache and small-map cache.";
     public string Writes => "Create directories, persist verified bundles and temporary files in BundleCacheDirectory, " +
         "and create or update InventoryPath, ItemImageCachePath, PortraitCachePath, EmojiCachePath and SmallMapCachePath (including SQLite journal files). Stop does not undo completed writes.";
     internal AccountResourceDisclosure(string absoluteDataRoot)

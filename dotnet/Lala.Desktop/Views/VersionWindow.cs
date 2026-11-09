@@ -142,7 +142,7 @@ public sealed class VersionWindow : DesktopWindow
             Ui.Text("官方 HTTPS：" + disclosure.ResourceUrlPrefix), Ui.Text("SQLite：" + disclosure.InventoryPath), Ui.Text("物品圖快取：" + disclosure.ItemImageCachePath), Ui.Text("頭像快取：" + disclosure.PortraitCachePath), Ui.Text("表情快取（驗證通過後寫入）：" + disclosure.EmojiCachePath), Ui.Text("小地圖快取（驗證通過後寫入）：" + disclosure.SmallMapCachePath), Ui.Text("小地圖串流階段最多 4 檔／64 MiB；其餘下載額度不變。"),
             Ui.Text("Bundle 快取：" + disclosure.BundleCacheDirectory),
             Ui.Text("將建立目錄、寫入驗證過的 Bundle、暫存檔及 SQLite／journal，再獨立回讀及重查版本與 Manifest。停止不會撤銷已完成或結果不明的寫入，不自動重試。"),
-            Ui.Text("準備必要資料表、受支援物品圖及已審查版本的頭像與表情快取；圖資未通過來源、格式或像素驗證時保持不可用。頭像僅在來源與角色映射驗證後顯示；表情僅在整批來源、像素及回讀驗證後顯示；小地圖僅在來源、像素、SQLite 回讀及目前地圖綁定有效時顯示，不提供位置標記或導航操作；不授權登入或遊戲指令。"),
+            Ui.Text("準備必要資料表、受支援物品圖及已審查版本的頭像與表情快取；圖資未通過來源、格式或像素驗證時保持不可用。頭像僅在來源與角色映射驗證後顯示；表情僅在整批來源、像素及回讀驗證後顯示；小地圖僅在來源、像素、SQLite 回讀及目前地圖綁定有效時顯示，僅標示當前已確認位置，不提供導航操作；不授權登入或遊戲指令。"),
             Ui.Row(Ui.Button("取消", () => dialog.Close(false), "PreloginCancel"), Ui.Button("確認下載與寫入", () => dialog.Close(true), "PreloginConfirm"))) };
         bool approved;
         using (token.Register(() => Avalonia.Threading.Dispatcher.UIThread.Post(() => dialog.Close(false))))

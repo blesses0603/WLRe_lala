@@ -60,8 +60,8 @@ internal sealed class AccountResourceBinding
         if(!IsCurrent)return null;var result=_activation.CreateEmojiGallery(()=>IsCurrent);
         return IsCurrent?result:null;
     }
-    internal SmallMapRenderRequest? ReadSmallMap(int model,Func<bool> selectionCurrent)
-    {if(!IsCurrent)return null;var result=_activation.CreateSmallMap(model,()=>IsCurrent&&selectionCurrent());return IsCurrent?result:null;}
+    internal SmallMapRenderRequest? ReadSmallMap(ushort scene,Func<bool> selectionCurrent)
+    {if(!IsCurrent)return null;var result=_activation.CreateSmallMap(scene,()=>IsCurrent&&selectionCurrent());return IsCurrent?result:null;}
     internal bool TryReadPortrait(PortraitMaterialKey key, out PortraitCachedImage? image)
     {
         image = null;

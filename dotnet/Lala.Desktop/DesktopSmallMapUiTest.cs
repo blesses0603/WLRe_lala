@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using Lala.Core.Resources;
 namespace Lala.Desktop;
 internal static class DesktopSmallMapUiTest
 {
@@ -19,9 +20,13 @@ internal static class DesktopSmallMapUiTest
         try
         {
             var input=new SmallMapImageView.Input("owned-map",hash,()=>current,()=>png);view.Update(input);await Until(()=>view.DisplayedIdentity==input.Identity);
-            Check(view.DecodeCount==1,"one decode");for(int i=0;i<10;i++)view.Update(input);window.Width=450;await Task.Delay(50);Check(view.DecodeCount==1,"repaint and resize reuse bitmap");
+            Check(view.DecodeCount==1,"one decode");
+            view.SetMarker(new SmallMapPixel(512,512));Check(view.DisplayedMarker==new SmallMapPixel(512,512),"confirmed pixel marker overlays current image");
+            view.SetMarker(new SmallMapPixel(100,200));Check(view.DisplayedMarker==new SmallMapPixel(100,200)&&view.DecodeCount==1,"position changes do not decode image");
+            view.SetMarker(new SmallMapPixel(double.NaN,200));Check(view.DisplayedMarker is null,"nonfinite marker hidden");
+            view.SetMarker(new SmallMapPixel(512,512));for(int i=0;i<10;i++)view.Update(input);window.Width=450;await Task.Delay(50);Check(view.DecodeCount==1,"repaint and resize reuse bitmap");
             using(var render=new RenderTargetBitmap(new PixelSize(450,300),new Vector(96,96))){render.Render(view);using var output=new MemoryStream();render.Save(output,PngBitmapEncoderOptions.Default);Check(output.Length>8,"native render");}
-            current=false;await Until(()=>view.DisplayedIdentity is null);Check(!view.IsWorking,"revocation clears bitmap");
+            current=false;await Until(()=>view.DisplayedIdentity is null);Check(!view.IsWorking&&view.DisplayedMarker is null,"revocation clears bitmap and marker");
             view.Update(new SmallMapImageView.Input("bad",new string('0',64),()=>true,()=>png));await Until(()=>!view.IsWorking);Check(view.DisplayedIdentity is null&&view.DecodeCount==1,"bad hash rejected before native decode");
             using var release=new ManualResetEventSlim();var entered=new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             view.Update(new SmallMapImageView.Input("late",hash,()=>true,()=>{entered.SetResult();release.Wait();return png;}));await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));

@@ -178,8 +178,8 @@ public sealed class AccountResourceRuntime : IAsyncDisposable
     {
         lock(_gate){png=null;return !_disposed&&_binding is not null&&_binding.TryReadEmoji(token,out png);}
     }
-    internal SmallMapRenderRequest? ReadSmallMap(int model,Func<bool> selectionCurrent)
-    {lock(_gate)return !_disposed?_binding?.ReadSmallMap(model,selectionCurrent):null;}
+    internal SmallMapRenderRequest? ReadSmallMap(ushort scene,Func<bool> selectionCurrent)
+    {lock(_gate)return !_disposed?_binding?.ReadSmallMap(scene,selectionCurrent):null;}
     internal EmojiGalleryRequest? ReadEmojiGallery()
     {lock(_gate)return !_disposed?_binding?.ReadEmojiGallery():null;}
     internal bool TrySelectPortrait(Lala.Core.Protocol.WorldPlayer? player,Lala.Core.Inventory.CompanionReceiveSnapshot companions,

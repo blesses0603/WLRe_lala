@@ -140,9 +140,12 @@ public sealed class MapView : UserControl,IAsyncDisposable
         var player = world.Player;
         title.Text = player is null ? "小地圖｜等待角色地圖" : "小地圖｜" + view.Labels.Scene(player.Scene);
         ToolTip.SetTip(title, title.Text);
-        var mapRequest=player is null?null:session.ReadSmallMap(player.Scene);picture.Update(mapRequest);
-        mapMessage.Text = mapRequest is not null ? "地圖預覽；角色位置尚未標示" : player is null ? "尚未同步小地圖" : "此地圖的同版圖片\n尚未同步";
+        var mapRequest=player is null?null:session.ReadSmallMap(view.Snapshot,player.Scene);picture.Update(mapRequest);
+        mapMessage.Text = mapRequest is not null ? "地圖預覽" : player is null ? "尚未同步小地圖" : "此地圖的同版圖片\n尚未同步";
         var confirmed = world.Location.Confirmed;
+        Lala.Core.Resources.SmallMapPixel? marker=null;
+        if(player is not null&&world.Location.ConfirmedIsCurrent&&confirmed?.Scene==player.Scene&&mapRequest?.TryProjectPosition(confirmed.X,confirmed.Y,out var pixel)==true)marker=pixel;
+        picture.SetMarker(marker);
         position.Text = player is not null && world.Location.ConfirmedIsCurrent && confirmed?.Scene == player.Scene
             ? $"已確認座標\n{confirmed.X}, {confirmed.Y}" : "等待角色位置同步…";
         navigationStatus.Text = player is null ? "導航：等待目前地圖。" : "導航：等待同版地圖與導航資料。";

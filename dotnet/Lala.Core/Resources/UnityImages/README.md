@@ -1,3 +1,5 @@
+> 8.0.76: current-scene Python projection and confirmed-position overlay; official production resource owner bootstrap/read-only refresh, 562-map publication/revocation and 799 synthetic scene positions verified. Live account/game-screen acceptance remains pending. [Details](../../../../docs/DOTNET_SMALLMAP_RECEIPTS.md).
+
 > 8.0.75: bounded small-map disk acquisition, version rechecks, private PNG publication and revocable current-scene desktop rendering are connected. Integrated official acceptance and coordinate mapping remain pending. [Details](../../../../docs/DOTNET_SMALLMAP_RECEIPTS.md).
 
 > Production emoji activation is still capacity-blocked: required tables plus emoji closure total 33,772,710 bytes, above unchanged 33,554,432 retained-byte bound, including cache hits. Factory validation is not full production activation.

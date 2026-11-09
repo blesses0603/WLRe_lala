@@ -1,4 +1,4 @@
-# ver 8.0.75 小地圖下載協調與撤銷顯示
+# ver 8.0.76 小地圖座標映射與正式資源驗證
 
 ## 固定來源工廠
 
@@ -30,9 +30,9 @@ v8.0.73 `1cdd473ccc4882212423bcfd8e8e5371f241ac09`：.NET run 42706007943 四平
 
 準備階段在取得前後及 owner 發布前重新觀察版本／manifest。SQLite 發布回讀逐圖重新解碼、比較後捕獲私有 PNG；後續 cache 變更不改變已捕獲 bytes。owner 必須完成 source batch 清理並確認仍為目前 attempt 才發布。新準備、停止、帳號替換或目前場景改變均使讀圖要求失效。
 
-桌面依當前接收場景與 Stage model 選圖，在背景驗證 PNG hash／1024 尺寸並解碼。相同 identity 重用 Bitmap，200 ms 檢查撤銷，關閉取消並等待既有讀取／解碼，晚到結果不重新顯示。這只提供底圖預覽，座標仍以既有已確認文字顯示；沒有猜測像素座標、目的地選取或導航發送。
+桌面依當前接收場景與 Stage model 選圖，在背景驗證 PNG hash／1024 尺寸並解碼。相同 identity 重用 Bitmap，200 ms 檢查撤銷，關閉取消並等待既有讀取／解碼，晚到結果不重新顯示。底圖上新增目前場景已確認位置標記，位置變更不重新解碼圖片；不提供目的地選取或導航發送。
 
-**未完成**：整合 production owner／帳號／桌面的官方正向驗收、場景座標映射及完整圖資。下述 v8.0.74 官方資料診斷不等於新整合路徑驗收；本批測試使用自有 fixture／合成畫面，不連正式遊戲服務。
+**未完成**：正式帳號／桌面遊戲畫面正向驗收及完整圖資。production 資源 owner 與當前場景投影的後續驗證見 v8.0.76 段落。下述 v8.0.74 官方資料診斷不等於新整合路徑驗收；本批測試使用自有 fixture／合成畫面，不連正式遊戲服務。
 
 
 ## v8.0.74 官方來源正向診斷及 CI 修正
@@ -52,3 +52,21 @@ Core 的虛擬 archive 索引確認邏輯大小 362,827,948 bytes，其中 Seria
 新增離線下載／來源／長度／checksum／取消／晚到撤銷、單次 quota、快取重用、HTTP 舊新上限、PNG 複本與讀取中撤銷測試。owner 測試確認自有必要表不能通過 1296 固定來源雜湊，且尚未進入小地圖下載／寫入；不放寬 parser 以製造成功案例。原生小地圖 7 項驗證一次解碼、10 次相同更新及縮放不追加解碼、原生 render、撤銷清圖、錯 hash 拒絕與關閉等待；主流程 198 項及既有頭像／表情／登入測試通過，皆合成／loopback。
 
 最終本機強制重建零警告／錯誤，完整 Core **45,883** 通過；公用 Core consumer、Python 倉庫／UnityPy 包裝 **9**、Desktop Release 零警告／錯誤及離線 **81** 通過。原生 UI 主流程 **198**，另小地圖 **7**、頭像 **13**、表情 **24**、catalog **10**／資源確認 **6**／登入 loopback **11** 全通過；無正式登入或遊戲指令。
+
+## v8.0.76 場景投影
+
+對照 `wlre/services/world/smallmaps.py` 的正式 `SmallMaps.projection` 與 `Projection.packet_to_pixel`：width／height 為 65535 時取 6992，rate=100×(1024−24)/max(width,height)，u=x×0.01×rate+small_offset_x，v=1024−((height−y)×0.01×rate+small_offset_y)。使用同次 publication 的 Stage row，不套用歷史導航 origin，也不再次乘 PosXRatio／PosYRatio。尺寸零、偏移超過 1024、無 model、非有限值、封包範圍外或畫布外結果不顯示標記。
+
+讀圖 request 的投影和 PNG 一樣在操作前後檢查當前性；場景替換、帳號或資源撤銷後失效。桌面讀圖前後還檢查同一 `ServiceStateSnapshot`，避免跨帳號的同 scene id 混用位置。標記只用 `ConfirmedIsCurrent` 且 scene 相同的已確認座標；目前沒有本機預測、路徑、傳點或 NPC 標記，也沒有導航發送。縮放採與底圖相同的置中等比例 square；位置更新只刷新標記。
+
+六組數值直接由 repo Python Projection 執行取得，涵蓋長寬比、雙／單邊 sentinel、最小尺寸及邊界；另測無效幾何、NaN／Infinity／負值／封包與畫布越界、缺投影及操作中撤銷。這些是純座標數學，不構成遊戲移動權限。
+
+## v8.0.76 正式資源 owner 診斷
+
+使用原本 `ResourceRuntimeOwner.Create`，無注入 source／decoder／假信任旗標，在新的私有資料目錄執行 production BootstrapAndRefresh。結果 WasPublished=true、SourcesRechecked=true、SmallMapStorageOutcome=Committed、SmallMapDownloadCount=1、SmallMapDownloadBytes=43,187,027、562 張、ResourceAdmitted=true、Failure=null；activation 成功，Dispose 後 activation 失效並完成清理。這是官方 HTTPS 資源流程，沒有 AccountRuntime、帳密、遊戲 socket 或遊戲命令。官方 payload、PNG／SQLite 不提交 repo。
+
+2026-11-09T23:21:59Z，以相同私有目錄走 production `RefreshWithResultAsync`：WasPublished／SourcesRechecked／ResourceAdmitted 均 true、Failure=null，小地圖下載 0 檔／0 bytes，寫入 NotAttempted，562 張。刷新前後小地圖 SQLite 整檔 SHA 相同。DataVer 1.3.23，DataPackage 1296_2026_11_04_13_34_19_13，manifest SHA `1dc1c74a9c9824085c91fe5504d1190b40e4b619751625a44e95c7d9a1adc358`；MainPackage 1296_2026_11_04_13_36_07_72，manifest SHA `faaab749110cf9e68be784e613e94579d51e92015ad8ef21e68de4aebbb5ba98`。小地圖 source／batch 指紋與前批相同。
+
+由 owner-issued activation 為 799 個有圖場景取得 request，採各場景測試中心點；真實 repo Python Projection 對照全部 799 結果相符。這些是合成位置，不是真實玩家位置；至少一個 request 的 PNG 複本 SHA 通過，owner Dispose 後 activation、PNG 讀取及位置投影全部失效。正式帳號接收／遊戲畫面仍未驗收，沒有任何遊戲 socket／命令。
+
+本批最終強制重建零警告／錯誤，Core **45,901** 全通過（新增 18 項）；Desktop Release 零警告／錯誤、離線 **81**，原生主流程 **198** 加小地圖 **10**、頭像 **13**、表情 **24**、catalog **10**／資源確認 **6**／登入 loopback **11** 通過。公用 Core consumer 與 Python 倉庫／UnityPy 包裝 **9** 通過。正式資源診斷與合成 UI 證據分開，沒有以合成位置宣稱正式玩家位置驗收。

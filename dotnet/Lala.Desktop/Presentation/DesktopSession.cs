@@ -67,12 +67,12 @@ public sealed class DesktopSession : IDisposable
     }
     internal void SetSmallMapReader(long expectedGeneration,Func<ushort,SmallMapRenderRequest?>? reader)
     {lock(gate){if(disposed||generation!=expectedGeneration)return;smallMapReader=reader;}Changed?.Invoke();}
-    internal SmallMapRenderRequest? ReadSmallMap(ushort scene)
+    internal SmallMapRenderRequest? ReadSmallMap(ServiceStateSnapshot observed,ushort scene)
     {
         Func<ushort,SmallMapRenderRequest?>? reader;long expected;
-        lock(gate){if(disposed)return null;reader=smallMapReader;expected=generation;}
+        lock(gate){if(disposed||!ReferenceEquals(snapshot,observed))return null;reader=smallMapReader;expected=generation;}
         var result=reader?.Invoke(scene);if(result?.IsCurrent!=true)return null;
-        lock(gate)return !disposed&&generation==expected&&ReferenceEquals(reader,smallMapReader)?result:null;
+        lock(gate)return !disposed&&generation==expected&&ReferenceEquals(snapshot,observed)&&ReferenceEquals(reader,smallMapReader)?result:null;
     }
     internal void SetEmojiReader(long expectedGeneration,Func<EmojiGalleryRequest?>? reader)
     {lock(gate){if(disposed||generation!=expectedGeneration)return;emojiReader=reader;}Changed?.Invoke();}
