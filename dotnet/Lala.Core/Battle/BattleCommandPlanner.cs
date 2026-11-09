@@ -145,7 +145,7 @@ public static class BattleCommandPlanner
         return proposals.Count == 0 ? new([],new("ProtocolError","本回合可操作單位皆已送出，或沒有存活的本機角色／夥伴")) : new(proposals.ToImmutable(),null);
     }
 
-    private static BattleCommandCandidate Adapt(CombatResourceActionCandidate candidate)
+    internal static BattleCommandCandidate Adapt(CombatResourceActionCandidate candidate)
     {
         if (candidate.Error is { } error) return new(null,error);
         var value = candidate.Intent!;

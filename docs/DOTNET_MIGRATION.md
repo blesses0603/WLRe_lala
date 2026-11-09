@@ -1915,3 +1915,20 @@ Windows/macOS/Android device or official-server acceptance.
 No real credentials or official-server acceptance is involved. The overall PR marker
 advances to 8.0.33 once; reconstruction and same-batch repairs do not increment it
 again, and platform/Core/Desktop project version settings remain unchanged.
+
+
+### Overall PR development marker 8.0.34: battle rule candidate chooser
+
+Port the actual Python AutoBattle.choose_action priority and target-selection rules
+onto the existing pure action, skill and food candidate planners. Typed immutable
+profiles are bounded, sparse evidence remains explicit, and only the source's
+ProtocolError failures permit rule fallthrough. Results contain candidate intent and
+reason or error, never send authority.
+
+This increment does not install AutoBattle.tick, timers, reservations, settings
+persistence, Desktop UI or AccountRuntime actor projection. Independent review found
+no blockers. Fresh checks passed: 1,032 focused, 44,766 full Core, external public
+consumer, 76 lifecycle, 36 synthetic acceptance, 17 Linux PTY and 35 release/version
+checks. The 1,005 actual-Python vectors regenerate identically. No real credentials,
+game commands or official-server acceptance are involved. Only the overall PR marker advances once
+to 8.0.34; same-batch repairs and platform/Core/Desktop project versions are unchanged.
