@@ -1,0 +1,165 @@
+{
+  "source": "wlre/services/world/portrait_render.py",
+  "sha256": "bb46c4e85a409ce346e9c861615e34b8c6224244432bcbd6961efcfa8361b6ed",
+  "vectors": [
+    {
+      "seed": 0,
+      "palettes": {},
+      "colors": {},
+      "clip": 0.2199999988079071,
+      "edge": 0,
+      "sha256": "f5453fc81f1f2bc34ec7d20a28781857209b63c98afc7761e7e0c5d2e1a2ed1a"
+    },
+    {
+      "seed": 1,
+      "palettes": {
+        "1": 123456789
+      },
+      "colors": {},
+      "clip": 0.05999999865889549,
+      "edge": 0,
+      "sha256": "a33df15f7aefccae2030be2a6ddaca76ce74f3dcd751cdfd69d5775fed081672"
+    },
+    {
+      "seed": 2,
+      "palettes": {
+        "2": 987654321,
+        "3": 102030405,
+        "4": 901234567,
+        "5": 123456789
+      },
+      "colors": {},
+      "clip": -1,
+      "edge": 0,
+      "sha256": "1211d726d23320c84a5db08d490f5d74c98a26b9835e8d8a9fe210b2d1a64fee"
+    },
+    {
+      "seed": 3,
+      "palettes": {
+        "1": 0,
+        "5": 999999999
+      },
+      "colors": {},
+      "clip": 1,
+      "edge": 0,
+      "sha256": "bce94ec2389519388381a73ce2ff1eb8b203c99c657b83fc171906d6ae8d50de"
+    },
+    {
+      "seed": 4,
+      "palettes": {
+        "1": 444900444
+      },
+      "colors": {},
+      "clip": 0.22,
+      "edge": 0,
+      "sha256": "232500a46e2cd804e7194634de19c612586bc06bccf68eba424cf8828f2ebf6d"
+    },
+    {
+      "seed": 5,
+      "palettes": {},
+      "colors": {
+        "_1_1_HairColor": [
+          2.5,
+          7.5,
+          1.25
+        ],
+        "_13_EyeColor_": [
+          9,
+          0,
+          5
+        ]
+      },
+      "clip": 0.2199999988079071,
+      "edge": 0.12,
+      "sha256": "4e85ff0828584478dd5c01647c4376273c67b51ad78224d2c5ecc9933e5bc733"
+    },
+    {
+      "seed": 6,
+      "palettes": {
+        "1": 123456789
+      },
+      "colors": {
+        "_1_1_HairColor": [
+          2.5,
+          7.5,
+          1.25
+        ],
+        "_13_EyeColor_": [
+          9,
+          0,
+          5
+        ]
+      },
+      "clip": 0.05999999865889549,
+      "edge": 0.12,
+      "sha256": "2b85676567d3a2c3b23f38c375eb77ae76b5ce60a2dcc5154a01891103b44658"
+    },
+    {
+      "seed": 7,
+      "palettes": {
+        "2": 987654321,
+        "3": 102030405,
+        "4": 901234567,
+        "5": 123456789
+      },
+      "colors": {
+        "_1_1_HairColor": [
+          2.5,
+          7.5,
+          1.25
+        ],
+        "_13_EyeColor_": [
+          9,
+          0,
+          5
+        ]
+      },
+      "clip": -1,
+      "edge": 0.12,
+      "sha256": "931ce3e6d3dbda5046bb1b842193fb326e4d53a929d704390549fa7581dbadb2"
+    },
+    {
+      "seed": 8,
+      "palettes": {
+        "1": 0,
+        "5": 999999999
+      },
+      "colors": {
+        "_1_1_HairColor": [
+          2.5,
+          7.5,
+          1.25
+        ],
+        "_13_EyeColor_": [
+          9,
+          0,
+          5
+        ]
+      },
+      "clip": 1,
+      "edge": 0.12,
+      "sha256": "faf2c729d17d2b9a6c52d8adab8d9a1feeb2575dcda998589173492f1743896b"
+    },
+    {
+      "seed": 9,
+      "palettes": {
+        "1": 444900444
+      },
+      "colors": {
+        "_1_1_HairColor": [
+          2.5,
+          7.5,
+          1.25
+        ],
+        "_13_EyeColor_": [
+          9,
+          0,
+          5
+        ]
+      },
+      "clip": 0.22,
+      "edge": 0.12,
+      "sha256": "72f1c1c3a1e697309f335470b86015c80a56582e0b0cbc31e0c2f4a1b8e3fcf9"
+    }
+  ]
+}

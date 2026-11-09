@@ -29,4 +29,5 @@
 <ItemGroup><EmbeddedResource Include="Resources/UnityImages/item_mapping_vectors.json" LogicalName="Lala.Core.Tests.Resources.UnityImages.item_mapping_vectors.json" /></ItemGroup>
 <ItemGroup><EmbeddedResource Include="Resources/UnityImages/block_vectors.json" LogicalName="Lala.Core.Tests.Resources.UnityImages.block_vectors.json" /></ItemGroup>
 <ItemGroup><EmbeddedResource Include="Resources/UnityImages/block_serialized.json" LogicalName="Lala.Core.Tests.Resources.UnityImages.block_serialized.json" /></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Resources/Portraits/vectors.json" LogicalName="Lala.Core.Tests.Resources.Portraits.vectors.json" /></ItemGroup>
 </Project>

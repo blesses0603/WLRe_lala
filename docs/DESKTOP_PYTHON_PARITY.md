@@ -1,4 +1,4 @@
-# PR #79 ver 8.0.53：Python 桌面介面對照盤點
+# PR #79 ver 8.0.54：Python 桌面介面對照盤點
 
 範圍是全部桌面畫面及其子視窗，保留使用者較新的「背包／特技各自獨立視窗」要求。參照 PR 原 head `59416bde817f39035176ae9c1e2eeb5b23896d58` 中 Python 7.3.1 原始碼；本批未改 Python，也未聲稱已全部移植完成。
 
@@ -170,3 +170,7 @@ C# 原本只有技能 ID 的名稱查找也接入目前已驗證可選技能目�
 - https://learn.microsoft.com/en-us/windows/win32/direct3d10/d3d10-graphics-programming-guide-resources-block-compression
 
 尚缺：實際官方圖片正向驗收、頭像材質／遮罩、SpriteAtlas 表情、小地圖與全 Python 介面對齊。本批只做合成／loopback，不連正式服，不改 HasVisualAssets=false；恢復量仍未知。
+
+## 8.0.54 頭像前置層與格位重建
+
+新增 Core 離線頭像配色投影，尚未接 production；背包相同內容不再重建整頁控制項，但仍逐格重查圖片來源。來源、測試與三類圖資剩餘相依見 [本批說明](DOTNET_PORTRAIT_RENDERING.md)。v8.0.53 macOS Python 已完成，該提交兩組 CI 全部成功。

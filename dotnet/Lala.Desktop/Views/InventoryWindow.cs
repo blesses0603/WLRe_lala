@@ -71,6 +71,7 @@ public sealed class InventoryWindow : DesktopWindow
     internal int VisibleBagImageCount => bag.ImageCount;
     internal int BagImageDecodeCount => bag.DecodeCount;
     internal int BagRetainedImageCount => bag.RetainedImageCount;
+    internal int BagCellBuildCount => bag.CellBuildCount;
     public int BagPageIndex => bag.PageIndex;
     public ushort? SelectedBagIndex => bag.SelectedIndex;
     public string BagDetailsText => bag.DetailsText;
@@ -143,12 +144,16 @@ internal sealed class InventoryGrid : UserControl
     {
         foreach (var cell in cells) if (cell is not null) cell.Content = null;
         imageCache.Dispose();
+        Array.Clear(cellStates);
         bitmaps.Clear();
     }
     private const int Columns = 6;
     private const int Rows = 4;
     private const int PageSize = Columns * Rows;
     private readonly Button[] cells = new Button[PageSize];
+    private sealed record CellState(InventoryDisplayItem? Item, bool Selected, Bitmap? Bitmap);
+    private readonly CellState?[] cellStates = new CellState?[PageSize];
+    internal int CellBuildCount { get; private set; }
     private readonly TextBlock summary = Ui.Text("等待背包同步", 12, Ui.Muted);
     private readonly TextBlock pageLabel = Ui.Text("1 / 1");
     private readonly TextBlock title = Ui.Text("物品資訊", 16, bold: true);
@@ -294,15 +299,21 @@ internal sealed class InventoryGrid : UserControl
 
     private void Paint()
     {
-        foreach (var cell in cells) if (cell is not null) cell.Content = null;
         bitmaps.Clear(); imageCache.BeginFrame();
         for (var position = 0; position < PageSize; position++)
         {
             var index = page * PageSize + position;
             var item = index < items.Length ? items[index] : null;
             var cell = cells[position];
-            cell.IsEnabled = item is not null;
             var selected = item is not null && item.Index == selectedIndex && item.ItemId == selectedItemId;
+            // Still obtain current admitted bytes on every refresh, even when the row is unchanged.
+            Bitmap? bitmap = item is null ? null : imageCache.Read(ImageReader, item.ItemId);
+            if (bitmap is not null) bitmaps.Add(bitmap);
+            var state = new CellState(item, selected, bitmap);
+            if (state == cellStates[position]) continue;
+            cellStates[position] = state;
+            cell.Content = null;
+            cell.IsEnabled = item is not null;
             cell.Background = Brush.Parse(selected ? "#244f67" : "#132d40");
             cell.BorderBrush = selected ? Ui.Accent : Brush.Parse("#3a627a");
             if (item is null)
@@ -312,13 +323,12 @@ internal sealed class InventoryGrid : UserControl
                 ToolTip.SetTip(cell, "尚無對應物品資料，不代表已解鎖的背包容量。");
                 continue;
             }
+            CellBuildCount++;
             var tile = new Grid { RowDefinitions = new RowDefinitions("*,Auto") };
             var label = Ui.Text(item.Name, 13);
             label.TextAlignment = TextAlignment.Center;
             label.TextTrimming = TextTrimming.CharacterEllipsis;
             label.MaxLines = 2;
-            Bitmap? bitmap = imageCache.Read(ImageReader, item.ItemId);
-            if (bitmap is not null) bitmaps.Add(bitmap);
             if (bitmap is null) Ui.At(tile, label, 0);
             else
             {

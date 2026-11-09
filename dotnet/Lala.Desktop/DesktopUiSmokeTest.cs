@@ -267,11 +267,17 @@ internal static class DesktopUiSmokeTest
             Check(inventory.BagImageDecodeCount == 1 && inventory.BagRetainedImageCount == 1,
                 "24 identical current PNGs share one native decode, previously 24 per refresh");
             int decodeCount = inventory.BagImageDecodeCount;
+            int cellBuildCount = inventory.BagCellBuildCount;
             int sourceReads = 0;
             for (int refresh = 0; refresh < 10; refresh++) session.SetItemImageReader(session.Generation, _ => { sourceReads++; return ownedPng.ToArray(); });
             await Settle(inventory);
             Check(inventory.BagImageDecodeCount == decodeCount, "ten unchanged refreshes add zero native decodes, previously 240");
             Check(sourceReads >= 240, "bitmap reuse still rechecks current source for every visible item on each refresh");
+            Check(inventory.BagCellBuildCount == cellBuildCount, "ten unchanged refreshes rebuild zero inventory tiles, previously 240");
+            inventory.SelectBagItem(1);
+            Check(inventory.BagCellBuildCount == cellBuildCount + 1, "first selection updates only the selected tile");
+            inventory.SelectBagItem(2);
+            Check(inventory.BagCellBuildCount == cellBuildCount + 3, "selection change rebuilds only previous and current tiles");
             await Capture(inventory, "06-item-images-owned");
             byte[] changedPng = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNg+M/wHwAEAQH/cetH5QAAAABJRU5ErkJggg==");
             session.SetItemImageReader(session.Generation, _ => changedPng.ToArray());
