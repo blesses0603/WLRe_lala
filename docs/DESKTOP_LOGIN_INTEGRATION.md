@@ -1,4 +1,4 @@
-# Desktop login integration — overall PR 8.0.42
+# Desktop login integration — overall PR 8.0.43
 
 The Avalonia login and role controls use shared Core preparation. The Python-compatible
 server/line dropdowns now load official HTTPS metadata through `OfficialServerDiscovery`.
@@ -9,6 +9,9 @@ for provenance, limitations and the remaining UI work. Credentials are never per
 
 ## User flow and transport risk
 
+0. Startup opens the separate version/resource window. It queries official metadata and can
+   inspect a user-selected local resource root read-only. This is not full resource activation;
+   local self-consistency cannot admit login. Continue requires fresh supported metadata.
 1. Select a server and line from the verified current catalog, then enter credentials locally.
    Changing the server/line or refreshing clears both credential fields.
 2. Press Login. The controls freeze for this attempt; input transfers into Core-owned

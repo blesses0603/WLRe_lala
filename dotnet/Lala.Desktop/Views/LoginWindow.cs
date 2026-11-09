@@ -39,10 +39,10 @@ public sealed class LoginWindow : DesktopWindow, IAccountLoginInput, IAccountRol
     private bool closePending;
     private readonly Button preview, inspector;
 
-    public LoginWindow(DesktopSession session, Action openPreview, Action openInspector)
-        : this(session, openPreview, openInspector, Program.UiSmokeTest ? new OfflineDesktopServerCatalog() : new OfficialDesktopServerCatalog()) { }
+    public LoginWindow(DesktopSession session, Action openPreview, Action openInspector, Action? openVersion = null)
+        : this(session, openPreview, openInspector, Program.UiSmokeTest ? new OfflineDesktopServerCatalog() : new OfficialDesktopServerCatalog(), openVersion) { }
 
-    internal LoginWindow(DesktopSession session, Action openPreview, Action openInspector, IDesktopServerCatalog catalogSource)
+    internal LoginWindow(DesktopSession session, Action openPreview, Action openInspector, IDesktopServerCatalog catalogSource, Action? openVersion = null)
         : base("飄流Re:LaLa  =By赤寧= · 登入／選角", 900, 620)
     {
         this.catalogSource = catalogSource;
@@ -56,7 +56,7 @@ public sealed class LoginWindow : DesktopWindow, IAccountLoginInput, IAccountRol
         account.TextChanged += (_, _) => ClearSecrets();
         servers.SelectionChanged += (_, _) => SelectServer();
         lines.SelectionChanged += (_, _) => { account.Text = ""; ClearSecrets(); UpdateAdmission(); };
-        refresh = Ui.Button("版本檢測", () => StartDiscovery(), "LoginVersionCheck");
+        refresh = Ui.Button("版本檢測", () => { if (openVersion is null) StartDiscovery(); else { ClearSecrets(); openVersion(); } }, "LoginVersionCheck");
         submit.IsEnabled = false;
         Opened += (_, _) => StartDiscovery();
         var body = new StackPanel { Spacing = 8 };

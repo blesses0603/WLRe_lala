@@ -2061,3 +2061,12 @@ feature windows and a complete source/geometry/gap inventory; resource activatio
 several projections, local editors and child dialogs remain incomplete. This is not
 full Python UI parity or live acceptance. See [the inventory](DESKTOP_PYTHON_PARITY.md).
 The overall marker advances once; platform versions remain unchanged.
+
+### Overall PR development marker 8.0.43: startup version and read-only resources
+
+The dedicated Python-style startup window displays actual official version/package metadata
+and invokes Core's read-only resource inventory inspector on an explicitly selected local root.
+Login/dashboard navigation shares this window. Failures, stale metadata, cancellation and
+local consistency cannot admit resources or game commands. Full resource activation,
+background observation and application updates remain incomplete. See the parity inventory.
+Platform versions remain unchanged; no live login or real credentials were used.

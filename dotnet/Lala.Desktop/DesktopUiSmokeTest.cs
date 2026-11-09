@@ -40,6 +40,7 @@ internal static class DesktopUiSmokeTest
             {
                 await EmptyAndLoginAsync();
                 await DesktopLoginUiTest.RunAsync();
+                await VersionEntryAsync();
                 Publish(fixture.State, fixture.Labels);
                 await Settle(dashboard);
                 await Capture(dashboard, "02-dashboard-observed");
@@ -58,6 +59,77 @@ internal static class DesktopUiSmokeTest
                 session.Reset();
                 dashboard.SelectEventTab();
             }
+        }
+
+        private sealed class VersionCatalog(Func<CancellationToken, Task<DesktopServerCatalogSnapshot>> load) : IDesktopServerCatalog
+        {
+            public Task<DesktopServerCatalogSnapshot> LoadAsync(CancellationToken token) => load(token);
+        }
+        private async Task VersionEntryAsync()
+        {
+            int entered = 0;
+            var profile = new Lala.Core.Sessions.AccountConnectionProfile(new(System.Net.IPAddress.Loopback, 1), new(System.Net.IPAddress.Loopback, 2), 173, 173, 1, 3, 0);
+            var current = new DesktopServerCatalogSnapshot([new(101, "地球", "1線", profile)], "合成公開版本", System.Diagnostics.Stopwatch.GetTimestamp());
+            current = current with { Version = Lala.Core.Resources.OfficialVersionSnapshot.Parse(System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(new
+            {
+                schema_version = 1, origin = "official_pc_version_endpoint", data_ver = "1.2.3", exe_version = "1.3.0",
+                packages = new { DataPackage = "1275_2026_10_21_18_27_33_84", MainPackage = "1275_2026_10_21_18_29_38_49" },
+                checked_at_utc = "2026-11-09T00:00:00Z", assets_ready = false
+            })) };
+            bool fail = false;
+            var source = new VersionCatalog(_ => fail ? Task.FromException<DesktopServerCatalogSnapshot>(new IOException("secret error details")) : Task.FromResult(current));
+            var window = Show(new VersionWindow(() => entered++, () => { }, () => { }, source, Lala.Core.Resources.ResourceInventoryInspector.InspectAsync));
+            await window.Pending; await Settle(window);
+            Check(Find<TextBlock>(window, "VersionMetadata").Text!.Contains("MainPackage：1275_") && Find<TextBlock>(window, "VersionMetadata").Text!.Contains("資料版本：1.2.3"), "version display uses observed metadata fields");
+            Check(Find<Button>(window, "VersionContinue").IsEnabled, "supported fresh metadata allows only controlled login entry");
+            Click(window, "VersionContinue"); Check(entered == 1 && !session.CanSendGameCommands, "version entry never enables commands");
+            var root = Path.Combine(Path.GetTempPath(), "lala-version-fixture-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                await window.InspectAsync(root);
+                Check(Find<TextBlock>(window, "VersionInventory").Text!.Contains("找不到"), "real Core inspector reports missing local database");
+                Check(!Directory.Exists(root), "read-only inspection never creates missing data directories");
+                var directory = Path.Combine(root, "official_sync", "derived_catalogs"); Directory.CreateDirectory(directory);
+                var db = Path.Combine(directory, "resource_inventory.sqlite3"); await File.WriteAllTextAsync(db, "synthetic invalid database");
+                await window.InspectAsync(root);
+                Check(Find<TextBlock>(window, "VersionInventory").Text!.Contains("無效"), "real Core inspector reports corrupt synthetic database");
+                Check(await File.ReadAllTextAsync(db) == "synthetic invalid database", "inspection never repairs or overwrites database");
+                await Capture(window, "29-version-resources");
+                fail = true; await window.RefreshAsync();
+                Check(!Find<Button>(window, "VersionContinue").IsEnabled, "failed refresh revokes previous admission");
+                Check(!Find<TextBlock>(window, "VersionStatus").Text!.Contains("secret"), "version errors are sanitized");
+                fail = false; current = current with { ObservedAt = System.Diagnostics.Stopwatch.GetTimestamp() - 301L * System.Diagnostics.Stopwatch.Frequency };
+                await window.RefreshAsync(); Check(!Find<Button>(window, "VersionContinue").IsEnabled, "stale version observation blocks entry");
+            }
+            finally { await window.StopAsync(); window.Close(); if (Directory.Exists(root)) Directory.Delete(root, true); }
+            var began = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var released = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var waiting = Show(new VersionWindow(() => entered++, () => { }, () => { }, new VersionCatalog(async token =>
+            {
+                began.SetResult();
+                try { await Task.Delay(Timeout.Infinite, token); return current; }
+                finally { released.SetResult(); }
+            }), Lala.Core.Resources.ResourceInventoryInspector.InspectAsync));
+            await began.Task; await waiting.StopAsync();
+            Check(released.Task.IsCompleted && !Find<Button>(waiting, "VersionContinue").IsEnabled, "version stop awaits source cleanup and rejects late admission");
+            waiting.Close();
+            var consistent = Show(new VersionWindow(() => entered++, () => { }, () => { }, new OfflineDesktopServerCatalog(),
+                (_, _) => Task.FromResult(new Lala.Core.Resources.ResourceInventoryInspection(Lala.Core.Resources.ResourceInventoryInspectionStatus.SelfConsistent, "synthetic", "1.2.3", "1.3.0", 5, 100))));
+            await consistent.Pending; await consistent.InspectAsync(Path.GetTempPath());
+            Check(Find<TextBlock>(consistent, "VersionInventory").Text!.Contains("不代表官方驗證") && !Find<Button>(consistent, "VersionContinue").IsEnabled,
+                "self-consistency alone never admits login or resources");
+            await consistent.StopAsync(); consistent.Close();
+            using (var navigation = new DesktopWindows(session, () => { }))
+            {
+                navigation.Version.Show(); await navigation.Version.Pending;
+                Check(navigation.Version.IsVisible && !navigation.Login.IsVisible, "version entry initially keeps credentials hidden");
+                navigation.OpenLogin(); await Settle(navigation.Login);
+                Check(navigation.Login.IsVisible && !navigation.Version.IsVisible, "login navigation hides the version window");
+                Click(navigation.Login, "LoginVersionCheck"); await navigation.Version.Pending;
+                Check(navigation.Version.IsVisible && !navigation.Login.IsVisible, "login version button returns to shared resource entry");
+                await navigation.Version.StopAsync(); await navigation.Login.ShutdownAsync();
+            }
+            Progress("版本入口、唯讀資源檢查與取消清理");
         }
 
         private async Task PythonParityWindowsAsync()

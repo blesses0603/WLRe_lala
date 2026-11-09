@@ -50,7 +50,7 @@ public sealed class DashboardWindow : DesktopWindow
         Ui.At(header, Ui.Text("桌面開發版｜登入接收與唯讀資料", 13, Ui.Muted), 0, 1);
         connection.HorizontalAlignment = HorizontalAlignment.Right;
         Ui.At(header, connection, 1, 1, 2);
-        Ui.At(header, Ui.Text("官方版本與資源狀態：尚未同步", 12, Ui.Muted), 0, 2, 3);
+        Ui.At(header, Ui.Button("官方版本與資源檢查", () => windows.OpenVersion(), "OpenVersion"), 0, 2, 3);
         Ui.At(body, header, 0);
 
         var content = new Grid { ColumnDefinitions = new ColumnDefinitions("870,380"), ColumnSpacing = 10 };

@@ -32,7 +32,7 @@ public sealed class DesktopApplication : Application
             session = new(preferences);
             windows = new(session, () => desktop.Shutdown());
             desktop.ShutdownRequested += (_, args) => { args.Cancel = true; windows.RequestShutdown(); };
-            desktop.MainWindow = Program.UiSmokeTest ? windows.Dashboard : windows.Login;
+            desktop.MainWindow = Program.UiSmokeTest ? windows.Dashboard : windows.Version;
             if (Program.UiSmokeTest)
                 windows.Dashboard.Opened += (_, _) => Dispatcher.UIThread.Post(async () =>
                 {
@@ -69,11 +69,14 @@ public sealed class DesktopWindows : IDisposable
     private bool shutdownRequested;
     public DashboardWindow Dashboard { get; }
     public LoginWindow Login { get; }
+    public VersionWindow Version { get; }
     public DesktopWindows(DesktopSession session, Action shutdown)
     {
         this.session = session; this.shutdown = shutdown;
         Dashboard = new(session, this);
-        Login = new(session, OpenMain, () => OpenInspector());
+        Version = new(() => OpenLogin(), OpenMain, RequestShutdown);
+        Version.Closing += (_, args) => { if (!disposed) { args.Cancel = true; RequestShutdown(); } };
+        Login = new(session, OpenMain, () => OpenInspector(), () => OpenVersion());
         Dashboard.Closing += (_, args) => { if (!disposed) { args.Cancel = true; RequestShutdown(); } };
         Login.Closing += (_, args) =>
         {
@@ -85,12 +88,19 @@ public sealed class DesktopWindows : IDisposable
     }
     public void OpenMain()
     {
-        Login.ClearSecrets(); Login.Hide();
+        Version.Hide(); Login.ClearSecrets(); Login.Hide();
         if (!Dashboard.IsVisible) Dashboard.Show();
         Dashboard.Activate();
     }
+    public VersionWindow OpenVersion()
+    {
+        Login.ClearSecrets(); Login.Hide();
+        if (!Version.IsVisible) Version.Show();
+        Version.Activate(); return Version;
+    }
     public LoginWindow OpenLogin()
     {
+        Version.Hide();
         if (!Login.IsVisible) { if (Dashboard.IsVisible) Login.Show(Dashboard); else Login.Show(); }
         Login.StartDiscovery(); Login.Activate(); return Login;
     }
@@ -108,7 +118,7 @@ public sealed class DesktopWindows : IDisposable
     {
         if (disposed || shutdownRequested) return;
         shutdownRequested = true;
-        Dispatcher.UIThread.Post(async () => { await Login.ShutdownAsync(); Dispose(); shutdown(); });
+        Dispatcher.UIThread.Post(async () => { await Version.StopAsync(); await Login.ShutdownAsync(); Dispose(); shutdown(); });
     }
     private T Get<T>(string key, Func<T> create, bool preserve = false) where T : Window
     {
@@ -141,7 +151,7 @@ public sealed class DesktopWindows : IDisposable
     {
         if (disposed) return; disposed = true;
         foreach (var entry in features.Values.ToArray()) entry.Window.Close();
-        features.Clear(); Login.ClearSecrets(); Login.Close(); Dashboard.Close();
+        features.Clear(); Version.Close(); Login.ClearSecrets(); Login.Close(); Dashboard.Close();
     }
     private sealed record FeatureWindow(Window Window, long Generation);
 }

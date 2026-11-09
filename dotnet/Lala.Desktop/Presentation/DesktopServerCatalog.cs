@@ -8,6 +8,7 @@ namespace Lala.Desktop;
 internal sealed record DesktopServerLine(int Id, string Group, string Label, AccountConnectionProfile? Profile);
 internal sealed record DesktopServerCatalogSnapshot(IReadOnlyList<DesktopServerLine> Lines, string Status, long ObservedAt)
 {
+    internal Lala.Core.Resources.OfficialVersionSnapshot? Version { get; init; }
     internal bool IsFresh => Stopwatch.GetElapsedTime(ObservedAt) < TimeSpan.FromMinutes(5);
 }
 internal interface IDesktopServerCatalog
@@ -36,7 +37,7 @@ internal sealed class OfficialDesktopServerCatalog : IDesktopServerCatalog
             line.GroupId switch { 1 => "地球", 2 => "水星", _ => "未支援伺服器" },
             $"{line.Id % 100}線", ProfileFor(snapshot, line))).ToArray();
         return new(lines, $"官方伺服器清單 · {new Uri(snapshot.ExactUrl).Host} · {snapshot.Version.DataVersion}｜" +
-            (snapshot.Version.ExeVersion == "1.3.0" ? "協定沿用 Python 版已觀測設定；資源仍 Held" : "官方執行版本未知，登入已阻擋"), Stopwatch.GetTimestamp());
+            (snapshot.Version.ExeVersion == "1.3.0" ? "協定沿用 Python 版已觀測設定；資源仍 Held" : "官方執行版本未知，登入已阻擋"), Stopwatch.GetTimestamp()) { Version = snapshot.Version };
     }
 }
 
