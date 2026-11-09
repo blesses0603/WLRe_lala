@@ -75,12 +75,21 @@ internal sealed class BundleSourcePlan
     internal static BundleSourcePlan CreateInstances(YooAssetManifest current, string dataVersion, CancellationToken token)
         => CreateCore(current, dataVersion, null, new[] { DungeonAssetPath, CooperativeAssetPath }, token);
 
+    internal static BundleSourcePlan CreateItemImages(YooAssetManifest current, string dataVersion, CancellationToken token = default)
+    {
+        var paths = ItemImageMapping.Paths(current, token);
+        var plan = CreateCore(current, dataVersion, null, paths.Values.ToArray(), token, "MainPackage");
+        if (plan.Entries.Count is < 1 or > 4 || plan.Entries.Sum(entry => entry.Spec.Size) > 32L * 1024 * 1024)
+            throw new BundleSourceException(BundleSourceFailure.Budget, "Item image source closure exceeds quota");
+        return plan;
+    }
+
     private static BundleSourcePlan CreateCore(YooAssetManifest current, string dataVersion,
-        YooAssetManifest? previous, IReadOnlyList<string> assetPaths, CancellationToken cancellationToken)
+        YooAssetManifest? previous, IReadOnlyList<string> assetPaths, CancellationToken cancellationToken, string package = "DataPackage")
     {
         cancellationToken.ThrowIfCancellationRequested();
-        if (current.Header.PackageName != "DataPackage" || (previous is not null && previous.Header.PackageName != current.Header.PackageName))
-            throw new BundleSourceException(BundleSourceFailure.ManifestIdentity, "Required data tables require DataPackage");
+        if (current.Header.PackageName != package || (previous is not null && previous.Header.PackageName != current.Header.PackageName))
+            throw new BundleSourceException(BundleSourceFailure.ManifestIdentity, "Asset plan package mismatch");
         var roots = new HashSet<int>();
         foreach (string path in assetPaths)
         {

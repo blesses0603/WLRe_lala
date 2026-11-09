@@ -140,3 +140,17 @@ Python cache compatibility if required, and UI. HasVisualAssets remains false. 8
 8.0.48 local checks: all 22 new cache/PNG tests passed; Release Core build has zero warnings/errors;
 public consumer and 15 repository/release checks passed. The full Core regression and exact-head CI
 are recorded separately on PR #79; these focused results do not claim platform or official acceptance.
+
+## 8.0.49 物品圖 MainPackage 來源與映射基礎
+
+核對 Python item_image_database.py／dynamic_bundle_runtime.py 後，新增 MainPackage 精確物品圖清單及模型映射：s1000 預設圖不可缺、模型不得重複、未知物品或缺圖回退 1000；ItemData 必須提供 ReviewedDetails，舊版未知圖示欄位不猜測。映射包含圖示、寬高及 open_used，與 manifest SHA256 一起形成輸入指紋。
+
+Bundle 計畫沿用 YooAsset 完整依賴集合語意，不遞迴擴張；上限 4 個 Bundle／32 MiB。取得沿用既有受限來源、版本／manifest、checksum 及 attempt 機制，並共享必要資料的總下載／保留額度；比 Python 分開圖資額度更保守，沒有增加總配額。以檔名為鍵的既有已持有來源遇到不同 package／spec 一律拒絕，不能跨 package 誤用同名檔。
+
+本批為內部計畫／取得與唯讀映射層，尚未由 production owner 自動呼叫；未宣稱實際官方圖片成功解碼。後續仍需將每圖來源閉包、完整批次來源與映射指紋接入 PNG／SQLite，再接 owner 的版本撤銷及 UI。四類圖資、正式格式覆蓋、可撤銷 publication 與 UI 未完成，HasVisualAssets=false。
+
+Python parity is for typed item IDs. Python also coerces arbitrary values through int(); Core accepts ushort IDs only. Parsed manifests and reviewed field shapes do not grant official provenance. The new acquisition entry point remains internal and uninstalled until decoding, batch context, storage and revocation are composed.
+
+8.0.49 local focused validation: 62 mapping/source tests passed (18 new), public Core consumer and
+15 repository/release checks passed; Core Release build zero warnings/errors. All source responses are
+synthetic and Python vectors use owned inputs. Full Core regression and exact-head CI are recorded on PR #79.

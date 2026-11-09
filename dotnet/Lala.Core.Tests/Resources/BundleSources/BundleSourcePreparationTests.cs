@@ -12,6 +12,7 @@ public sealed class BundleSourcePreparationTests
         internal readonly List<string> Requests = [];
         internal readonly List<TrackingStream> Streams = [];
         internal int Observations;
+        internal readonly Dictionary<string, byte[]> Extra = new();
         internal Func<int, OfficialVersionSnapshot> Observe = _ => BundleSourceFixtures.Snapshot();
         internal Func<string, int, byte[], byte[]> Mutate = (_, _, bytes) => bytes;
         internal Func<string, ResourceResponse, ResourceResponse> Response = (_, response) => response;
@@ -30,7 +31,7 @@ public sealed class BundleSourcePreparationTests
                 "DataPackage.bytes" => Data.ToArray(), "MainPackage.bytes" => Main.ToArray(),
                 "DataPackage.hash" => Encoding.ASCII.GetBytes(ManifestIdentity.Crc32LittleEndian(Data)),
                 "MainPackage.hash" => Encoding.ASCII.GetBytes(ManifestIdentity.Crc32LittleEndian(Main)),
-                _ => BundleSourceFixtures.Payload(name)
+                _ => Extra.TryGetValue(name, out var extra) ? extra.ToArray() : BundleSourceFixtures.Payload(name)
             };
             body = Mutate(name, Requests.Count(x => x == url), body);
             var stream = new TrackingStream(body, ChunkSize, () => DuringRead?.Invoke()); Streams.Add(stream);
@@ -61,6 +62,69 @@ public sealed class BundleSourcePreparationTests
     }
     private static void Fails(BundleSourceFailure expected, BundleSourceException error) => Assert.Equal(expected, error.Failure);
     private static YooAssetManifest Parsed() => YooAssetManifest.Parse(BundleSourceFixtures.Bytes("data-valid"));
+
+    private static Script ImageScript(bool collide = false)
+    {
+        var script = new Script(); var index = BundleSourceFixtures.Index();
+        index["header"]!["package_name"] = "MainPackage";
+        var asset = index["assets"]![0]!.DeepClone(); asset["path"] = ItemImageMapping.Prefix + "s1000.png";
+        index["assets"] = new JsonArray(asset);
+        foreach (var row in index["bundles"]!.AsArray())
+        {
+            string name = row!["name"]!.GetValue<string>();
+            if (!collide) { row["name"] = "image-" + name; script.Extra["image-" + name] = BundleSourceFixtures.Payload(name); }
+        }
+        script.Main = BundleSourceFixtures.Encode(index); return script;
+    }
+    [Fact]
+    public async Task Item_images_use_MainPackage_exact_closure_and_shared_budget()
+    {
+        var script = ImageScript(); var preparation = new BundleSourcePreparation();
+        var required = await preparation.PrepareAsync(script); var totals = new BundleDownloadTotals(required.DownloadCount, required.DownloadBytes);
+        var result = await preparation.PrepareItemImagesAsync(script, required, null, null, totals, default);
+        Assert.Equal(new[] { "image-dep-a.bundle", "image-dep-b.bundle", "image-root-a.bundle" }, result.Single().Value.Select(x => x.Spec.Name));
+        Assert.All(result.Single().Value, x => Assert.Equal("MainPackage", x.Spec.Package));
+        Assert.Equal(7, totals.Count); Assert.DoesNotContain(script.Requests, x => x.EndsWith("image-unrelated.bundle"));
+        int requests = script.Requests.Count;
+        await preparation.PrepareItemImagesAsync(script, required, null, null, totals, default);
+        Assert.Equal(requests, script.Requests.Count); Assert.Equal(7, totals.Count);
+        await preparation.ConfirmUnchangedAsync(script, required, default);
+    }
+    [Fact]
+    public async Task MainPackage_same_name_cannot_reuse_DataPackage_even_identical_bytes()
+    {
+        var script = ImageScript(collide: true); var preparation = new BundleSourcePreparation();
+        var required = await preparation.PrepareAsync(script); int requests = script.Requests.Count;
+        var error = await Assert.ThrowsAsync<BundleSourceException>(() => preparation.PrepareItemImagesAsync(script, required, null, null,
+            new(required.DownloadCount, required.DownloadBytes), default));
+        Assert.Equal(BundleSourceFailure.InvalidBundle, error.Failure); Assert.Equal(requests, script.Requests.Count);
+    }
+    [Fact]
+    public async Task Image_downloads_do_not_reset_required_budget_or_stale_attempt()
+    {
+        var script = ImageScript(); var preparation = new BundleSourcePreparation(); var required = await preparation.PrepareAsync(script);
+        int requests = script.Requests.Count;
+        var error = await Assert.ThrowsAsync<BundleSourceException>(() => preparation.PrepareItemImagesAsync(script, required, null, new(6),
+            new(required.DownloadCount, required.DownloadBytes), default));
+        Assert.Equal(BundleSourceFailure.Budget, error.Failure); Assert.Equal(requests, script.Requests.Count);
+        preparation.Invalidate();
+        await Assert.ThrowsAnyAsync<Exception>(() => preparation.PrepareItemImagesAsync(script, required, null, null,
+            new(required.DownloadCount, required.DownloadBytes), default));
+        Assert.Equal(requests, script.Requests.Count);
+    }
+    [Fact]
+    public async Task Image_checksum_and_final_manifest_change_are_rejected()
+    {
+        var script = ImageScript(); var preparation = new BundleSourcePreparation(); var required = await preparation.PrepareAsync(script);
+        script.Mutate = (name, _, bytes) => { if (name.StartsWith("image-")) bytes[0] ^= 1; return bytes; };
+        var error = await Assert.ThrowsAsync<BundleSourceException>(() => preparation.PrepareItemImagesAsync(script, required, null, null,
+            new(required.DownloadCount, required.DownloadBytes), default));
+        Assert.Equal(BundleSourceFailure.Checksum, error.Failure);
+        script.Mutate = (_, _, bytes) => bytes;
+        await preparation.PrepareItemImagesAsync(script, required, null, null, new(required.DownloadCount, required.DownloadBytes), default);
+        var index = BundleSourceFixtures.Index("main-valid"); script.Main = BundleSourceFixtures.Encode(index);
+        await Assert.ThrowsAsync<BundleSourceException>(() => preparation.ConfirmUnchangedAsync(script, required, default));
+    }
 
     [Fact]
     public async Task CompletePipelineChecksBothManifestContentsAndReturnsOwnedSourcesOnly()

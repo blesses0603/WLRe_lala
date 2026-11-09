@@ -204,6 +204,15 @@ internal sealed class BundleSourcePreparation
         => PrepareOptionalAsync(source, required, cache, budget, totals,
             BundleSourcePlan.CreateInstances(required.Manifests[0], required.Snapshot.DataVersion, token), token);
 
+    // MainPackage image acquisition stays inside the existing attempt and aggregate budget.
+    // This returns owned bytes only, never image decoding, publication or UI readiness.
+    internal Task<IReadOnlyDictionary<string, IReadOnlyList<VerifiedBundleSource>>> PrepareItemImagesAsync(IResourceSource source,
+        RequiredBundleSources required, IBundleSourceCacheReader? cache, BundleSourceBudget? budget,
+        BundleDownloadTotals totals, CancellationToken token)
+        => PrepareOptionalAsync(source, required, cache, budget, totals,
+            BundleSourcePlan.CreateItemImages(required.Manifests.Single(m => m.Header.PackageName == "MainPackage"),
+                required.Snapshot.DataVersion, token), token);
+
     private async Task<IReadOnlyDictionary<string, IReadOnlyList<VerifiedBundleSource>>> PrepareOptionalAsync(IResourceSource source,
         RequiredBundleSources required, IBundleSourceCacheReader? cache, BundleSourceBudget? budget,
         BundleDownloadTotals totals, BundleSourcePlan plan, CancellationToken token)
@@ -215,6 +224,11 @@ internal sealed class BundleSourcePreparation
             throw new BundleSourceException(BundleSourceFailure.StaleAttempt, "Optional acquisition belongs to another preparation");
         var owned = totals.Owned;
         foreach (var handle in required.Sources) owned.TryAdd(handle.Spec.Name, handle);
+        // The existing cache is keyed by name. Never reuse a DataPackage handle for a
+        // MainPackage name (or any changed spec), even when the payload happens to match.
+        foreach (var entry in plan.Entries)
+            if (owned.TryGetValue(entry.Spec.Name, out var existing) && existing.Spec != entry.Spec)
+                throw new BundleSourceException(BundleSourceFailure.InvalidBundle, "Owned bundle name has a different source identity");
         var needed = plan.Entries.Where(x => !owned.ContainsKey(x.Spec.Name)).ToArray();
         long retained = owned.Values.Sum(x => x.Spec.Size) + needed.Sum(x => x.Spec.Size);
         if (retained > MaximumRetainedBytes)
