@@ -1,4 +1,4 @@
-# Desktop 資源準備接線 — PR #79 ver 8.0.45
+# Desktop 資源準備接線 — PR #79 ver 8.0.46
 
 本批在登入前接入必要資料的真實下載、驗證及 SQLite 啟用流程；圖資尚未啟用，
 不是 Python 完整資源流程或正式服驗收。
@@ -53,3 +53,7 @@ Python 在登入前比較官方 exe／data／兩個 Package，再驗證來源與
 - 全部測試只用合成／loopback／臨時檔案；未連官方 HTTP、正式服或讀取真帳密。
 
 - 本機驗證：Release build 0 警告／錯誤；Core 資源 204、原生 UI 226（29 張圖）、catalog UI 10、登入 loopback 11、資源確認 loopback 6、離線 Desktop 63、公開 consumer 與 Python 倉庫／發行 15 通過。
+
+## 8.0.46 圖像像素基礎批次
+
+已完成四種未壓縮 Texture2D 格式及未打包矩形 Sprite 的純像素解碼、完整來源／像素雜湊與記憶體快取比對。尚未解析 class 28／213 或從官方 Bundle 建立圖片；context 是觀測主張，不能授予 provenance。PNG／SQLite、實際來源解析及圖資 publication 仍未完成，登入前流程與 HasVisualAssets=false 不變。詳見 [範圍、參照與相依](../dotnet/Lala.Core/Resources/UnityImages/README.md)。
