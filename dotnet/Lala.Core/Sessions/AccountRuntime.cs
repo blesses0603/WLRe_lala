@@ -276,6 +276,16 @@ public sealed class AccountRuntime : IAsyncDisposable
         cancellationToken.ThrowIfCancellationRequested();
         return updated;
     }
+    /// <summary>Current bound item PNG only; returned bytes are a historical copy, not authority.</summary>
+    public bool TryReadItemImage(ushort itemId, out byte[]? png)
+    {
+        lock (gate)
+        {
+            png = null;
+            if (!CurrentCatalogsLocked(out _) || !resources.TryReadItemImage(itemId, out var bytes) || !CurrentCatalogsLocked(out _)) return false;
+            png = bytes; return true;
+        }
+    }
     private bool CurrentCatalogsLocked(out OfflineRuntimeCandidate? catalogs)
     {
         var (currentConnection, receive) = connection.ReadPublication();

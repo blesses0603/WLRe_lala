@@ -20,12 +20,13 @@ public sealed class AccountResourceDisclosure
     public string AbsoluteDataRoot { get; }
     public string InventoryPath { get; }
     public string BundleCacheDirectory { get; }
+    public string ItemImageCachePath { get; }
     public string VersionMapUrl => $"https://{OfficialResourceOrigin.DefaultHost}/WLN/TW/ResourcePath_PC.dat";
     public string ResourceUrlPrefix => $"https://{OfficialResourceOrigin.DefaultHost}/WLN/TW/";
     public string Purpose => "Acquire official HTTPS version metadata, DataPackage and MainPackage " +
-        "manifests and required bundles; bootstrap and independently read back the fixed SQLite resource inventory.";
+        "manifests, required bundles and supported optional item-image bundles; bootstrap and independently read back the fixed SQLite resource inventory and item-image cache.";
     public string Writes => "Create directories, persist verified bundles and temporary files in BundleCacheDirectory, " +
-        "and create or update InventoryPath (including SQLite journal files). Stop does not undo completed writes.";
+        "and create or update InventoryPath and ItemImageCachePath (including SQLite journal files). Stop does not undo completed writes.";
     internal AccountResourceDisclosure(string absoluteDataRoot)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(absoluteDataRoot);
@@ -33,6 +34,7 @@ public sealed class AccountResourceDisclosure
             throw new ArgumentException("An absolute data root is required.", nameof(absoluteDataRoot));
         AbsoluteDataRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(absoluteDataRoot));
         InventoryPath = Path.Combine(AbsoluteDataRoot, "official_sync", "derived_catalogs", "resource_inventory.sqlite3");
+        ItemImageCachePath = Path.Combine(AbsoluteDataRoot, "official_sync", "derived_catalogs", "core_item_images_v1.sqlite3");
         BundleCacheDirectory = Path.Combine(AbsoluteDataRoot, "official_sync", "bundles");
     }
     public override string ToString() => "Resource operation disclosure (local paths redacted)";

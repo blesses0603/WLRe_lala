@@ -9,6 +9,7 @@ internal sealed class OfflinePreparedRuntimeCandidate
 {
     internal OfflineRuntimeCandidate Candidate { get; }
     internal ManifestIdentity Identity { get; }
+    internal ItemImageBatch? ItemImages { get; }
     internal ResourceInventoryInput InventoryInput { get; }
     internal RequiredBundleSources RecheckContext { get; }
     internal string ManifestContentIdentity { get; }
@@ -26,9 +27,9 @@ internal sealed class OfflinePreparedRuntimeCandidate
     internal string Static1275Admission => "unavailable";
     internal OfflinePreparedRuntimeCandidate(OfflineRuntimeCandidate candidate, RequiredBundleSources sources,
         ResourceInventoryInput inventory, ManifestIdentity identity, BundleDownloadTotals? downloads = null,
-        IEnumerable<VerifiedBundleSource>? verifiedSources = null)
+        IEnumerable<VerifiedBundleSource>? verifiedSources = null, ItemImageBatch? itemImages = null)
     {
-        RecheckContext = sources;
+        RecheckContext = sources; ItemImages = itemImages;
         Identity = identity; InventoryInput = inventory;
         Candidate = candidate; ManifestContentIdentity = sources.ManifestContentIdentity; Attempt = sources.Attempt;
         DownloadCount = downloads?.Count ?? sources.DownloadCount; DownloadBytes = downloads?.Bytes ?? sources.DownloadBytes;
@@ -150,6 +151,24 @@ internal sealed class OfflineBundleRuntimePreparation
             _preparation.EnsureCurrent(prepared, cancellationToken);
         }
         var identity = ManifestIdentity.FromParsed(prepared.Snapshot, prepared.Manifests, cancellationToken);
+        ItemImageBatch? itemImages = null;
+        var imageManifest = prepared.Manifests.Single(m => m.Header.PackageName == "MainPackage");
+        // Unsupported optional images do not disable required tables. Never download when
+        // item icon fields have not been independently reviewed by the existing item parser.
+        if (candidate.Items.Count > 0 && candidate.Items.Values.All(row => row.ReviewedDetails is not null) &&
+            imageManifest.Assets.Any(a => a.Path.StartsWith(ItemImageMapping.Prefix, StringComparison.Ordinal)))
+        {
+            try
+            {
+                _ = ItemImageMapping.Create(imageManifest, candidate.Items, cancellationToken);
+                var selected = await _preparation.PrepareItemImagesAsync(source, prepared, cache, budget, downloads, cancellationToken).ConfigureAwait(false);
+                itemImages = ItemImageBatch.Create(imageManifest, prepared.Snapshot.DataVersion, identity.Key,
+                    candidate.Items, selected, cancellationToken);
+                foreach (var handle in selected.Values.SelectMany(group => group)) handles.TryAdd(handle.Spec.Name, handle);
+            }
+            catch (Exception error) when (IsOptionalFailure(error) || error is SpritePixelException) { }
+            _preparation.EnsureCurrent(prepared, cancellationToken);
+        }
         // Persist precisely the native-extracted arrays, not reserialized decoded rows or
         // caller-provided hashes. Capture detaches every payload under the original limits.
         var inventory = ResourceInventoryInput.Capture(identity.Key, tables.Keys
@@ -171,7 +190,7 @@ internal sealed class OfflineBundleRuntimePreparation
         _preparation.EnsureCurrent(prepared, cancellationToken);
         await _preparation.ConfirmUnchangedAsync(source, prepared, cancellationToken).ConfigureAwait(false);
         return _preparation.ReturnCurrent(prepared, new OfflinePreparedRuntimeCandidate(candidate, prepared, inventory, identity,
-            downloads, handles.Values), cancellationToken);
+            downloads, handles.Values, itemImages), cancellationToken);
     }
     private static bool IsOptionalFailure(Exception error) => !error.Data.Contains(ResourceCleanup.FailureMarker) &&
         error is not ResourceTransportException { Failure: ResourceTransportFailure.Cleanup } &&

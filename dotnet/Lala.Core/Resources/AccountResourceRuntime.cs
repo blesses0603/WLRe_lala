@@ -12,6 +12,7 @@ public sealed record AccountResourcePreparationResult(
     long AccountGeneration, AccountResourcePreparationStatus Status,
     AccountResourceStorageOutcome StorageOutcome, bool ReadbackMatched, bool SourcesRechecked)
 {
+    public AccountResourceStorageOutcome ItemImageStorageOutcome { get; init; } = AccountResourceStorageOutcome.NotAttempted;
     public bool WasBound => Status == AccountResourcePreparationStatus.Bound;
     public bool CanLogin => false;
     public bool CanSendPackets => false;
@@ -146,7 +147,8 @@ public sealed class AccountResourceRuntime : IAsyncDisposable
                 else status = ReferenceEquals(_session.Snapshot, snapshot)
                     ? AccountResourcePreparationStatus.NotAdmitted : AccountResourcePreparationStatus.AccountChanged;
                 return new(expectedGeneration, status, StorageOutcome(result),
-                    result?.Readback == ResourceRuntimeReadback.Matched, result?.SourcesRechecked == true);
+                    result?.Readback == ResourceRuntimeReadback.Matched, result?.SourcesRechecked == true)
+                    { ItemImageStorageOutcome = result?.ItemImageStorageOutcome ?? AccountResourceStorageOutcome.NotAttempted };
             }
         }
         finally { lock (_gate) _running = false; }
@@ -162,6 +164,11 @@ public sealed class AccountResourceRuntime : IAsyncDisposable
 
     /// <summary>Immutable point-in-time catalog data, never action authority. Each call rechecks
     /// account and resource lifetimes; later revocation cannot erase data already returned.</summary>
+    /// <summary>Caller-owned historical PNG bytes. Reacquire on each operation; no send authority.</summary>
+    public bool TryReadItemImage(ushort itemId, out byte[]? png)
+    {
+        lock (_gate) { png = null; return !_disposed && _binding is not null && _binding.TryReadItemImage(itemId, out png); }
+    }
     public bool TryReadCatalogs(out OfflineRuntimeCandidate? catalogs)
     {
         lock (_gate)

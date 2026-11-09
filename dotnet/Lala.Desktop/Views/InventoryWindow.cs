@@ -5,6 +5,7 @@ using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Lala.Core.Inventory;
 
 namespace Lala.Desktop;
@@ -29,6 +30,7 @@ public sealed class InventoryWindow : DesktopWindow
     {
         ArgumentNullException.ThrowIfNull(session);
         this.session = session;
+        bag.ImageReader = garage.ImageReader = materials.ImageReader = session.ReadItemImage;
         generation = session.ReadView().Generation;
 
         var body = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,Auto,*"), RowSpacing = 6 };
@@ -52,7 +54,7 @@ public sealed class InventoryWindow : DesktopWindow
         SetBody(body);
         search.TextChanged += (_, _) => { if (!refreshing && !closed) Refresh(resetPages: true); };
         session.Changed += SessionChanged;
-        Closed += (_, _) => { closed = true; session.Changed -= SessionChanged; };
+        Closed += (_, _) => { closed = true; session.Changed -= SessionChanged; bag.ReleaseImages(); garage.ReleaseImages(); materials.ReleaseImages(); };
         SelectTab(initialTab);
         Refresh();
     }
@@ -66,6 +68,7 @@ public sealed class InventoryWindow : DesktopWindow
     public int SelectedTab => tabs.SelectedIndex;
     public string SearchText { get => search.Text ?? ""; set => search.Text = value; }
     public int VisibleBagItemCount => bag.ItemCount;
+    internal int VisibleBagImageCount => bag.ImageCount;
     public int BagPageIndex => bag.PageIndex;
     public ushort? SelectedBagIndex => bag.SelectedIndex;
     public string BagDetailsText => bag.DetailsText;
@@ -128,6 +131,15 @@ internal sealed record InventoryDisplayItem(ushort Index, ushort ItemId, BigInte
 /// </summary>
 internal sealed class InventoryGrid : UserControl
 {
+    internal Func<ushort, byte[]?>? ImageReader { get; set; }
+    private readonly List<Bitmap> bitmaps = [];
+    internal int ImageCount => bitmaps.Count;
+    internal void ReleaseImages()
+    {
+        foreach (var cell in cells) if (cell is not null) cell.Content = null;
+        foreach (var bitmap in bitmaps) bitmap.Dispose();
+        bitmaps.Clear();
+    }
     private const int Columns = 6;
     private const int Rows = 4;
     private const int PageSize = Columns * Rows;
@@ -233,11 +245,8 @@ internal sealed class InventoryGrid : UserControl
 
     public void SetItems(IEnumerable<InventoryDisplayItem> source, string query, ushort? capacity, bool ready, bool reliable)
     {
-        var previousPage = page;
-        var previousSelection = selectedIndex;
         var replacement = source.Where(item => query.Length == 0 || item.Name.Contains(query, StringComparison.OrdinalIgnoreCase)
             || item.ItemId.ToString(CultureInfo.InvariantCulture).Contains(query, StringComparison.OrdinalIgnoreCase)).ToArray();
-        var changed = !items.SequenceEqual(replacement);
         items = replacement;
         if (!items.Any(item => item.Index == selectedIndex && item.ItemId == selectedItemId))
         {
@@ -248,7 +257,9 @@ internal sealed class InventoryGrid : UserControl
         summary.Text = $"{items.Length} / {(capacity is { } value ? value.ToString(CultureInfo.InvariantCulture) : "?")} 格｜" +
             (!ready ? "等待同步" : reliable ? "已同步" : "數量待確認");
         empty.Text = query.Length > 0 ? "沒有符合搜尋條件的物品" : ready ? "尚無物品紀錄" : storage ? "等待儲藏物品同步" : "等待背包同步";
-        if (changed || page != previousPage || selectedIndex != previousSelection) Paint();
+        // Image admission can change while inventory rows remain byte-for-byte identical.
+        // Reacquire image data on every host refresh, including revocation-only updates.
+        Paint();
     }
 
     public void SelectItem(ushort index)
@@ -277,6 +288,7 @@ internal sealed class InventoryGrid : UserControl
 
     private void Paint()
     {
+        ReleaseImages();
         for (var position = 0; position < PageSize; position++)
         {
             var index = page * PageSize + position;
@@ -298,7 +310,35 @@ internal sealed class InventoryGrid : UserControl
             label.TextAlignment = TextAlignment.Center;
             label.TextTrimming = TextTrimming.CharacterEllipsis;
             label.MaxLines = 2;
-            Ui.At(tile, label, 0);
+            Bitmap? bitmap = null;
+            try
+            {
+                if (ImageReader?.Invoke(item.ItemId) is { Length: > 0 and <= 4194304 } png)
+                {
+                    // Production bytes are canonical Core PNGs. Bound native allocation before decoding.
+                    var copy = png.ToArray();
+                    if (copy.Length < 33 || !copy.AsSpan(0, 8).SequenceEqual(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 }) ||
+                        System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(copy.AsSpan(8)) != 13 ||
+                        !copy.AsSpan(12, 4).SequenceEqual("IHDR"u8) ||
+                        System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(copy.AsSpan(16)) is 0 or > 512 ||
+                        System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(copy.AsSpan(20)) is 0 or > 512 ||
+                        copy[24] != 8 || copy[25] != 6 || copy[26] != 0 || copy[27] != 0 || copy[28] != 0)
+                        throw new InvalidDataException("Unreviewed item PNG header");
+                    using var stream = new MemoryStream(copy, writable: false);
+                    var decoded = new Bitmap(stream);
+                    if (decoded.PixelSize.Width is > 0 and <= 512 && decoded.PixelSize.Height is > 0 and <= 512)
+                    { bitmap = decoded; bitmaps.Add(decoded); }
+                    else decoded.Dispose();
+                }
+            }
+            catch (Exception) { /* Display failure remains unavailable; never infer readiness. */ }
+            if (bitmap is null) Ui.At(tile, label, 0);
+            else
+            {
+                var content = new Grid { RowDefinitions = new RowDefinitions("*,Auto") };
+                Ui.At(content, new Image { Source = bitmap, Stretch = Stretch.Uniform, MaxHeight = 48 }, 0);
+                Ui.At(content, label, 0, 1); Ui.At(tile, content, 0);
+            }
             var footer = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
             Ui.At(footer, Ui.Text("#" + item.Index, 11, Ui.Muted), 0);
             Ui.At(footer, Ui.Text("×" + item.Count.ToString(CultureInfo.InvariantCulture), 13, Ui.Gold, true), 1);
@@ -306,7 +346,7 @@ internal sealed class InventoryGrid : UserControl
             cell.Content = tile;
             var description = $"{item.Name}｜ID {item.ItemId}｜格位 {item.Index}｜數量 {item.Count}";
             AutomationProperties.SetName(cell, description);
-            ToolTip.SetTip(cell, description + "；物品圖示尚未接入。");
+            ToolTip.SetTip(cell, description + (bitmap is null ? "；物品圖示尚未通過驗證。" : "；已驗證物品圖示。"));
         }
         empty.IsVisible = items.Length == 0;
         pageLabel.Text = $"{page + 1} / {PageCount}";

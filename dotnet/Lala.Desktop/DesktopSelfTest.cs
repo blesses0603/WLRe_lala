@@ -16,11 +16,28 @@ internal static class DesktopSelfTest
         try
         {
             TestSession(suite, directory);
+            TestImageReader(suite);
             TestDraft(suite);
             TestPreferences(suite, directory);
             Console.WriteLine($"Desktop presentation self-test: {suite.Count} checks passed. Offline only; no UI/native or server acceptance.");
         }
         finally { Directory.Delete(directory, true); }
+    }
+
+    private static void TestImageReader(Checks check)
+    {
+        using var images = new DesktopSession(); long generation = images.Generation;
+        images.SetItemImageReader(generation, _ => new byte[] { 1 });
+        check.True(images.ReadItemImage(1) is { Length: 1 }, "image reader available only in its presentation generation");
+        images.Reset();
+        check.True(images.ReadItemImage(1) is null, "account reset removes image provider");
+        images.SetItemImageReader(generation, _ => new byte[] { 2 });
+        check.True(images.ReadItemImage(1) is null, "stale image provider cannot attach to replacement account");
+        images.SetItemImageReader(images.Generation, _ => { images.Reset(); return new byte[] { 3 }; });
+        check.True(images.ReadItemImage(1) is null, "generation change during image copy discards the result");
+        int changed = 0; images.Changed += () => changed++;
+        images.Dispose();
+        check.True(changed == 1 && images.ReadItemImage(1) is null, "disposal notifies views to clear image buffers");
     }
 
     private static void TestSession(Checks check, string directory)

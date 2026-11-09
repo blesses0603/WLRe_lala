@@ -1,3 +1,5 @@
+> Current scope: v8.0.50 conditionally prepares, stores and publishes supported item images in production. Other image families and actual official positive-format acceptance remain incomplete. Earlier version sections below retain their historical scope.
+
 # Bounded image pixel layer — overall PR 8.0.47
 
 This is an internal, offline candidate layer, not an official image extractor or activation path.
@@ -154,3 +156,23 @@ Python parity is for typed item IDs. Python also coerces arbitrary values throug
 8.0.49 local focused validation: 62 mapping/source tests passed (18 new), public Core consumer and
 15 repository/release checks passed; Core Release build zero warnings/errors. All source responses are
 synthetic and Python vectors use owned inputs. Full Core regression and exact-head CI are recorded on PR #79.
+
+## 8.0.50 物品圖 production 準備、撤銷與桌面顯示
+
+已將物品圖條件式接入 production 資源準備：ItemData 必須有經審閱的圖示欄位，MainPackage 必須含精確圖示清單；未知欄位、未支援格式或來源取得失敗時不產生圖片候選。下載仍共用原有總額度，圖片閉包維持 4 Bundle／32 MiB，不增加帳密或遊戲傳送權限。
+
+每個 Bundle 在整批只解析一次；每張圖仍僅能在 manifest 指定的 root＋完整依賴集合解析同檔 Sprite／Texture 指標。整批指紋包含版本 identity、manifest、映射／尺寸／open_used、全部 Bundle specs／SHA256 與每圖依賴；不同依賴的圖片可共同寫入快取，沒有降低逐圖來源驗證。整批像素／PNG 預算維持 96 MiB。
+
+owner 將完整批次寫入固定 core_item_images_v1.sqlite3，關閉後重新開啟只讀比對全部 PNG，再重查遠端版本／manifest，清理完成後才建立圖片 publication。寫入前重查來源、commit 前檢查當前 attempt；遠端版本與本機交易無法原子化，寫入後來源變更仍會拒絕發布。必要資料庫與圖片庫不是跨庫交易，圖片寫入另回報 NotAttempted／NotCommitted／Committed／Unknown，停止不回復既有寫入、不自動重試不明結果。只讀 refresh 不建立缺少的圖片快取；圖片庫損壞或寫入失敗目前會阻擋本次 owner 發布，保留結果供確認。
+
+圖片讀取沿用 ResourceRuntimeActivation 及帳號快照，逐次核對 owner／publication／generation；回傳僅為呼叫者擁有的歷史 PNG 副本，不能作為後續操作權限。停止、版本／帳號切換與釋放撤銷讀取。桌面背包及儲藏格每次刷新重新取得圖片，欄位未改變時也會處理圖片更新／撤銷；關閉與撤銷清除 Bitmap 並釋放。原生解碼前檢查 PNG header／尺寸上限；缺圖維持名稱與未通過驗證狀態。資源確認視窗新增圖片庫路徑及寫入結果。
+
+測試只使用自有合成 Bundle／PNG、SQLite 與 loopback。owner 正向持久化測試使用明示 offline image hook，撤銷測試沿用 white-box publication seam；這些都不能證明官方來源正向驗收，production 建構不接受 hook／來源注入。原生 UI 測試發現「庫存不變便跳過重繪」會漏掉圖片撤銷，已修正並新增顯示／失敗／清除檢查。
+
+**仍未完成**：實際官方圖片格式正向驗收、更多 Texture／Sprite 格式、頭像、表情、小地圖及 Python 全介面一致。HasItemImages 反映當前物品圖狀態；HasVisualAssets 仍為 false，不冒稱全圖資完成。既有帳密逐次確認、無 TLS／XOR 可逆提示、停止等待清理及一般遊戲操作 Held 均保留。
+
+8.0.50 local desktop verification: Release build zero warnings/errors; offline checks 68;
+native UI 233 checks with 30 rendered screenshots, catalog 10, resource confirmation 6 and login
+loopback 11 passed. The owned red-pixel PNG screenshot was visually inspected. Public Core consumer
+and 15 repository/release checks passed. Full final-source Core regression and exact-head CI are
+recorded on PR #79; no real accounts, official HTTP/game sockets or user-computer operations were used.

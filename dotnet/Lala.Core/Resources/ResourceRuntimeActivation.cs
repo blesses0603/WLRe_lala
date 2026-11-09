@@ -13,6 +13,8 @@ internal sealed class ResourceRuntimeActivation(ResourceRuntimeOwner owner, Reso
     internal long Generation => publication.Generation;
     internal ManifestIdentity Identity => publication.Identity;
     internal bool IsActive => owner.IsCurrentActivation(this, publication);
+    internal bool HasItemImages => IsActive && publication.ItemImages is not null;
+    internal bool TryReadItemImage(ushort itemId, out byte[]? png) => owner.TryReadItemImage(this, publication, itemId, out png);
     internal bool CanLogin => false;
     internal bool CanSendPackets => false;
 

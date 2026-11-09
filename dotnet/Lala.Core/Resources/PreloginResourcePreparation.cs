@@ -8,6 +8,7 @@ public enum PreloginResourceStatus { Ready, NotAdmitted, Cancelled, Failed }
 public sealed record PreloginResourceResult(PreloginResourceStatus Status, AccountResourceStorageOutcome StorageOutcome,
     bool ReadbackMatched, bool SourcesRechecked)
 {
+    public AccountResourceStorageOutcome ItemImageStorageOutcome { get; init; } = AccountResourceStorageOutcome.NotAttempted;
     public bool CanLogin => false;
     public bool CanSendPackets => false;
 }
@@ -32,7 +33,12 @@ public sealed class PreloginResourcePreparation : IAsyncDisposable
     public static PreloginResourcePreparation Create(string absoluteDataRoot) => new(absoluteDataRoot);
     internal static PreloginResourcePreparation CreateForOfflineTests(string root, ResourceRuntimeOwner owner) => new(root, owner);
     public bool HasCurrentResources { get { lock (gate) return !retired && activation?.IsActive == true; } }
-    public bool HasVisualAssets => false;
+    public bool HasVisualAssets => false; // Other image families remain unavailable.
+    public bool HasItemImages { get { lock (gate) return !retired && activation?.HasItemImages == true; } }
+    public bool TryReadItemImage(ushort itemId, out byte[]? png)
+    {
+        lock (gate) { png = null; return !retired && activation is not null && activation.TryReadItemImage(itemId, out png); }
+    }
     public bool CanLogin => false;
     public bool CanSendPackets => false;
     public bool Matches(OfficialVersionSnapshot? version)
@@ -79,7 +85,8 @@ public sealed class PreloginResourcePreparation : IAsyncDisposable
                 ResourceInventoryWriteOutcome.NotCommitted => AccountResourceStorageOutcome.NotCommitted,
                 _ => AccountResourceStorageOutcome.Unknown
             };
-            return new(status, storage, result.Readback == ResourceRuntimeReadback.Matched, result.SourcesRechecked);
+            return new(status, storage, result.Readback == ResourceRuntimeReadback.Matched, result.SourcesRechecked)
+                { ItemImageStorageOutcome = result.ItemImageStorageOutcome };
         }
     }
     public void Stop()

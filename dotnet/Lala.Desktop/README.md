@@ -61,3 +61,12 @@ IconLocation 的捷徑會取用目標 EXE 的圖示，但本輪未在 Windows Sh
 官方 HTTPS 下載與固定快取／SQLite 寫入範圍，再逐次確認帳密傳送；登入協定完成後
 由共用 AccountRuntime 實際下載、驗證、回讀並綁定唯讀目錄。一般遊戲操作仍 Held。
 詳見 [接線範圍與驗證](../../docs/DESKTOP_RESOURCE_INTEGRATION.md)。
+
+### PR #79 ver 8.0.50：條件式物品圖顯示
+
+登入前／登入後資源準備可取得受支援的 MainPackage 物品圖，在來源、精確依賴、像素、
+SQLite 獨立回讀及版本重查通過後，由 Core 的當前 activation 提供。背包與儲藏格逐次讀取，
+刷新、停止、換帳與關閉會更新／清除圖片並釋放 Bitmap；未通過時保留名稱與不可用狀態。
+確認視窗包含專用圖片庫路徑，圖片寫入結果獨立回報；停止不會撤銷已完成的磁碟寫入。
+此接線仍未經實際官方圖片正向驗收，頭像、表情、小地圖與全介面一致尚未完成；
+HasVisualAssets=false，一般遊戲操作仍 Held。測試僅自有合成圖片、資料與 loopback。

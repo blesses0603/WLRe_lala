@@ -17,6 +17,7 @@ public sealed class DesktopSession : IDisposable
     private bool disposed;
     private string identityKey = "desktop-preview";
     private DesktopLabels labels = new();
+    private Func<ushort, byte[]?>? itemImageReader;
 
     public DesktopSession(DesktopPreferencesStore? preferences = null) =>
         Preferences = preferences ?? new DesktopPreferencesStore();
@@ -34,6 +35,18 @@ public sealed class DesktopSession : IDisposable
     {
         lock (gate) { if (disposed || connectionText == value) return; connectionText = value; }
         Changed?.Invoke();
+    }
+    internal void SetItemImageReader(long expectedGeneration, Func<ushort, byte[]?>? reader)
+    {
+        lock (gate) { if (disposed || generation != expectedGeneration) return; itemImageReader = reader; }
+        Changed?.Invoke();
+    }
+    internal byte[]? ReadItemImage(ushort itemId)
+    {
+        Func<ushort, byte[]?>? reader; long expected;
+        lock (gate) { if (disposed) return null; reader = itemImageReader; expected = generation; }
+        var png = reader?.Invoke(itemId); // Core rechecks owner/account; no callback under presentation gate.
+        lock (gate) return !disposed && generation == expected && ReferenceEquals(reader, itemImageReader) ? png : null;
     }
     public DesktopLabels Labels { get { lock (gate) return labels; } }
     public DesktopPublication ReadView()
@@ -67,7 +80,7 @@ public sealed class DesktopSession : IDisposable
             publication = -1;
             connectionText = "尚未連線";
             snapshot = new();
-            labels = new();
+            labels = new(); itemImageReader = null;
             identityKey = presentationIdentity;
         }
         Changed?.Invoke();
@@ -107,14 +120,16 @@ public sealed class DesktopSession : IDisposable
 
     public void Dispose()
     {
+        Action? changed;
         lock (gate)
         {
             disposed = true;
             generation = checked(generation + 1);
             snapshot = new();
-            labels = new();
-            Changed = null;
+            labels = new(); itemImageReader = null;
+            changed = Changed; Changed = null;
         }
+        changed?.Invoke();
     }
 }
 

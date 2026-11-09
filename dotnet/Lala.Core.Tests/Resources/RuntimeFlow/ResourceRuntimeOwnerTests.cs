@@ -83,6 +83,81 @@ public sealed class ResourceRuntimeOwnerTests
         public void Dispose() { if (Directory.Exists(Root)) Directory.Delete(Root, true); }
     }
     [Fact]
+    public async Task Readonly_refresh_does_not_create_a_missing_item_image_cache()
+    {
+        using var fixture = new Fixture(); var source = new Source(); await fixture.PopulateAsync(source);
+        var hooks = new ResourceRuntimeBootstrapTestHooks { ItemImagesForOfflineTest = p => ImageBatchFixtures.Batch(p.Identity.Key) };
+        await using var owner = ResourceRuntimeOwner.CreateForOfflineTests(fixture.Root, source, bootstrapHooks: hooks);
+        var result = await owner.RefreshWithResultAsync();
+        Assert.Null(result.Failure); Assert.Null(result.Publication!.ItemImages);
+        Assert.Equal(AccountResourceStorageOutcome.NotAttempted, result.ItemImageStorageOutcome);
+        Assert.False(File.Exists(Path.Combine(fixture.Root, "official_sync", "derived_catalogs", "core_item_images_v1.sqlite3")));
+    }
+    [Fact]
+    public async Task Unreviewed_item_fields_do_not_fetch_or_publish_image_candidates()
+    {
+        var source = new Source(); var main = BundleSourceFixtures.Index("main-valid");
+        main["assets"]![0]!["path"] = ItemImageMapping.Prefix + "s1000.png";
+        source.Main = BundleSourceFixtures.Encode(main);
+        var prepared = await new OfflineBundleRuntimePreparation().PrepareAsync(source);
+        Assert.Null(prepared.ItemImages);
+        Assert.All(prepared.VerifiedSources, handle => Assert.Equal("DataPackage", handle.Spec.Package));
+    }
+    [Fact]
+    public async Task Owned_image_batch_is_written_read_back_but_offline_owner_never_admits()
+    {
+        using var fixture = new Fixture(); var source = new Source();
+        var hooks = new ResourceRuntimeBootstrapTestHooks { ItemImagesForOfflineTest = p => ImageBatchFixtures.Batch(p.Identity.Key) };
+        await using var owner = ResourceRuntimeOwner.CreateForOfflineTests(fixture.Root, source, bootstrapHooks: hooks);
+        var result = await owner.BootstrapAndRefreshAsync();
+        Assert.Null(result.Failure); Assert.Equal(AccountResourceStorageOutcome.Committed, result.ItemImageStorageOutcome);
+        Assert.NotNull(result.Publication!.ItemImages); Assert.False(result.Publication.ResourceAdmitted);
+        Assert.False(owner.TryActivate(result.Publication, out _));
+        var refreshed = await owner.RefreshWithResultAsync();
+        Assert.Null(refreshed.Failure); Assert.Equal(AccountResourceStorageOutcome.NotAttempted, refreshed.ItemImageStorageOutcome);
+        Assert.NotNull(refreshed.Publication!.ItemImages);
+    }
+    [Theory, InlineData(false), InlineData(true)]
+    public async Task Image_retirement_or_source_change_prevents_publication_and_preserves_write_outcome(bool changeAfterCommit)
+    {
+        using var fixture = new Fixture(); var source = new Source(); ResourceRuntimeOwner? owner = null;
+        var hooks = new ResourceRuntimeBootstrapTestHooks
+        {
+            ItemImagesForOfflineTest = p => ImageBatchFixtures.Batch(p.Identity.Key),
+            BeforeImageCommitAdmission = () =>
+            {
+                if (changeAfterCommit)
+                {
+                    var main = BundleSourceFixtures.Index("main-valid"); main["header"]!["package_note"] = "changed";
+                    source.Main = BundleSourceFixtures.Encode(main);
+                }
+                else owner!.Invalidate();
+            }
+        };
+        await using (owner = ResourceRuntimeOwner.CreateForOfflineTests(fixture.Root, source, bootstrapHooks: hooks))
+        {
+            var result = await owner.BootstrapAndRefreshAsync();
+            Assert.NotNull(result.Failure); Assert.Null(owner.Current);
+            Assert.Equal(changeAfterCommit ? AccountResourceStorageOutcome.Committed : AccountResourceStorageOutcome.NotCommitted, result.ItemImageStorageOutcome);
+        }
+    }
+    [Fact]
+    public async Task Item_image_reads_require_exact_activation_and_revoke_with_owner()
+    {
+        using var fixture = new Fixture(); var prepared = await new OfflineBundleRuntimePreparation().PrepareAsync(new Source());
+        var batch = ImageBatchFixtures.Batch();
+        var readback = new ItemImageReadback(batch, batch.Pixels.ToDictionary(p => p.Context.AssetPath, p => SpritePng.Encode(p)));
+        await using var owner = ResourceRuntimeOwner.Create(fixture.Root);
+        var publication = new ResourceRuntimePublication(owner, 0, prepared, itemImages: readback);
+        // Existing white-box admission seam tests lifetime only, not official provenance.
+        typeof(ResourceRuntimeOwner).GetField("_current", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.SetValue(owner, publication);
+        Assert.True(owner.TryActivate(publication, out var active)); Assert.True(active!.HasItemImages);
+        Assert.True(active.TryReadItemImage(1, out var png)); Assert.NotNull(png);
+        Assert.False(new ResourceRuntimeActivation(owner, publication).TryReadItemImage(1, out _));
+        owner.Invalidate(); Assert.False(active.HasItemImages); Assert.False(active.TryReadItemImage(1, out png)); Assert.Null(png);
+    }
+
+    [Fact]
     public async Task Real_database_match_is_published_but_offline_success_never_admits()
     {
         using var fixture = new Fixture(); var source = new Source(); await fixture.PopulateAsync(source);

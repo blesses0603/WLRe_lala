@@ -256,6 +256,22 @@ internal static class DesktopUiSmokeTest
             await Settle(inventory);
             await Settle(skills);
             Check(inventory.VisibleBagItemCount == 30, "backpack uses all thirty observed fixture records");
+            // Owned 1x1 RGBA PNG tests presentation only, not Core provenance/admission.
+            byte[] ownedPng = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==");
+            session.SetItemImageReader(session.Generation, _ => ownedPng.ToArray());
+            await Settle(inventory);
+            Check(inventory.VisibleBagImageCount == 24, "current image provider paints visible observed items");
+            await Capture(inventory, "06-item-images-owned");
+            session.SetItemImageReader(session.Generation, _ => new byte[] { 1, 2, 3 });
+            await Settle(inventory);
+            Check(inventory.VisibleBagImageCount == 0, "malformed PNG removes previous bitmaps without claiming readiness");
+            session.SetItemImageReader(session.Generation, _ => ownedPng.ToArray());
+            await Settle(inventory);
+            Check(inventory.VisibleBagImageCount == 24, "fresh provider can repaint after image failure");
+            session.SetItemImageReader(session.Generation, null);
+            await Settle(inventory);
+            Check(inventory.VisibleBagImageCount == 0, "provider retirement clears and disposes visible item images");
+
             Check(skills.SkillRowCount == 4, "skill view excludes zero-level and removed skills while preserving both actors");
             Check(!ReferenceEquals(inventory.Content, skills.Content), "backpack and skills are separate window content trees");
             Disabled(inventory, "InventoryBagHealHp", "InventoryBagHealSp", "InventoryBagDepositGarage", "InventoryBagDepositMaterials");

@@ -44,6 +44,12 @@ internal sealed class AccountResourceBinding
     /// <summary>Immutable point-in-time data only. Account checks bracket the resource read
     /// without nesting session/resource locks. A later revocation cannot erase returned data;
     /// neither this binding nor a retained catalog reference authorizes external effects.</summary>
+    internal bool TryReadItemImage(ushort itemId, out byte[]? png)
+    {
+        png = null;
+        if (!HasSameAccountSnapshot || !_activation.TryReadItemImage(itemId, out var bytes) || !HasSameAccountSnapshot) return false;
+        png = bytes; return true;
+    }
     internal bool TryReadCatalogs(out OfflineRuntimeCandidate? catalogs)
     {
         catalogs = null;
