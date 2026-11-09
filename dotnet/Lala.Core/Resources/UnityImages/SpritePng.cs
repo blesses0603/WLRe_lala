@@ -33,6 +33,14 @@ internal static class SpritePng
         BoundedSpritePixels.Check(pixels.Length==width*height*4 && Hash(pixels)==candidate.PixelSha256,"Emoji PNG pixel mismatch");
         return EncodeOwnedRgba(width,height,pixels,true,token);
     }
+    internal static byte[] EncodeSmallMap(TexturePixelCandidate candidate,CancellationToken token=default)
+    {
+        token.ThrowIfCancellationRequested();
+        BoundedSpritePixels.Check(candidate.Layout.Width==1024&&candidate.Layout.Height==1024,"Small map PNG geometry mismatch");
+        var pixels=candidate.CopyPixels();BoundedSpritePixels.Check(pixels.Length==1024*1024*4&&Hash(pixels)==candidate.PixelSha256,"Small map PNG pixel mismatch");
+        var png=EncodeOwnedRgba(1024,1024,pixels,true,token);
+        BoundedSpritePixels.Check(png.Length<=MaximumBytes,"Small map PNG exceeds bound");return png;
+    }
     private static byte[] EncodeOwnedRgba(int width, int height, byte[] pixels, bool compressed, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();

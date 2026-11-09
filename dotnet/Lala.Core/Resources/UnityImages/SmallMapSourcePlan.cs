@@ -25,6 +25,11 @@ internal static class SmallMapSourcePlan
         }
         Require(paths.Count>0,"Missing small map assets");return paths.ToFrozenDictionary();
     }
+    internal static BundleSourcePlan CreateStaged(YooAssetManifest manifest,string version,CancellationToken token=default)
+    {
+        token.ThrowIfCancellationRequested();Require(version==EmojiSourcePlan.DataVersion&&manifest.Header.PackageVersion==EmojiSourcePlan.MainVersion,"Unreviewed staged small map source version");
+        return BundleSourcePlan.CreateStagedSmallMaps(manifest,version,Paths(manifest,token).Values.ToArray(),token);
+    }
     internal static BundleSourcePlan Create(YooAssetManifest manifest,string version,CancellationToken token=default)
     {
         token.ThrowIfCancellationRequested();Require(version==EmojiSourcePlan.DataVersion&&manifest.Header.PackageVersion==EmojiSourcePlan.MainVersion,"Unreviewed small map source version");

@@ -31,5 +31,8 @@ public sealed class SmallMapSourceTests
         Assert.Throws<UnityTextAssetException>(()=>SmallMapSourcePlan.Paths(Parse(Index())));
         var index=Index("SmallMap2D_10001.png");index["bundles"]![0]!["file_size"]=43187027L;
         Assert.Equal(BundleSourceFailure.Budget,Assert.Throws<BundleSourceException>(()=>SmallMapSourcePlan.Create(Parse(index),EmojiSourcePlan.DataVersion)).Failure);
+        Assert.Equal(3,SmallMapSourcePlan.CreateStaged(Parse(index),EmojiSourcePlan.DataVersion).Entries.Count);
+        index["bundles"]![0]!["file_size"]=64L*1024*1024+1;
+        Assert.Equal(BundleSourceFailure.Budget,Assert.Throws<BundleSourceException>(()=>SmallMapSourcePlan.CreateStaged(Parse(index),EmojiSourcePlan.DataVersion)).Failure);
     }
 }

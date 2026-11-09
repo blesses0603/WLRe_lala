@@ -21,8 +21,14 @@ internal sealed class BoundedSerializedFile
     internal static BoundedSerializedFile ReadEmojiAtlasProjection(UnityFileIdentity identity,ReadOnlyMemory<byte> bytes,
         UnityExtractionBudget budget,CancellationToken token,UnityImageArchive? imageArchive=null)
         => ReadCore(identity,bytes,budget,token,true,false,false,true,imageArchive,true);
+    internal static BoundedSerializedFile ReadSmallMapProjection(UnityFileIdentity identity,ReadOnlyMemory<byte> bytes,
+        IReadOnlyCollection<string> paths,UnityExtractionBudget budget,CancellationToken token=default)
+    {
+        Require(paths.Count is >0 and <=2048&&paths.All(p=>p.StartsWith(SmallMapSourcePlan.Prefix,StringComparison.Ordinal))&&paths.Distinct(StringComparer.Ordinal).Count()==paths.Count,"Invalid small map projection paths");
+        return ReadCore(identity,bytes,budget,token,true,false,false,false,null,false,paths.ToHashSet(StringComparer.Ordinal));
+    }
     private static BoundedSerializedFile ReadCore(UnityFileIdentity identity,ReadOnlyMemory<byte> bytes,UnityExtractionBudget budget,
-        CancellationToken token,bool allowImages,bool allowMaterials,bool allowShaders,bool allowAtlases,UnityImageArchive? imageArchive,bool emojiProjection)
+        CancellationToken token,bool allowImages,bool allowMaterials,bool allowShaders,bool allowAtlases,UnityImageArchive? imageArchive,bool emojiProjection,IReadOnlySet<string>? smallMapPaths=null)
     {
         token.ThrowIfCancellationRequested(); var header = new UnityReadCursor(bytes, true);
         Require(header.U32() == 0 && header.U32() == 0 && header.U32() == 22 && header.U32() == 0 && header.U8() == 0,
@@ -95,6 +101,19 @@ internal sealed class BoundedSerializedFile
             }
             objects=selected;container=[roots[0]];
         }
+        if(smallMapPaths is not null)
+        {
+            foreach(var obj in objects.Values.Where(o=>o.ClassId==142))ReadContainer(obj.Bytes,container,budget,token);
+            var roots=container.Where(e=>smallMapPaths.Contains(e.Path)).ToList();
+            Require(roots.Count==smallMapPaths.Count&&roots.Select(e=>e.Path).Distinct(StringComparer.Ordinal).Count()==roots.Count,"Small map container coverage mismatch");
+            var selected=new Dictionary<long,UnityObject>();
+            foreach(var root in roots)
+            {
+                token.ThrowIfCancellationRequested();Require(root.Pointer.FileId==0&&root.Pointer.PathId!=0&&objects.TryGetValue(root.Pointer.PathId,out var obj)&&obj.ClassId==28,"Small map requires exact local Texture2D pointer");
+                selected.TryAdd(root.Pointer.PathId,objects[root.Pointer.PathId]);
+            }
+            objects=selected;container=roots;
+        }
         foreach (var obj in objects.Values)
         {
             token.ThrowIfCancellationRequested();
@@ -102,7 +121,7 @@ internal sealed class BoundedSerializedFile
             else if (obj.ClassId == 48) UnityShaderObjects.Read(obj.Bytes, obj.ShaderLayout!, token);
             else if (obj.ClassId == 687078895) UnityAtlasObjects.Read(obj.Bytes, token);
             else if (obj.ClassId == 21) UnityMaterialObjects.Read(obj.Bytes, token);
-            else if (obj.ClassId == 28) UnityImageObjects.Texture(obj.Bytes, token, imageArchive, identity);
+            else if (obj.ClassId == 28) { if(smallMapPaths is not null)UnityImageObjects.DescribeTexture(obj.Bytes,token);else UnityImageObjects.Texture(obj.Bytes, token, imageArchive, identity); }
             else if (obj.ClassId == 213) UnityImageObjects.Sprite(obj.Bytes, token, allowAtlases);
             else ValidateText(obj.Bytes, token); // Also validate unused objects; no unchecked layout escapes.
         }

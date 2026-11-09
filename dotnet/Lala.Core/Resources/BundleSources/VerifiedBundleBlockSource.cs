@@ -15,6 +15,9 @@ internal sealed class VerifiedBundleBlockSource:IAsyncDisposable
     internal static async Task<VerifiedBundleBlockSource> OpenAsync(IBundleSourceCacheReader cache,BundleStreamReceipt receipt,CancellationToken token=default)
     {
         ArgumentNullException.ThrowIfNull(cache);ArgumentNullException.ThrowIfNull(receipt);token.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(receipt.Spec);
+        if(receipt.Sha256 is null||receipt.Sha256.Length!=64||receipt.Sha256.Any(c=>!(c is >= '0' and <= '9' or >= 'a' and <= 'f')))
+            throw new BundleSourceException(BundleSourceFailure.ManifestIdentity,"Missing or invalid receipt SHA256");
         var input=await cache.OpenReadAsync(receipt.Spec,token).ConfigureAwait(false)
             ??throw new BundleSourceException(BundleSourceFailure.CacheChanged,"Staged bundle is missing");
         try

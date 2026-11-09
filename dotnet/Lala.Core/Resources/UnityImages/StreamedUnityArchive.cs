@@ -54,6 +54,17 @@ internal sealed class StreamedUnityArchive
         ir.End();foreach(var e in entries.Where(e=>e.IsResource))Require(e.Name.EndsWith(".resS",StringComparison.Ordinal)&&entries.Any(o=>!o.IsResource&&o.Name==e.Name[..^5]),"Unpaired staged resource");
         source.EnsureOpen(token);return new(source,blocks,entries,plainAt);
     }
+    internal void RequireOwner(UnityFileIdentity owner,CancellationToken token=default)
+    {
+        source.EnsureOpen(token);
+        Require(owner.BundleName==source.Receipt.Spec.Name&&entries.TryGetValue(owner.EntryName,out var file)&&!file.IsResource,"Owner outside exact staged bundle");
+    }
+    internal Task<byte[]> ReadResourceAsync(UnityFileIdentity owner,string path,long offset,uint size,CancellationToken token=default)
+    {
+        RequireOwner(owner,token);string resource=owner.EntryName+".resS";
+        Require(path=="archive:/"+owner.EntryName+"/"+resource&&entries.TryGetValue(resource,out var entry)&&entry.IsResource&&size<=MaximumSliceBytes,"Resource outside exact staged owner");
+        return ReadAsync(resource,offset,checked((int)size),token);
+    }
     internal async Task<byte[]> ReadAsync(string entryName,long offset,int count,CancellationToken token=default)
     {
         token.ThrowIfCancellationRequested();Require(entries.TryGetValue(entryName,out var entry),"Entry is outside exact staged archive");

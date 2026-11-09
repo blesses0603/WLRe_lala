@@ -26,6 +26,12 @@ public sealed class BundleReceiptReadTests
         {Maximum=Math.Max(Maximum,b.Length);if(Hold){Entered.TrySetResult();await Release.Task;}int n=await base.ReadAsync(b,t);Bytes+=n;return n;}
         protected override void Dispose(bool disposing){if(!closed){closed=true;close();}base.Dispose(disposing);}
     }
+    [Theory][InlineData(null)][InlineData("")][InlineData("not-a-digest")]
+    public async Task Malformed_receipt_digest_cannot_disable_sha_validation(string? digest)
+    {
+        byte[] bytes=[1,2,3];var cache=new Cache(bytes);var receipt=Receipt(bytes) with{Sha256=digest!};
+        await Assert.ThrowsAsync<BundleSourceException>(()=>VerifiedBundleBlockSource.OpenAsync(cache,receipt));Assert.Equal(0,cache.Opens);
+    }
     [Fact]
     public async Task Reads_hash_complete_covering_blocks_and_rejects_mutation_outside_requested_slice()
     {

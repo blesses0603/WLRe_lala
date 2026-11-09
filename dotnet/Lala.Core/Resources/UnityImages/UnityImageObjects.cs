@@ -41,7 +41,8 @@ internal static class UnityImageObjects
     { var p = Pointer(r); Require(p.FileId == 0 && p.PathId == 0, "Unsupported image pointer"); }
     private static SpritePixelRect Rect(UnityReadCursor r) => new(Float(r), Float(r), Float(r), Float(r));
     private static void EmptyAlignedArray(UnityReadCursor r) { Require(r.Count(0) == 0, "Unsupported optional image array"); r.Align(); }
-    internal static UnityTexturePixels Texture(ReadOnlyMemory<byte> bytes, CancellationToken token, UnityImageArchive? archive = null, UnityFileIdentity? owner = null)
+    internal sealed record TextureDescriptor(string Name,TexturePixelLayout Layout,ReadOnlyMemory<byte> Inline,int ColorSpace,string StreamPath,long Offset,uint Size);
+    internal static TextureDescriptor DescribeTexture(ReadOnlyMemory<byte> bytes,CancellationToken token=default)
     {
         token.ThrowIfCancellationRequested(); var r = new UnityReadCursor(bytes); string name = r.String(1024, false);
         r.I32(); Require(!Bool(r), "Downscaled fallback unsupported"); Bool(r); r.Align();
@@ -55,19 +56,32 @@ internal static class UnityImageObjects
         EmptyAlignedArray(r); // platform blob
         int length = r.Count(16 * 1024 * 1024, 1); var payload = r.Take(length); r.Align();
         long streamOffset=r.I64(); uint streamSize=r.U32(); string streamPath=r.String(1024);r.End();
-        if(streamPath.Length!=0)
-        {
-            Require(archive is not null && owner is not null && length==0,"Streamed image requires exact archive binding and no inline payload");
-            payload=archive!.CopyResource(owner!,streamPath,streamOffset,streamSize,token);length=payload.Length;
-        }
-        else Require(streamOffset==0 && streamSize==0,"Unbound stream span");
+        Require(streamPath.Length==0?streamOffset==0&&streamSize==0:length==0&&streamOffset>=0&&streamSize is >0 and <=16*1024*1024,"Invalid inline or streamed texture span");
+        int payloadLength=streamPath.Length==0?length:checked((int)streamSize);
         Require(width is > 0 and <= 2048 && height is > 0 and <= 2048 && mips == 1 && images == 1 && dimension == 2,
             "Unsupported image dimensions/mips/array");
         int expected;
         try { expected = BlockTexturePixels.PayloadLength(width, height, format); }
         catch (SpritePixelException) { throw new UnityTextAssetException("Unreviewed texture compression/format"); }
-        Require(length == expected && complete == length, "Texture image size mismatch");
-        token.ThrowIfCancellationRequested(); return new(name, new(width, height, format), payload, colorSpace);
+        Require(payloadLength == expected && complete == payloadLength, "Texture image size mismatch");
+        token.ThrowIfCancellationRequested(); return new(name, new(width, height, format), payload, colorSpace,streamPath,streamOffset,streamSize);
+    }
+    internal static UnityTexturePixels Texture(ReadOnlyMemory<byte> bytes,CancellationToken token,UnityImageArchive? archive=null,UnityFileIdentity? owner=null)
+    {
+        var d=DescribeTexture(bytes,token);var payload=d.Inline;
+        if(d.StreamPath.Length!=0)
+        {
+            Require(archive is not null&&owner is not null,"Streamed image requires exact archive binding");
+            payload=archive!.CopyResource(owner!,d.StreamPath,d.Offset,d.Size,token);
+        }
+        token.ThrowIfCancellationRequested();return new(d.Name,d.Layout,payload,d.ColorSpace);
+    }
+    internal static async Task<UnityTexturePixels> TextureAsync(ReadOnlyMemory<byte> bytes,StreamedUnityArchive archive,UnityFileIdentity owner,CancellationToken token=default)
+    {
+        ArgumentNullException.ThrowIfNull(archive);var d=DescribeTexture(bytes,token);var payload=d.Inline;
+        archive.RequireOwner(owner,token);
+        if(d.StreamPath.Length!=0)payload=await archive.ReadResourceAsync(owner,d.StreamPath,d.Offset,d.Size,token).ConfigureAwait(false);
+        token.ThrowIfCancellationRequested();return new(d.Name,d.Layout,payload,d.ColorSpace);
     }
     internal static UnitySpritePixels Sprite(ReadOnlyMemory<byte> bytes, CancellationToken token, bool allowAtlas = false)
     {

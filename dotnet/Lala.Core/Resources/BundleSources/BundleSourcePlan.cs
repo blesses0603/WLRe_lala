@@ -106,6 +106,15 @@ internal sealed class BundleSourcePlan
         return plan;
     }
 
+    // Explicit disk-backed phase plan, never the existing owned-byte download path.
+    internal static BundleSourcePlan CreateStagedSmallMaps(YooAssetManifest current,string version,IReadOnlyList<string> paths,CancellationToken token)
+    {
+        var plan=CreateCore(current,version,null,paths,token,"MainPackage");
+        if(plan.Entries.Count is <1 or >4||plan.Entries.Sum(e=>e.Spec.Size)>64L*1024*1024)
+            throw new BundleSourceException(BundleSourceFailure.Budget,"Staged small map closure exceeds disk-source quota");
+        return plan;
+    }
+
     private static BundleSourcePlan CreateCore(YooAssetManifest current, string dataVersion,
         YooAssetManifest? previous, IReadOnlyList<string> assetPaths, CancellationToken cancellationToken, string package = "DataPackage")
     {
