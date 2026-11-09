@@ -1,4 +1,4 @@
-# Desktop 資源準備接線 — PR #79 ver 8.0.46
+# Desktop 資源準備接線 — PR #79 ver 8.0.47
 
 本批在登入前接入必要資料的真實下載、驗證及 SQLite 啟用流程；圖資尚未啟用，
 不是 Python 完整資源流程或正式服驗收。
@@ -57,3 +57,7 @@ Python 在登入前比較官方 exe／data／兩個 Package，再驗證來源與
 ## 8.0.46 圖像像素基礎批次
 
 已完成四種未壓縮 Texture2D 格式及未打包矩形 Sprite 的純像素解碼、完整來源／像素雜湊與記憶體快取比對。尚未解析 class 28／213 或從官方 Bundle 建立圖片；context 是觀測主張，不能授予 provenance。PNG／SQLite、實際來源解析及圖資 publication 仍未完成，登入前流程與 HasVisualAssets=false 不變。詳見 [範圍、參照與相依](../dotnet/Lala.Core/Resources/UnityImages/README.md)。
+
+## 8.0.47 圖片 SerializedFile 接線
+
+內部 UnitySpriteExtractor 已可從有限且 checksum 驗證的 Bundle 集合，按固定 2021.3.45f2 release type tree 解析 class 28／213，精確核對同檔容器配對與 Sprite→Texture 指標，再建立像素候選。原 TextAsset 路徑不自動接受圖片。獨立 UnityPy writer／SpriteHelper 與 AssetsTools 驗證使用自有合成檔，不能代表官方圖資驗收；正式圖片取得／publication、PNG／SQLite 與 UI 仍未接入。詳見圖資 README。

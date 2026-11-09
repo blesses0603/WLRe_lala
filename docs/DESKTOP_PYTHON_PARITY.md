@@ -1,4 +1,4 @@
-# PR #79 ver 8.0.46：Python 桌面介面對照盤點
+# PR #79 ver 8.0.47：Python 桌面介面對照盤點
 
 範圍是全部桌面畫面及其子視窗，保留使用者較新的「背包／特技各自獨立視窗」要求。參照 PR 原 head `59416bde817f39035176ae9c1e2eeb5b23896d58` 中 Python 7.3.1 原始碼；本批未改 Python，也未聲稱已全部移植完成。
 
@@ -97,3 +97,7 @@ inspection 201、Desktop 離線 63 通過。原生 UI 224（29 張截圖）、ca
 ## 8.0.46 圖像候選解碼
 
 Core 已有受限四格式 Texture2D 像素／矩形 Sprite 裁切與像素快取比對，但沒有 production 圖片抽取或 UI 啟用。class 28／213 精確解析、PNG／SQLite、同版來源重查及映射仍缺；所有圖資狀態維持未就緒。
+
+## 8.0.47 精確 SerializedFile 圖像解析
+
+已補上固定型別樹的 Texture2D／Sprite 解析與同檔指標核對，從驗證 Bundle 到像素候選可做離線整合測試。未接 production 圖資 publication；PNG／SQLite、實際官方格式覆蓋、四類圖片映射與 UI 啟用仍缺。維持未就緒狀態。

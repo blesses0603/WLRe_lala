@@ -1,0 +1,25 @@
+{
+  "writer": "UnityPy 1.25.4 SerializedFile.save + Texture2DConverter/SpriteHelper",
+  "schema": "UnityPy 1.25.4 bundled TPK 2021.3.45f2 release",
+  "tpk_sha256": "16f1f8b809d1cd3bc3aeebf0cd43ecd3690b326a7a88b2273e57bcd83f5df608",
+  "shapes": {
+    "28": {
+      "nodes": 44,
+      "sha256": "1ce7de4b790393afeb3979cb673250f386b6ef5d91e78743ff8d6a52a9dce178"
+    },
+    "213": {
+      "nodes": 167,
+      "sha256": "0e4602cdddd5763cb291097cd5a0359c703a6ba572a5e189dc95369935b41e01"
+    }
+  },
+  "asset_path": "Assets/ResourcesBuild/Sprite/Sprite_Item/s1000.png",
+  "pixels_hex": "3f6489aed3f81d42ef14395e83a8cdf29fc4e90e33587da2",
+  "pixel_sha256": "6764ba71a4074ce33ab99a2c212040a54daff2e0c666525cb0e1dfcaac96e581",
+  "files": {
+    "owned.assets": "0a70f958cb80e978e05642f92995d7845745096466ff85d52359ab47831d9a17",
+    "owned.bundle": "6df2ed988e28962ffeca896b14d4c5208efddeb761bd4d24a621546c996c4714",
+    "reversed.assets": "9d21f2b458c5818b67e91a7d89c76779e22025380f3457b4ba0f1af6af125375",
+    "sprite-only.assets": "8f4dd20d952326e1b497e064e202a6a6b07d016872523023a2f9f85bba532d7b",
+    "texture-only.assets": "7f24c526fd3760fe8fb4dcdf6cd28c60a412d395b505013bc5b1dac5e87a8aa2"
+  }
+}
