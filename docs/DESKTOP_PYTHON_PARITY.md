@@ -243,3 +243,10 @@ SQLite 首幀與 token 索引採完整 transaction 與新連線獨立回讀；�
 ## ver 8.0.70：表情必要物件及小數裁切
 
 確認 Python 對官方小數 textureRect 的 Pillow 端點取整語意；C# 以 double／ties-to-even 對齊，保留原始及取整後範圍檢查。表情專用解析只輸出精確本檔必要圖集物件，所有 metadata/schema/container 仍完整驗證，必要 Sprite physics 上限 64 不變。官方私有快取 62 首幀完整像素與 SQLite 獨立回讀成功；production 工廠尚未註冊、小地圖尚未接線。這不是完整桌面正式驗收。
+
+
+## ver 8.0.71：正式表情工廠及小地圖來源預檢
+
+正式表情 prepared batch 已接上既有 owner／SQLite／撤銷 gallery，資源確認描述條件式表情寫入。官方私有快取 62 首幀工廠及資料庫驗證成功；完整正式帳號 owner 與畫面仍待驗收。小地圖只有來源模型／閉包預檢：562 張所需單檔 43,187,027 bytes 超過既有 Core 32 MiB，未下載、解碼或啟用。見 [本批流程與限制](DOTNET_EMOJI_PRODUCTION.md)。
+
+補查正式表情聯集 33,772,710 bytes 超過 32 MiB 保留上限，factory／owner 雖已接線，完整 production 仍被容量阻擋，下一步需分階段來源持有與再驗證。

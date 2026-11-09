@@ -15,6 +15,8 @@ public sealed class UnityImageArchiveTests
     {
         var raw=Normal(index);Assert.Throws<UnityTextAssetException>(()=>BoundedUnityBundle.Read(raw,new(),default));
         var archive=UnityImageArchive.Read(Owner.BundleName,raw,new());var hash=archive.SourceSha256;raw[0]=0;
+        Assert.Equal(new[]{Owner},archive.SerializedOwners);
+        Assert.Throws<NotSupportedException>(()=>((IList<UnityFileIdentity>)archive.SerializedOwners)[0]=Owner with{EntryName="other"});
         Assert.Equal(Enumerable.Range(250,20).Select(i=>(byte)i).ToArray(),archive.CopyResource(Owner,Path,250,20));
         var copy=archive.CopyResource(Owner,Path,0,10);copy[0]=99;Assert.Equal(0,archive.CopyResource(Owner,Path,0,1)[0]);Assert.Equal(hash,archive.SourceSha256);
     }

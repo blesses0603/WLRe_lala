@@ -282,7 +282,7 @@ public sealed class LoginWindow : DesktopWindow, IAccountLoginInput, IAccountRol
             Ui.Text("登入協定完成後，下載並驗證官方資源", 20, bold: true),
             Ui.Text("HTTPS 來源：" + disclosure.ResourceUrlPrefix),
             Ui.Text("版本入口：" + disclosure.VersionMapUrl),
-            Ui.Text("SQLite：" + disclosure.InventoryPath), Ui.Text("物品圖快取：" + disclosure.ItemImageCachePath), Ui.Text("頭像快取：" + disclosure.PortraitCachePath), Ui.Text("表情快取（來源待驗證，尚不寫入）：" + disclosure.EmojiCachePath), Ui.Text("Bundle 快取：" + disclosure.BundleCacheDirectory),
+            Ui.Text("SQLite：" + disclosure.InventoryPath), Ui.Text("物品圖快取：" + disclosure.ItemImageCachePath), Ui.Text("頭像快取：" + disclosure.PortraitCachePath), Ui.Text("表情快取（驗證通過後寫入）：" + disclosure.EmojiCachePath), Ui.Text("Bundle 快取：" + disclosure.BundleCacheDirectory),
             Ui.Text("將建立目錄、寫入經驗證的 Bundle／暫存檔與 SQLite（含 journal），再獨立回讀及重查來源版本。停止不會撤銷已完成的寫入；結果不明時不自動重試。"),
             Ui.Text("資源綁定只提供唯讀目錄與核心投影；一般遊戲操作仍停用。尚非 Python 全量資源／圖資功能。帳密只傳給另行確認的遊戲端點，不傳到資源 HTTPS。"),
             Ui.Row(Ui.Button("取消", () => dialog.Close(false), "ResourceSendCancel"),

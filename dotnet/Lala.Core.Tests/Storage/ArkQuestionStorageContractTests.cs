@@ -356,12 +356,23 @@ public sealed class ArkQuestionStorageContractTests
     {
         using var db = new ArkQuestionStorageTestDatabase(); db.Store().Observe(Token, 1, Question);
         using var gate = new Barrier(2);
+        ArkQuestionEvidenceStatus Write(int i) => mode == 0 || mode == 2 && i == 1
+            ? db.Store().Confirm(Token, 1, Question, (uint)(22 + i))
+            : db.Store().RecordCandidate(Token, 1, Question, (uint)(22 + i), "reviewed", "r1");
+        // The store deliberately bounds lock waiting to one second. Under runner
+        // contention a competing call may fail BUSY rather than both succeeding.
+        // Drain both attempts first; only then explicitly resubmit the rejected
+        // observation. No production retry or timeout change is implied.
         var results = await Task.WhenAll(Enumerable.Range(0, 2).Select(i => Task.Run(() =>
         {
             gate.SignalAndWait();
-            return mode == 0 || mode == 2 && i == 1 ? db.Store().Confirm(Token, 1, Question, (uint)(22 + i))
-                : db.Store().RecordCandidate(Token, 1, Question, (uint)(22 + i), "reviewed", "r1");
+            try { return (ArkQuestionEvidenceStatus?)Write(i); }
+            catch (SqliteException error) when (error.SqliteErrorCode == 5)
+            { Assert.False(error.Data.Contains("ArkQuestionRollbackError")); return null; }
         })));
+        Assert.Contains(results, result => result is not null);
+        for (int i = 0; i < results.Length; i++)
+            if (results[i] is null) results[i] = Write(i);
         Assert.Contains(ArkQuestionEvidenceStatus.Conflict, results);
         Assert.Equal(new ArkQuestionObservation(null, ArkQuestionEvidenceStatus.Conflict), db.Store().Observe(Token, 1, Question));
         Assert.Equal(ArkQuestionEvidenceStatus.Conflict, db.Store().Confirm(Token, 1, Question, 22));

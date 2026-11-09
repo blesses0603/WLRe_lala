@@ -28,7 +28,7 @@ internal static class RuntimeFlowFixtures
     internal static byte[] Manifest(IReadOnlyDictionary<string, byte[]> bundles,
         IReadOnlyDictionary<string, string>? roots = null, IReadOnlyDictionary<string, string[]>? dependencies = null,
         string version = Version, bool includeSkill = false, bool includeDaily = false,
-        IReadOnlySet<string>? omittedTables = null, bool includeInstances = false)
+        IReadOnlySet<string>? omittedTables = null, bool includeInstances = false, bool includeEmoji = false)
     {
         var index = BundleSourceFixtures.Index();
         index["header"]!["package_version"] = version;
@@ -36,6 +36,7 @@ internal static class RuntimeFlowFixtures
         var ids = names.Select((name, id) => (name, id)).ToDictionary(pair => pair.name, pair => pair.id, StringComparer.Ordinal);
         var assets = new JsonArray(); var rows = new JsonArray();
         IEnumerable<string> tables = BundleSourcePlan.RequiredTables;
+        if (includeEmoji) tables = tables.Append("EmojiData_C");
         if (includeSkill) tables = tables.Append("SkillData_C");
         if (includeDaily) tables = tables.Concat(new[] { "DailyTaskData_C", "DailyTaskRewardData_C" });
         if (includeInstances) tables = tables.Concat(new[] { "DungeonData_C", "CooperateEventData_C" });

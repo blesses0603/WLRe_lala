@@ -9,6 +9,7 @@ internal sealed class UnityImageArchive
     private readonly FrozenDictionary<string, BoundedUnityBundle.Entry> entries;
     internal string BundleName { get; }
     internal string SourceSha256 { get; }
+    internal IReadOnlyList<UnityFileIdentity> SerializedOwners => Array.AsReadOnly(entries.Values.Where(e=>!e.IsResource).Select(e=>new UnityFileIdentity(BundleName,e.Name)).OrderBy(e=>e.EntryName,StringComparer.Ordinal).ToArray());
     private UnityImageArchive(string name, string hash, List<BoundedUnityBundle.Entry> values)
     { BundleName=name; SourceSha256=hash; entries=values.ToFrozenDictionary(e=>e.Name,StringComparer.Ordinal); }
     internal static UnityImageArchive Read(string bundleName, ReadOnlyMemory<byte> input, UnityExtractionBudget budget, CancellationToken token=default)

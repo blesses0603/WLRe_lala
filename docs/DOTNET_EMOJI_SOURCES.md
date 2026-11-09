@@ -1,3 +1,5 @@
+> v8.0.71 最新接線與驗證界線見 [正式表情工廠](DOTNET_EMOJI_PRODUCTION.md)。以下保留各批實作與當時驗證紀錄。
+
 # ver 8.0.65 表情資料映射與受限來源準備
 
 本批新增內部 `PrepareEmojiSourcesAsync` 入口及 `EmojiMapping`。尚未掛入 production 自動準備／啟用流程，沒有表情圖片資料庫、publication、桌面顯示或聊天發送。本批不代表正式表情取得已正向驗收。

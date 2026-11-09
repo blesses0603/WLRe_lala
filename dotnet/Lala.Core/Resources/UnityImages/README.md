@@ -1,3 +1,7 @@
+> Production emoji activation is still capacity-blocked: required tables plus emoji closure total 33,772,710 bytes, above unchanged 33,554,432 retained-byte bound, including cache hits. Factory validation is not full production activation.
+
+> 8.0.71: production emoji factory consumes immutable verified closure, rebuilds pixels and joins existing SQLite/current-publication path. Cached official 62-frame factory/readback validated; live owner/UI acceptance pending. Smallmap source preflight rejects observed 43,187,027-byte closure under unchanged 32 MiB capacity. [Details](../../../../docs/DOTNET_EMOJI_PRODUCTION.md).
+
 > 8.0.70: exact local emoji graph projection retains full metadata validation and selected-object physics limits. Fractional crops follow UnityPy/Pillow double endpoint ties-to-even rounding. Verified private official cache: 62 full RGBA/token matches and independent SQLite round trip. Production source factory/publication and smallmap remain pending. See [evidence](../../../../docs/DOTNET_EMOJI_DISPLAY.md).
 
 > 8.0.69: desktop now consumes a revocable emoji gallery request, decodes shared first frames in the background, fits a single-page grid and inserts local draft tokens only. Production emoji sources remain uninstalled: the fresh verified official root bundle is rejected by the full-object parser at an unrelated Sprite physics quota. See [display and source evidence](../../../../docs/DOTNET_EMOJI_DISPLAY.md). No full official image acceptance is claimed.

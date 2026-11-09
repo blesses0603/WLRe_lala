@@ -96,6 +96,16 @@ internal sealed class BundleSourcePlan
         return plan;
     }
 
+    internal static BundleSourcePlan CreateSmallMaps(YooAssetManifest current,string version,IReadOnlyList<string> paths,CancellationToken token)
+    {
+        var plan=CreateCore(current,version,null,paths,token,"MainPackage");
+        // Keep existing Core source capacity; Python's 64 MiB family does not
+        // authorize widening the Core shared download/decode budgets.
+        if(plan.Entries.Count is <1 or >4||plan.Entries.Sum(e=>e.Spec.Size)>32L*1024*1024)
+            throw new BundleSourceException(BundleSourceFailure.Budget,"Small map closure exceeds current Core quota");
+        return plan;
+    }
+
     private static BundleSourcePlan CreateCore(YooAssetManifest current, string dataVersion,
         YooAssetManifest? previous, IReadOnlyList<string> assetPaths, CancellationToken cancellationToken, string package = "DataPackage")
     {

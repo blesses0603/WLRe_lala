@@ -1,3 +1,5 @@
+> v8.0.71 最新接線與驗證界線見 [正式表情工廠](DOTNET_EMOJI_PRODUCTION.md)。以下保留各批實作與當時驗證紀錄。
+
 # ver 8.0.70 表情必要物件投影與小數裁切
 
 Core `EmojiGalleryRequest` 綁定目前帳號快照、owner publication 與精確 activation。只提供可見 token 的不可變顯示 metadata 與私有 PNG 複本；每次讀取前後重查，不能據此取得聊天或遊戲指令權限。hidden token 不列入網格，列序號與共享首幀保留。

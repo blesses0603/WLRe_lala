@@ -368,8 +368,8 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
                     portraits = portraits with { Mapping = portraitBatch.Mapping };
                 }
             }
-            // Offline hook only: no production factory exists until full official source verification.
-            if (_bootstrapHooks?.EmojisForOfflineTest?.Invoke(prepared) is { } emojiBatch)
+            // Production uses verified closure reconstruction; offline hooks cannot replace it.
+            if ((prepared.Emojis ?? _bootstrapHooks?.EmojisForOfflineTest?.Invoke(prepared)) is { } emojiBatch)
             {
                 if (bootstrap)
                 {

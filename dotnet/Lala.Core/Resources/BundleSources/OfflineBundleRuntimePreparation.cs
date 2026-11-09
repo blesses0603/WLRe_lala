@@ -11,6 +11,7 @@ internal sealed class OfflinePreparedRuntimeCandidate
     internal ManifestIdentity Identity { get; }
     internal ItemImageBatch? ItemImages { get; }
     internal PortraitRuntimeBatch? Portraits { get; }
+    internal EmojiRuntimeBatch? Emojis { get; }
     internal ResourceInventoryInput InventoryInput { get; }
     internal RequiredBundleSources RecheckContext { get; }
     internal string ManifestContentIdentity { get; }
@@ -28,9 +29,9 @@ internal sealed class OfflinePreparedRuntimeCandidate
     internal string Static1275Admission => "unavailable";
     internal OfflinePreparedRuntimeCandidate(OfflineRuntimeCandidate candidate, RequiredBundleSources sources,
         ResourceInventoryInput inventory, ManifestIdentity identity, BundleDownloadTotals? downloads = null,
-        IEnumerable<VerifiedBundleSource>? verifiedSources = null, ItemImageBatch? itemImages = null, PortraitRuntimeBatch? portraits = null)
+        IEnumerable<VerifiedBundleSource>? verifiedSources = null, ItemImageBatch? itemImages = null, PortraitRuntimeBatch? portraits = null, EmojiRuntimeBatch? emojis = null)
     {
-        RecheckContext = sources; ItemImages = itemImages; Portraits = portraits;
+        RecheckContext = sources; ItemImages = itemImages; Portraits = portraits; Emojis = emojis;
         Identity = identity; InventoryInput = inventory;
         Candidate = candidate; ManifestContentIdentity = sources.ManifestContentIdentity; Attempt = sources.Attempt;
         DownloadCount = downloads?.Count ?? sources.DownloadCount; DownloadBytes = downloads?.Bytes ?? sources.DownloadBytes;
@@ -187,6 +188,21 @@ internal sealed class OfflineBundleRuntimePreparation
             catch (Exception error) when (IsOptionalFailure(error) || error is SpritePixelException) { }
             _preparation.EnsureCurrent(prepared, cancellationToken);
         }
+        EmojiRuntimeBatch? emojis=null;
+        if(prepared.Snapshot.DataVersion==EmojiSourcePlan.DataVersion && packageVersion==EmojiSourcePlan.DataPackageVersion &&
+            imageManifest.Header.PackageVersion==EmojiSourcePlan.MainVersion &&
+            imageManifest.AssetBundles.ContainsKey(EmojiSourcePlan.AtlasPath) && prepared.Manifests[0].AssetBundles.ContainsKey(EmojiSourcePlan.DataPath))
+        {
+            try
+            {
+                var selected=await _preparation.PrepareEmojiSourcesAsync(source,prepared,cache,budget,downloads,cancellationToken).ConfigureAwait(false);
+                emojis=EmojiRuntimeBatch.Create(selected,cancellationToken);
+                foreach(var handle in selected.Data.Concat(selected.Images))handles.TryAdd(handle.Spec.Name,handle);
+            }
+            catch(Exception error) when(IsOptionalFailure(error) && error is not BundleSourceException
+                {Failure:BundleSourceFailure.VersionsChanged or BundleSourceFailure.ManifestChanged or BundleSourceFailure.StaleAttempt}) { }
+            _preparation.EnsureCurrent(prepared,cancellationToken);
+        }
         // Persist precisely the native-extracted arrays, not reserialized decoded rows or
         // caller-provided hashes. Capture detaches every payload under the original limits.
         var inventory = ResourceInventoryInput.Capture(identity.Key, tables.Keys
@@ -208,7 +224,7 @@ internal sealed class OfflineBundleRuntimePreparation
         _preparation.EnsureCurrent(prepared, cancellationToken);
         await _preparation.ConfirmUnchangedAsync(source, prepared, cancellationToken).ConfigureAwait(false);
         return _preparation.ReturnCurrent(prepared, new OfflinePreparedRuntimeCandidate(candidate, prepared, inventory, identity,
-            downloads, handles.Values, itemImages, portraits), cancellationToken);
+            downloads, handles.Values, itemImages, portraits, emojis), cancellationToken);
     }
     private static bool IsOptionalFailure(Exception error) => !error.Data.Contains(ResourceCleanup.FailureMarker) &&
         error is not ResourceTransportException { Failure: ResourceTransportFailure.Cleanup } &&
