@@ -84,6 +84,18 @@ internal sealed class BundleSourcePlan
         return plan;
     }
 
+    internal static BundleSourcePlan CreateEmojiData(YooAssetManifest current,string version,CancellationToken token)
+        => CreateCore(current,version,null,[EmojiSourcePlan.DataPath],token);
+    internal static BundleSourcePlan CreateEmojiAtlas(YooAssetManifest current,string version,CancellationToken token)
+    {
+        var plan=CreateCore(current,version,null,[EmojiSourcePlan.AtlasPath],token,"MainPackage");
+        // Python's reviewed source budget is eight bundles. The observed exact
+        // official closure contains six; this does not widen decoded-object scopes.
+        if(plan.Entries.Count is <1 or >8||plan.Entries.Sum(e=>e.Spec.Size)>32L*1024*1024)
+            throw new BundleSourceException(BundleSourceFailure.Budget,"Emoji atlas source closure exceeds supported quota");
+        return plan;
+    }
+
     private static BundleSourcePlan CreateCore(YooAssetManifest current, string dataVersion,
         YooAssetManifest? previous, IReadOnlyList<string> assetPaths, CancellationToken cancellationToken, string package = "DataPackage")
     {

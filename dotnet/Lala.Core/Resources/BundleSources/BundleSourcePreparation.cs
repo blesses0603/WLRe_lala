@@ -238,6 +238,21 @@ internal sealed class BundleSourcePreparation
         return verified;
     }
 
+    internal async Task<PreparedEmojiSources> PrepareEmojiSourcesAsync(IResourceSource source,
+        RequiredBundleSources required,IBundleSourceCacheReader? cache,BundleSourceBudget? budget,
+        BundleDownloadTotals totals,CancellationToken token=default)
+    {
+        EnsureCurrent(required,token);
+        var plan=EmojiSourcePlan.Create(required.Manifests.Single(m=>m.Header.PackageName=="DataPackage"),
+            required.Manifests.Single(m=>m.Header.PackageName=="MainPackage"),required.Snapshot.DataVersion,token);
+        var data=await AcquireOptionalSourcesAsync(source,required,cache,budget,totals,plan.Data.Entries.Select(e=>e.Spec).ToArray(),token).ConfigureAwait(false);
+        var raw=UnityTextAssetExtractor.Extract(EmojiSourcePlan.DataPath,plan.Data.AssetSourceNames[EmojiSourcePlan.DataPath].Select(n=>data[n]).ToArray(),cancellationToken:token);
+        var mapping=EmojiMapping.Create(raw,token); // Unknown mapping never triggers image acquisition.
+        var images=await AcquireOptionalSourcesAsync(source,required,cache,budget,totals,plan.Images.Entries.Select(e=>e.Spec).ToArray(),token).ConfigureAwait(false);
+        var captured=PreparedEmojiSources.Capture(plan,mapping,plan.Data.Entries.Select(e=>data[e.Spec.Name]).ToArray(),plan.Images.Entries.Select(e=>images[e.Spec.Name]).ToArray(),token);
+        await ConfirmUnchangedAsync(source,required,token).ConfigureAwait(false);EnsureCurrent(required,token);return captured;
+    }
+
     private async Task<IReadOnlyDictionary<string, VerifiedBundleSource>> AcquireOptionalSourcesAsync(IResourceSource source,
         RequiredBundleSources required, IBundleSourceCacheReader? cache, BundleSourceBudget? budget,
         BundleDownloadTotals totals, IReadOnlyList<BundleSourceSpec> specs, CancellationToken token)

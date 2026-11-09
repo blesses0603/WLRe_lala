@@ -214,3 +214,7 @@ C# 原本只有技能 ID 的名稱查找也接入目前已驗證可選技能目�
 ## 8.0.64 圖集首幀前置層
 
 補入精確圖集／Sprite／貼圖指標與矩形 packing／alpha 像素對照；尚無正式表情來源、publication 或新增桌面顯示。小地圖仍未接線，詳見 [首幀像素與缺口](DOTNET_EMOJI_PIXELS.md)。
+
+## 8.0.65 表情映射與來源準備入口
+
+新增與 Python 一致的資料列 token／hidden／首幀映射及內部受限來源準備；尚未接 production 自動啟用、表情資料庫／撤銷／顯示，小地圖仍待接線。正式來源成功路徑未驗收，見 [來源界線](DOTNET_EMOJI_SOURCES.md)。
