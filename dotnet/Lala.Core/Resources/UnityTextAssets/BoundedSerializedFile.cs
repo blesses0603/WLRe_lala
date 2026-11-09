@@ -14,7 +14,7 @@ internal sealed class BoundedSerializedFile
     internal required Dictionary<long, UnityObject> Objects { get; init; }
     internal required IReadOnlyList<string> Externals { get; init; }
     internal required List<UnityContainerEntry> Container { get; init; }
-    internal static BoundedSerializedFile Read(UnityFileIdentity identity, ReadOnlyMemory<byte> bytes, UnityExtractionBudget budget, CancellationToken token, bool allowImages = false, bool allowMaterials = false, bool allowShaders = false)
+    internal static BoundedSerializedFile Read(UnityFileIdentity identity, ReadOnlyMemory<byte> bytes, UnityExtractionBudget budget, CancellationToken token, bool allowImages = false, bool allowMaterials = false, bool allowShaders = false, bool allowAtlases = false)
     {
         token.ThrowIfCancellationRequested(); var header = new UnityReadCursor(bytes, true);
         Require(header.U32() == 0 && header.U32() == 0 && header.U32() == 22 && header.U32() == 0 && header.U8() == 0,
@@ -32,7 +32,7 @@ internal sealed class BoundedSerializedFile
         for (int i = 0; i < types; i++)
         {
             token.ThrowIfCancellationRequested(); int classId = r.I32(); classes[i] = classId;
-            Require((classId is 49 or 142 || allowImages && classId is 28 or 213 || allowMaterials && classId == 21 || allowShaders && classId == 48) && r.U8() == 0 && r.U16() == ushort.MaxValue, "Unsupported or stripped Unity class");
+            Require((classId is 49 or 142 || allowImages && classId is 28 or 213 || allowMaterials && classId == 21 || allowShaders && classId == 48 || allowAtlases && classId == 687078895) && r.U8() == 0 && r.U16() == ushort.MaxValue, "Unsupported or stripped Unity class");
             r.Take(16); var shape = ReadTree(r, classId, token);
             if (classId == 48) shaders[i] = UnityShaderLayout.Create(shape);
             Require(r.Count(0) == 0, "Type dependencies unsupported");
@@ -65,6 +65,7 @@ internal sealed class BoundedSerializedFile
             token.ThrowIfCancellationRequested();
             if (obj.ClassId == 142) ReadContainer(obj.Bytes, container, budget, token);
             else if (obj.ClassId == 48) UnityShaderObjects.Read(obj.Bytes, obj.ShaderLayout!, token);
+            else if (obj.ClassId == 687078895) UnityAtlasObjects.Read(obj.Bytes, token);
             else if (obj.ClassId == 21) UnityMaterialObjects.Read(obj.Bytes, token);
             else if (obj.ClassId == 28) UnityImageObjects.Texture(obj.Bytes, token);
             else if (obj.ClassId == 213) UnityImageObjects.Sprite(obj.Bytes, token);
@@ -82,7 +83,7 @@ internal sealed class BoundedSerializedFile
         {
             token.ThrowIfCancellationRequested(); ushort version = r.U16(); byte depth = r.U8(), flags = r.U8();
             uint type = r.U32(), name = r.U32(); int size = r.I32(); uint index = r.U32(), meta = r.U32(); long reference = r.I64();
-            Require(version > 0 && depth <= (classId == 48 ? 22 : 8) && flags <= 1 && index == i && reference == 0, "Unsupported Unity tree node");
+            Require(version > 0 && depth <= (classId == 48 ? 22 : classId == 687078895 ? 10 : 8) && flags <= 1 && index == i && reference == 0, "Unsupported Unity tree node");
             raw.Add(new(depth, flags, type, name, size, meta));
         }
         var table = r.Take(strings); var nodes = new List<UnityTreeShape.Node>(count);
