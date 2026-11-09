@@ -1,4 +1,4 @@
-# PR #79 ver 8.0.47：Python 桌面介面對照盤點
+# PR #79 ver 8.0.48：Python 桌面介面對照盤點
 
 範圍是全部桌面畫面及其子視窗，保留使用者較新的「背包／特技各自獨立視窗」要求。參照 PR 原 head `59416bde817f39035176ae9c1e2eeb5b23896d58` 中 Python 7.3.1 原始碼；本批未改 Python，也未聲稱已全部移植完成。
 
@@ -101,3 +101,11 @@ Core 已有受限四格式 Texture2D 像素／矩形 Sprite 裁切與像素快�
 ## 8.0.47 精確 SerializedFile 圖像解析
 
 已補上固定型別樹的 Texture2D／Sprite 解析與同檔指標核對，從驗證 Bundle 到像素候選可做離線整合測試。未接 production 圖資 publication；PNG／SQLite、實際官方格式覆蓋、四類圖片映射與 UI 啟用仍缺。維持未就緒狀態。
+
+## 8.0.48 離線 PNG／SQLite 快取
+
+已加入固定 RGBA8 PNG 編碼與獨立 SQLite cache，輸入必須為同版本／來源集合的精確候選清單。每次讀取重新對照完整 context、texture payload／像素雜湊及由獨立候選重建的 PNG 位元組；不以資料庫自存 hash 證明正確。限制單圖 512×512、8,192 張及合計 96 MiB；來源重查與取消在提交前執行，交易失敗保留既有資料。回傳僅是離線 PNG，不是 production publication。
+
+PNG 使用固定 stored DEFLATE 區塊，避免執行不可信快取的通用解壓；不是 Python PNG 編碼或 SQLite schema 相容層。Pillow／zlib 獨立解碼證據涵蓋最小尺寸、跨區塊與最大尺寸；自有 Bundle→候選→SQLite→重新開啟回讀有整合測試。官方來源取得與重查 owner、item／portrait／emoji／smallmap 映射、可撤銷 publication、UI 與實際官方格式覆蓋仍待接入，HasVisualAssets=false。
+
+8.0.47 CI 維持未驗證；8.0.48 需在推送後核對精確 head，不沿用歷史綠燈。

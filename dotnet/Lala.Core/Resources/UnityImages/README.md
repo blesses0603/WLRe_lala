@@ -100,3 +100,43 @@ consistency only; they do not mint official provenance, current catalog activati
   publication, item/portrait/emoji/smallmap mappings and UI remain outstanding.
 
 8.0.47 validation: 18 new SerializedFile/pointer tests, 165 combined image/Unity tests, Release Core build with zero warnings/errors, public consumer and 15 repository/release checks passed.
+
+## 8.0.48 canonical PNG and offline SQLite cache
+
+`SpritePng` writes PNG RGBA8, filter None, one IDAT, noninterlaced, with deterministic stored
+DEFLATE blocks, CRC32 chunks and Adler32. Dimensions remain 1..512. This intentionally trades
+compression for a small auditable format, independent of runtime compression versions.
+References: https://www.w3.org/TR/png-3/ and https://www.rfc-editor.org/rfc/rfc1950 and
+https://www.rfc-editor.org/rfc/rfc1951 . `generate_png.py` verifies owned vectors with Pillow13
+and Python zlib, including multiple DEFLATE blocks and 512×512 output.
+
+`SpritePngStore` consumes an exclusively supplied closed SQLite connection, with a dedicated exact
+schema (not the Python image database). It owns no path selection, HTTP, credentials or game I/O.
+The supplied candidate list must be independently rebuilt from current sources, have one exact
+VersionIdentity/source-set, unique exact AssetPaths, 1..8192 entries and at most 96 MiB estimated PNG
+bytes. Reads require exactly that index, complete context/layout/crop/source/pixel identity, bounded
+PNG storage, its SHA256, AND byte equality to a fresh canonical encoding of the independent candidate.
+Thus a corrupt cache cannot approve its own pixels even if its hashes are replaced. Arbitrary PNG
+filters, compressed streams and metadata are never parsed or inflated. This is a canonical-cache
+validator and writer, not a general PNG decoder or Python cache import implementation.
+
+Writes replace the complete catalog in BEGIN IMMEDIATE, independently read it back, then run the
+required source-revalidation callback and cancellation check immediately before COMMIT. Reads use a
+snapshot transaction and the same final revalidation. Existing inventory transaction machinery records
+committed/not-committed/unknown outcomes and cleanup failures; a late/uncertain commit is not retried.
+No source callback itself proves official provenance. Returned buffers are caller-owned offline data,
+not a live/revocable publication; owner generation admission and replacement after return remain the
+future production bridge's responsibility. This API must not be wired directly to a ready UI flag.
+
+Tests cover owned UnityFS→Sprite/Texture→pixels→PNG→SQLite→reopen/rebuild; independent PNG vectors;
+corrupt hashes/identity/PNG/storage/index; forged PNG plus matching hash; same-pixel version changes;
+source-set mixing; aggregate bounds; source recheck failure/cancellation rollback; readonly writes;
+unexpected triggers; and atomic replacement. No actual official game assets or credentials were used.
+
+Remaining: actual official format evidence/coverage, trusted production image acquisition and final
+source reobservation/generation admission, item/portrait/emoji/smallmap mapping, revocable publication,
+Python cache compatibility if required, and UI. HasVisualAssets remains false. 8.0.47 CI is unverified.
+
+8.0.48 local checks: all 22 new cache/PNG tests passed; Release Core build has zero warnings/errors;
+public consumer and 15 repository/release checks passed. The full Core regression and exact-head CI
+are recorded separately on PR #79; these focused results do not claim platform or official acceptance.

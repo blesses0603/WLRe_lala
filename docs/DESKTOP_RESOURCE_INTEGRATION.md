@@ -1,4 +1,4 @@
-# Desktop 資源準備接線 — PR #79 ver 8.0.47
+# Desktop 資源準備接線 — PR #79 ver 8.0.48
 
 本批在登入前接入必要資料的真實下載、驗證及 SQLite 啟用流程；圖資尚未啟用，
 不是 Python 完整資源流程或正式服驗收。
@@ -61,3 +61,11 @@ Python 在登入前比較官方 exe／data／兩個 Package，再驗證來源與
 ## 8.0.47 圖片 SerializedFile 接線
 
 內部 UnitySpriteExtractor 已可從有限且 checksum 驗證的 Bundle 集合，按固定 2021.3.45f2 release type tree 解析 class 28／213，精確核對同檔容器配對與 Sprite→Texture 指標，再建立像素候選。原 TextAsset 路徑不自動接受圖片。獨立 UnityPy writer／SpriteHelper 與 AssetsTools 驗證使用自有合成檔，不能代表官方圖資驗收；正式圖片取得／publication、PNG／SQLite 與 UI 仍未接入。詳見圖資 README。
+
+## 8.0.48 離線 PNG／SQLite 快取
+
+已加入固定 RGBA8 PNG 編碼與獨立 SQLite cache，輸入必須為同版本／來源集合的精確候選清單。每次讀取重新對照完整 context、texture payload／像素雜湊及由獨立候選重建的 PNG 位元組；不以資料庫自存 hash 證明正確。限制單圖 512×512、8,192 張及合計 96 MiB；來源重查與取消在提交前執行，交易失敗保留既有資料。回傳僅是離線 PNG，不是 production publication。
+
+PNG 使用固定 stored DEFLATE 區塊，避免執行不可信快取的通用解壓；不是 Python PNG 編碼或 SQLite schema 相容層。Pillow／zlib 獨立解碼證據涵蓋最小尺寸、跨區塊與最大尺寸；自有 Bundle→候選→SQLite→重新開啟回讀有整合測試。官方來源取得與重查 owner、item／portrait／emoji／smallmap 映射、可撤銷 publication、UI 與實際官方格式覆蓋仍待接入，HasVisualAssets=false。
+
+8.0.47 CI 維持未驗證；8.0.48 需在推送後核對精確 head，不沿用歷史綠燈。
