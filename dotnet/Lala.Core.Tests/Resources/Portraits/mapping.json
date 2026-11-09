@@ -1,0 +1,521 @@
+{
+  "raw": "AwAAAAAAAAAAWBsAAABYGxyvfRoVzVsHAAAAAP/JmjsAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWRsAAAJHAAEAAAACAAAAAwAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWhsAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+  "npcs": {
+    "7000": {
+      "icon": "7000",
+      "palettes": {
+        "1": 444444444,
+        "2": 123456789,
+        "3": 0,
+        "4": 999999999
+      }
+    },
+    "7001": {
+      "icon": "0071_2",
+      "palettes": {
+        "1": 1,
+        "2": 2,
+        "3": 3,
+        "4": 4
+      }
+    }
+  },
+  "players": [
+    {
+      "sex": 0,
+      "head": 0,
+      "expected": null
+    },
+    {
+      "sex": 0,
+      "head": 1,
+      "expected": null
+    },
+    {
+      "sex": 0,
+      "head": 2,
+      "expected": null
+    },
+    {
+      "sex": 0,
+      "head": 3,
+      "expected": null
+    },
+    {
+      "sex": 0,
+      "head": 4,
+      "expected": null
+    },
+    {
+      "sex": 0,
+      "head": 5,
+      "expected": null
+    },
+    {
+      "sex": 0,
+      "head": 6,
+      "expected": null
+    },
+    {
+      "sex": 0,
+      "head": 7,
+      "expected": null
+    },
+    {
+      "sex": 0,
+      "head": 8,
+      "expected": null
+    },
+    {
+      "sex": 0,
+      "head": 9,
+      "expected": null
+    },
+    {
+      "sex": 1,
+      "head": 0,
+      "expected": [
+        "player",
+        "0003",
+        [
+          [
+            1,
+            123456789
+          ],
+          [
+            5,
+            987654321
+          ]
+        ]
+      ]
+    },
+    {
+      "sex": 1,
+      "head": 1,
+      "expected": null
+    },
+    {
+      "sex": 1,
+      "head": 2,
+      "expected": null
+    },
+    {
+      "sex": 1,
+      "head": 3,
+      "expected": null
+    },
+    {
+      "sex": 1,
+      "head": 4,
+      "expected": null
+    },
+    {
+      "sex": 1,
+      "head": 5,
+      "expected": null
+    },
+    {
+      "sex": 1,
+      "head": 6,
+      "expected": null
+    },
+    {
+      "sex": 1,
+      "head": 7,
+      "expected": null
+    },
+    {
+      "sex": 1,
+      "head": 8,
+      "expected": null
+    },
+    {
+      "sex": 1,
+      "head": 9,
+      "expected": null
+    },
+    {
+      "sex": 2,
+      "head": 0,
+      "expected": [
+        "player",
+        "0001",
+        [
+          [
+            1,
+            123456789
+          ],
+          [
+            5,
+            987654321
+          ]
+        ]
+      ]
+    },
+    {
+      "sex": 2,
+      "head": 1,
+      "expected": [
+        "player",
+        "0002",
+        [
+          [
+            1,
+            123456789
+          ],
+          [
+            5,
+            987654321
+          ]
+        ]
+      ]
+    },
+    {
+      "sex": 2,
+      "head": 2,
+      "expected": null
+    },
+    {
+      "sex": 2,
+      "head": 3,
+      "expected": null
+    },
+    {
+      "sex": 2,
+      "head": 4,
+      "expected": null
+    },
+    {
+      "sex": 2,
+      "head": 5,
+      "expected": null
+    },
+    {
+      "sex": 2,
+      "head": 6,
+      "expected": null
+    },
+    {
+      "sex": 2,
+      "head": 7,
+      "expected": null
+    },
+    {
+      "sex": 2,
+      "head": 8,
+      "expected": null
+    },
+    {
+      "sex": 2,
+      "head": 9,
+      "expected": null
+    },
+    {
+      "sex": 3,
+      "head": 0,
+      "expected": [
+        "player",
+        "0006",
+        [
+          [
+            1,
+            123456789
+          ],
+          [
+            5,
+            987654321
+          ]
+        ]
+      ]
+    },
+    {
+      "sex": 3,
+      "head": 1,
+      "expected": [
+        "player",
+        "0007",
+        [
+          [
+            1,
+            123456789
+          ],
+          [
+            5,
+            987654321
+          ]
+        ]
+      ]
+    },
+    {
+      "sex": 3,
+      "head": 2,
+      "expected": [
+        "player",
+        "0012",
+        [
+          [
+            1,
+            123456789
+          ],
+          [
+            5,
+            987654321
+          ]
+        ]
+      ]
+    },
+    {
+      "sex": 3,
+      "head": 3,
+      "expected": [
+        "player",
+        "0013",
+        [
+          [
+            1,
+            123456789
+          ],
+          [
+            5,
+            987654321
+          ]
+        ]
+      ]
+    },
+    {
+      "sex": 3,
+      "head": 4,
+      "expected": null
+    },
+    {
+      "sex": 3,
+      "head": 5,
+      "expected": null
+    },
+    {
+      "sex": 3,
+      "head": 6,
+      "expected": null
+    },
+    {
+      "sex": 3,
+      "head": 7,
+      "expected": null
+    },
+    {
+      "sex": 3,
+      "head": 8,
+      "expected": null
+    },
+    {
+      "sex": 3,
+      "head": 9,
+      "expected": null
+    },
+    {
+      "sex": 4,
+      "head": 0,
+      "expected": [
+        "player",
+        "0010",
+        [
+          [
+            1,
+            123456789
+          ],
+          [
+            5,
+            987654321
+          ]
+        ]
+      ]
+    },
+    {
+      "sex": 4,
+      "head": 1,
+      "expected": [
+        "player",
+        "0005",
+        [
+          [
+            1,
+            123456789
+          ],
+          [
+            5,
+            987654321
+          ]
+        ]
+      ]
+    },
+    {
+      "sex": 4,
+      "head": 2,
+      "expected": [
+        "player",
+        "0004",
+        [
+          [
+            1,
+            123456789
+          ],
+          [
+            5,
+            987654321
+          ]
+        ]
+      ]
+    },
+    {
+      "sex": 4,
+      "head": 3,
+      "expected": [
+        "player",
+        "0015",
+        [
+          [
+            1,
+            123456789
+          ],
+          [
+            5,
+            987654321
+          ]
+        ]
+      ]
+    },
+    {
+      "sex": 4,
+      "head": 4,
+      "expected": [
+        "player",
+        "0008",
+        [
+          [
+            1,
+            123456789
+          ],
+          [
+            5,
+            987654321
+          ]
+        ]
+      ]
+    },
+    {
+      "sex": 4,
+      "head": 5,
+      "expected": [
+        "player",
+        "0009",
+        [
+          [
+            1,
+            123456789
+          ],
+          [
+            5,
+            987654321
+          ]
+        ]
+      ]
+    },
+    {
+      "sex": 4,
+      "head": 6,
+      "expected": [
+        "player",
+        "0011",
+        [
+          [
+            1,
+            123456789
+          ],
+          [
+            5,
+            987654321
+          ]
+        ]
+      ]
+    },
+    {
+      "sex": 4,
+      "head": 7,
+      "expected": [
+        "player",
+        "0014",
+        [
+          [
+            1,
+            123456789
+          ],
+          [
+            5,
+            987654321
+          ]
+        ]
+      ]
+    },
+    {
+      "sex": 4,
+      "head": 8,
+      "expected": null
+    },
+    {
+      "sex": 4,
+      "head": 9,
+      "expected": null
+    },
+    {
+      "sex": 5,
+      "head": 0,
+      "expected": null
+    },
+    {
+      "sex": 5,
+      "head": 1,
+      "expected": null
+    },
+    {
+      "sex": 5,
+      "head": 2,
+      "expected": null
+    },
+    {
+      "sex": 5,
+      "head": 3,
+      "expected": null
+    },
+    {
+      "sex": 5,
+      "head": 4,
+      "expected": null
+    },
+    {
+      "sex": 5,
+      "head": 5,
+      "expected": null
+    },
+    {
+      "sex": 5,
+      "head": 6,
+      "expected": null
+    },
+    {
+      "sex": 5,
+      "head": 7,
+      "expected": null
+    },
+    {
+      "sex": 5,
+      "head": 8,
+      "expected": null
+    },
+    {
+      "sex": 5,
+      "head": 9,
+      "expected": null
+    }
+  ],
+  "source": "actual Python parser (owned digest seam) and select_portrait; no official acceptance"
+}

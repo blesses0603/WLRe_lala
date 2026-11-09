@@ -33,7 +33,14 @@ internal sealed class PortraitCachedImage
 }
 internal sealed record PortraitPngReadback(PortraitBatchReceipt Receipt,IReadOnlyDictionary<PortraitMaterialKey,PortraitCachedImage> Images)
 {
-    internal bool HasVerifiedProvenance=>false; // A future revocable binding must separately admit publication.
+    internal PortraitMapping? Mapping { get; init; }
+    internal PortraitSelection? Select(Lala.Core.Protocol.WorldPlayer? player,
+        Lala.Core.Inventory.CompanionReceiveSnapshot companions, bool companion)
+    {
+        var selected = Mapping?.Select(player, companions, companion);
+        return selected is not null && Images.ContainsKey(selected.Key) ? selected : null;
+    }
+    internal bool HasVerifiedProvenance=>false; // Current owner activation must separately admit each read.
 }
 internal static class PortraitPngStore
 {

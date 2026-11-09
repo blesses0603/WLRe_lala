@@ -147,11 +147,16 @@ public sealed class ResourceRuntimeOwnerTests
         var result = await offline.BootstrapAndRefreshAsync(); Assert.Null(result.Failure);
         var prepared = await new OfflineBundleRuntimePreparation().PrepareAsync(new Source());
         await using var owner = ResourceRuntimeOwner.Create(fixture.Root);
-        var publication = new ResourceRuntimePublication(owner, 0, prepared, portraits: result.Publication!.Portraits);
+        var portraits = result.Publication!.Portraits! with { Mapping = PortraitMapping.ParseLayoutForOfflineTests(PortraitMappingTests.Raw()) };
+        var publication = new ResourceRuntimePublication(owner, 0, prepared, portraits: portraits);
         // White-box lifetime fixture only; this does not assert official acquisition or acceptance.
         typeof(ResourceRuntimeOwner).GetField("_current", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.SetValue(owner, publication);
         Assert.True(owner.TryActivate(publication, out var active)); Assert.True(active!.HasPortraits);
         Assert.True(active.TryReadPortrait(PortraitRuntimeFixtures.Key, out var image)); Assert.NotNull(image);
+        var player = new Lala.Core.Protocol.WorldPlayer(1,2,1,0,0,0,0,0,444444444,444444444,0,false,[],"owned",0);
+        Assert.True(active.TrySelectPortrait(player,Lala.Core.Inventory.CompanionReceiveSnapshot.Empty,false,out var selection,out var selected));
+        Assert.Equal(PortraitRuntimeFixtures.Key,selection!.Key); Assert.Same(image,selected);
+        Assert.False(new ResourceRuntimeActivation(owner,publication).TrySelectPortrait(player,Lala.Core.Inventory.CompanionReceiveSnapshot.Empty,false,out _,out _));
         Assert.False(active.TryReadPortrait(new("player","9999"), out _));
         Assert.False(new ResourceRuntimeActivation(owner, publication).TryReadPortrait(PortraitRuntimeFixtures.Key, out _));
         var first = image!.CopyBasePng(); Array.Fill(first,(byte)0); Assert.NotEqual(first,image.CopyBasePng());
@@ -159,6 +164,8 @@ public sealed class ResourceRuntimeOwnerTests
         else if (retirement == "dispose") await owner.DisposeAsync();
         else await Assert.ThrowsAnyAsync<OperationCanceledException>(() => owner.RefreshAsync(new(true)));
         Assert.False(active.HasPortraits); Assert.False(active.TryReadPortrait(PortraitRuntimeFixtures.Key, out image)); Assert.Null(image);
+        Assert.False(active.TrySelectPortrait(player,Lala.Core.Inventory.CompanionReceiveSnapshot.Empty,false,out selection,out selected));
+        Assert.Null(selection); Assert.Null(selected);
     }
     [Fact]
     public async Task Corrupt_portrait_cache_is_not_repaired_by_refresh()

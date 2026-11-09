@@ -56,6 +56,14 @@ internal sealed class AccountResourceBinding
         if (!HasSameAccountSnapshot || !_activation.TryReadPortrait(key, out var selected) || !HasSameAccountSnapshot) return false;
         image = selected; return true;
     }
+    internal bool TrySelectPortrait(Lala.Core.Protocol.WorldPlayer? player,
+        Lala.Core.Inventory.CompanionReceiveSnapshot companions, bool companion,
+        out PortraitSelection? selection, out PortraitCachedImage? image)
+    {
+        selection = null; image = null;
+        if (!HasSameAccountSnapshot || !_activation.TrySelectPortrait(player, companions, companion, out var chosen, out var cached) || !HasSameAccountSnapshot) return false;
+        selection = chosen; image = cached; return true;
+    }
     internal bool TryReadCatalogs(out OfflineRuntimeCandidate? catalogs)
     {
         catalogs = null;

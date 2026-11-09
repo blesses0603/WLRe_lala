@@ -4,6 +4,7 @@ namespace Lala.Core.Resources;
 internal sealed class PortraitRuntimeBatch
 {
     internal PortraitCachePlan Plan { get; }
+    internal PortraitMapping? Mapping { get; private init; }
     private readonly Func<Action<PortraitImageCandidate>, CancellationToken, PortraitBatchReceipt> rebuild;
     private readonly PortraitBatchReceipt expected;
     private PortraitRuntimeBatch(PortraitCachePlan plan,
@@ -15,8 +16,12 @@ internal sealed class PortraitRuntimeBatch
         BoundedSpritePixels.Check(expected.SourceFingerprint == plan.SourceFingerprint && expected.Count == plan.Keys.Count,
             "Portrait preparation receipt mismatch");
     }
-    internal static PortraitRuntimeBatch Create(PortraitSourcePlan.VerifiedPortraitSources sources, CancellationToken token)
-        => new(PortraitCachePlan.FromSources(sources), (consume, ct) => PortraitBatch.Process(sources, consume, ct), token);
+    internal static PortraitRuntimeBatch Create(PortraitSourcePlan.VerifiedPortraitSources sources,
+        ReadOnlyMemory<byte> npcRaw, string dataPackageVersion, CancellationToken token)
+    {
+        var mapping = PortraitMapping.Create(npcRaw.Span, dataPackageVersion, token);
+        return new(PortraitCachePlan.FromSources(sources), (consume, ct) => PortraitBatch.Process(sources, consume, ct), token) { Mapping = mapping };
+    }
     // Explicit synthetic seam, reachable only through offline owner hooks. No pin replacement.
     internal static PortraitRuntimeBatch ForOfflineTests(PortraitCachePlan plan,
         Func<Action<PortraitImageCandidate>, CancellationToken, PortraitBatchReceipt> rebuild)

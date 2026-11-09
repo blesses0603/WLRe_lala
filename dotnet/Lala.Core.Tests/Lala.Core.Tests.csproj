@@ -33,4 +33,5 @@
 <ItemGroup><EmbeddedResource Include="Resources/Portraits/materials.json" LogicalName="Lala.Core.Tests.Resources.Portraits.materials.json" /></ItemGroup>
 <ItemGroup><EmbeddedResource Include="Resources/Portraits/shaders.json" LogicalName="Lala.Core.Tests.Resources.Portraits.shaders.json" /></ItemGroup>
 <ItemGroup><EmbeddedResource Include="Resources/Portraits/textures.json" LogicalName="Lala.Core.Tests.Resources.Portraits.textures.json" /></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Resources/Portraits/mapping.json" LogicalName="Lala.Core.Tests.Resources.Portraits.mapping.json" /></ItemGroup>
 </Project>

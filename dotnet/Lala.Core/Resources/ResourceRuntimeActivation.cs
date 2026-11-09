@@ -18,6 +18,10 @@ internal sealed class ResourceRuntimeActivation(ResourceRuntimeOwner owner, Reso
     internal bool HasPortraits => IsActive && publication.Portraits is not null;
     internal bool TryReadPortrait(PortraitMaterialKey key, out PortraitCachedImage? image)
         => owner.TryReadPortrait(this, publication, key, out image);
+    internal bool TrySelectPortrait(Lala.Core.Protocol.WorldPlayer? player,
+        Lala.Core.Inventory.CompanionReceiveSnapshot companions, bool companion,
+        out PortraitSelection? selection, out PortraitCachedImage? image)
+        => owner.TrySelectPortrait(this, publication, player, companions, companion, out selection, out image);
     internal bool CanLogin => false;
     internal bool CanSendPackets => false;
 

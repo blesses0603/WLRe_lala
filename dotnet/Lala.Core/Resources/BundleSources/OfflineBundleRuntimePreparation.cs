@@ -174,12 +174,14 @@ internal sealed class OfflineBundleRuntimePreparation
         // Only the reviewed fixed projection can fetch portrait sources; unknown versions
         // leave this optional family absent without widening source or decode acceptance.
         if (prepared.Snapshot.DataVersion == PortraitSourcePlan.DataVersion &&
-            imageManifest.Header.PackageVersion == PortraitSourcePlan.MainVersion)
+            imageManifest.Header.PackageVersion == PortraitSourcePlan.MainVersion &&
+            packageVersion == PortraitMapping.DataPackageVersion &&
+            candidate.SourceSha256["NpcData_C"] == NormalAttackCatalogParser.ReviewedNpcSha256)
         {
             try
             {
                 var selected = await _preparation.PreparePortraitSourcesAsync(source, prepared, cache, budget, downloads, cancellationToken).ConfigureAwait(false);
-                portraits = PortraitRuntimeBatch.Create(selected, cancellationToken);
+                portraits = PortraitRuntimeBatch.Create(selected, tables["NpcData_C"], packageVersion, cancellationToken);
                 foreach (var handle in selected.Sources.Values) handles.TryAdd(handle.Spec.Name, handle);
             }
             catch (Exception error) when (IsOptionalFailure(error) || error is SpritePixelException) { }

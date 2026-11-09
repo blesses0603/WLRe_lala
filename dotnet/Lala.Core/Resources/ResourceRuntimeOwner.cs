@@ -124,6 +124,18 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
                 publication.Portraits.Images.TryGetValue(key, out image);
         }
     }
+    internal bool TrySelectPortrait(ResourceRuntimeActivation activation, ResourceRuntimePublication publication,
+        Lala.Core.Protocol.WorldPlayer? player, Lala.Core.Inventory.CompanionReceiveSnapshot companions, bool companion,
+        out PortraitSelection? selection, out PortraitCachedImage? image)
+    {
+        lock (_gate)
+        {
+            selection = null; image = null;
+            if (!IsCurrentActivation(activation, publication) || publication.Portraits is not { } portraits) return false;
+            selection = portraits.Select(player, companions, companion);
+            return selection is not null && portraits.Images.TryGetValue(selection.Key, out image);
+        }
+    }
     internal ResourceRuntimePublication? Current { get { lock (_gate) return _current; } }
 
     internal void Invalidate()
@@ -337,8 +349,11 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
                 }
                 EnsureCurrent(generation, mine);
                 if (bootstrap || File.Exists(_portraits))
+                {
                     portraits = await PortraitPngStore.ReadAsync(PortraitConnection(SqliteOpenMode.ReadOnly), portraitBatch.Plan,
                         portraitBatch.Rebuild, () => EnsureCurrent(generation, mine), mine.Token).ConfigureAwait(false);
+                    portraits = portraits with { Mapping = portraitBatch.Mapping };
+                }
             }
             await _preparation.ConfirmUnchangedAsync(_source, prepared, mine.Token).ConfigureAwait(false);
             sourcesRechecked = true;
