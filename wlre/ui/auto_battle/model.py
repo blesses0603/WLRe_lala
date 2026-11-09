@@ -4,6 +4,7 @@ from wlre.services.battle.auto_battle import validate, ACTION_IDS
 from wlre.services.battle.battle_commands import ACTIONS, owned_units
 from wlre.services.items.combat_resources import CAT, skill_rows, field_context
 from wlre.services.items.catalog import item_display_name
+from wlre.services.items.skill_effects import recovery_description
 
 NAMES={0:'略過此格',**{sid:ACTIONS[mode] for sid,mode in ACTION_IDS.items()}}
 TARGETS={1:'最低HP',2:'屬性優先',3:'最高HP'}
@@ -51,7 +52,7 @@ def confirmed_skill_entries(state,who):
         for skill in skill_rows(state,actor):
             source='裝備附帶' if skill['source']=='目前裝備附帶' else '已學'
             known.setdefault(skill['id'],[]).append(f"{actor.get('name','夥伴')} {source} Lv{skill['level']}")
-    return [(sid,f"{CAT['skills'].get(str(sid),{}).get('name',f'技能{sid}')} ({sid})｜"+'／'.join(labels))
+    return [(sid,f"{CAT['skills'].get(str(sid),{}).get('name',f'技能{sid}')} ({sid})｜"+'／'.join(labels)+'｜'+recovery_description(CAT['skills'].get(str(sid),{})))
             for sid,labels in sorted(known.items())]
 
 def confirmed_action_label(row,state,who):

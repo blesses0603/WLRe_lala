@@ -35,7 +35,7 @@ public sealed class SkillsWindow : DesktopWindow
         detail.Name = "SkillsDetails";
         Ui.At(body, Ui.Card("特技資訊", detail), 0, 4);
         Ui.At(body, Ui.Column(Ui.Unavailable("施放選取特技（戰鬥內）", "SkillsCast"),
-            Ui.Text("裝備附帶特技、分類、SP 與使用條件待資料核對；目前不會發送戰鬥指令。", 12, Ui.Muted)), 0, 5);
+            Ui.Text("效果與消耗來自目前已驗證目錄；恢復量、裝備附帶特技與施放條件仍待核對，不會發送戰鬥指令。", 12, Ui.Muted)), 0, 5);
         SetBody(body);
         search.TextChanged += (_, _) => { if (!refreshing && !closed) Refresh(); };
         table.SelectionChanged += UpdateDetails;
@@ -84,15 +84,18 @@ public sealed class SkillsWindow : DesktopWindow
     {
         var row = rows.FirstOrDefault(row => row.Key == table.SelectedKey);
         detail.Text = row is null ? "請選取特技查看資料。"
-            : $"{row.Actor}｜{row.Name}（{row.Id}）｜等級 {row.Level}\n資料來源：{row.Source}。分類、消耗 SP、目標與施放條件尚待核對。";
+            : $"{row.Actor}｜{row.Name}（{row.Id}）｜等級 {row.Level}\n資料來源：{row.Source}。\n{row.MetadataText}；實際施放條件尚待核對。";
     }
 }
 
 internal sealed record SkillPresentationRow(string Key, string Actor, uint Id, string Name, long Level,
-    string Source, bool Player, ushort? CompanionIndex = null, uint? NpcId = null)
+    string Source, bool Player, ushort? CompanionIndex = null, uint? NpcId = null, DesktopSkillDetails? Details = null)
 {
+    public string RecoveryText => Details?.RecoveryText ?? "恢復效果未驗證";
+    public string MetadataText => Details is null ? "分類、消耗 SP、目標與恢復效果未驗證" :
+        $"{Details.Category}｜消耗 SP {Details.SpCost}｜目標 {Details.Target}｜{RecoveryText}";
     public string[] Cells => [Actor, Id.ToString(CultureInfo.InvariantCulture), Name,
-        Level.ToString(CultureInfo.InvariantCulture), "待核對", "待核對", "等待連線、回合與技能規則核對", Source];
+        Level.ToString(CultureInfo.InvariantCulture), Details?.Category ?? "待核對", Details?.SpCost.ToString(CultureInfo.InvariantCulture) ?? "待核對", RecoveryText + "；施放條件待核對", Source];
 }
 
 /// <summary>Read-only evidence projection shared by windows, never shared controls or action authority.</summary>
@@ -105,7 +108,7 @@ internal static class SkillPresentation
         {
             if (pair.Key == 0 || pair.Value.Level <= 0 || Removed(state.PlayerKnowledge.RemovedSkillIds, pair.Key)) continue;
             yield return new($"player:{pair.Key}", playerName, pair.Key, labels.Skill(pair.Key),
-                pair.Value.Level, Source(pair.Value.Source), true);
+                pair.Value.Level, Source(pair.Value.Source), true, Details: labels.SkillDetails.GetValueOrDefault(pair.Key));
         }
         foreach (var companion in state.Companions.Companions.OrderBy(pair => pair.Key))
         {
@@ -117,7 +120,7 @@ internal static class SkillPresentation
             {
                 if (pair.Key == 0 || pair.Value.Level <= 0 || Removed(companion.Value.RemovedSkillIds, pair.Key)) continue;
                 yield return new($"companion:{companion.Key}:{data.NpcId}:{pair.Key}", $"夥伴#{companion.Key} {name}",
-                    pair.Key, labels.Skill(pair.Key), pair.Value.Level, Source(pair.Value.Source), false, companion.Key, data.NpcId);
+                    pair.Key, labels.Skill(pair.Key), pair.Value.Level, Source(pair.Value.Source), false, companion.Key, data.NpcId, labels.SkillDetails.GetValueOrDefault(pair.Key));
             }
         }
     }

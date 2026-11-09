@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Lala.Core.State;
+using Lala.Core.Catalogs;
 
 namespace Lala.Desktop;
 
@@ -141,6 +142,7 @@ public sealed record DesktopLabels
 {
     public ImmutableDictionary<ushort, string> Items { get; init; } = ImmutableDictionary<ushort, string>.Empty;
     public ImmutableDictionary<uint, string> Skills { get; init; } = ImmutableDictionary<uint, string>.Empty;
+    public ImmutableDictionary<uint, DesktopSkillDetails> SkillDetails { get; init; } = ImmutableDictionary<uint, DesktopSkillDetails>.Empty;
     public ImmutableDictionary<ushort, string> Scenes { get; init; } = ImmutableDictionary<ushort, string>.Empty;
     public ImmutableDictionary<ushort, string> Npcs { get; init; } = ImmutableDictionary<ushort, string>.Empty;
     public ImmutableDictionary<ushort, string> ExpeditionTasks { get; init; } = ImmutableDictionary<ushort, string>.Empty;
@@ -149,4 +151,18 @@ public sealed record DesktopLabels
     public string Scene(ushort id) => Scenes.GetValueOrDefault(id) ?? $"地圖 {id}";
     public string Npc(ushort id) => Npcs.GetValueOrDefault(id) ?? $"夥伴 {id}（名稱待同步）";
     public string ExpeditionTask(ushort id) => ExpeditionTasks.GetValueOrDefault(id) ?? $"任務 {id}（資料待同步）";
+}
+
+/// <summary>Display-only catalog facts. Neither learning nor casting is inferred.</summary>
+public sealed record DesktopSkillDetails(uint KindSort, uint SpCost, uint TargetKind, SkillRecoveryKind Recovery)
+{
+    public string Category => KindSort switch { 1 => "物理", 2 => "魔法", 3 => "輔助", 4 => "被動", _ => "其他／未驗證" };
+    public string Target => TargetKind switch { 0 => "敵方", 1 => "友方", 2 => "任意目標", 3 => "自身", 4 => "其他目標", 5 => "隊友", _ => "目標未驗證" };
+    public string RecoveryText => Recovery switch
+    {
+        SkillRecoveryKind.Hp => "恢復 HP（恢復量未知）",
+        SkillRecoveryKind.Sp => "恢復 SP（恢復量未知）",
+        SkillRecoveryKind.HpAndSp => "恢復 HP／SP（恢復量未知）",
+        _ => "恢復效果未驗證"
+    };
 }

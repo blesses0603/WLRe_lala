@@ -51,7 +51,7 @@ internal static class SettingsActions
         foreach (var row in skills)
         {
             if (row.Id > ushort.MaxValue || result.Any(choice => choice.Id == (int)row.Id)) continue;
-            result.Add(new((int)row.Id, $"{row.Name}（{row.Id}）｜{row.Actor} 已觀察 Lv.{row.Level}", actor));
+            result.Add(new((int)row.Id, $"{row.Name}（{row.Id}）｜{row.Actor} 已觀察 Lv.{row.Level}｜{row.RecoveryText}", actor));
         }
         return result.ToArray();
     }
@@ -137,7 +137,7 @@ internal sealed class SettingsActionWindow : DesktopWindow
             threshold.FormatString = "0.##";
             options.Children.Add(Ui.Field(ruleKey == "lowHpAction" ? "HP <" : ruleKey == "lowSpAction" ? "SP <" : "HP 門檻", threshold, "88,*"));
         }
-        options.Children.Add(Ui.Text("SP 不足仍可編輯本機規則。\n友方技能不代表恢復 SP，效果未驗證。\n0 為略過，不會送出指令。", 12, Ui.Muted));
+        options.Children.Add(Ui.Text("SP 不足仍可編輯本機規則。\n友方目標不等於恢復 SP；請核對效果。\n0 為略過，不會送出指令。", 12, Ui.Muted));
         Ui.At(area, new ScrollViewer { Content = options, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled }, 1);
         Ui.At(body, area, 0, 3);
         Ui.At(body, note, 0, 4);

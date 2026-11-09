@@ -6,6 +6,7 @@ from tkinter import ttk,messagebox
 from wlre.ui.storage_transfer_form import StorageTransferForm
 from wlre.services.items.combat_resources import CAT, skill_rows, food_command, learned_command, field_context
 from wlre.services.battle.battle_commands import owned_units
+from wlre.services.items.skill_effects import recovery_description
 from wlre.ui.crafting_browser import ItemIcons
 from wlre.ui.bag_grid import BagGrid
 from wlre.ui.room_storage_status import unlock_message, storage_sync_message, confirmed_view
@@ -110,7 +111,7 @@ class ResourceView:
                 if query and query not in (label+row['name']+str(row['id'])).casefold():continue
                 iid=f"skill{actor['pid']}_{actor.get('npc_index',0)}_{row['id']}"
                 self.skill_map[iid]=(actor,row['id'])
-                self.skills.insert('','end',iid=iid,values=(label,row['id'],row['name'],row['level'],row['category'],row['sp'],'；'.join(row['reasons']) or '基礎條件可用',row['source']))
+                self.skills.insert('','end',iid=iid,values=(label,row['id'],row['name'],row['level'],row['category'],row['sp'],recovery_description(CAT['skills'].get(str(row['id']),{}))+'；'+('；'.join(row['reasons']) or '基礎條件可用'),row['source']))
         if selected_bag and selected_bag[0] in self.bag_map and not self.bag.selection():self.bag.selection_set(selected_bag[0])
         if selected_skill and selected_skill[0] in self.skill_map:self.skills.selection_set(selected_skill[0])
 

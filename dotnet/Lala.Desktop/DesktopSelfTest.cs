@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Lala.Core.State;
+using Lala.Core.Catalogs;
 
 namespace Lala.Desktop;
 
@@ -26,9 +27,23 @@ internal static class DesktopSelfTest
             suite.True(SettingsActions.TargetOptions(1001, 1, "lowSpAction").Labels[0].Contains("友方最低SP"), "unknown skill effect is not inferred");
             TestPreferences(suite, directory);
             TestIndependentResourceRules(suite, directory);
+            TestSkillEffects(suite);
             Console.WriteLine($"Desktop presentation self-test: {suite.Count} checks passed. Offline only; no UI/native or server acceptance.");
         }
         finally { Directory.Delete(directory, true); }
+    }
+
+    private static void TestSkillEffects(Checks check)
+    {
+        var (state,labels) = DesktopTestData.Create();
+        labels = labels with { SkillDetails = labels.SkillDetails.SetItem(2101,new(3,17,1,SkillRecoveryKind.Sp)) };
+        var row = SkillPresentation.All(state,labels).First(row => row.Player && row.Id == 2101);
+        check.True(row.RecoveryText == "恢復 SP（恢復量未知）" && row.Cells[5] == "17", "SP cost is separate from recovery category and unknown amount");
+        check.True(row.MetadataText.Contains("友方") && row.MetadataText.Contains("消耗 SP 17"), "reviewed target and cost are display facts");
+        check.True(SettingsActions.Choices(new(1,1,"合成",state,labels),"player",false).Single(choice => choice.Id == 2101).Label.Contains("恢復 SP"), "observed skill picker includes recovery category");
+        var withdrawn = SkillPresentation.All(state,new DesktopLabels()).First(row => row.Player && row.Id == 2101);
+        check.True(withdrawn.RecoveryText == "恢復效果未驗證" && withdrawn.Cells[5] == "待核對", "withdrawn metadata never retains recovery or cost");
+        check.True(SkillPresentation.All(state,labels).Where(row => row.Id != 2101).All(row => row.Details is null), "known recovery cannot spread to another skill ID");
     }
 
     private static void TestIndependentResourceRules(Checks check, string root)

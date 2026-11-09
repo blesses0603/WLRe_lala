@@ -311,6 +311,12 @@ public sealed class LoginWindow : DesktopWindow, IAccountLoginInput, IAccountRol
             var labels = catalogs is null ? new DesktopLabels() : new DesktopLabels
             {
                 Items = catalogs.Items.ToImmutableDictionary(p => p.Key, p => p.Value.Name),
+                Skills = (catalogs.OptionalSkills ?? new Dictionary<ushort, Lala.Core.Catalogs.SkillDataRow>())
+                    .Where(p => catalogs.Texts.TryGetValue(p.Value.NameTextId, out var name) && !string.IsNullOrWhiteSpace(name))
+                    .ToImmutableDictionary(p => (uint)p.Key, p => catalogs.Texts[p.Value.NameTextId]),
+                SkillDetails = (catalogs.OptionalSkills ?? new Dictionary<ushort, Lala.Core.Catalogs.SkillDataRow>())
+                    .ToImmutableDictionary(p => (uint)p.Key, p => new DesktopSkillDetails(p.Value.Fields["KindSort"],
+                        p.Value.Fields["ReduceSP"], p.Value.Fields["TargetKind"], p.Value.RecoveryKind)),
                 Scenes = catalogs.SceneNames.ToImmutableDictionary()
             };
             session.Publish(presentationGeneration, ++sequence, publication.State, labels);

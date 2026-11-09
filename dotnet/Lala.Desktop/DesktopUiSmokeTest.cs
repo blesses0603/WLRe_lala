@@ -8,6 +8,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Lala.Core.Battle;
+using Lala.Core.Catalogs;
 using Lala.Core.Inventory;
 using Lala.Core.Protocol;
 using Lala.Core.State;
@@ -50,6 +51,7 @@ internal static class DesktopUiSmokeTest
                 await ExpeditionAsync();
                 await SettingsAsync();
                 await ResourceTargetEditorAsync();
+                await SkillRecoveryDisplayAsync();
                 await PythonParityWindowsAsync();
                 await ScopeAndLifecycleAsync();
                 Console.WriteLine($"Desktop native UI smoke test: {checks} checks passed; {screenshots} rendered screenshots. Synthetic data only; no live login, game commands, installer or production-server acceptance.");
@@ -415,6 +417,25 @@ internal static class DesktopUiSmokeTest
             await Capture(expedition, "10-expedition");
             expedition.Close();
             Progress("遠征三欄與本機草稿保存");
+        }
+
+        private async Task SkillRecoveryDisplayAsync()
+        {
+            var labels = fixture.Labels with { SkillDetails = fixture.Labels.SkillDetails.SetItem(2101,new(3,17,1,SkillRecoveryKind.Sp)) };
+            Publish(fixture.State,labels);
+            var skills = Show(new SkillsWindow(session)); await Settle(skills);
+            skills.SearchText = "2101"; skills.SelectSkillRow(0);
+            Check(skills.DetailsText.Contains("恢復 SP（恢復量未知）") && skills.DetailsText.Contains("消耗 SP 17"), "native skill details separate recovery and cost");
+            Disabled(skills,"SkillsCast");
+            var editor = Show(new SettingsActionWindow(session,"player",new JsonObject { ["id"] = 2101,["kind"] = 1,["target"] = 1,["bUseNextSkill"] = false },"lowSpAction"));
+            await Settle(editor);
+            Check(Find<ListBox>(editor,"ActionChoices").Items.Cast<string>().Any(label => label.Contains("2101") && label.Contains("恢復 SP")), "native action picker exposes observed SP recovery skill");
+            await Capture(skills,"22-skill-recovery-evidence");
+            Publish(fixture.State,fixture.Labels); await Settle(skills); await Settle(editor);
+            Check(Find<ListBox>(editor,"ActionChoices").Items.Cast<string>().Any(label => label.Contains("2101") && label.Contains("恢復效果未驗證")), "open action picker clears withdrawn effect metadata");
+            editor.Close();
+            Check(skills.DetailsText.Contains("未驗證") && !skills.DetailsText.Contains("消耗 SP 17"), "catalog withdrawal clears effect details on open window");
+            skills.Close();
         }
 
         private async Task ResourceTargetEditorAsync()

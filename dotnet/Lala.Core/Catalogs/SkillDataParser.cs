@@ -9,6 +9,7 @@ public sealed class SkillDataRow
     public ushort Id => (ushort)Fields["ID"];
     public uint NameTextId => Fields["Name"];
     public ushort Key => (ushort)Fields["Key"];
+    public SkillRecoveryKind RecoveryKind => SkillRecoveryEffects.FromFightWay(Fields["FightWay"]);
     public IReadOnlyDictionary<string, uint> Fields { get; }
 
     internal SkillDataRow(Dictionary<string, uint> fields) => Fields = fields.ToFrozenDictionary(StringComparer.Ordinal);

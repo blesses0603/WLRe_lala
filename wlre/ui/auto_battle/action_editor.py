@@ -45,7 +45,7 @@ class ActionEditor:
         if 'value' in row:
             var=tk.StringVar(value=str(row['value']));self.extra['value']=(var,None)
             ttk.Label(fields,text='HP <' if rule_key=='lowHpAction' else 'SP <' if rule_key=='lowSpAction' else 'HP門檻').grid(row=r,column=0,sticky='w');ttk.Entry(fields,textvariable=var,width=16).grid(row=r,column=1,sticky='w');r+=1
-        ttk.Label(options,text='只列已學及裝備附帶特技。\nSP不足仍保留；0為略過。\n友方目標不代表恢復SP，效果未驗證。',wraplength=260).pack(anchor='w',pady=6)
+        ttk.Label(options,text='只列已學及裝備附帶特技。\nSP不足仍保留；0為略過。\n友方目標不等於恢復SP；請核對效果。',wraplength=260).pack(anchor='w',pady=6)
         self._query_job=None;self._poll_job=None
         kind.bind('<<ComboboxSelected>>',self.change_kind);self.query.trace_add('write',self.search_changed)
         self.window.bind('<Destroy>',self.cleanup,add='+')
