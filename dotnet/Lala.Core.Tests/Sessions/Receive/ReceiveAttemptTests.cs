@@ -515,6 +515,16 @@ public sealed partial class ReceiveAttemptTests
         private int offset;
         private int reads;
         private int disposes;
+        private BlockingCollection<Action>[]? completionQueues;
+        private Thread[]? completionWorkers;
+        private void StartCompletionWorkers()
+        {
+            if(completionWorkers is not null)return;
+            completionQueues=[new(),new()];
+            completionWorkers=completionQueues.Select(queue=>new Thread(()=>
+            {foreach(var complete in queue.GetConsumingEnumerable())complete();}){IsBackground=true}).ToArray();
+            foreach(var worker in completionWorkers)worker.Start();
+        }
         public int ReadCalls => Volatile.Read(ref reads);
         public int DisposeCalls => Volatile.Read(ref disposes);
         public ConcurrentBag<Thread> CompletionThreads { get; } = [];
@@ -535,12 +545,26 @@ public sealed partial class ReceiveAttemptTests
             }
             if (!newThreads) return new(Read());
             var result = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
-            new Thread(() => result.TrySetResult(Read())) { IsBackground = true }.Start();
+            // Alternate two actual completion threads instead of creating one OS
+            // thread per byte. Keep byte reads and the independent writer assertion.
+            StartCompletionWorkers();
+            completionQueues![reads & 1].Add(()=>
+            {
+                try{cancellationToken.ThrowIfCancellationRequested();result.TrySetResult(Read());}
+                catch(OperationCanceledException){result.TrySetCanceled(cancellationToken);}
+                catch(Exception error){result.TrySetException(error);}
+            });
             return new(result.Task);
         }
         public ValueTask DisposeAsync()
         {
             Interlocked.Increment(ref disposes);
+            if(completionWorkers is not null)
+            {
+                foreach(var queue in completionQueues!)queue.CompleteAdding();
+                foreach(var worker in completionWorkers)worker.Join();
+                foreach(var queue in completionQueues!)queue.Dispose();
+            }
             return failDispose ? ValueTask.FromException(new IOException("private transport message")) : ValueTask.CompletedTask;
         }
     }

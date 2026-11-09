@@ -17,6 +17,7 @@ internal sealed class RuntimeBundleCacheWriter
     private readonly string _dataRoot;
     private readonly string _root;
     private readonly Action<RuntimeBundleCacheWriteStage>? _checkpoint;
+    private readonly SemaphoreSlim _streamStageGate=new(1,1);
 
     internal RuntimeBundleCacheWriter(string absoluteDataRoot) : this(absoluteDataRoot, null) { }
 
@@ -66,6 +67,82 @@ internal sealed class RuntimeBundleCacheWriter
             await StoreOneAsync(path, source, cancellationToken).ConfigureAwait(false);
         }
         cancellationToken.ThrowIfCancellationRequested();
+    }
+
+    // Explicit disk-stage route. It does not widen StoreAsync's owned-memory
+    // quota, fetch any URL, or grant a Prepared/VerifiedBundleSource handle.
+    internal async Task<BundleStreamReceipt> StoreStreamAsync(BundleSourceSpec spec,Stream input,CancellationToken token=default)
+    {
+        await _streamStageGate.WaitAsync(token).ConfigureAwait(false);
+        try{return await StoreStreamCoreAsync(spec,input,token).ConfigureAwait(false);}
+        finally{_streamStageGate.Release();}
+    }
+    private async Task<BundleStreamReceipt> StoreStreamCoreAsync(BundleSourceSpec spec,Stream input,CancellationToken token)
+    {
+        ArgumentNullException.ThrowIfNull(spec);ArgumentNullException.ThrowIfNull(input);token.ThrowIfCancellationRequested();
+        if(spec.Size is <=0 or >BundleStreamVerifier.MaximumBytes)
+            throw new BundleSourceException(BundleSourceFailure.Budget,"Streamed cache entry exceeds disk-stage bound");
+        string destination=Path.Combine(_root,spec.Package,spec.PackageVersion,spec.Md5,spec.Name);
+        string directory=Path.GetDirectoryName(destination)!;CheckDirectories(directory,true,token);
+        string temporary=Path.Combine(directory,".bundle_"+Guid.NewGuid().ToString("N")+".partial");
+        bool ownsTemporary=false;Exception? primary=null;
+        try
+        {
+            CheckDirectories(directory,false,token);CheckLeaf(destination);
+            var output=new FileStream(temporary,FileMode.CreateNew,FileAccess.Write,FileShare.None,ChunkBytes,FileOptions.Asynchronous|FileOptions.SequentialScan);
+            ownsTemporary=true;BundleStreamReceipt receipt;Exception? copyFailure=null;
+            try
+            {
+                Checkpoint(RuntimeBundleCacheWriteStage.TemporaryCreated,token);
+                receipt=await BundleStreamVerifier.VerifyAsync(spec,input,output,token:token).ConfigureAwait(false);
+                await output.FlushAsync(token).ConfigureAwait(false);token.ThrowIfCancellationRequested();output.Flush(true);
+            }
+            catch(Exception error){copyFailure=error;throw;}
+            finally{ResourceCleanup.DisposePreservingFailure(output,copyFailure);}
+            Checkpoint(RuntimeBundleCacheWriteStage.BeforePublish,token);
+            if(!await MatchesAsync(temporary,receipt,token).ConfigureAwait(false))throw new InvalidDataException("Streamed stage changed before publication");
+            if(await MatchesAsync(destination,receipt,token).ConfigureAwait(false))return receipt;
+            CheckDirectories(directory,false,token);CheckLeaf(temporary);CheckLeaf(destination);
+            Checkpoint(RuntimeBundleCacheWriteStage.BeforeMove,token);
+            try{File.Move(temporary,destination,overwrite:true);}
+            catch(Exception error) when(error is IOException or UnauthorizedAccessException)
+            {
+                try{if(await MatchesAsync(destination,receipt,token).ConfigureAwait(false))return receipt;}
+                catch(OperationCanceledException){throw;}
+                catch(Exception){token.ThrowIfCancellationRequested();}
+                throw;
+            }
+            ownsTemporary=false;Checkpoint(RuntimeBundleCacheWriteStage.Published,token);
+            if(!await MatchesAsync(destination,receipt,token).ConfigureAwait(false))throw new InvalidDataException("Streamed cache changed after publication");
+            token.ThrowIfCancellationRequested();return receipt;
+        }
+        catch(Exception error){primary=error;throw;}
+        finally
+        {
+            if(ownsTemporary)
+            {
+                try{if(CheckDirectories(directory,false,CancellationToken.None)&&CheckLeaf(temporary))File.Delete(temporary);}
+                catch(Exception){if(primary is null)throw;ResourceCleanup.Report(true,primary);}
+            }
+        }
+    }
+    private async Task<bool> MatchesAsync(string path,BundleStreamReceipt receipt,CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();string directory=Path.GetDirectoryName(path)!;
+        if(!CheckDirectories(directory,false,token)||!CheckLeaf(path))return false;
+        FileStream input;
+        try{input=new(path,FileMode.Open,FileAccess.Read,FileShare.Read|FileShare.Delete,ChunkBytes,FileOptions.Asynchronous|FileOptions.SequentialScan);}
+        catch(FileNotFoundException){return false;}catch(DirectoryNotFoundException){return false;}
+        Exception? primary=null;
+        try
+        {
+            if(input.Length!=receipt.Spec.Size)return false;
+            try{await BundleStreamVerifier.VerifyAsync(receipt.Spec,input,expectedSha256:receipt.Sha256,token:token).ConfigureAwait(false);}
+            catch(BundleSourceException error) when(error.Failure is BundleSourceFailure.ResponseLength or BundleSourceFailure.Checksum){return false;}
+            return CheckDirectories(directory,false,token)&&CheckLeaf(path);
+        }
+        catch(Exception error){primary=error;throw;}
+        finally{ResourceCleanup.DisposePreservingFailure(input,primary);}
     }
 
     private async Task StoreOneAsync(string destination, VerifiedBundleSource source, CancellationToken token)

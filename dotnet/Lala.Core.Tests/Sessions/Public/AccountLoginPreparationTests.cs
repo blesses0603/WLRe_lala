@@ -131,18 +131,19 @@ public sealed partial class AccountConnectionRuntimeTests
         var session = new AccountSession(); var generation = session.Begin("opaque", "test").Generation;
         var entered = Signal(); var release = Signal(); var tokenCancelled = Signal();
         var credentials = new AccountLoginCredentials("synthetic", "fake_password");
-        using var cancellation = new CancellationTokenSource();
+        using var cancellation = new CancellationTokenSource(); var clock = new PreparationClock();
         await using var preparation = new AccountLoginPreparation(session, generation, Guid.NewGuid(), Profile(verification, formal),
             new Input(async (_, token) =>
             {
                 using var registration = token.Register(() => tokenCancelled.TrySetResult());
                 entered.SetResult(); await release.Task; return credentials; // Deliberately ignores cancellation.
-            }), validity: action == "expiry" ? TimeSpan.FromMilliseconds(200) : null);
+            }), options: null, validity: TimeSpan.FromMinutes(1), clock: clock);
         try
         {
             var run = preparation.RunAsync(cancellation.Token); await entered.Task.WaitAsync(Guard);
             switch (action)
             {
+                case "expiry": clock.Advance(TimeSpan.FromMinutes(1)); break;
                 case "stop": preparation.Stop(); break;
                 case "cancel": cancellation.Cancel(); break;
                 case "replace": session.Begin("different", "different"); break;
