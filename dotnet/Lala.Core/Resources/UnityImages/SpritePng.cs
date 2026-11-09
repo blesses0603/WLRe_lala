@@ -24,6 +24,15 @@ internal static class SpritePng
         BoundedSpritePixels.Check(pixels.Length == 256 * 256 * 4, "Portrait PNG geometry mismatch");
         return EncodeOwnedRgba(256, 256, pixels.ToArray(), true, token);
     }
+    // Emoji uses its own candidate identity and compressed variable-size PNG budget.
+    internal static byte[] EncodeEmoji(AtlasPixelCandidate candidate, CancellationToken token=default)
+    {
+        token.ThrowIfCancellationRequested();int width=candidate.Width,height=candidate.Height;
+        BoundedSpritePixels.Check(width is >0 and <=512 && height is >0 and <=512,"Emoji PNG geometry exceeds bound");
+        byte[] pixels=candidate.CopyPixels();
+        BoundedSpritePixels.Check(pixels.Length==width*height*4 && Hash(pixels)==candidate.PixelSha256,"Emoji PNG pixel mismatch");
+        return EncodeOwnedRgba(width,height,pixels,true,token);
+    }
     private static byte[] EncodeOwnedRgba(int width, int height, byte[] pixels, bool compressed, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();

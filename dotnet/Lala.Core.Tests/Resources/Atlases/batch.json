@@ -1,0 +1,32 @@
+{
+  "raw": "AwAAAAH/AWQAAAAAAgACyAAAAAEBAAEsAQAAAA==",
+  "images": {
+    "Emoji_001_1": {
+      "width": 3,
+      "height": 5,
+      "pixels": "ASZLcJW63wQpTnOYveIHLFF2m8DlCi9UeZ7D6A0yV3yhxusQNVp/pMnuEzhdgqfM8RY7YIWqz/QZPmOI"
+    },
+    "Emoji_002_1": {
+      "width": 3,
+      "height": 5,
+      "pixels": "AidMcZa74AUqT3SZvuMILVJ3nMHmCzBVep/E6Q4zWH2ix+wRNluApcrvFDleg6jN8hc8YYar0PUaP2SJ"
+    }
+  },
+  "tokens": {
+    "1": {
+      "frame": "Emoji_001_1",
+      "show": true,
+      "pixels": "83cd509c9402abcceb1f787d4c2d407f782642d433e3d49aefc5dc7d060c210d"
+    },
+    "2": {
+      "frame": "Emoji_002_1",
+      "show": false,
+      "pixels": "55f6e159d05ad7b7a491b5e6d2c1a4813da035d948a917246ef131bb25b468de"
+    },
+    "3": {
+      "frame": "Emoji_001_1",
+      "show": true,
+      "pixels": "83cd509c9402abcceb1f787d4c2d407f782642d433e3d49aefc5dc7d060c210d"
+    }
+  }
+}

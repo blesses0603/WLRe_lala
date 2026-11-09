@@ -165,7 +165,7 @@ public sealed class HeldAccountConnectionTests
         {
             await client.Expect(63, 7, 0);
             await client.Send(new Packet(63, 7, [(byte)resultCode, (byte)loginKind]));
-            await client.CloseSendAndExpectEof();
+            await client.ExpectClosedAfterRetirement();
         });
         var session = new AccountSession(); var generation = session.Begin("a", "b").Generation;
         int providers = 0;
@@ -189,7 +189,7 @@ public sealed class HeldAccountConnectionTests
         var first = verification.Run(async client =>
         {
             await client.Expect(63, 7, 0); request.SetResult();
-            await client.WaitFor(stopPeer.Task); await client.CloseSendAndExpectEof();
+            await client.WaitFor(stopPeer.Task); await client.ExpectClosedAfterRetirement();
         });
         var session = new AccountSession(); var generation = session.Begin("a", "b").Generation;
         await using var owner = Attach(session, generation, verification, formal);
@@ -290,7 +290,7 @@ public sealed class HeldAccountConnectionTests
         var second = formal.Run(async client =>
         {
             await client.Expect(63, 7, 2); request.SetResult();
-            await client.WaitFor(stopPeer.Task); await client.CloseSendAndExpectEof();
+            await client.WaitFor(stopPeer.Task); await client.ExpectClosedAfterRetirement();
         });
         var session = new AccountSession(); var generation = session.Begin("a", "b").Generation;
         await using var owner = Attach(session, generation, verification, formal,
@@ -312,7 +312,7 @@ public sealed class HeldAccountConnectionTests
         {
             await EnterWorld(client);
             await client.Send(new Packet(63, 7, [0, 2]));
-            await client.CloseSendAndExpectEof();
+            await client.ExpectClosedAfterRetirement();
         });
         var session = new AccountSession(); var generation = session.Begin("a", "b").Generation;
         await using var owner = Attach(session, generation, verification, formal);
@@ -353,7 +353,7 @@ public sealed class HeldAccountConnectionTests
         var entered = Signal(); var release = Signal(); var finish = Signal();
         var peer = verification.Run(async client =>
         {
-            await client.WaitFor(finish.Task); await client.CloseSendAndExpectEof();
+            await client.WaitFor(finish.Task); await client.ExpectClosedAfterRetirement();
         });
         var session = new AccountSession(); var generation = session.Begin("a", "b").Generation;
         await using var owner = Attach(session, generation, verification, formal, credentials: leg =>
@@ -391,7 +391,9 @@ public sealed class HeldAccountConnectionTests
             var valid = WireCodec.Encode(new Packet(26, 4, [42, 0, 0, 0]));
             var tail = truncated ? WireCodec.Encode(new Packet(1, 23))[..3] : new byte[] { 0, 0, 0, 0 };
             await client.Raw(valid.Concat(tail).ToArray());
-            await client.CloseSendAndExpectEof();
+            // Truncation needs peer EOF; invalid framing retires locally without it.
+            if (truncated) await client.CloseSendAndExpectEof();
+            else await client.ExpectClosedAfterRetirement();
         });
         var session = new AccountSession(); var generation = session.Begin("a", "b").Generation;
         await using var owner = Attach(session, generation, verification, formal);
