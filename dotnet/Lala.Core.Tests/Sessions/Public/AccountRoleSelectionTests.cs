@@ -131,7 +131,9 @@ public sealed partial class AccountConnectionRuntimeTests
             if (protocolFailure)
             {
                 await client.Send(Roles); // A second role-list epoch is never accepted.
-                await Assert.ThrowsAsync<IOException>(() => client.Next());
+                // Explicit protocol retirement can close with FIN or reset on Windows.
+                // The shared assertion also rejects pending packets and partial frames.
+                await client.ExpectClosedAfterRetirement();
             }
             else await client.CloseSendAndExpectEof();
         });

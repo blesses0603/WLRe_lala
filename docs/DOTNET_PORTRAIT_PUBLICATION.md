@@ -21,3 +21,7 @@
 新增合成 owner 流程涵蓋三次重建、唯讀缺檔、非審查版本不取得、離線 owner 不准入、commit 前撤銷、commit 後來源漂移、解碼漂移、損壞快取不修復及 invalidate／dispose／refresh 撤銷。沿用既有明示 white-box admission fixture 只測生命週期；離線 hook 不替換正式 pins，也不提供到 production factory 的注入參數。
 
 **未完成正式三檔來源正向驗收或完整 778 張實際圖片回讀；合成測試不是正式驗收。** 未連正式服、未使用真帳密，未宣稱 GPU／手機畫面一致。
+
+## Windows CI 修正
+
+首個 v8.0.60 提交的 Windows Core 回歸在既有 pending-role protocol-failure 測試遇到 ConnectionReset，原測試只接受精確 IOException。該分支是主動協定退役，改用既有 `RetiredPeerClosure`：仍要求沒有待收封包／半框，且只接受 EOF、ConnectionReset 或 ConnectionAborted；其他錯誤／逾時不吞掉。未變更產品登入或傳輸行為，正常 peer EOF 分支維持原檢查。
