@@ -52,15 +52,24 @@ internal static class AtlasSpritePixels
         token.ThrowIfCancellationRequested();
         Require((entry.Settings & ~0x7fU)==0 && (entry.Settings & 3)==3 && ((entry.Settings>>2)&15)<=4 && entry.Downscale==1,"Unreviewed atlas packing/rotation/downscale");
         Require((entry.Alpha.PathId!=0)==(alpha is not null),"Atlas alpha presence mismatch");
-        static int Integral(float f){Require(float.IsFinite(f)&&f>=0&&f<=2048&&f==MathF.Truncate(f),"Invalid atlas crop");return (int)f;}
-        int x=Integral(entry.Rect.X),y=Integral(entry.Rect.Y),w=Integral(entry.Rect.Width),h=Integral(entry.Rect.Height);
+        // UnityPy passes Float32 fields as Python doubles to Pillow. Pillow rounds
+        // each endpoint to even; rounding the width or summing in float differs.
+        static (int Start,int Size) Crop(float start,float size)
+        {
+            double end=(double)start+size;
+            Require(float.IsFinite(start)&&float.IsFinite(size)&&start>=0&&size>0&&end<=2048,"Invalid atlas crop");
+            int first=(int)Math.Round((double)start,MidpointRounding.ToEven);
+            int last=(int)Math.Round(end,MidpointRounding.ToEven);
+            return(first,last-first);
+        }
+        var (x,w)=Crop(entry.Rect.X,entry.Rect.Width);var (y,h)=Crop(entry.Rect.Y,entry.Rect.Height);
         Require(w is >0 and <=512&&h is >0 and <=512,"Atlas sprite exceeds bound");
         byte[] Raw(UnityTexturePixels t)
         {
             var l=t.Layout;Require(l.Width is >0 and <=2048&&l.Height is >0 and <=2048&&l.MipCount==1&&l.ImageCount==1&&l.Dimension==2&&l.Platform==19&&!l.Streamed&&!l.HasPlatformBlob,"Unsupported atlas texture layout");
             Require(t.ColorSpace==1&&l.Format is 4 or 10 or 12,"Unreviewed atlas texture color space/format");
             Require(t.Payload.Length==BlockTexturePixels.PayloadLength(l.Width,l.Height,l.Format),"Atlas texture size mismatch");
-            Require(x<=l.Width-w&&y<=l.Height-h,"Atlas crop exceeds texture");
+            Require((double)entry.Rect.X+entry.Rect.Width<=l.Width&&(double)entry.Rect.Y+entry.Rect.Height<=l.Height&&x<=l.Width-w&&y<=l.Height-h,"Atlas crop exceeds texture");
             var owned=t.Payload.ToArray();return l.Format==4?owned:BlockTexturePixels.Decode(owned,l.Width,l.Height,l.Format,token);
         }
         var raw=Raw(texture);byte[]? mask=null;

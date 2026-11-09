@@ -90,7 +90,10 @@ public sealed class AtlasPixelTests
     {
         var f=File();var data=UnityAtlasObjects.Read(f.Objects[1].Bytes).RenderData.Values.Single();var texture=UnityImageObjects.Texture(f.Objects[3].Bytes,default);
         AtlasPixelCandidate Decode(UnityAtlasData e,UnityTexturePixels t,UnityTexturePixels? a=null,SpritePixelRect? logical=null)=>AtlasSpritePixels.Decode("owned",logical??new(0,0,3,5),e,t,a,"owned");
+        // This half tie rounds endpoints to 2 and 6, exceeding logical width 3.
         Assert.Throws<UnityTextAssetException>(()=>Decode(data with{Rect=new(2.5f,1,3,5)},texture));
+        foreach(var rect in new[]{new SpritePixelRect(float.NaN,1,3,5),new(-.01f,1,3,5),new(2,1,0,5),new(2,1,.1f,5),new(2,1,float.PositiveInfinity,5),new(6.01f,1,3,5),new(2048,1,1,5)})
+            Assert.Throws<UnityTextAssetException>(()=>Decode(data with{Rect=rect},texture));
         Assert.Throws<UnityTextAssetException>(()=>Decode(data with{Rect=new(8,1,3,5)},texture));
         Assert.Throws<UnityTextAssetException>(()=>Decode(data with{Downscale=.5f},texture));
         Assert.Throws<UnityTextAssetException>(()=>Decode(data,texture with{ColorSpace=0}));

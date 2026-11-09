@@ -15,6 +15,14 @@ internal sealed class BoundedSerializedFile
     internal required IReadOnlyList<string> Externals { get; init; }
     internal required List<UnityContainerEntry> Container { get; init; }
     internal static BoundedSerializedFile Read(UnityFileIdentity identity, ReadOnlyMemory<byte> bytes, UnityExtractionBudget budget, CancellationToken token, bool allowImages = false, bool allowMaterials = false, bool allowShaders = false, bool allowAtlases = false, UnityImageArchive? imageArchive = null)
+        => ReadCore(identity,bytes,budget,token,allowImages,allowMaterials,allowShaders,allowAtlases,imageArchive,false);
+    // Dedicated local atlas projection: all metadata is checked, but unrelated
+    // object bodies never escape. General Read retains complete body validation.
+    internal static BoundedSerializedFile ReadEmojiAtlasProjection(UnityFileIdentity identity,ReadOnlyMemory<byte> bytes,
+        UnityExtractionBudget budget,CancellationToken token,UnityImageArchive? imageArchive=null)
+        => ReadCore(identity,bytes,budget,token,true,false,false,true,imageArchive,true);
+    private static BoundedSerializedFile ReadCore(UnityFileIdentity identity,ReadOnlyMemory<byte> bytes,UnityExtractionBudget budget,
+        CancellationToken token,bool allowImages,bool allowMaterials,bool allowShaders,bool allowAtlases,UnityImageArchive? imageArchive,bool emojiProjection)
     {
         token.ThrowIfCancellationRequested(); var header = new UnityReadCursor(bytes, true);
         Require(header.U32() == 0 && header.U32() == 0 && header.U32() == 22 && header.U32() == 0 && header.U8() == 0,
@@ -60,6 +68,33 @@ internal sealed class BoundedSerializedFile
         }
         Require(r.Count(0) == 0, "Managed reference types unsupported"); r.NullString(1024, true); r.End();
         var container = new List<UnityContainerEntry>();
+        if (emojiProjection)
+        {
+            foreach(var obj in objects.Values.Where(o=>o.ClassId==142))
+            { token.ThrowIfCancellationRequested(); ReadContainer(obj.Bytes,container,budget,token); }
+            var roots=container.Where(e=>e.Path==EmojiSourcePlan.AtlasPath).ToArray();
+            Require(roots.Length==1,"Emoji atlas container must be unique");
+            var selected=new Dictionary<long,UnityObject>();
+            UnityObject Select(UnityContainerPointer pointer,int classId)
+            {
+                token.ThrowIfCancellationRequested();
+                Require(pointer.FileId==0&&pointer.PathId!=0,"Emoji projection requires local pointers");
+                Require(objects.TryGetValue(pointer.PathId,out var obj)&&obj.ClassId==classId,"Missing or mismatched emoji object");
+                selected.TryAdd(pointer.PathId,obj!);return obj!;
+            }
+            var atlas=UnityAtlasObjects.Read(Select(roots[0].Pointer,687078895).Bytes,token);
+            foreach(var pointer in atlas.Sprites)
+            {
+                var sprite=UnityImageObjects.Sprite(Select(pointer,213).Bytes,token,true);
+                Require(sprite.Atlas==roots[0].Pointer&&sprite.RenderKey is not null&&atlas.RenderData.ContainsKey(sprite.RenderKey.Value),"Invalid emoji sprite backlink or render key");
+            }
+            foreach(var entry in atlas.RenderData.Values)
+            {
+                Select(entry.Texture,28);
+                if(entry.Alpha.PathId!=0)Select(entry.Alpha,28);
+            }
+            objects=selected;container=[roots[0]];
+        }
         foreach (var obj in objects.Values)
         {
             token.ThrowIfCancellationRequested();

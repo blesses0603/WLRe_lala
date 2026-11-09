@@ -34,7 +34,7 @@ def encode(cid,d):
  w=EndianBinaryWriter(endian='<');write_typetree(d,roots[cid],w);return w.bytes
 
 def file(bodies):
- meta=b'2021.3.45f2\0'+p('iBi',19,1,3)
+ meta=b'2021.3.45f2\0'+p('iBi',19,1,len(classes))
  for cid in classes:
   w=EndianBinaryWriter(endian='<');roots[cid].dump_blob(w,22)
   meta+=p('iBh',cid,0,-1)+bytes(16)+w.bytes+p('i',0)

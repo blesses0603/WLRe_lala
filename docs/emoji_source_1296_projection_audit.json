@@ -27,5 +27,17 @@
     "physics_shapes": 65,
     "physics_points": 260
   },
-  "csharp_result": "BoundedSerializedFile.Read rejects at UnityImageObjects.Sprite physics count bound 64. No limit changed; no C# full batch or production activation acceptance."
+  "v69_csharp_result": "BoundedSerializedFile.Read rejects at UnityImageObjects.Sprite physics count bound 64. No limit changed; no C# full batch or production activation acceptance.",
+  "v70_csharp_result": {
+    "parser": "ReadEmojiAtlasProjection; full schema/index/span/container validation, exact local packed graph, unrelated bodies not exposed; general Read unchanged",
+    "physics_shapes_limit": 64,
+    "crop": "Float32 fields promoted to double; round each endpoint ties-to-even, subtract; finite positive bounded crop, no out-of-texture padding",
+    "reference": "UnityPy 1.25.4 SpriteHelper + Pillow 13.0.0 Image._crop",
+    "rgba_token_dimension_matches": 62,
+    "png_bytes": 279975,
+    "sqlite_png_token_matches": 62,
+    "independent_native_rebuilds_for_sqlite": 2,
+    "production_factory_publication_acceptance": false,
+    "source": "same verified private cache; no fresh download or current endpoint claim"
+  }
 }

@@ -238,3 +238,8 @@ SQLite 首幀與 token 索引採完整 transaction 與新連線獨立回讀；�
 表情入口接上可撤銷 Core gallery request；只列 ShowInList，沿用原始 token 和共享首幀。單頁格數／視窗偏好比例對照 Python emoji_picker，圖示在 24–40 間縮放；空間不足時顯示提示，不重疊或以捲軸代替。選取只替換本機草稿選取區，遵守 512 字上限與帳號世代，聊天送出仍停用。
 
 背景解碼有逐圖／整批上限及完整 PNG SHA、header／native 尺寸核對；同一批次重用按鈕與 Bitmap、共享首幀只解碼一次。來源失效清圖，舊結果不能復活，關閉等待工作釋放。正式工廠尚未啟用，所以正式資料仍是空狀態，不以合成表情補入。詳見 [顯示與正式來源阻礙](DOTNET_EMOJI_DISPLAY.md)。
+
+
+## ver 8.0.70：表情必要物件及小數裁切
+
+確認 Python 對官方小數 textureRect 的 Pillow 端點取整語意；C# 以 double／ties-to-even 對齊，保留原始及取整後範圍檢查。表情專用解析只輸出精確本檔必要圖集物件，所有 metadata/schema/container 仍完整驗證，必要 Sprite physics 上限 64 不變。官方私有快取 62 首幀完整像素與 SQLite 獨立回讀成功；production 工廠尚未註冊、小地圖尚未接線。這不是完整桌面正式驗收。
