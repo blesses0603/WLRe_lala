@@ -4,7 +4,7 @@ using Lala.Core.Resources;
 
 namespace Lala.Desktop;
 
-/// <summary>Explicit metadata and read-only inventory entry point. Never admits resources or sends game commands.</summary>
+/// <summary>Prelogin required-resource preparation and read-only diagnostics. Never sends game commands.</summary>
 public sealed class VersionWindow : DesktopWindow
 {
     private readonly IDesktopServerCatalog source;
@@ -19,7 +19,11 @@ public sealed class VersionWindow : DesktopWindow
     private readonly Button retry, choose, next, prepare;
     private readonly Action<string?>? selectResources;
     private string? selectedRoot;
-    private readonly TextBlock selection = Ui.Text("尚未選擇登入後資源準備目錄。", 12, Ui.Muted);
+    private PreloginResourcePreparation? prelogin;
+    private Task resourceRetirement = Task.CompletedTask;
+    private Window? resourceConfirmation;
+    internal bool ResourcesMatch(OfficialVersionSnapshot? version) => prelogin?.Matches(version) == true;
+    private readonly TextBlock selection = Ui.Text("尚未完成登入前必要資源準備。", 12, Ui.Muted);
     private CancellationTokenSource stop = new();
     private Task? operation;
     private DesktopServerCatalogSnapshot? catalog;
@@ -33,11 +37,7 @@ public sealed class VersionWindow : DesktopWindow
         : base("飄流Re:LaLa · 資源準備與官方線上版本檢測", 1000, 710)
     {
         this.source = source; this.inspect = inspect; this.openLogin = openLogin; this.selectResources = selectResources;
-        prepare = Ui.Button("使用此目錄準備登入資源", () =>
-        {
-            if (selectedRoot is null || selectResources is null || operation is not null) return;
-            selectResources(selectedRoot); selection.Text = "已選擇：" + selectedRoot + "；下次登入先確認下載與寫入，再於登入協定完成後執行。";
-        }, "VersionPrepare"); prepare.IsEnabled = false;
+        prepare = Ui.Button("登入前下載、驗證與準備", () => _ = PrepareResourcesAsync(), "VersionPrepare"); prepare.IsEnabled = false;
         heading.Name = "VersionHeading"; status.Name = "VersionStatus"; versions.Name = "VersionMetadata"; inventory.Name = "VersionInventory";
         retry = Ui.Button("重新查詢官方版本", () => _ = RefreshAsync(), "VersionRefresh");
         choose = Ui.Button("選擇資料根目錄並檢查", () => _ = RunAsync(async token =>
@@ -57,10 +57,10 @@ public sealed class VersionWindow : DesktopWindow
         next = Ui.Button("進入登入畫面", Continue, "VersionContinue"); next.IsEnabled = false;
         var content = Ui.Column(Ui.Card("檢查結果", Ui.Column(heading, status)),
             Ui.Card("官方線上版本", versions),
-            Ui.Card("本機資源資料庫", Ui.Column(location, inventory, choose, Ui.Row(prepare, Ui.Button("取消資源準備選擇", () => { selectResources?.Invoke(null); selection.Text = "已取消資源準備選擇；不影響已啟動的登入，需按中斷停止。"; }, "VersionClearPreparation")), selection,
-                Ui.Text("檢查只讀取所選目錄下固定 SQLite。使用目錄準備登入資源是另一項操作，登入時另行確認。", 12, Ui.Muted))),
-            Ui.Card("資源啟用狀態", Ui.Column(Ui.Text("已接入登入後 Core 下載、同版驗證、SQLite 回讀與目錄綁定；仍非全部圖資啟用。", color: Ui.Gold),
-                Ui.Text("唯讀檢查不代表官方來源可信；綁定須由登入後 Core 流程重新驗證。一般遊戲操作仍 Held。", 12, Ui.Muted))),
+            Ui.Card("本機資源資料庫", Ui.Column(location, inventory, choose, Ui.Row(prepare, Ui.Button("取消資源準備選擇", () => _ = StopAsync(), "VersionClearPreparation")), selection,
+                Ui.Text("檢查僅唯讀；登入前準備會另行確認官方下載與固定快取／SQLite 寫入。", 12, Ui.Muted))),
+            Ui.Card("資源啟用狀態", Ui.Column(Ui.Text("登入前核對必要資源、SQLite 回讀及來源版本；圖示、頭像、表情與小地圖尚未就緒。", color: Ui.Gold),
+                Ui.Text("登入前與登入後各自驗證資源，不用舊圖資補齊缺漏。一般遊戲操作仍 Held。", 12, Ui.Muted))),
             Ui.Card("LaLa 程式更新（GitHub 正式 Release）", Ui.Text("C# Desktop 發行更新尚未接入；不下載或執行 Python 安裝程式。", 12, Ui.Muted)),
             Ui.Text("官方 TCP 沒有 TLS；XOR 可逆，不提供安全加密。進入登入後，帳密傳送仍逐次確認。", 12, Ui.Muted));
         var body = new Grid { RowDefinitions = new("*,Auto,Auto"), RowSpacing = 10 };
@@ -71,7 +71,7 @@ public sealed class VersionWindow : DesktopWindow
         Opened += (_, _) => { if (catalog?.IsFresh != true) _ = RefreshAsync(); };
         Closing += (_, args) =>
         {
-            if (operation is null) return;
+            if (operation is null && prelogin is null && resourceRetirement.IsCompleted) return;
             args.Cancel = true;
             if (!closing) { closing = true; _ = StopAndCloseAsync(); }
         };
@@ -79,25 +79,31 @@ public sealed class VersionWindow : DesktopWindow
     }
     private void Continue()
     {
-        if (operation is not null || closed || catalog?.IsFresh != true || !catalog.Lines.Any(x => x.Profile is not null))
-        { next.IsEnabled = false; status.Text = "清單未就緒或已過期，請重新查詢。"; return; }
+        if (operation is not null || closed || catalog?.IsFresh != true || !catalog.Lines.Any(x => x.Profile is not null) || !ResourcesMatch(catalog.Version))
+        { next.IsEnabled = false; status.Text = "清單或同版必要資源未就緒；請重新查詢並準備資源。"; return; }
         openLogin();
     }
     internal Task RefreshAsync() => RunAsync(async token =>
     {
+        await RetireResourcesAsync();
         catalog = null; versions.Text = "官方版本：查詢中…"; heading.Text = "正在查詢官方版本";
         var value = await source.LoadAsync(token);
         token.ThrowIfCancellationRequested();
         catalog = value;
+        RenderVersion(value);
+        heading.Text = value.IsFresh && value.Lines.Any(x => x.Profile is not null) ? "官方清單已取得；請完成登入前資源準備" : "沒有可用的已知登入設定";
+        status.Text = value.Status;
+    });
+    private void RenderVersion(DesktopServerCatalogSnapshot value)
+    {
         var v = value.Version;
         versions.Text = v is null ? value.Status : $"遊戲版本：{v.ExeVersion}\n資料版本：{v.DataVersion}\n" +
             string.Join("\n", v.Packages.OrderBy(p => p.Key).Select(p => $"{p.Key}：{p.Value}")) + $"\n觀測時間（UTC）：{v.CheckedAtUtc}";
-        heading.Text = value.IsFresh && value.Lines.Any(x => x.Profile is not null) ? "官方清單已取得；資源另由登入流程驗證" : "沒有可用的已知登入設定";
-        status.Text = value.Status;
-    });
+    }
     internal Task InspectAsync(string root) => RunAsync(token => InspectCoreAsync(root, token));
     private async Task InspectCoreAsync(string root, CancellationToken token)
     {
+        await RetireResourcesAsync(); selectedRoot = null;
         inventory.Text = "正在唯讀檢查本機資源…";
         var result = await Task.Run(() => inspect(root, token), token);
         token.ThrowIfCancellationRequested();
@@ -110,6 +116,53 @@ public sealed class VersionWindow : DesktopWindow
             _ => $"本機資料庫自洽（不代表官方驗證）\n遊戲 {result.ExeVersion}／資料 {result.DataVersion}\n必要資料表 {result.RequiredTables}／{result.RequiredTableBytes} bytes"
         };
     }
+    private Task RetireResourcesAsync()
+    {
+        var previous = prelogin; prelogin = null; selectResources?.Invoke(null);
+        if (previous is not null)
+        {
+            previous.Stop(); resourceRetirement = DrainResourcesAsync(resourceRetirement, previous);
+        }
+        return resourceRetirement;
+    }
+    private static async Task DrainResourcesAsync(Task prior, PreloginResourcePreparation previous)
+    {
+        try { await prior; }
+        finally { await previous.DisposeAsync(); }
+    }
+    internal Task PrepareResourcesAsync() => RunAsync(async token =>
+    {
+        if (selectedRoot is null) return;
+        await RetireResourcesAsync();
+        prelogin = PreloginResourcePreparation.Create(selectedRoot);
+        var disclosure = prelogin.Disclosure;
+        var dialog = new Window { Title = "確認登入前資源準備", Icon = Icon, Width = 760, Height = 380, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+        resourceConfirmation = dialog;
+        dialog.Content = new ScrollViewer { Content = Ui.Column(Ui.Text("不需要帳密；現在下載並驗證必要資源", 20, bold: true),
+            Ui.Text("官方 HTTPS：" + disclosure.ResourceUrlPrefix), Ui.Text("SQLite：" + disclosure.InventoryPath),
+            Ui.Text("Bundle 快取：" + disclosure.BundleCacheDirectory),
+            Ui.Text("將建立目錄、寫入驗證過的 Bundle、暫存檔及 SQLite／journal，再獨立回讀及重查版本與 Manifest。停止不會撤銷已完成或結果不明的寫入，不自動重試。"),
+            Ui.Text("此階段只準備必要資料表；Sprite／Texture2D 圖資尚未啟用，不授權登入或遊戲指令。"),
+            Ui.Row(Ui.Button("取消", () => dialog.Close(false), "PreloginCancel"), Ui.Button("確認下載與寫入", () => dialog.Close(true), "PreloginConfirm"))) };
+        bool approved;
+        using (token.Register(() => Avalonia.Threading.Dispatcher.UIThread.Post(() => dialog.Close(false))))
+        {
+            try { approved = await dialog.ShowDialog<bool>(this); token.ThrowIfCancellationRequested(); }
+            finally { resourceConfirmation = null; }
+        }
+        if (!approved) { await RetireResourcesAsync(); selection.Text = "未同意下載；沒有啟動資源準備。"; return; }
+        heading.Text = "正在下載、驗證及回讀必要資源";
+        var result = await prelogin.PrepareAsync(token);
+        token.ThrowIfCancellationRequested();
+        selection.Text = $"資源 {result.Status}／寫入 {result.StorageOutcome}；回讀 {result.ReadbackMatched}／來源重查 {result.SourcesRechecked}。";
+        if (result.Status != PreloginResourceStatus.Ready) { await RetireResourcesAsync(); heading.Text = "必要資源未通過驗證"; return; }
+        var observed = await source.LoadAsync(token); token.ThrowIfCancellationRequested();
+        catalog = observed; RenderVersion(observed); status.Text = observed.Status;
+        if (!observed.IsFresh || !ResourcesMatch(observed.Version)) { await RetireResourcesAsync(); heading.Text = "清單與資源版本不同，禁止登入"; return; }
+        selectResources?.Invoke(selectedRoot);
+        heading.Text = "同版必要資源已核對；圖資尚未就緒";
+        status.Text = observed.Status;
+    });
     private Task RunAsync(Func<CancellationToken, Task> action)
     {
         if (closed || operation is not null) return Pending;
@@ -121,14 +174,14 @@ public sealed class VersionWindow : DesktopWindow
         await Task.Yield();
         retry.IsEnabled = choose.IsEnabled = next.IsEnabled = prepare.IsEnabled = false; progress.IsIndeterminate = true;
         try { await action(stop.Token); }
-        catch (OperationCanceledException) { catalog = null; heading.Text = "檢查已取消"; status.Text = "未啟用任何資源或登入。"; }
-        catch (Exception) { catalog = null; heading.Text = "檢查未完成"; status.Text = "來源或本機檢查失敗，請重新查詢；不使用先前結果放行。"; }
+        catch (OperationCanceledException) { await RetireResourcesAsync(); catalog = null; heading.Text = "檢查已取消"; status.Text = "未啟用任何資源或登入。"; }
+        catch (Exception) { await RetireResourcesAsync(); catalog = null; heading.Text = "檢查未完成"; status.Text = "來源或本機檢查失敗，請重新查詢；不使用先前結果放行。"; }
         finally
         {
             operation = null; progress.IsIndeterminate = false;
             retry.IsEnabled = choose.IsEnabled = !closed;
             prepare.IsEnabled = !closed && selectedRoot is not null && selectResources is not null;
-            next.IsEnabled = !closed && catalog?.IsFresh == true && catalog.Lines.Any(x => x.Profile is not null);
+            next.IsEnabled = !closed && catalog?.IsFresh == true && catalog.Lines.Any(x => x.Profile is not null) && ResourcesMatch(catalog.Version);
         }
     }
     private async Task StopAndCloseAsync()
@@ -138,8 +191,10 @@ public sealed class VersionWindow : DesktopWindow
     }
     internal async Task StopAsync()
     {
-        stop.Cancel();
+        stop.Cancel(); prelogin?.Stop(); resourceConfirmation?.Close(false);
         if (operation is { } pending) await pending;
-        catalog = null; next.IsEnabled = false;
+        await RetireResourcesAsync();
+        catalog = null; selectedRoot = null; next.IsEnabled = prepare.IsEnabled = false;
+        selection.Text = "資源準備已撤銷；已完成或結果不明的磁碟寫入不會回復。";
     }
 }

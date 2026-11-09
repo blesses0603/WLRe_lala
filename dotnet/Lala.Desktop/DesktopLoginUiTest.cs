@@ -166,7 +166,11 @@ internal static class DesktopLoginUiTest
         await pending.StopAsync();
         Check(finished.Task.IsCompleted && !Find<Button>(pending, "LoginSubmit").IsEnabled, "stop cancels and awaits catalog cleanup");
         pending.Close();
-        Console.WriteLine("Desktop catalog UI: 9 offline assertions passed (no official HTTP or game sockets).");
+        var gated = new LoginWindow(session, () => { }, () => { }, new OfflineDesktopServerCatalog(rows), resourcesReady: _ => false);
+        gated.Show(); Find<ComboBox>(gated, "LoginServer").SelectedIndex = 0;
+        Check(!Find<Button>(gated, "LoginSubmit").IsEnabled, "opening login directly cannot bypass retired prelogin resources");
+        await gated.ShutdownAsync(); gated.Close();
+        Console.WriteLine("Desktop catalog UI: 10 offline assertions passed (no official HTTP or game sockets).");
     }
     private static T Find<T>(Control root, string name) where T : Control => root.GetVisualDescendants().OfType<T>().Single(c => c.Name == name);
     private static void Click(Control root, string name)

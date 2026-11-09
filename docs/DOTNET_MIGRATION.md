@@ -2079,3 +2079,14 @@ acquisition, SQLite readback/source recheck and account-scoped read-only catalog
 Desktop names follow the same publication and revoke with it. Commands remain Held; no
 production resources or game servers were contacted during validation. See
 [the integration record](DESKTOP_RESOURCE_INTEGRATION.md) for synthetic proof and limitations.
+
+### Overall PR development marker 8.0.45: prelogin required resources
+
+The account-free PreloginResourcePreparation facade reuses the private production resource owner.
+Desktop explicitly confirms prelogin download/writes, waits for required table bootstrap/readback/source
+recheck, then compares a fresh catalog's exact exe/data/package identity. Metadata alone cannot open
+login; refresh/stop revokes admission and drains work. Account preparation independently rechecks later.
+No packet authority is added. Sprite/Texture2D decoding, image database validation and visual publication
+remain missing; HasVisualAssets is false. See DESKTOP_RESOURCE_INTEGRATION.md for Python dependencies.
+Validation is synthetic/loopback only, with an explicitly labelled white-box positive identity seam.
+Platform versions stay unchanged; overall draft PR marker advances once, without release or merge.

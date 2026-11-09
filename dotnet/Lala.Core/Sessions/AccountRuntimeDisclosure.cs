@@ -13,7 +13,7 @@ public sealed class AccountRuntimeDisclosure
 }
 
 /// <summary>Fixed production resource destination and local writes. Login permission alone
-/// does not authorize these operations. Version-dependent URLs are resolved after login from
+/// does not authorize these operations. Version-dependent URLs are resolved when preparation runs from
 /// validated official metadata, within ResourceUrlPrefix; no login credentials are sent to HTTPS.</summary>
 public sealed class AccountResourceDisclosure
 {
@@ -22,7 +22,7 @@ public sealed class AccountResourceDisclosure
     public string BundleCacheDirectory { get; }
     public string VersionMapUrl => $"https://{OfficialResourceOrigin.DefaultHost}/WLN/TW/ResourcePath_PC.dat";
     public string ResourceUrlPrefix => $"https://{OfficialResourceOrigin.DefaultHost}/WLN/TW/";
-    public string Purpose => "After protocol login, acquire official HTTPS version metadata, DataPackage and MainPackage " +
+    public string Purpose => "Acquire official HTTPS version metadata, DataPackage and MainPackage " +
         "manifests and required bundles; bootstrap and independently read back the fixed SQLite resource inventory.";
     public string Writes => "Create directories, persist verified bundles and temporary files in BundleCacheDirectory, " +
         "and create or update InventoryPath (including SQLite journal files). Stop does not undo completed writes.";

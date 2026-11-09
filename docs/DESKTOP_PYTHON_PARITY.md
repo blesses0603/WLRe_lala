@@ -1,4 +1,4 @@
-# PR #79 ver 8.0.44：Python 桌面介面對照盤點
+# PR #79 ver 8.0.45：Python 桌面介面對照盤點
 
 範圍是全部桌面畫面及其子視窗，保留使用者較新的「背包／特技各自獨立視窗」要求。參照 PR 原 head `59416bde817f39035176ae9c1e2eeb5b23896d58` 中 Python 7.3.1 原始碼；本批未改 Python，也未聲稱已全部移植完成。
 
@@ -16,7 +16,7 @@ Desktop 使用既有 `OfficialServerDiscovery`：官方 HTTPS allowlist、限制
 
 | Python 畫面／流程 | 原始碼（wlre/ 下）與尺寸 | Avalonia 現況／剩餘工作 |
 |---|---|---|
-| 啟動資源準備、線上版本、背景更新 | ui/version_gate_controller.py、background_version_controller.py；1000×710，內容可增高 | 8.0.43 已接獨立啟動視窗、實際官方 metadata 與選定目錄的 Core SQLite 唯讀檢查；8.0.44 已接登入後必要資源下載／驗證／唯讀目錄綁定；完整登入前資源 gate、全圖資、背景 observer、GitHub 更新、計時及 Python 自動增高仍缺 |
+| 啟動資源準備、線上版本、背景更新 | ui/version_gate_controller.py、background_version_controller.py；1000×710，內容可增高 | 8.0.43 已接獨立啟動視窗、實際官方 metadata 與選定目錄的 Core SQLite 唯讀檢查；8.0.44 已接登入後必要資源下載／驗證／唯讀目錄綁定；8.0.45 補入登入前必要資料準備及精確同版 gate；全圖資、背景 observer、GitHub 更新、計時及 Python 自動增高仍缺 |
 | 登入、帳號清單、分流、選角 | ui/login_controller.py、account_controller.py；900×620 | 已還原下拉流程與自動來源，接共用 Core；帳號設定與可信快取未移植，風險說明可捲動 |
 | 主畫面／十張總覽卡片 | ui/dashboard_builder.py、dashboard_layout.py、overview_ui.py、layout.py；1280×800 左870右380 | 既有 Dashboard；補齊所有主要功能入口，仍有卡片完整欄位／資源差距 |
 | 聊天／頻道／表情 | ui/chat_ui.py、chat_emoji.py、emoji_picker.py；表情依圖數自動計算 | 既有聊天唯讀、文字草稿；新增無資料表情提示；真實表情網格、文字插入與聊天發送未接 |
@@ -89,3 +89,7 @@ inspection 201、Desktop 離線 63 通過。原生 UI 224（29 張截圖）、ca
 同步物品／場景名稱及綁定／失敗狀態，撤銷時清除。完整流程與證據見
 [Desktop 資源接線](DESKTOP_RESOURCE_INTEGRATION.md)。這不是全部圖資啟用或 Python
 登入前完整 gate；前節 8.0.43 的未接線描述是歷史狀態，以上述本批範圍為準。
+
+## 8.0.45 登入前必要資源
+
+官方 metadata 不再足以開啟登入；先明示確認下載／寫入，由 Core 準備必要表、SQLite 回讀和來源重查，再以新清單精確比對 exe／data／Package。停止撤銷並等待資源釋放，登入後仍獨立重查。圖資未啟用：Core 缺 Sprite／Texture2D 圖像解碼及 Python 圖片資料庫的來源／像素／快取驗證橋接，詳見 [實際流程與相依差距](DESKTOP_RESOURCE_INTEGRATION.md)。

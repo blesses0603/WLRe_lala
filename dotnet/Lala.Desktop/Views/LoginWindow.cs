@@ -32,6 +32,7 @@ public sealed class LoginWindow : DesktopWindow, IAccountLoginInput, IAccountRol
     private AccountLoginPreparation? preparation;
     private AccountRuntime? runtime;
     private readonly Func<string?> resourceRoot;
+    private readonly Func<Lala.Core.Resources.OfficialVersionSnapshot?, bool>? resourcesReady;
     private OfflineRuntimeCandidate? lastCatalogs;
     private CancellationTokenSource? cancellation;
     private Task? operation;
@@ -44,13 +45,13 @@ public sealed class LoginWindow : DesktopWindow, IAccountLoginInput, IAccountRol
     private bool closePending;
     private readonly Button preview, inspector;
 
-    public LoginWindow(DesktopSession session, Action openPreview, Action openInspector, Action? openVersion = null, Func<string?>? resourceRoot = null)
-        : this(session, openPreview, openInspector, Program.UiSmokeTest ? new OfflineDesktopServerCatalog() : new OfficialDesktopServerCatalog(), openVersion, resourceRoot) { }
+    public LoginWindow(DesktopSession session, Action openPreview, Action openInspector, Action? openVersion = null, Func<string?>? resourceRoot = null, Func<Lala.Core.Resources.OfficialVersionSnapshot?, bool>? resourcesReady = null)
+        : this(session, openPreview, openInspector, Program.UiSmokeTest ? new OfflineDesktopServerCatalog() : new OfficialDesktopServerCatalog(), openVersion, resourceRoot, resourcesReady) { }
 
-    internal LoginWindow(DesktopSession session, Action openPreview, Action openInspector, IDesktopServerCatalog catalogSource, Action? openVersion = null, Func<string?>? resourceRoot = null)
+    internal LoginWindow(DesktopSession session, Action openPreview, Action openInspector, IDesktopServerCatalog catalogSource, Action? openVersion = null, Func<string?>? resourceRoot = null, Func<Lala.Core.Resources.OfficialVersionSnapshot?, bool>? resourcesReady = null)
         : base("飄流Re:LaLa  =By赤寧= · 登入／選角", 900, 620)
     {
-        this.catalogSource = catalogSource; this.resourceRoot = resourceRoot ?? (() => null);
+        this.catalogSource = catalogSource; this.resourceRoot = resourceRoot ?? (() => null); this.resourcesReady = resourcesReady;
         this.session = session; openMain = openPreview;
         submit = Ui.Button("登入", () => { if (operation is null) { stopping = false; operation = LoginAsync(); } }, "LoginSubmit");
         disconnect = Ui.Button("中斷", async () => await StopAsync(), "LoginDisconnect");
@@ -110,7 +111,7 @@ public sealed class LoginWindow : DesktopWindow, IAccountLoginInput, IAccountRol
 
     private void UpdateAdmission()
     {
-        submit.IsEnabled = operation is null && !closed && catalog?.IsFresh == true &&
+        submit.IsEnabled = operation is null && !closed && catalog?.IsFresh == true && (resourcesReady is null || resourcesReady(catalog.Version)) &&
             lines.SelectedIndex >= 0 && lines.SelectedIndex < groupLines.Length && groupLines[lines.SelectedIndex].Profile is not null;
     }
     private void SelectServer()
@@ -170,7 +171,7 @@ public sealed class LoginWindow : DesktopWindow, IAccountLoginInput, IAccountRol
         try
         {
             if (stopping) return;
-            if (catalog?.IsFresh != true || lines.SelectedIndex < 0 || lines.SelectedIndex >= groupLines.Length ||
+            if (catalog?.IsFresh != true || (resourcesReady is not null && !resourcesReady(catalog.Version)) || lines.SelectedIndex < 0 || lines.SelectedIndex >= groupLines.Length ||
                 groupLines[lines.SelectedIndex].Profile is not { } profile)
                 throw new InvalidOperationException("No current supported official line selected.");
             openedMain = false; sequence = 0; lastPublication = null; lastCatalogs = null;
@@ -186,6 +187,7 @@ public sealed class LoginWindow : DesktopWindow, IAccountLoginInput, IAccountRol
                 runtime = AccountRuntime.CreatePrepared(core, snapshot.Generation, identity, profile, this, root,
                     new() { LoginTimeout = TimeSpan.FromMinutes(2) }, roleSelector: this, sendConfirmation: this);
                 if (!await ConfirmResourcesAsync(runtime.Disclosure!.Resources, cancellation.Token)) return;
+                if (resourcesReady is not null && !resourcesReady(catalog.Version)) throw new InvalidOperationException("Prelogin resources retired.");
                 cancellation.Token.ThrowIfCancellationRequested();
                 timer.Start();
                 var result = await runtime.RunAsync(cancellation.Token);
@@ -241,7 +243,7 @@ public sealed class LoginWindow : DesktopWindow, IAccountLoginInput, IAccountRol
         panel.Children.Add(Ui.Row(Ui.Button("取消", () => dialog.Close(false), "LoginSendCancel"), Ui.Button("知悉風險，確認傳送", () => dialog.Close(true), "LoginSendConfirm")));
         dialog.Content = panel;
         using var registration = token.Register(() => Dispatcher.UIThread.Post(() => dialog.Close(false)));
-        try { var approved = await dialog.ShowDialog<bool>(this); token.ThrowIfCancellationRequested(); return approved; }
+        try { var approved = await dialog.ShowDialog<bool>(this); token.ThrowIfCancellationRequested(); return approved && (resourcesReady is null || resourcesReady(catalog?.Version)); }
         finally { confirmationWindow = null; }
     }
 
@@ -281,7 +283,7 @@ public sealed class LoginWindow : DesktopWindow, IAccountLoginInput, IAccountRol
             Ui.Row(Ui.Button("取消", () => dialog.Close(false), "ResourceSendCancel"),
                 Ui.Button("確認本次下載與寫入", () => dialog.Close(true), "ResourceSendConfirm"))) };
         using var registration = token.Register(() => Dispatcher.UIThread.Post(() => dialog.Close(false)));
-        try { var approved = await dialog.ShowDialog<bool>(this); token.ThrowIfCancellationRequested(); return approved; }
+        try { var approved = await dialog.ShowDialog<bool>(this); token.ThrowIfCancellationRequested(); return approved && (resourcesReady is null || resourcesReady(catalog?.Version)); }
         finally { confirmationWindow = null; }
     }
     private void Publish()

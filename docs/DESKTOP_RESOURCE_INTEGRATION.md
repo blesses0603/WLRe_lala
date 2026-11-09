@@ -1,51 +1,55 @@
-# Desktop 資源準備接線 — PR #79 ver 8.0.44
+# Desktop 資源準備接線 — PR #79 ver 8.0.45
 
-本批把桌面選定資料目錄接到現有 `AccountRuntime.CreatePrepared`，不自行重作 downloader、
-SQLite writer 或 runtime admission。沒有選資源目錄時仍可使用原受控登入／唯讀接收流程。
-這不是正式服驗收，也不是 Python 的完整登入前資源 gate。
+本批在登入前接入必要資料的真實下載、驗證及 SQLite 啟用流程；圖資尚未啟用，
+不是 Python 完整資源流程或正式服驗收。
 
-## 實際流程
+## 登入前流程
 
-1. 在版本視窗選擇資料根目錄，唯讀檢查仍只讀固定 SQLite，不會下載或修復。
-2. 按「使用此目錄準備登入資源」只記住本次程式生命週期的路徑；不寫設定、不做 I/O。
-   「取消資源準備選擇」只影響下次登入；已啟動的登入須使用中斷停止。
-3. 選伺服器／分流並自行輸入帳密，按登入後凍結本次 profile 與資料路徑。
-4. 獨立確認框列出 `AccountRuntimeDisclosure.Resources` 的官方 HTTPS 前綴、版本入口、
-   Bundle 快取與 SQLite 完整位置；明示建立目錄／暫存檔／journal，以及停止不撤銷既有寫入。
-   取消時只有 inert runtime 被釋放，不啟動 socket、HTTP 或寫入。
-5. 同意資源範圍仍不等於同意帳密傳送。`AccountRuntime.CreatePrepared` 現在將可選
-   `IAccountLoginSendConfirmation` 傳入內部準備器；Desktop 必定傳入，驗證／正式 TCP
-   各自顯示目的地與無 TLS／可逆 XOR 風險。手動選角不變，沒有自動重試。
-6. 登入協定完成後，Core 自動執行必要 Bundle 取得／驗證、十表解析、SQLite bootstrap、
-   獨立回讀及來源版本／Manifest 重查；只有既有 Core 准入通過才有當前帳號目錄綁定。
-7. Desktop 從同一 `PublicationSnapshot` 取得接收狀態與目錄，呈現物品／場景名稱；目錄
-   撤銷時清除名稱映射。Core 同版 observation inputs 仍由整合 runtime 提供，不由 UI 重建。
-8. 中斷／關閉同時停止登入、資源工作與回呼並等待整體釋放。Committed／Unknown 寫入
-   不會自動回復或由 UI 重試，必須重新觀察；歷史 WasBound 不當成當前可用性。
+1. 版本視窗取得官方 metadata。只有清單、已知協定或本機 SQLite 自洽均不能進入登入。
+2. 使用者選擇資料根目錄，先進行不建立／修復檔案的唯讀檢查。
+3. 「登入前下載、驗證與準備」顯示獨立確認框，列出官方 HTTPS、Bundle 快取、SQLite
+   路徑及目錄／暫存檔／journal 寫入範圍。拒絕時不執行 HTTP 或寫入。
+4. 新增公開 `PreloginResourcePreparation`，由私有 production `ResourceRuntimeOwner`
+   執行既有官方來源、Manifest／Bundle 驗證、必要十表解析、SQLite bootstrap、獨立回讀
+   及來源重查。建構不執行 I/O；沒有帳號、帳密或遊戲 socket，也不接收任意來源／URL。
+5. `Ready` 只表示當前必要資料目錄通過既有准入。視窗重新取得官方清單，再精確比對
+   exe／data／完整 Package 名稱及版本；不符、過期、未知協定均不放行。
+6. 正式桌面路由在登入按鈕、啟動登入及每次確認返回時再次檢查當前資源。登入後仍使用
+   `AccountRuntime.CreatePrepared` 獨立重查及綁定，登入前的歷史結果不能授權帳號資料。
+   登入後資源寫入與驗證／正式 TCP 帳密傳送各自確認。官方 TCP 沒有 TLS，XOR 可逆。
+7. 刷新、改目錄、取消、停止／關閉立即撤銷資源准入，並等待背景工作及 owner 釋放；
+   已完成或結果不明的磁碟寫入不回復、不自動重試。根目錄只留在本次程式記憶體。
+8. 同一次帳號 publication 提供接收狀態與物品／場景名稱；撤銷時清除。一般遊戲操作
+   仍 Held。`PreloginResourceResult`、候選目錄都不提供登入或封包發送權限。
 
-## 邊界與 Python 差異
+## Python 對照與圖資阻礙
 
-- 官方 host、版本／Manifest／Bundle 驗證、大小限制、cache／SQLite 路徑及讀回規則沿用 Core，
-  沒有開放任意 URL、handler、資料來源或聲稱來源可信的 UI 輸入。
-- Core 綁定表示當前帳號的唯讀目錄可用；`ResourceHeld`／`CanSendCommands=false` 保持不變。
-  候選本身的 `HasVerifiedProvenance=false` 等旗標不被改寫成授權。
-- Python 啟動前完整資源準備／ZIP 重建流程未照搬：此路徑在登入協定完成後執行。
-  尚未實作完整圖片／技能效果、全部可選目錄正向驗收、背景版本 observer、程式更新器，
-  也不代表全桌面 UI 已完成。
-- 本次資源確認計入既有 prepared login 一分鐘有效期；逾期須重新開始，不重用確認。
-- 根目錄只在記憶體中保存；路徑正規化及固定子路徑沿用 Core，並非防禦惡意 symlink／
-  外部替換的檔案系統 sandbox。使用者應選擇自己管理的應用程式資料目錄。
+已核對 `game_version_gate.py`、`dynamic_bundle_runtime.py`、`bundle_runtime_1275.py`。
+Python 在登入前比較官方 exe／data／兩個 Package，再驗證來源與 SQLite；可選圖片各自
+有同版來源與快取驗證，不是找到舊 PNG 或資料庫就啟用。本批補上必要資料的登入前順序。
 
-## 驗證
+尚缺以下真實圖資鏈，`HasVisualAssets` 明確保持 false：
 
-- Core 資源整合／bootstrap 201 通過；既有 prepared-account 正向測試新增驗證兩次
-  recipient 確認均經過整合 runtime。其正向綁定是既有 **white-box 合成來源** fixture，
-  明示不證明官方 provenance 或 live acceptance。
-- 真正 Avalonia → public AccountRuntime → loopback：6 項資源確認斷言通過，涵蓋拒絕
-  資源無副作用、同意資源仍等待帳密確認、拒絕帳密不下載／不寫入。未讓此測試走到
-  production HTTP 下載階段。
-- 原生 UI 226（29 張截圖）、catalog UI 9、原登入 loopback 11、Desktop 離線 63、
-  公開 Core consumer 與 Python 倉庫／發行 15 通過。沒有實際連官方 HTTP／遊戲伺服器。
-- 資料目錄選擇與取消只影響下一次登入，測試確認這一步不建立目錄。
+| Python 來源 | C# 尚缺的相依與驗證 |
+| --- | --- |
+| `item_image_database.py` | Unity Sprite→同 asset Texture2D 解析、有限尺寸／數量解碼、PNG 與 RGBA 雜湊、精確 inputs/catalog key、commit 前來源重查 |
+| `portrait_database.py` | 頭像映射、圖集裁切、同版來源／像素與快取驗證 |
+| `emoji_database.py` | EmojiData 與圖片來源相依、同版 catalog 及快取驗證 |
+| `smallmap_database.py` | 小地圖 Sprite／Texture2D、場景映射、同版來源與像素驗證 |
 
-完整官方資料成功組合與各平台真實資源準備仍需另行驗收，不以合成測試冒稱完成。
+目前 Core 的受限 Unity 解碼器只處理 TextAsset，未具備 Sprite／Texture2D 圖像解碼與
+上述圖片 SQLite／publication 橋接。不能將未驗證舊圖資顯示為就緒；不猜格式或降低驗證。
+背景版本 observer、Python ZIP 重建、程式更新器與全介面一致也仍未完成。
+
+路徑正規化及固定子路徑沿用 Core；這不是防禦惡意 symlink／外部替換的檔案系統 sandbox。
+
+## 驗證方式
+
+- 資源 Core 測試使用合成來源；正向 current identity 案例沿用明示 white-box `_production`
+  seam，只證明生命週期／精確比對接線，不證明官方 provenance 或真實資料成功啟用。
+- 新增建構／關閉無 I/O、離線來源不能准入、精確版本不符阻擋、停止撤銷及等待晚到來源測試。
+- 原生 UI 驗證 metadata 不能放行、準備確認取消不建目錄、登入的資源 gate、清理與既有路由。
+- 既有 public runtime loopback 驗證資源與帳密確認分離；不走 production HTTP。
+- 全部測試只用合成／loopback／臨時檔案；未連官方 HTTP、正式服或讀取真帳密。
+
+- 本機驗證：Release build 0 警告／錯誤；Core 資源 204、原生 UI 226（29 張圖）、catalog UI 10、登入 loopback 11、資源確認 loopback 6、離線 Desktop 63、公開 consumer 與 Python 倉庫／發行 15 通過。

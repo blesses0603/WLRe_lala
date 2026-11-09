@@ -1,4 +1,6 @@
-# Desktop login integration — overall PR 8.0.44
+# Desktop login integration — overall PR 8.0.45
+
+8.0.45 正式桌面路由先完成 [登入前必要資源準備及精確同版 gate](DESKTOP_RESOURCE_INTEGRATION.md)，才允許登入。圖資尚未啟用；登入後仍獨立重查並確認資源寫入與逐次帳密傳送。下文保留既有登入接線與歷史驗證。
 
 The Avalonia login and role controls use shared Core preparation. The Python-compatible
 server/line dropdowns now load official HTTPS metadata through `OfficialServerDiscovery`.

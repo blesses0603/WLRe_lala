@@ -81,8 +81,8 @@ internal static class DesktopUiSmokeTest
             var window = Show(new VersionWindow(() => entered++, () => { }, () => { }, source, Lala.Core.Resources.ResourceInventoryInspector.InspectAsync, root => plannedRoot = root));
             await window.Pending; await Settle(window);
             Check(Find<TextBlock>(window, "VersionMetadata").Text!.Contains("MainPackage：1275_") && Find<TextBlock>(window, "VersionMetadata").Text!.Contains("資料版本：1.2.3"), "version display uses observed metadata fields");
-            Check(Find<Button>(window, "VersionContinue").IsEnabled, "supported fresh metadata allows only controlled login entry");
-            Click(window, "VersionContinue"); Check(entered == 1 && !session.CanSendGameCommands, "version entry never enables commands");
+            Check(!Find<Button>(window, "VersionContinue").IsEnabled, "metadata alone cannot bypass prelogin resources");
+            Check(entered == 0 && !session.CanSendGameCommands, "metadata never enters login or enables commands");
             var root = Path.Combine(Path.GetTempPath(), "lala-version-fixture-" + Guid.NewGuid().ToString("N"));
             try
             {
@@ -90,8 +90,16 @@ internal static class DesktopUiSmokeTest
                 Check(Find<TextBlock>(window, "VersionInventory").Text!.Contains("找不到"), "real Core inspector reports missing local database");
                 Check(!Directory.Exists(root), "read-only inspection never creates missing data directories");
                 Click(window, "VersionPrepare");
-                Check(plannedRoot == Path.GetFullPath(root) && !Directory.Exists(root), "resource plan selects only the explicit root without writes");
-                Click(window, "VersionClearPreparation"); Check(plannedRoot is null, "resource preparation selection can be cancelled");
+                Window? consent = null;
+                using (var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
+                {
+                    while ((consent = (Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Windows.FirstOrDefault(w => w.Title == "確認登入前資源準備")) is null)
+                        await Task.Delay(10, deadline.Token);
+                }
+                Check(plannedRoot is null && !Directory.Exists(root), "prelogin consent precedes resource IO and account selection");
+                Click(consent, "PreloginCancel"); await window.Pending;
+                Check(plannedRoot is null && !Directory.Exists(root) && !Find<Button>(window, "VersionContinue").IsEnabled, "declined prelogin preparation cannot admit login or create files");
+                Click(window, "VersionClearPreparation");
                 var directory = Path.Combine(root, "official_sync", "derived_catalogs"); Directory.CreateDirectory(directory);
                 var db = Path.Combine(directory, "resource_inventory.sqlite3"); await File.WriteAllTextAsync(db, "synthetic invalid database");
                 await window.InspectAsync(root);
