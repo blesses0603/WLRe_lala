@@ -1,4 +1,4 @@
-# PR #79 ver 8.0.52：Python 桌面介面對照盤點
+# PR #79 ver 8.0.53：Python 桌面介面對照盤點
 
 範圍是全部桌面畫面及其子視窗，保留使用者較新的「背包／特技各自獨立視窗」要求。參照 PR 原 head `59416bde817f39035176ae9c1e2eeb5b23896d58` 中 Python 7.3.1 原始碼；本批未改 Python，也未聲稱已全部移植完成。
 
@@ -154,3 +154,19 @@ Desktop 離線 76 項（presentation 67＋inspector 9）；公開 consumer、Tk 
 技能視窗與動態行動清單顯示已知恢復種類，恢復量仍未知；消耗 SP 與恢復效果分開顯示。
 C# 原本只有技能 ID 的名稱查找也接入目前已驗證可選技能目錄；無目錄仍顯示待同步／未驗證。
 不新增自動選技能、不變更次階規則、不啟用施放；正式官方資源正向驗收仍未完成。
+
+## 8.0.53 壓縮圖像接線與背包解碼重用
+
+新增 TextureFormat 10（DXT1／BC1）與 12（DXT5／BC3）的受限 base-level 解碼，接在既有精確 SerializedFile 圖片路徑，因此符合既有 Sprite 條件的壓縮圖片可進入原本 production 物品圖批次、PNG／SQLite 與撤銷 publication。尺寸、逐圖指標／來源依賴、manifest、版本與容量限制不變；不接納 Crunch、mip、外部 streamed texture、SpriteAtlas 或材質。
+
+依據為 Unity TextureFormat 文件、Microsoft BC1／BC3 區塊規格及固定 UnityPy 1.25.4 的 Pillow bcn 解碼。Python 已審查頭像來源的 portrait_assets.py 明列格式 4／10／12，證明這是後續頭像的實際相依，但不代表本批已載入官方頭像。96 組自有向量覆蓋 RGB565 插值、透明色、兩種 alpha 端點模式、所有 selector、邊界 padding、跨 block 裁切與垂直方向；自有 SerializedFile／Bundle 經真實 UnityPy writer 和 SpriteHelper 對照後，再測 PNG／SQLite 關閉重開回讀。完整壓縮來源仍納入 SHA256，快取不能只以輸出像素證明來源一致。
+
+桌面背包／兩種儲藏格原本每次 Paint 都重建每張 Bitmap。現在每次仍從目前 runtime 取得每格 PNG，檢查 header、尺寸與完整 bytes；僅重用完全相同內容的 native Bitmap，同幀重複圖也共用。每個 grid 最多保留目前 24 格所用的圖片，換頁、內容變更或撤銷會在舊控制項移除後釋放不再使用的 Bitmap，換帳與關閉清空。沒有全域跨帳號快取，沒有跳過來源檢查，也不新增背景工作或影響 UI 排序／選取。
+
+測量方式是原生解碼呼叫計數，而非推測耗時／FPS：24 個相同 PNG 的可見格只需 1 次 native decode；接著 10 次相同刷新新增 0 次（舊 Paint 路徑需 240 次）。回歸同時要求每格每次仍取得來源，以及損壞／撤銷時清圖。仍會重建格位控制項與複製／雜湊 PNG；不是全面繪製或載入效能完成的宣告。
+
+參照：
+- https://docs.unity3d.com/2021.3/Documentation/ScriptReference/TextureFormat.DXT1.html
+- https://learn.microsoft.com/en-us/windows/win32/direct3d10/d3d10-graphics-programming-guide-resources-block-compression
+
+尚缺：實際官方圖片正向驗收、頭像材質／遮罩、SpriteAtlas 表情、小地圖與全 Python 介面對齊。本批只做合成／loopback，不連正式服，不改 HasVisualAssets=false；恢復量仍未知。

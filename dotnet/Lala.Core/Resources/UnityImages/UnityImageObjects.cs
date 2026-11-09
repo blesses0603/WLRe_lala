@@ -53,8 +53,10 @@ internal static class UnityImageObjects
         Require(r.I64() == 0 && r.U32() == 0 && r.String(1024) == "", "Streamed image resource unsupported"); r.End();
         Require(width is > 0 and <= 2048 && height is > 0 and <= 2048 && mips == 1 && images == 1 && dimension == 2,
             "Unsupported image dimensions/mips/array");
-        int stride = format switch { 3 => 3, 4 or 5 or 14 => 4, _ => throw new UnityTextAssetException("Unreviewed texture compression/format") };
-        Require(length == width * height * stride && complete == length, "Texture image size mismatch");
+        int expected;
+        try { expected = BlockTexturePixels.PayloadLength(width, height, format); }
+        catch (SpritePixelException) { throw new UnityTextAssetException("Unreviewed texture compression/format"); }
+        Require(length == expected && complete == length, "Texture image size mismatch");
         token.ThrowIfCancellationRequested(); return new(name, new(width, height, format), payload);
     }
     internal static UnitySpritePixels Sprite(ReadOnlyMemory<byte> bytes, CancellationToken token)

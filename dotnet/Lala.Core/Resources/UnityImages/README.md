@@ -1,4 +1,4 @@
-> Current scope: v8.0.50 conditionally prepares, stores and publishes supported item images in production. Other image families and actual official positive-format acceptance remain incomplete. Earlier version sections below retain their historical scope.
+> Current scope: v8.0.53 conditionally prepares, stores and publishes supported item images in production. BC1/BC3 now compose the same bounded pipeline; desktop native decodes reuse exact current bytes. Other image families and actual official positive-format acceptance remain incomplete. Earlier version sections below retain their historical scope.
 
 # Bounded image pixel layer — overall PR 8.0.47
 
@@ -176,3 +176,21 @@ native UI 233 checks with 30 rendered screenshots, catalog 10, resource confirma
 loopback 11 passed. The owned red-pixel PNG screenshot was visually inspected. Public Core consumer
 and 15 repository/release checks passed. Full final-source Core regression and exact-head CI are
 recorded on PR #79; no real accounts, official HTTP/game sockets or user-computer operations were used.
+
+## 8.0.53 壓縮圖像接線與背包解碼重用
+
+新增 TextureFormat 10（DXT1／BC1）與 12（DXT5／BC3）的受限 base-level 解碼，接在既有精確 SerializedFile 圖片路徑，因此符合既有 Sprite 條件的壓縮圖片可進入原本 production 物品圖批次、PNG／SQLite 與撤銷 publication。尺寸、逐圖指標／來源依賴、manifest、版本與容量限制不變；不接納 Crunch、mip、外部 streamed texture、SpriteAtlas 或材質。
+
+依據為 Unity TextureFormat 文件、Microsoft BC1／BC3 區塊規格及固定 UnityPy 1.25.4 的 Pillow bcn 解碼。Python 已審查頭像來源的 portrait_assets.py 明列格式 4／10／12，證明這是後續頭像的實際相依，但不代表本批已載入官方頭像。96 組自有向量覆蓋 RGB565 插值、透明色、兩種 alpha 端點模式、所有 selector、邊界 padding、跨 block 裁切與垂直方向；自有 SerializedFile／Bundle 經真實 UnityPy writer 和 SpriteHelper 對照後，再測 PNG／SQLite 關閉重開回讀。完整壓縮來源仍納入 SHA256，快取不能只以輸出像素證明來源一致。
+
+桌面背包／兩種儲藏格原本每次 Paint 都重建每張 Bitmap。現在每次仍從目前 runtime 取得每格 PNG，檢查 header、尺寸與完整 bytes；僅重用完全相同內容的 native Bitmap，同幀重複圖也共用。每個 grid 最多保留目前 24 格所用的圖片，換頁、內容變更或撤銷會在舊控制項移除後釋放不再使用的 Bitmap，換帳與關閉清空。沒有全域跨帳號快取，沒有跳過來源檢查，也不新增背景工作或影響 UI 排序／選取。
+
+測量方式是原生解碼呼叫計數，而非推測耗時／FPS：24 個相同 PNG 的可見格只需 1 次 native decode；接著 10 次相同刷新新增 0 次（舊 Paint 路徑需 240 次）。回歸同時要求每格每次仍取得來源，以及損壞／撤銷時清圖。仍會重建格位控制項與複製／雜湊 PNG；不是全面繪製或載入效能完成的宣告。
+
+參照：
+- https://docs.unity3d.com/2021.3/Documentation/ScriptReference/TextureFormat.DXT1.html
+- https://learn.microsoft.com/en-us/windows/win32/direct3d10/d3d10-graphics-programming-guide-resources-block-compression
+
+尚缺：實際官方圖片正向驗收、頭像材質／遮罩、SpriteAtlas 表情、小地圖與全 Python 介面對齊。本批只做合成／loopback，不連正式服，不改 HasVisualAssets=false；恢復量仍未知。
+
+8.0.53 local verification: 174 focused image checks passed; Desktop Release build zero warnings/errors, native UI 254 checks / 32 screenshots, offline presentation+inspector 81, public consumer and Python repository/release 15 passed. Full Core and exact-head CI are recorded on PR #79 separately. No official live-format acceptance is claimed.

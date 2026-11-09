@@ -12,9 +12,12 @@ public sealed class SpritePixelTests
     private static byte[] Payload => Enumerable.Range(0, 48).Select(i => (byte)(i * 37 + 11)).ToArray();
     public static IEnumerable<object[]> Vectors()
     {
-        using var stream = typeof(SpritePixelTests).Assembly.GetManifestResourceStream("Lala.Core.Tests.Resources.UnityImages.vectors.json")!;
+        foreach (string file in new[] { "vectors.json", "block_vectors.json" })
+        {
+        using var stream = typeof(SpritePixelTests).Assembly.GetManifestResourceStream("Lala.Core.Tests.Resources.UnityImages." + file)!;
         using var json = JsonDocument.Parse(stream);
         foreach (var row in json.RootElement.GetProperty("vectors").EnumerateArray()) yield return new object[] { row.Clone() };
+        }
     }
     [Theory, MemberData(nameof(Vectors))]
     public void Pixel_crop_orientation_and_channels_match_pinned_UnityPy(JsonElement v)
@@ -31,7 +34,7 @@ public sealed class SpritePixelTests
     public static IEnumerable<object[]> UnsupportedTextures()
     {
         foreach (var value in new[] { Texture with { Width = 0 }, Texture with { Height = -1 }, Texture with { Width = 2049 },
-            Texture with { Height = int.MaxValue }, Texture with { Format = 10 }, Texture with { Format = 999 },
+            Texture with { Height = int.MaxValue }, Texture with { Format = 11 }, Texture with { Format = 999 },
             Texture with { MipCount = 2 }, Texture with { ImageCount = 2 }, Texture with { Dimension = 3 },
             Texture with { Platform = 11 }, Texture with { Streamed = true }, Texture with { HasPlatformBlob = true } }) yield return new object[] { value };
     }

@@ -69,6 +69,8 @@ public sealed class InventoryWindow : DesktopWindow
     public string SearchText { get => search.Text ?? ""; set => search.Text = value; }
     public int VisibleBagItemCount => bag.ItemCount;
     internal int VisibleBagImageCount => bag.ImageCount;
+    internal int BagImageDecodeCount => bag.DecodeCount;
+    internal int BagRetainedImageCount => bag.RetainedImageCount;
     public int BagPageIndex => bag.PageIndex;
     public ushort? SelectedBagIndex => bag.SelectedIndex;
     public string BagDetailsText => bag.DetailsText;
@@ -133,11 +135,14 @@ internal sealed class InventoryGrid : UserControl
 {
     internal Func<ushort, byte[]?>? ImageReader { get; set; }
     private readonly List<Bitmap> bitmaps = [];
+    private readonly ItemBitmapCache imageCache = new();
+    internal int DecodeCount => imageCache.DecodeCount;
+    internal int RetainedImageCount => imageCache.RetainedCount;
     internal int ImageCount => bitmaps.Count;
     internal void ReleaseImages()
     {
         foreach (var cell in cells) if (cell is not null) cell.Content = null;
-        foreach (var bitmap in bitmaps) bitmap.Dispose();
+        imageCache.Dispose();
         bitmaps.Clear();
     }
     private const int Columns = 6;
@@ -232,6 +237,7 @@ internal sealed class InventoryGrid : UserControl
 
     public void Reset()
     {
+        ReleaseImages();
         page = 0; selectedIndex = null; selectedItemId = null; items = [];
         Paint();
     }
@@ -288,7 +294,8 @@ internal sealed class InventoryGrid : UserControl
 
     private void Paint()
     {
-        ReleaseImages();
+        foreach (var cell in cells) if (cell is not null) cell.Content = null;
+        bitmaps.Clear(); imageCache.BeginFrame();
         for (var position = 0; position < PageSize; position++)
         {
             var index = page * PageSize + position;
@@ -310,28 +317,8 @@ internal sealed class InventoryGrid : UserControl
             label.TextAlignment = TextAlignment.Center;
             label.TextTrimming = TextTrimming.CharacterEllipsis;
             label.MaxLines = 2;
-            Bitmap? bitmap = null;
-            try
-            {
-                if (ImageReader?.Invoke(item.ItemId) is { Length: > 0 and <= 4194304 } png)
-                {
-                    // Production bytes are canonical Core PNGs. Bound native allocation before decoding.
-                    var copy = png.ToArray();
-                    if (copy.Length < 33 || !copy.AsSpan(0, 8).SequenceEqual(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 }) ||
-                        System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(copy.AsSpan(8)) != 13 ||
-                        !copy.AsSpan(12, 4).SequenceEqual("IHDR"u8) ||
-                        System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(copy.AsSpan(16)) is 0 or > 512 ||
-                        System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(copy.AsSpan(20)) is 0 or > 512 ||
-                        copy[24] != 8 || copy[25] != 6 || copy[26] != 0 || copy[27] != 0 || copy[28] != 0)
-                        throw new InvalidDataException("Unreviewed item PNG header");
-                    using var stream = new MemoryStream(copy, writable: false);
-                    var decoded = new Bitmap(stream);
-                    if (decoded.PixelSize.Width is > 0 and <= 512 && decoded.PixelSize.Height is > 0 and <= 512)
-                    { bitmap = decoded; bitmaps.Add(decoded); }
-                    else decoded.Dispose();
-                }
-            }
-            catch (Exception) { /* Display failure remains unavailable; never infer readiness. */ }
+            Bitmap? bitmap = imageCache.Read(ImageReader, item.ItemId);
+            if (bitmap is not null) bitmaps.Add(bitmap);
             if (bitmap is null) Ui.At(tile, label, 0);
             else
             {
@@ -348,6 +335,7 @@ internal sealed class InventoryGrid : UserControl
             AutomationProperties.SetName(cell, description);
             ToolTip.SetTip(cell, description + (bitmap is null ? "；物品圖示尚未通過驗證。" : "；已驗證物品圖示。"));
         }
+        imageCache.EndFrame();
         empty.IsVisible = items.Length == 0;
         pageLabel.Text = $"{page + 1} / {PageCount}";
         previous.IsEnabled = page > 0;
