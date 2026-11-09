@@ -1,4 +1,4 @@
-# ver 8.0.72 分階段來源與串流快取
+# ver 8.0.73 分階段來源與串流快取
 
 ## 本批實作
 
@@ -29,3 +29,19 @@
 `0902c68` Python 全成功；.NET Windows／Linux／Android 成功，先前 Windows SQLite 修正已通過。macOS job 129440634189 的兩個 timeout：ReceiveAttemptTests.ByteReadsAndDifferentCompletionThreadsStillHaveOneActualWriter(xor:255)（10 秒）及 PreparedPendingInputRetirementKeepsCleanupPendingAndClearsLateCredentials(expiry)（30 秒等待進入輸入回呼）；45,822 通過／2 失敗。
 
 本批只修正測試排程依賴：逐 byte read 沿用全部封包，但以兩個輪替的真實 completion threads 取代每 byte 建立 OS thread，關閉等待兩者退出，單一 writer／不同 completion thread 斷言保留。expiry 案例改用同檔既有 PreparationClock，確定 input 已進入後才推進到期限；保留取消、清除晚到帳密、清理等待及零正式連線斷言。不延長產品期限、測試 guard 或自動重跑舊 CI。舊 failure 保留，不修改被拒的 PR 說明。
+
+## v8.0.73 可驗證的讀取階段
+
+`VerifiedBundleBlockSource` 重新開啟精確 receipt 的 seekable stream，以固定 64 KiB 工作區完整核對長度／MD5／CRC／SHA，同次掃描記錄每個實體區塊 SHA。之後讀取任何範圍均重新讀取涵蓋的完整區塊，先核對 SHA 才複製；切片外但同區塊的竄改也拒絕。每次讀取最多 16 MiB，無解壓快取；64 MiB 檔案最多 1024 個 hash。這不保證其他未讀區塊當下未變，階段結束仍需全檔重查。
+
+`BundleReceiptPhase` 僅協調 cache 讀取：最多 24 個 receipt、合計 64 MiB 磁碟來源，要求同 dataVersion、各 package 同版本、無重複來源。消費前後完整重查所有 receipt，逐檔釋放；同一 phase 最多一個開啟的來源，並序列化消費。關閉先拒絕新工作，再等待不合作的 I/O／回呼結束，晚到結果不可返回。取消不刪除已完成 cache。此 primitive 尚未取代 production 的跨階段 byte[] 保留，亦未處理最新 manifest／版本觀察或 publication。
+
+`StreamedUnityArchive` 明示 opt-in 2021.3.45f2 UnityFS 6/7/8，保留完整 metadata、壓縮型別、精確壓縮範圍、目錄與 .resS 配對檢查。metadata 壓縮與展開各最多 4 MiB，最多 4096 個 block／128 個目錄項；單 block 壓縮與展開各最多 1 MiB，單次切片最多 16 MiB。虛擬展開位址上限 1 GiB，只儲存索引，不配置此大小的陣列。每次僅解壓相交 block；不快取展開像素，仍經來源區塊 hash 核對。限制是工作陣列與輸入規模界線，並非量測的應用程式 heap 峰值。
+
+測試以既有獨立產生的 UnityFS 壓縮 0/2/3 fixture 比對資源切片；超過 96 MiB 的虛擬 archive 僅讀尾端 20 bytes，斷言實際來源讀量不超過兩個 64 KiB 區塊。另覆蓋 SHA 聲明不符、切片外同區塊來源竄改、回呼後閉包變動、排隊取消、關閉等待及晚到結果、未知來源、重複 receipt、目錄配對／flags、越界與取消。合成 fixture 不代表官方小地圖像素驗收。
+
+v8.0.72 `d9a15342440e944a2757ce71eccd9ddd8a2c30c5` CI 已完成：.NET run 42702257435 四平台全成功，Python run 42702257354 三平台全成功。PR 說明仍維持先前狀態，未重試被拒操作。
+
+下一批仍需把固定 production 工廠接上 receipt phase、重新核對當前版本／manifest，並將 SerializedFile 所需物件與 Texture 像素讀取改成有界範圍，再接小地圖每圖 PNG／SQLite、來源指紋、撤銷與場景座標。既有 32 MiB 來源限制與 production 阻擋不變，不能聲稱完整流程已啟用。
+
+額外離線核對先前已驗證的官方表情快取（root SHA `069b5ccf41c5a19bdc8f2a20d5f0339b0fb6fbb3dd572c239c2ccfdf50578996`）：新的 receipt-backed 索引讀出 3,378,476 bytes SerializedFile，並於 .resS 起點、65,530、中央、尾端各讀 100 bytes，均與既有完整解碼器一致；虛擬 archive 為 78,745,132 bytes。這是歷史私有快取的格式／切片對照，沒有重新下載、沒有當前版本正向驗收，亦非小地圖檔案。診斷程式同時使用舊完整 decoder 作 oracle，因此不以該程序的記憶體用量宣稱新的有界讀取效能。
