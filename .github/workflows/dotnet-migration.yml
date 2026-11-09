@@ -35,6 +35,12 @@ jobs:
         run: dotnet build dotnet/Lala.Desktop/Lala.Desktop.csproj -c Release
       - name: Check offline inspector
         run: dotnet run --project dotnet/Lala.Desktop/Lala.Desktop.csproj -c Release --no-build -- --self-test
+      - name: Test Avalonia UI and synthetic loopback login
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+          xvfb-run -a dotnet run --project dotnet/Lala.Desktop/Lala.Desktop.csproj -c Release --no-build -- --ui-self-test
   android:
     runs-on: ubuntu-latest
     steps:

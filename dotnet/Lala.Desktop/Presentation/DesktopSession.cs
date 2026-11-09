@@ -27,8 +27,14 @@ public sealed class DesktopSession : IDisposable
     public long Generation { get { lock (gate) return generation; } }
     public string IdentityKey { get { lock (gate) return identityKey; } }
     public bool CanSendGameCommands => false;
-    public const string ConnectionUnavailable = "尚未接通遊戲連線；等待登入與資料同步。";
-    public string ConnectionText => "尚未連線";
+    public const string ConnectionUnavailable = "一般遊戲操作尚未接入；資源保持 Held。";
+    private string connectionText = "尚未連線";
+    public string ConnectionText { get { lock (gate) return connectionText; } }
+    internal void SetConnectionText(string value)
+    {
+        lock (gate) { if (disposed || connectionText == value) return; connectionText = value; }
+        Changed?.Invoke();
+    }
     public DesktopLabels Labels { get { lock (gate) return labels; } }
     public DesktopPublication ReadView()
     {
@@ -59,6 +65,7 @@ public sealed class DesktopSession : IDisposable
             ObjectDisposedException.ThrowIf(disposed, this);
             generation = checked(generation + 1);
             publication = -1;
+            connectionText = "尚未連線";
             snapshot = new();
             labels = new();
             identityKey = presentationIdentity;

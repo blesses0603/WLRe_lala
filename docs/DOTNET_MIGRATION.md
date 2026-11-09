@@ -2036,3 +2036,19 @@ not establish a successful reviewed raw-payload pair; that acceptance remains
 unavailable. Full Lua combat acquisition/persistence and command lifecycles remain
 unfinished. No UI, credential or official-server changes. Overall PR advances once
 to 8.0.40; same-batch fixes and platform/Core/Desktop versions remain unchanged.
+
+
+### Overall PR development marker 8.0.41: desktop login and role host
+
+Avalonia now supplies transient user input, per-recipient credential-write confirmation,
+interactive role choice and awaited shutdown to the shared single-attempt preparation.
+Explicit IP endpoints and decimal protocol bytes have no production defaults. Both raw
+TCP recipients disclose reversible XOR / no TLS before their credential write. The host
+never stores credentials or enables game commands; publications remain resource-held.
+
+Validation: Core 45,096; focused login 78; public consumer; desktop offline 63;
+Linux native UI 142 and synthetic loopback login 11 assertions, 16 rendered screenshots.
+No real credentials, production connection or user-computer operation. Windows/macOS
+live UI and official-server acceptance remain outstanding. Overall PR marker moves from
+8.0.40 to 8.0.41 once; platform/Core/Desktop versions remain unchanged. See
+[desktop login integration](DESKTOP_LOGIN_INTEGRATION.md).

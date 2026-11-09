@@ -1,149 +1,206 @@
-using Avalonia;
+using System.Net;
 using Avalonia.Controls;
 using Avalonia.Layout;
+using Avalonia.Threading;
+using Lala.Core.Sessions;
+using Lala.Core.Protocol;
 
 namespace Lala.Desktop;
 
-/// <summary>
-/// Desktop-only reproduction of the existing login/role window. Credentials are an
-/// unsaved local edit; no login, resource approval, or remembered identity is simulated.
-/// </summary>
-public sealed class LoginWindow : DesktopWindow
+/// <summary>Single-attempt desktop host. No saved credentials, endpoint defaults or game commands.</summary>
+public sealed class LoginWindow : DesktopWindow, IAccountLoginInput, IAccountRoleSelector, IAccountLoginSendConfirmation
 {
     private readonly DesktopSession session;
-    private readonly TextBox account = new() { Name = "LoginAccount", MaxLength = 128 };
-    private readonly TextBox password = new() { Name = "LoginPassword", PasswordChar = '*', MaxLength = 256 };
-    private readonly ComboBox servers = Ui.Combo(["等待官方伺服器清單"], name: "LoginServer");
-    private readonly ComboBox lines = Ui.Combo(["等待分流資料"], name: "LoginLine");
+    private readonly TextBox account = new() { Name = "LoginAccount", MaxLength = 255 };
+    private readonly TextBox password = new() { Name = "LoginPassword", PasswordChar = '*', MaxLength = 255 };
+    private readonly TextBox verification = new() { Name = "LoginVerification", PlaceholderText = "IP:port" };
+    private readonly TextBox formal = new() { Name = "LoginFormal", PlaceholderText = "IP:port" };
+    private readonly TextBox tx = new() { Name = "LoginTx", PlaceholderText = "0–255" };
+    private readonly TextBox rx = new() { Name = "LoginRx", PlaceholderText = "0–255" };
+    private readonly TextBox platform = new() { Name = "LoginPlatform", PlaceholderText = "0–255" };
+    private readonly TextBox language = new() { Name = "LoginLanguage", PlaceholderText = "0–255" };
     private readonly ComboBox roles = Ui.Combo([], -1, "LoginRoles");
-    private readonly TextBlock status = Ui.Text(DesktopSession.ConnectionUnavailable, color: Ui.Muted);
-    private readonly TextBlock roleStatus = Ui.Text("選角後等待世界資料同步完成，將自動開啟主頁。", color: Ui.Muted);
-    private long generation;
-    private bool closed;
+    private readonly TextBlock status = Ui.Text("請輸入已核對的驗證與正式分流目的地及協定參數。", color: Ui.Muted);
+    private readonly Button submit, disconnect, enter;
+    private readonly Action openMain;
+    private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(100) };
+    private AccountLoginPreparation? preparation;
+    private CancellationTokenSource? cancellation;
+    private Task? operation;
+    private TaskCompletionSource<AccountRoleSelectionChoice?>? roleCompletion;
+    private AccountRoleSelectionRequest? roleRequest;
+    private long presentationGeneration, sequence;
+    private AccountReceivePublication? lastPublication;
+    private bool openedMain, stopping, closed;
+    private Window? confirmationWindow;
+    private bool closePending;
+    private readonly Button preview, inspector;
 
     public LoginWindow(DesktopSession session, Action openPreview, Action openInspector)
-        : base("飄流Re:LaLa  =By赤寧= · 登入／選角", 900, 620)
+        : base("飄流Re:LaLa · 登入／選角", 900, 700)
     {
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(openPreview);
-        ArgumentNullException.ThrowIfNull(openInspector);
-        this.session = session;
-        generation = session.ReadView().Generation;
+        this.session = session; openMain = openPreview;
+        submit = Ui.Button("登入", () => { if (operation is null) { stopping = false; operation = LoginAsync(); } }, "LoginSubmit");
+        disconnect = Ui.Button("中斷", async () => await StopAsync(), "LoginDisconnect");
+        enter = Ui.Button("確認選角進入", SelectRole, "LoginEnterRole");
+        disconnect.IsEnabled = enter.IsEnabled = false;
+        roles.SelectionChanged += (_, _) => enter.IsEnabled = !stopping && roleRequest is not null &&
+            roles.SelectedIndex >= 0 && !roleRequest.Roles[roles.SelectedIndex].Locked;
         account.TextChanged += (_, _) => ClearSecrets();
-
-        var body = new StackPanel { Spacing = 7 };
+        foreach (var field in ProfileFields()) field.TextChanged += (_, _) => ClearSecrets();
+        var body = new StackPanel { Spacing = 8 };
         body.Children.Add(Ui.Text("登入與選角", 22, bold: true));
-        body.Children.Add(Ui.Text("選擇帳號與分流，登入後再選取角色。", color: Ui.Muted));
-
-        var toolbar = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,Auto,Auto,*,Auto,Auto"), ColumnSpacing = 6 };
-        Ui.At(toolbar, Ui.Unavailable("載入設定", "LoginLoadProfile", "連線設定匯入尚未接入。"), 0);
-        Ui.At(toolbar, Ui.Unavailable("儲存設定", "LoginSaveProfile", "連線設定匯出尚未接入；帳密不會寫入檔案。"), 1);
-        Ui.At(toolbar, Ui.Text("帳號清單"), 2);
-        var saved = Ui.Combo(["尚無已記住的帳號"], name: "LoginSavedAccounts");
-        saved.IsEnabled = false;
-        ToolTip.SetTip(saved, "帳號與密碼安全儲存尚未接入。");
-        Ui.At(toolbar, saved, 3);
-        Ui.At(toolbar, Ui.Unavailable("版本檢測", "LoginVersionCheck", "正式資源檢測流程尚未接入桌面宿主。"), 4);
-        Ui.At(toolbar, Ui.Button("新增", NewDraft, "LoginNewDraft"), 5);
-        body.Children.Add(toolbar);
-        body.Children.Add(Ui.Text("版本檢測尚未接入；目前尚無可登入的正式連線。", color: Ui.Muted));
-        body.Children.Add(Ui.Text("伺服器與分流清單待同步；不使用預設或推測的連線目的地。", color: Ui.Muted));
-
-        var login = new Grid
-        {
-            ColumnDefinitions = new ColumnDefinitions("*,*,*,*"),
-            RowDefinitions = new RowDefinitions("Auto,Auto,Auto,Auto,Auto"),
-            ColumnSpacing = 6, RowSpacing = 5
-        };
-        Ui.At(login, Ui.Text("伺服器"), 0);
-        servers.IsEnabled = false;
-        lines.IsEnabled = false;
-        servers.SelectionChanged += (_, _) => ClearSecrets();
-        lines.SelectionChanged += (_, _) => ClearSecrets();
-        Ui.At(login, servers, 1);
-        Ui.At(login, Ui.Text("分流選擇"), 2);
-        Ui.At(login, lines, 3);
-        Ui.At(login, Ui.Text("帳號"), 0, 1, 2);
-        Ui.At(login, Ui.Text("密碼"), 2, 1, 2);
-        Ui.At(login, account, 0, 2, 2);
-        Ui.At(login, password, 2, 2, 2);
-        Ui.At(login, UnavailableCheck("記住帳號", "LoginRememberAccount"), 0, 3);
-        Ui.At(login, UnavailableCheck("記住密碼", "LoginRememberPassword"), 1, 3);
-        Ui.At(login, Ui.Unavailable("儲存此組", "LoginSaveIdentity", "安全儲存尚未接入，不會儲存輸入的帳密。"), 2, 3);
-        Ui.At(login, Ui.Unavailable("刪除此組", "LoginDeleteIdentity", "尚無已儲存的登入資料。"), 3, 3);
-        Ui.At(login, Ui.Text("輸入內容僅留在此視窗，不會傳送或儲存。", 12, Ui.Muted), 0, 4, 2);
-        Ui.At(login, Ui.Unavailable("登入", "LoginSubmit"), 2, 4);
-        Ui.At(login, Ui.Unavailable("中斷", "LoginDisconnect"), 3, 4);
-        body.Children.Add(Ui.Card("帳號登入", login));
-
-        var roleRow = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 8 };
-        Ui.At(roleRow, roles, 0);
-        Ui.At(roleRow, Ui.Unavailable("選角進入", "LoginEnterRole"), 1);
-        body.Children.Add(Ui.Card("選擇角色", roleRow));
+        body.Children.Add(Ui.Text("官方 TCP 沒有 TLS；XOR 可逆，不提供安全加密，網路觀察者可能還原帳密。", color: Ui.Muted));
+        body.Children.Add(Ui.Text("每次登入只嘗試一次；兩次帳密傳送須在一分鐘內分別確認。登入包含協定 ACK／心跳；一般遊戲操作停用。", color: Ui.Muted));
+        var fields = new Grid { ColumnDefinitions = new("Auto,*,Auto,*"), RowDefinitions = new("Auto,Auto,Auto,Auto"), ColumnSpacing = 8, RowSpacing = 6 };
+        AddField("驗證目的地", verification, 0, 0); AddField("正式分流目的地", formal, 2, 0);
+        AddField("傳送 XOR（十進位）", tx, 0, 1); AddField("接收 XOR（十進位）", rx, 2, 1);
+        AddField("平台（十進位）", platform, 0, 2); AddField("語言（十進位）", language, 2, 2);
+        AddField("帳號", account, 0, 3); AddField("密碼", password, 2, 3);
+        void AddField(string label, Control control, int column, int row) { Ui.At(fields, Ui.Text(label), column, row); Ui.At(fields, control, column + 1, row); }
+        body.Children.Add(Ui.Card("手動核對連線設定（不儲存）", fields));
+        body.Children.Add(Ui.Text("帳密僅在記憶體短暫使用，不記錄或儲存。清除文字框無法保證 .NET 字串立即從記憶體抹除。", 12, Ui.Muted));
+        body.Children.Add(Ui.Row(submit, disconnect));
+        body.Children.Add(Ui.Card("伺服器回傳角色（不預選）", Ui.Row(roles, enter)));
         body.Children.Add(status);
-        body.Children.Add(roleStatus);
-
-        var preview = Ui.Button("檢視桌面介面", () => { ClearSecrets(); openPreview(); }, "LoginPreview");
-        var inspector = Ui.Button("封包檢查", () => { ClearSecrets(); openInspector(); }, "LoginInspector");
-        body.Children.Add(Ui.Row(preview, inspector,
-            Ui.Text("僅檢視介面與同步資料，不代表登入成功。", 12, Ui.Muted)));
-        SetBody(new ScrollViewer
+        preview = Ui.Button("檢視桌面介面", () => { ClearSecrets(); openPreview(); }, "LoginPreview");
+        inspector = Ui.Button("封包檢查", () => { ClearSecrets(); openInspector(); }, "LoginInspector");
+        body.Children.Add(Ui.Row(preview, inspector));
+        SetBody(new ScrollViewer { Content = body });
+        timer.Tick += (_, _) => Publish();
+        Closing += (_, args) =>
         {
-            Content = body,
-            HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
-            VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto
-        });
-        session.Changed += SessionChanged;
-        Closed += (_, _) =>
-        {
-            closed = true;
-            session.Changed -= SessionChanged;
             ClearSecrets();
-            account.Text = "";
+            if (operation is not null) { args.Cancel = true; _ = StopAndCloseAsync(); }
         };
-        Refresh();
+        Closed += (_, _) => { closed = true; timer.Stop(); ClearSecrets(); account.Text = ""; };
     }
 
-    /// <summary>Clear on account/endpoint handoff, navigation, and final close.</summary>
+    private TextBox[] ProfileFields() => [verification, formal, tx, rx, platform, language];
     public void ClearSecrets() => password.Text = "";
-
-    private static CheckBox UnavailableCheck(string title, string name)
+    private async Task StopAndCloseAsync()
     {
-        var check = new CheckBox { Content = title, Name = name, IsEnabled = false };
-        ToolTip.SetTip(check, "帳號與密碼安全儲存尚未接入；不會自動記住輸入內容。");
-        return check;
+        if (closePending) return; closePending = true;
+        try { await StopAsync(); if (!closed) Close(); }
+        finally { closePending = false; }
+    }
+    public async Task StopAsync()
+    {
+        stopping = true; enter.IsEnabled = false;
+        cancellation?.Cancel(); preparation?.Stop(); roleCompletion?.TrySetResult(null);
+        confirmationWindow?.Close(false);
+        if (operation is { } running) await running;
     }
 
-    private void NewDraft()
+    private async Task LoginAsync()
     {
-        ClearSecrets();
-        account.Text = "";
-        account.Focus();
-    }
-
-    private void SessionChanged() => Ui.OnUi(() => { if (!closed) Refresh(); });
-
-    private void Refresh()
-    {
-        var view = session.ReadView();
-        if (generation != view.Generation)
+        // Yield ensures the task is assigned before synchronous validation can finish.
+        await Task.Yield();
+        AccountSession? core = null;
+        try
         {
-            generation = view.Generation;
-            ClearSecrets();
-            account.Text = "";
-            roles.SelectedIndex = -1;
+            if (stopping) return;
+            var profile = new AccountConnectionProfile(IPEndPoint.Parse(verification.Text ?? ""), IPEndPoint.Parse(formal.Text ?? ""),
+                byte.Parse(tx.Text ?? ""), byte.Parse(rx.Text ?? ""), 1, byte.Parse(platform.Text ?? ""), byte.Parse(language.Text ?? ""));
+            // RoleIndex is ignored because this host always supplies the interactive selector.
+            openedMain = false; sequence = 0; lastPublication = null;
+            foreach (var field in ProfileFields()) field.IsEnabled = false;
+            preview.IsEnabled = inspector.IsEnabled = false;
+            account.IsEnabled = password.IsEnabled = submit.IsEnabled = false; disconnect.IsEnabled = true;
+            cancellation = new(); core = new();
+            var identity = Guid.NewGuid();
+            var snapshot = core.Begin(identity.ToString("N"), profile.FormalEndpoint.ToString());
+            session.Reset(identity.ToString("N")); presentationGeneration = session.Generation;
+            preparation = new(core, snapshot.Generation, identity, profile, this,
+                new() { LoginTimeout = TimeSpan.FromMinutes(2) }, roleSelector: this, sendConfirmation: this);
+            timer.Start();
+            var result = await preparation.RunAsync(cancellation.Token);
+            status.Text = $"連線結束：{result.Status.EndReason}；資源釋放：{result.ResourcesReleased}。重新登入需重新輸入及確認。";
         }
-        var selected = roles.SelectedItem as string;
-        var state = view.Snapshot;
-        var choices = state.Local.Session.Roles.IsDefault ? [] : state.Local.Session.Roles
-            .Select(role => $"{role.Index} · {role.Name} · Lv.{role.Level}{(role.Locked ? "（鎖定）" : "")}").ToArray();
-        roles.ItemsSource = choices;
-        var previousIndex = Array.IndexOf(choices, selected);
-        roles.SelectedIndex = previousIndex >= 0 ? previousIndex : choices.Length > 0 ? 0 : -1;
-        roles.IsEnabled = choices.Length > 0;
-        status.Text = session.ConnectionText + "｜" + DesktopSession.ConnectionUnavailable;
-        roleStatus.Text = choices.Length == 0
-            ? "選角後等待世界資料同步完成，將自動開啟主頁；目前尚未收到角色清單。"
-            : "已呈現收到的角色清單；正式登入、選角與世界同步流程尚未接通。";
+        catch (Exception) { status.Text = "登入未完成：請檢查 IP:port、0–255 協定參數與 ASCII 帳密，或重新確認。"; }
+        finally
+        {
+            timer.Stop();
+            try { if (preparation is not null) await preparation.DisposeAsync(); }
+            catch (Exception) { status.Text = "連線清理失敗；請關閉程式後再試。"; closed = true; }
+            core?.Disconnect(); preparation = null;
+            cancellation?.Dispose(); cancellation = null;
+            roleCompletion?.TrySetResult(null); roleCompletion = null; roleRequest = null;
+            roles.ItemsSource = Array.Empty<string>(); roles.SelectedIndex = -1; enter.IsEnabled = false;
+            session.Reset(); ClearSecrets(); account.Text = "";
+            foreach (var field in ProfileFields()) field.IsEnabled = !closed;
+            account.IsEnabled = password.IsEnabled = submit.IsEnabled = !closed;
+            preview.IsEnabled = inspector.IsEnabled = true;
+            disconnect.IsEnabled = false; operation = null;
+        }
+    }
+
+    public async ValueTask<AccountLoginCredentials?> AcquireAsync(AccountLoginDisclosure disclosure, CancellationToken token)
+        => await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            token.ThrowIfCancellationRequested();
+            try { return new AccountLoginCredentials((account.Text ?? "").AsSpan(), (password.Text ?? "").AsSpan()); }
+            finally { ClearSecrets(); account.Text = ""; }
+        });
+
+    public async ValueTask<bool> ConfirmAsync(AccountLoginRecipient recipient, IPEndPoint endpoint, CancellationToken token)
+        => await Dispatcher.UIThread.InvokeAsync(() => ConfirmOnUiAsync(recipient, endpoint, token));
+
+    private async Task<bool> ConfirmOnUiAsync(AccountLoginRecipient recipient, IPEndPoint endpoint, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        var dialog = new Window { Title = "確認本次帳密傳送", Width = 620, Height = 260, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+        confirmationWindow = dialog;
+        var panel = new StackPanel { Margin = new(20), Spacing = 12 };
+        panel.Children.Add(Ui.Text($"即將將帳號與密碼傳送至{(recipient == AccountLoginRecipient.Verification ? "驗證" : "正式")}端點：{endpoint}"));
+        panel.Children.Add(Ui.Text("沒有 TLS；XOR 可逆，不提供安全加密。網路觀察者可能還原帳密。"));
+        panel.Children.Add(Ui.Text("只同意這一次傳送；取消或關閉將中止本次登入。"));
+        panel.Children.Add(Ui.Row(Ui.Button("取消", () => dialog.Close(false), "LoginSendCancel"), Ui.Button("知悉風險，確認傳送", () => dialog.Close(true), "LoginSendConfirm")));
+        dialog.Content = panel;
+        using var registration = token.Register(() => Dispatcher.UIThread.Post(() => dialog.Close(false)));
+        try { var approved = await dialog.ShowDialog<bool>(this); token.ThrowIfCancellationRequested(); return approved; }
+        finally { confirmationWindow = null; }
+    }
+
+    public async ValueTask<AccountRoleSelectionChoice?> SelectAsync(AccountRoleSelectionRequest request, CancellationToken token)
+        => await Dispatcher.UIThread.InvokeAsync(() => SelectOnUiAsync(request, token));
+
+    private async Task<AccountRoleSelectionChoice?> SelectOnUiAsync(AccountRoleSelectionRequest request, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        roleRequest = request;
+        var pending = new TaskCompletionSource<AccountRoleSelectionChoice?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        roleCompletion = pending;
+        roles.ItemsSource = request.Roles.Select(r => $"{r.Index} · {r.Name} · Lv.{r.Level}{(r.Locked ? "（鎖定）" : "")}").ToArray();
+        roles.SelectedIndex = -1; enter.IsEnabled = false;
+        status.Text = "請選擇角色；按「確認選角進入」會傳送此角色選擇並繼續世界登入協定。";
+        using var registration = token.Register(() => pending.TrySetCanceled(token));
+        try { return await pending.Task; }
+        finally { roleRequest = null; roleCompletion = null; roles.SelectedIndex = -1; enter.IsEnabled = false; }
+    }
+    private void SelectRole()
+    {
+        if (stopping || roleRequest is not { } request || roles.SelectedIndex < 0) return;
+        var role = request.Roles[roles.SelectedIndex];
+        if (!role.Locked) { enter.IsEnabled = false; roleCompletion?.TrySetResult(request.Choose(role.Index)); }
+    }
+    private void Publish()
+    {
+        if (stopping || preparation is null) return;
+        if (session.Generation != presentationGeneration) { cancellation?.Cancel(); preparation.Stop(); return; }
+        var publication = preparation.Publication;
+        session.SetConnectionText(preparation.Snapshot.Phase == AccountConnectionPhase.ReceivingHeld
+            ? "登入協定完成｜資源 Held，遊戲操作停用" : "登入進行中｜等待確認或伺服器回覆");
+        if (publication is null) return;
+        if (!ReferenceEquals(publication, lastPublication))
+        {
+            lastPublication = publication;
+            session.Publish(presentationGeneration, ++sequence, publication.State);
+        }
+        if (!openedMain && preparation.Snapshot.Phase == AccountConnectionPhase.ReceivingHeld &&
+            publication.State.Player is not null)
+        {
+            openedMain = true; status.Text = "已接收世界登入資料；資源仍 Held，一般遊戲操作停用。"; openMain();
+        }
     }
 }

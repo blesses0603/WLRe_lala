@@ -12,6 +12,7 @@ public sealed class DashboardWindow : DesktopWindow
 {
     private readonly DesktopSession session;
     private readonly DesktopWindows windows;
+    private readonly TextBlock connection = Ui.Text("尚未連線", 13, Ui.Muted);
     private readonly TextBlock position = Ui.Text("尚未收到角色位置", 16, bold: true);
     private readonly TextBlock role = Ui.Text("等待登入與角色資料同步", color: Ui.Muted);
     private readonly TextBlock companion = Ui.Text("等待夥伴資料同步", color: Ui.Muted);
@@ -44,10 +45,10 @@ public sealed class DashboardWindow : DesktopWindow
         var body = new Grid { Name = "DashboardRoot", RowDefinitions = new RowDefinitions("Auto,*"), RowSpacing = 7 };
         var header = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), RowDefinitions = new RowDefinitions("Auto,Auto,Auto"), ColumnSpacing = 6, RowSpacing = 3 };
         Ui.At(header, position, 0);
-        Ui.At(header, Ui.Unavailable("中斷連線", "DashboardDisconnect"), 1);
+        Ui.At(header, Ui.Button("中斷連線", async () => await windows.Login.StopAsync(), "DashboardDisconnect"), 1);
         Ui.At(header, Ui.Button("登入／選角", () => windows.OpenLogin(), "OpenLogin"), 2);
-        Ui.At(header, Ui.Text("桌面介面預覽｜等待登入功能接入", 13, Ui.Muted), 0, 1);
-        var connection = Ui.Text("尚未連線", 13, Ui.Muted); connection.HorizontalAlignment = HorizontalAlignment.Right;
+        Ui.At(header, Ui.Text("桌面開發版｜登入接收與唯讀資料", 13, Ui.Muted), 0, 1);
+        connection.HorizontalAlignment = HorizontalAlignment.Right;
         Ui.At(header, connection, 1, 1, 2);
         Ui.At(header, Ui.Text("官方版本與資源狀態：尚未同步", 12, Ui.Muted), 0, 2, 3);
         Ui.At(body, header, 0);
@@ -166,6 +167,7 @@ public sealed class DashboardWindow : DesktopWindow
     private void SessionChanged() => Ui.OnUi(() => { if (!closed) Refresh(); });
     private void Refresh()
     {
+        connection.Text = session.ConnectionText;
         var view = session.ReadView();
         if (generation != view.Generation)
         {

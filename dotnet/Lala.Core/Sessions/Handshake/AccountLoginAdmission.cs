@@ -6,7 +6,7 @@ namespace Lala.Core.Sessions.Handshake;
 /// session -> admission -> login transport -> TCP. Actions passed here are Core-owned
 /// synchronous transport admission only, never host input or observers.</summary>
 internal sealed class AccountLoginAdmission(AccountSession session, SessionSnapshot expected,
-    AccountConnectionProfile profile, TimeSpan validity, TimeProvider clock)
+    AccountConnectionProfile profile, TimeSpan validity, TimeProvider clock, IAccountLoginSendConfirmation? sendConfirmation = null)
 {
     private readonly object gate = new();
     private readonly long created = clock.GetTimestamp();
@@ -58,6 +58,19 @@ internal sealed class AccountLoginAdmission(AccountSession session, SessionSnaps
             if (!Valid(previous)) return false;
             expected = next; return true;
         }
+    }
+    internal async ValueTask ConfirmAsync(HandshakeLeg leg, CancellationToken token)
+    {
+        Check(token);
+        if (sendConfirmation is not null && !await sendConfirmation.ConfirmAsync(
+            leg == HandshakeLeg.Verification ? AccountLoginRecipient.Verification : AccountLoginRecipient.Formal,
+            leg == HandshakeLeg.Verification ? profile.VerificationEndpoint : profile.FormalEndpoint,
+            token).ConfigureAwait(false))
+        {
+            Revoke();
+            throw new InvalidOperationException("Credential transmission declined.");
+        }
+        Check(token);
     }
     internal T Admit<T>(HandshakeLeg leg, IPEndPoint endpoint, CancellationToken token, Func<T> operation)
         => session.WithLoginSnapshot(snapshot =>

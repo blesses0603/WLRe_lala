@@ -318,6 +318,8 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
         try
         {
             token.ThrowIfCancellationRequested();
+            if (credentialLeg is { } pendingLeg && loginAdmission is not null)
+                await loginAdmission.ConfirmAsync(pendingLeg, token).ConfigureAwait(false);
             Task<TcpWriteResult> Admit()
             {
                 lock (gate)

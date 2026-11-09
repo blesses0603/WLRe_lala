@@ -55,13 +55,13 @@ public sealed class AccountLoginPreparation : IAsyncDisposable
 
     public AccountLoginPreparation(AccountSession session, long generation, Guid selectedIdentity,
         AccountConnectionProfile profile, IAccountLoginInput input,
-        AccountConnectionOptions? options = null, TimeSpan? validity = null, IAccountRoleSelector? roleSelector = null)
-        : this(session, generation, selectedIdentity, profile, input, options, validity, TimeProvider.System, roleSelector) { }
+        AccountConnectionOptions? options = null, TimeSpan? validity = null, IAccountRoleSelector? roleSelector = null, IAccountLoginSendConfirmation? sendConfirmation = null)
+        : this(session, generation, selectedIdentity, profile, input, options, validity, TimeProvider.System, roleSelector, sendConfirmation: sendConfirmation) { }
 
     internal AccountLoginPreparation(AccountSession session, long generation, Guid selectedIdentity,
         AccountConnectionProfile profile, IAccountLoginInput input, AccountConnectionOptions? options,
         TimeSpan? validity, TimeProvider clock, IAccountRoleSelector? roleSelector = null,
-        Func<ServiceStateSnapshot, double, ServiceObservationInputs>? observationInputs = null)
+        Func<ServiceStateSnapshot, double, ServiceObservationInputs>? observationInputs = null, IAccountLoginSendConfirmation? sendConfirmation = null)
     {
         ArgumentNullException.ThrowIfNull(session); ArgumentNullException.ThrowIfNull(profile);
         ArgumentNullException.ThrowIfNull(input); ArgumentNullException.ThrowIfNull(clock);
@@ -75,7 +75,7 @@ public sealed class AccountLoginPreparation : IAsyncDisposable
             throw new InvalidOperationException("A current preparing session is required.");
         this.session = session; this.input = input; this.clock = clock;
         Disclosure = new(selectedIdentity, generation, profile, duration, roleSelector is null ? AccountRoleSelectionMode.Fixed : AccountRoleSelectionMode.Interactive);
-        admission = new(session, snapshot, profile, duration, clock);
+        admission = new(session, snapshot, profile, duration, clock, sendConfirmation);
         runtime = new(session, generation, profile, new InputSource(this), options, observationInputs, admission, roleSelector);
     }
 

@@ -31,6 +31,7 @@ public sealed class DesktopApplication : Application
                 : new DesktopPreferencesStore();
             session = new(preferences);
             windows = new(session, () => desktop.Shutdown());
+            desktop.ShutdownRequested += (_, args) => { args.Cancel = true; windows.RequestShutdown(); };
             desktop.MainWindow = Program.UiSmokeTest ? windows.Dashboard : windows.Login;
             if (Program.UiSmokeTest)
                 windows.Dashboard.Opened += (_, _) => Dispatcher.UIThread.Post(async () =>
@@ -102,11 +103,11 @@ public sealed class DesktopWindows : IDisposable
         var window = Get("settings", () => new SettingsWindow(session, tab)); window.SelectTab(tab); return window;
     }
     public Window OpenInspector() => Get("inspector", () => new InspectorWindow());
-    private void RequestShutdown()
+    internal void RequestShutdown()
     {
         if (disposed || shutdownRequested) return;
         shutdownRequested = true;
-        Dispatcher.UIThread.Post(() => { Dispose(); shutdown(); });
+        Dispatcher.UIThread.Post(async () => { await Login.StopAsync(); Dispose(); shutdown(); });
     }
     private T Get<T>(string key, Func<T> create, bool preserve = false) where T : Window
     {

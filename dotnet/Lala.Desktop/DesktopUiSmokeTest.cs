@@ -39,6 +39,7 @@ internal static class DesktopUiSmokeTest
             try
             {
                 await EmptyAndLoginAsync();
+                await DesktopLoginUiTest.RunAsync();
                 Publish(fixture.State, fixture.Labels);
                 await Settle(dashboard);
                 await Capture(dashboard, "02-dashboard-observed");
@@ -67,7 +68,7 @@ internal static class DesktopUiSmokeTest
                 "empty battle keeps exactly sixteen packet-position cells");
             Check(Descendants<Button>(battle).Where(b => b.Name?.StartsWith("BattleSlot_", StringComparison.Ordinal) == true)
                 .All(b => !b.IsEnabled), "empty battle has no selectable invented occupants");
-            Disabled(dashboard, "DashboardDisconnect", "ChatSend", "MapSyncNavigation", "MapCancelSync", "MapPortalGo");
+            Disabled(dashboard, "ChatSend", "MapSyncNavigation", "MapCancelSync", "MapPortalGo");
             Check(Find<TextBlock>(dashboard, "MapPosition").Text!.Contains("等待", StringComparison.Ordinal),
                 "empty map does not display guessed coordinates");
             foreach (var name in new[] { "OpenInventory", "OpenSkills", "OpenSettings", "OpenExpedition", "OpenLogin" })
@@ -77,11 +78,14 @@ internal static class DesktopUiSmokeTest
             int previews = 0;
             var login = Show(new LoginWindow(session, () => previews++, () => { }));
             await Settle(login);
-            Disabled(login, "LoginSubmit", "LoginDisconnect", "LoginEnterRole", "LoginSaveIdentity", "LoginDeleteIdentity",
-                "LoginLoadProfile", "LoginSaveProfile", "LoginVersionCheck");
-            Check(!Find<ComboBox>(login, "LoginServer").IsEnabled && !Find<ComboBox>(login, "LoginLine").IsEnabled,
-                "login cannot select fabricated server endpoints");
-            Check(!Find<CheckBox>(login, "LoginRememberPassword").IsEnabled, "unimplemented credential persistence is unavailable");
+            Disabled(login, "LoginDisconnect", "LoginEnterRole");
+            Check(Find<Button>(login, "LoginSubmit").IsEnabled, "login is available with explicit profile validation");
+            Check(string.IsNullOrEmpty(Find<TextBox>(login, "LoginFormal").Text) &&
+                string.IsNullOrEmpty(Find<TextBox>(login, "LoginVerification").Text), "no invented endpoint defaults");
+            Check(Find<ComboBox>(login, "LoginRoles").SelectedIndex == -1, "roles are never preselected");
+            Click(login, "LoginSubmit");
+            await Settle(login);
+            Check(Find<Button>(login, "LoginSubmit").IsEnabled, "invalid profile returns to idle without a connection");
             var account = Find<TextBox>(login, "LoginAccount");
             var password = Find<TextBox>(login, "LoginPassword");
             account.Text = "介面測試帳號";
