@@ -98,27 +98,27 @@ public sealed class AccountRuntime : IAsyncDisposable
     /// parts of Disclosure before RunAsync. No credential source or connection is exported.</summary>
     public static AccountRuntime CreatePrepared(AccountSession session, long generation, Guid selectedIdentity,
         AccountConnectionProfile profile, IAccountLoginInput input, string absoluteDataRoot,
-        AccountConnectionOptions? options = null, TimeSpan? validity = null, IAccountRoleSelector? roleSelector = null)
+        AccountConnectionOptions? options = null, TimeSpan? validity = null, IAccountRoleSelector? roleSelector = null, IAccountLoginSendConfirmation? sendConfirmation = null)
         => new(session, generation, selectedIdentity, profile, input, absoluteDataRoot, options, validity,
-            roleSelector, TimeProvider.System, null);
+            roleSelector, TimeProvider.System, null, sendConfirmation);
 
     internal static AccountRuntime CreatePreparedForOfflineTests(AccountSession session, long generation,
         Guid selectedIdentity, AccountConnectionProfile profile, IAccountLoginInput input, string absoluteDataRoot,
         AccountResourceRuntime resources, AccountConnectionOptions? options = null, TimeSpan? validity = null,
-        IAccountRoleSelector? roleSelector = null, TimeProvider? clock = null)
+        IAccountRoleSelector? roleSelector = null, TimeProvider? clock = null, IAccountLoginSendConfirmation? sendConfirmation = null)
         => new(session, generation, selectedIdentity, profile, input, absoluteDataRoot, options, validity,
-            roleSelector, clock ?? TimeProvider.System, resources);
+            roleSelector, clock ?? TimeProvider.System, resources, sendConfirmation);
 
     private AccountRuntime(AccountSession session, long generation, Guid selectedIdentity,
         AccountConnectionProfile profile, IAccountLoginInput input, string absoluteDataRoot,
         AccountConnectionOptions? options, TimeSpan? validity, IAccountRoleSelector? roleSelector,
-        TimeProvider clock, AccountResourceRuntime? supplied)
+        TimeProvider clock, AccountResourceRuntime? supplied, IAccountLoginSendConfirmation? sendConfirmation)
     {
         // Validate/normalize paths before taking ownership of input or resources. All construction is inert.
         var resourceDisclosure = new AccountResourceDisclosure(absoluteDataRoot);
         this.session = session;
         preparedLogin = new(session, generation, selectedIdentity, profile, input, options, validity,
-            clock, roleSelector, Observe);
+            clock, roleSelector, Observe, sendConfirmation);
         connection = preparedLogin.Connection;
         resources = supplied ?? AccountResourceRuntime.Create(session, resourceDisclosure.AbsoluteDataRoot);
         Disclosure = new(preparedLogin.Disclosure, resourceDisclosure);

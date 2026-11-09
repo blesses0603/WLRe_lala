@@ -1,4 +1,4 @@
-# Desktop login integration — overall PR 8.0.43
+# Desktop login integration — overall PR 8.0.44
 
 The Avalonia login and role controls use shared Core preparation. The Python-compatible
 server/line dropdowns now load official HTTPS metadata through `OfficialServerDiscovery`.
@@ -24,7 +24,8 @@ for provenance, limitations and the remaining UI work. Credentials are never per
    authorizes this request's role-selection send and continuation of the disclosed world-login
    ACK/heartbeat protocol. Core's two-minute login deadline still applies; no default is sent.
 5. The dashboard opens only after Core reports completed login protocol and publishes a player.
-   Resources stay Held and every general game command remains unavailable.
+   Optional resource preparation uses the integrated runtime after protocol login; see
+   [resource integration](DESKTOP_RESOURCE_INTEGRATION.md). Every general game command remains unavailable.
 6. Disconnect, close, or application quit cancels and awaits Core cleanup and pending callbacks.
    The presentation snapshot is reset; another attempt needs fresh input and confirmations.
 

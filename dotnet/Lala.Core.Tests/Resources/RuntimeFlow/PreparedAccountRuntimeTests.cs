@@ -7,6 +7,12 @@ namespace Lala.Core.Tests.Resources;
 
 public sealed partial class ResourceRuntimeBootstrapTests
 {
+    private sealed class PreparedConfirm : IAccountLoginSendConfirmation
+    {
+        internal readonly List<AccountLoginRecipient> Recipients = [];
+        public ValueTask<bool> ConfirmAsync(AccountLoginRecipient recipient, System.Net.IPEndPoint endpoint, CancellationToken token)
+        { token.ThrowIfCancellationRequested(); Recipients.Add(recipient); return ValueTask.FromResult(true); }
+    }
     private sealed class PreparedInput : IAccountLoginInput
     {
         internal int Calls;
@@ -42,7 +48,7 @@ public sealed partial class ResourceRuntimeBootstrapTests
     public async Task Prepared_integrated_account_binds_resources_survives_validity_then_retires(bool hold)
     {
         using var fixture = new Fixture(); var source = new Source(); var input = new PreparedInput();
-        var selector = new PreparedSelector(); var clock = new IntegratedClock();
+        var selector = new PreparedSelector(); var confirmation = new PreparedConfirm(); var clock = new IntegratedClock();
         var session = new AccountSession(); long generation = session.Begin("synthetic", "loopback").Generation;
         await using var verification = new AccountPeer(); await using var formal = new AccountPeer();
         var afterValidity = AccountSignal();
@@ -59,7 +65,7 @@ public sealed partial class ResourceRuntimeBootstrapTests
         typeof(ResourceRuntimeOwner).GetField("_production", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(owner, true);
         var resources = AccountResourceRuntime.CreateForOfflineTests(session, owner);
         await using var runtime = AccountRuntime.CreatePreparedForOfflineTests(session, generation, Guid.NewGuid(),
-            AccountProfile(verification, formal), input, fixture.Root, resources, roleSelector: selector, clock: clock);
+            AccountProfile(verification, formal), input, fixture.Root, resources, roleSelector: selector, clock: clock, sendConfirmation: confirmation);
         Assert.Equal(0, input.Calls); Assert.Equal(0, source.Observations); Assert.False(Directory.Exists(fixture.Root));
         Assert.Equal(Path.GetFullPath(fixture.Root), runtime.Disclosure!.Resources.AbsoluteDataRoot);
         Assert.Equal(AccountRoleSelectionMode.Interactive, runtime.Disclosure.Login.RoleSelectionMode);
@@ -69,6 +75,7 @@ public sealed partial class ResourceRuntimeBootstrapTests
             await AccountWaitFor(() => runtime.Snapshot.HasCurrentResources);
             Assert.Same(runtime.Disclosure.Login, input.Seen);
             Assert.Equal(1, input.Calls); Assert.Equal(1, selector.Calls);
+            Assert.Equal(new[] { AccountLoginRecipient.Verification, AccountLoginRecipient.Formal }, confirmation.Recipients);
             Assert.True(Assert.Single(runtime.Snapshot.ResourceHistory).Preparation.WasBound);
             Assert.Equal(AccountResourceStorageOutcome.Committed, runtime.Snapshot.ResourceHistory[0].Preparation.StorageOutcome);
             Assert.NotNull(runtime.Publication!.Catalogs);

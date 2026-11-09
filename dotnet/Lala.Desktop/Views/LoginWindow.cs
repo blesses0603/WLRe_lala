@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+using Lala.Core.Catalogs;
 using System.Net;
 using Avalonia.Controls;
 using Avalonia.Layout;
@@ -28,6 +30,9 @@ public sealed class LoginWindow : DesktopWindow, IAccountLoginInput, IAccountRol
     private readonly Action openMain;
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(100) };
     private AccountLoginPreparation? preparation;
+    private AccountRuntime? runtime;
+    private readonly Func<string?> resourceRoot;
+    private OfflineRuntimeCandidate? lastCatalogs;
     private CancellationTokenSource? cancellation;
     private Task? operation;
     private TaskCompletionSource<AccountRoleSelectionChoice?>? roleCompletion;
@@ -39,13 +44,13 @@ public sealed class LoginWindow : DesktopWindow, IAccountLoginInput, IAccountRol
     private bool closePending;
     private readonly Button preview, inspector;
 
-    public LoginWindow(DesktopSession session, Action openPreview, Action openInspector, Action? openVersion = null)
-        : this(session, openPreview, openInspector, Program.UiSmokeTest ? new OfflineDesktopServerCatalog() : new OfficialDesktopServerCatalog(), openVersion) { }
+    public LoginWindow(DesktopSession session, Action openPreview, Action openInspector, Action? openVersion = null, Func<string?>? resourceRoot = null)
+        : this(session, openPreview, openInspector, Program.UiSmokeTest ? new OfflineDesktopServerCatalog() : new OfficialDesktopServerCatalog(), openVersion, resourceRoot) { }
 
-    internal LoginWindow(DesktopSession session, Action openPreview, Action openInspector, IDesktopServerCatalog catalogSource, Action? openVersion = null)
+    internal LoginWindow(DesktopSession session, Action openPreview, Action openInspector, IDesktopServerCatalog catalogSource, Action? openVersion = null, Func<string?>? resourceRoot = null)
         : base("飄流Re:LaLa  =By赤寧= · 登入／選角", 900, 620)
     {
-        this.catalogSource = catalogSource;
+        this.catalogSource = catalogSource; this.resourceRoot = resourceRoot ?? (() => null);
         this.session = session; openMain = openPreview;
         submit = Ui.Button("登入", () => { if (operation is null) { stopping = false; operation = LoginAsync(); } }, "LoginSubmit");
         disconnect = Ui.Button("中斷", async () => await StopAsync(), "LoginDisconnect");
@@ -151,7 +156,7 @@ public sealed class LoginWindow : DesktopWindow, IAccountLoginInput, IAccountRol
     {
         stopping = true; enter.IsEnabled = false;
         discoveryStop.Cancel();
-        cancellation?.Cancel(); preparation?.Stop(); roleCompletion?.TrySetResult(null);
+        cancellation?.Cancel(); preparation?.Stop(); runtime?.Stop(); roleCompletion?.TrySetResult(null);
         confirmationWindow?.Close(false);
         if (operation is { } running) await running;
         if (discoveryTask is { } pending) await pending;
@@ -168,7 +173,7 @@ public sealed class LoginWindow : DesktopWindow, IAccountLoginInput, IAccountRol
             if (catalog?.IsFresh != true || lines.SelectedIndex < 0 || lines.SelectedIndex >= groupLines.Length ||
                 groupLines[lines.SelectedIndex].Profile is not { } profile)
                 throw new InvalidOperationException("No current supported official line selected.");
-            openedMain = false; sequence = 0; lastPublication = null;
+            openedMain = false; sequence = 0; lastPublication = null; lastCatalogs = null;
             servers.IsEnabled = lines.IsEnabled = refresh.IsEnabled = false;
             preview.IsEnabled = inspector.IsEnabled = false;
             account.IsEnabled = password.IsEnabled = submit.IsEnabled = false; disconnect.IsEnabled = true;
@@ -176,19 +181,32 @@ public sealed class LoginWindow : DesktopWindow, IAccountLoginInput, IAccountRol
             var identity = Guid.NewGuid();
             var snapshot = core.Begin(identity.ToString("N"), profile.FormalEndpoint.ToString());
             session.Reset(identity.ToString("N")); presentationGeneration = session.Generation;
-            preparation = new(core, snapshot.Generation, identity, profile, this,
-                new() { LoginTimeout = TimeSpan.FromMinutes(2) }, roleSelector: this, sendConfirmation: this);
-            timer.Start();
-            var result = await preparation.RunAsync(cancellation.Token);
-            status.Text = $"連線結束：{result.Status.EndReason}；資源釋放：{result.ResourcesReleased}。重新登入需重新輸入及確認。";
+            if (resourceRoot() is { } root)
+            {
+                runtime = AccountRuntime.CreatePrepared(core, snapshot.Generation, identity, profile, this, root,
+                    new() { LoginTimeout = TimeSpan.FromMinutes(2) }, roleSelector: this, sendConfirmation: this);
+                if (!await ConfirmResourcesAsync(runtime.Disclosure!.Resources, cancellation.Token)) return;
+                cancellation.Token.ThrowIfCancellationRequested();
+                timer.Start();
+                var result = await runtime.RunAsync(cancellation.Token);
+                status.Text = $"連線結束：{result.Connection.Status.EndReason}；資源釋放：{result.ResourcesReleased}。已完成或結果不明的寫入不會回復。";
+            }
+            else
+            {
+                preparation = new(core, snapshot.Generation, identity, profile, this,
+                    new() { LoginTimeout = TimeSpan.FromMinutes(2) }, roleSelector: this, sendConfirmation: this);
+                timer.Start();
+                var result = await preparation.RunAsync(cancellation.Token);
+                status.Text = $"連線結束：{result.Status.EndReason}；資源釋放：{result.ResourcesReleased}。重新登入需重新輸入及確認。";
+            }
         }
         catch (Exception) { status.Text = "登入未完成：請重新版本檢測並選擇分流，確認 ASCII 帳密後重試。"; }
         finally
         {
             timer.Stop();
-            try { if (preparation is not null) await preparation.DisposeAsync(); }
+            try { if (runtime is not null) await runtime.DisposeAsync(); if (preparation is not null) await preparation.DisposeAsync(); }
             catch (Exception) { status.Text = "連線清理失敗；請關閉程式後再試。"; closed = true; }
-            core?.Disconnect(); preparation = null;
+            core?.Disconnect(); preparation = null; runtime = null; lastCatalogs = null;
             cancellation?.Dispose(); cancellation = null;
             roleCompletion?.TrySetResult(null); roleCompletion = null; roleRequest = null;
             roles.ItemsSource = Array.Empty<string>(); roles.SelectedIndex = -1; enter.IsEnabled = false;
@@ -249,23 +267,52 @@ public sealed class LoginWindow : DesktopWindow, IAccountLoginInput, IAccountRol
         var role = request.Roles[roles.SelectedIndex];
         if (!role.Locked) { enter.IsEnabled = false; roleCompletion?.TrySetResult(request.Choose(role.Index)); }
     }
+    private async Task<bool> ConfirmResourcesAsync(AccountResourceDisclosure disclosure, CancellationToken token)
+    {
+        var dialog = new Window { Title = "確認本次資源下載與寫入", Icon = Icon, Width = 760, Height = 430, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+        confirmationWindow = dialog;
+        dialog.Content = new ScrollViewer { Content = Ui.Column(
+            Ui.Text("登入協定完成後，下載並驗證官方資源", 20, bold: true),
+            Ui.Text("HTTPS 來源：" + disclosure.ResourceUrlPrefix),
+            Ui.Text("版本入口：" + disclosure.VersionMapUrl),
+            Ui.Text("SQLite：" + disclosure.InventoryPath), Ui.Text("Bundle 快取：" + disclosure.BundleCacheDirectory),
+            Ui.Text("將建立目錄、寫入經驗證的 Bundle／暫存檔與 SQLite（含 journal），再獨立回讀及重查來源版本。停止不會撤銷已完成的寫入；結果不明時不自動重試。"),
+            Ui.Text("資源綁定只提供唯讀目錄與核心投影；一般遊戲操作仍停用。尚非 Python 全量資源／圖資功能。帳密只傳給另行確認的遊戲端點，不傳到資源 HTTPS。"),
+            Ui.Row(Ui.Button("取消", () => dialog.Close(false), "ResourceSendCancel"),
+                Ui.Button("確認本次下載與寫入", () => dialog.Close(true), "ResourceSendConfirm"))) };
+        using var registration = token.Register(() => Dispatcher.UIThread.Post(() => dialog.Close(false)));
+        try { var approved = await dialog.ShowDialog<bool>(this); token.ThrowIfCancellationRequested(); return approved; }
+        finally { confirmationWindow = null; }
+    }
     private void Publish()
     {
-        if (stopping || preparation is null) return;
-        if (session.Generation != presentationGeneration) { cancellation?.Cancel(); preparation.Stop(); return; }
-        var publication = preparation.Publication;
-        session.SetConnectionText(preparation.Snapshot.Phase == AccountConnectionPhase.ReceivingHeld
-            ? "登入協定完成｜資源 Held，遊戲操作停用" : "登入進行中｜等待確認或伺服器回覆");
+        if (stopping || (preparation is null && runtime is null)) return;
+        if (session.Generation != presentationGeneration) { cancellation?.Cancel(); preparation?.Stop(); runtime?.Stop(); return; }
+        var joined = runtime?.PublicationSnapshot;
+        var connection = joined?.Connection ?? preparation!.Snapshot;
+        var publication = joined?.Publication?.Receive ?? (runtime is null ? preparation?.Publication : null);
+        var catalogs = joined?.Publication?.Catalogs;
+        var resourceState = runtime?.Snapshot;
+        var resourceText = resourceState is null ? "未選資源準備" : resourceState.HasCurrentResources ? "資源目錄已綁定（唯讀）" :
+            resourceState.ResourceHistory.LastOrDefault()?.Preparation is { } outcome
+                ? $"資源 {outcome.Status}／寫入 {outcome.StorageOutcome}；回讀 {outcome.ReadbackMatched}／來源重查 {outcome.SourcesRechecked}"
+                : "等待登入完成或資源準備中";
+        session.SetConnectionText(connection.Phase == AccountConnectionPhase.ReceivingHeld
+            ? "登入協定完成｜" + resourceText + "｜遊戲操作 Held" : "登入進行中｜等待確認或伺服器回覆");
         if (publication is null) return;
-        if (!ReferenceEquals(publication, lastPublication))
+        if (!ReferenceEquals(publication, lastPublication) || !ReferenceEquals(catalogs, lastCatalogs))
         {
-            lastPublication = publication;
-            session.Publish(presentationGeneration, ++sequence, publication.State);
+            lastPublication = publication; lastCatalogs = catalogs;
+            var labels = catalogs is null ? new DesktopLabels() : new DesktopLabels
+            {
+                Items = catalogs.Items.ToImmutableDictionary(p => p.Key, p => p.Value.Name),
+                Scenes = catalogs.SceneNames.ToImmutableDictionary()
+            };
+            session.Publish(presentationGeneration, ++sequence, publication.State, labels);
         }
-        if (!openedMain && preparation.Snapshot.Phase == AccountConnectionPhase.ReceivingHeld &&
-            publication.State.Player is not null)
+        if (!openedMain && connection.Phase == AccountConnectionPhase.ReceivingHeld && publication.State.Player is not null)
         {
-            openedMain = true; status.Text = "已接收世界登入資料；資源仍 Held，一般遊戲操作停用。"; openMain();
+            openedMain = true; status.Text = "已接收世界登入資料；" + resourceText + "，一般遊戲操作停用。"; openMain();
         }
     }
 }

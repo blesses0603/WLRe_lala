@@ -2070,3 +2070,12 @@ Login/dashboard navigation shares this window. Failures, stale metadata, cancell
 local consistency cannot admit resources or game commands. Full resource activation,
 background observation and application updates remain incomplete. See the parity inventory.
 Platform versions remain unchanged; no live login or real credentials were used.
+
+### Overall PR development marker 8.0.44: integrated desktop resource preparation
+
+Opted-in desktop logins now use AccountRuntime.CreatePrepared with separate resource write
+consent and per-recipient credential confirmation. The existing Core pipeline performs official
+acquisition, SQLite readback/source recheck and account-scoped read-only catalog binding.
+Desktop names follow the same publication and revoke with it. Commands remain Held; no
+production resources or game servers were contacted during validation. See
+[the integration record](DESKTOP_RESOURCE_INTEGRATION.md) for synthetic proof and limitations.

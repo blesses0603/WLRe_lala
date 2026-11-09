@@ -16,20 +16,28 @@ public sealed class VersionWindow : DesktopWindow
     private readonly TextBlock inventory = Ui.Text("本機資源：尚未檢查；不會自動讀取舊帳號設定。");
     private readonly TextBlock location = Ui.Text("尚未選擇資料根目錄", 12, Ui.Muted);
     private readonly ProgressBar progress = new() { IsIndeterminate = false, Height = 6 };
-    private readonly Button retry, choose, next;
+    private readonly Button retry, choose, next, prepare;
+    private readonly Action<string?>? selectResources;
+    private string? selectedRoot;
+    private readonly TextBlock selection = Ui.Text("尚未選擇登入後資源準備目錄。", 12, Ui.Muted);
     private CancellationTokenSource stop = new();
     private Task? operation;
     private DesktopServerCatalogSnapshot? catalog;
     private bool closed, closing;
     internal Task Pending => operation ?? Task.CompletedTask;
 
-    public VersionWindow(Action openLogin, Action openPreview, Action exit)
-        : this(openLogin, openPreview, exit, Program.UiSmokeTest ? new OfflineDesktopServerCatalog() : new OfficialDesktopServerCatalog(), ResourceInventoryInspector.InspectAsync) { }
+    public VersionWindow(Action openLogin, Action openPreview, Action exit, Action<string?>? selectResources = null)
+        : this(openLogin, openPreview, exit, Program.UiSmokeTest ? new OfflineDesktopServerCatalog() : new OfficialDesktopServerCatalog(), ResourceInventoryInspector.InspectAsync, selectResources) { }
     internal VersionWindow(Action openLogin, Action openPreview, Action exit, IDesktopServerCatalog source,
-        Func<string, CancellationToken, Task<ResourceInventoryInspection>> inspect)
+        Func<string, CancellationToken, Task<ResourceInventoryInspection>> inspect, Action<string?>? selectResources = null)
         : base("飄流Re:LaLa · 資源準備與官方線上版本檢測", 1000, 710)
     {
-        this.source = source; this.inspect = inspect; this.openLogin = openLogin;
+        this.source = source; this.inspect = inspect; this.openLogin = openLogin; this.selectResources = selectResources;
+        prepare = Ui.Button("使用此目錄準備登入資源", () =>
+        {
+            if (selectedRoot is null || selectResources is null || operation is not null) return;
+            selectResources(selectedRoot); selection.Text = "已選擇：" + selectedRoot + "；下次登入先確認下載與寫入，再於登入協定完成後執行。";
+        }, "VersionPrepare"); prepare.IsEnabled = false;
         heading.Name = "VersionHeading"; status.Name = "VersionStatus"; versions.Name = "VersionMetadata"; inventory.Name = "VersionInventory";
         retry = Ui.Button("重新查詢官方版本", () => _ = RefreshAsync(), "VersionRefresh");
         choose = Ui.Button("選擇資料根目錄並檢查", () => _ = RunAsync(async token =>
@@ -49,10 +57,10 @@ public sealed class VersionWindow : DesktopWindow
         next = Ui.Button("進入登入畫面", Continue, "VersionContinue"); next.IsEnabled = false;
         var content = Ui.Column(Ui.Card("檢查結果", Ui.Column(heading, status)),
             Ui.Card("官方線上版本", versions),
-            Ui.Card("本機資源資料庫", Ui.Column(location, inventory, choose,
-                Ui.Text("只讀取所選目錄下 official_sync/derived_catalogs/resource_inventory.sqlite3；不修復、不下載、不讀帳密。", 12, Ui.Muted))),
-            Ui.Card("資源啟用狀態", Ui.Column(Ui.Text("尚未接入完整下載、同版來源核對與資源啟用。", color: Ui.Gold),
-                Ui.Text("資料庫自洽不代表官方來源可信，也不能解除 Held。版本資料只供選擇分流，不授權遊戲指令。", 12, Ui.Muted))),
+            Ui.Card("本機資源資料庫", Ui.Column(location, inventory, choose, Ui.Row(prepare, Ui.Button("取消資源準備選擇", () => { selectResources?.Invoke(null); selection.Text = "已取消資源準備選擇；不影響已啟動的登入，需按中斷停止。"; }, "VersionClearPreparation")), selection,
+                Ui.Text("檢查只讀取所選目錄下固定 SQLite。使用目錄準備登入資源是另一項操作，登入時另行確認。", 12, Ui.Muted))),
+            Ui.Card("資源啟用狀態", Ui.Column(Ui.Text("已接入登入後 Core 下載、同版驗證、SQLite 回讀與目錄綁定；仍非全部圖資啟用。", color: Ui.Gold),
+                Ui.Text("唯讀檢查不代表官方來源可信；綁定須由登入後 Core 流程重新驗證。一般遊戲操作仍 Held。", 12, Ui.Muted))),
             Ui.Card("LaLa 程式更新（GitHub 正式 Release）", Ui.Text("C# Desktop 發行更新尚未接入；不下載或執行 Python 安裝程式。", 12, Ui.Muted)),
             Ui.Text("官方 TCP 沒有 TLS；XOR 可逆，不提供安全加密。進入登入後，帳密傳送仍逐次確認。", 12, Ui.Muted));
         var body = new Grid { RowDefinitions = new("*,Auto,Auto"), RowSpacing = 10 };
@@ -84,7 +92,7 @@ public sealed class VersionWindow : DesktopWindow
         var v = value.Version;
         versions.Text = v is null ? value.Status : $"遊戲版本：{v.ExeVersion}\n資料版本：{v.DataVersion}\n" +
             string.Join("\n", v.Packages.OrderBy(p => p.Key).Select(p => $"{p.Key}：{p.Value}")) + $"\n觀測時間（UTC）：{v.CheckedAtUtc}";
-        heading.Text = value.IsFresh && value.Lines.Any(x => x.Profile is not null) ? "官方清單已取得；資源尚未啟用" : "沒有可用的已知登入設定";
+        heading.Text = value.IsFresh && value.Lines.Any(x => x.Profile is not null) ? "官方清單已取得；資源另由登入流程驗證" : "沒有可用的已知登入設定";
         status.Text = value.Status;
     });
     internal Task InspectAsync(string root) => RunAsync(token => InspectCoreAsync(root, token));
@@ -93,7 +101,7 @@ public sealed class VersionWindow : DesktopWindow
         inventory.Text = "正在唯讀檢查本機資源…";
         var result = await Task.Run(() => inspect(root, token), token);
         token.ThrowIfCancellationRequested();
-        location.Text = root;
+        selectedRoot = Path.GetFullPath(root); location.Text = selectedRoot;
         inventory.Text = result.Status switch
         {
             ResourceInventoryInspectionStatus.Missing => "找不到資源資料庫；沒有建立或下載任何檔案。",
@@ -111,7 +119,7 @@ public sealed class VersionWindow : DesktopWindow
     private async Task RunCoreAsync(Func<CancellationToken, Task> action)
     {
         await Task.Yield();
-        retry.IsEnabled = choose.IsEnabled = next.IsEnabled = false; progress.IsIndeterminate = true;
+        retry.IsEnabled = choose.IsEnabled = next.IsEnabled = prepare.IsEnabled = false; progress.IsIndeterminate = true;
         try { await action(stop.Token); }
         catch (OperationCanceledException) { catalog = null; heading.Text = "檢查已取消"; status.Text = "未啟用任何資源或登入。"; }
         catch (Exception) { catalog = null; heading.Text = "檢查未完成"; status.Text = "來源或本機檢查失敗，請重新查詢；不使用先前結果放行。"; }
@@ -119,6 +127,7 @@ public sealed class VersionWindow : DesktopWindow
         {
             operation = null; progress.IsIndeterminate = false;
             retry.IsEnabled = choose.IsEnabled = !closed;
+            prepare.IsEnabled = !closed && selectedRoot is not null && selectResources is not null;
             next.IsEnabled = !closed && catalog?.IsFresh == true && catalog.Lines.Any(x => x.Profile is not null);
         }
     }

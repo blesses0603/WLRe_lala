@@ -1,4 +1,4 @@
-# PR #79 ver 8.0.43：Python 桌面介面對照盤點
+# PR #79 ver 8.0.44：Python 桌面介面對照盤點
 
 範圍是全部桌面畫面及其子視窗，保留使用者較新的「背包／特技各自獨立視窗」要求。參照 PR 原 head `59416bde817f39035176ae9c1e2eeb5b23896d58` 中 Python 7.3.1 原始碼；本批未改 Python，也未聲稱已全部移植完成。
 
@@ -16,7 +16,7 @@ Desktop 使用既有 `OfficialServerDiscovery`：官方 HTTPS allowlist、限制
 
 | Python 畫面／流程 | 原始碼（wlre/ 下）與尺寸 | Avalonia 現況／剩餘工作 |
 |---|---|---|
-| 啟動資源準備、線上版本、背景更新 | ui/version_gate_controller.py、background_version_controller.py；1000×710，內容可增高 | 8.0.43 已接獨立啟動視窗、實際官方 metadata 與選定目錄的 Core SQLite 唯讀檢查；資源下載／啟用、背景 observer、GitHub 更新、計時及 Python 自動增高仍缺 |
+| 啟動資源準備、線上版本、背景更新 | ui/version_gate_controller.py、background_version_controller.py；1000×710，內容可增高 | 8.0.43 已接獨立啟動視窗、實際官方 metadata 與選定目錄的 Core SQLite 唯讀檢查；8.0.44 已接登入後必要資源下載／驗證／唯讀目錄綁定；完整登入前資源 gate、全圖資、背景 observer、GitHub 更新、計時及 Python 自動增高仍缺 |
 | 登入、帳號清單、分流、選角 | ui/login_controller.py、account_controller.py；900×620 | 已還原下拉流程與自動來源，接共用 Core；帳號設定與可信快取未移植，風險說明可捲動 |
 | 主畫面／十張總覽卡片 | ui/dashboard_builder.py、dashboard_layout.py、overview_ui.py、layout.py；1280×800 左870右380 | 既有 Dashboard；補齊所有主要功能入口，仍有卡片完整欄位／資源差距 |
 | 聊天／頻道／表情 | ui/chat_ui.py、chat_emoji.py、emoji_picker.py；表情依圖數自動計算 | 既有聊天唯讀、文字草稿；新增無資料表情提示；真實表情網格、文字插入與聊天發送未接 |
@@ -81,3 +81,11 @@ Python Nuitka／macOS 既有打包命令已引用 app.ico，本批未重打包 P
 本批驗證包括缺檔不建目錄、損壞合成 SQLite 不覆寫、版本欄位顯示、失敗撤銷、過期阻擋、
 停止等待與窗口路由；合成自洽結果亦不單獨啟用登入。Core discovery 136、資源 bootstrap／
 inspection 201、Desktop 離線 63 通過。原生 UI 224（29 張截圖）、catalog UI 9、loopback 11 與 Python 倉庫／發行 15 通過。CI 以 PR 本批驗證紀錄為準。
+
+## 8.0.44 登入後資源準備
+
+已從選定資料目錄接入真實 `AccountRuntime.CreatePrepared`；資源範圍與兩次帳密傳送
+分別確認。Core 完成官方取得、SQLite 回讀／來源重查後才綁定當前帳號目錄，Desktop
+同步物品／場景名稱及綁定／失敗狀態，撤銷時清除。完整流程與證據見
+[Desktop 資源接線](DESKTOP_RESOURCE_INTEGRATION.md)。這不是全部圖資啟用或 Python
+登入前完整 gate；前節 8.0.43 的未接線描述是歷史狀態，以上述本批範圍為準。

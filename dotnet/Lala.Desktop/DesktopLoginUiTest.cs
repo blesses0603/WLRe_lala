@@ -15,6 +15,7 @@ internal static class DesktopLoginUiTest
     internal static async Task RunAsync()
     {
         await CatalogAdmissionAsync();
+        await ResourceAdmissionAsync();
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(20));
         var token = deadline.Token;
         using var verification = new TcpListener(IPAddress.Loopback, 0);
@@ -76,6 +77,49 @@ internal static class DesktopLoginUiTest
             .FirstOrDefault(w => w.Title == "確認本次帳密傳送");
         async Task Confirm() { await Until(() => Dialog() is not null); Click(Dialog()!, "LoginSendConfirm"); await Until(() => Dialog() is null); }
         async Task Until(Func<bool> condition) { while (!condition()) await Task.Delay(10, token); }
+    }
+    private static async Task ResourceAdmissionAsync()
+    {
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        using var session = new DesktopSession();
+        using var verification = new TcpListener(IPAddress.Loopback, 0);
+        using var formal = new TcpListener(IPAddress.Loopback, 0);
+        verification.Start(); formal.Start();
+        var root = Path.Combine(Path.GetTempPath(), "lala-resource-ui-" + Guid.NewGuid().ToString("N"));
+        var profile = new Lala.Core.Sessions.AccountConnectionProfile((IPEndPoint)verification.LocalEndpoint, (IPEndPoint)formal.LocalEndpoint, 173, 173, 1, 3, 0);
+        var login = new LoginWindow(session, () => { }, () => { }, new OfflineDesktopServerCatalog(new DesktopServerLine(101, "地球", "1線", profile)), resourceRoot: () => root);
+        login.Show();
+        Window? Dialog(string title) => (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Windows.FirstOrDefault(w => w.Title == title);
+        async Task Until(Func<bool> condition) { while (!condition()) await Task.Delay(10, deadline.Token); }
+        async Task Fill()
+        {
+            Find<ComboBox>(login, "LoginServer").SelectedIndex = 0;
+            await Task.Delay(50, deadline.Token);
+            Find<TextBox>(login, "LoginAccount").Text = "synthetic";
+            await Task.Delay(50, deadline.Token);
+            Find<TextBox>(login, "LoginPassword").Text = "fake_password";
+        }
+        try
+        {
+            await Fill(); Click(login, "LoginSubmit");
+            await Until(() => Dialog("確認本次資源下載與寫入") is not null);
+            var dialog = Dialog("確認本次資源下載與寫入")!;
+            Check(dialog.GetVisualDescendants().OfType<TextBlock>().Any(t => t.Text?.Contains(Path.Combine(root, "official_sync")) == true), "resource consent shows exact normalized local target");
+            Check(!verification.Pending() && !formal.Pending() && !Directory.Exists(root), "resource disclosure is inert before approval");
+            Click(dialog, "ResourceSendCancel"); await Until(() => Find<Button>(login, "LoginSubmit").IsEnabled);
+            Check(!verification.Pending() && !Directory.Exists(root), "declining resource preparation starts no transport or writes");
+            await Fill(); Click(login, "LoginSubmit"); await Until(() => Dialog("確認本次資源下載與寫入") is not null);
+            Click(Dialog("確認本次資源下載與寫入")!, "ResourceSendConfirm");
+            using var socket = await verification.AcceptSocketAsync(deadline.Token);
+            await Until(() => Dialog("確認本次帳密傳送") is not null);
+            Check(socket.Available == 0 && !Directory.Exists(root), "resource approval does not replace credential approval or start resources before login");
+            Click(Dialog("確認本次帳密傳送")!, "LoginSendCancel");
+            await Until(() => Find<Button>(login, "LoginSubmit").IsEnabled);
+            Check(await socket.ReceiveAsync(new byte[1], SocketFlags.None, deadline.Token) == 0 && !formal.Pending(), "integrated runtime honors declined credential send");
+            Check(!Directory.Exists(root) && !session.CanSendGameCommands, "declined login neither writes resources nor admits game commands");
+            Console.WriteLine("Desktop resource admission: 6 loopback assertions passed; no official HTTP or resource writes.");
+        }
+        finally { await login.ShutdownAsync(); login.Close(); }
     }
     private sealed class Catalog(Func<CancellationToken, Task<DesktopServerCatalogSnapshot>> load) : IDesktopServerCatalog
     {

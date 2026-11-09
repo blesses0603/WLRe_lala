@@ -70,13 +70,14 @@ public sealed class DesktopWindows : IDisposable
     public DashboardWindow Dashboard { get; }
     public LoginWindow Login { get; }
     public VersionWindow Version { get; }
+    private string? resourceRoot;
     public DesktopWindows(DesktopSession session, Action shutdown)
     {
         this.session = session; this.shutdown = shutdown;
         Dashboard = new(session, this);
-        Version = new(() => OpenLogin(), OpenMain, RequestShutdown);
+        Version = new(() => OpenLogin(), OpenMain, RequestShutdown, root => resourceRoot = root);
         Version.Closing += (_, args) => { if (!disposed) { args.Cancel = true; RequestShutdown(); } };
-        Login = new(session, OpenMain, () => OpenInspector(), () => OpenVersion());
+        Login = new(session, OpenMain, () => OpenInspector(), () => OpenVersion(), () => resourceRoot);
         Dashboard.Closing += (_, args) => { if (!disposed) { args.Cancel = true; RequestShutdown(); } };
         Login.Closing += (_, args) =>
         {

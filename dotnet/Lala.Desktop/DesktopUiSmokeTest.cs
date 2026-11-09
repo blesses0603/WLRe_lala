@@ -67,7 +67,7 @@ internal static class DesktopUiSmokeTest
         }
         private async Task VersionEntryAsync()
         {
-            int entered = 0;
+            int entered = 0; string? plannedRoot = null;
             var profile = new Lala.Core.Sessions.AccountConnectionProfile(new(System.Net.IPAddress.Loopback, 1), new(System.Net.IPAddress.Loopback, 2), 173, 173, 1, 3, 0);
             var current = new DesktopServerCatalogSnapshot([new(101, "地球", "1線", profile)], "合成公開版本", System.Diagnostics.Stopwatch.GetTimestamp());
             current = current with { Version = Lala.Core.Resources.OfficialVersionSnapshot.Parse(System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(new
@@ -78,7 +78,7 @@ internal static class DesktopUiSmokeTest
             })) };
             bool fail = false;
             var source = new VersionCatalog(_ => fail ? Task.FromException<DesktopServerCatalogSnapshot>(new IOException("secret error details")) : Task.FromResult(current));
-            var window = Show(new VersionWindow(() => entered++, () => { }, () => { }, source, Lala.Core.Resources.ResourceInventoryInspector.InspectAsync));
+            var window = Show(new VersionWindow(() => entered++, () => { }, () => { }, source, Lala.Core.Resources.ResourceInventoryInspector.InspectAsync, root => plannedRoot = root));
             await window.Pending; await Settle(window);
             Check(Find<TextBlock>(window, "VersionMetadata").Text!.Contains("MainPackage：1275_") && Find<TextBlock>(window, "VersionMetadata").Text!.Contains("資料版本：1.2.3"), "version display uses observed metadata fields");
             Check(Find<Button>(window, "VersionContinue").IsEnabled, "supported fresh metadata allows only controlled login entry");
@@ -89,6 +89,9 @@ internal static class DesktopUiSmokeTest
                 await window.InspectAsync(root);
                 Check(Find<TextBlock>(window, "VersionInventory").Text!.Contains("找不到"), "real Core inspector reports missing local database");
                 Check(!Directory.Exists(root), "read-only inspection never creates missing data directories");
+                Click(window, "VersionPrepare");
+                Check(plannedRoot == Path.GetFullPath(root) && !Directory.Exists(root), "resource plan selects only the explicit root without writes");
+                Click(window, "VersionClearPreparation"); Check(plannedRoot is null, "resource preparation selection can be cancelled");
                 var directory = Path.Combine(root, "official_sync", "derived_catalogs"); Directory.CreateDirectory(directory);
                 var db = Path.Combine(directory, "resource_inventory.sqlite3"); await File.WriteAllTextAsync(db, "synthetic invalid database");
                 await window.InspectAsync(root);
