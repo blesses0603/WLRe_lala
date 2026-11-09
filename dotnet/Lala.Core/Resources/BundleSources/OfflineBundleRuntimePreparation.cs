@@ -226,6 +226,29 @@ internal sealed class OfflineBundleRuntimePreparation
         return _preparation.ReturnCurrent(prepared, new OfflinePreparedRuntimeCandidate(candidate, prepared, inventory, identity,
             downloads, handles.Values, itemImages, portraits, emojis), cancellationToken);
     }
+    internal async Task<SmallMapAcquisitionResult?> PrepareSmallMapsAsync(IResourceSource source,OfflinePreparedRuntimeCandidate prepared,
+        IBundleSourceCacheReader cache,RuntimeBundleCacheWriter writer,bool allowDownloads,CancellationToken token)
+    {
+        var context=prepared.RecheckContext;_preparation.EnsureCurrent(context,token);
+        var manifest=context.Manifests.Single(m=>m.Header.PackageName=="MainPackage");
+        if(context.Snapshot.DataVersion!=EmojiSourcePlan.DataVersion||manifest.Header.PackageVersion!=EmojiSourcePlan.MainVersion||
+            !manifest.Assets.Any(a=>a.Path.StartsWith(SmallMapSourcePlan.Prefix,StringComparison.Ordinal)))return null;
+        await _preparation.ConfirmUnchangedAsync(source,context,token).ConfigureAwait(false);
+        SmallMapAcquisitionResult? result=null;
+        try
+        {
+            result=await new SmallMapSourceAcquisition().AcquireAsync(manifest,context.Snapshot.DataVersion,source,cache,writer,allowDownloads,
+                ()=>_preparation.EnsureCurrent(context,token),context.Host,token).ConfigureAwait(false);
+            await _preparation.ConfirmUnchangedAsync(source,context,token).ConfigureAwait(false);
+            return _preparation.ReturnCurrent(context,result,token);
+        }
+        catch(Exception error)
+        {
+            if(result is not null)await result.Batch.DisposeAsync().ConfigureAwait(false);
+            if(!IsOptionalFailure(error)||error is BundleSourceException{Failure:BundleSourceFailure.VersionsChanged or BundleSourceFailure.ManifestChanged or BundleSourceFailure.StaleAttempt})throw;
+            return null;
+        }
+    }
     private static bool IsOptionalFailure(Exception error) => !error.Data.Contains(ResourceCleanup.FailureMarker) &&
         error is not ResourceTransportException { Failure: ResourceTransportFailure.Cleanup } &&
         error is (BundleSourceException or UnityTextAssetException or CatalogDecodeException or IOException or

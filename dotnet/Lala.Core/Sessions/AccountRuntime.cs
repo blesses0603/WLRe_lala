@@ -295,6 +295,22 @@ public sealed class AccountRuntime : IAsyncDisposable
             png=bytes;return true;
         }
     }
+    /// <summary>Verified artwork for the current scene only; no coordinate or navigation authority.</summary>
+    public bool TryGetSmallMap(ushort scene,out SmallMapRenderRequest? request)
+    {
+        lock(gate)
+        {
+            request=null;var(status,receive)=connection.ReadPublication();
+            if(!CurrentCatalogsLocked(status,receive,out var catalogs)||receive?.State.Player?.Scene!=scene||!catalogs!.Stages.TryGetValue(scene,out var stage))return false;
+            var result=resources.ReadSmallMap(stage.ModelId,()=>SmallMapIsCurrent(scene,stage.ModelId));
+            if(result?.IsCurrent!=true)return false;request=result;return true;
+        }
+    }
+    private bool SmallMapIsCurrent(ushort scene,ushort model)
+    {
+        lock(gate)
+        {var(status,receive)=connection.ReadPublication();return CurrentCatalogsLocked(status,receive,out var catalogs)&&receive?.State.Player?.Scene==scene&&catalogs!.Stages.TryGetValue(scene,out var stage)&&stage.ModelId==model;}
+    }
     /// <summary>Current visible emoji gallery only; no chat send authority.</summary>
     public bool TryGetEmojiGallery(out EmojiGalleryRequest? request)
     {

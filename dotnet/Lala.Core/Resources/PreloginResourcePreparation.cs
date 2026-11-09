@@ -9,6 +9,7 @@ public sealed record PreloginResourceResult(PreloginResourceStatus Status, Accou
     bool ReadbackMatched, bool SourcesRechecked)
 {
     public AccountResourceStorageOutcome PortraitStorageOutcome { get; init; } = AccountResourceStorageOutcome.NotAttempted;
+    public AccountResourceStorageOutcome SmallMapStorageOutcome {get;init;}=AccountResourceStorageOutcome.NotAttempted;
     public AccountResourceStorageOutcome EmojiStorageOutcome { get; init; } = AccountResourceStorageOutcome.NotAttempted;
     public AccountResourceStorageOutcome ItemImageStorageOutcome { get; init; } = AccountResourceStorageOutcome.NotAttempted;
     public bool CanLogin => false;
@@ -88,7 +89,7 @@ public sealed class PreloginResourcePreparation : IAsyncDisposable
                 _ => AccountResourceStorageOutcome.Unknown
             };
             return new(status, storage, result.Readback == ResourceRuntimeReadback.Matched, result.SourcesRechecked)
-                { ItemImageStorageOutcome = result.ItemImageStorageOutcome, PortraitStorageOutcome = result.PortraitStorageOutcome, EmojiStorageOutcome = result.EmojiStorageOutcome };
+                { ItemImageStorageOutcome = result.ItemImageStorageOutcome, PortraitStorageOutcome = result.PortraitStorageOutcome, EmojiStorageOutcome = result.EmojiStorageOutcome, SmallMapStorageOutcome=result.SmallMapStorageOutcome };
         }
     }
     public void Stop()

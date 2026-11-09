@@ -6,7 +6,7 @@ using Avalonia.Media;
 namespace Lala.Desktop;
 
 /// <summary>Compact original map layout. A missing map image never becomes a fabricated map.</summary>
-public sealed class MapView : UserControl
+public sealed class MapView : UserControl,IAsyncDisposable
 {
     private readonly DesktopSession session;
     private readonly TextBlock title = Ui.Text("小地圖｜等待角色地圖", 14, bold: true);
@@ -14,6 +14,7 @@ public sealed class MapView : UserControl
     private readonly TextBlock mapMessage = Ui.Text("尚未同步小地圖", 14, Ui.Muted);
     private readonly TextBlock navigationStatus = Ui.Text("導航：等待目前地圖。", 11, Ui.Muted);
     private bool subscribed;
+    private readonly SmallMapImageView picture=new();
 
     public MapView(DesktopSession session, Action openNavigation)
     {
@@ -77,9 +78,8 @@ public sealed class MapView : UserControl
         mapMessage.TextAlignment = TextAlignment.Center;
         position.Name = "MapPosition";
         position.TextAlignment = TextAlignment.Center;
-        var missing = Ui.Column(mapMessage, position);
-        missing.HorizontalAlignment = HorizontalAlignment.Stretch;
-        missing.VerticalAlignment = VerticalAlignment.Center;
+        var missing = new Grid{RowDefinitions=new RowDefinitions("*,Auto,Auto")};
+        picture.Name="SmallMapImage";Ui.At(missing,picture,0);Ui.At(missing,mapMessage,0,1);Ui.At(missing,position,0,2);
         var map = new Border
         {
             Name = "MapSurface", Background = Brush.Parse("#18232c"), Padding = new Thickness(8),
@@ -128,6 +128,7 @@ public sealed class MapView : UserControl
         if (!subscribed) return;
         subscribed = false;
         session.Changed -= Changed;
+        picture.Update((Lala.Core.Resources.SmallMapRenderRequest?)null);
     }
 
     private void Changed() => Ui.OnUi(() => { if (subscribed) Refresh(); });
@@ -139,10 +140,12 @@ public sealed class MapView : UserControl
         var player = world.Player;
         title.Text = player is null ? "小地圖｜等待角色地圖" : "小地圖｜" + view.Labels.Scene(player.Scene);
         ToolTip.SetTip(title, title.Text);
-        mapMessage.Text = player is null ? "尚未同步小地圖" : "此地圖的同版圖片\n尚未同步";
+        var mapRequest=player is null?null:session.ReadSmallMap(player.Scene);picture.Update(mapRequest);
+        mapMessage.Text = mapRequest is not null ? "地圖預覽；角色位置尚未標示" : player is null ? "尚未同步小地圖" : "此地圖的同版圖片\n尚未同步";
         var confirmed = world.Location.Confirmed;
         position.Text = player is not null && world.Location.ConfirmedIsCurrent && confirmed?.Scene == player.Scene
             ? $"已確認座標\n{confirmed.X}, {confirmed.Y}" : "等待角色位置同步…";
         navigationStatus.Text = player is null ? "導航：等待目前地圖。" : "導航：等待同版地圖與導航資料。";
     }
+    public async ValueTask DisposeAsync(){Unsubscribe();await picture.DisposeAsync();}
 }

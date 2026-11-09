@@ -1,10 +1,10 @@
-# ver 8.0.74 小地圖按需像素與整批快取驗證
+# ver 8.0.75 小地圖下載協調與撤銷顯示
 
 ## 固定來源工廠
 
 `SmallMapReceiptBatch` 只接受已解析 MainPackage manifest、固定受審查版本、cache reader 及精確相符的 receipt 集合。工廠自己衍生完整每圖閉包、根 Bundle、來源與 manifest 指紋，沒有接受 caller pixels、serialized object bytes、任意 decoder 或自稱來源指紋的 production overload。
 
-新的 `CreateStagedSmallMaps` 是磁碟 receipt 計畫，最多 4 檔／64 MiB。既有 `CreateSmallMaps` 的 32 MiB owned-source 額度完全不變，亦未增加 production 下載額度。receipt 必須含有效小寫 SHA256，不能以 null 觸發 optional SHA 跳過。所有來源在消費前後重新核對，範圍讀取仍核對同次完整掃描捕獲的 64 KiB 區塊 hash。
+新的 `CreateStagedSmallMaps` 是磁碟 receipt 計畫，最多 4 檔／64 MiB。既有 `CreateSmallMaps` 的 32 MiB owned-source 額度完全不變，原有 production 額度不變；新增明確獨立的 4 檔／64 MiB 磁碟階段。receipt 必須含有效小寫 SHA256，不能以 null 觸發 optional SHA 跳過。所有來源在消費前後重新核對，範圍讀取仍核對同次完整掃描捕獲的 64 KiB 區塊 hash。
 
 每個 root 最多一個 SerializedFile，保留 16 MiB serialized slice 限制；完整驗證 type tree、metadata、物件索引／跨度與 container，再投影此 root 所需的精確小地圖路徑。只接受本檔且 class 28 的 Texture2D 指標；不猜外部指標、名稱 fallback、場景座標。必要 Texture descriptor 保留既有格式驗證，像素使用精確 owner 的 `.resS` 路徑與範圍讀取。舊一般 SerializedFile／Texture 入口仍驗證完整物件。
 
@@ -14,9 +14,9 @@
 
 `ConsumeAsync` 按 root 分組，重用同一已驗證來源／索引／metadata，逐張解碼交付 PNG。若同一 root 有兩張地圖，整批只開三次來源（前查、消費、後查），不是逐圖重開；測試實測此開啟次數。這是 I/O 次數驗證，不宣稱時間或應用程式 heap 改善數字。
 
-`SmallMapPngStore` 原子交易中逐張寫入並回讀，或獨立由固定工廠重新解碼並比對既有 cache。嚴格核對唯一 schema、model、source、asset、pixel SHA、PNG SHA、完整 PNG bytes 及總列數；不解壓不可信 stored PNG，也不將資料庫 hash 當像素真相。每張 PNG 最多 4 MiB，整批最多 96 MiB、2048 張，逐張消費不保留整批 PNG／RGBA。整批指紋由來源與每個 model／path／像素／PNG hash 順序計算。
+`SmallMapPngStore` 原子交易中逐張寫入並回讀，或獨立由固定工廠重新解碼並比對既有 cache。嚴格核對唯一 schema、model、source、asset、pixel SHA、PNG SHA、完整 PNG bytes 及總列數；不解壓不可信 stored PNG，也不將資料庫 hash 當像素真相。每張 PNG 最多 4 MiB，整批最多 96 MiB、2048 張，一般寫入／檢查逐張消費不保留整批 PNG／RGBA；發布專用回讀只保留最多 96 MiB 的私有 PNG，不保留整批 RGBA。整批指紋由來源與每個 model／path／像素／PNG hash 順序計算。
 
-來源／像素／cache 失敗、最終撤銷或取消使交易回滾；沿用 ResourceInventoryDatabase 的 committed／not-committed／unknown 及 cleanup 語意。回讀結果只含來源、整批指紋與數量，不能直接變成 UI 或帳號准入。
+來源／像素／cache 失敗、最終撤銷或取消使交易回滾；沿用 ResourceInventoryDatabase 的 committed／not-committed／unknown 及 cleanup 語意。一般回讀結果只含來源、整批指紋與數量；發布專用回讀捕獲重新建立並核對過的 PNG，只有清理完成與 owner 最終重查後才加入 publication，不能提供帳號或封包准入。
 
 ## 驗證與限制
 
@@ -24,7 +24,16 @@
 
 v8.0.73 `1cdd473ccc4882212423bcfd8e8e5371f241ac09`：.NET run 42706007943 四平台、Python run 42706007753 三平台均成功。
 
-**未完成**：production 下載與必要表階段的真正組合、當前版本／manifest 再觀察、owner 的可撤銷發布、獨立視窗／小地圖顯示及場景座標映射。原有下載與準備路徑仍保持容量阻擋。本批不連正式遊戲服務，不宣稱完整登入前圖資或桌面發布驗收；不能只因磁碟 stage／SQLite 成功就啟用畫面。
+## production 協調與桌面顯示
+
+`SmallMapSourceAcquisition` 單次使用，先探查完整來源計畫；只讀缺檔不下載、不寫入。bootstrap 保留缺檔數量／總 bytes 後逐檔使用 typed HTTP 入口，檢查來源、狀態、Content-Length，完整 checksum 串流寫入後回開。既有任意 URL 入口仍限 32 MiB。失敗／取消會清理 response 與暫存；失敗後已完成的合法快取可保留，不宣稱整批檔案交易。
+
+準備階段在取得前後及 owner 發布前重新觀察版本／manifest。SQLite 發布回讀逐圖重新解碼、比較後捕獲私有 PNG；後續 cache 變更不改變已捕獲 bytes。owner 必須完成 source batch 清理並確認仍為目前 attempt 才發布。新準備、停止、帳號替換或目前場景改變均使讀圖要求失效。
+
+桌面依當前接收場景與 Stage model 選圖，在背景驗證 PNG hash／1024 尺寸並解碼。相同 identity 重用 Bitmap，200 ms 檢查撤銷，關閉取消並等待既有讀取／解碼，晚到結果不重新顯示。這只提供底圖預覽，座標仍以既有已確認文字顯示；沒有猜測像素座標、目的地選取或導航發送。
+
+**未完成**：整合 production owner／帳號／桌面的官方正向驗收、場景座標映射及完整圖資。下述 v8.0.74 官方資料診斷不等於新整合路徑驗收；本批測試使用自有 fixture／合成畫面，不連正式遊戲服務。
+
 
 ## v8.0.74 官方來源正向診斷及 CI 修正
 
@@ -35,3 +44,11 @@ Core 的虛擬 archive 索引確認邏輯大小 362,827,948 bytes，其中 Seria
 隨後 SQLite 寫入與獨立重新解碼回讀均得到 562 列，來源指紋 `34f38e603ffb16cb01f8e8b95c3b099e2545680ef7600b3d0e3b8b7e616276c5`、整批指紋 `ec75468af9ddadf7a9beb22d0c98fe51f163ebbeb645acb293a7175b5a80d13b`。解碼與 SQLite 回讀後，2026-11-09T22:21:01Z 再次觀察官方版本並取得 manifest hash，仍與前述完全一致。這是雲端固定工廠／像素／SQLite 的正向診斷；沒有 account owner、production 下載協調或 UI activation，因此不能據此宣稱完整桌面驗收。Python oracle 為獨立對照，不能拿它的整檔展開記憶體用量當作 Core 按需路徑的效能數字。
 
 原提交 `5902418` 的 Python 三平台及 .NET Linux／macOS／Android 均成功；Windows job 129473416158 為 45,869 通過、1 失敗。失敗在 `Integrated_account_whitebox_trust_bit_projects_current_catalogs_into_real_receive_then_revokes(false)` 的對端收尾：測試已 Stop 並確認 ResourcesReleased，仍要求正常 peer-led FIN，Windows 回報 ConnectionReset。僅此明確退休後的收尾改用既有 `ExpectClosedAfterRetirement`；正常 `CloseSendAndExpectEof` 完全不變，仍拒絕任何多餘 byte、已排隊封包、不完整 frame、timeout／取消及非退休錯誤。相關兩種 includeInstances 情況與既有退休關閉邊界合計 8 項通過。此為同批 CI 修正，不重複升版；新提交 CI 另行追蹤。
+
+## v8.0.75 回歸證據
+
+沿用上節已驗證私有官方快取，未重新下載：562 張完整 RGBA 再次符合獨立 oracle；SQLite 寫入及新增發布專用回讀均為 562 張、來源／批次指紋與 v8.0.74 相同。逐圖建立讀圖 request 並取得複本，全部 PNG SHA 相符。這是固定工廠／快照診斷，沒有當前官方版本再觀察或 production owner／帳號綁定，因此仍不代表正式整合驗收。
+
+新增離線下載／來源／長度／checksum／取消／晚到撤銷、單次 quota、快取重用、HTTP 舊新上限、PNG 複本與讀取中撤銷測試。owner 測試確認自有必要表不能通過 1296 固定來源雜湊，且尚未進入小地圖下載／寫入；不放寬 parser 以製造成功案例。原生小地圖 7 項驗證一次解碼、10 次相同更新及縮放不追加解碼、原生 render、撤銷清圖、錯 hash 拒絕與關閉等待；主流程 198 項及既有頭像／表情／登入測試通過，皆合成／loopback。
+
+最終本機強制重建零警告／錯誤，完整 Core **45,883** 通過；公用 Core consumer、Python 倉庫／UnityPy 包裝 **9**、Desktop Release 零警告／錯誤及離線 **81** 通過。原生 UI 主流程 **198**，另小地圖 **7**、頭像 **13**、表情 **24**、catalog **10**／資源確認 **6**／登入 loopback **11** 全通過；無正式登入或遊戲指令。

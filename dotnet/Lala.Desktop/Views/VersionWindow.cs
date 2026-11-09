@@ -139,10 +139,10 @@ public sealed class VersionWindow : DesktopWindow
         var dialog = new Window { Title = "確認登入前資源準備", Icon = Icon, Width = 760, Height = 380, WindowStartupLocation = WindowStartupLocation.CenterOwner };
         resourceConfirmation = dialog;
         dialog.Content = new ScrollViewer { Content = Ui.Column(Ui.Text("不需要帳密；現在下載並驗證必要資源", 20, bold: true),
-            Ui.Text("官方 HTTPS：" + disclosure.ResourceUrlPrefix), Ui.Text("SQLite：" + disclosure.InventoryPath), Ui.Text("物品圖快取：" + disclosure.ItemImageCachePath), Ui.Text("頭像快取：" + disclosure.PortraitCachePath), Ui.Text("表情快取（驗證通過後寫入）：" + disclosure.EmojiCachePath),
+            Ui.Text("官方 HTTPS：" + disclosure.ResourceUrlPrefix), Ui.Text("SQLite：" + disclosure.InventoryPath), Ui.Text("物品圖快取：" + disclosure.ItemImageCachePath), Ui.Text("頭像快取：" + disclosure.PortraitCachePath), Ui.Text("表情快取（驗證通過後寫入）：" + disclosure.EmojiCachePath), Ui.Text("小地圖快取（驗證通過後寫入）：" + disclosure.SmallMapCachePath), Ui.Text("小地圖串流階段最多 4 檔／64 MiB；其餘下載額度不變。"),
             Ui.Text("Bundle 快取：" + disclosure.BundleCacheDirectory),
             Ui.Text("將建立目錄、寫入驗證過的 Bundle、暫存檔及 SQLite／journal，再獨立回讀及重查版本與 Manifest。停止不會撤銷已完成或結果不明的寫入，不自動重試。"),
-            Ui.Text("準備必要資料表、受支援物品圖及已審查版本的頭像與表情快取；圖資未通過來源、格式或像素驗證時保持不可用。頭像僅在來源與角色映射驗證後顯示；表情僅在整批來源、像素及回讀驗證後顯示；小地圖尚未完成，不授權登入或遊戲指令。"),
+            Ui.Text("準備必要資料表、受支援物品圖及已審查版本的頭像與表情快取；圖資未通過來源、格式或像素驗證時保持不可用。頭像僅在來源與角色映射驗證後顯示；表情僅在整批來源、像素及回讀驗證後顯示；小地圖僅在來源、像素、SQLite 回讀及目前地圖綁定有效時顯示，不提供位置標記或導航操作；不授權登入或遊戲指令。"),
             Ui.Row(Ui.Button("取消", () => dialog.Close(false), "PreloginCancel"), Ui.Button("確認下載與寫入", () => dialog.Close(true), "PreloginConfirm"))) };
         bool approved;
         using (token.Register(() => Avalonia.Threading.Dispatcher.UIThread.Post(() => dialog.Close(false))))
@@ -154,7 +154,7 @@ public sealed class VersionWindow : DesktopWindow
         heading.Text = "正在下載、驗證及回讀必要資源";
         var result = await prelogin.PrepareAsync(token);
         token.ThrowIfCancellationRequested();
-        selection.Text = $"資源 {result.Status}／寫入 {result.StorageOutcome}／物品圖寫入 {result.ItemImageStorageOutcome}／頭像寫入 {result.PortraitStorageOutcome}／表情寫入 {result.EmojiStorageOutcome}；回讀 {result.ReadbackMatched}／來源重查 {result.SourcesRechecked}／物品圖 {(prelogin.HasItemImages ? "可用" : "不可用")}。";
+        selection.Text = $"資源 {result.Status}／寫入 {result.StorageOutcome}／物品圖寫入 {result.ItemImageStorageOutcome}／頭像寫入 {result.PortraitStorageOutcome}／表情寫入 {result.EmojiStorageOutcome}／小地圖寫入 {result.SmallMapStorageOutcome}；回讀 {result.ReadbackMatched}／來源重查 {result.SourcesRechecked}／物品圖 {(prelogin.HasItemImages ? "可用" : "不可用")}。";
         if (result.Status != PreloginResourceStatus.Ready) { await RetireResourcesAsync(); heading.Text = "必要資源未通過驗證"; return; }
         var observed = await source.LoadAsync(token); token.ThrowIfCancellationRequested();
         catalog = observed; RenderVersion(observed); status.Text = observed.Status;

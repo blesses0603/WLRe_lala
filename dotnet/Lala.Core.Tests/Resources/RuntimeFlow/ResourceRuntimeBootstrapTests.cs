@@ -9,7 +9,7 @@ namespace Lala.Core.Tests.Resources;
 public sealed partial class ResourceRuntimeBootstrapTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(15);
-    private sealed class Source : IResourceSource, IDisposable
+    private sealed class Source : IResourceSource, IBundleStreamSource, IDisposable
     {
         internal byte[] Bundle = RuntimeFlowFixtures.Read("all-ten.bundle");
         internal byte[] Main = BundleSourceFixtures.Bytes("main-valid");
@@ -28,6 +28,7 @@ public sealed partial class ResourceRuntimeBootstrapTests
             if (BeforeObserve is not null) await BeforeObserve(n);
             token.ThrowIfCancellationRequested(); return Snapshot(n);
         }
+        public ValueTask<ResourceResponse> OpenBundleStreamAsync(BundleSourceSpec spec,CancellationToken token)=>OpenAsync(spec.Url(OfficialResourceOrigin.DefaultHost),token);
         public ValueTask<ResourceResponse> OpenAsync(string url, CancellationToken token)
         {
             token.ThrowIfCancellationRequested();

@@ -13,6 +13,7 @@ public sealed record AccountResourcePreparationResult(
     AccountResourceStorageOutcome StorageOutcome, bool ReadbackMatched, bool SourcesRechecked)
 {
     public AccountResourceStorageOutcome PortraitStorageOutcome { get; init; } = AccountResourceStorageOutcome.NotAttempted;
+    public AccountResourceStorageOutcome SmallMapStorageOutcome {get;init;}=AccountResourceStorageOutcome.NotAttempted;
     public AccountResourceStorageOutcome EmojiStorageOutcome { get; init; } = AccountResourceStorageOutcome.NotAttempted;
     public AccountResourceStorageOutcome ItemImageStorageOutcome { get; init; } = AccountResourceStorageOutcome.NotAttempted;
     public bool WasBound => Status == AccountResourcePreparationStatus.Bound;
@@ -152,7 +153,7 @@ public sealed class AccountResourceRuntime : IAsyncDisposable
                     result?.Readback == ResourceRuntimeReadback.Matched, result?.SourcesRechecked == true)
                     { ItemImageStorageOutcome = result?.ItemImageStorageOutcome ?? AccountResourceStorageOutcome.NotAttempted,
                         PortraitStorageOutcome = result?.PortraitStorageOutcome ?? AccountResourceStorageOutcome.NotAttempted,
-                        EmojiStorageOutcome = result?.EmojiStorageOutcome ?? AccountResourceStorageOutcome.NotAttempted };
+                        EmojiStorageOutcome = result?.EmojiStorageOutcome ?? AccountResourceStorageOutcome.NotAttempted, SmallMapStorageOutcome=result?.SmallMapStorageOutcome??AccountResourceStorageOutcome.NotAttempted };
             }
         }
         finally { lock (_gate) _running = false; }
@@ -177,6 +178,8 @@ public sealed class AccountResourceRuntime : IAsyncDisposable
     {
         lock(_gate){png=null;return !_disposed&&_binding is not null&&_binding.TryReadEmoji(token,out png);}
     }
+    internal SmallMapRenderRequest? ReadSmallMap(int model,Func<bool> selectionCurrent)
+    {lock(_gate)return !_disposed?_binding?.ReadSmallMap(model,selectionCurrent):null;}
     internal EmojiGalleryRequest? ReadEmojiGallery()
     {lock(_gate)return !_disposed?_binding?.ReadEmojiGallery():null;}
     internal bool TrySelectPortrait(Lala.Core.Protocol.WorldPlayer? player,Lala.Core.Inventory.CompanionReceiveSnapshot companions,

@@ -157,7 +157,7 @@ public sealed class LoginWindow : DesktopWindow, IAccountLoginInput, IAccountRol
     {
         stopping = true; enter.IsEnabled = false;
         discoveryStop.Cancel();
-        session.SetItemImageReader(presentationGeneration, null); session.SetPortraitReader(presentationGeneration, null); session.SetEmojiReader(presentationGeneration, null);
+        session.SetItemImageReader(presentationGeneration, null); session.SetPortraitReader(presentationGeneration, null); session.SetEmojiReader(presentationGeneration, null); session.SetSmallMapReader(presentationGeneration, null);
         cancellation?.Cancel(); preparation?.Stop(); runtime?.Stop(); roleCompletion?.TrySetResult(null);
         confirmationWindow?.Close(false);
         if (operation is { } running) await running;
@@ -193,6 +193,7 @@ public sealed class LoginWindow : DesktopWindow, IAccountLoginInput, IAccountRol
                 var imageRuntime = runtime;
                 session.SetItemImageReader(presentationGeneration, id => imageRuntime.TryReadItemImage(id, out var png) ? png : null);
                 session.SetEmojiReader(presentationGeneration, () => imageRuntime.TryGetEmojiGallery(out var gallery) ? gallery : null);
+                session.SetSmallMapReader(presentationGeneration, scene => imageRuntime.TryGetSmallMap(scene,out var request)?request:null);
                 session.SetPortraitReader(presentationGeneration, (state, companion) => imageRuntime.TryGetPortrait(state, companion, out var request) ? request : null);
                 timer.Start();
                 var result = await runtime.RunAsync(cancellation.Token);
@@ -210,7 +211,7 @@ public sealed class LoginWindow : DesktopWindow, IAccountLoginInput, IAccountRol
         catch (Exception) { status.Text = "登入未完成：請重新版本檢測並選擇分流，確認 ASCII 帳密後重試。"; }
         finally
         {
-            timer.Stop(); session.SetItemImageReader(presentationGeneration, null); session.SetPortraitReader(presentationGeneration, null); session.SetEmojiReader(presentationGeneration, null);
+            timer.Stop(); session.SetItemImageReader(presentationGeneration, null); session.SetPortraitReader(presentationGeneration, null); session.SetEmojiReader(presentationGeneration, null); session.SetSmallMapReader(presentationGeneration, null);
             try { if (runtime is not null) await runtime.DisposeAsync(); if (preparation is not null) await preparation.DisposeAsync(); }
             catch (Exception) { status.Text = "連線清理失敗；請關閉程式後再試。"; closed = true; }
             core?.Disconnect(); preparation = null; runtime = null; lastCatalogs = null;
@@ -282,7 +283,7 @@ public sealed class LoginWindow : DesktopWindow, IAccountLoginInput, IAccountRol
             Ui.Text("登入協定完成後，下載並驗證官方資源", 20, bold: true),
             Ui.Text("HTTPS 來源：" + disclosure.ResourceUrlPrefix),
             Ui.Text("版本入口：" + disclosure.VersionMapUrl),
-            Ui.Text("SQLite：" + disclosure.InventoryPath), Ui.Text("物品圖快取：" + disclosure.ItemImageCachePath), Ui.Text("頭像快取：" + disclosure.PortraitCachePath), Ui.Text("表情快取（驗證通過後寫入）：" + disclosure.EmojiCachePath), Ui.Text("Bundle 快取：" + disclosure.BundleCacheDirectory),
+            Ui.Text("SQLite：" + disclosure.InventoryPath), Ui.Text("物品圖快取：" + disclosure.ItemImageCachePath), Ui.Text("頭像快取：" + disclosure.PortraitCachePath), Ui.Text("表情快取（驗證通過後寫入）：" + disclosure.EmojiCachePath), Ui.Text("小地圖快取（驗證通過後寫入）：" + disclosure.SmallMapCachePath), Ui.Text("小地圖串流階段最多 4 檔／64 MiB；其餘下載額度不變。"), Ui.Text("Bundle 快取：" + disclosure.BundleCacheDirectory),
             Ui.Text("將建立目錄、寫入經驗證的 Bundle／暫存檔與 SQLite（含 journal），再獨立回讀及重查來源版本。停止不會撤銷已完成的寫入；結果不明時不自動重試。"),
             Ui.Text("資源綁定只提供唯讀目錄與核心投影；一般遊戲操作仍停用。尚非 Python 全量資源／圖資功能。帳密只傳給另行確認的遊戲端點，不傳到資源 HTTPS。"),
             Ui.Row(Ui.Button("取消", () => dialog.Close(false), "ResourceSendCancel"),
@@ -302,7 +303,7 @@ public sealed class LoginWindow : DesktopWindow, IAccountLoginInput, IAccountRol
         var resourceState = runtime?.Snapshot;
         var resourceText = resourceState is null ? "未選資源準備" : resourceState.HasCurrentResources ? "資源目錄已綁定（唯讀）" :
             resourceState.ResourceHistory.LastOrDefault()?.Preparation is { } outcome
-                ? $"資源 {outcome.Status}／寫入 {outcome.StorageOutcome}／物品圖寫入 {outcome.ItemImageStorageOutcome}／頭像寫入 {outcome.PortraitStorageOutcome}／表情寫入 {outcome.EmojiStorageOutcome}；回讀 {outcome.ReadbackMatched}／來源重查 {outcome.SourcesRechecked}"
+                ? $"資源 {outcome.Status}／寫入 {outcome.StorageOutcome}／物品圖寫入 {outcome.ItemImageStorageOutcome}／頭像寫入 {outcome.PortraitStorageOutcome}／表情寫入 {outcome.EmojiStorageOutcome}／小地圖寫入 {outcome.SmallMapStorageOutcome}；回讀 {outcome.ReadbackMatched}／來源重查 {outcome.SourcesRechecked}"
                 : "等待登入完成或資源準備中";
         session.SetConnectionText(connection.Phase == AccountConnectionPhase.ReceivingHeld
             ? "登入協定完成｜" + resourceText + "｜遊戲操作 Held" : "登入進行中｜等待確認或伺服器回覆");

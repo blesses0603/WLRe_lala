@@ -14,6 +14,7 @@ internal sealed class ResourceRuntimePublication
     internal ItemImageReadback? ItemImages { get; }
     internal PortraitPngReadback? Portraits { get; }
     internal EmojiPngReadback? Emojis { get; }
+    internal SmallMapPngSnapshot? SmallMaps { get; }
     private readonly ResourceRuntimeOwner _owner;
     internal bool ResourceAdmitted => _owner.IsCurrentAdmission(this);
     internal bool TlsOriginObserved => _owner.IsCurrentAdmission(this);
@@ -22,8 +23,8 @@ internal sealed class ResourceRuntimePublication
     internal bool CanLogin => false;
     internal bool CanSendPackets => false;
     internal ResourceRuntimePublication(ResourceRuntimeOwner owner, long generation, OfflinePreparedRuntimeCandidate prepared,
-        OfflineRuntimeCandidate? readbackCandidate = null, ItemImageReadback? itemImages = null, PortraitPngReadback? portraits = null, EmojiPngReadback? emojis = null)
-        => (_owner, Generation, Identity, Candidate, ItemImages, Portraits, Emojis) = (owner, generation, prepared.Identity, readbackCandidate ?? prepared.Candidate, itemImages, portraits, emojis);
+        OfflineRuntimeCandidate? readbackCandidate = null, ItemImageReadback? itemImages = null, PortraitPngReadback? portraits = null, EmojiPngReadback? emojis = null, SmallMapPngSnapshot? smallMaps = null)
+        => (_owner, Generation, Identity, Candidate, ItemImages, Portraits, Emojis, SmallMaps) = (owner, generation, prepared.Identity, readbackCandidate ?? prepared.Candidate, itemImages, portraits, emojis, smallMaps);
 }
 
 /// <summary>Uninstalled resource-only owner. Construction does no network or database I/O.
@@ -41,6 +42,7 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
     private readonly string _itemImages;
     private readonly string _portraits;
     private readonly string _emojis;
+    private readonly string _smallMaps;
     private readonly IBundleSourceCacheReader _cache;
     private readonly RuntimeBundleCacheWriter _cacheWriter;
     private readonly OfflineBundleRuntimePreparation _preparation = new();
@@ -71,6 +73,7 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
         _itemImages = Path.Combine(root, "official_sync", "derived_catalogs", "core_item_images_v1.sqlite3");
         _portraits = Path.Combine(root, "official_sync", "derived_catalogs", "core_portraits_v1.sqlite3");
         _emojis = Path.Combine(root, "official_sync", "derived_catalogs", "core_emojis_v1.sqlite3");
+        _smallMaps = Path.Combine(root,"official_sync","derived_catalogs","core_smallmaps_v1.sqlite3");
         _afterAdmission = afterAdmission;
         _cleanupEntered = cleanupEntered;
         _bootstrapHooks = bootstrapHooks;
@@ -220,6 +223,8 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
         ItemImageReadback? itemImages = null;
         PortraitPngReadback? portraits = null;
         EmojiPngReadback? emojis = null;
+        SmallMapPngSnapshot? smallMaps=null;SmallMapAcquisitionResult? smallMapSources=null;
+        var smallMapStorage=AccountResourceStorageOutcome.NotAttempted;
         var emojiStorage = AccountResourceStorageOutcome.NotAttempted;
         var portraitStorage = AccountResourceStorageOutcome.NotAttempted;
         var imageStorage = AccountResourceStorageOutcome.NotAttempted;
@@ -400,6 +405,27 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
                         emojiBatch.Rebuild, () => EnsureCurrent(generation, mine), mine.Token).ConfigureAwait(false);
                 }
             }
+            smallMapSources=await _preparation.PrepareSmallMapsAsync(_source,prepared,_cache,_cacheWriter,bootstrap,mine.Token).ConfigureAwait(false);
+            if(smallMapSources is not null)
+            {
+                var mapBatch=smallMapSources.Batch;
+                if(bootstrap)
+                {
+                    smallMapStorage=AccountResourceStorageOutcome.Unknown;
+                    try
+                    {
+                        await SmallMapPngStore.WriteAsync(SmallMapConnection(SqliteOpenMode.ReadWriteCreate),mapBatch,()=>EnsureCurrent(generation,mine),mine.Token).ConfigureAwait(false);
+                        smallMapStorage=AccountResourceStorageOutcome.Committed;
+                    }
+                    catch(Exception error)
+                    {
+                        smallMapStorage=error.Data[ResourceInventoryDatabase.OutcomeKey] switch
+                        {ResourceInventoryWriteOutcome.NotCommitted=>AccountResourceStorageOutcome.NotCommitted,ResourceInventoryWriteOutcome.Committed=>AccountResourceStorageOutcome.Committed,_=>AccountResourceStorageOutcome.Unknown};throw;
+                    }
+                }
+                EnsureCurrent(generation,mine);
+                if(bootstrap||File.Exists(_smallMaps))smallMaps=await SmallMapPngStore.ReadForPublicationAsync(SmallMapConnection(SqliteOpenMode.ReadOnly),mapBatch,()=>EnsureCurrent(generation,mine),mine.Token).ConfigureAwait(false);
+            }
             await _preparation.ConfirmUnchangedAsync(_source, prepared, mine.Token).ConfigureAwait(false);
             sourcesRechecked = true;
             preparedResult = prepared;
@@ -410,6 +436,8 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
             // Offline-only instrumentation cannot bypass or prevent actual cleanup.
             try { _cleanupEntered?.Invoke(); }
             catch (Exception error) { failure = Combine(failure, error); }
+            try { if(smallMapSources is not null)await smallMapSources.Batch.DisposeAsync().ConfigureAwait(false); }
+            catch(Exception error){failure=Combine(failure,error);}
             try { await mine.CleanupAsync().ConfigureAwait(false); }
             catch (Exception error) { failure = Combine(failure, error); }
             if (failure is null)
@@ -420,13 +448,13 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         EnsureCurrent(generation, mine);
-                        publication = _current = new(this, generation, preparedResult!, readbackCandidate, itemImages, portraits, emojis);
+                        publication = _current = new(this, generation, preparedResult!, readbackCandidate, itemImages, portraits, emojis, smallMaps);
                     }
                 }
                 catch (Exception error) { failure = error; }
             }
             return new(storageAttempted, storage, mine.CommitAdmitted, receipt, readback,
-                sourcesRechecked, publication, failure) { ItemImageStorageOutcome = imageStorage, PortraitStorageOutcome = portraitStorage, EmojiStorageOutcome = emojiStorage };
+                sourcesRechecked, publication, failure) { ItemImageStorageOutcome = imageStorage, PortraitStorageOutcome = portraitStorage, EmojiStorageOutcome = emojiStorage, SmallMapStorageOutcome=smallMapStorage, SmallMapDownloadCount=smallMapSources?.DownloadCount, SmallMapDownloadBytes=smallMapSources?.DownloadBytes };
         }
         finally
         {
@@ -454,6 +482,7 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
         return await ResourceInventoryWriteBaseline.CaptureAsync(connection, token).ConfigureAwait(false);
     }
 
+    private SqliteConnection SmallMapConnection(SqliteOpenMode mode)=>new(new SqliteConnectionStringBuilder{DataSource=_smallMaps,Mode=mode,Pooling=false}.ToString());
     private SqliteConnection EmojiConnection(SqliteOpenMode mode) => new(new SqliteConnectionStringBuilder
     { DataSource = _emojis, Mode = mode, Cache = SqliteCacheMode.Private, Pooling = false, DefaultTimeout = 5 }.ToString());
 

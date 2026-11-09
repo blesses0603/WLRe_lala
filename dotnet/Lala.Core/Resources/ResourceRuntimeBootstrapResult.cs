@@ -15,6 +15,9 @@ internal sealed class ResourceRuntimeBootstrapResult(bool storageAttempted, Reso
     internal AccountResourceStorageOutcome ItemImageStorageOutcome { get; init; } = AccountResourceStorageOutcome.NotAttempted;
     internal AccountResourceStorageOutcome PortraitStorageOutcome { get; init; } = AccountResourceStorageOutcome.NotAttempted;
     internal AccountResourceStorageOutcome EmojiStorageOutcome { get; init; } = AccountResourceStorageOutcome.NotAttempted;
+    internal AccountResourceStorageOutcome SmallMapStorageOutcome {get;init;}=AccountResourceStorageOutcome.NotAttempted;
+    internal int? SmallMapDownloadCount {get;init;}
+    internal long? SmallMapDownloadBytes {get;init;}
     internal bool StorageAttempted { get; } = storageAttempted;
     internal ResourceInventoryWriteOutcome StorageOutcome { get; } = storageOutcome;
     internal bool CommitAdmitted { get; } = commitAdmitted;

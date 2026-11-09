@@ -43,6 +43,7 @@ internal static class DesktopUiSmokeTest
                 await DesktopLoginUiTest.RunAsync();
                 await DesktopPortraitUiTest.RunAsync();
                 await DesktopEmojiUiTest.RunAsync();
+                await DesktopSmallMapUiTest.RunAsync();
                 await VersionEntryAsync();
                 Publish(fixture.State, fixture.Labels);
                 await Settle(dashboard);
@@ -231,7 +232,7 @@ internal static class DesktopUiSmokeTest
             Check(battle.SelectedTargetKey == "3:2", "dead and empty cells do not replace the target");
             Check(Find<TextBlock>(dashboard, "MapPosition").Text!.Contains("120, 240", StringComparison.Ordinal),
                 "map shows only current confirmed textual coordinates");
-            Check(!Descendants<Image>(Find<Border>(dashboard, "MapSurface")).Any(),
+            Check(Descendants<Image>(Find<Border>(dashboard, "MapSurface")).All(image => image.Source is null),
                 "missing official map remains an empty-state surface");
             await Capture(dashboard, "04-battle-map");
 

@@ -12,12 +12,14 @@ internal static class SmallMapPngStore
 {
     private const string Schema="CREATE TABLE smallmap_frames_v1 (model INTEGER PRIMARY KEY, source TEXT NOT NULL, asset TEXT NOT NULL, pixel_sha TEXT NOT NULL, png_sha TEXT NOT NULL, png BLOB NOT NULL)";
     internal static Task<SmallMapPngReadback> WriteAsync(DbConnection connection,SmallMapReceiptBatch batch,Action revalidate,CancellationToken token=default)
-        =>Task.Run(()=>Run(connection,batch,revalidate,true,token),CancellationToken.None);
+        =>Task.Run(async()=>(await Run(connection,batch,revalidate,true,false,token).ConfigureAwait(false)).Readback,CancellationToken.None);
     internal static Task<SmallMapPngReadback> ReadAsync(DbConnection connection,SmallMapReceiptBatch batch,Action revalidate,CancellationToken token=default)
-        =>Task.Run(()=>Run(connection,batch,revalidate,false,token),CancellationToken.None);
-    private static async Task<SmallMapPngReadback> Run(DbConnection connection,SmallMapReceiptBatch batch,Action revalidate,bool write,CancellationToken token)
+        =>Task.Run(async()=>(await Run(connection,batch,revalidate,false,false,token).ConfigureAwait(false)).Readback,CancellationToken.None);
+    internal static Task<SmallMapPngSnapshot> ReadForPublicationAsync(DbConnection connection,SmallMapReceiptBatch batch,Action revalidate,CancellationToken token=default)
+        =>Task.Run(()=>Run(connection,batch,revalidate,false,true,token),CancellationToken.None);
+    private static async Task<SmallMapPngSnapshot> Run(DbConnection connection,SmallMapReceiptBatch batch,Action revalidate,bool write,bool capture,CancellationToken token)
     {
-        var db=new ResourceInventoryDatabase(connection,token);Exception? failure=null;SmallMapPngReadback? result=null;
+        var db=new ResourceInventoryDatabase(connection,token);Exception? failure=null;SmallMapPngReadback? result=null;var images=new Dictionary<int,byte[]>();
         try
         {
             ArgumentNullException.ThrowIfNull(batch);ArgumentNullException.ThrowIfNull(revalidate);token.ThrowIfCancellationRequested();
@@ -37,6 +39,7 @@ internal static class SmallMapPngStore
                 var rows=await db.ReadAsync("SELECT "+ResourceInventoryDatabase.BoundedTextSql("source",64)+","+ResourceInventoryDatabase.BoundedTextSql("asset",1024)+","+ResourceInventoryDatabase.BoundedTextSql("pixel_sha",64)+","+ResourceInventoryDatabase.BoundedTextSql("png_sha",64)+",CASE WHEN typeof(png)='blob' AND length(png)<=4194304 THEN png ELSE NULL END FROM smallmap_frames_v1 WHERE model=@m",1,("@m",image.Model)).ConfigureAwait(false);
                 Require(rows.Count==1,"Missing small map PNG row");var row=rows[0];
                 Require(row[0] as string==batch.SourceFingerprint&&row[1] as string==image.AssetPath&&row[2] as string==image.PixelSha256&&row[3] as string==image.PngSha256&&row[4] is byte[] stored&&stored.AsSpan().SequenceEqual(png),"Small map PNG identity or bytes changed");
+                if(capture)images.Add(image.Model,png);
                 hash.AppendData(JsonSerializer.SerializeToUtf8Bytes(new{image.Model,image.AssetPath,image.PixelSha256,image.PngSha256}));
             },token).ConfigureAwait(false);
             var rows=await db.ReadAsync("SELECT count(*) FROM smallmap_frames_v1",1).ConfigureAwait(false);
@@ -45,6 +48,6 @@ internal static class SmallMapPngStore
             await db.CommitAsync(()=>{revalidate();token.ThrowIfCancellationRequested();}).ConfigureAwait(false);
         }
         catch(Exception error){failure=error;}
-        await db.FinishAsync(failure).ConfigureAwait(false);return result!;
+        await db.FinishAsync(failure).ConfigureAwait(false);return new(result!,images);
     }
 }

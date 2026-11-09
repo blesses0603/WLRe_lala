@@ -16,7 +16,7 @@ internal sealed class ResourceTransportException(ResourceTransportFailure failur
 
 /// <summary>Uninstalled HTTP acquisition. Neither the adapter nor its results confer provenance,
 /// readiness, runtime admission or permission to send packets. Test handlers are not trusted origins.</summary>
-internal sealed class HttpOfficialResourceSource : IResourceSource, IDisposable
+internal sealed class HttpOfficialResourceSource : IResourceSource, IBundleStreamSource, IDisposable
 {
     private readonly HttpClient _client;
     private readonly HttpMessageHandler _handler;
@@ -85,6 +85,14 @@ internal sealed class HttpOfficialResourceSource : IResourceSource, IDisposable
         long limit = path.EndsWith(".hash", StringComparison.Ordinal) ? 8 :
             path.EndsWith(".bytes", StringComparison.Ordinal) ? ManifestIdentity.MaximumManifestBytes : BundleSourcePreparation.MaximumRetainedBytes;
         return OpenCoreAsync(exactUrl, version: false, limit, cancellationToken);
+    }
+
+    public ValueTask<ResourceResponse> OpenBundleStreamAsync(BundleSourceSpec spec,CancellationToken token)
+    {
+        ArgumentNullException.ThrowIfNull(spec);token.ThrowIfCancellationRequested();
+        if(spec.Size>BundleStreamVerifier.MaximumBytes)throw new BundleSourceException(BundleSourceFailure.Budget,"Staged HTTP source exceeds bound");
+        string url=spec.Url(_host);_ = Validate(url,version:false);
+        return OpenCoreAsync(url,version:false,spec.Size,token);
     }
 
     private async Task<byte[]> VersionBytesAsync(string canonical, CancellationToken token)

@@ -1,3 +1,5 @@
+> 8.0.75: bounded small-map disk acquisition, version rechecks, private PNG publication and revocable current-scene desktop rendering are connected. Integrated official acceptance and coordinate mapping remain pending. [Details](../../../../docs/DOTNET_SMALLMAP_RECEIPTS.md).
+
 > Production emoji activation is still capacity-blocked: required tables plus emoji closure total 33,772,710 bytes, above unchanged 33,554,432 retained-byte bound, including cache hits. Factory validation is not full production activation.
 
 > 8.0.71: production emoji factory consumes immutable verified closure, rebuilds pixels and joins existing SQLite/current-publication path. Cached official 62-frame factory/readback validated; live owner/UI acceptance pending. Smallmap source preflight rejects observed 43,187,027-byte closure under unchanged 32 MiB capacity. [Details](../../../../docs/DOTNET_EMOJI_PRODUCTION.md).

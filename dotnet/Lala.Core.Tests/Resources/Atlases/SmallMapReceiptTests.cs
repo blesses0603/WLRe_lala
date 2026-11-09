@@ -16,7 +16,7 @@ public sealed class SmallMapReceiptTests:IDisposable
     {using var c=Connection();c.Open();using var cmd=c.CreateCommand();cmd.CommandText=sql;cmd.ExecuteNonQuery();}
     private static JsonElement Row(int index)
     {using var d=JsonDocument.Parse(typeof(SmallMapReceiptTests).Assembly.GetManifestResourceStream("Lala.Core.Tests.Resources.Atlases.smallmaps.json")!);return d.RootElement.GetProperty("cases")[index].Clone();}
-    private static (YooAssetManifest Manifest,BundleStreamReceipt Receipt,byte[] Bytes) Fixture(int index=0)
+    internal static (YooAssetManifest Manifest,BundleStreamReceipt Receipt,byte[] Bytes,byte[] ManifestBytes) Fixture(int index=0)
     {
         var bytes=Convert.FromBase64String(Row(index).GetProperty("bytes").GetString()!);var j=BundleSourceFixtures.Index("main-valid");
         j["header"]!["package_version"]=EmojiSourcePlan.MainVersion;
@@ -24,7 +24,7 @@ public sealed class SmallMapReceiptTests:IDisposable
         bundle["file_hash"]=Convert.ToHexStringLower(MD5.HashData(bytes));bundle["file_crc"]=ManifestIdentity.Crc32LittleEndian(bytes);j["bundles"]=new JsonArray(bundle);
         var asset=j["assets"]![0]!.DeepClone();asset["bundle_id"]=0;asset["path"]=SmallMapSourcePlan.Prefix+"SmallMap2D_10001.png";var assets=new JsonArray();
         for(int n=0;n<Row(index).GetProperty("models").GetInt32();n++){var a=asset.DeepClone();a["path"]=SmallMapSourcePlan.Prefix+"SmallMap2D_"+(10001+n)+".png";assets.Add(a);}j["assets"]=assets;
-        var m=YooAssetManifest.Parse(BundleSourceFixtures.Encode(j));return(m,new(new("1.3.23",m,m.Bundles[0]),Convert.ToHexStringLower(SHA256.HashData(bytes))),bytes);
+        var manifestBytes=BundleSourceFixtures.Encode(j);var m=YooAssetManifest.Parse(manifestBytes);return(m,new(new("1.3.23",m,m.Bundles[0]),Convert.ToHexStringLower(SHA256.HashData(bytes))),bytes,manifestBytes);
     }
     private sealed class Cache(byte[] bytes):IBundleSourceCacheReader
     {
@@ -108,4 +108,26 @@ public sealed class SmallMapReceiptTests:IDisposable
         Assert.NotNull(error);Assert.Equal(ResourceInventoryWriteOutcome.NotCommitted,error.Data[ResourceInventoryDatabase.OutcomeKey]);Assert.Equal(true,error.Data[ResourceInventoryDatabase.RollbackKey]);
         Assert.Equal(old,await SmallMapPngStore.ReadAsync(Connection(),batch,()=>{}));
     }
+    [Fact]
+    public async Task Publication_copies_verified_pixels_and_rejects_revocation_before_or_during_copy()
+    {
+        var f=Fixture();await using var batch=new SmallMapReceiptBatch(f.Manifest,"1.3.23",new Cache(f.Bytes),[f.Receipt]);
+        await SmallMapPngStore.WriteAsync(Connection(),batch,()=>{});
+        var snapshot=await SmallMapPngStore.ReadForPublicationAsync(Connection(),batch,()=>{});
+        bool current=true;var request=new SmallMapRenderRequest(snapshot,10001,()=>current);
+        Assert.True(request.TryReadPng(out var first));Assert.Equal(request.PngSha256,SpritePng.Hash(first!));
+        first![0]^=1;Execute("UPDATE smallmap_frames_v1 SET png=zeroblob(length(png))");
+        Assert.True(request.TryReadPng(out var second));Assert.Equal(request.PngSha256,SpritePng.Hash(second!));
+        current=false;Assert.False(request.TryReadPng(out var revoked));Assert.Null(revoked);
+        int checks=0;var racing=new SmallMapRenderRequest(snapshot,10001,()=>++checks==1);
+        Assert.False(racing.TryReadPng(out var late));Assert.Null(late);
+    }
+    [Fact]
+    public async Task Final_revalidation_failure_never_returns_publication_snapshot()
+    {
+        var f=Fixture();await using var batch=new SmallMapReceiptBatch(f.Manifest,"1.3.23",new Cache(f.Bytes),[f.Receipt]);
+        await SmallMapPngStore.WriteAsync(Connection(),batch,()=>{});
+        await Assert.ThrowsAsync<InvalidOperationException>(()=>SmallMapPngStore.ReadForPublicationAsync(Connection(),batch,()=>throw new InvalidOperationException("revoked")));
+    }
+
 }

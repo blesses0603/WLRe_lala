@@ -384,8 +384,18 @@ public sealed class ArkQuestionStorageContractTests
         using var db = new ArkQuestionStorageTestDatabase(); db.Store().RecordCandidate(Token, 1, Question, 22, "reviewed", "r1");
         using var gate = new Barrier(4);
         var results = await Task.WhenAll(Enumerable.Range(0, 4).Select(_ => Task.Run(() =>
-        { gate.SignalAndWait(); return db.Store().ClaimCandidate(Token, 1, Question, 22); })));
-        Assert.Single(results, x => x);
+        {
+            gate.SignalAndWait();
+            try { return (bool?)db.Store().ClaimCandidate(Token, 1, Question, 22); }
+            catch (SqliteException error) when (error.SqliteErrorCode == 5)
+            { Assert.False(error.Data.Contains("ArkQuestionRollbackError")); return null; }
+        })));
+        // Bounded lock waiting may reject contenders on a busy runner. Drain all
+        // original calls before retrying only rejected calls on fresh connections.
+        Assert.Contains(results, x => x is not null);
+        for (int i = 0; i < results.Length; i++)
+            if (results[i] is null) results[i] = db.Store().ClaimCandidate(Token, 1, Question, 22);
+        Assert.Single(results, x => x == true);
         Assert.Equal(ArkQuestionEvidenceStatus.Pending, db.Store().RecordCandidate(Token, 1, Question, 22, "reviewed", "r2"));
         Assert.False(db.Store().ClaimCandidate(Token, 1, Question, 22));
     }

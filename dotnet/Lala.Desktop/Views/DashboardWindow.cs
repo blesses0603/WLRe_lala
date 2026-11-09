@@ -62,7 +62,8 @@ public sealed class DashboardWindow : DesktopWindow
         Ui.At(left, Chat(), 0, 2);
         Ui.At(content, left, 0);
         var right = new Grid { RowDefinitions = new RowDefinitions("320,*"), RowSpacing = 8 };
-        Ui.At(right, new MapView(session, () => windows.OpenNavigation()), 0);
+        var mapView=new MapView(session, () => windows.OpenNavigation());
+        Ui.At(right,mapView,0);
         var log = new ScrollViewer { Content = eventLog, Padding = new Thickness(10) };
         activityTabs = Ui.Tabs(("事件紀錄", log), ("戰場陣形", new BattleView(session)));
         activityTabs.Name = "ActivityTabs";
@@ -73,7 +74,7 @@ public sealed class DashboardWindow : DesktopWindow
         {
             if(closingReady)return;e.Cancel=true;if(closingStarted)return;
             closingStarted=true;closed=true;session.Changed-=SessionChanged;
-            await Task.WhenAll(playerPortrait.DisposeAsync().AsTask(),companionPortrait.DisposeAsync().AsTask());
+            await Task.WhenAll(playerPortrait.DisposeAsync().AsTask(),companionPortrait.DisposeAsync().AsTask(),mapView.DisposeAsync().AsTask());
             closingReady=true;Avalonia.Threading.Dispatcher.UIThread.Post(Close);
         };
         Closed += (_, _) => { closed = true; session.Changed -= SessionChanged; chatInput.Text = ""; whisperTarget.Text = ""; };
