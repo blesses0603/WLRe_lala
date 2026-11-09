@@ -19,3 +19,7 @@ production 可選頭像取得現在同時要求 DataPackage `1296_2026_11_04_13_
 `generate_mapping.py` 呼叫實際 Python parser／select_portrait，建立三筆自有 NPC 及 60 種玩家 sex/head 組合。只有產生自有 parser fixture 時暫時替換 Python 測試程序內的預期 digest，C# production 測試必須拒絕同一合成 bytes；沒有正式 pins 替換入口。其餘測試涵蓋 modeling／stat override、未知／零／重複出戰、配色邊界、截斷／重複資料、不可變性、圖片可用性與 owner 撤銷。
 
 這是 Python 語意與自有資料對照，不是正式 NPC／三檔圖資／778 張圖片正向驗收。尚未量測或宣稱新的 FPS、載入秒數或 GPU 畫面一致性。
+
+## 首輪 Windows CI 與修正
+
+首輪 v8.0.61 的 Windows Core 在既有 `Integrated_account_stop_or_replacement_drains_noncooperative_resource_callbacks(replace: true)` 遇到 ConnectionReset：fixture 在帳號已替換、連線已 Ended 後仍呼叫 Shutdown 並要求 FIN。改為該 fixture 既有的 `ExpectClosedAfterRetirement`，只接受 EOF／ConnectionReset／ConnectionAborted，仍拒絕殘留封包／半框，其他錯誤不吞掉。停止與替換兩種退役均適用，正常 peer EOF 測試保持原檢查；產品行為不變，版本維持 8.0.61。

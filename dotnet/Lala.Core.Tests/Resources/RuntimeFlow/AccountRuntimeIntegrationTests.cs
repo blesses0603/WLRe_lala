@@ -236,7 +236,7 @@ public sealed partial class ResourceRuntimeBootstrapTests
         var first = verification.Run(AccountVerify);
         var second = formal.Run(async client =>
         {
-            await AccountEnterWorld(client); await client.WaitFor(finish.Task); await client.CloseSendAndExpectEof();
+            await AccountEnterWorld(client); await client.WaitFor(finish.Task); await client.ExpectClosedAfterRetirement();
         });
         var resources = AccountResourceRuntime.CreateForOfflineTests(session, ResourceRuntimeOwner.CreateForOfflineTests(
             fixture.Root, source, cleanupEntered: () => cleanupEntered.TrySetResult()));
