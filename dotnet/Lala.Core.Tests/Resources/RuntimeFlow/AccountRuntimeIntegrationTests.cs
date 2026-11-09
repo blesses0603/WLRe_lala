@@ -490,7 +490,8 @@ public sealed partial class ResourceRuntimeBootstrapTests
             await AccountEnterWorld(client);
             await client.WaitFor(sendBound.Task); await client.Send(schedules!);
             await client.WaitFor(sendRevoked.Task); await client.Send(schedules!);
-            await client.WaitFor(finish.Task); await client.CloseSendAndExpectEof();
+            // The test signals finish only after local Stop has drained resources.
+            await client.WaitFor(finish.Task); await client.ExpectClosedAfterRetirement();
         });
         var owner = ResourceRuntimeOwner.CreateForOfflineTests(fixture.Root, source);
         // WHITE-BOX WIRING ONLY: simulate the private admission bit, never real TLS,
