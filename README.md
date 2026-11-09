@@ -2,7 +2,7 @@
 
 > **v7.3.1 桌面發行（2026-11-07）**：以 main `8aa7a684` 為基底，包含 PR #74 的舊導航資料隔離、無種子啟動及官方預覽修正。程式、介面與封裝共用 `wlre.__version__ = 7.3.1`；由版本 Tag 觸發 Windows x64、macOS arm64／x64 建置，成功後發布 ZIP 與 SHA-256。正式服完整端到端、全地圖導航／實際移動與使用者電腦實機驗收仍未完成；官方導航預覽不授權正式移動。macOS Intel CI 不驗證 GUI，Apple Developer ID 公證亦未完成。Android 不在本次發行範圍。下列舊版段落保留歷史狀態，不代表本次驗收結果。
 
-> **整體 PR #79 ver 8.0.41（開發中／未發布）**：Avalonia 登入、互動選角及中斷接上共用核心；手動核對連線參數，驗證與正式端的帳密傳送逐次確認。TCP 無 TLS，XOR 可逆，帳密不保存。資源保持 Held，一般遊戲操作停用；正式服尚未驗收。詳見[桌面登入接線](docs/DESKTOP_LOGIN_INTEGRATION.md)及[版本歷史](版本歷史.md)。
+> **整體 PR #79 ver 8.0.42（開發中／未發布）**：桌面登入改回 Python 版伺服器／分流選單，官方清單自動載入；補入主要功能視窗並完成[全介面差距盤點](docs/DESKTOP_PYTHON_PARITY.md)。尚未全部對齊 Python，資源與一般遊戲操作仍停用。TCP 無 TLS、XOR 可逆，帳密不保存且逐次傳送確認；未連正式服。詳見[版本歷史](版本歷史.md)。
 
 > **PR #79 C# Desktop 介面（開發中）**：依既有桌面配置建立登入、主畫面、背包、特技、戰場陣形、地圖、遠征與設定；依新要求「背包」與「特技」各自獨立視窗。可操作本機介面、顯示共用核心快照及編輯設定草稿，正式登入、遊戲操作與官方資源接入仍未完成。原 Python 桌面版本與 Android 版本不變，詳見 [Desktop 啟動方式](dotnet/Lala.Desktop/README.md)及[介面驗收](docs/DESKTOP_INTERFACE_MIGRATION.md)。
 

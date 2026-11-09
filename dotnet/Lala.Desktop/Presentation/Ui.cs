@@ -231,7 +231,8 @@ public abstract class DesktopWindow : Window
         var layout = new Grid { RowDefinitions = new RowDefinitions("44,*") };
         var chrome = new Grid { ColumnDefinitions = new ColumnDefinitions("*,32,32"), ColumnSpacing = 10,
             Margin = new Thickness(12, 5) };
-        var caption = Ui.Row(Ui.Icon("function-icons/MainIcon_041.png", 24), Ui.Text(Title ?? "LaLa", 16, bold: true));
+        var applicationIcon = Ui.Icon("app.ico", 24); applicationIcon.Name = "DesktopAppIcon";
+        var caption = Ui.Row(applicationIcon, Ui.Text(Title ?? "LaLa", 16, bold: true));
         caption.Background = Brushes.Transparent;
         caption.PointerPressed += (_, e) => { if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) BeginMoveDrag(e); };
         Ui.At(chrome, caption, 0);

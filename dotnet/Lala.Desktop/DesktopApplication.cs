@@ -92,7 +92,7 @@ public sealed class DesktopWindows : IDisposable
     public LoginWindow OpenLogin()
     {
         if (!Login.IsVisible) { if (Dashboard.IsVisible) Login.Show(Dashboard); else Login.Show(); }
-        Login.Activate(); return Login;
+        Login.StartDiscovery(); Login.Activate(); return Login;
     }
     public InventoryWindow OpenInventory() => Get("inventory", () => new InventoryWindow(session));
     public SkillsWindow OpenSkills() => Get("skills", () => new SkillsWindow(session));
@@ -102,12 +102,13 @@ public sealed class DesktopWindows : IDisposable
     {
         var window = Get("settings", () => new SettingsWindow(session, tab)); window.SelectTab(tab); return window;
     }
+    public PythonFeatureWindow OpenPythonFeature(string key) => Get("python-" + key, () => new PythonFeatureWindow(key, session, this), preserve: true);
     public Window OpenInspector() => Get("inspector", () => new InspectorWindow());
     internal void RequestShutdown()
     {
         if (disposed || shutdownRequested) return;
         shutdownRequested = true;
-        Dispatcher.UIThread.Post(async () => { await Login.StopAsync(); Dispose(); shutdown(); });
+        Dispatcher.UIThread.Post(async () => { await Login.ShutdownAsync(); Dispose(); shutdown(); });
     }
     private T Get<T>(string key, Func<T> create, bool preserve = false) where T : Window
     {

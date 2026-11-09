@@ -1,15 +1,16 @@
-# Desktop login integration — overall PR 8.0.41
+# Desktop login integration — overall PR 8.0.42
 
-The Avalonia login and role controls now use the existing shared Core preparation. The
-host requires explicit verification and formal IP:port recipients and decimal TX/RX XOR,
-platform and language bytes. There are no guessed production endpoints, saved accounts,
-command-line credentials, automatic retries or default role choices. Server/line discovery
-and official version/resource activation are still pending; this is a controlled manual
-acceptance entry point, not a complete replacement for the Python client.
+The Avalonia login and role controls use shared Core preparation. The Python-compatible
+server/line dropdowns now load official HTTPS metadata through `OfficialServerDiscovery`.
+Protocol bytes and the verification endpoint come from the reviewed Python release profile,
+never editable text fields or downloaded rows. Unknown executable versions/groups, failed or
+stale catalogs and no selection block admission. See [the full parity inventory](DESKTOP_PYTHON_PARITY.md)
+for provenance, limitations and the remaining UI work. Credentials are never persisted.
 
 ## User flow and transport risk
 
-1. Fill the manually verified connection profile, then enter credentials locally.
+1. Select a server and line from the verified current catalog, then enter credentials locally.
+   Changing the server/line or refreshing clears both credential fields.
 2. Press Login. The controls freeze for this attempt; input transfers into Core-owned
    transient buffers and both credential text fields clear. Profile changes require a new attempt.
 3. Confirm each credential transmission separately: verification recipient, then formal
@@ -43,7 +44,7 @@ per-leg confirmation, cancelled/late replies, manual role choice, UI-thread call
 awaited close/stop, stale publication rejection and held game-command state. No independent
 reviewer or production acceptance is claimed.
 
-## Validation
+## Previous 8.0.41 validation (historical)
 
 - Complete Core: 45,096 passed; login-focused subset: 78 passed (including seven new
   decline/failure and late-approval retirement cases).

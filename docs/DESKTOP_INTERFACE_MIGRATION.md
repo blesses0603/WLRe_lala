@@ -1,5 +1,7 @@
 # PR #79：Desktop 介面移植與驗收
 
+> 本文為最初介面批次的歷史紀錄。最新登入流程見 [桌面登入](DESKTOP_LOGIN_INTEGRATION.md)，全畫面／子視窗完成度以 [Python 對照盤點](DESKTOP_PYTHON_PARITY.md) 為準；不能從下方舊表推定全介面已完成。
+
 ## 範圍與基準
 
 基準是 `main` 的 Python 桌面版 **7.3.1**（`0f8bf6a99a70070cea1aeec60a0d6ca93dbc581a`），C# 起點為 PR #79 的 `a08c719466ff591254fe22608737c926c24dbd09`。保留現有共用核心、Android 生命週期與 Python 程式。

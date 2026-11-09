@@ -48,6 +48,7 @@ internal static class DesktopUiSmokeTest
                 await NavigationAsync();
                 await ExpeditionAsync();
                 await SettingsAsync();
+                await PythonParityWindowsAsync();
                 await ScopeAndLifecycleAsync();
                 Console.WriteLine($"Desktop native UI smoke test: {checks} checks passed; {screenshots} rendered screenshots. Synthetic data only; no live login, game commands, installer or production-server acceptance.");
             }
@@ -57,6 +58,27 @@ internal static class DesktopUiSmokeTest
                 session.Reset();
                 dashboard.SelectEventTab();
             }
+        }
+
+        private async Task PythonParityWindowsAsync()
+        {
+            using var manager = new DesktopWindows(session, () => { });
+            manager.Dashboard.Show();
+            int number = 17;
+            foreach (var key in PythonFeatureWindow.Definitions.Keys)
+            {
+                var window = manager.OpenPythonFeature(key);
+                Check(ReferenceEquals(window, manager.OpenPythonFeature(key)), "one non-modal instance per Python feature: " + key);
+                await Settle(window);
+                Check(Descendants<TextBlock>(window).Any(t => t.Text?.Contains("尚未接通", StringComparison.Ordinal) == true), "incomplete operations disclosed: " + key);
+                await Capture(window, $"{number++:00}-python-{key}");
+                window.Hide();
+            }
+            var old = manager.OpenPythonFeature("party");
+            session.Reset();
+            var replaced = manager.OpenPythonFeature("party");
+            Check(!ReferenceEquals(old, replaced), "account switch retires Python feature drafts");
+            Progress("Python 功能視窗、獨立實例與換帳草稿隔離");
         }
 
         private async Task EmptyAndLoginAsync()
@@ -73,19 +95,19 @@ internal static class DesktopUiSmokeTest
                 "empty map does not display guessed coordinates");
             foreach (var name in new[] { "OpenInventory", "OpenSkills", "OpenSettings", "OpenExpedition", "OpenLogin" })
                 Check(Find<Button>(dashboard, name).IsEnabled, "dashboard feature launcher exists: " + name);
+            Check(ReferenceEquals(Find<Image>(dashboard, "DesktopAppIcon").Source, DesktopAssets.Bitmap("app.ico")) && dashboard.Icon is not null,
+                "custom title and native window use the supplied application icon");
             await Capture(dashboard, "01-dashboard-empty");
 
             int previews = 0;
             var login = Show(new LoginWindow(session, () => previews++, () => { }));
             await Settle(login);
             Disabled(login, "LoginDisconnect", "LoginEnterRole");
-            Check(Find<Button>(login, "LoginSubmit").IsEnabled, "login is available with explicit profile validation");
-            Check(string.IsNullOrEmpty(Find<TextBox>(login, "LoginFormal").Text) &&
-                string.IsNullOrEmpty(Find<TextBox>(login, "LoginVerification").Text), "no invented endpoint defaults");
+            Check(!Find<Button>(login, "LoginSubmit").IsEnabled, "unknown or missing official catalog blocks login");
+            Check(Find<ComboBox>(login, "LoginServer").ItemCount == 0 &&
+                Find<ComboBox>(login, "LoginLine").ItemCount == 0, "offline startup never invents server endpoints");
             Check(Find<ComboBox>(login, "LoginRoles").SelectedIndex == -1, "roles are never preselected");
-            Click(login, "LoginSubmit");
-            await Settle(login);
-            Check(Find<Button>(login, "LoginSubmit").IsEnabled, "invalid profile returns to idle without a connection");
+            Disabled(login, "LoginLoadProfile", "LoginSaveProfile", "LoginSaveIdentity");
             var account = Find<TextBox>(login, "LoginAccount");
             var password = Find<TextBox>(login, "LoginPassword");
             account.Text = "介面測試帳號";

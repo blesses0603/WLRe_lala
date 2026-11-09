@@ -14,6 +14,7 @@ internal static class DesktopLoginUiTest
 {
     internal static async Task RunAsync()
     {
+        await CatalogAdmissionAsync();
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(20));
         var token = deadline.Token;
         using var verification = new TcpListener(IPAddress.Loopback, 0);
@@ -21,15 +22,18 @@ internal static class DesktopLoginUiTest
         verification.Start(); formal.Start();
         using var session = new DesktopSession();
         int opened = 0;
-        var login = new LoginWindow(session, () => opened++, () => { }); login.Show();
+        var profile = new Lala.Core.Sessions.AccountConnectionProfile((IPEndPoint)verification.LocalEndpoint, (IPEndPoint)formal.LocalEndpoint, 173, 173, 1, 1, 2);
+        var source = new OfflineDesktopServerCatalog(new(101, "地球", "1線", profile), new(201, "水星", "1線", profile));
+        var login = new LoginWindow(session, () => opened++, () => { }, source); login.Show();
         try
         {
-            Fill("LoginVerification", verification.LocalEndpoint.ToString()!); Fill("LoginFormal", formal.LocalEndpoint.ToString()!);
-            Fill("LoginTx", "173"); Fill("LoginRx", "173"); Fill("LoginPlatform", "1"); Fill("LoginLanguage", "2");
+            await Until(() => Find<ComboBox>(login, "LoginServer").ItemCount == 2);
+            Find<ComboBox>(login, "LoginServer").SelectedIndex = 0;
+            await Task.Delay(50, token);
             Fill("LoginAccount", "synthetic"); await Task.Delay(50, token); Fill("LoginPassword", "fake_password");
             Click(login, "LoginSubmit");
             using var verifySocket = await verification.AcceptSocketAsync(token);
-            Check(!Find<TextBox>(login, "LoginFormal").IsEnabled && !Find<Button>(login, "LoginSubmit").IsEnabled, "profile and duplicate login frozen during attempt");
+            Check(!Find<ComboBox>(login, "LoginLine").IsEnabled && !Find<Button>(login, "LoginSubmit").IsEnabled, "profile and duplicate login frozen during attempt");
             await Confirm();
             var verifyPeer = new Peer(verifySocket, token);
             await verifyPeer.Expect(63, 7, 0); await verifyPeer.Send(new(63, 7, [0, 0]));
@@ -72,6 +76,53 @@ internal static class DesktopLoginUiTest
             .FirstOrDefault(w => w.Title == "確認本次帳密傳送");
         async Task Confirm() { await Until(() => Dialog() is not null); Click(Dialog()!, "LoginSendConfirm"); await Until(() => Dialog() is null); }
         async Task Until(Func<bool> condition) { while (!condition()) await Task.Delay(10, token); }
+    }
+    private sealed class Catalog(Func<CancellationToken, Task<DesktopServerCatalogSnapshot>> load) : IDesktopServerCatalog
+    {
+        public Task<DesktopServerCatalogSnapshot> LoadAsync(CancellationToken token) => load(token);
+    }
+    private static async Task CatalogAdmissionAsync()
+    {
+        using var session = new DesktopSession();
+        var profile = new Lala.Core.Sessions.AccountConnectionProfile(new(IPAddress.Loopback, 1), new(IPAddress.Loopback, 2), 173, 173, 1, 3, 0);
+        DesktopServerLine[] rows = [new(101, "地球", "1線", profile), new(102, "地球", "2線", profile), new(201, "水星", "1線", null)];
+        var snapshot = new DesktopServerCatalogSnapshot(rows, "synthetic", System.Diagnostics.Stopwatch.GetTimestamp());
+        bool fail = false;
+        var source = new Catalog(_ => fail ? Task.FromException<DesktopServerCatalogSnapshot>(new IOException("private failure must not appear")) : Task.FromResult(snapshot));
+        var login = new LoginWindow(session, () => { }, () => { }, source); login.Show();
+        try
+        {
+            var servers = Find<ComboBox>(login, "LoginServer"); var lines = Find<ComboBox>(login, "LoginLine");
+            Check(servers.SelectedIndex == -1 && !Find<Button>(login, "LoginSubmit").IsEnabled, "catalog never chooses a server for the user");
+            servers.SelectedIndex = 0;
+            Check(lines.ItemCount == 2 && lines.SelectedIndex == 0 && Find<Button>(login, "LoginSubmit").IsEnabled, "Python group selects its first available line");
+            Find<TextBox>(login, "LoginAccount").Text = "synthetic"; Find<TextBox>(login, "LoginPassword").Text = "fake";
+            lines.SelectedIndex = 1;
+            Check(string.IsNullOrEmpty(Find<TextBox>(login, "LoginAccount").Text) && string.IsNullOrEmpty(Find<TextBox>(login, "LoginPassword").Text), "line change clears both credential fields");
+            servers.SelectedIndex = 1;
+            Check(!Find<Button>(login, "LoginSubmit").IsEnabled, "unknown protocol profile is blocked");
+            servers.SelectedIndex = 0; fail = true; login.StartDiscovery();
+            Check(servers.ItemCount == 0 && lines.ItemCount == 0 && !Find<Button>(login, "LoginSubmit").IsEnabled, "refresh failure retires the previous catalog");
+            Check(!login.GetVisualDescendants().OfType<TextBlock>().Any(t => t.Text?.Contains("private failure") == true), "source failure details are sanitized");
+            fail = false; snapshot = snapshot with { ObservedAt = System.Diagnostics.Stopwatch.GetTimestamp() - 301L * System.Diagnostics.Stopwatch.Frequency };
+            login.StartDiscovery(); servers.SelectedIndex = 0;
+            Check(!Find<Button>(login, "LoginSubmit").IsEnabled, "stale catalog cannot enable login");
+            Check(!login.GetVisualDescendants().Any(c => c.Name is "LoginVerification" or "LoginFormal" or "LoginTxXor" or "LoginRxXor"), "technical connection input removed");
+        }
+        finally { await login.ShutdownAsync(); login.Close(); }
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var finished = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var pending = new LoginWindow(session, () => { }, () => { }, new Catalog(async token =>
+        {
+            started.SetResult();
+            try { await Task.Delay(Timeout.Infinite, token); return snapshot; }
+            finally { finished.SetResult(); }
+        }));
+        pending.Show(); await started.Task;
+        await pending.StopAsync();
+        Check(finished.Task.IsCompleted && !Find<Button>(pending, "LoginSubmit").IsEnabled, "stop cancels and awaits catalog cleanup");
+        pending.Close();
+        Console.WriteLine("Desktop catalog UI: 9 offline assertions passed (no official HTTP or game sockets).");
     }
     private static T Find<T>(Control root, string name) where T : Control => root.GetVisualDescendants().OfType<T>().Single(c => c.Name == name);
     private static void Click(Control root, string name)

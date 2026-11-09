@@ -81,14 +81,14 @@ public sealed class DashboardWindow : DesktopWindow
         (string Label, string Icon, Action? Open)[] items =
         [
             ("主頁", "function-icons/MainIcon_041.png", () => { }),
-            ("組隊", "function-icons/MainIcon_005.png", null),
-            ("夥伴出戰", "function-icons/MainIcon_010.png", null),
+            ("組隊", "function-icons/MainIcon_005.png", () => windows.OpenPythonFeature("party")),
+            ("夥伴出戰", "function-icons/MainIcon_010.png", () => windows.OpenPythonFeature("companion")),
             ("遠征", "function-icons/MainIcon_038.png", () => windows.OpenExpedition()),
-            ("副本", "instance-menu/Menu_Dungeon.png", null),
-            ("福利", "function-icons/MainIcon_023.png", null),
-            ("其他功能", "function-icons/Btn_CategoryAISetting004.png", null),
-            ("煉金", "function-icons/MainIcon_007.png", null),
-            ("製作", "function-icons/MainIcon_011.png", null)
+            ("副本", "instance-menu/Menu_Dungeon.png", () => windows.OpenPythonFeature("instance")),
+            ("福利", "function-icons/MainIcon_023.png", () => windows.OpenPythonFeature("benefits")),
+            ("其他功能", "function-icons/Btn_CategoryAISetting004.png", () => windows.OpenPythonFeature("other")),
+            ("煉金", "function-icons/MainIcon_007.png", () => windows.OpenPythonFeature("alchemy")),
+            ("製作", "function-icons/MainIcon_011.png", () => windows.OpenPythonFeature("crafting"))
         ];
         foreach (var (label, path, open) in items)
         {
@@ -98,11 +98,11 @@ public sealed class DashboardWindow : DesktopWindow
                 Background = Brushes.Transparent, BorderThickness = new Thickness(0), IsEnabled = open is not null };
             AutomationProperties.SetName(button, label); ToolTip.SetTip(button, label + (open is null ? "｜此功能尚未移植" : ""));
             if (open is not null) button.Click += (_, _) => open();
-            if (label == "遠征") button.Name = "OpenExpedition";
+            button.Name = label == "遠征" ? "OpenExpedition" : "OpenFeature_" + label;
             row.Children.Add(button);
         }
         Ui.At(grid, row, 0);
-        Ui.At(grid, Ui.IconButton("經驗效率", "function-icons/MainIcon_020.png", null, 34, false), 1);
+        Ui.At(grid, Ui.IconButton("經驗效率", "function-icons/MainIcon_020.png", () => windows.OpenPythonFeature("efficiency"), 34), 1);
         return grid;
     }
 
@@ -110,7 +110,7 @@ public sealed class DashboardWindow : DesktopWindow
     {
         var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,*,*,*,*"), RowDefinitions = new RowDefinitions("1.24*,*,76,76"), ColumnSpacing = 6, RowSpacing = 6 };
         var roleTools = Ui.Row(Ui.Button("背包", () => windows.OpenInventory(), "OpenInventory"),
-            Ui.Button("特技", () => windows.OpenSkills(), "OpenSkills"), Ui.Unavailable("配點"));
+            Ui.Button("特技", () => windows.OpenSkills(), "OpenSkills"), Ui.Button("配點", () => windows.OpenPythonFeature("attributes"), "OpenAttributes"));
         var portraits = new Grid { RowDefinitions = new RowDefinitions("*,*") };
         Ui.At(portraits, Portrait(role), 0); Ui.At(portraits, Portrait(companion), 0, 1);
         Ui.At(grid, Card("角色與夥伴", portraits, roleTools), 0, 0, 3);
@@ -121,10 +121,10 @@ public sealed class DashboardWindow : DesktopWindow
         Ui.At(grid, Card("自動徘徊", Ui.Text("未啟用\n等待角色位置與導航資料", color: Ui.Muted), Play("啟動自動徘徊")), 2, 1, 2);
         Ui.At(grid, Card("遠征", expedition, Ui.Row(Ui.IconButton("遠征設定", "buttons/Btn_Setting.png", () => windows.OpenExpedition()), Play("啟動自動派遣"))), 4, 1, 2);
         Ui.At(grid, Card("補給紀錄", supply, Ui.IconButton("補給設定", "buttons/Btn_CategoryAISetting003.png", () => windows.OpenSettings(2))), 0, 2, 2);
-        Ui.At(grid, Card("煉金", Ui.Text("等待煉金資料同步", color: Ui.Muted), Ui.IconButton("煉金", "function-icons/MainIcon_007.png", null, enabled: false)), 2, 2, 2);
-        Ui.At(grid, Card("製作", Ui.Text("等待製作資料同步", color: Ui.Muted), Ui.IconButton("製作", "function-icons/MainIcon_011.png", null, enabled: false)), 4, 2, 2);
-        Ui.At(grid, Card("隊伍檢查", party, Ui.IconButton("組隊", "function-icons/MainIcon_005.png", null, enabled: false)), 0, 3, 3);
-        Ui.At(grid, Card("經驗效率", efficiency, Ui.IconButton("經驗效率", "function-icons/MainIcon_020.png", null, enabled: false)), 3, 3, 3);
+        Ui.At(grid, Card("煉金", Ui.Text("等待煉金資料同步", color: Ui.Muted), Ui.IconButton("煉金", "function-icons/MainIcon_007.png", () => windows.OpenPythonFeature("alchemy"))), 2, 2, 2);
+        Ui.At(grid, Card("製作", Ui.Text("等待製作資料同步", color: Ui.Muted), Ui.IconButton("製作", "function-icons/MainIcon_011.png", () => windows.OpenPythonFeature("crafting"))), 4, 2, 2);
+        Ui.At(grid, Card("隊伍檢查", party, Ui.IconButton("組隊", "function-icons/MainIcon_005.png", () => windows.OpenPythonFeature("party"))), 0, 3, 3);
+        Ui.At(grid, Card("經驗效率", efficiency, Ui.IconButton("經驗效率", "function-icons/MainIcon_020.png", () => windows.OpenPythonFeature("efficiency"))), 3, 3, 3);
         return grid;
     }
 
@@ -160,7 +160,7 @@ public sealed class DashboardWindow : DesktopWindow
         var channels = Ui.Combo(["區域", "世界", "隊伍", "組織", "密語"]);
         channels.SelectionChanged += (_, _) => whisperTarget.IsVisible = channels.SelectedIndex == 4;
         Ui.At(compose, channels, 0); Ui.At(compose, whisperTarget, 1); Ui.At(compose, chatInput, 2);
-        Ui.At(compose, Ui.Unavailable("表情", reason: "等待同版表情資源同步。"), 3); Ui.At(compose, Ui.Unavailable("送出", "ChatSend"), 4);
+        Ui.At(compose, Ui.Button("表情", () => windows.OpenPythonFeature("emoji"), "OpenEmoji"), 3); Ui.At(compose, Ui.Unavailable("送出", "ChatSend"), 4);
         Ui.At(layout, compose, 0, 2); return Ui.Card("聊天", layout);
     }
 

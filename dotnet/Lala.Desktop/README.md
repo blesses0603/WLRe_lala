@@ -15,7 +15,7 @@ dotnet run --project dotnet/Lala.Desktop -c Release --no-build
 
 啟動先顯示「登入／選角」。按 **檢視桌面介面** 開啟未連線的主畫面。角色卡有獨立的 **背包** 與 **特技** 入口；右側可切換 **事件紀錄／戰場陣形**，小地圖下方開啟導航預覽；遠征圖示與 AI 齒輪開啟原有獨立設定視窗。
 
-密碼記憶、施放、補給、儲藏存取、實際移動、派遣與聊天送出等尚無宿主接點的操作維持停用並顯示原因。登入欄位不持久化；取得輸入、切換身分或關閉視窗時清除密碼。手動填寫核對過的驗證／正式 IP:port、十進位 XOR、平台及語言後按登入；兩次帳密傳送分別確認，角色不預選。官方 TCP 沒有 TLS、XOR 可逆；登入準備一分鐘內有效，角色選擇在登入期限內完成。詳見[接線與限制](../../docs/DESKTOP_LOGIN_INTEGRATION.md)。
+密碼記憶、施放、補給、儲藏存取、實際移動、派遣與聊天送出等尚無宿主接點的操作維持停用並顯示原因。登入欄位不持久化；取得輸入、切換身分或關閉視窗時清除密碼。從自動載入的官方伺服器／分流選單選擇後按登入；協定參數沿用已知 Python 發行設定，未知或過期資料阻擋；兩次帳密傳送分別確認，角色不預選。官方 TCP 沒有 TLS、XOR 可逆；登入準備一分鐘內有效，角色選擇在登入期限內完成。詳見[接線與限制](../../docs/DESKTOP_LOGIN_INTEGRATION.md)。
 
 ```bash
 # 不需要圖形環境：原封包自測＋桌面設定與資料邊界自測。
@@ -37,4 +37,20 @@ UI 自測使用獨立臨時設定目錄，合成資料名稱標示「介面測�
 - `DesktopPreferencesStore` 在 `LocalApplicationData/LaLa/DesktopPreview` 依身分雜湊分檔。預覽身分與後續遊戲帳號分開；原 Python 設定不被覆寫，無帳密、Token、遊戲快照或授權旗標落盤。
 - 官方原圖由 `wlre/resources/assets/` 直接嵌入 Desktop assembly，沒有另一套重複素材或 Android 資源變更。
 
+全畫面／子視窗差距見 [Python 介面盤點](../../docs/DESKTOP_PYTHON_PARITY.md)，尚未完成全部介面一致。
+
 詳細來源映射、驗收與限制見 [桌面介面移植與驗收](../../docs/DESKTOP_INTERFACE_MIGRATION.md)。
+
+## 程式圖示與打包
+
+自製標題列、原生 WindowIcon 及 Windows ApplicationIcon 都直接引用
+`wlre/resources/assets/app.ico`。`dotnet publish -r win-x64 --self-contained false`
+的實際 apphost 可用 `python tools/check_desktop_icon.py <Lala.Desktop.exe>`
+核對原生 RT_GROUP_ICON 與全部 RT_ICON 圖框，CI Windows 同樣執行。
+
+目前 C# Desktop 沒有獨立安裝器、.lnk 產生器、Linux .desktop 或 macOS .app bundle；
+不把 runtime WindowIcon 當成這些打包層已完成。Windows 使用者建立且沒有自訂
+IconLocation 的捷徑會取用目標 EXE 的圖示，但本輪未在 Windows Shell 實機建立／驗收。
+既有 tools/build/build_nuitka.py 與 build_macos.py 是 Python 發行流程，已引用同一 app.ico，
+本批未改動也未冒稱已重新建置 Python 安裝包。macOS Finder bundle／Dock、Linux launcher
+整合及作業系統舊圖示快取仍需平台驗收。

@@ -1,7 +1,7 @@
 name: .NET migration verification
 on:
   pull_request:
-    paths: ['dotnet/**', 'tools/check_terminal_acceptance.py', '.github/workflows/dotnet-migration.yml']
+    paths: ['dotnet/**', 'tools/check_terminal_acceptance.py', 'tools/check_desktop_icon.py', '.github/workflows/dotnet-migration.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -33,6 +33,11 @@ jobs:
         run: python3 tools/check_terminal_acceptance.py
       - name: Build Avalonia desktop
         run: dotnet build dotnet/Lala.Desktop/Lala.Desktop.csproj -c Release
+      - name: Verify Windows executable icon
+        if: runner.os == 'Windows'
+        run: |
+          dotnet publish dotnet/Lala.Desktop/Lala.Desktop.csproj -c Release -r win-x64 --self-contained false -o desktop-icon-check
+          python tools/check_desktop_icon.py desktop-icon-check/Lala.Desktop.exe
       - name: Check offline inspector
         run: dotnet run --project dotnet/Lala.Desktop/Lala.Desktop.csproj -c Release --no-build -- --self-test
       - name: Test Avalonia UI and synthetic loopback login

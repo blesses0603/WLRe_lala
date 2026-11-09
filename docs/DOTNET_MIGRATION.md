@@ -2052,3 +2052,12 @@ No real credentials, production connection or user-computer operation. Windows/m
 live UI and official-server acceptance remain outstanding. Overall PR marker moves from
 8.0.40 to 8.0.41 once; platform/Core/Desktop versions remain unchanged. See
 [desktop login integration](DESKTOP_LOGIN_INTEGRATION.md).
+
+### Overall PR development marker 8.0.42: Python desktop parity inventory
+
+Replaced technical login fields with official server/line selection and release-owned
+Python protocol settings. Unknown/failing/stale metadata blocks login. Added primary
+feature windows and a complete source/geometry/gap inventory; resource activation,
+several projections, local editors and child dialogs remain incomplete. This is not
+full Python UI parity or live acceptance. See [the inventory](DESKTOP_PYTHON_PARITY.md).
+The overall marker advances once; platform versions remain unchanged.
