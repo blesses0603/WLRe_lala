@@ -45,3 +45,9 @@ Python 圖集元資料檢查得到 **246 packed Sprite／246 render entries，se
 Python 真實 `parse_entries` 以明示的自有 fixture digest seam 產生獨立對照；C# 正式 parser 必須拒絕所有這些合成 bytes。另以 UnityPy 真實 writer 建立精確 EmojiData TextAsset／UnityFS，驗證取得與解碼確實到達 raw SHA gate，再拒絕圖集下載。包含額度、重用、不遞迴閉包、版本／路徑、取消及退役。**C# 完整準備／圖集／發布的正式來源正向驗收尚未完成**；上述 Python 公開資料 raw SHA 已另行核對，沒有改寫正式 pin 來讓測試通過。
 
 仍需官方完整圖集的精確容器／CAB 外部引用證據、首幀整批驗證、PNG／SQLite 新連線獨立回讀、來源重查與可撤銷發布，再接 production 與表情 UI。小地圖來源、模型映射及顯示仍未完成；未宣稱完整 Python UI 或效能提升。`HasVisualAssets=false`、一般操作 Held；未連正式服、未使用真帳密。
+
+## 串流容器容量補查
+
+以已驗證的同批本機 Bundle 讀取 UnityFS block info（不新增下載）確認：主圖集解壓後 **78,745,132 bytes**，其中 SerializedFile 3,378,476 bytes／flags=4，配對 `.resS` 75,366,656 bytes／flags=0。其餘五檔解壓總量依序為 resonance 2,243,464、monopoly 1,691,808、gamewhackmole 3,845,204、emoji_sc 2,782,800、bricktreasure 527,420 bytes；每檔均為同名 CAB 與 CAB.resS 配對。
+
+因此正式來源超過現有單 Bundle 64 MiB 解壓上限；不能只接受 directory flags=0 或將 streamed 欄位清空就宣稱支援。後續需要明示串流資源入口、完整 bundle/CAB/archive 身份綁定、offset/size 範圍及來源指紋，並限制解壓與擷取記憶體；既有 TextAsset／物品路徑的 64 MiB 限制維持不變。此補查沒有啟用串流像素、資料庫或 UI。

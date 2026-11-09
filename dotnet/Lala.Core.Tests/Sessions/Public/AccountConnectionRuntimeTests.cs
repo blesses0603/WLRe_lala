@@ -118,7 +118,8 @@ public sealed partial class AccountConnectionRuntimeTests
             await EnterWorld(client);
             await client.Send(new Packet(26, 4, [42, 0, 0, 0]), new Packet(1, 23));
             await client.Expect(63, 5); ready.SetResult();
-            await client.WaitFor(finish.Task); await client.CloseSendAndExpectEof();
+            // The runtime has explicitly stopped and released its socket before finish.
+            await client.WaitFor(finish.Task); await client.ExpectClosedAfterRetirement();
         });
         var session = new AccountSession(); var generation = session.Begin("synthetic", "loopback").Generation;
         var credentials = new AccountLoginCredentials("synthetic", "fake_password");
