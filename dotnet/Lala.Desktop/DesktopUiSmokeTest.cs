@@ -300,6 +300,24 @@ internal static class DesktopUiSmokeTest
             Check(inventory.VisibleBagImageCount == 0, "provider retirement clears and disposes visible item images");
             Check(inventory.BagRetainedImageCount == 0, "withdrawal evicts all cached native images despite unchanged inventory");
 
+            // Owned table observations exercise the shared table renderer independently of game state.
+            var probe = new TextTable(["ID", "內容"], "80,*", "TableReuseProbe");
+            var probeWindow = Show(new Window { Width = 400, Height = 300, Content = probe });
+            var tableRows = Enumerable.Range(0, 200).Select(i => (Key: i.ToString(), Cells: new[] { i.ToString(), "owned " + i })).ToArray();
+            probe.SetRows(tableRows); probe.SelectIndex(100); await Settle(probeWindow);
+            Progress("表格離屏列量測與字型");
+            Check(probe.RowBuildCount == 200, "initial shared table builds exactly its two hundred rows");
+            tableRows[50].Cells[1] = "changed owned row";
+            probe.SetRows(tableRows); await Settle(probeWindow);
+            Check(probe.RowBuildCount == 201 && probe.SelectedKey == "100", "one caller-mutated row rebuilds once and preserves selection");
+            probe.SetRows(tableRows.Reverse()); await Settle(probeWindow);
+            Check(probe.RowBuildCount == 201 && probe.SelectedKey == "100", "reordering unique rows reuses controls and preserves key selection");
+            probe.SetRows(new[] { ("duplicate", new[] { "1", "first" }), ("duplicate", new[] { "2", "second" }) });
+            await Settle(probeWindow);
+            Check(probe.RowCount == 2 && probe.RowBuildCount == 203, "duplicate keys remain separate controls");
+            probe.SetRows([]); await Settle(probeWindow);
+            Check(probe.RowCount == 0 && probe.SelectedKey is null, "table withdrawal clears rows and selection");
+            probeWindow.Close();
             Check(skills.SkillRowCount == 4, "skill view excludes zero-level and removed skills while preserving both actors");
             Check(!ReferenceEquals(inventory.Content, skills.Content), "backpack and skills are separate window content trees");
             Disabled(inventory, "InventoryBagHealHp", "InventoryBagHealSp", "InventoryBagDepositGarage", "InventoryBagDepositMaterials");

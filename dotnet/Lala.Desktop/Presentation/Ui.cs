@@ -12,6 +12,7 @@ namespace Lala.Desktop;
 
 internal static class Ui
 {
+    internal static readonly FontFamily DefaultFont = new("Microsoft JhengHei UI, Noto Sans CJK TC, Noto Serif CJK TC, WenQuanYi Micro Hei, sans-serif");
     public static readonly IBrush Background = Brush.Parse("#101c2b");
     public static readonly IBrush Panel = Brush.Parse("#e8142638");
     public static readonly IBrush Input = Brush.Parse("#16364b");
@@ -121,7 +122,7 @@ internal static class Ui
 
     public static void InstallStyles(Application app)
     {
-        var font = new FontFamily("Microsoft JhengHei UI, Noto Sans CJK TC, Noto Serif CJK TC, WenQuanYi Micro Hei, sans-serif");
+        var font = DefaultFont;
         app.Styles.Add(new Style(s => s.OfType<Window>())
         {
             Setters = { new Setter(TemplatedControl.FontFamilyProperty, font), new Setter(TemplatedControl.FontSizeProperty, 14d),
@@ -271,9 +272,12 @@ internal sealed class TextTable : UserControl
     private readonly ListBox list = new() { Background = Brushes.Transparent, Padding = new Thickness(0) };
     private readonly TextBlock empty = Ui.Text("尚未收到資料。", color: Ui.Muted);
     private (string Key, string[] Cells)[] rows = [];
+    private readonly System.Collections.ObjectModel.ObservableCollection<ListBoxItem> renderedRows = [];
+    internal int RowBuildCount { get; private set; }
     public TextTable(string[] headings, string columns, string? name = null)
     {
         this.columns = columns; Name = name;
+        list.ItemsSource = renderedRows;
         var grid = new Grid { RowDefinitions = new RowDefinitions("Auto,*") };
         var header = new Border { Background = Brush.Parse("#243d52"), Padding = new Thickness(8, 5), Child = MakeRow(headings, true) };
         Ui.At(grid, header, 0);
@@ -288,25 +292,50 @@ internal sealed class TextTable : UserControl
     public void SelectIndex(int index) => list.SelectedIndex = index;
     public void SetRows(IEnumerable<(string Key, string[] Cells)> value, string emptyMessage = "尚未收到資料。")
     {
-        var updated = value.ToArray();
+        // Own the cell arrays: caller mutation must not defeat the equality check.
+        var updated = value.Select(row => (row.Key, Cells: row.Cells.ToArray())).ToArray();
         if (rows.Length == updated.Length && rows.Zip(updated).All(pair => pair.First.Key == pair.Second.Key && pair.First.Cells.SequenceEqual(pair.Second.Cells)))
         {
             empty.Text = emptyMessage; empty.IsVisible = rows.Length == 0;
             return;
         }
         var selected = SelectedKey;
+        // Reuse only unique keys, never attach the same control twice for duplicate keys.
+        var oldByKey = rows.Select((row, index) => (row, index)).GroupBy(p => p.row.Key, StringComparer.Ordinal)
+            .Where(group => group.Count() == 1).ToDictionary(group => group.Key, group => group.Single(), StringComparer.Ordinal);
+        var counts = updated.GroupBy(row => row.Key, StringComparer.Ordinal).ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
+        var next = updated.Select(row =>
+        {
+            if (counts[row.Key] == 1 && oldByKey.TryGetValue(row.Key, out var old))
+            {
+                var existing = renderedRows[old.index];
+                if (!old.row.Cells.SequenceEqual(row.Cells)) existing.Content = MakeRow(row.Cells);
+                return existing;
+            }
+            return new ListBoxItem { Content = MakeRow(row.Cells), Padding = new Thickness(6, 4), HorizontalContentAlignment = HorizontalAlignment.Stretch };
+        }).ToArray();
         rows = updated;
-        list.ItemsSource = rows.Select(row => new ListBoxItem { Content = MakeRow(row.Cells), Padding = new Thickness(6, 4),
-            HorizontalContentAlignment = HorizontalAlignment.Stretch }).ToArray();
+        // Keep the item collection stable while updating or moving existing row controls.
+        for (int i = 0; i < next.Length; i++)
+        {
+            if (i < renderedRows.Count && ReferenceEquals(renderedRows[i], next[i])) continue;
+            int previousIndex = renderedRows.IndexOf(next[i]);
+            if (previousIndex >= 0) renderedRows.Move(previousIndex, i);
+            else renderedRows.Insert(i, next[i]);
+        }
+        while (renderedRows.Count > next.Length) renderedRows.RemoveAt(renderedRows.Count - 1);
         empty.Text = emptyMessage; empty.IsVisible = rows.Length == 0;
         list.SelectedIndex = Array.FindIndex(rows, r => r.Key == selected);
     }
     private Grid MakeRow(string[] cells, bool heading = false)
     {
+        if (!heading) RowBuildCount++;
         var row = new Grid { ColumnDefinitions = new ColumnDefinitions(columns) };
         for (var i = 0; i < cells.Length; i++)
         {
             var label = Ui.Text(cells[i], 13, heading ? Brush.Parse("#c5f1ff") : Ui.Ink, heading);
+            // Virtualized offscreen rows can be measured before inheriting the window font.
+            label.FontFamily = Ui.DefaultFont;
             label.TextWrapping = TextWrapping.NoWrap; label.TextTrimming = TextTrimming.CharacterEllipsis;
             label.Margin = new Thickness(3, 0); ToolTip.SetTip(label, cells[i]); Ui.At(row, label, i);
         }

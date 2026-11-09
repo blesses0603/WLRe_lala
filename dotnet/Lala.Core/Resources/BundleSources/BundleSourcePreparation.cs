@@ -217,6 +217,31 @@ internal sealed class BundleSourcePreparation
         RequiredBundleSources required, IBundleSourceCacheReader? cache, BundleSourceBudget? budget,
         BundleDownloadTotals totals, BundleSourcePlan plan, CancellationToken token)
     {
+        var owned = await AcquireOptionalSourcesAsync(source, required, cache, budget, totals,
+            plan.Entries.Select(entry => entry.Spec).ToArray(), token).ConfigureAwait(false);
+        return plan.AssetSourceNames.ToDictionary(pair => pair.Key,
+            pair => (IReadOnlyList<VerifiedBundleSource>)pair.Value.Select(name => owned[name]).ToArray(), StringComparer.Ordinal);
+    }
+
+    // Uninstalled until the exact material/shader/PPtr decoder and publication are composed.
+    // Uses the same attempt, aggregate budget and cache; never loads a Unity dependency closure.
+    internal async Task<PortraitSourcePlan.VerifiedPortraitSources> PreparePortraitSourcesAsync(IResourceSource source,
+        RequiredBundleSources required, IBundleSourceCacheReader? cache, BundleSourceBudget? budget,
+        BundleDownloadTotals totals, CancellationToken token = default)
+    {
+        EnsureCurrent(required, token);
+        var plan = PortraitSourcePlan.Create(required.Manifests.Single(m => m.Header.PackageName == "MainPackage"), required.Snapshot.DataVersion, token);
+        var owned = await AcquireOptionalSourcesAsync(source, required, cache, budget, totals, plan.Specs, token).ConfigureAwait(false);
+        var verified = plan.Verify(owned.Values.ToArray(), token);
+        await ConfirmUnchangedAsync(source, required, token).ConfigureAwait(false);
+        EnsureCurrent(required, token);
+        return verified;
+    }
+
+    private async Task<IReadOnlyDictionary<string, VerifiedBundleSource>> AcquireOptionalSourcesAsync(IResourceSource source,
+        RequiredBundleSources required, IBundleSourceCacheReader? cache, BundleSourceBudget? budget,
+        BundleDownloadTotals totals, IReadOnlyList<BundleSourceSpec> specs, CancellationToken token)
+    {
         EnsureCurrent(required, token);
         budget ??= new(); budget.Validate();
         if (totals.Context is null) totals.Context = required;
@@ -226,35 +251,34 @@ internal sealed class BundleSourcePreparation
         foreach (var handle in required.Sources) owned.TryAdd(handle.Spec.Name, handle);
         // The existing cache is keyed by name. Never reuse a DataPackage handle for a
         // MainPackage name (or any changed spec), even when the payload happens to match.
-        foreach (var entry in plan.Entries)
-            if (owned.TryGetValue(entry.Spec.Name, out var existing) && existing.Spec != entry.Spec)
+        foreach (var spec in specs)
+            if (owned.TryGetValue(spec.Name, out var existing) && existing.Spec != spec)
                 throw new BundleSourceException(BundleSourceFailure.InvalidBundle, "Owned bundle name has a different source identity");
-        var needed = plan.Entries.Where(x => !owned.ContainsKey(x.Spec.Name)).ToArray();
-        long retained = owned.Values.Sum(x => x.Spec.Size) + needed.Sum(x => x.Spec.Size);
+        var needed = specs.Where(x => !owned.ContainsKey(x.Name)).ToArray();
+        long retained = owned.Values.Sum(x => x.Spec.Size) + needed.Sum(x => x.Size);
         if (retained > MaximumRetainedBytes)
             throw new BundleSourceException(BundleSourceFailure.Budget, "Optional closure exceeds owned-byte bound");
         var hits = new Dictionary<string, bool>(StringComparer.Ordinal);
         int downloads = Math.Max(totals.Count, required.DownloadCount);
         long bytes = Math.Max(totals.Bytes, required.DownloadBytes);
-        foreach (var entry in needed)
+        foreach (var spec in needed)
         {
             EnsureCurrent(required, token);
             bool hit = false;
             if (cache is not null)
             {
-                try { hit = await ReadOptionalCacheAsync(cache, entry.Spec, token).ConfigureAwait(false) is not null; }
+                try { hit = await ReadOptionalCacheAsync(cache, spec, token).ConfigureAwait(false) is not null; }
                 catch (BundleSourceException error) when (!error.Data.Contains(ResourceCleanup.FailureMarker)) { }
             }
-            hits.Add(entry.Spec.Name, hit);
-            if (!hit) { downloads++; bytes += entry.Spec.Size; }
+            hits.Add(spec.Name, hit);
+            if (!hit) { downloads++; bytes += spec.Size; }
         }
         if (downloads > budget.MaximumDownloads || bytes > budget.MaximumDownloadBytes)
             throw new BundleSourceException(BundleSourceFailure.Budget, "Optional downloads exceed remaining quota");
         totals.Count = downloads; totals.Bytes = bytes;
-        foreach (var entry in needed)
+        foreach (var spec in needed)
         {
             EnsureCurrent(required, token);
-            var spec = entry.Spec;
             if (hits[spec.Name])
             {
                 var handle = await ReadOptionalCacheAsync(cache!, spec, token).ConfigureAwait(false);
@@ -268,8 +292,7 @@ internal sealed class BundleSourcePreparation
             }
         }
         EnsureCurrent(required, token);
-        return plan.AssetSourceNames.ToDictionary(pair => pair.Key,
-            pair => (IReadOnlyList<VerifiedBundleSource>)pair.Value.Select(name => owned[name]).ToArray(), StringComparer.Ordinal);
+        return specs.ToDictionary(spec => spec.Name, spec => owned[spec.Name], StringComparer.Ordinal);
     }
 
     private static async Task<VerifiedBundleSource?> ReadOptionalCacheAsync(IBundleSourceCacheReader cache,
