@@ -14,7 +14,7 @@ internal sealed class BoundedSerializedFile
     internal required Dictionary<long, UnityObject> Objects { get; init; }
     internal required IReadOnlyList<string> Externals { get; init; }
     internal required List<UnityContainerEntry> Container { get; init; }
-    internal static BoundedSerializedFile Read(UnityFileIdentity identity, ReadOnlyMemory<byte> bytes, UnityExtractionBudget budget, CancellationToken token, bool allowImages = false)
+    internal static BoundedSerializedFile Read(UnityFileIdentity identity, ReadOnlyMemory<byte> bytes, UnityExtractionBudget budget, CancellationToken token, bool allowImages = false, bool allowMaterials = false)
     {
         token.ThrowIfCancellationRequested(); var header = new UnityReadCursor(bytes, true);
         Require(header.U32() == 0 && header.U32() == 0 && header.U32() == 22 && header.U32() == 0 && header.U8() == 0,
@@ -32,7 +32,7 @@ internal sealed class BoundedSerializedFile
         for (int i = 0; i < types; i++)
         {
             token.ThrowIfCancellationRequested(); int classId = r.I32(); classes[i] = classId;
-            Require((classId is 49 or 142 || allowImages && classId is 28 or 213) && r.U8() == 0 && r.U16() == ushort.MaxValue, "Unsupported or stripped Unity class");
+            Require((classId is 49 or 142 || allowImages && classId is 28 or 213 || allowMaterials && classId == 21) && r.U8() == 0 && r.U16() == ushort.MaxValue, "Unsupported or stripped Unity class");
             r.Take(16); ReadTree(r, classId, token); Require(r.Count(0) == 0, "Type dependencies unsupported");
         }
         int objectCount = r.Count(16_384, 24); budget.Objects += objectCount;
@@ -62,6 +62,7 @@ internal sealed class BoundedSerializedFile
         {
             token.ThrowIfCancellationRequested();
             if (obj.ClassId == 142) ReadContainer(obj.Bytes, container, budget, token);
+            else if (obj.ClassId == 21) UnityMaterialObjects.Read(obj.Bytes, token);
             else if (obj.ClassId == 28) UnityImageObjects.Texture(obj.Bytes, token);
             else if (obj.ClassId == 213) UnityImageObjects.Sprite(obj.Bytes, token);
             else ValidateText(obj.Bytes, token); // Also validate unused objects; no unchecked layout escapes.

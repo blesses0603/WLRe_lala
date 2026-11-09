@@ -13,6 +13,7 @@ internal static class UnityImageShapes
     {
         var (count, hash) = classId switch
         {
+            21 => (107, "a9e27e0128a6337ddea3c51592bb90e48b2203fd87a3e5ce7f395d0a8e830ad7"),
             28 => (44, "1ce7de4b790393afeb3979cb673250f386b6ef5d91e78743ff8d6a52a9dce178"),
             213 => (167, "0e4602cdddd5763cb291097cd5a0359c703a6ba572a5e189dc95369935b41e01"),
             _ => throw new UnityTextAssetException("Unsupported image class")
