@@ -88,9 +88,41 @@ public static class AutoBattleRuleChooser
                 if (match) { first = unit; break; }
             }
             if (first is null) continue;
-            var explicitTarget = action.Kind == AutoBattleActionKind.Item || Field(action,"TargetKind") is 1 or 3 or 5;
-            var result = Done(reason,action,explicitTarget ? BattleCommandPlanner.Slot(first) : null,attribute);
-            if (result is not null) return result;
+            var selectedId = action.Kind == AutoBattleActionKind.Skill && action.Id > 0 && action.Id is not (10001 or 60021 or 60041 or 10008)
+                ? CombatResourceActionCandidates.ResolveSkillId(resources,actor,(uint)action.Id,action.UseNextSkill) : (uint)Math.Max(0,action.Id);
+            var selectedTarget = resources.Catalog.Skills.GetValueOrDefault(selectedId)?.Fields.GetValueOrDefault("TargetKind");
+            // Defensive/basic actions never inherit the triggering ally as their target.
+            var explicitTarget = action.Kind == AutoBattleActionKind.Item ||
+                action.Id is not (0 or -1 or 10001 or 60021 or 60041 or 10008) && selectedTarget is 1 or 3 or 5;
+            if (explicitTarget)
+            {
+                var candidates = new List<CombatResourceActor>();
+                foreach (var unit in living)
+                {
+                    if (!unit.Stats.TryGetValue(attribute,out var value) || action.Value.Compare(value) >= 0) continue;
+                    if (action.Notice == AutoBattleNotice.Player && unit.Pid is null) return Failure("KeyError","'pid'");
+                    if (action.Notice switch { AutoBattleNotice.SameSide => Same(unit),AutoBattleNotice.Player => unit.Pid == pid,_ => unit.MasterId == pid })
+                        candidates.Add(unit);
+                }
+                // Policies 1/3 rank the observed resource, not HP under a low-SP trigger.
+                // Policy 2 retains coordinate order for these explicit friendly targets.
+                IEnumerable<CombatResourceActor> ranked = action.Target switch
+                {
+                    AutoBattleTargetPolicy.LowestHp => candidates.OrderBy(unit => unit.Stats[attribute]).ThenBy(unit => unit.Col).ThenBy(unit => unit.Row),
+                    AutoBattleTargetPolicy.HighestHp => candidates.OrderByDescending(unit => unit.Stats[attribute]).ThenBy(unit => unit.Col).ThenBy(unit => unit.Row),
+                    _ => candidates
+                };
+                foreach (var unit in ranked)
+                {
+                    var result = Done(reason,action,BattleCommandPlanner.Slot(unit),attribute);
+                    if (result is not null) return result;
+                }
+            }
+            else
+            {
+                var result = Done(reason,action,null,attribute);
+                if (result is not null) return result;
+            }
         }
         if (rules.RoundEnabled && context.Round is >= 1 and <= 3)
         {

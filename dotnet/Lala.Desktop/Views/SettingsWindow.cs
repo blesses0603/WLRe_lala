@@ -34,7 +34,6 @@ public sealed class SettingsWindow : DesktopWindow
     private bool busy;
     private bool actionOpen;
     private static readonly string[] RuleKeys = ["orderAction", "repeatAction", "roundAction", "misc"];
-    private static readonly string[] Targets = ["最低HP", "屬性優先", "最高HP"];
     private static readonly string[] Notices = ["同方任一單位", "本機角色", "出戰夥伴"];
 
     public SettingsWindow(DesktopSession session, int initialTab = 0)
@@ -292,6 +291,8 @@ public sealed class SettingsWindow : DesktopWindow
             if (row.ContainsKey("value")) top.Children.Add(Number(row, "value", 0, decimal.MaxValue, bindingKey: who + ":" + key));
         }
         card.Children.Add(top);
+        if (key is "lowHpAction" or "lowSpAction")
+            card.Children.Add(Ui.Text((key == "lowHpAction" ? "HP" : "SP") + " < 門檻 → 使用此列技能／指令；兩列獨立保存。", 12, Ui.Muted));
         for (var i = 0; i < group.Count; i++)
         {
             var index = i;
@@ -314,7 +315,10 @@ public sealed class SettingsWindow : DesktopWindow
             card.Children.Add(actions);
             var next = Flag(row, "bUseNextSkill", compact ? "次階特技" : "允許下一階特技", $"SettingsNext_{who}_{key}_{index}");
             next.IsEnabled = BattleSettingsDraft.Int(row["kind"]) == 1;
-            card.Children.Add(Ui.Row(Ui.Text("優先目標"), Choice(row, "target", Targets), next));
+            var options = SettingsActions.TargetOptions(BattleSettingsDraft.Int(row["id"]), BattleSettingsDraft.Int(row["kind"]), key);
+            var targetChoice = Choice(row, "target", options.Labels);
+            targetChoice.IsEnabled = options.Enabled;
+            card.Children.Add(Ui.Row(Ui.Text("優先目標"), targetChoice, next));
         }
         if (key == "orderAction") card.Children.Add(Ui.Text("第一順位不可用才試第二順位；不是同回合連續施放兩次。", 12, Ui.Muted));
         if (key == "repeatAction") card.Children.Add(Ui.Text("每回合輪用一格，只計入非空指令。", 12, Ui.Muted));
@@ -450,7 +454,7 @@ public sealed class SettingsWindow : DesktopWindow
         actionOpen = true;
         try
         {
-            var editor = new SettingsActionWindow(session, who, ActionRow(who, key, index));
+            var editor = new SettingsActionWindow(session, who, ActionRow(who, key, index), key);
             var result = await editor.ShowDialog<JsonObject?>(this);
             if (result is not null && IsCurrent) SetAction(who, key, index, result);
         }

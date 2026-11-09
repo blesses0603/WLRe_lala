@@ -7,6 +7,20 @@ from wlre.services.items.catalog import item_display_name
 
 NAMES={0:'略過此格',**{sid:ACTIONS[mode] for sid,mode in ACTION_IDS.items()}}
 TARGETS={1:'最低HP',2:'屬性優先',3:'最高HP'}
+def target_options(row,key):
+    """Persisted policy IDs stay stable; the rule and action define their meaning."""
+    if row.get('kind')!=2 and row['id'] in (0,60021,60041):
+        return {1:'不需目標',2:'不需目標',3:'不需目標'},False
+    if key in ('lowHpAction','lowSpAction'):
+        resource='SP' if key=='lowSpAction' else 'HP'
+        if row.get('kind')==2:
+            return {1:'最低'+resource,2:'座標順序',3:'最高'+resource},True
+        if row['id'] not in (10001,10008,-1):
+            return {1:'友方最低'+resource+'／敵方最低HP',2:'友方座標／敵方屬性',3:'友方最高'+resource+'／敵方最高HP'},True
+    if row['id'] in (10001,10008):
+        return {1:'最低HP',2:'最低HP（基本行動）',3:'最高HP'},True
+    return TARGETS,True
+
 NOTICES={1:'同方任一單位',2:'本機角色',3:'出戰夥伴'}
 COMPARES={1:'大於',2:'小於'}
 GROUPS=(('bDeadAction','deadAction','同方陣亡',1),('bEnemyHPAction','enemyHpAction','敵HP條件',1),

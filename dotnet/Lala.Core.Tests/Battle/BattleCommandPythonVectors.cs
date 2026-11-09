@@ -6,7 +6,7 @@ public static class BattleCommandPythonVectors
 {
     internal static JsonNode Read() => JsonNode.Parse(GzipJson.DecodeResource(
         "Lala.Core.Tests.Battle.Fixtures.battle-commands.json.gz",
-        "85dccaa5739586081cd8b49be3e9fef8c9c5e568079bbbcf8732ad22e383f18b", "0b17dd1d1fe01155219337c8a6c6642147cbab836a9b07b36a3da3912dc3b61d"))!;
+        "75d34f80f825514f533e76a1b7d825a81ffc549313da6fb9d45b99661fa7281b", "a561e2a1b6333978e5ad8f8e489cb0865f84df604aeb1a5a797360b2eb483c01"))!;
     public static IEnumerable<object[]> Cases()
     {
         foreach (var row in Read()["cases"]!.AsArray()) yield return [row!["case_id"]!.GetValue<int>(),row.ToJsonString()];

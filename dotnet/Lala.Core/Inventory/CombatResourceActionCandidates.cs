@@ -143,10 +143,8 @@ public static class CombatResourceActionCandidates
             [new(choice.Index,1,choice.Item)]);
     });
 
-    private static CombatResourceActionIntent LearnedCore(CombatResourceActionContext context, CombatResourceActor actor,
-        uint skillId, string? targetSlot, int targetKind, bool nextSkill)
+    internal static uint ResolveSkillId(CombatResourceActionContext context, CombatResourceActor actor, uint skillId, bool nextSkill)
     {
-        Validate(context); ArgumentNullException.ThrowIfNull(actor);
         var records = CombatResourceKnowledge.Learned(context.Player,context.Companions,context.LocalRoleId,actor,context.Catalog);
         if (nextSkill)
             for (var hop = 0; hop < 2; hop++)
@@ -157,6 +155,14 @@ public static class CombatResourceActionCandidates
                     !records.Any(value => value.Id == next)) break;
                 skillId = checked((uint)next);
             }
+        return skillId;
+    }
+
+    private static CombatResourceActionIntent LearnedCore(CombatResourceActionContext context, CombatResourceActor actor,
+        uint skillId, string? targetSlot, int targetKind, bool nextSkill)
+    {
+        Validate(context); ArgumentNullException.ThrowIfNull(actor);
+        skillId = ResolveSkillId(context,actor,skillId,nextSkill);
         var reasons = CombatResourceKnowledge.SkillReasons(context.Player,context.Companions,context.LocalRoleId,actor,skillId,context.Catalog,context.Inventory,context.InventoryContext);
         if (!reasons.IsEmpty) throw new ProtocolException(string.Join("；",reasons));
         var data = context.Catalog.Skills[skillId];

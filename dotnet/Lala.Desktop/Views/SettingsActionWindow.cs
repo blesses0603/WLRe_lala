@@ -17,6 +17,19 @@ internal static class SettingsActions
         [10001] = "自動普攻", [60021] = "防禦", [60041] = "逃跑", [10008] = "捕捉"
     };
 
+    internal static (string[] Labels, bool Enabled) TargetOptions(int id, int kind, string? key)
+    {
+        if (kind != 2 && id is 0 or 60021 or 60041) return (["不需目標", "不需目標", "不需目標"], false);
+        if (key is "lowHpAction" or "lowSpAction")
+        {
+            var resource = key == "lowSpAction" ? "SP" : "HP";
+            if (kind == 2) return ([$"最低{resource}", "座標順序", $"最高{resource}"], true);
+            if (id is not (10001 or 10008 or -1))
+                return ([$"友方最低{resource}／敵方最低HP", "友方座標／敵方屬性", $"友方最高{resource}／敵方最高HP"], true);
+        }
+        return (id is 10001 or 10008 ? ["最低HP", "最低HP（基本行動）", "最高HP"] : ["最低HP", "屬性優先", "最高HP"], true);
+    }
+
     public static SettingsActionChoice[] Choices(DesktopPublication view, string who, bool items)
     {
         if (who is not ("player" or "partner")) throw new ArgumentOutOfRangeException(nameof(who));
@@ -69,6 +82,7 @@ internal sealed class SettingsActionWindow : DesktopWindow
 {
     private readonly DesktopSession session;
     private readonly string who;
+    private readonly string? ruleKey;
     private readonly long generation;
     private readonly string identity;
     private readonly JsonObject original;
@@ -89,11 +103,11 @@ internal sealed class SettingsActionWindow : DesktopWindow
     private bool updating;
     private bool closed;
 
-    public SettingsActionWindow(DesktopSession session, string who, JsonObject row)
+    public SettingsActionWindow(DesktopSession session, string who, JsonObject row, string? ruleKey = null)
         : base("編輯行動與條件", 960, 640)
     {
         this.session = session;
-        this.who = who;
+        this.who = who; this.ruleKey = ruleKey;
         var view = session.ReadView();
         generation = view.Generation; identity = view.IdentityKey;
         original = (JsonObject)row.DeepClone();
@@ -121,9 +135,9 @@ internal sealed class SettingsActionWindow : DesktopWindow
         {
             threshold = Ui.Number(BattleSettingsDraft.Number(row["value"]), 0, decimal.MaxValue, width: 150);
             threshold.FormatString = "0.##";
-            options.Children.Add(Ui.Field("HP／SP 門檻", threshold, "88,*"));
+            options.Children.Add(Ui.Field(ruleKey == "lowHpAction" ? "HP <" : ruleKey == "lowSpAction" ? "SP <" : "HP 門檻", threshold, "88,*"));
         }
-        options.Children.Add(Ui.Text("SP 不足仍可編輯本機規則。\n0 為略過，不會送出指令。", 12, Ui.Muted));
+        options.Children.Add(Ui.Text("SP 不足仍可編輯本機規則。\n友方技能不代表恢復 SP，效果未驗證。\n0 為略過，不會送出指令。", 12, Ui.Muted));
         Ui.At(area, new ScrollViewer { Content = options, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled }, 1);
         Ui.At(body, area, 0, 3);
         Ui.At(body, note, 0, 4);
@@ -193,6 +207,9 @@ internal sealed class SettingsActionWindow : DesktopWindow
 
     private void UpdateSelection()
     {
+        var policy = Math.Clamp(target.SelectedIndex, 0, 2);
+        var options = SettingsActions.TargetOptions(chosen, kind.SelectedIndex + 1, ruleKey);
+        target.ItemsSource = options.Labels; target.SelectedIndex = policy; target.IsEnabled = options.Enabled;
         var choice = allChoices.FirstOrDefault(choice => choice.Id == chosen);
         bool actorMatches = choice is not null && (choice.ActorIdentity is null || choice.ActorIdentity == chosenActor);
         selected.Text = choice?.Label ?? $"原設定 ID {chosen} 尚未核對，請重新選擇或略過此格。";

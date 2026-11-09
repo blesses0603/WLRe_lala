@@ -99,7 +99,7 @@ class SettingsEditor:
         except (OSError,ValueError,TypeError,KeyError,tk.TclError) as exc:messagebox.showerror('AI設定',str(exc),parent=self.window);return
         data=self.draft.value['profiles'][who][key];row=data[index] if isinstance(data,list) else data
         def commit(value):self.draft.set_action(who,key,index,value);self.cards[who,key].render()
-        ActionEditor(self.window,row,lambda:self.app.snapshot,who,commit)
+        ActionEditor(self.window,row,lambda:self.app.snapshot,who,commit,rule_key=key)
     def clear(self,who,key,index):
         try:
             self.draft=RuleDraft(self.collect());data=self.draft.value['profiles'][who][key]

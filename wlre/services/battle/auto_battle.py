@@ -7,7 +7,7 @@ import math
 from wlre.services.items import recovery, maintenance;from wlre.services.battle import party_guard
 from wlre.services.battle.battle_commands import owned_units, slot, action_command
 from wlre.network.wire import ProtocolError
-from wlre.services.items.combat_resources import CAT, best_skill_command, learned_command, food_command, field_context
+from wlre.services.items.combat_resources import CAT, best_skill_command, learned_command, food_command, field_context, resolved_skill_id
 
 ACTION_IDS={-1:'auto_skill',-2:'heal_hp',-3:'heal_sp',10001:'normal',60021:'defend',60041:'escape',10008:'catch'}
 REASONS={'deadAction':'同方陣亡','enemyHpAction':'敵方HP條件','lowHpAction':'自方HP條件',
@@ -129,12 +129,20 @@ def choose_action(state,actor,profile):
             match=any(u.get(attr,float('inf'))<data['value'] and (
                 (notice==1 and same(u)) or (notice==2 and u['pid']==pid) or (notice==3 and u.get('master_id')==pid)) for u in living)
             if match:
-                target=None
-                if data.get('kind')==2 or CAT['skills'].get(str(data['id']),{}).get('TargetKind') in (1,3,5):
-                    target=next((f"{u['col']}:{u['row']}" for u in living if u.get(attr,float('inf'))<data['value'] and ((notice==1 and same(u)) or (notice==2 and u['pid']==pid) or (notice==3 and u.get('master_id')==pid))),None)
                 resource_data=dict(data)
                 if key=='lowSpAction' and resource_data.get('kind')==2:resource_data['resource']='sp'
-                if result:=done(key,resource_data,target):return result
+                selected_id=resolved_skill_id(state,actor,data['id'],data.get('bUseNextSkill',False)) if data.get('kind')!=2 and data['id']>0 and data['id'] not in ACTION_IDS else data['id']
+                friendly=data.get('kind')==2 or (data['id'] not in (0,-1,10001,60021,60041,10008) and
+                    CAT['skills'].get(str(selected_id),{}).get('TargetKind') in (1,3,5))
+                if friendly:
+                    candidates=[u for u in living if u.get(attr,float('inf'))<data['value'] and (
+                        (notice==1 and same(u)) or (notice==2 and u['pid']==pid) or (notice==3 and u.get('master_id')==pid))]
+                    # Persisted 1/3 follow the triggering resource; 2 preserves slot order.
+                    if data['target'] in (1,3):
+                        candidates.sort(key=lambda u:((-u[attr] if data['target']==3 else u[attr]),u['col'],u['row']))
+                    for unit in candidates:
+                        if result:=done(key,resource_data,slot(unit)):return result
+                elif result:=done(key,resource_data):return result
     round_number=state['battle'].get('round',0)
     if profile['bRoundAction'] and 1<=round_number<=3:
         if result:=done('roundAction',profile['roundAction'][round_number-1]):return result

@@ -18,10 +18,36 @@ internal static class DesktopSelfTest
             TestSession(suite, directory);
             TestImageReader(suite);
             TestDraft(suite);
+            suite.True(SettingsActions.TargetOptions(-3, 2, "lowSpAction").Labels.SequenceEqual(new[] { "最低SP", "座標順序", "最高SP" }), "SP item priorities");
+            suite.True(SettingsActions.TargetOptions(-2, 2, "lowHpAction").Labels[0] == "最低HP", "HP item priorities");
+            suite.True(!SettingsActions.TargetOptions(60021, 1, "lowSpAction").Enabled, "defense needs no target");
+            suite.True(!SettingsActions.TargetOptions(60041, 1, "lowSpAction").Enabled, "escape needs no target");
+            suite.True(SettingsActions.TargetOptions(10001, 1, "lowSpAction").Labels[2] == "最高HP", "enemy HP priority retained");
+            suite.True(SettingsActions.TargetOptions(1001, 1, "lowSpAction").Labels[0].Contains("友方最低SP"), "unknown skill effect is not inferred");
             TestPreferences(suite, directory);
+            TestIndependentResourceRules(suite, directory);
             Console.WriteLine($"Desktop presentation self-test: {suite.Count} checks passed. Offline only; no UI/native or server acceptance.");
         }
         finally { Directory.Delete(directory, true); }
+    }
+
+    private static void TestIndependentResourceRules(Checks check, string root)
+    {
+        var draft = new BattleSettingsDraft();
+        var player = BattleSettingsDraft.Profile(draft.Value, "player");
+        var partner = BattleSettingsDraft.Profile(draft.Value, "partner");
+        player["lowHpAction"]!["id"] = 1001; player["lowHpAction"]!["kind"] = 1; player["lowHpAction"]!["value"] = 123;
+        player["lowSpAction"]!["id"] = 1002; player["lowSpAction"]!["value"] = 45; player["bLowSpAction"] = true;
+        partner["lowHpAction"]!["id"] = 2001; partner["lowHpAction"]!["kind"] = 1; partner["lowHpAction"]!["value"] = 234;
+        partner["lowSpAction"]!["id"] = 2002; partner["lowSpAction"]!["value"] = 67; partner["bLowSpAction"] = true;
+        var store = new DesktopPreferencesStore(Path.Combine(root,"independent-rules"));
+        store.WriteBattle("合成條件角色",draft);
+        var reopened = new DesktopPreferencesStore(Path.Combine(root,"independent-rules")).ReadBattle("合成條件角色");
+        check.True(reopened.ToJson() == draft.ToJson(), "HP A/B and SP C/D for both actors survive store reopen independently");
+        BattleSettingsDraft.Profile(reopened.Value,"player")["lowHpAction"]!["value"] = 999;
+        check.True(BattleSettingsDraft.Int(BattleSettingsDraft.Profile(reopened.Value,"player")["lowSpAction"]!["value"]) == 45 &&
+            BattleSettingsDraft.Int(BattleSettingsDraft.Profile(reopened.Value,"partner")["lowHpAction"]!["value"]) == 234,
+            "changing player HP never changes SP or companion rules");
     }
 
     private static void TestImageReader(Checks check)

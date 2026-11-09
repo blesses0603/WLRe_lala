@@ -89,13 +89,31 @@ for configured_way in [1,8,24]:
     c=cat();c['skills']['1001'].update(FightWay=configured_way,TargetKind=1,HitStatus=254,NextSkillId=1002)
     c['skills']['1002'].update(FightWay=8,TargetKind=1,HitStatus=254)
     add('dead upgrade configured '+str(configured_way),s=s,c=c,p=profile(bDeadAction=True,deadAction=action(1001,bUseNextSkill=True)))
-# Low-resource support metadata has the same pre-upgrade boundary. An original
-# friendly target kind pins the ally and the upgraded enemy skill cannot use it.
+# Low-resource targeting follows the actual upgraded skill target kind.
 for configured_kind in [0,1,3,5]:
     s=state();s['battle_units']['1:1']['hp']=20;c=cat()
     c['skills']['1001'].update(TargetKind=configured_kind,NextSkillId=1002)
     c['skills']['1002'].update(TargetKind=0)
     add('support upgrade configured '+str(configured_kind),s=s,c=c,p=profile(bLowHpAction=True,lowHpAction=action(1001,notice=2,value=50,bUseNextSkill=True)))
+# Explicit resource priorities: HP and SP deliberately rank allies oppositely.
+for resource in ('hp','sp'):
+    for policy in (1,2,3):
+        for sid in (-3,1001,10001,60021):
+            s=state();c=cat();c['skills']['1001']['TargetKind']=1
+            s['battle_units']['1:1'].update(hp=10,sp=15)
+            s['battle_units']['2:1'].update(hp=90,sp=5)
+            key='lowSpAction' if resource=='sp' else 'lowHpAction'
+            flag='bLowSpAction' if resource=='sp' else 'bLowHpAction'
+            add(f'priority {resource} {policy} {sid}',s=s,c=c,p=profile(**{flag:True,key:action(sid,kind=2 if sid==-3 else 1,notice=1,value=100,target=policy)}))
+for mode in ('tie','threshold','invalid-first','missing','self','other'):
+    s=state();c=cat();c['skills']['1001']['TargetKind']=1
+    s['battle_units']['1:1'].update(sp=5);s['battle_units']['2:1'].update(sp=5 if mode=='tie' else 2)
+    if mode=='threshold':s['battle_units']['2:1']['sp']=10
+    if mode=='invalid-first':s['battle_units']['2:1']['is_fly']=True
+    if mode=='missing':del s['battle_units']['2:1']['sp']
+    if mode=='self':c['skills']['1001']['TargetKind']=3
+    if mode=='other':c['skills']['1001']['TargetKind']=5
+    add('priority '+mode,s=s,c=c,p=profile(bLowSpAction=True,lowSpAction=action(1001,notice=1,value=10)))
 # Enemy condition is coordinate order and strict absolute threshold, not HP ordering.
 for comparison in [1,2]:
     for threshold in [0,40,40.0,40.5,60,61,2**53+1,float(2**53),2**63-1,float(2**63),1e200]:

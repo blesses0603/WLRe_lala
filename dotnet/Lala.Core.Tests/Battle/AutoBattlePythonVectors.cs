@@ -5,7 +5,7 @@ namespace Lala.Core.Tests.Battle;
 public static class AutoBattlePythonVectors
 {
     internal static JsonNode Read() => JsonNode.Parse(GzipJson.DecodeResource(
-        "Lala.Core.Tests.Battle.Fixtures.auto-battle.json.gz", "3350bb2e3bd9592b9455b2b730d1c31e0c3b740a9c371f97cc8f83a90c366c8e", "8b80e84eacf4cb48fb59881ecbb83c36e3555dde013b904852b87df885cfe2fd"))!;
+        "Lala.Core.Tests.Battle.Fixtures.auto-battle.json.gz", "c9eb972c6183d684f434f5eb3a88a547e114d8e64bf10c0d050b591352bd63d8", "4781256f81cdd2ee73267831648a71a14c9d5dcb8be3252cc4c4e6e63c175c56"))!;
     public static IEnumerable<object[]> Cases()
     {
         foreach (var row in Read()["cases"]!.AsArray()) yield return [row!["case_id"]!.GetValue<int>(),row.ToJsonString()];

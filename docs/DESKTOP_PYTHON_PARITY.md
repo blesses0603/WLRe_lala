@@ -1,4 +1,4 @@
-# PR #79 ver 8.0.50：Python 桌面介面對照盤點
+# PR #79 ver 8.0.51：Python 桌面介面對照盤點
 
 範圍是全部桌面畫面及其子視窗，保留使用者較新的「背包／特技各自獨立視窗」要求。參照 PR 原 head `59416bde817f39035176ae9c1e2eeb5b23896d58` 中 Python 7.3.1 原始碼；本批未改 Python，也未聲稱已全部移植完成。
 
@@ -131,3 +131,19 @@ owner 將完整批次寫入固定 core_item_images_v1.sqlite3，關閉後重新�
 測試只使用自有合成 Bundle／PNG、SQLite 與 loopback。owner 正向持久化測試使用明示 offline image hook，撤銷測試沿用 white-box publication seam；這些都不能證明官方來源正向驗收，production 建構不接受 hook／來源注入。原生 UI 測試發現「庫存不變便跳過重繪」會漏掉圖片撤銷，已修正並新增顯示／失敗／清除檢查。
 
 **仍未完成**：實際官方圖片格式正向驗收、更多 Texture／Sprite 格式、頭像、表情、小地圖及 Python 全介面一致。HasItemImages 反映當前物品圖狀態；HasVisualAssets 仍為 false，不冒稱全圖資完成。既有帳密逐次確認、無 TLS／XOR 可逆提示、停止等待清理及一般遊戲操作 Held 均保留。
+
+## 8.0.51 低資源優先目標
+
+低 SP 補品與友方技能按 SP 排序，低 HP 按 HP；門檻仍是絕對值且嚴格小於。
+保存的 target 1／2／3 不變，友方含義為最低資源／座標／最高資源。
+敵方技能仍走原 HP／屬性目標邏輯；基本普攻的 2 原本是最低 HP，介面明示。
+防禦／逃跑無目標；原有設定值保留但選單停用。次階技能按最終 TargetKind 分類。
+友方技能不等於補 SP；本機只有原始 SkillData 欄位與消耗，沒有可靠恢復量分類。
+本批沒有以不明 FightWay 或 Variable 欄位新增自動恢復技能。
+
+依使用者附圖，HP < A → B 技能與 SP < C → D 技能分列保存；角色／夥伴各自獨立。
+保留嚴格小於和兩條件同時成立時先 HP 的既有順序。舊 JSON 不需遷移。
+測試資料皆為合成，沒有正式服驗收或真實遊戲發送。
+
+最終原生驗證：Avalonia Release 零警告／錯誤；UI 240 項、31 張截圖，SP < 門檻行動視窗已目視檢查。
+Desktop 離線 76 項（presentation 67＋inspector 9）；公開 consumer、Tk 原生編輯器及模型 6 項、倉庫／發行 15 項通過。

@@ -49,6 +49,7 @@ internal static class DesktopUiSmokeTest
                 await NavigationAsync();
                 await ExpeditionAsync();
                 await SettingsAsync();
+                await ResourceTargetEditorAsync();
                 await PythonParityWindowsAsync();
                 await ScopeAndLifecycleAsync();
                 Console.WriteLine($"Desktop native UI smoke test: {checks} checks passed; {screenshots} rendered screenshots. Synthetic data only; no live login, game commands, installer or production-server acceptance.");
@@ -414,6 +415,25 @@ internal static class DesktopUiSmokeTest
             await Capture(expedition, "10-expedition");
             expedition.Close();
             Progress("遠征三欄與本機草稿保存");
+        }
+
+        private async Task ResourceTargetEditorAsync()
+        {
+            var item = Show(new SettingsActionWindow(session, "player", new JsonObject { ["id"] = -3, ["kind"] = 2, ["target"] = 3, ["bUseNextSkill"] = false, ["notice"] = 2, ["value"] = 17 }, "lowSpAction"));
+            await Settle(item);
+            var target = Find<ComboBox>(item, "ActionTarget");
+            Check(target.IsEnabled && target.SelectedIndex == 2 && target.Items.Cast<string>().SequenceEqual(new[] { "最低SP", "座標順序", "最高SP" }), "SP item editor uses resource priorities and retains stored choice");
+            Check(item.GetVisualDescendants().OfType<TextBlock>().Any(text => text.Text == "SP <"), "SP editor names only its own threshold");
+            await Capture(item, "21-low-sp-priority");
+            item.Close();
+            var defend = Show(new SettingsActionWindow(session, "player", new JsonObject { ["id"] = 60021, ["kind"] = 1, ["target"] = 3, ["bUseNextSkill"] = false }, "lowSpAction"));
+            await Settle(defend);
+            target = Find<ComboBox>(defend, "ActionTarget");
+            Check(!target.IsEnabled && target.SelectedIndex == 2, "defense disables target without rewriting persisted policy");
+            Find<ListBox>(defend, "ActionChoices").SelectedIndex = 2; // default basic normal attack
+            await Settle(defend);
+            Check(target.IsEnabled && target.SelectedIndex == 2 && (string?)target.SelectedItem == "最高HP", "switching to attack restores enemy HP target priority");
+            defend.Close();
         }
 
         private async Task SettingsAsync()

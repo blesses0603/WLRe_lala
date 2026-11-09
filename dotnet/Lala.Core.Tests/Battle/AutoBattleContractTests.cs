@@ -14,6 +14,58 @@ public sealed class AutoBattleContractTests
     private static CombatResourceActor Actor => Context.Resources.Units.Single(entry => entry.Actor.Pid == 7).Actor;
     private static AutoBattleProfile Off => new() { LowHpEnabled = false,OrderEnabled = false };
 
+    [Theory]
+    [InlineData(20,10,1001,AutoBattleReason.LowHp,1)]
+    [InlineData(10,10,1002,AutoBattleReason.LowSp,2)]
+    [InlineData(10,5,10001,AutoBattleReason.Fallback,3)]
+    public void IndependentHpAndSpSkillsKeepStrictThresholdsAndHpFirst(long hpLimit,long spLimit,long skill,AutoBattleReason reason,int col)
+    {
+        var input = AutoBattlePythonVectors.Read()["cases"]!.AsArray().Single(node => node!["label"]!.GetValue<string>() == "priority sp 1 1001")!;
+        var context = BattleCommandParityTests.Context(input);
+        var catalog = context.Resources.Catalog;
+        catalog = catalog with { Skills = catalog.Skills.SetItem(1002,catalog.Skills[1002] with { Fields = catalog.Skills[1002].Fields.SetItem("TargetKind",1) }) };
+        context = context with { Resources = context.Resources with { Catalog = catalog } };
+        var profile = Off with { LowHpEnabled = true,LowSpEnabled = true,
+            LowHp = new() { Id = 1001,Notice = AutoBattleNotice.Player,Value = hpLimit },
+            LowSp = new() { Id = 1002,Notice = AutoBattleNotice.Partner,Value = spLimit } };
+        var result = AutoBattleRuleChooser.Choose(context,BattleCommandParityTests.Actor(input["actor"]!),profile);
+        Assert.Equal(reason,result.Reason); Assert.Equal(skill,result.Intent!.SkillId); Assert.Equal(col,result.Intent.TargetCol);
+    }
+
+    [Theory]
+    [InlineData("priority sp 1 -3",2)]
+    [InlineData("priority sp 3 -3",1)]
+    [InlineData("priority sp 2 -3",1)]
+    [InlineData("priority sp 1 1001",2)]
+    [InlineData("priority sp 3 1001",1)]
+    [InlineData("priority hp 1 1001",1)]
+    [InlineData("priority hp 3 1001",2)]
+    [InlineData("priority sp 1 10001",4)]
+    [InlineData("priority sp 3 10001",3)]
+    [InlineData("priority tie",1)]
+    [InlineData("priority threshold",1)]
+    [InlineData("priority invalid-first",1)]
+    [InlineData("priority missing",1)]
+    [InlineData("priority self",1)]
+    [InlineData("priority other",2)]
+    public void ResourcePriorityUsesActualStatAndSkipsInvalidTargets(string label,int col)
+    {
+        var input = AutoBattlePythonVectors.Read()["cases"]!.AsArray().Single(node => node!["label"]!.GetValue<string>() == label)!;
+        var result = AutoBattleRuleChooser.Choose(BattleCommandParityTests.Context(input),BattleCommandParityTests.Actor(input["actor"]!),AutoBattleParityTests.Profile(input["profile"]!));
+        Assert.True(result.Success); Assert.Equal(col,result.Intent!.TargetCol);
+        Assert.Equal(label.StartsWith("priority hp") ? AutoBattleReason.LowHp : AutoBattleReason.LowSp,result.Reason);
+    }
+
+    [Theory]
+    [InlineData(1)] [InlineData(2)] [InlineData(3)]
+    public void LowSpDefenseDoesNotSelectTheTriggeringAlly(int policy)
+    {
+        var input = AutoBattlePythonVectors.Read()["cases"]!.AsArray().Single(node => node!["label"]!.GetValue<string>() == $"priority sp {policy} 60021")!;
+        var result = AutoBattleRuleChooser.Choose(BattleCommandParityTests.Context(input),BattleCommandParityTests.Actor(input["actor"]!),AutoBattleParityTests.Profile(input["profile"]!));
+        Assert.Equal(AutoBattleReason.LowSp,result.Reason); Assert.Equal(BattleCommandKind.Defend,result.Intent!.Kind);
+        Assert.Equal(0,result.Intent.TargetCol); Assert.Equal(0,result.Intent.TargetRow);
+    }
+
     [Fact]
     public void DefaultsMatchActualSourcePlayerAndPartnerProfiles()
     {
@@ -30,7 +82,7 @@ public sealed class AutoBattleContractTests
     [InlineData("dead upgrade configured 1",AutoBattleReason.DeadAlly,2,2)]
     [InlineData("dead upgrade configured 8",AutoBattleReason.Fallback,3,1)]
     [InlineData("support upgrade configured 0",AutoBattleReason.LowHp,4,2)]
-    [InlineData("support upgrade configured 1",AutoBattleReason.Fallback,3,1)]
+    [InlineData("support upgrade configured 1",AutoBattleReason.LowHp,4,2)]
     public void ReviveAndPreUpgradeFixturesReachDistinguishingOutcomes(string label,AutoBattleReason reason,int col,int row)
     {
         var input = AutoBattlePythonVectors.Read()["cases"]!.AsArray().Single(node => node!["label"]!.GetValue<string>() == label)!;
