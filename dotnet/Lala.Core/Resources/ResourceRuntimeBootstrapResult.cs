@@ -14,6 +14,7 @@ internal sealed class ResourceRuntimeBootstrapResult(bool storageAttempted, Reso
 {
     internal AccountResourceStorageOutcome ItemImageStorageOutcome { get; init; } = AccountResourceStorageOutcome.NotAttempted;
     internal AccountResourceStorageOutcome PortraitStorageOutcome { get; init; } = AccountResourceStorageOutcome.NotAttempted;
+    internal AccountResourceStorageOutcome EmojiStorageOutcome { get; init; } = AccountResourceStorageOutcome.NotAttempted;
     internal bool StorageAttempted { get; } = storageAttempted;
     internal ResourceInventoryWriteOutcome StorageOutcome { get; } = storageOutcome;
     internal bool CommitAdmitted { get; } = commitAdmitted;
@@ -36,6 +37,8 @@ internal sealed class ResourceRuntimeBootstrapTestHooks
     internal Func<OfflinePreparedRuntimeCandidate, ItemImageBatch>? ItemImagesForOfflineTest { get; init; }
     internal Func<OfflinePreparedRuntimeCandidate, PortraitRuntimeBatch>? PortraitsForOfflineTest { get; init; }
     internal Action? BeforePortraitCommitAdmission { get; init; }
+    internal Func<OfflinePreparedRuntimeCandidate, EmojiRuntimeBatch>? EmojisForOfflineTest { get; init; }
+    internal Action? BeforeEmojiCommitAdmission { get; init; }
     internal Action? BeforeImageCommitAdmission { get; init; }
     internal Func<SqliteConnection, DbConnection>? WrapConnection { get; init; }
     internal Func<Task>? BeforeWrite { get; init; }

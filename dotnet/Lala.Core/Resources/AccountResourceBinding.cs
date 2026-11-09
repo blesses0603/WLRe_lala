@@ -50,6 +50,11 @@ internal sealed class AccountResourceBinding
         if (!HasSameAccountSnapshot || !_activation.TryReadItemImage(itemId, out var bytes) || !HasSameAccountSnapshot) return false;
         png = bytes; return true;
     }
+    internal bool TryReadEmoji(byte token,out byte[]? png)
+    {
+        png=null;if(!HasSameAccountSnapshot||!_activation.TryReadEmoji(token,out var bytes)||!HasSameAccountSnapshot)return false;
+        png=bytes;return true;
+    }
     internal bool TryReadPortrait(PortraitMaterialKey key, out PortraitCachedImage? image)
     {
         image = null;

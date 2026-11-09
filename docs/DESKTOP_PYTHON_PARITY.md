@@ -226,3 +226,9 @@ C# 原本只有技能 ID 的名稱查找也接入目前已驗證可選技能目�
 ## ver 8.0.67：表情首幀／PNG 批次候選
 
 完整首幀與 token 映射、PNG 額度與批次指紋已加入核心候選層，尚未接入 SQLite、publication 或桌面表情視窗。正式來源閉包／容器組合仍待驗證；[候選及驗證界線](DOTNET_EMOJI_BATCH.md)。
+
+## ver 8.0.68：表情快取與撤銷讀圖接線
+
+SQLite 首幀與 token 索引採完整 transaction 與新連線獨立回讀；每次重新建立來源候選並核對所有映射／像素。owner 發布、activation、帳號 binding 及 AccountRuntime 的唯讀 PNG API 已接線，撤銷後不再交付。桌面登入與版本確認只顯示待驗證的固定快取路徑及獨立寫入結果。
+
+目前僅離線來源工廠；production 尚未組合完整官方閉包，不會寫入表情快取或啟用圖片。表情網格、聊天文字插入／發送、小地圖及正式正向驗收仍未完成，未將 SQLite 測試當成正式來源驗收。詳見 [快取規則](DOTNET_EMOJI_CACHE.md)。

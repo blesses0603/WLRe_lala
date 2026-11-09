@@ -13,6 +13,7 @@ internal sealed class ResourceRuntimePublication
     internal OfflineRuntimeCandidate Candidate { get; }
     internal ItemImageReadback? ItemImages { get; }
     internal PortraitPngReadback? Portraits { get; }
+    internal EmojiPngReadback? Emojis { get; }
     private readonly ResourceRuntimeOwner _owner;
     internal bool ResourceAdmitted => _owner.IsCurrentAdmission(this);
     internal bool TlsOriginObserved => _owner.IsCurrentAdmission(this);
@@ -21,8 +22,8 @@ internal sealed class ResourceRuntimePublication
     internal bool CanLogin => false;
     internal bool CanSendPackets => false;
     internal ResourceRuntimePublication(ResourceRuntimeOwner owner, long generation, OfflinePreparedRuntimeCandidate prepared,
-        OfflineRuntimeCandidate? readbackCandidate = null, ItemImageReadback? itemImages = null, PortraitPngReadback? portraits = null)
-        => (_owner, Generation, Identity, Candidate, ItemImages, Portraits) = (owner, generation, prepared.Identity, readbackCandidate ?? prepared.Candidate, itemImages, portraits);
+        OfflineRuntimeCandidate? readbackCandidate = null, ItemImageReadback? itemImages = null, PortraitPngReadback? portraits = null, EmojiPngReadback? emojis = null)
+        => (_owner, Generation, Identity, Candidate, ItemImages, Portraits, Emojis) = (owner, generation, prepared.Identity, readbackCandidate ?? prepared.Candidate, itemImages, portraits, emojis);
 }
 
 /// <summary>Uninstalled resource-only owner. Construction does no network or database I/O.
@@ -39,6 +40,7 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
     private readonly string _inventory;
     private readonly string _itemImages;
     private readonly string _portraits;
+    private readonly string _emojis;
     private readonly IBundleSourceCacheReader _cache;
     private readonly RuntimeBundleCacheWriter _cacheWriter;
     private readonly OfflineBundleRuntimePreparation _preparation = new();
@@ -68,6 +70,7 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
         _inventory = Path.Combine(root, "official_sync", "derived_catalogs", "resource_inventory.sqlite3");
         _itemImages = Path.Combine(root, "official_sync", "derived_catalogs", "core_item_images_v1.sqlite3");
         _portraits = Path.Combine(root, "official_sync", "derived_catalogs", "core_portraits_v1.sqlite3");
+        _emojis = Path.Combine(root, "official_sync", "derived_catalogs", "core_emojis_v1.sqlite3");
         _afterAdmission = afterAdmission;
         _cleanupEntered = cleanupEntered;
         _bootstrapHooks = bootstrapHooks;
@@ -111,6 +114,14 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
         lock (_gate)
         {
             png = IsCurrentActivation(activation, publication) ? publication.ItemImages?.CopyPng(itemId) : null;
+            return png is not null;
+        }
+    }
+    internal bool TryReadEmoji(ResourceRuntimeActivation activation, ResourceRuntimePublication publication, byte token, out byte[]? png)
+    {
+        lock(_gate)
+        {
+            png=IsCurrentActivation(activation,publication)?publication.Emojis?.CopyPng(token):null;
             return png is not null;
         }
     }
@@ -208,6 +219,8 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
         ResourceRuntimePublication? publication = null;
         ItemImageReadback? itemImages = null;
         PortraitPngReadback? portraits = null;
+        EmojiPngReadback? emojis = null;
+        var emojiStorage = AccountResourceStorageOutcome.NotAttempted;
         var portraitStorage = AccountResourceStorageOutcome.NotAttempted;
         var imageStorage = AccountResourceStorageOutcome.NotAttempted;
         Exception? failure = null;
@@ -355,6 +368,38 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
                     portraits = portraits with { Mapping = portraitBatch.Mapping };
                 }
             }
+            // Offline hook only: no production factory exists until full official source verification.
+            if (_bootstrapHooks?.EmojisForOfflineTest?.Invoke(prepared) is { } emojiBatch)
+            {
+                if (bootstrap)
+                {
+                    await _preparation.ConfirmUnchangedAsync(_source, prepared, mine.Token).ConfigureAwait(false);
+                    EnsureCurrent(generation, mine);
+                    emojiStorage = AccountResourceStorageOutcome.Unknown;
+                    try
+                    {
+                        await EmojiPngStore.WriteAsync(EmojiConnection(SqliteOpenMode.ReadWriteCreate), emojiBatch.SourceFingerprint,
+                            emojiBatch.Rebuild, () => { _bootstrapHooks?.BeforeEmojiCommitAdmission?.Invoke(); EnsureCurrent(generation, mine); }, mine.Token).ConfigureAwait(false);
+                        emojiStorage = AccountResourceStorageOutcome.Committed;
+                    }
+                    catch (Exception error)
+                    {
+                        emojiStorage = error.Data[ResourceInventoryDatabase.OutcomeKey] switch
+                        {
+                            ResourceInventoryWriteOutcome.NotCommitted => AccountResourceStorageOutcome.NotCommitted,
+                            ResourceInventoryWriteOutcome.Committed => AccountResourceStorageOutcome.Committed,
+                            _ => AccountResourceStorageOutcome.Unknown
+                        };
+                        throw;
+                    }
+                }
+                EnsureCurrent(generation, mine);
+                if (bootstrap || File.Exists(_emojis))
+                {
+                    emojis = await EmojiPngStore.ReadAsync(EmojiConnection(SqliteOpenMode.ReadOnly), emojiBatch.SourceFingerprint,
+                        emojiBatch.Rebuild, () => EnsureCurrent(generation, mine), mine.Token).ConfigureAwait(false);
+                }
+            }
             await _preparation.ConfirmUnchangedAsync(_source, prepared, mine.Token).ConfigureAwait(false);
             sourcesRechecked = true;
             preparedResult = prepared;
@@ -375,13 +420,13 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         EnsureCurrent(generation, mine);
-                        publication = _current = new(this, generation, preparedResult!, readbackCandidate, itemImages, portraits);
+                        publication = _current = new(this, generation, preparedResult!, readbackCandidate, itemImages, portraits, emojis);
                     }
                 }
                 catch (Exception error) { failure = error; }
             }
             return new(storageAttempted, storage, mine.CommitAdmitted, receipt, readback,
-                sourcesRechecked, publication, failure) { ItemImageStorageOutcome = imageStorage, PortraitStorageOutcome = portraitStorage };
+                sourcesRechecked, publication, failure) { ItemImageStorageOutcome = imageStorage, PortraitStorageOutcome = portraitStorage, EmojiStorageOutcome = emojiStorage };
         }
         finally
         {
@@ -408,6 +453,9 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
         var connection = await CreateConnectionAsync(SqliteOpenMode.ReadOnly).ConfigureAwait(false);
         return await ResourceInventoryWriteBaseline.CaptureAsync(connection, token).ConfigureAwait(false);
     }
+
+    private SqliteConnection EmojiConnection(SqliteOpenMode mode) => new(new SqliteConnectionStringBuilder
+    { DataSource = _emojis, Mode = mode, Cache = SqliteCacheMode.Private, Pooling = false, DefaultTimeout = 5 }.ToString());
 
     private SqliteConnection PortraitConnection(SqliteOpenMode mode) => new(new SqliteConnectionStringBuilder
     { DataSource = _portraits, Mode = mode, Cache = SqliteCacheMode.Private, Pooling = false, DefaultTimeout = 5 }.ToString());

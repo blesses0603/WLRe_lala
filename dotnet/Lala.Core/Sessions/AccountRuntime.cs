@@ -286,6 +286,15 @@ public sealed class AccountRuntime : IAsyncDisposable
             png = bytes; return true;
         }
     }
+    /// <summary>Current bound emoji PNG copy only; never chat or packet authority.</summary>
+    public bool TryReadEmojiImage(byte token,out byte[]? png)
+    {
+        lock(gate)
+        {
+            png=null;if(!CurrentCatalogsLocked(out _)||!resources.TryReadEmojiImage(token,out var bytes)||!CurrentCatalogsLocked(out _))return false;
+            png=bytes;return true;
+        }
+    }
     /// <summary>Acquire visual input only for the exact receive snapshot shown by the host.
     /// Each currentness check reselects from live state; no work or callbacks run under render.</summary>
     public bool TryGetPortrait(ServiceStateSnapshot expected,bool companion,out PortraitRenderRequest? request)

@@ -183,6 +183,105 @@ public sealed class ResourceRuntimeOwnerTests
     }
 
     [Fact]
+    public async Task Emoji_batch_writes_independently_reads_and_offline_owner_cannot_admit()
+    {
+        using var fixture = new Fixture();
+        int builds = 0;
+        var hooks = new ResourceRuntimeBootstrapTestHooks { EmojisForOfflineTest = _ => EmojiRuntimeFixtures.Batch(() => { builds++; return 255; }) };
+        await using var owner = ResourceRuntimeOwner.CreateForOfflineTests(fixture.Root, new Source(), bootstrapHooks: hooks);
+        var result = await owner.BootstrapAndRefreshAsync();
+        Assert.Null(result.Failure); Assert.Equal(AccountResourceStorageOutcome.Committed, result.EmojiStorageOutcome);
+        Assert.NotNull(result.Publication!.Emojis); Assert.Equal(3, builds);
+        Assert.False(owner.TryActivate(result.Publication, out _));
+        var refresh = await owner.RefreshWithResultAsync();
+        Assert.Null(refresh.Failure); Assert.NotNull(refresh.Publication!.Emojis);
+        Assert.Equal(AccountResourceStorageOutcome.NotAttempted, refresh.EmojiStorageOutcome); Assert.Equal(5, builds);
+    }
+    [Fact]
+    public async Task Missing_emoji_cache_refresh_is_readonly_and_unreviewed_sources_are_absent()
+    {
+        using var fixture = new Fixture(); var source = new Source(); await fixture.PopulateAsync(source);
+        var hooks = new ResourceRuntimeBootstrapTestHooks { EmojisForOfflineTest = _ => EmojiRuntimeFixtures.Batch() };
+        await using var owner = ResourceRuntimeOwner.CreateForOfflineTests(fixture.Root, source, bootstrapHooks: hooks);
+        var result = await owner.RefreshWithResultAsync();
+        Assert.Null(result.Failure); Assert.Null(result.Publication!.Emojis);
+        Assert.Equal(AccountResourceStorageOutcome.NotAttempted, result.EmojiStorageOutcome);
+        Assert.False(File.Exists(Path.Combine(fixture.Root,"official_sync","derived_catalogs","core_emojis_v1.sqlite3")));
+    }
+    [Theory, InlineData(false), InlineData(true)]
+    public async Task Emoji_retirement_or_source_drift_preserves_exact_storage_outcome(bool drift)
+    {
+        using var fixture = new Fixture(); var source = new Source(); ResourceRuntimeOwner? owner = null;
+        var hooks = new ResourceRuntimeBootstrapTestHooks
+        {
+            EmojisForOfflineTest = _ => EmojiRuntimeFixtures.Batch(),
+            BeforeEmojiCommitAdmission = () =>
+            {
+                if (drift) { var main = BundleSourceFixtures.Index("main-valid"); main["header"]!["package_note"] = "changed"; source.Main = BundleSourceFixtures.Encode(main); }
+                else owner!.Invalidate();
+            }
+        };
+        await using (owner = ResourceRuntimeOwner.CreateForOfflineTests(fixture.Root, source, bootstrapHooks: hooks))
+        {
+            var result = await owner.BootstrapAndRefreshAsync(); Assert.NotNull(result.Failure); Assert.Null(owner.Current);
+            Assert.Equal(drift ? AccountResourceStorageOutcome.Committed : AccountResourceStorageOutcome.NotCommitted, result.EmojiStorageOutcome);
+        }
+    }
+    [Fact]
+    public async Task Emoji_pixel_drift_between_preparation_and_write_blocks_publication()
+    {
+        using var fixture = new Fixture(); int calls = 0;
+        var hooks = new ResourceRuntimeBootstrapTestHooks { EmojisForOfflineTest = _ => EmojiRuntimeFixtures.Batch(() => ++calls) };
+        await using var owner = ResourceRuntimeOwner.CreateForOfflineTests(fixture.Root, new Source(), bootstrapHooks: hooks);
+        var result = await owner.BootstrapAndRefreshAsync();
+        Assert.NotNull(result.Failure); Assert.Null(result.Publication);
+        Assert.Equal(AccountResourceStorageOutcome.NotCommitted, result.EmojiStorageOutcome);
+    }
+    [Theory, InlineData("invalidate"), InlineData("dispose"), InlineData("refresh")]
+    public async Task Emoji_reads_require_exact_activation_and_revoke(string retirement)
+    {
+        using var fixture = new Fixture();
+        var hooks = new ResourceRuntimeBootstrapTestHooks { EmojisForOfflineTest = _ => EmojiRuntimeFixtures.Batch() };
+        await using var offline = ResourceRuntimeOwner.CreateForOfflineTests(fixture.Root, new Source(), bootstrapHooks: hooks);
+        var result = await offline.BootstrapAndRefreshAsync(); Assert.Null(result.Failure);
+        var prepared = await new OfflineBundleRuntimePreparation().PrepareAsync(new Source());
+        await using var owner = ResourceRuntimeOwner.Create(fixture.Root);
+        var emojis = result.Publication!.Emojis!;
+        var publication = new ResourceRuntimePublication(owner, 0, prepared, emojis: emojis);
+        // White-box lifetime fixture only; this does not assert official acquisition or acceptance.
+        typeof(ResourceRuntimeOwner).GetField("_current", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.SetValue(owner, publication);
+        Assert.True(owner.TryActivate(publication, out var active)); Assert.True(active!.HasEmojis);
+        Assert.True(active.TryReadEmoji(1, out var image)); Assert.NotNull(image);
+        var session=new AccountSession();var snapshot=session.Begin("owned","offline");
+        Assert.True(AccountResourceBinding.TryBind(session,snapshot.Generation,owner,publication,out var binding));
+        Assert.True(binding!.TryReadEmoji(1,out _));Assert.False(binding.CanSendPackets);
+        session.Hold(snapshot.Generation);Assert.False(binding.TryReadEmoji(1,out var retired));Assert.Null(retired);
+        Assert.True(active.TryReadEmoji(1,out _)); // Account replacement does not revoke unrelated owner readers.
+
+        Assert.False(active.TryReadEmoji(0, out _));
+        Assert.False(new ResourceRuntimeActivation(owner, publication).TryReadEmoji(1, out _));
+        image![0]=0; Assert.True(active.TryReadEmoji(1,out var fresh)); Assert.Equal(137,fresh![0]);
+        if (retirement == "invalidate") owner.Invalidate();
+        else if (retirement == "dispose") await owner.DisposeAsync();
+        else await Assert.ThrowsAnyAsync<OperationCanceledException>(() => owner.RefreshAsync(new(true)));
+        Assert.False(active.HasEmojis); Assert.False(active.TryReadEmoji(1, out image)); Assert.Null(image);
+    }
+    [Fact]
+    public async Task Corrupt_emoji_cache_is_not_repaired_by_refresh()
+    {
+        using var fixture = new Fixture();
+        var hooks = new ResourceRuntimeBootstrapTestHooks { EmojisForOfflineTest = _ => EmojiRuntimeFixtures.Batch() };
+        await using var owner = ResourceRuntimeOwner.CreateForOfflineTests(fixture.Root, new Source(), bootstrapHooks: hooks);
+        Assert.Null((await owner.BootstrapAndRefreshAsync()).Failure);
+        string path = Path.Combine(fixture.Root,"official_sync","derived_catalogs","core_emojis_v1.sqlite3");
+        using (var db = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource=path,Pooling=false }.ToString()))
+        { db.Open(); using var command=db.CreateCommand(); command.CommandText="UPDATE emoji_frames_v1 SET png=zeroblob(16)"; command.ExecuteNonQuery(); }
+        byte[] before = File.ReadAllBytes(path);
+        var result = await owner.RefreshWithResultAsync(); Assert.NotNull(result.Failure); Assert.Null(owner.Current);
+        Assert.Equal(AccountResourceStorageOutcome.NotAttempted,result.EmojiStorageOutcome); Assert.Equal(before,File.ReadAllBytes(path));
+    }
+
+    [Fact]
     public async Task Readonly_refresh_does_not_create_a_missing_item_image_cache()
     {
         using var fixture = new Fixture(); var source = new Source(); await fixture.PopulateAsync(source);

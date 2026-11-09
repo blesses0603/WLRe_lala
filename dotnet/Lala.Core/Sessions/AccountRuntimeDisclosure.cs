@@ -22,6 +22,7 @@ public sealed class AccountResourceDisclosure
     public string BundleCacheDirectory { get; }
     public string ItemImageCachePath { get; }
     public string PortraitCachePath { get; }
+    public string EmojiCachePath { get; }
     public string VersionMapUrl => $"https://{OfficialResourceOrigin.DefaultHost}/WLN/TW/ResourcePath_PC.dat";
     public string ResourceUrlPrefix => $"https://{OfficialResourceOrigin.DefaultHost}/WLN/TW/";
     public string Purpose => "Acquire official HTTPS version metadata, DataPackage and MainPackage " +
@@ -37,6 +38,7 @@ public sealed class AccountResourceDisclosure
         InventoryPath = Path.Combine(AbsoluteDataRoot, "official_sync", "derived_catalogs", "resource_inventory.sqlite3");
         ItemImageCachePath = Path.Combine(AbsoluteDataRoot, "official_sync", "derived_catalogs", "core_item_images_v1.sqlite3");
         PortraitCachePath = Path.Combine(AbsoluteDataRoot, "official_sync", "derived_catalogs", "core_portraits_v1.sqlite3");
+        EmojiCachePath = Path.Combine(AbsoluteDataRoot, "official_sync", "derived_catalogs", "core_emojis_v1.sqlite3");
         BundleCacheDirectory = Path.Combine(AbsoluteDataRoot, "official_sync", "bundles");
     }
     public override string ToString() => "Resource operation disclosure (local paths redacted)";

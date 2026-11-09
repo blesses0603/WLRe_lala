@@ -1,3 +1,5 @@
+> Current update (8.0.68): emoji candidate batches now have transactional SQLite storage, independent readback and revocable owner/account PNG reads, exercised only through an internal offline factory. Production emoji acquisition/publication and desktop gallery are not installed. Desktop shows the pending path and write status only. See [cache boundaries](../../../../docs/DOTNET_EMOJI_CACHE.md). Official positive-format acceptance remains incomplete; historical sections below describe their original version.
+
 > Current scope: v8.0.53 conditionally prepares, stores and publishes supported item images in production. BC1/BC3 now compose the same bounded pipeline; desktop native decodes reuse exact current bytes. Other image families and actual official positive-format acceptance remain incomplete. Earlier version sections below retain their historical scope.
 
 # Bounded image pixel layer — overall PR 8.0.47

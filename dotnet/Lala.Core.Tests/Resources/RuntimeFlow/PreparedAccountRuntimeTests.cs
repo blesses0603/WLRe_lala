@@ -115,6 +115,9 @@ public sealed partial class ResourceRuntimeBootstrapTests
         var runtime = AccountRuntime.CreatePrepared(session, generation, Guid.NewGuid(), AccountProfile(verification, formal), input, root);
         var disclosure = runtime.Disclosure!;
         Assert.Equal(Path.GetFullPath(root), disclosure.Resources.AbsoluteDataRoot);
+        Assert.EndsWith("official_sync/derived_catalogs/core_emojis_v1.sqlite3".Replace('/',Path.DirectorySeparatorChar),disclosure.Resources.EmojiCachePath);
+        Assert.False(runtime.TryReadEmojiImage(1,out var emoji));Assert.Null(emoji);
+
         Assert.EndsWith("official_sync/derived_catalogs/resource_inventory.sqlite3".Replace('/', Path.DirectorySeparatorChar), disclosure.Resources.InventoryPath);
         Assert.EndsWith("official_sync/bundles".Replace('/', Path.DirectorySeparatorChar), disclosure.Resources.BundleCacheDirectory);
         Assert.Equal("https://wlreftpsrc.chinesegamer.net/WLN/TW/ResourcePath_PC.dat", disclosure.Resources.VersionMapUrl);

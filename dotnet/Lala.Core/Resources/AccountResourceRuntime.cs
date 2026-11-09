@@ -13,6 +13,7 @@ public sealed record AccountResourcePreparationResult(
     AccountResourceStorageOutcome StorageOutcome, bool ReadbackMatched, bool SourcesRechecked)
 {
     public AccountResourceStorageOutcome PortraitStorageOutcome { get; init; } = AccountResourceStorageOutcome.NotAttempted;
+    public AccountResourceStorageOutcome EmojiStorageOutcome { get; init; } = AccountResourceStorageOutcome.NotAttempted;
     public AccountResourceStorageOutcome ItemImageStorageOutcome { get; init; } = AccountResourceStorageOutcome.NotAttempted;
     public bool WasBound => Status == AccountResourcePreparationStatus.Bound;
     public bool CanLogin => false;
@@ -150,7 +151,8 @@ public sealed class AccountResourceRuntime : IAsyncDisposable
                 return new(expectedGeneration, status, StorageOutcome(result),
                     result?.Readback == ResourceRuntimeReadback.Matched, result?.SourcesRechecked == true)
                     { ItemImageStorageOutcome = result?.ItemImageStorageOutcome ?? AccountResourceStorageOutcome.NotAttempted,
-                        PortraitStorageOutcome = result?.PortraitStorageOutcome ?? AccountResourceStorageOutcome.NotAttempted };
+                        PortraitStorageOutcome = result?.PortraitStorageOutcome ?? AccountResourceStorageOutcome.NotAttempted,
+                        EmojiStorageOutcome = result?.EmojiStorageOutcome ?? AccountResourceStorageOutcome.NotAttempted };
             }
         }
         finally { lock (_gate) _running = false; }
@@ -170,6 +172,10 @@ public sealed class AccountResourceRuntime : IAsyncDisposable
     public bool TryReadItemImage(ushort itemId, out byte[]? png)
     {
         lock (_gate) { png = null; return !_disposed && _binding is not null && _binding.TryReadItemImage(itemId, out png); }
+    }
+    public bool TryReadEmojiImage(byte token,out byte[]? png)
+    {
+        lock(_gate){png=null;return !_disposed&&_binding is not null&&_binding.TryReadEmoji(token,out png);}
     }
     internal bool TrySelectPortrait(Lala.Core.Protocol.WorldPlayer? player,Lala.Core.Inventory.CompanionReceiveSnapshot companions,
         bool companion,out PortraitSelection? selection,out PortraitCachedImage? image)
