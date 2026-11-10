@@ -13,20 +13,24 @@ public sealed class VersionWindow : DesktopWindow
     private readonly Func<string, CancellationToken, Task<ResourceInventoryInspection>> inspect;
     private readonly Action openLogin;
     private readonly TextBlock heading = Ui.Text("準備查詢官方版本", 22, bold: true);
-    private readonly TextBlock status = Ui.Text("只查詢公開 HTTPS metadata，不需要遊戲帳密。");
-    private readonly TextBlock versions = Ui.Text("官方版本：尚未查詢");
+    private readonly TextBlock dataPackageVersion = Ui.Text("—", 14, Ui.Accent, true);
+    private readonly TextBlock mainPackageVersion = Ui.Text("—", 14, Ui.Accent, true);
+    private readonly TextBlock gameVersion = Ui.Text("—", 26, bold: true);
+    private readonly TextBlock dataVersion = Ui.Text("—", 26, Ui.Accent, true);
+    private readonly TextBlock databaseVersion = Ui.Text("—", 26, bold: true);
+    private readonly TextBlock databaseDataVersion = Ui.Text("—", 26, Ui.Accent, true);
+    private readonly TextBlock observedTime = Ui.Text("尚未取得觀測時間", 12, Ui.Muted);
     private readonly TextBlock inventory = Ui.Text("本機資源：尚未檢查；不會自動讀取舊帳號設定。");
-    private readonly TextBlock location = Ui.Text("由系統管理資源位置", 12, Ui.Muted);
     private readonly ProgressBar progress = new() { IsIndeterminate = false, Height = 6 };
-    private readonly Button retry, inspectButton, next, prepare;
+    private readonly Button retry, next, prepare;
+    private readonly Func<string, PreloginResourcePreparation> createPreparation;
     private readonly Func<string> resourceDirectory;
     private readonly Action<string?>? selectResources;
     private string? selectedRoot;
     private PreloginResourcePreparation? prelogin;
     private Task resourceRetirement = Task.CompletedTask;
-    private Window? resourceConfirmation;
     internal bool ResourcesMatch(OfficialVersionSnapshot? version) => prelogin?.Matches(version) == true;
-    private readonly TextBlock selection = Ui.Text("尚未完成登入前必要資源準備。", 12, Ui.Muted);
+    private readonly TextBlock selection = Ui.Text("等待官方版本，自動驗證、下載將隨後開始。", 12, Ui.Muted);
     private CancellationTokenSource stop = new();
     private Task? operation;
     private DesktopServerCatalogSnapshot? catalog;
@@ -36,20 +40,23 @@ public sealed class VersionWindow : DesktopWindow
     public VersionWindow(Action openLogin, Action openPreview, Action exit, Action<string?>? selectResources = null)
         : this(openLogin, openPreview, exit, Program.UiSmokeTest ? new OfflineDesktopServerCatalog() : new OfficialDesktopServerCatalog(), ResourceInventoryInspector.InspectAsync, selectResources) { }
     internal VersionWindow(Action openLogin, Action openPreview, Action exit, IDesktopServerCatalog source,
-        Func<string, CancellationToken, Task<ResourceInventoryInspection>> inspect, Action<string?>? selectResources = null, Func<string>? resourceDirectory = null)
+        Func<string, CancellationToken, Task<ResourceInventoryInspection>> inspect, Action<string?>? selectResources = null, Func<string>? resourceDirectory = null,
+        Func<string, PreloginResourcePreparation>? createPreparation = null)
         : base("飄流Re:LaLa · 資源準備與官方線上版本檢測", 1000, 710)
     {
         this.resourceDirectory = resourceDirectory ?? DesktopResourceDirectory.Resolve;
         this.source = source; this.inspect = inspect; this.openLogin = openLogin; this.selectResources = selectResources;
-        prepare = ActionButton("下載、驗證與準備", () => _ = PrepareResourcesAsync(), "VersionPrepare", primary: true); prepare.IsEnabled = false;
-        heading.Name = "VersionHeading"; status.Name = "VersionStatus"; versions.Name = "VersionMetadata"; inventory.Name = "VersionInventory";
+        this.createPreparation = createPreparation ?? PreloginResourcePreparation.Create;
+        prepare = ActionButton("重新驗證、下載", () => _ = RefreshAsync(), "VersionPrepare", primary: true); prepare.IsEnabled = false;
+        heading.Name = "VersionHeading"; inventory.Name = "VersionInventory";
+        dataPackageVersion.Name = "VersionDataPackageValue"; mainPackageVersion.Name = "VersionMainPackageValue";
+        gameVersion.Name = "VersionGameValue"; dataVersion.Name = "VersionDataValue"; observedTime.Name = "VersionObservedTime";
+        databaseVersion.Name = "DatabaseVersionValue"; databaseDataVersion.Name = "DatabaseDataValue";
         retry = ActionButton("重新查詢版本", () => _ = RefreshAsync(), "VersionRefresh");
-        inspectButton = ActionButton("重新檢查本機資源", () => _ = RunAsync(token => InspectCoreAsync(this.resourceDirectory(), token)), "VersionInspect");
         next = ActionButton("進入登入畫面 →", Continue, "VersionContinue", primary: true); next.IsEnabled = false;
 
-        // Keep the live verdict visible first; long diagnostics scroll independently
-        // of the footer so entry and exit actions remain reachable.
-        var summary = Ui.Column(Ui.Text("啟動準備 / 檢查狀態", 12, Ui.Accent, true), heading, status);
+        // Fit the startup overview and actions on one page without scrolling.
+        var summary = Ui.Column(Ui.Text("啟動準備 / 檢查狀態", 12, Ui.Accent, true), heading);
         summary.Spacing = 10;
         var overview = Surface(summary, accent: true);
         overview.Name = "VersionOverview";
@@ -57,32 +64,51 @@ public sealed class VersionWindow : DesktopWindow
         var resourceActions = new Grid { ColumnDefinitions = new("*,Auto"), ColumnSpacing = 8 };
         Ui.At(resourceActions, prepare, 0);
         Ui.At(resourceActions, ActionButton("停止", () => _ = StopAsync(), "VersionClearPreparation"), 1);
-        var local = Ui.Column(location, inventory, inspectButton, resourceActions, selection);
-        local.Spacing = 12;
+        var databaseValues = new Grid { ColumnDefinitions = new("*,*"), ColumnSpacing = 10 };
+        Ui.At(databaseValues, VersionTile("資料庫版本", databaseVersion), 0);
+        Ui.At(databaseValues, VersionTile("資料", databaseDataVersion), 1);
+        var resourceActivity = Ui.Column(Ui.Text("自動取得官方資源，驗證後寫入 LALA資料庫。", 12, Ui.Muted),
+            progress, selection, resourceActions);
+        resourceActivity.Spacing = 10;
+        resourceActivity.Name = "DatabaseActivity";
+        var local = new Grid { RowDefinitions = new("Auto,Auto,Auto,*,Auto"), RowSpacing = 10 };
+        Ui.At(local, Ui.Text("自動驗證、下載", 18, Ui.Accent, true), 0);
+        Ui.At(local, databaseValues, 0, 1);
+        Ui.At(local, inventory, 0, 2);
+        Ui.At(local, resourceActivity, 0, 4);
         var panels = new Grid { ColumnDefinitions = new("*,*"), ColumnSpacing = 16 };
         panels.Name = "VersionPanels";
-        Ui.At(panels, Section("01", "官方線上版本", "從官方公開清單取得最新版本", versions), 0);
-        Ui.At(panels, Section("02", "本機資源準備", "確認必要資料，再進入登入", local), 1);
+        var versionValues = new Grid { ColumnDefinitions = new("*,*"), ColumnSpacing = 10 };
+        Ui.At(versionValues, VersionTile("遊戲版本", gameVersion), 0);
+        Ui.At(versionValues, VersionTile("資料版本", dataVersion), 1);
+        var packages = Ui.Column(VersionTile("資料套件 · DataPackage", dataPackageVersion, compact: true),
+            VersionTile("主程式套件 · MainPackage", mainPackageVersion, compact: true));
+        packages.Name = "VersionMetadata";
+        var metadata = new Grid { RowDefinitions = new("Auto,Auto,*"), RowSpacing = 10 };
+        observedTime.HorizontalAlignment = HorizontalAlignment.Right;
+        observedTime.VerticalAlignment = VerticalAlignment.Bottom;
+        observedTime.TextAlignment = TextAlignment.Right;
+        Ui.At(metadata, versionValues, 0);
+        Ui.At(metadata, packages, 0, 1);
+        Ui.At(metadata, observedTime, 0, 2);
+        Ui.At(panels, Section("01", "官方線上版本", null, metadata), 0);
+        Ui.At(panels, Section("02", "LALA資料庫", null, local), 1);
 
-        var update = new Expander
-        {
-            Header = Ui.Text("LaLa 程式更新 · GitHub Release", 13, Ui.Muted),
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            Content = Ui.Text("C# Desktop 發行更新尚未接入；不下載或執行 Python 安裝程式。", 12, Ui.Muted),
-            Name = "VersionUpdateDetails"
-        };
-        var content = Ui.Column(overview, panels, Surface(update));
-        content.Spacing = 16;
-        var actions = new Grid { ColumnDefinitions = new("Auto,Auto,*,Auto,Auto"), ColumnSpacing = 10 };
+        var update = Ui.Column(Ui.Text("LaLa 程式更新 · GitHub Release", 13, Ui.Muted),
+            Ui.Text("C# Desktop 發行更新尚未接入；不下載或執行 Python 安裝程式。", 12, Ui.Muted));
+        update.Name = "VersionUpdateDetails";
+        var content = new Grid { RowDefinitions = new("Auto,*,Auto"), RowSpacing = 12 };
+        Ui.At(content, overview, 0);
+        Ui.At(content, panels, 0, 1);
+        Ui.At(content, Surface(update), 0, 2);
+        var actions = new Grid { ColumnDefinitions = new("Auto,*,Auto,Auto"), ColumnSpacing = 10 };
         Ui.At(actions, ActionButton("結束程式", exit), 0);
-        Ui.At(actions, ActionButton("檢視未連線桌面", openPreview, "VersionPreview"), 1);
-        Ui.At(actions, retry, 3);
-        Ui.At(actions, next, 4);
-        var footer = Ui.Column(progress,
-            Ui.Text("連線提醒：官方 TCP 未使用 TLS，XOR 不提供安全加密；登入時會逐次確認帳密傳送。", 12, Ui.Muted), actions);
+        Ui.At(actions, retry, 2);
+        Ui.At(actions, next, 3);
+        var footer = Ui.Column(Ui.Text("連線提醒：官方 TCP 未使用 TLS，XOR 不提供安全加密；登入時會逐次確認帳密傳送。", 12, Ui.Muted), actions);
         footer.Spacing = 12;
-        var body = new Grid { RowDefinitions = new("*,Auto"), RowSpacing = 16 };
-        Ui.At(body, new ScrollViewer { Content = content, HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled }, 0);
+        var body = new Grid { RowDefinitions = new("*,Auto"), RowSpacing = 12 };
+        Ui.At(body, content, 0);
         Ui.At(body, Surface(footer), 0, 1);
         SetBody(body);
         Opened += (_, _) => { if (catalog?.IsFresh != true) _ = RefreshAsync(); };
@@ -94,6 +120,13 @@ public sealed class VersionWindow : DesktopWindow
         };
         Closed += (_, _) => { closed = true; stop.Cancel(); };
     }
+
+    private static Border VersionTile(string label, TextBlock value, bool compact = false) => new()
+    {
+        Background = Brush.Parse("#c0254256"), BorderBrush = Brush.Parse("#3b6075"), BorderThickness = new Thickness(1),
+        CornerRadius = new CornerRadius(8), Padding = new Thickness(12, compact ? 5 : 8),
+        Child = Ui.Column(Ui.Text(label, 12, Ui.Muted), value)
+    };
 
     private static Button ActionButton(string text, Action action, string? name = null, bool primary = false)
     {
@@ -119,32 +152,46 @@ public sealed class VersionWindow : DesktopWindow
         Padding = new Thickness(18, 16), Child = content
     };
 
-    private static Border Section(string step, string title, string subtitle, Control content)
+    private static Border Section(string step, string title, string? subtitle, Control content)
     {
         var header = Ui.Row(Ui.Text(step, 13, Ui.Accent, true), Ui.Text(title, 17, bold: true));
         header.Spacing = 10;
-        var column = Ui.Column(header, Ui.Text(subtitle, 12, Ui.Muted), content);
+        var column = Ui.Column(header);
+        if (!string.IsNullOrEmpty(subtitle)) column.Children.Add(Ui.Text(subtitle, 12, Ui.Muted));
         column.Spacing = 12;
-        return Surface(column);
+        var layout = new Grid { RowDefinitions = new("Auto,*"), RowSpacing = 12 };
+        Ui.At(layout, column, 0);
+        Ui.At(layout, content, 0, 1);
+        return Surface(layout);
     }
     private void Continue()
     {
         if (operation is not null || closed || catalog?.IsFresh != true || !catalog.Lines.Any(x => x.Profile is not null) || !ResourcesMatch(catalog.Version))
-        { next.IsEnabled = false; status.Text = "清單或同版必要資源未就緒；請重新查詢並準備資源。"; return; }
+        { next.IsEnabled = false; selection.Text = "清單或同版必要資源未就緒；請重新查詢並準備資源。"; return; }
         openLogin();
     }
     internal Task RefreshAsync() => RunAsync(async token =>
     {
         await RetireResourcesAsync();
         catalog = null;
+        gameVersion.Text = dataVersion.Text = "—";
+        dataPackageVersion.Text = mainPackageVersion.Text = "—";
+        observedTime.Text = "正在查詢觀測時間…";
+        selection.Text = "正在檢查 LALA資料庫…";
         await InspectCoreAsync(resourceDirectory(), token);
-        versions.Text = "官方版本：查詢中…"; heading.Text = "正在查詢官方版本";
+        heading.Text = "正在查詢官方版本";
         var value = await source.LoadAsync(token);
         token.ThrowIfCancellationRequested();
         catalog = value;
         RenderVersion(value);
-        heading.Text = value.IsFresh && value.Lines.Any(x => x.Profile is not null) ? "官方清單已取得；請完成登入前資源準備" : "沒有可用的已知登入設定";
-        status.Text = value.Status;
+        heading.Text = "官方清單已取得";
+        if (value.IsFresh && value.Version is not null && value.Lines.Any(x => x.Profile is not null) && selectedRoot is not null && selectResources is not null)
+            await PrepareResourcesCoreAsync(token);
+        else
+        {
+            heading.Text = "官方版本或登入設定尚未就緒";
+            selection.Text = "尚未啟動自動下載，請重新查詢官方版本。";
+        }
     });
     private void RenderVersion(DesktopServerCatalogSnapshot value)
     {
@@ -154,24 +201,35 @@ public sealed class VersionWindow : DesktopWindow
             System.Globalization.DateTimeStyles.AssumeUniversal, out var timestamp)
             ? timestamp.ToOffset(TimeSpan.FromHours(8)).ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture)
             : "時間資料無效";
-        versions.Text = v is null ? value.Status : $"遊戲版本：{v.ExeVersion}\n資料版本：{v.DataVersion}\n" +
-            string.Join("\n", v.Packages.OrderBy(p => p.Key).Select(p => $"{p.Key}：{p.Value}")) + $"\n觀測時間（UTC+8）：{observedAt}";
+        gameVersion.Text = v?.ExeVersion ?? "—";
+        dataVersion.Text = v?.DataVersion ?? "—";
+        dataPackageVersion.Text = v?.Packages.GetValueOrDefault("DataPackage") ?? "—";
+        mainPackageVersion.Text = v?.Packages.GetValueOrDefault("MainPackage") ?? "—";
+        observedTime.Text = $"觀測時間 · {observedAt}";
     }
     internal Task InspectAsync(string root) => RunAsync(token => InspectCoreAsync(root, token));
     private async Task InspectCoreAsync(string root, CancellationToken token)
     {
         await RetireResourcesAsync(); selectedRoot = null;
+        databaseVersion.Text = databaseDataVersion.Text = "—";
+        inventory.IsVisible = true;
         inventory.Text = "正在唯讀檢查本機資源…";
         var result = await Task.Run(() => inspect(root, token), token);
         token.ThrowIfCancellationRequested();
-        selectedRoot = Path.GetFullPath(root); location.Text = "資源由程式自動管理";
+        selectedRoot = Path.GetFullPath(root);
         inventory.Text = result.Status switch
         {
             ResourceInventoryInspectionStatus.Missing => "找不到資源資料庫；沒有建立或下載任何檔案。",
             ResourceInventoryInspectionStatus.Invalid => "資料庫內容無效；沒有修復或覆寫。",
             ResourceInventoryInspectionStatus.Unavailable => "資料庫目前無法讀取；沒有重試或覆寫。",
-            _ => $"本機資料庫自洽（不代表官方驗證）\n遊戲 {result.ExeVersion}／資料 {result.DataVersion}\n必要資料表 {result.RequiredTables}／{result.RequiredTableBytes} bytes"
+            _ => ""
         };
+        inventory.IsVisible = !string.IsNullOrEmpty(inventory.Text);
+        if (result.Status == ResourceInventoryInspectionStatus.SelfConsistent)
+        {
+            databaseVersion.Text = result.ExeVersion;
+            databaseDataVersion.Text = result.DataVersion;
+        }
     }
     private Task RetireResourcesAsync()
     {
@@ -187,42 +245,14 @@ public sealed class VersionWindow : DesktopWindow
         try { await prior; }
         finally { await previous.DisposeAsync(); }
     }
-    internal Task PrepareResourcesAsync() => RunAsync(async token =>
+    private async Task PrepareResourcesCoreAsync(CancellationToken token)
     {
         if (selectedRoot is null) return;
+        token.ThrowIfCancellationRequested();
         await RetireResourcesAsync();
-        prelogin = PreloginResourcePreparation.Create(selectedRoot);
-        var disclosure = prelogin.Disclosure;
-        var dialog = new Window { Title = "確認登入前資源準備", Icon = Icon, Width = 720, Height = 620, MinWidth = 520, MinHeight = 420, WindowStartupLocation = WindowStartupLocation.CenterOwner };
-        resourceConfirmation = dialog;
-        var details = new Expander { Header = "進階細節：驗證方式", IsExpanded = false,
-            Name = "PreloginResourceDetails", HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
-            Content = Ui.Column(
-                Ui.Text("小地圖串流階段最多 4 檔／64 MiB；其餘下載額度不變。"),
-                Ui.Text("來源、版本、Manifest、格式與像素依各資源驗證，SQLite 獨立回讀；頭像另需角色映射，小地圖另需目前場景綁定。驗證未通過的圖資保持不可用。")) };
-        var summary = Ui.Column(
-            Ui.Text("準備遊戲資源", 22, bold: true),
-            Ui.Text("此步驟不需要帳密，也不會登入遊戲。", 14, Ui.Muted),
-            Ui.Text("下載內容", 16, bold: true),
-            Ui.Text("必要資料表，以及受支援、通過驗證的物品圖、頭像、表情與小地圖。"),
-            Ui.Text("官方來源", 16, bold: true),
-            Ui.Text(disclosure.ResourceUrlPrefix),
-            Ui.Text("資源由程式自動管理；將建立必要目錄，下載並寫入 Bundle、暫存檔與 SQLite 資料庫（含 journal）。停止不會回復已完成或結果不明的寫入，也不會自動重試。", 13),
-            Ui.Text("資源準備不代表全圖資或正式登入驗收完成；一般遊戲操作仍停用。", 13, Ui.Muted),
-            details);
-        var layout = new Grid { RowDefinitions = new RowDefinitions("*,Auto"), Margin = new Avalonia.Thickness(20) };
-        Ui.At(layout, new ScrollViewer { Content = summary }, 0, 0);
-        Ui.At(layout, Ui.Row(Ui.Button("取消", () => dialog.Close(false), "PreloginCancel"),
-            Ui.Button("確認下載與寫入", () => dialog.Close(true), "PreloginConfirm")), 0, 1);
-        dialog.Content = layout;
-        bool approved;
-        using (token.Register(() => Avalonia.Threading.Dispatcher.UIThread.Post(() => dialog.Close(false))))
-        {
-            try { approved = await dialog.ShowDialog<bool>(this); token.ThrowIfCancellationRequested(); }
-            finally { resourceConfirmation = null; }
-        }
-        if (!approved) { await RetireResourcesAsync(); selection.Text = "未同意下載；沒有啟動資源準備。"; return; }
-        heading.Text = "正在下載、驗證及回讀必要資源";
+        token.ThrowIfCancellationRequested();
+        prelogin = createPreparation(selectedRoot);
+        heading.Text = "LALA資料庫正在自動驗證、下載";
         var currentPreparation = prelogin;
         void RenderProgress()
         {
@@ -238,24 +268,28 @@ public sealed class VersionWindow : DesktopWindow
         var progressTimer = new Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
         progressTimer.Tick += (_, _) => RenderProgress();
         PreloginResourceResult result;
-        try { progressTimer.Start(); result = await currentPreparation.PrepareAsync(token); RenderProgress(); }
+        try { RenderProgress(); progressTimer.Start(); result = await currentPreparation.PrepareAsync(token); RenderProgress(); }
         finally { progressTimer.Stop(); }
         token.ThrowIfCancellationRequested();
         if (result.Status != PreloginResourceStatus.Ready)
         {
             string reason = currentPreparation.Progress.Phase;
-            await RetireResourcesAsync(); heading.Text = "資源準備未完成"; selection.Text = reason; return;
+            await RetireResourcesAsync(); heading.Text = "LALA資料庫尚未就緒"; selection.Text = reason; return;
         }
         heading.Text = "必要資源已驗證；正在重新核對登入清單";
         progress.IsIndeterminate = true;
         var observed = await source.LoadAsync(token); token.ThrowIfCancellationRequested();
-        catalog = observed; RenderVersion(observed); status.Text = observed.Status;
-        if (!observed.IsFresh || !ResourcesMatch(observed.Version)) { await RetireResourcesAsync(); heading.Text = "清單與資源版本不同，禁止登入"; return; }
+        catalog = observed; RenderVersion(observed);
+        if (!observed.IsFresh || !observed.Lines.Any(x => x.Profile is not null) || !ResourcesMatch(observed.Version))
+        { await RetireResourcesAsync(); heading.Text = "清單與資源版本不同，禁止登入"; return; }
         selectResources?.Invoke(selectedRoot);
-        heading.Text = "同版必要資源準備完成";
+        heading.Text = "LALA資料庫已就緒，可以登入";
+        inventory.Text = "資料庫已完成驗證與回讀";
+        inventory.IsVisible = true;
+        databaseVersion.Text = observed.Version!.ExeVersion;
+        databaseDataVersion.Text = observed.Version.DataVersion;
         selection.Text = "必要資料已完成驗證與回讀。可進入登入畫面；可選圖資仍依個別驗證結果啟用，尚非正式登入驗收。";
-        status.Text = observed.Status;
-    });
+    }
     private Task RunAsync(Func<CancellationToken, Task> action)
     {
         if (closed || operation is not null) return Pending;
@@ -265,15 +299,15 @@ public sealed class VersionWindow : DesktopWindow
     private async Task RunCoreAsync(Func<CancellationToken, Task> action)
     {
         await Task.Yield();
-        retry.IsEnabled = inspectButton.IsEnabled = next.IsEnabled = prepare.IsEnabled = false; progress.IsIndeterminate = true;
+        retry.IsEnabled = next.IsEnabled = prepare.IsEnabled = false; progress.Value = 0; progress.IsIndeterminate = true;
         try { await action(stop.Token); }
-        catch (OperationCanceledException) { await RetireResourcesAsync(); catalog = null; selectedRoot = null; heading.Text = "檢查已取消"; status.Text = "未啟用任何資源或登入。"; }
-        catch (Exception) { await RetireResourcesAsync(); catalog = null; selectedRoot = null; heading.Text = "檢查未完成"; status.Text = "來源或本機檢查失敗，請重新查詢；不使用先前結果放行。"; }
+        catch (OperationCanceledException) { await RetireResourcesAsync(); catalog = null; selectedRoot = null; heading.Text = "檢查已取消"; selection.Text = "自動處理已停止。"; }
+        catch (Exception) { await RetireResourcesAsync(); catalog = null; selectedRoot = null; heading.Text = "檢查未完成"; selection.Text = "自動處理未完成，請重新驗證、下載。"; }
         finally
         {
             operation = null; progress.IsIndeterminate = false;
-            retry.IsEnabled = inspectButton.IsEnabled = !closed;
-            prepare.IsEnabled = !closed && selectedRoot is not null && selectResources is not null;
+            retry.IsEnabled = !closed;
+            prepare.IsEnabled = !closed && selectResources is not null;
             next.IsEnabled = !closed && catalog?.IsFresh == true && catalog.Lines.Any(x => x.Profile is not null) && ResourcesMatch(catalog.Version);
         }
     }
@@ -284,7 +318,7 @@ public sealed class VersionWindow : DesktopWindow
     }
     internal async Task StopAsync()
     {
-        stop.Cancel(); prelogin?.Stop(); resourceConfirmation?.Close(false);
+        stop.Cancel(); prelogin?.Stop();
         if (operation is { } pending) await pending;
         await RetireResourcesAsync();
         catalog = null; selectedRoot = null; next.IsEnabled = prepare.IsEnabled = false;

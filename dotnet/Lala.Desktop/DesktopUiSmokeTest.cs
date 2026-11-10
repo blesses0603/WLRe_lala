@@ -83,33 +83,34 @@ internal static class DesktopUiSmokeTest
                 packages = new { DataPackage = "1275_2026_10_21_18_27_33_84", MainPackage = "1275_2026_10_21_18_29_38_49" },
                 checked_at_utc = "2026-11-09T00:00:00Z", assets_ready = false
             })) };
+            var knownVersion = current.Version;
             bool fail = false;
             var source = new VersionCatalog(_ => fail ? Task.FromException<DesktopServerCatalogSnapshot>(new IOException("secret error details")) : Task.FromResult(current));
             var root = Path.Combine(Path.GetTempPath(), "lala-version-fixture-" + Guid.NewGuid().ToString("N"));
-            var window = Show(new VersionWindow(() => entered++, () => { }, () => { }, source, Lala.Core.Resources.ResourceInventoryInspector.InspectAsync, path => plannedRoot = path, () => root));
+            int preparationAttempts = 0;
+            var window = Show(new VersionWindow(() => entered++, () => { }, () => { }, source, Lala.Core.Resources.ResourceInventoryInspector.InspectAsync,
+                path => plannedRoot = path, () => root, _ => { preparationAttempts++; throw new IOException("synthetic preparation failure"); }));
             await window.Pending; await Settle(window);
-            Check(Find<TextBlock>(window, "VersionMetadata").Text!.Contains("MainPackage：1275_") && Find<TextBlock>(window, "VersionMetadata").Text!.Contains("資料版本：1.2.3"), "version display uses observed metadata fields");
+            Check(Find<TextBlock>(window, "VersionMainPackageValue").Text == "1275_2026_10_21_18_29_38_49" &&
+                Find<TextBlock>(window, "VersionDataPackageValue").Text == "1275_2026_10_21_18_27_33_84" && Find<TextBlock>(window, "VersionDataValue").Text == "1.2.3" &&
+                Find<TextBlock>(window, "VersionGameValue").Text == "1.3.0", "version cards use observed metadata fields");
+            Check(Find<TextBlock>(window, "VersionObservedTime").Text!.Contains("2026-11-09 08:00:00"), "version observation displays UTC+8");
+            Check(!window.GetVisualDescendants().OfType<ScrollViewer>().Any(), "startup overview has no scrolling container");
             Check(!Find<Button>(window, "VersionContinue").IsEnabled, "metadata alone cannot bypass prelogin resources");
             Check(entered == 0 && !session.CanSendGameCommands, "metadata never enters login or enables commands");
-            Check(Find<Button>(window, "VersionInspect").Content?.ToString() == "重新檢查本機資源", "resource action inspects the automatic location without a folder picker");
-            Check(Find<Button>(window, "VersionPrepare").IsEnabled && !Directory.Exists(root), "startup selects the managed directory without creating it or admitting login");
+            Check(preparationAttempts == 1 && plannedRoot is null && !Directory.Exists(root), "fresh supported catalog automatically starts one preparation attempt without entering login; injected failure performs no IO");
+            Check(Find<Button>(window, "VersionPrepare").IsEnabled, "failed automatic preparation permits an explicit retry");
             try
             {
                 Check(Find<TextBlock>(window, "VersionInventory").Text!.Contains("找不到"), "real Core inspector reports missing local database");
                 Check(!Directory.Exists(root), "read-only inspection never creates missing data directories");
                 Click(window, "VersionPrepare");
-                Window? consent = null;
-                using (var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
-                {
-                    while ((consent = (Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Windows.FirstOrDefault(w => w.Title == "確認登入前資源準備")) is null)
-                        await Task.Delay(10, deadline.Token);
-                }
-                Check(plannedRoot is null && !Directory.Exists(root), "prelogin consent precedes resource IO and account selection");
-                Click(consent, "PreloginCancel"); await window.Pending;
-                Check(plannedRoot is null && !Directory.Exists(root) && !Find<Button>(window, "VersionContinue").IsEnabled, "declined prelogin preparation cannot admit login or create files");
+                await window.Pending;
+                Check(preparationAttempts == 2 && plannedRoot is null && !Directory.Exists(root) && !Find<Button>(window, "VersionContinue").IsEnabled,
+                    "explicit retry rechecks catalog and retries once; a preparation failure never admits login");
                 Click(window, "VersionClearPreparation");
                 await window.StopAsync(); await window.RefreshAsync();
-                Check(Find<Button>(window, "VersionPrepare").IsEnabled && plannedRoot is null && !Directory.Exists(root), "refresh after stop restores automatic location without bypassing consent or resource verification");
+                Check(preparationAttempts == 3 && plannedRoot is null && !Directory.Exists(root), "refresh after stop starts a new automatic attempt without admitting failed resources");
                 var directory = Path.Combine(root, "official_sync", "derived_catalogs"); Directory.CreateDirectory(directory);
                 var db = Path.Combine(directory, "resource_inventory.sqlite3"); await File.WriteAllTextAsync(db, "synthetic invalid database");
                 await window.InspectAsync(root);
@@ -121,13 +122,18 @@ internal static class DesktopUiSmokeTest
                 Check(!window.GetVisualDescendants().OfType<TextBlock>().Any(t => t.Text?.Contains("secret") == true), "version errors are sanitized");
                 fail = false; current = current with { ObservedAt = System.Diagnostics.Stopwatch.GetTimestamp() - 301L * System.Diagnostics.Stopwatch.Frequency };
                 await window.RefreshAsync(); Check(!Find<Button>(window, "VersionContinue").IsEnabled, "stale version observation blocks entry");
+                Check(preparationAttempts == 3, "stale official metadata never triggers an automatic download");
+                current = current with { ObservedAt = System.Diagnostics.Stopwatch.GetTimestamp(), Version = null };
+                await window.RefreshAsync(); Check(preparationAttempts == 3, "missing official version never triggers an automatic download");
+                current = current with { Version = knownVersion, Lines = [new(101, "地球", "1線", null)] };
+                await window.RefreshAsync(); Check(preparationAttempts == 3, "unsupported login profile never triggers an automatic download");
             }
             finally { await window.StopAsync(); window.Close(); if (Directory.Exists(root)) Directory.Delete(root, true); }
             var unavailable = Show(new VersionWindow(() => entered++, () => { }, () => { }, source,
                 Lala.Core.Resources.ResourceInventoryInspector.InspectAsync, _ => { }, () => throw new IOException("private system path")));
             await unavailable.Pending;
-            Check(!Find<Button>(unavailable, "VersionPrepare").IsEnabled && !Find<Button>(unavailable, "VersionContinue").IsEnabled,
-                "unavailable system directory blocks preparation and login without fallback");
+            Check(Find<Button>(unavailable, "VersionPrepare").IsEnabled && !Find<Button>(unavailable, "VersionContinue").IsEnabled,
+                "unavailable system directory blocks login without fallback and permits a fresh retry");
             Check(!unavailable.GetVisualDescendants().OfType<TextBlock>().Any(t => t.Text?.Contains("private") == true), "directory resolution failure is sanitized");
             await unavailable.StopAsync(); unavailable.Close();
             var began = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -144,7 +150,8 @@ internal static class DesktopUiSmokeTest
             var consistent = Show(new VersionWindow(() => entered++, () => { }, () => { }, new OfflineDesktopServerCatalog(),
                 (_, _) => Task.FromResult(new Lala.Core.Resources.ResourceInventoryInspection(Lala.Core.Resources.ResourceInventoryInspectionStatus.SelfConsistent, "synthetic", "1.2.3", "1.3.0", 5, 100))));
             await consistent.Pending; await consistent.InspectAsync(Path.GetTempPath());
-            Check(Find<TextBlock>(consistent, "VersionInventory").Text!.Contains("不代表官方驗證") && !Find<Button>(consistent, "VersionContinue").IsEnabled,
+            Check(Find<TextBlock>(consistent, "DatabaseVersionValue").Text == "1.3.0" &&
+                Find<TextBlock>(consistent, "DatabaseDataValue").Text == "1.2.3" && !Find<Button>(consistent, "VersionContinue").IsEnabled,
                 "self-consistency alone never admits login or resources");
             await consistent.StopAsync(); consistent.Close();
             using (var navigation = new DesktopWindows(session, () => { }))

@@ -17,7 +17,7 @@ Windows 可雙擊倉庫根目錄的 `run_desktop.bat` 啟動 C# Desktop。需 .N
 此頁使用 C# 建構函式建立控件，因此預覽關閉 Hot Reload，以重啟確保版面修改套用。
 編譯失敗時可在命令視窗查看錯誤，修正後再次存檔；按 `Ctrl+C` 停止監看。
 使用 Debug 輸出，與 `run_desktop.bat` 的 Release 輸出分開。
-此模式執行正常桌面流程，啟動仍會查詢官方公開版本；下載、寫入與登入沿用原有確認。
+此模式執行正常桌面流程，啟動會查詢官方公開版本，隨後自動驗證、下載並寫入 LALA資料庫；登入仍沿用原有確認。
 
 ```powershell
 dotnet watch --project dotnet/Lala.Desktop/Lala.Desktop.csproj --no-hot-reload --configuration Debug
@@ -28,7 +28,7 @@ dotnet build dotnet/Lala.Desktop/Lala.Desktop.csproj -c Release
 dotnet run --project dotnet/Lala.Desktop -c Release --no-build
 ```
 
-啟動先顯示「資源準備與官方線上版本檢測」，取得新鮮且支援的官方清單、確認下載與寫入並完成 Core 必要資源準備及精確同版核對後，才可進入登入；完整圖資仍未啟用。程式自動使用系統 LocalApplicationData 下的 LaLa/Resources，啟動即進行 Core 唯讀資料庫檢查，不提供選擇或更改資料夾，自洽不代表資源啟用。按 **檢視未連線桌面**（登入頁為 **檢視桌面介面**）開啟未連線主畫面。登入的版本檢測與主畫面的官方版本／資源檢查可返回同一入口。角色卡有獨立的 **背包** 與 **特技** 入口；右側可切換 **事件紀錄／戰場陣形**，小地圖下方開啟導航預覽；遠征圖示與 AI 齒輪開啟原有獨立設定視窗。
+啟動先顯示「資源準備與官方線上版本檢測」，左側以卡片顯示官方版本，觀測時間使用 UTC+8；右側「LALA資料庫」在取得新鮮且支援的官方清單後，自動開始 Core 資源驗證、下載與寫入，完成精確同版核對後才可進入登入。失敗或停止後不會循環重試，可按 **重新驗證、下載** 手動重啟完整檢查；停止不會回復已完成或結果不明的磁碟寫入。完整圖資仍未啟用。程式自動使用系統 LocalApplicationData 下的 LaLa/Resources，不提供選擇或更改資料夾，自洽不代表資源啟用。按 **檢視未連線桌面**（登入頁為 **檢視桌面介面**）開啟未連線主畫面。登入的版本檢測與主畫面的官方版本／資源檢查可返回同一入口。角色卡有獨立的 **背包** 與 **特技** 入口；右側可切換 **事件紀錄／戰場陣形**，小地圖下方開啟導航預覽；遠征圖示與 AI 齒輪開啟原有獨立設定視窗。
 
 密碼記憶、施放、補給、儲藏存取、實際移動、派遣與聊天送出等尚無宿主接點的操作維持停用並顯示原因。登入欄位不持久化；取得輸入、切換身分或關閉視窗時清除密碼。從自動載入的官方伺服器／分流選單選擇後按登入；協定參數沿用已知 Python 發行設定，未知或過期資料阻擋；兩次帳密傳送分別確認，角色不預選。官方 TCP 沒有 TLS、XOR 可逆；登入準備一分鐘內有效，角色選擇在登入期限內完成。詳見[接線與限制](../../docs/DESKTOP_LOGIN_INTEGRATION.md)。
 
@@ -72,7 +72,7 @@ IconLocation 的捷徑會取用目標 EXE 的圖示，但本輪未在 Windows Sh
 
 ## 登入後資源準備
 
-Windows 使用 AppData\Local\LaLa\Resources；其他系統使用 .NET 的 LocalApplicationData 對應位置。路徑無效時停止準備，不退回程式目錄或共用暫存目錄。版本視窗可按「登入前下載、驗證與準備」，由既有資源流程建立固定快取及資料庫目錄。每次登入會另外確認
+Windows 使用 AppData\Local\LaLa\Resources；其他系統使用 .NET 的 LocalApplicationData 對應位置。路徑無效時停止準備，不退回程式目錄或共用暫存目錄。版本視窗取得有效官方清單後自動驗證、下載，由既有資源流程建立固定快取及資料庫目錄；可停止或按「重新驗證、下載」重啟。每次登入會另外確認
 官方 HTTPS 下載與固定快取／SQLite 寫入範圍，再逐次確認帳密傳送；登入協定完成後
 由共用 AccountRuntime 實際下載、驗證、回讀並綁定唯讀目錄。一般遊戲操作仍 Held。
 詳見 [接線範圍與驗證](../../docs/DESKTOP_RESOURCE_INTEGRATION.md)。
