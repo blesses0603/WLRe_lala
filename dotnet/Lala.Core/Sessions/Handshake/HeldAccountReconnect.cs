@@ -95,6 +95,7 @@ internal sealed class HeldAccountReconnect : IAsyncDisposable
         view = new(Guid.NewGuid(), generation, 0, ReconnectPhase.Created, null, null, []);
     }
 
+    internal AccountLoginProgress? LoginProgress { get { lock(gate) return !retired && current is {} active ? AccountLoginProgress.From(active.Handshake) : null; } }
     internal ReconnectView Snapshot { get { lock (gate) return view; } }
     /// <summary>
     /// Observes assignment identity, including same-phase updates. Comparing and subscribing

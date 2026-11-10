@@ -53,6 +53,7 @@ public sealed class AccountConnectionRuntime : IAsyncDisposable
             observationInputs ?? ((_, now) => new(now)), login, retry, ownedCredentials: AcquireAsync, loginAdmission: loginAdmission, roleSelector: roleSelector);
     }
 
+    public AccountLoginProgress? LoginProgress => connection.LoginProgress;
     private ReconnectView? observedView;
     private AccountConnectionStatus? observedStatus;
     private ReceivePublication? observedReceive;

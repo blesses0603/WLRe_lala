@@ -47,6 +47,8 @@ public sealed partial class AccountConnectionRuntimeTests
         Assert.Equal(AccountRoleSelectionMode.Interactive, preparation.Disclosure.RoleSelectionMode);
         var run = preparation.RunAsync();
         var request = await offered.Task.WaitAsync(Guard);
+        Assert.Equal(AccountLoginStage.SelectingRole, preparation.LoginProgress?.Stage);
+        Assert.Equal(request.HandshakeAttempt, preparation.LoginProgress?.Attempt);
         Assert.Equal(generation, request.Generation); Assert.NotEqual(Guid.Empty, request.HandshakeAttempt);
         Assert.NotEqual(Guid.Empty, request.RequestId); Assert.Single(request.Roles);
         await heartbeat.Task.WaitAsync(Guard);
@@ -54,6 +56,7 @@ public sealed partial class AccountConnectionRuntimeTests
         Assert.False(preparation.Snapshot.CanSendCommands); Assert.Equal(1, calls);
         preparation.Stop(); finish.SetResult();
         Assert.True((await run.WaitAsync(Guard)).ResourcesReleased);
+        Assert.Null(preparation.LoginProgress);
         await Task.WhenAll(first, second).WaitAsync(Guard);
     }
 

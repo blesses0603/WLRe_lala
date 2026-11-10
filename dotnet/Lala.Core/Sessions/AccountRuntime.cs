@@ -125,6 +125,7 @@ public sealed class AccountRuntime : IAsyncDisposable
     }
     /// <summary>Stable assignment identity until visible lifecycle, resource selection,
     /// history, or aggregate completion changes. Retained values are historical only.</summary>
+    public AccountLoginProgress? LoginProgress => connection.LoginProgress;
     public AccountRuntimeStatus Snapshot
     {
         get { lock (gate) return RefreshStatusLocked(); }

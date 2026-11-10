@@ -50,6 +50,7 @@ public sealed class AccountLoginPreparation : IAsyncDisposable
     private readonly TimeProvider clock;
     internal AccountConnectionRuntime Connection => runtime;
     public AccountLoginDisclosure Disclosure { get; }
+    public AccountLoginProgress? LoginProgress => runtime.LoginProgress;
     public AccountConnectionStatus Snapshot => runtime.Snapshot;
     public AccountReceivePublication? Publication => runtime.Publication;
 

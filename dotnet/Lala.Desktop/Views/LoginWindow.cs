@@ -164,6 +164,19 @@ public sealed class LoginWindow : DesktopWindow, IAccountLoginInput, IAccountRol
         if (discoveryTask is { } pending) await pending;
     }
 
+    private DesktopServerCatalogSnapshot? attemptCatalog;
+    private int attemptLineId;
+    private async Task<bool> RevalidateTargetAsync(CancellationToken token)
+    {
+        if (attemptCatalog is not {} expected) return false;
+        var observed = await catalogSource.LoadAsync(token);
+        token.ThrowIfCancellationRequested();
+        if (!DesktopLoginTarget.Matches(expected, observed, attemptLineId) ||
+            (resourcesReady is not null && !resourcesReady(observed.Version)))
+        { status.Text = "官方分流、協定或資源版本已變更；請重新查詢並選擇分流。"; return false; }
+        catalog = observed;
+        return true;
+    }
     private async Task LoginAsync()
     {
         // Yield ensures the task is assigned before synchronous validation can finish.
@@ -175,6 +188,7 @@ public sealed class LoginWindow : DesktopWindow, IAccountLoginInput, IAccountRol
             if (catalog?.IsFresh != true || (resourcesReady is not null && !resourcesReady(catalog.Version)) || lines.SelectedIndex < 0 || lines.SelectedIndex >= groupLines.Length ||
                 groupLines[lines.SelectedIndex].Profile is not { } profile)
                 throw new InvalidOperationException("No current supported official line selected.");
+            attemptCatalog = catalog; attemptLineId = groupLines[lines.SelectedIndex].Id;
             openedMain = false; sequence = 0; lastPublication = null; lastCatalogs = null;
             servers.IsEnabled = lines.IsEnabled = refresh.IsEnabled = false;
             preview.IsEnabled = inspector.IsEnabled = false;
@@ -196,26 +210,29 @@ public sealed class LoginWindow : DesktopWindow, IAccountLoginInput, IAccountRol
                 session.SetNpcReader(presentationGeneration, scene=>imageRuntime.TryGetSceneNpcRoster(scene,out var roster)?roster:null);
                 session.SetSmallMapReader(presentationGeneration, scene => imageRuntime.TryGetSmallMap(scene,out var request)?request:null);
                 session.SetPortraitReader(presentationGeneration, (state, companion) => imageRuntime.TryGetPortrait(state, companion, out var request) ? request : null);
+                if (!await RevalidateTargetAsync(cancellation.Token)) return;
                 timer.Start();
                 var result = await runtime.RunAsync(cancellation.Token);
-                status.Text = $"連線結束：{result.Connection.Status.EndReason}；資源釋放：{result.ResourcesReleased}。已完成或結果不明的寫入不會回復。";
+                status.Text = $"{DesktopLoginTarget.DescribeEnd(result.Connection.Status)}；資源釋放：{result.ResourcesReleased}。";
             }
             else
             {
                 preparation = new(core, snapshot.Generation, identity, profile, this,
                     new() { LoginTimeout = TimeSpan.FromMinutes(2) }, roleSelector: this, sendConfirmation: this);
+                if (!await RevalidateTargetAsync(cancellation.Token)) return;
                 timer.Start();
                 var result = await preparation.RunAsync(cancellation.Token);
-                status.Text = $"連線結束：{result.Status.EndReason}；資源釋放：{result.ResourcesReleased}。重新登入需重新輸入及確認。";
+                status.Text = $"{DesktopLoginTarget.DescribeEnd(result.Status)}；資源釋放：{result.ResourcesReleased}。重新登入需重新輸入及確認。";
             }
         }
-        catch (Exception) { status.Text = "登入未完成：請重新版本檢測並選擇分流，確認 ASCII 帳密後重試。"; }
+        catch (OperationCanceledException) { status.Text = "登入已取消；不會自動重送。"; }
+        catch (Exception) { status.Text = "登入未完成：官方清單重查、資源或連線檢查失敗，請重新查詢並選擇分流。"; }
         finally
         {
             timer.Stop(); session.SetItemImageReader(presentationGeneration, null); session.SetPortraitReader(presentationGeneration, null); session.SetEmojiReader(presentationGeneration, null); session.SetSmallMapReader(presentationGeneration, null); session.SetNpcReader(presentationGeneration,null);
             try { if (runtime is not null) await runtime.DisposeAsync(); if (preparation is not null) await preparation.DisposeAsync(); }
             catch (Exception) { status.Text = "連線清理失敗；請關閉程式後再試。"; closed = true; }
-            core?.Disconnect(); preparation = null; runtime = null; lastCatalogs = null;
+            core?.Disconnect(); preparation = null; runtime = null; lastCatalogs = null; attemptCatalog = null;
             cancellation?.Dispose(); cancellation = null;
             roleCompletion?.TrySetResult(null); roleCompletion = null; roleRequest = null;
             roles.ItemsSource = Array.Empty<string>(); roles.SelectedIndex = -1; enter.IsEnabled = false;
@@ -250,7 +267,7 @@ public sealed class LoginWindow : DesktopWindow, IAccountLoginInput, IAccountRol
         panel.Children.Add(Ui.Row(Ui.Button("取消", () => dialog.Close(false), "LoginSendCancel"), Ui.Button("知悉風險，確認傳送", () => dialog.Close(true), "LoginSendConfirm")));
         dialog.Content = panel;
         using var registration = token.Register(() => Dispatcher.UIThread.Post(() => dialog.Close(false)));
-        try { var approved = await dialog.ShowDialog<bool>(this); token.ThrowIfCancellationRequested(); return approved && (resourcesReady is null || resourcesReady(catalog?.Version)); }
+        try { var approved = await dialog.ShowDialog<bool>(this); token.ThrowIfCancellationRequested(); return approved && await RevalidateTargetAsync(token); }
         finally { confirmationWindow = null; }
     }
 
@@ -306,8 +323,10 @@ public sealed class LoginWindow : DesktopWindow, IAccountLoginInput, IAccountRol
             resourceState.ResourceHistory.LastOrDefault()?.Preparation is { } outcome
                 ? $"資源 {outcome.Status}／寫入 {outcome.StorageOutcome}／物品圖寫入 {outcome.ItemImageStorageOutcome}／頭像寫入 {outcome.PortraitStorageOutcome}／表情寫入 {outcome.EmojiStorageOutcome}／小地圖寫入 {outcome.SmallMapStorageOutcome}；回讀 {outcome.ReadbackMatched}／來源重查 {outcome.SourcesRechecked}"
                 : "等待登入完成或資源準備中";
+        var stageText = DesktopLoginTarget.Describe((runtime?.LoginProgress ?? preparation?.LoginProgress)?.Stage);
         session.SetConnectionText(connection.Phase == AccountConnectionPhase.ReceivingHeld
-            ? "登入協定完成｜" + resourceText + "｜遊戲操作 Held" : "登入進行中｜等待確認或伺服器回覆");
+            ? "登入協定完成｜" + resourceText + "｜遊戲操作 Held" : stageText);
+        if (!openedMain && confirmationWindow is null) status.Text = stageText;
         if (publication is null) return;
         if (!ReferenceEquals(publication, lastPublication) || !ReferenceEquals(catalogs, lastCatalogs))
         {

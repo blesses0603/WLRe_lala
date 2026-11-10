@@ -11,7 +11,7 @@ public sealed class SceneShopPreviewTests
     [Fact]
     public void Explicit_offer_indices_order_base_prices_exit_and_restriction_follow_Python()
     {
-        var products = SceneShopPreviewRequest.Build(Shop(new(8,7,2,3),new(0,0,0,4),new(2,9,2,3)),
+        var products = SceneShopPreviewRequest.Build(Shop(new EveInteractionItem(8,7,2,3),new EveInteractionItem(0,0,0,4),new EveInteractionItem(2,9,2,3)),
             new Dictionary<ushort,ItemDataRow>{{7,Item()},{9,Item(9,0,16)}})!.Value;
         Assert.Equal(new byte[]{8,2},products.Select(p=>p.OfferIndex));
         Assert.Equal(10u,products[0].BasePriceGold); Assert.Equal(3u,products[0].BaseSellPriceGold);
@@ -22,11 +22,11 @@ public sealed class SceneShopPreviewTests
     [InlineData("zero-item")][InlineData("zero-offer")][InlineData("duplicate")][InlineData("empty")][InlineData("identity")][InlineData("limit")]
     public void Invalid_or_nonshop_rows_do_not_produce_partial_catalog(string mode)
     {
-        var row=Shop(new(1,7,2,3)); var items=new Dictionary<ushort,ItemDataRow>{{7,Item()}};
+        var row=Shop(new EveInteractionItem(1,7,2,3)); var items=new Dictionary<ushort,ItemDataRow>{{7,Item()}};
         row=mode switch {
-            "form"=>row with{FormKind=1},"default"=>row with{Items=default},"kind"=>Shop(new(1,7,2,1)),
-            "database"=>Shop(new(1,7,1,3)),"zero-item"=>Shop(new(1,0,2,3)),"zero-offer"=>Shop(new(0,7,2,3)),
-            "duplicate"=>Shop(new(1,7,2,3),new(1,7,2,3)),"empty"=>Shop(new(0,0,0,4)),
+            "form"=>row with{FormKind=1},"default"=>row with{Items=default},"kind"=>Shop(new EveInteractionItem(1,7,2,1)),
+            "database"=>Shop(new EveInteractionItem(1,7,1,3)),"zero-item"=>Shop(new EveInteractionItem(1,0,2,3)),"zero-offer"=>Shop(new EveInteractionItem(0,7,2,3)),
+            "duplicate"=>Shop(new EveInteractionItem(1,7,2,3),new EveInteractionItem(1,7,2,3)),"empty"=>Shop(new EveInteractionItem(0,0,0,4)),
             "limit"=>row with{Items=Enumerable.Repeat(new EveInteractionItem(0,0,0,4),256).ToImmutableArray()},_=>row};
         if(mode=="identity")items[7]=Item(8);
         Assert.Null(SceneShopPreviewRequest.Build(row,items));
@@ -34,7 +34,7 @@ public sealed class SceneShopPreviewTests
     [Fact]
     public void Unknown_price_stays_unknown_and_quantity_offer_and_uint_overflow_are_rejected()
     {
-        var products=SceneShopPreviewRequest.Build(Shop(new(1,7,2,3),new(2,8,2,3),new(3,9,2,3)),
+        var products=SceneShopPreviewRequest.Build(Shop(new EveInteractionItem(1,7,2,3),new EveInteractionItem(2,8,2,3),new EveInteractionItem(3,9,2,3)),
             new Dictionary<ushort,ItemDataRow>{{8,Item(8,uint.MaxValue)},{9,Item(9,0)}})!.Value;
         var request=new SceneShopPreviewRequest(10,9,3,products,()=>true);
         Assert.True(request.TryPreviewPurchase(1,9999,out var unknown));Assert.Null(unknown!.BaseTotalGold);Assert.Null(unknown.TotalGold);Assert.False(unknown.Enabled);
@@ -46,7 +46,7 @@ public sealed class SceneShopPreviewTests
     [Fact]
     public void Stale_reads_and_revocation_during_preview_never_deliver_data()
     {
-        var products=SceneShopPreviewRequest.Build(Shop(new(1,7,2,3)),new Dictionary<ushort,ItemDataRow>{{7,Item()}})!.Value;
+        var products=SceneShopPreviewRequest.Build(Shop(new EveInteractionItem(1,7,2,3)),new Dictionary<ushort,ItemDataRow>{{7,Item()}})!.Value;
         bool current=true;var request=new SceneShopPreviewRequest(10,9,2,products,()=>current);
         Assert.True(request.TryPreviewPurchase(1,2,out var preview));Assert.Equal(20u,preview!.BaseTotalGold);
         current=false;Assert.False(request.TryReadProducts(out var rows));Assert.Empty(rows);Assert.False(request.TryPreviewPurchase(1,1,out _));

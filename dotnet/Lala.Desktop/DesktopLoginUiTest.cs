@@ -15,6 +15,7 @@ internal static class DesktopLoginUiTest
     internal static async Task RunAsync()
     {
         await CatalogAdmissionAsync();
+        await ChangedTargetBeforeTcpAsync();
         await ResourceAdmissionAsync();
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(20));
         var token = deadline.Token;
@@ -120,6 +121,38 @@ internal static class DesktopLoginUiTest
             Console.WriteLine("Desktop resource admission: 6 loopback assertions passed; no official HTTP or resource writes.");
         }
         finally { await login.ShutdownAsync(); login.Close(); }
+    }
+    private static async Task ChangedTargetBeforeTcpAsync()
+    {
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        using var verification = new TcpListener(IPAddress.Loopback,0);
+        using var formal = new TcpListener(IPAddress.Loopback,0);
+        verification.Start(); formal.Start();
+        using var session = new DesktopSession();
+        var profile = new Lala.Core.Sessions.AccountConnectionProfile((IPEndPoint)verification.LocalEndpoint,(IPEndPoint)formal.LocalEndpoint,173,173,1,3,0);
+        var original = new DesktopServerCatalogSnapshot([new(101,"地球","1線",profile)],"synthetic",System.Diagnostics.Stopwatch.GetTimestamp());
+        var changed = original with { Lines = [] };
+        Check(DesktopLoginTarget.Matches(original,original,101),"same target remains selectable");
+        Check(!DesktopLoginTarget.Matches(original,changed,101),"removed line rejected");
+        Check(!DesktopLoginTarget.Matches(original,original with { Lines = original.Lines.Concat(original.Lines).ToArray() },101),"ambiguous line rejected");
+        var different = new Lala.Core.Sessions.AccountConnectionProfile(profile.VerificationEndpoint,profile.FormalEndpoint,172,173,1,3,0);
+        Check(!DesktopLoginTarget.Matches(original,original with { Lines = [new(101,"地球","1線",different)] },101),"changed protocol rejected");
+        int calls=0;
+        var login=new LoginWindow(session,()=>throw new InvalidOperationException("must not enter world"),()=>{},
+            new Catalog(_=>Task.FromResult(++calls==1?original:changed)));
+        login.Show();
+        try
+        {
+            Find<ComboBox>(login,"LoginServer").SelectedIndex=0;
+            Find<TextBox>(login,"LoginAccount").Text="synthetic";
+            Find<TextBox>(login,"LoginPassword").Text="fake_password";
+            Click(login,"LoginSubmit");
+            while(calls<2 || !Find<Button>(login,"LoginSubmit").IsEnabled) await Task.Delay(10,deadline.Token);
+            Check(!verification.Pending()&&!formal.Pending(),"changed discovery rejects before any game TCP");
+            Check(string.IsNullOrEmpty(Find<TextBox>(login,"LoginPassword").Text),"failed revalidation clears secrets");
+            Console.WriteLine("Desktop login target: 6 offline/loopback checks passed.");
+        }
+        finally { await login.StopAsync(); login.Close(); }
     }
     private sealed class Catalog(Func<CancellationToken, Task<DesktopServerCatalogSnapshot>> load) : IDesktopServerCatalog
     {
