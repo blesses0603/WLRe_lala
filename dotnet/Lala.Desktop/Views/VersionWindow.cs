@@ -1,4 +1,7 @@
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Layout;
+using Avalonia.Media;
 using Lala.Core.Resources;
 
 namespace Lala.Desktop;
@@ -9,7 +12,7 @@ public sealed class VersionWindow : DesktopWindow
     private readonly IDesktopServerCatalog source;
     private readonly Func<string, CancellationToken, Task<ResourceInventoryInspection>> inspect;
     private readonly Action openLogin;
-    private readonly TextBlock heading = Ui.Text("準備查詢官方版本", 24, bold: true);
+    private readonly TextBlock heading = Ui.Text("準備查詢官方版本", 22, bold: true);
     private readonly TextBlock status = Ui.Text("只查詢公開 HTTPS metadata，不需要遊戲帳密。");
     private readonly TextBlock versions = Ui.Text("官方版本：尚未查詢");
     private readonly TextBlock inventory = Ui.Text("本機資源：尚未檢查；不會自動讀取舊帳號設定。");
@@ -38,20 +41,49 @@ public sealed class VersionWindow : DesktopWindow
     {
         this.resourceDirectory = resourceDirectory ?? DesktopResourceDirectory.Resolve;
         this.source = source; this.inspect = inspect; this.openLogin = openLogin; this.selectResources = selectResources;
-        prepare = Ui.Button("登入前下載、驗證與準備", () => _ = PrepareResourcesAsync(), "VersionPrepare"); prepare.IsEnabled = false;
+        prepare = ActionButton("下載、驗證與準備", () => _ = PrepareResourcesAsync(), "VersionPrepare", primary: true); prepare.IsEnabled = false;
         heading.Name = "VersionHeading"; status.Name = "VersionStatus"; versions.Name = "VersionMetadata"; inventory.Name = "VersionInventory";
-        retry = Ui.Button("重新查詢官方版本", () => _ = RefreshAsync(), "VersionRefresh");
-        inspectButton = Ui.Button("重新檢查本機資源", () => _ = RunAsync(token => InspectCoreAsync(this.resourceDirectory(), token)), "VersionInspect");
-        next = Ui.Button("進入登入畫面", Continue, "VersionContinue"); next.IsEnabled = false;
-        var content = Ui.Column(Ui.Card("官方線上版本", versions),
-            Ui.Card("本機資源資料庫", Ui.Column(location, inventory, inspectButton, Ui.Row(prepare, Ui.Button("停止資源準備", () => _ = StopAsync(), "VersionClearPreparation")), selection)),
-            Ui.Card("LaLa 程式更新（GitHub 正式 Release）", Ui.Text("C# Desktop 發行更新尚未接入；不下載或執行 Python 安裝程式。", 12, Ui.Muted)),
-            Ui.Text("官方 TCP 沒有 TLS；XOR 可逆，不提供安全加密。進入登入後，帳密傳送仍逐次確認。", 12, Ui.Muted),
-            Ui.Card("檢查結果", Ui.Column(heading)));
-        var body = new Grid { RowDefinitions = new("*,Auto,Auto"), RowSpacing = 10 };
-        Ui.At(body, new ScrollViewer { Content = content }, 0);
-        Ui.At(body, progress, 0, 1);
-        Ui.At(body, Ui.Row(Ui.Button("結束程式", exit), retry, next, Ui.Button("檢視未連線桌面", openPreview, "VersionPreview")), 0, 2);
+        retry = ActionButton("重新查詢版本", () => _ = RefreshAsync(), "VersionRefresh");
+        inspectButton = ActionButton("重新檢查本機資源", () => _ = RunAsync(token => InspectCoreAsync(this.resourceDirectory(), token)), "VersionInspect");
+        next = ActionButton("進入登入畫面 →", Continue, "VersionContinue", primary: true); next.IsEnabled = false;
+
+        // Keep the live verdict visible first; long diagnostics scroll independently
+        // of the footer so entry and exit actions remain reachable.
+        var summary = Ui.Column(Ui.Text("啟動準備 / 檢查狀態", 12, Ui.Accent, true), heading, status);
+        summary.Spacing = 10;
+        var overview = Surface(summary, accent: true);
+        overview.Name = "VersionOverview";
+
+        var resourceActions = new Grid { ColumnDefinitions = new("*,Auto"), ColumnSpacing = 8 };
+        Ui.At(resourceActions, prepare, 0);
+        Ui.At(resourceActions, ActionButton("停止", () => _ = StopAsync(), "VersionClearPreparation"), 1);
+        var local = Ui.Column(location, inventory, inspectButton, resourceActions, selection);
+        local.Spacing = 12;
+        var panels = new Grid { ColumnDefinitions = new("*,*"), ColumnSpacing = 16 };
+        panels.Name = "VersionPanels";
+        Ui.At(panels, Section("01", "官方線上版本", "從官方公開清單取得最新版本", versions), 0);
+        Ui.At(panels, Section("02", "本機資源準備", "確認必要資料，再進入登入", local), 1);
+
+        var update = new Expander
+        {
+            Header = Ui.Text("LaLa 程式更新 · GitHub Release", 13, Ui.Muted),
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            Content = Ui.Text("C# Desktop 發行更新尚未接入；不下載或執行 Python 安裝程式。", 12, Ui.Muted),
+            Name = "VersionUpdateDetails"
+        };
+        var content = Ui.Column(overview, panels, Surface(update));
+        content.Spacing = 16;
+        var actions = new Grid { ColumnDefinitions = new("Auto,Auto,*,Auto,Auto"), ColumnSpacing = 10 };
+        Ui.At(actions, ActionButton("結束程式", exit), 0);
+        Ui.At(actions, ActionButton("檢視未連線桌面", openPreview, "VersionPreview"), 1);
+        Ui.At(actions, retry, 3);
+        Ui.At(actions, next, 4);
+        var footer = Ui.Column(progress,
+            Ui.Text("連線提醒：官方 TCP 未使用 TLS，XOR 不提供安全加密；登入時會逐次確認帳密傳送。", 12, Ui.Muted), actions);
+        footer.Spacing = 12;
+        var body = new Grid { RowDefinitions = new("*,Auto"), RowSpacing = 16 };
+        Ui.At(body, new ScrollViewer { Content = content, HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled }, 0);
+        Ui.At(body, Surface(footer), 0, 1);
         SetBody(body);
         Opened += (_, _) => { if (catalog?.IsFresh != true) _ = RefreshAsync(); };
         Closing += (_, args) =>
@@ -61,6 +93,39 @@ public sealed class VersionWindow : DesktopWindow
             if (!closing) { closing = true; _ = StopAndCloseAsync(); }
         };
         Closed += (_, _) => { closed = true; stop.Cancel(); };
+    }
+
+    private static Button ActionButton(string text, Action action, string? name = null, bool primary = false)
+    {
+        var button = new Button
+        {
+            Content = text, Name = name, MinHeight = 38, Padding = new Thickness(14, 8),
+            CornerRadius = new CornerRadius(7), HorizontalContentAlignment = HorizontalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            Background = Brush.Parse(primary ? "#277e94" : "#20394d"),
+            BorderBrush = Brush.Parse(primary ? "#74d5e6" : "#456174"),
+            BorderThickness = new Thickness(1), Foreground = Ui.Ink
+        };
+        Avalonia.Automation.AutomationProperties.SetName(button, text);
+        button.Click += (_, _) => action();
+        return button;
+    }
+
+    private static Border Surface(Control content, bool accent = false) => new()
+    {
+        Background = Brush.Parse(accent ? "#f01a3246" : "#f0102335"),
+        BorderBrush = Brush.Parse(accent ? "#4b9db2" : "#344e63"),
+        BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(12),
+        Padding = new Thickness(18, 16), Child = content
+    };
+
+    private static Border Section(string step, string title, string subtitle, Control content)
+    {
+        var header = Ui.Row(Ui.Text(step, 13, Ui.Accent, true), Ui.Text(title, 17, bold: true));
+        header.Spacing = 10;
+        var column = Ui.Column(header, Ui.Text(subtitle, 12, Ui.Muted), content);
+        column.Spacing = 12;
+        return Surface(column);
     }
     private void Continue()
     {
@@ -84,8 +149,13 @@ public sealed class VersionWindow : DesktopWindow
     private void RenderVersion(DesktopServerCatalogSnapshot value)
     {
         var v = value.Version;
+        var observedAt = v is not null && DateTimeOffset.TryParse(v.CheckedAtUtc,
+            System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.AssumeUniversal, out var timestamp)
+            ? timestamp.ToOffset(TimeSpan.FromHours(8)).ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture)
+            : "時間資料無效";
         versions.Text = v is null ? value.Status : $"遊戲版本：{v.ExeVersion}\n資料版本：{v.DataVersion}\n" +
-            string.Join("\n", v.Packages.OrderBy(p => p.Key).Select(p => $"{p.Key}：{p.Value}")) + $"\n觀測時間（UTC）：{v.CheckedAtUtc}";
+            string.Join("\n", v.Packages.OrderBy(p => p.Key).Select(p => $"{p.Key}：{p.Value}")) + $"\n觀測時間（UTC+8）：{observedAt}";
     }
     internal Task InspectAsync(string root) => RunAsync(token => InspectCoreAsync(root, token));
     private async Task InspectCoreAsync(string root, CancellationToken token)

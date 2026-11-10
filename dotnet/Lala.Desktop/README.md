@@ -10,6 +10,19 @@ Windows 可雙擊倉庫根目錄的 `run_desktop.bat` 啟動 C# Desktop。需 .N
 
 ## 開啟與檢查
 
+### 修改版面時自動預覽
+
+在倉庫根目錄雙擊 `run_desktop_preview.bat`，保留命令視窗，編輯並儲存
+`dotnet/Lala.Desktop/Views/VersionWindow.cs` 即會自動編譯、重新啟動桌面視窗。
+此頁使用 C# 建構函式建立控件，因此預覽關閉 Hot Reload，以重啟確保版面修改套用。
+編譯失敗時可在命令視窗查看錯誤，修正後再次存檔；按 `Ctrl+C` 停止監看。
+使用 Debug 輸出，與 `run_desktop.bat` 的 Release 輸出分開。
+此模式執行正常桌面流程，啟動仍會查詢官方公開版本；下載、寫入與登入沿用原有確認。
+
+```powershell
+dotnet watch --project dotnet/Lala.Desktop/Lala.Desktop.csproj --no-hot-reload --configuration Debug
+```
+
 ```bash
 dotnet build dotnet/Lala.Desktop/Lala.Desktop.csproj -c Release
 dotnet run --project dotnet/Lala.Desktop -c Release --no-build
