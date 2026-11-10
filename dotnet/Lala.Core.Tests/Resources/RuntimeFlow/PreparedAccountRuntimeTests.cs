@@ -118,6 +118,7 @@ public sealed partial class ResourceRuntimeBootstrapTests
         Assert.EndsWith("official_sync/derived_catalogs/core_emojis_v1.sqlite3".Replace('/',Path.DirectorySeparatorChar),disclosure.Resources.EmojiCachePath);
         Assert.False(runtime.TryReadEmojiImage(1,out var emoji));Assert.Null(emoji);
         Assert.False(runtime.TryGetEmojiGallery(out var gallery));Assert.Null(gallery);
+        Assert.False(runtime.TryGetSceneNpcRoster(101,out var roster));Assert.Null(roster);
 
         Assert.EndsWith("official_sync/derived_catalogs/resource_inventory.sqlite3".Replace('/', Path.DirectorySeparatorChar), disclosure.Resources.InventoryPath);
         Assert.EndsWith("official_sync/bundles".Replace('/', Path.DirectorySeparatorChar), disclosure.Resources.BundleCacheDirectory);

@@ -15,6 +15,7 @@ public sealed class MapView : UserControl,IAsyncDisposable
     private readonly TextBlock navigationStatus = Ui.Text("導航：等待目前地圖。", 11, Ui.Muted);
     private bool subscribed;
     private readonly SmallMapImageView picture=new();
+    private readonly SceneNpcRosterView npcRoster=new();
 
     public MapView(DesktopSession session, Action openNavigation)
     {
@@ -34,7 +35,7 @@ public sealed class MapView : UserControl,IAsyncDisposable
         var monsters = Ui.Text("等待怪物資料。", 11, Ui.Muted);
         monsters.Margin = new Thickness(4);
         var npc = new Grid { RowDefinitions = new RowDefinitions("*,Auto,Auto") };
-        Ui.At(npc, Ui.Text("等待 NPC 資料。", 11, Ui.Muted), 0);
+        Ui.At(npc,npcRoster,0);
         var npcButtons = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*") };
         var interact = Ui.Unavailable("互動", "MapNpcInteract");
         var next = Ui.Unavailable("接續", "MapNpcContinue");
@@ -129,6 +130,7 @@ public sealed class MapView : UserControl,IAsyncDisposable
         subscribed = false;
         session.Changed -= Changed;
         picture.Update((Lala.Core.Resources.SmallMapRenderRequest?)null);
+        npcRoster.Update((Lala.Core.Resources.SceneNpcRosterRequest?)null);
     }
 
     private void Changed() => Ui.OnUi(() => { if (subscribed) Refresh(); });
@@ -140,6 +142,7 @@ public sealed class MapView : UserControl,IAsyncDisposable
         var player = world.Player;
         title.Text = player is null ? "小地圖｜等待角色地圖" : "小地圖｜" + view.Labels.Scene(player.Scene);
         ToolTip.SetTip(title, title.Text);
+        npcRoster.Update(player is null?null:session.ReadNpcRoster(view.Snapshot,player.Scene));
         var mapRequest=player is null?null:session.ReadSmallMap(view.Snapshot,player.Scene);picture.Update(mapRequest);
         mapMessage.Text = mapRequest is not null ? "地圖預覽" : player is null ? "尚未同步小地圖" : "此地圖的同版圖片\n尚未同步";
         var confirmed = world.Location.Confirmed;
@@ -150,5 +153,5 @@ public sealed class MapView : UserControl,IAsyncDisposable
             ? $"已確認座標\n{confirmed.X}, {confirmed.Y}" : "等待角色位置同步…";
         navigationStatus.Text = player is null ? "導航：等待目前地圖。" : "導航：等待同版地圖與導航資料。";
     }
-    public async ValueTask DisposeAsync(){Unsubscribe();await picture.DisposeAsync();}
+    public async ValueTask DisposeAsync(){Unsubscribe();npcRoster.Dispose();await picture.DisposeAsync();}
 }

@@ -24,6 +24,7 @@ public sealed class DesktopSession : IDisposable
 
     private Func<EmojiGalleryRequest?>? emojiReader;
     private Func<ushort,SmallMapRenderRequest?>? smallMapReader;
+    private Func<ushort,SceneNpcRosterRequest?>? npcReader;
 
     public DesktopSession(DesktopPreferencesStore? preferences = null) =>
         Preferences = preferences ?? new DesktopPreferencesStore();
@@ -64,6 +65,15 @@ public sealed class DesktopSession : IDisposable
         lock(gate){if(disposed||!ReferenceEquals(expected,snapshot))return null;reader=portraitReader;captured=generation;}
         var request=reader?.Invoke(expected,companion);
         lock(gate)return !disposed&&generation==captured&&ReferenceEquals(reader,portraitReader)&&ReferenceEquals(expected,snapshot)?request:null;
+    }
+    internal void SetNpcReader(long expectedGeneration,Func<ushort,SceneNpcRosterRequest?>? reader)
+    {lock(gate){if(disposed||generation!=expectedGeneration)return;npcReader=reader;}Changed?.Invoke();}
+    internal SceneNpcRosterRequest? ReadNpcRoster(ServiceStateSnapshot observed,ushort scene)
+    {
+        Func<ushort,SceneNpcRosterRequest?>? reader;long expected;
+        lock(gate){if(disposed||!ReferenceEquals(snapshot,observed))return null;reader=npcReader;expected=generation;}
+        var result=reader?.Invoke(scene);if(result?.IsCurrent!=true)return null;
+        lock(gate)return !disposed&&generation==expected&&ReferenceEquals(snapshot,observed)&&ReferenceEquals(reader,npcReader)?result:null;
     }
     internal void SetSmallMapReader(long expectedGeneration,Func<ushort,SmallMapRenderRequest?>? reader)
     {lock(gate){if(disposed||generation!=expectedGeneration)return;smallMapReader=reader;}Changed?.Invoke();}
@@ -115,7 +125,7 @@ public sealed class DesktopSession : IDisposable
             publication = -1;
             connectionText = "尚未連線";
             snapshot = new();
-            labels = new(); itemImageReader = null; portraitReader = null; emojiReader = null; smallMapReader = null;
+            labels = new(); itemImageReader = null; portraitReader = null; emojiReader = null; smallMapReader = null; npcReader = null;
             identityKey = presentationIdentity;
         }
         Changed?.Invoke();
@@ -161,7 +171,7 @@ public sealed class DesktopSession : IDisposable
             disposed = true;
             generation = checked(generation + 1);
             snapshot = new();
-            labels = new(); itemImageReader = null; portraitReader = null; emojiReader = null; smallMapReader = null;
+            labels = new(); itemImageReader = null; portraitReader = null; emojiReader = null; smallMapReader = null; npcReader = null;
             changed = Changed; Changed = null;
         }
         changed?.Invoke();

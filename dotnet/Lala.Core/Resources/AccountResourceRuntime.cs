@@ -178,6 +178,8 @@ public sealed class AccountResourceRuntime : IAsyncDisposable
     {
         lock(_gate){png=null;return !_disposed&&_binding is not null&&_binding.TryReadEmoji(token,out png);}
     }
+    internal SceneNpcRosterRequest? ReadNpcRoster(ushort scene,Func<bool> selectionCurrent)
+    {lock(_gate)return !_disposed?_binding?.ReadNpcRoster(scene,selectionCurrent):null;}
     internal SmallMapRenderRequest? ReadSmallMap(ushort scene,Func<bool> selectionCurrent)
     {lock(_gate)return !_disposed?_binding?.ReadSmallMap(scene,selectionCurrent):null;}
     internal EmojiGalleryRequest? ReadEmojiGallery()

@@ -506,6 +506,11 @@ public sealed partial class ResourceRuntimeBootstrapTests
         {
             await AccountWaitFor(() => runtime.Snapshot.HasCurrentResources);
             var bound = runtime.Publication!; Assert.NotNull(bound.Catalogs);
+            ushort rosterScene=bound.Receive.State.Player!.Scene;
+            bool rosterAvailable=runtime.TryGetSceneNpcRoster(rosterScene,out var npcRoster);
+            Assert.Equal(bound.Catalogs.Stages.ContainsKey(rosterScene),rosterAvailable);
+            if(npcRoster is not null){Assert.True(npcRoster.TryReadRows(out var rows));Assert.All(rows,row=>Assert.False(row.CanInteract));Assert.False(npcRoster.CanSendPackets);}
+            Assert.False(runtime.TryGetSceneNpcRoster((ushort)(rosterScene+1),out _));
             Assert.True(Assert.Single(runtime.Snapshot.ResourceHistory).Preparation.WasBound);
             var scheduleRows = bound.Catalogs.Recipes.Catalog;
             Assert.NotEmpty(scheduleRows);
@@ -546,6 +551,8 @@ public sealed partial class ResourceRuntimeBootstrapTests
             Assert.Equal(nameof(AccountRuntimePublication), observed.ToString()); AccountHeld(runtime, session);
             resources.Invalidate();
             Assert.False(runtime.Snapshot.HasCurrentResources); Assert.Null(runtime.Publication!.Catalogs);
+            if(npcRoster is not null)Assert.False(npcRoster.TryReadRows(out _));
+            Assert.False(runtime.TryGetSceneNpcRoster(rosterScene,out _));
             revision = runtime.Publication.Receive.Revision; sendRevoked.SetResult();
             await AccountWaitFor(() => runtime.Publication!.Receive.Revision > revision);
             var revoked = runtime.Publication!.Receive.State.Observation!.Inputs;

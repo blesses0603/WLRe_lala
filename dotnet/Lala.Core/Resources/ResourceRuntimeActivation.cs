@@ -1,4 +1,5 @@
 using Lala.Core.Catalogs;
+using System.Collections.Immutable;
 
 namespace Lala.Core.Resources;
 
@@ -10,6 +11,25 @@ namespace Lala.Core.Resources;
 /// </summary>
 internal sealed class ResourceRuntimeActivation(ResourceRuntimeOwner owner, ResourceRuntimePublication publication)
 {
+    private readonly object npcGate=new();
+    private ushort? npcScene;private ImmutableArray<SceneNpcEntry> npcRows=[];
+    internal SceneNpcRosterRequest? CreateNpcRoster(ushort scene,Func<bool> accountCurrent)
+    {
+        if(!IsActive||!publication.Candidate.Stages.ContainsKey(scene)||!publication.Candidate.EveIndexes.IncludesNpcs)return null;
+        ImmutableArray<SceneNpcEntry> rows;
+        lock(npcGate)
+        {
+            if(npcScene!=scene)
+            {
+                var source=publication.Candidate.EveIndexes.Scenes.FirstOrDefault(s=>s.SceneId==scene)?.Npcs??[];
+                try{npcRows=SceneNpcRosterRequest.Build(source,publication.Candidate.ReviewedNpcs);}
+                catch(ResourceValidationException){npcRows=default;}
+                npcScene=scene;
+            }
+            rows=npcRows;
+        }
+        return !rows.IsDefault&&IsActive?new(scene,publication.Identity.Key+":"+Generation+":"+scene,rows,()=>IsActive&&accountCurrent()):null;
+    }
     internal long Generation => publication.Generation;
     internal ManifestIdentity Identity => publication.Identity;
     internal bool IsActive => owner.IsCurrentActivation(this, publication);

@@ -295,6 +295,19 @@ public sealed class AccountRuntime : IAsyncDisposable
             png=bytes;return true;
         }
     }
+    /// <summary>Current official scene NPC references only; no dialogue, shop or movement authority.</summary>
+    public bool TryGetSceneNpcRoster(ushort scene,out SceneNpcRosterRequest? request)
+    {
+        lock(gate)
+        {
+            request=null;var(status,receive)=connection.ReadPublication();
+            if(!CurrentCatalogsLocked(status,receive,out var catalogs)||receive?.State.Player?.Scene!=scene)return false;
+            var captured=catalogs;var attempt=receive.Attempt;
+            bool Current()
+            {lock(gate){var(s,r)=connection.ReadPublication();return r?.Attempt==attempt&&r.State.Player?.Scene==scene&&CurrentCatalogsLocked(s,r,out var c)&&ReferenceEquals(c,captured);}}
+            var result=resources.ReadNpcRoster(scene,Current);if(result?.IsCurrent!=true)return false;request=result;return true;
+        }
+    }
     /// <summary>Verified artwork for the current scene only; no coordinate or navigation authority.</summary>
     public bool TryGetSmallMap(ushort scene,out SmallMapRenderRequest? request)
     {
