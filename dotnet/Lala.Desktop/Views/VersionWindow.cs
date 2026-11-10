@@ -97,7 +97,7 @@ public sealed class VersionWindow : DesktopWindow
         inventory.Text = "正在唯讀檢查本機資源…";
         var result = await Task.Run(() => inspect(root, token), token);
         token.ThrowIfCancellationRequested();
-        selectedRoot = Path.GetFullPath(root); location.Text = selectedRoot;
+        selectedRoot = Path.GetFullPath(root); location.Text = "資源由程式自動管理";
         inventory.Text = result.Status switch
         {
             ResourceInventoryInspectionStatus.Missing => "找不到資源資料庫；沒有建立或下載任何檔案。",
@@ -156,15 +156,37 @@ public sealed class VersionWindow : DesktopWindow
         }
         if (!approved) { await RetireResourcesAsync(); selection.Text = "未同意下載；沒有啟動資源準備。"; return; }
         heading.Text = "正在下載、驗證及回讀必要資源";
-        var result = await prelogin.PrepareAsync(token);
+        var currentPreparation = prelogin;
+        void RenderProgress()
+        {
+            if (closed || !ReferenceEquals(prelogin, currentPreparation)) return;
+            var observedProgress = currentPreparation.Progress;
+            selection.Text = observedProgress.Phase;
+            bool measured = observedProgress.Total is > 0 && observedProgress.Completed is not null;
+            progress.IsIndeterminate = !observedProgress.IsFinished && !measured;
+            progress.Value = measured ? 100.0 * observedProgress.Completed!.Value / observedProgress.Total!.Value : 0;
+            if (measured) selection.Text += $"：{observedProgress.Completed}／{observedProgress.Total} 檔（本階段 {progress.Value:0}%）";
+            else if (!observedProgress.IsFinished) selection.Text += "（進行中）";
+        }
+        var progressTimer = new Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+        progressTimer.Tick += (_, _) => RenderProgress();
+        PreloginResourceResult result;
+        try { progressTimer.Start(); result = await currentPreparation.PrepareAsync(token); RenderProgress(); }
+        finally { progressTimer.Stop(); }
         token.ThrowIfCancellationRequested();
-        selection.Text = $"資源 {result.Status}／寫入 {result.StorageOutcome}／物品圖寫入 {result.ItemImageStorageOutcome}／頭像寫入 {result.PortraitStorageOutcome}／表情寫入 {result.EmojiStorageOutcome}／小地圖寫入 {result.SmallMapStorageOutcome}；回讀 {result.ReadbackMatched}／來源重查 {result.SourcesRechecked}／物品圖 {(prelogin.HasItemImages ? "可用" : "不可用")}。";
-        if (result.Status != PreloginResourceStatus.Ready) { await RetireResourcesAsync(); heading.Text = "必要資源未通過驗證"; return; }
+        if (result.Status != PreloginResourceStatus.Ready)
+        {
+            string reason = currentPreparation.Progress.Phase;
+            await RetireResourcesAsync(); heading.Text = "資源準備未完成"; selection.Text = reason; return;
+        }
+        heading.Text = "必要資源已驗證；正在重新核對登入清單";
+        progress.IsIndeterminate = true;
         var observed = await source.LoadAsync(token); token.ThrowIfCancellationRequested();
         catalog = observed; RenderVersion(observed); status.Text = observed.Status;
         if (!observed.IsFresh || !ResourcesMatch(observed.Version)) { await RetireResourcesAsync(); heading.Text = "清單與資源版本不同，禁止登入"; return; }
         selectResources?.Invoke(selectedRoot);
-        heading.Text = "同版必要資源已核對；圖資尚未就緒";
+        heading.Text = "同版必要資源準備完成";
+        selection.Text = "必要資料已完成驗證與回讀。可進入登入畫面；可選圖資仍依個別驗證結果啟用，尚非正式登入驗收。";
         status.Text = observed.Status;
     });
     private Task RunAsync(Func<CancellationToken, Task> action)

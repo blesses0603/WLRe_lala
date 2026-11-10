@@ -9,3 +9,11 @@ Python `wlre/services/world/portals.py` 區分 EventData 格座標、投影座�
 登入前確認保留官方來源與實際寫入範圍，資源由程式自動管理且不顯示儲存路徑；進階驗證可展開；取消與確認留在捲動內容外。沒有修改 PrepareAsync、版本驗證或登入 gate。
 
 新增測試交由既有 GitHub CI 執行；本機未跑完整測試。正向帳號整合仍沿用明示合成 white-box fixture，不等同正式驗收。
+
+## 同批補充：進度與 Windows CI
+
+Core 以不可變快照回報實際階段；必要資源完成一個 Bundle 的取得及雜湊驗證後才增加檔數，包含快取命中，比例只屬於該階段。未知總量的其他下載／驗證／回讀階段只顯示進行中。終止狀態不接受遲來更新；UI 200ms 輪詢並在 finally 停止，不跨取消或替換的 preparation 更新。完成準備後仍重查登入清單，進度本身不授權登入。
+
+Windows aff72bc run 42738434990/job 129573290086 的失敗是空角色清單拒絕後的 FIN／RST 平台差異。測試改用既有嚴格 RetiredPeerClosure（檢查佇列與 frame 未殘留，再接受關閉），仍斷言 selector 未呼叫與資源釋放。沒有放寬產品協定。
+
+同批後續提交維持 v8.0.79；完整測試及平台 UI 交 CI。workflow concurrency 僅取消同一 PR 的舊執行，保留其他 PR、main 和已完成結果。

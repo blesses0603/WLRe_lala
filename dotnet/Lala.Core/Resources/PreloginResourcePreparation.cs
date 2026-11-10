@@ -22,6 +22,8 @@ public sealed record PreloginResourceResult(PreloginResourceStatus Status, Accou
 public sealed class PreloginResourcePreparation : IAsyncDisposable
 {
     private readonly object gate = new();
+    private readonly ResourceProgressState progress = new();
+    public ResourcePreparationProgress Progress => progress.Snapshot;
     private readonly ResourceRuntimeOwner owner;
     private ResourceRuntimeActivation? activation;
     private Task<PreloginResourceResult>? running;
@@ -73,7 +75,7 @@ public sealed class PreloginResourcePreparation : IAsyncDisposable
         lock (gate)
         {
             if (retired) return new(PreloginResourceStatus.Cancelled, AccountResourceStorageOutcome.NotAttempted, false, false);
-            execute = owner.Reserve(true, token); // Pure reservation; Stop cannot miss an admitted attempt.
+            execute = owner.Reserve(true, token, progress); // Pure reservation; Stop cannot miss an admitted attempt.
         }
         var result = await execute().ConfigureAwait(false);
         lock (gate)
@@ -81,6 +83,18 @@ public sealed class PreloginResourcePreparation : IAsyncDisposable
             var status = result.Failure is OperationCanceledException || token.IsCancellationRequested || retired ? PreloginResourceStatus.Cancelled :
                 result.Failure is not null ? PreloginResourceStatus.Failed :
                 owner.TryActivate(result.Publication, out activation) ? PreloginResourceStatus.Ready : PreloginResourceStatus.NotAdmitted;
+            progress.Set(status switch
+            {
+                PreloginResourceStatus.Ready => "必要資源驗證完成",
+                PreloginResourceStatus.Cancelled => "已取消資源準備",
+                PreloginResourceStatus.NotAdmitted => "資源來源或版本未通過准入驗證",
+                _ => result.Failure is BundleSourceException { Failure: BundleSourceFailure.VersionsChanged or BundleSourceFailure.ManifestChanged } ? "官方版本已變更，請重新查詢後準備" :
+                    result.Failure is BundleSourceException { Failure: BundleSourceFailure.Budget } ? "資源超過安全容量限制，未啟用" :
+                    result.Failure is BundleSourceException { Failure: BundleSourceFailure.SourceUnavailable } ? "官方資源暫時無法取得，請稍後重新查詢" :
+                    result.Failure is HttpRequestException ? "官方資源連線失敗，請稍後重新查詢" :
+                    result.Failure is IOException ? "資源讀寫失敗，請檢查磁碟空間與存取權限" :
+                    "資源取得或驗證失敗；未啟用資源，請重新查詢官方版本"
+            }, finished: true);
             if (status != PreloginResourceStatus.Ready) activation = null;
             var storage = !result.StorageAttempted ? AccountResourceStorageOutcome.NotAttempted : result.StorageOutcome switch
             {
@@ -97,6 +111,7 @@ public sealed class PreloginResourcePreparation : IAsyncDisposable
         lock (gate)
         {
             if (retired) return;
+            progress.Set("已取消資源準備", finished: true);
             retired = true; activation = null; owner.Invalidate();
         }
     }

@@ -56,13 +56,14 @@ internal sealed class OfflineBundleRuntimePreparation
     internal async Task<OfflinePreparedRuntimeCandidate> PrepareAsync(IResourceSource source,
         IBundleSourceCacheReader? cache = null, BundleSourceBudget? budget = null,
         string host = OfficialResourceOrigin.DefaultHost, YooAssetManifest? previous = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default, ResourceProgressState? progress = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var prepared = await _preparation.PrepareAsync(source, cache, budget, host, previous, cancellationToken).ConfigureAwait(false);
+        var prepared = await _preparation.PrepareAsync(source, cache, budget, host, previous, cancellationToken, progress).ConfigureAwait(false);
         _preparation.EnsureCurrent(prepared, cancellationToken);
         var handles = prepared.Sources.ToDictionary(handle => handle.Spec.Name, StringComparer.Ordinal);
         var tables = new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal);
+        progress?.Set("解碼並驗證必要資料表");
         long extractedBytes = 0;
         foreach (string name in OfflineRuntimeCandidateDecoder.Sources)
         {
@@ -81,6 +82,7 @@ internal sealed class OfflineBundleRuntimePreparation
         _preparation.EnsureCurrent(prepared, cancellationToken);
         string packageVersion = prepared.Snapshot.Packages["DataPackage"];
         var candidate = OfflineRuntimeCandidateDecoder.Decode(tables, packageVersion, cancellationToken);
+        progress?.Set("取得並驗證可選資料與圖資");
         var downloads = new BundleDownloadTotals(prepared.DownloadCount, prepared.DownloadBytes);
         // Optional acquisition/decoding failures leave required preparation intact. It uses
         // the same manifest/attempt and remaining quota; unknown digests never become rows.

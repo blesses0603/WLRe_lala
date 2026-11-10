@@ -5,6 +5,9 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: dotnet-${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 env:
   AVALONIA_TELEMETRY_OPTOUT: '1'
   DOTNET_CLI_TELEMETRY_OPTOUT: '1'

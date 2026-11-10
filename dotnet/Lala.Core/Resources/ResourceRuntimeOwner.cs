@@ -189,7 +189,7 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
     // execution. The caller must execute the returned work exactly once outside its gates.
     // The reserved slot is visible to Invalidate/Dispose even before execution begins;
     // retirement continues to await its ordinary cleanup and Retired signal.
-    internal Func<Task<ResourceRuntimeBootstrapResult>> Reserve(bool bootstrap, CancellationToken cancellationToken)
+    internal Func<Task<ResourceRuntimeBootstrapResult>> Reserve(bool bootstrap, CancellationToken cancellationToken, ResourceProgressState? progress = null)
     {
         Attempt mine;
         long generation;
@@ -204,13 +204,13 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
         }
         int executed = 0;
         return () => Interlocked.Exchange(ref executed, 1) == 0
-            ? ExecuteAsync(bootstrap, cancellationToken, generation, mine)
+            ? ExecuteAsync(bootstrap, cancellationToken, generation, mine, progress)
             : Task.FromException<ResourceRuntimeBootstrapResult>(
                 new InvalidOperationException("A reserved resource attempt can execute only once"));
     }
 
     private async Task<ResourceRuntimeBootstrapResult> ExecuteAsync(bool bootstrap,
-        CancellationToken cancellationToken, long generation, Attempt mine)
+        CancellationToken cancellationToken, long generation, Attempt mine, ResourceProgressState? progress)
     {
         var execution = new OwnerExecution(this);
         OfflinePreparedRuntimeCandidate? preparedResult = null;
@@ -237,12 +237,14 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
             EnsureCurrent(generation, mine);
             if (_afterAdmission is not null) await _afterAdmission().ConfigureAwait(false);
             EnsureCurrent(generation, mine);
+            progress?.Set("檢查寫入前狀態");
             var baseline = bootstrap ? await CaptureWriteBaselineAsync(mine.Token).ConfigureAwait(false) : null;
             EnsureCurrent(generation, mine);
-            var prepared = await _preparation.PrepareAsync(_source, cache: _cache, cancellationToken: mine.Token).ConfigureAwait(false);
+            var prepared = await _preparation.PrepareAsync(_source, cache: _cache, cancellationToken: mine.Token, progress: progress).ConfigureAwait(false);
             EnsureCurrent(generation, mine);
             if (bootstrap)
             {
+                progress?.Set("寫入必要資源資料庫");
                 if (_bootstrapHooks?.BeforeWrite is not null) await _bootstrapHooks.BeforeWrite().ConfigureAwait(false);
                 EnsureCurrent(generation, mine);
                 Directory.CreateDirectory(Path.GetDirectoryName(_inventory)!);
@@ -268,6 +270,7 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
             }
             // Reopen independently after the writer and every SQL resource are disposed.
             // Never promote the write receipt itself to readback or runtime admission.
+            progress?.Set("獨立回讀並驗證必要資源");
             readback = ResourceRuntimeReadback.Failed;
             var connection = await CreateConnectionAsync(SqliteOpenMode.ReadOnly).ConfigureAwait(false);
             var database = await RuntimeDatabaseSnapshotReader.ReadAsync(connection, mine.Token, includeSkillData: prepared.Candidate.OptionalSkills is not null,
@@ -300,11 +303,13 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
                 // Cache files are only version-keyed byte candidates, never database or
                 // runtime authority. A later failure cannot undo already atomic file writes
                 // or the committed inventory. Keep the final source recheck after disk work.
+                progress?.Set("寫入來源快取");
                 await _cacheWriter.StoreAsync(prepared.VerifiedSources, mine.Token).ConfigureAwait(false);
                 EnsureCurrent(generation, mine);
                 if (_bootstrapHooks?.AfterCacheWrite is not null) await _bootstrapHooks.AfterCacheWrite().ConfigureAwait(false);
                 EnsureCurrent(generation, mine);
             }
+            progress?.Set("物品圖快取與回讀驗證");
             if ((_bootstrapHooks?.ItemImagesForOfflineTest?.Invoke(prepared) ?? prepared.ItemImages) is { } batch)
             {
                 if (bootstrap)
@@ -341,6 +346,7 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
                     itemImages = new(batch, pngs);
                 }
             }
+            progress?.Set("頭像快取與回讀驗證");
             if ((_bootstrapHooks?.PortraitsForOfflineTest?.Invoke(prepared) ?? prepared.Portraits) is { } portraitBatch)
             {
                 if (bootstrap)
@@ -374,6 +380,7 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
                 }
             }
             // Production uses verified closure reconstruction; offline hooks cannot replace it.
+            progress?.Set("表情快取與回讀驗證");
             if ((prepared.Emojis ?? _bootstrapHooks?.EmojisForOfflineTest?.Invoke(prepared)) is { } emojiBatch)
             {
                 if (bootstrap)
@@ -405,6 +412,7 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
                         emojiBatch.Rebuild, () => EnsureCurrent(generation, mine), mine.Token).ConfigureAwait(false);
                 }
             }
+            progress?.Set("取得並驗證小地圖來源");
             smallMapSources=await _preparation.PrepareSmallMapsAsync(_source,prepared,_cache,_cacheWriter,bootstrap,mine.Token).ConfigureAwait(false);
             if(smallMapSources is not null)
             {
@@ -414,6 +422,7 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
                     smallMapStorage=AccountResourceStorageOutcome.Unknown;
                     try
                     {
+                        progress?.Set("寫入小地圖快取");
                         await SmallMapPngStore.WriteAsync(SmallMapConnection(SqliteOpenMode.ReadWriteCreate),mapBatch,()=>EnsureCurrent(generation,mine),mine.Token).ConfigureAwait(false);
                         smallMapStorage=AccountResourceStorageOutcome.Committed;
                     }
@@ -424,13 +433,16 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
                     }
                 }
                 EnsureCurrent(generation,mine);
+                progress?.Set("獨立回讀並驗證小地圖");
                 if(bootstrap||File.Exists(_smallMaps))smallMaps=await SmallMapPngStore.ReadForPublicationAsync(SmallMapConnection(SqliteOpenMode.ReadOnly),mapBatch,()=>EnsureCurrent(generation,mine),mine.Token).ConfigureAwait(false);
             }
+            progress?.Set("最終來源與版本重查");
             await _preparation.ConfirmUnchangedAsync(_source, prepared, mine.Token).ConfigureAwait(false);
             sourcesRechecked = true;
             preparedResult = prepared;
         }
         catch (Exception error) { failure = error; }
+        progress?.Set("釋放暫存資源並完成檢查");
         try
         {
             // Offline-only instrumentation cannot bypass or prevent actual cleanup.

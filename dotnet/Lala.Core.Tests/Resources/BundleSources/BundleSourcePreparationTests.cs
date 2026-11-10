@@ -7,6 +7,28 @@ namespace Lala.Core.Tests.Resources;
 
 public sealed class BundleSourcePreparationTests
 {
+    [Fact]
+    public async Task Required_progress_counts_only_verified_sources_and_clears_counts_for_recheck()
+    {
+        var state = new ResourceProgressState();
+        var observed = new List<ResourcePreparationProgress>();
+        var script = new Script { DuringRead = () => observed.Add(state.Snapshot) };
+        var prepared = await new BundleSourcePreparation().PrepareAsync(script, progress: state);
+        var measured = observed.Where(x => x.Total is not null).ToArray();
+        Assert.NotEmpty(measured);
+        Assert.All(measured, x => { Assert.Equal(prepared.Plan.Entries.Count, x.Total); Assert.InRange(x.Completed!.Value, 0, x.Total!.Value); });
+        Assert.Equal(0, measured[0].Completed);
+        Assert.True(measured.Select(x=>x.Completed!.Value).SequenceEqual(measured.Select(x=>x.Completed!.Value).OrderBy(x=>x)));
+        Assert.Null(state.Snapshot.Total);
+    }
+    [Fact]
+    public void Terminal_progress_cannot_be_resurrected_and_invalid_counts_are_rejected()
+    {
+        var state = new ResourceProgressState();
+        Assert.Throws<ArgumentOutOfRangeException>(()=>state.Set("bad",2,1));
+        state.Set("cancelled",finished:true); state.Set("late",1,1);
+        Assert.Equal("cancelled",state.Snapshot.Phase); Assert.True(state.Snapshot.IsFinished);
+    }
     private sealed class Script : IResourceSource
     {
         internal readonly List<string> Requests = [];

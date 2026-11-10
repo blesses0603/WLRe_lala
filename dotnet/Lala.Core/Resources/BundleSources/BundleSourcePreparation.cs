@@ -105,7 +105,7 @@ internal sealed class BundleSourcePreparation
     internal async Task<RequiredBundleSources> PrepareAsync(IResourceSource source,
         IBundleSourceCacheReader? cache = null, BundleSourceBudget? budget = null,
         string host = OfficialResourceOrigin.DefaultHost, YooAssetManifest? previous = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default, ResourceProgressState? progress = null)
     {
         ArgumentNullException.ThrowIfNull(source);
         cancellationToken.ThrowIfCancellationRequested();
@@ -115,6 +115,7 @@ internal sealed class BundleSourcePreparation
             throw new BundleSourceException(BundleSourceFailure.ResponseSource, "Source host differs from preparation host");
         long attempt; lock (_gate) { attempt = _attempt = checked(_attempt + 1); }
         Check(attempt, cancellationToken);
+        progress?.Set("查詢官方版本與下載清單");
         var before = await source.ObserveAsync(cancellationToken).ConfigureAwait(false);
         Check(attempt, cancellationToken);
         var manifests = await ReadManifestsAsync(source, before, host, attempt, cancellationToken).ConfigureAwait(false);
@@ -127,6 +128,7 @@ internal sealed class BundleSourcePreparation
             if (retained > MaximumRetainedBytes)
                 throw new BundleSourceException(BundleSourceFailure.Budget, "Required source closure exceeds owned-byte bound");
         }
+        progress?.Set("檢查既有必要資源快取");
         bool[] cached = new bool[plan.Entries.Count];
         int downloadCount = 0; long downloadBytes = 0;
         for (int i = 0; i < plan.Entries.Count; i++)
@@ -139,6 +141,7 @@ internal sealed class BundleSourcePreparation
         if (downloadCount > budget.MaximumDownloads || downloadBytes > budget.MaximumDownloadBytes)
             throw new BundleSourceException(BundleSourceFailure.Budget, "Planned downloads exceed explicit byte/file quota");
         await CheckVersionsAsync(source, before, attempt, cancellationToken).ConfigureAwait(false);
+        progress?.Set("取得並驗證必要資源（含快取）", 0, plan.Entries.Count);
         var handles = new List<VerifiedBundleSource>();
         for (int i = 0; i < plan.Entries.Count; i++)
         {
@@ -164,7 +167,9 @@ internal sealed class BundleSourcePreparation
                 handles.Add(VerifiedBundleSource.Verify(spec, bytes, BundleAcquisition.UntrustedSourceDownload, cancellationToken));
             }
             Check(attempt, cancellationToken);
+            progress?.Set("取得並驗證必要資源（含快取）", i + 1, plan.Entries.Count);
         }
+        progress?.Set("重新核對官方版本與清單");
         await CheckVersionsAsync(source, before, attempt, cancellationToken).ConfigureAwait(false);
         // Re-read both complete manifest responses, not just metadata or old cached receipts. A same
         // version replacement with its own matching CRC still changes the SHA-256 content identity.
