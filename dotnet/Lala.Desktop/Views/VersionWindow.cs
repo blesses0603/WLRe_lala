@@ -43,12 +43,9 @@ public sealed class VersionWindow : DesktopWindow
         retry = Ui.Button("重新查詢官方版本", () => _ = RefreshAsync(), "VersionRefresh");
         inspectButton = Ui.Button("重新檢查本機資源", () => _ = RunAsync(token => InspectCoreAsync(this.resourceDirectory(), token)), "VersionInspect");
         next = Ui.Button("進入登入畫面", Continue, "VersionContinue"); next.IsEnabled = false;
-        var content = Ui.Column(Ui.Card("檢查結果", Ui.Column(heading, status)),
+        var content = Ui.Column(Ui.Card("檢查結果", Ui.Column(heading)),
             Ui.Card("官方線上版本", versions),
-            Ui.Card("本機資源資料庫", Ui.Column(location, inventory, inspectButton, Ui.Row(prepare, Ui.Button("停止資源準備", () => _ = StopAsync(), "VersionClearPreparation")), selection,
-                Ui.Text("檢查僅唯讀；登入前準備會另行確認官方下載與固定快取／SQLite 寫入。", 12, Ui.Muted))),
-            Ui.Card("資源啟用狀態", Ui.Column(Ui.Text("登入前核對必要資源、SQLite 回讀及來源版本；圖示、頭像、表情與小地圖尚未就緒。", color: Ui.Gold),
-                Ui.Text("登入前與登入後各自驗證資源，不用舊圖資補齊缺漏。一般遊戲操作仍 Held。", 12, Ui.Muted))),
+            Ui.Card("本機資源資料庫", Ui.Column(location, inventory, inspectButton, Ui.Row(prepare, Ui.Button("停止資源準備", () => _ = StopAsync(), "VersionClearPreparation")), selection)),
             Ui.Card("LaLa 程式更新（GitHub 正式 Release）", Ui.Text("C# Desktop 發行更新尚未接入；不下載或執行 Python 安裝程式。", 12, Ui.Muted)),
             Ui.Text("官方 TCP 沒有 TLS；XOR 可逆，不提供安全加密。進入登入後，帳密傳送仍逐次確認。", 12, Ui.Muted));
         var body = new Grid { RowDefinitions = new("*,Auto,Auto"), RowSpacing = 10 };

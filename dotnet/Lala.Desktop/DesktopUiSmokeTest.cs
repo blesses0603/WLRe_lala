@@ -118,7 +118,7 @@ internal static class DesktopUiSmokeTest
                 await Capture(window, "29-version-resources");
                 fail = true; await window.RefreshAsync();
                 Check(!Find<Button>(window, "VersionContinue").IsEnabled, "failed refresh revokes previous admission");
-                Check(!Find<TextBlock>(window, "VersionStatus").Text!.Contains("secret"), "version errors are sanitized");
+                Check(!window.GetVisualDescendants().OfType<TextBlock>().Any(t => t.Text?.Contains("secret") == true), "version errors are sanitized");
                 fail = false; current = current with { ObservedAt = System.Diagnostics.Stopwatch.GetTimestamp() - 301L * System.Diagnostics.Stopwatch.Frequency };
                 await window.RefreshAsync(); Check(!Find<Button>(window, "VersionContinue").IsEnabled, "stale version observation blocks entry");
             }
@@ -128,7 +128,7 @@ internal static class DesktopUiSmokeTest
             await unavailable.Pending;
             Check(!Find<Button>(unavailable, "VersionPrepare").IsEnabled && !Find<Button>(unavailable, "VersionContinue").IsEnabled,
                 "unavailable system directory blocks preparation and login without fallback");
-            Check(!Find<TextBlock>(unavailable, "VersionStatus").Text!.Contains("private"), "directory resolution failure is sanitized");
+            Check(!unavailable.GetVisualDescendants().OfType<TextBlock>().Any(t => t.Text?.Contains("private") == true), "directory resolution failure is sanitized");
             await unavailable.StopAsync(); unavailable.Close();
             var began = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             var released = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
