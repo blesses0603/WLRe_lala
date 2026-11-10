@@ -128,6 +128,33 @@ internal sealed class HeldAccountReconnect : IAsyncDisposable
         lock (gate) return (view, retired ? null : current?.Publication);
     }
     internal Task? PublicationChanged { get { lock (gate) return retired ? null : current?.PublicationChanged; } }
+    internal Task<ServiceStateSnapshot> ApplyCommandAsync(Guid attempt, Func<ServiceStateSnapshot, ServiceStateSnapshot> transition, CancellationToken token)
+    {
+        lock (gate)
+        {
+            if (retired || view.Phase != ReconnectPhase.Receiving || current?.Attempt != attempt)
+                throw new InvalidOperationException("No current account connection.");
+            return current.ApplyCommandAsync(transition, token);
+        }
+    }
+    internal Task SendGameAsync(Guid attempt, Func<Packet> prepare, CancellationToken token)
+    {
+        lock (gate)
+        {
+            if (retired || view.Phase != ReconnectPhase.Receiving || current?.Attempt != attempt)
+                throw new InvalidOperationException("No current account connection.");
+            return current.SendGameAsync(prepare, token);
+        }
+    }
+    internal Task SendChatAsync(Guid attempt, Packet packet, Func<bool> isCurrent, CancellationToken token)
+    {
+        lock (gate)
+        {
+            if (retired || view.Phase != ReconnectPhase.Receiving || current?.Attempt != attempt)
+                throw new InvalidOperationException("No current account connection.");
+            return current.SendChatAsync(packet, isCurrent, token);
+        }
+    }
     internal Task<ReconnectResult> RunAsync(CancellationToken cancellationToken = default)
     {
         lock (gate)

@@ -31,13 +31,20 @@ public sealed class AccountResourceRuntime : IAsyncDisposable
 {
     private readonly object _gate = new();
     private readonly AccountSession _session;
-    private readonly ResourceRuntimeOwner _owner;
+    private readonly ResourceRuntimeOwner? _owner;
+    private readonly PreloginResourcePreparation? _prepared;
     private AccountResourceBinding? _binding;
     private bool _running, _disposed;
     private long _revision;
+    private ResourceProgressState _progress = new();
+    public ResourcePreparationProgress Progress { get { lock (_gate) return _progress.Snapshot; } }
     private TaskCompletionSource _bindingChanged = NewBindingSignal();
     internal long Revision { get { lock (_gate) return _revision; } }
-    internal Task BindingChanged { get { lock (_gate) return _bindingChanged.Task; } }
+    internal string? CurrentResourceKey { get { lock (_gate) return _binding?.IsCurrent == true ? _binding.Identity.Key : null; } }
+    internal VerifiedNavigationSource? CreateNavigationSource() { lock (_gate) return !_disposed ? _binding?.CreateNavigationSource() : null; }
+    internal VerifiedSocialSource? CreateSocialSource() { lock (_gate) return !_disposed ? _binding?.CreateSocialSource() : null; }
+    private Task? _borrowedBindingChanged;
+    internal Task BindingChanged { get { lock (_gate) return _binding?.IsCurrent == true ? _borrowedBindingChanged ?? _bindingChanged.Task : _bindingChanged.Task; } }
     private static TaskCompletionSource NewBindingSignal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
     private void SetBindingLocked(AccountResourceBinding? binding)
     {
@@ -45,11 +52,19 @@ public sealed class AccountResourceRuntime : IAsyncDisposable
         var previous = _bindingChanged;
         _binding = binding;
         _bindingChanged = NewBindingSignal();
+        _borrowedBindingChanged = binding is not null && _prepared is not null ? Task.WhenAny(_bindingChanged.Task, _prepared.Retirement) : null;
         previous.SetResult();
     }
 
     private AccountResourceRuntime(AccountSession session, ResourceRuntimeOwner owner)
         => (_session, _owner) = (session, owner);
+    private AccountResourceRuntime(AccountSession session, PreloginResourcePreparation prepared)
+        => (_session, _prepared) = (session, prepared);
+    internal static AccountResourceRuntime FromPrepared(AccountSession session, PreloginResourcePreparation prepared)
+    {
+        ArgumentNullException.ThrowIfNull(session); ArgumentNullException.ThrowIfNull(prepared);
+        return new(session, prepared);
+    }
 
     public static AccountResourceRuntime Create(AccountSession session, string absoluteDataRoot)
     {
@@ -87,6 +102,26 @@ public sealed class AccountResourceRuntime : IAsyncDisposable
     private async Task<AccountResourcePreparationResult> RunAsync(long expectedGeneration, bool bootstrap, CancellationToken token,
         SessionSnapshot? expectedSnapshot = null, long? expectedRevision = null)
     {
+        if (_prepared is not null)
+        {
+            lock (_gate)
+            {
+                ObjectDisposedException.ThrowIf(_disposed, this);
+                var account = _session.Snapshot;
+                var status = token.IsCancellationRequested ? AccountResourcePreparationStatus.Cancelled :
+                    expectedRevision is not null && expectedRevision != _revision ? AccountResourcePreparationStatus.Revoked :
+                    account.Generation != expectedGeneration || (expectedSnapshot is not null && !ReferenceEquals(account, expectedSnapshot))
+                        ? AccountResourcePreparationStatus.AccountChanged : AccountResourcePreparationStatus.NotAdmitted;
+                if (status == AccountResourcePreparationStatus.NotAdmitted && _prepared.TryBindAccount(_session, account, out var binding))
+                {
+                    SetBindingLocked(binding);
+                    status = AccountResourcePreparationStatus.Bound;
+                }
+                _progress = new();
+                _progress.Set(status == AccountResourcePreparationStatus.Bound ? "已使用啟動時驗證的資源" : "啟動資源已失效，請回資源準備頁", finished: true);
+                return new(expectedGeneration, status, AccountResourceStorageOutcome.NotAttempted, false, false);
+            }
+        }
         SessionSnapshot snapshot;
         long revision;
         Func<Task<ResourceRuntimeBootstrapResult>>? execute = null;
@@ -110,7 +145,7 @@ public sealed class AccountResourceRuntime : IAsyncDisposable
             try
             {
                 execute = _session.WithLoginSnapshot(current => ReferenceEquals(current, snapshot)
-                    ? _owner.Reserve(bootstrap, token) : null);
+                    ? _owner!.Reserve(bootstrap, token, _progress = new()) : null);
             }
             catch (Exception error) { failure = error; }
             if (execute is null && failure is null)
@@ -141,7 +176,7 @@ public sealed class AccountResourceRuntime : IAsyncDisposable
                 else if (_disposed || revision != _revision || token.IsCancellationRequested)
                     status = token.IsCancellationRequested ? AccountResourcePreparationStatus.Cancelled : AccountResourcePreparationStatus.Revoked;
                 else if (!ReferenceEquals(_session.Snapshot, snapshot)) status = AccountResourcePreparationStatus.AccountChanged;
-                else if (AccountResourceBinding.TryBind(_session, expectedGeneration, _owner, result?.Publication, out var binding)
+                else if (AccountResourceBinding.TryBind(_session, expectedGeneration, _owner!, result?.Publication, out var binding)
                     && ReferenceEquals(_session.Snapshot, snapshot))
                 {
                     SetBindingLocked(binding);
@@ -212,7 +247,7 @@ public sealed class AccountResourceRuntime : IAsyncDisposable
             _revision = checked(_revision + 1); SetBindingLocked(null);
             // This owner operation only changes internal state and schedules cancellation;
             // it performs no I/O or synchronous caller callbacks.
-            _owner.Invalidate();
+            _owner?.Invalidate();
         }
     }
 
@@ -221,6 +256,6 @@ public sealed class AccountResourceRuntime : IAsyncDisposable
     public ValueTask DisposeAsync()
     {
         lock (_gate) { _disposed = true; SetBindingLocked(null); }
-        return _owner.DisposeAsync();
+        return _owner?.DisposeAsync() ?? ValueTask.CompletedTask;
     }
 }

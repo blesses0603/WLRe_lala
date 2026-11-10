@@ -28,13 +28,16 @@ public sealed class NavigationWindow : DesktopWindow
     private long seenGeneration;
     private ushort? seenScene;
     private uint? seenRole;
+    private CancellationTokenSource? planning;
+    private readonly Button syncButton, startButton, stopButton;
 
     public NavigationWindow(DesktopSession session) : base("官方資料庫導航預覽", 640, 520)
     {
         this.session = session;
         Name = "NavigationWindow";
         var body = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,Auto,Auto,Auto,Auto,*") };
-        Ui.At(body, Ui.Text("讀取官方導航資料庫；預覽不會移動角色。"), 0);
+        Ui.At(body, Ui.Text("預覽路線後可開始步行導航；起點使用目前同步或本機推算位置。"), 0);
+        startX.IsReadOnly = startY.IsReadOnly = true;
         var fields = new Grid { ColumnDefinitions = new ColumnDefinitions("100,*"), RowDefinitions = new RowDefinitions("Auto,Auto,Auto,Auto,Auto"), Margin = new Thickness(0, 6) };
         var entries = new (string Label, TextBox Field)[]
         {
@@ -51,7 +54,9 @@ public sealed class NavigationWindow : DesktopWindow
         Ui.At(body, mapping, 0, 2);
         Ui.At(body, Ui.Column(mode, smooth), 0, 3);
         var actions = Ui.Row(Ui.Button("從資料庫預覽", Preview, "NavigationPreview"),
-            Ui.Unavailable("同步此地圖並預覽", "NavigationSyncPreview", "官方導航下載與資料庫尚未接入。"));
+            syncButton = Ui.Button("同步此地圖並預覽", () => _ = PlanAsync(true), "NavigationSyncPreview"),
+            startButton = Ui.Button("開始導航", () => _ = PlanAsync(true, true), "NavigationStart"),
+            stopButton = Ui.Button("停止", async () => { planning?.Cancel(); await session.StopNavigationAsync(); }, "NavigationStop"));
         actions.Margin = new Thickness(0, 4);
         Ui.At(body, actions, 0, 4);
         status.Name = "NavigationStatus";
@@ -65,8 +70,9 @@ public sealed class NavigationWindow : DesktopWindow
             VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto
         });
         FillCurrentPosition();
+        RefreshActions();
         session.Changed += Changed;
-        Closed += (_, _) => { closed = true; session.Changed -= Changed; };
+        Closed += (_, _) => { closed = true; planning?.Cancel(); session.Changed -= Changed; };
     }
 
     private void FillCurrentPosition(DesktopPublication? publication = null)
@@ -91,6 +97,7 @@ public sealed class NavigationWindow : DesktopWindow
     private void Changed() => Ui.OnUi(() =>
     {
         if (closed) return;
+        RefreshActions();
         var view = session.ReadView();
         var player = view.Snapshot.Player;
         // Unrelated receive updates must not erase coordinates currently being typed.
@@ -100,8 +107,15 @@ public sealed class NavigationWindow : DesktopWindow
         FillCurrentPosition(view);
     });
 
-    private void Preview()
+    private void Preview() => _ = PlanAsync(false);
+    private void RefreshActions()
     {
+        syncButton.IsEnabled = startButton.IsEnabled = session.CanSendGameCommands && planning is null;
+        stopButton.IsEnabled = planning is not null || session.NavigationStatus.Running;
+    }
+    private async Task PlanAsync(bool synchronize, bool execute = false)
+    {
+        planning?.Cancel();
         output.Text = "";
         if (!ushort.TryParse(scene.Text, NumberStyles.None, CultureInfo.InvariantCulture, out var mapId) || mapId == 0)
         {
@@ -119,8 +133,31 @@ public sealed class NavigationWindow : DesktopWindow
                 return;
             }
         }
-        mapping.Text = session.ReadView().Labels.Scene(mapId) + "｜尚未取得同版地圖對應及導航資料。";
-        status.Text = "輸入格式正確；尚未接入官方導航資料庫，無法產生路線。";
-        // Do not echo plausible-looking waypoint lists or imply a successful route from field validation.
+        using var cancellation = new CancellationTokenSource(); planning = cancellation; RefreshActions();
+        try
+        {
+            if (!ushort.TryParse(endX.Text, out var x) || !ushort.TryParse(endY.Text, out var y)) throw new InvalidOperationException("執行目的地請輸入 0～65535 的整數。");
+            var target = new Lala.Core.Gameplay.GameNavigationTarget(mapId, x, y, synchronize, mode.SelectedIndex switch { 1 => "sea", 2 => "sky", _ => "land" }, smooth.IsChecked == true);
+            if (session.Snapshot.Player?.Scene is {} current && current != mapId)
+            {
+                var catalog = session.Catalogs ?? throw new InvalidOperationException("同版圖資尚未就緒。");
+                var legs = Lala.Core.Gameplay.GameTravelPlanner.Plan(catalog, current, mapId);
+                output.Text = string.Join("\n", legs.Select((leg, index) => $"{index + 1}. {session.ReadView().Labels.Scene(leg.Scene)} → 出口 {leg.Door} ({leg.X}, {leg.Y}) → {session.ReadView().Labels.Scene(leg.Destination)}"));
+                status.Text = "跨圖行程已列出；各段步行路線會在抵達該地圖後核對。";
+                if (execute) { await session.NavigateAsync(target, cancellation.Token); if (!closed) status.Text = session.NavigationStatus.Message; }
+                return;
+            }
+            status.Text = synchronize ? "同步並規劃官方導航資料…" : "讀取導航快取並規劃…";
+            var route = await session.PreviewNavigationAsync(target, cancellation.Token);
+            if (closed || cancellation.IsCancellationRequested || !route.IsCurrent) return;
+            mapping.Text = session.ReadView().Labels.Scene(mapId) + $"｜同版官方導航網格｜{route.Points.Length} 點";
+            output.Text = string.Join("\n", route.Points.Select((point, index) => $"{index + 1}. ({point.X:0.##}, {point.Y:0.##})"));
+            status.Text = "路線預覽完成；按開始導航才會移動角色。";
+            if (execute) { status.Text = "導航執行中…"; await session.NavigateAsync(target, cancellation.Token); if (!closed) status.Text = session.NavigationStatus.Message; }
+        }
+        catch (OperationCanceledException) { if (!closed) status.Text = "已取消導航工作。"; }
+        catch (Exception error) when (error is IOException or ArgumentException or InvalidOperationException or Lala.Core.Protocol.ProtocolException)
+        { if (!closed) status.Text = error.Message; }
+        finally { if (ReferenceEquals(planning, cancellation)) planning = null; if (!closed) RefreshActions(); }
     }
 }

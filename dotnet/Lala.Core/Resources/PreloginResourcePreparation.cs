@@ -29,6 +29,8 @@ public sealed class PreloginResourcePreparation : IAsyncDisposable
     private Task<PreloginResourceResult>? running;
     private Task? disposal;
     private bool retired;
+    private readonly TaskCompletionSource retirement = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    internal Task Retirement => retirement.Task;
     public AccountResourceDisclosure Disclosure { get; }
     private PreloginResourcePreparation(string root, ResourceRuntimeOwner? supplied = null)
     {
@@ -46,6 +48,33 @@ public sealed class PreloginResourcePreparation : IAsyncDisposable
     }
     public bool CanLogin => false;
     public bool CanSendPackets => false;
+    // Borrow the current activation; the startup preparation retains ownership.
+    // Binding performs no network, decode, database access or account transition.
+    internal bool TryBindAccount(AccountSession session, SessionSnapshot snapshot, out AccountResourceBinding? binding)
+    {
+        lock (gate)
+        {
+            binding = null;
+            return !retired && activation is not null && AccountResourceBinding.TryBind(session, snapshot, activation, out binding);
+        }
+    }
+    /// <summary>Visual-only input from an immutable server role request and verified portrait readback.</summary>
+    public bool TryGetRolePortrait(AccountRoleSelectionRequest request, byte index, out PortraitRenderRequest? portrait)
+    {
+        lock (gate)
+        {
+            portrait = null;
+            var roles = request.Roles.Where(role => role.Index == index).ToArray();
+            if (retired || activation is null || roles.Length != 1 ||
+                !activation.TrySelectRolePortrait(roles[0], out var selection, out var image)) return false;
+            var currentActivation = activation;
+            portrait = new(image!, selection!, index, null, () =>
+            {
+                lock (gate) return !retired && ReferenceEquals(activation, currentActivation) && currentActivation.IsActive;
+            });
+            return true;
+        }
+    }
     public bool Matches(OfficialVersionSnapshot? version)
     {
         lock (gate)
@@ -112,7 +141,7 @@ public sealed class PreloginResourcePreparation : IAsyncDisposable
         {
             if (retired) return;
             progress.Set("已取消資源準備", finished: true);
-            retired = true; activation = null; owner.Invalidate();
+            retired = true; activation = null; owner.Invalidate(); retirement.TrySetResult();
         }
     }
     public ValueTask DisposeAsync()

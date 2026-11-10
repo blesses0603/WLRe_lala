@@ -77,7 +77,8 @@ public sealed class DesktopWindows : IDisposable
         Dashboard = new(session, this);
         Version = new(() => OpenLogin(), OpenMain, RequestShutdown, root => resourceRoot = root);
         Version.Closing += (_, args) => { if (!disposed) { args.Cancel = true; RequestShutdown(); } };
-        Login = new(session, OpenMain, () => OpenInspector(), () => OpenVersion(), () => resourceRoot, version => Version.ResourcesMatch(version));
+        Login = new(session, OpenMain, () => OpenInspector(), () => OpenVersion(), () => resourceRoot, version => Version.ResourcesMatch(version),
+            rolePortrait: (request, index) => Version.GetRolePortrait(request, index), preparedResources: () => Version.PreparedResources);
         Dashboard.Closing += (_, args) => { if (!disposed) { args.Cancel = true; RequestShutdown(); } };
         Login.Closing += (_, args) =>
         {

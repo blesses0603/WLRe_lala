@@ -16,6 +16,13 @@ internal sealed class BoundedSerializedFile
     internal required List<UnityContainerEntry> Container { get; init; }
     internal static BoundedSerializedFile Read(UnityFileIdentity identity, ReadOnlyMemory<byte> bytes, UnityExtractionBudget budget, CancellationToken token, bool allowImages = false, bool allowMaterials = false, bool allowShaders = false, bool allowAtlases = false, UnityImageArchive? imageArchive = null)
         => ReadCore(identity,bytes,budget,token,allowImages,allowMaterials,allowShaders,allowAtlases,imageArchive,false);
+    internal static BoundedSerializedFile ReadPortraitShaders(UnityFileIdentity identity, ReadOnlyMemory<byte> bytes,
+        UnityExtractionBudget budget, CancellationToken token, UnityImageArchive archive)
+    {
+        Require(identity==PortraitBatchLayout.ShaderFile && archive.BundleName==identity.BundleName &&
+            archive.SourceSha256=="4e756561fa3d8b77f439b0b3e969a01f573b451ac9d14ac662d8c8bedf443a47", "Unreviewed portrait shader archive");
+        return ReadCore(identity,bytes,budget,token,true,false,true,false,archive,false,portraitShaders:true);
+    }
     // Dedicated local atlas projection: all metadata is checked, but unrelated
     // object bodies never escape. General Read retains complete body validation.
     internal static BoundedSerializedFile ReadEmojiAtlasProjection(UnityFileIdentity identity,ReadOnlyMemory<byte> bytes,
@@ -28,7 +35,7 @@ internal sealed class BoundedSerializedFile
         return ReadCore(identity,bytes,budget,token,true,false,false,false,null,false,paths.ToHashSet(StringComparer.Ordinal));
     }
     private static BoundedSerializedFile ReadCore(UnityFileIdentity identity,ReadOnlyMemory<byte> bytes,UnityExtractionBudget budget,
-        CancellationToken token,bool allowImages,bool allowMaterials,bool allowShaders,bool allowAtlases,UnityImageArchive? imageArchive,bool emojiProjection,IReadOnlySet<string>? smallMapPaths=null)
+        CancellationToken token,bool allowImages,bool allowMaterials,bool allowShaders,bool allowAtlases,UnityImageArchive? imageArchive,bool emojiProjection,IReadOnlySet<string>? smallMapPaths=null,bool portraitShaders=false)
     {
         token.ThrowIfCancellationRequested(); var header = new UnityReadCursor(bytes, true);
         Require(header.U32() == 0 && header.U32() == 0 && header.U32() == 22 && header.U32() == 0 && header.U8() == 0,
@@ -46,7 +53,7 @@ internal sealed class BoundedSerializedFile
         for (int i = 0; i < types; i++)
         {
             token.ThrowIfCancellationRequested(); int classId = r.I32(); classes[i] = classId;
-            Require((classId is 49 or 142 || allowImages && classId is 28 or 213 || allowMaterials && classId == 21 || allowShaders && classId == 48 || allowAtlases && classId == 687078895) && r.U8() == 0 && r.U16() == ushort.MaxValue, "Unsupported or stripped Unity class");
+            Require((classId is 49 or 142 || allowImages && classId is 28 or 213 || allowMaterials && classId == 21 || allowShaders && classId == 48 || portraitShaders && classId==200 || allowAtlases && classId == 687078895) && r.U8() == 0 && r.U16() == ushort.MaxValue, "Unsupported or stripped Unity class");
             r.Take(16); var shape = ReadTree(r, classId, token);
             if (classId == 48) shaders[i] = UnityShaderLayout.Create(shape);
             Require(r.Count(0) == 0, "Type dependencies unsupported");
@@ -119,6 +126,8 @@ internal sealed class BoundedSerializedFile
             token.ThrowIfCancellationRequested();
             if (obj.ClassId == 142) ReadContainer(obj.Bytes, container, budget, token);
             else if (obj.ClassId == 48) UnityShaderObjects.Read(obj.Bytes, obj.ShaderLayout!, token);
+            else if (obj.ClassId == 200)
+                Require(portraitShaders && obj.Bytes.Length==17392 && SpritePng.Hash(obj.Bytes.Span)=="37c13cd939e43e27834152f87c9ec95d0fa2b7a90b4987a502983198a118bf1d", "Unreviewed portrait shader variants");
             else if (obj.ClassId == 687078895) UnityAtlasObjects.Read(obj.Bytes, token);
             else if (obj.ClassId == 21) UnityMaterialObjects.Read(obj.Bytes, token);
             else if (obj.ClassId == 28) { if(smallMapPaths is not null)UnityImageObjects.DescribeTexture(obj.Bytes,token);else UnityImageObjects.Texture(obj.Bytes, token, imageArchive, identity); }
@@ -137,7 +146,7 @@ internal sealed class BoundedSerializedFile
         {
             token.ThrowIfCancellationRequested(); ushort version = r.U16(); byte depth = r.U8(), flags = r.U8();
             uint type = r.U32(), name = r.U32(); int size = r.I32(); uint index = r.U32(), meta = r.U32(); long reference = r.I64();
-            Require(version > 0 && depth <= (classId == 48 ? 22 : classId == 687078895 ? 10 : 8) && flags <= 1 && index == i && reference == 0, "Unsupported Unity tree node");
+            Require(version > 0 && depth <= (classId == 48 ? 22 : classId is 687078895 or 200 ? 10 : 8) && flags <= 1 && index == i && reference == 0, "Unsupported Unity tree node");
             raw.Add(new(depth, flags, type, name, size, meta));
         }
         var table = r.Take(strings); var nodes = new List<UnityTreeShape.Node>(count);

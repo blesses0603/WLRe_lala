@@ -62,6 +62,9 @@ internal sealed class BundleSourcePlan
         => CreateCore(current, dataVersion, previous, RequiredAssetPaths, cancellationToken);
 
     internal const string SkillAssetPath = "Assets/ResourcesBuild/Data/SkillData_C.bytes";
+    internal static BundleSourcePlan CreateSocial(YooAssetManifest current, string dataVersion, CancellationToken token)
+        => CreateCore(current, dataVersion, null, new[] { "UISellData_C", "FormulaData_C", "OrganizationFunctionData_C", "ArkStarData_C", "ArkAgentData_C", "ArkFightData_C" }
+            .Select(name => "Assets/ResourcesBuild/Data/" + name + ".bytes").ToArray(), token);
     internal static BundleSourcePlan CreateSkill(YooAssetManifest current, string dataVersion, CancellationToken token)
         => CreateCore(current, dataVersion, null, new[] { SkillAssetPath }, token);
 

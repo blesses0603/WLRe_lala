@@ -103,7 +103,36 @@ public sealed class AccountConnectionRuntime : IAsyncDisposable
     /// null after stop, replacement, or between attempts. Retained values are historical.
     /// Custom observation inputs run on the receive writer, not a UI thread.</summary>
     public AccountReceivePublication? Publication => ReadPublication().Publication;
+    public bool CanSendChat
+    {
+        get
+        {
+            var current = ReadPublication();
+            return current.Connection.Phase == AccountConnectionPhase.ReceivingHeld &&
+                current.Publication is { Phase: AccountReceivePhase.Running, State.Player.RoleId: > 0 };
+        }
+    }
+    public Task SendChatAsync(string channel, string text, uint? target = null, CancellationToken token = default)
+    {
+        var observed = ReadPublication();
+        if (observed.Connection.Phase != AccountConnectionPhase.ReceivingHeld ||
+            observed.Publication is not { Phase: AccountReceivePhase.Running, State.Player.RoleId: > 0 } publication)
+            throw new InvalidOperationException("請先完成登入。 ");
+        var packet = Lala.Core.Social.ChatCommands.Create(publication.State, channel, text, target);
+        return connection.SendChatAsync(publication.Attempt, packet, () =>
+        {
+            var next = ReadPublication();
+            if (next.Connection.Phase != AccountConnectionPhase.ReceivingHeld || next.Publication is not { Phase: AccountReceivePhase.Running } actual ||
+                actual.Attempt != publication.Attempt || actual.State.Player?.RoleId != publication.State.Player?.RoleId) return false;
+            _ = Lala.Core.Social.ChatCommands.Create(actual.State, channel, text, target);
+            return true;
+        }, token);
+    }
     internal Task? PublicationChanged => connection.PublicationChanged;
+    internal Task<ServiceStateSnapshot> ApplyCommandAsync(Guid attempt, Func<ServiceStateSnapshot, ServiceStateSnapshot> transition, CancellationToken token)
+        => connection.ApplyCommandAsync(attempt, transition, token);
+    internal Task SendGameAsync(Guid attempt, Func<Lala.Core.Protocol.Packet> prepare, CancellationToken token)
+        => connection.SendGameAsync(attempt, prepare, token);
     internal (AccountConnectionStatus Connection, AccountReceivePublication? Publication) ReadPublication()
     {
         lock (gate)
@@ -121,7 +150,7 @@ public sealed class AccountConnectionRuntime : IAsyncDisposable
                 {
                     ReceiveStage.Created => AccountReceivePhase.Created, ReceiveStage.Running => AccountReceivePhase.Running,
                     ReceiveStage.Ending => AccountReceivePhase.Ending, _ => AccountReceivePhase.Ended
-                }, value.Snapshot);
+                }, value.Snapshot) { Events = value.Events };
             }
             return (observedStatus!, observedPublication);
         }

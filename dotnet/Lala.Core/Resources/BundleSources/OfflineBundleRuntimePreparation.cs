@@ -155,24 +155,8 @@ internal sealed class OfflineBundleRuntimePreparation
             _preparation.EnsureCurrent(prepared, cancellationToken);
         }
         var identity = ManifestIdentity.FromParsed(prepared.Snapshot, prepared.Manifests, cancellationToken);
-        ItemImageBatch? itemImages = null;
         var imageManifest = prepared.Manifests.Single(m => m.Header.PackageName == "MainPackage");
-        // Unsupported optional images do not disable required tables. Never download when
-        // item icon fields have not been independently reviewed by the existing item parser.
-        if (candidate.Items.Count > 0 && candidate.Items.Values.All(row => row.ReviewedDetails is not null) &&
-            imageManifest.Assets.Any(a => a.Path.StartsWith(ItemImageMapping.Prefix, StringComparison.Ordinal)))
-        {
-            try
-            {
-                _ = ItemImageMapping.Create(imageManifest, candidate.Items, cancellationToken);
-                var selected = await _preparation.PrepareItemImagesAsync(source, prepared, cache, budget, downloads, cancellationToken).ConfigureAwait(false);
-                itemImages = ItemImageBatch.Create(imageManifest, prepared.Snapshot.DataVersion, identity.Key,
-                    candidate.Items, selected, cancellationToken);
-                foreach (var handle in selected.Values.SelectMany(group => group)) handles.TryAdd(handle.Spec.Name, handle);
-            }
-            catch (Exception error) when (IsOptionalFailure(error) || error is SpritePixelException) { }
-            _preparation.EnsureCurrent(prepared, cancellationToken);
-        }
+        // Login role portraits take priority within the existing shared source/download bounds.
         PortraitRuntimeBatch? portraits = null;
         // Only the reviewed fixed projection can fetch portrait sources; unknown versions
         // leave this optional family absent without widening source or decode acceptance.
@@ -186,6 +170,23 @@ internal sealed class OfflineBundleRuntimePreparation
                 var selected = await _preparation.PreparePortraitSourcesAsync(source, prepared, cache, budget, downloads, cancellationToken).ConfigureAwait(false);
                 portraits = PortraitRuntimeBatch.Create(selected, tables["NpcData_C"], packageVersion, cancellationToken);
                 foreach (var handle in selected.Sources.Values) handles.TryAdd(handle.Spec.Name, handle);
+            }
+            catch (Exception error) when (IsOptionalFailure(error) || error is SpritePixelException) { }
+            _preparation.EnsureCurrent(prepared, cancellationToken);
+        }
+        ItemImageBatch? itemImages = null;
+        // Unsupported optional images do not disable required tables. Never download when
+        // item icon fields have not been independently reviewed by the existing item parser.
+        if (candidate.Items.Count > 0 && candidate.Items.Values.All(row => row.ReviewedDetails is not null) &&
+            imageManifest.Assets.Any(a => a.Path.StartsWith(ItemImageMapping.Prefix, StringComparison.Ordinal)))
+        {
+            try
+            {
+                _ = ItemImageMapping.Create(imageManifest, candidate.Items, cancellationToken);
+                var selected = await _preparation.PrepareItemImagesAsync(source, prepared, cache, budget, downloads, cancellationToken).ConfigureAwait(false);
+                itemImages = ItemImageBatch.Create(imageManifest, prepared.Snapshot.DataVersion, identity.Key,
+                    candidate.Items, selected, cancellationToken);
+                foreach (var handle in selected.Values.SelectMany(group => group)) handles.TryAdd(handle.Spec.Name, handle);
             }
             catch (Exception error) when (IsOptionalFailure(error) || error is SpritePixelException) { }
             _preparation.EnsureCurrent(prepared, cancellationToken);

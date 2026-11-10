@@ -26,9 +26,9 @@ internal sealed class PortraitView : Border, IAsyncDisposable
     internal string? DisplayedIdentity {get;private set;}
     internal int RenderCount {get;private set;}
     internal bool IsWorking=>working;
-    internal PortraitView()
+    internal PortraitView(double size = 40)
     {
-        Width=Height=40;CornerRadius=new(20);BorderBrush=Ui.BorderBrush;BorderThickness=new(1);
+        Width=Height=size;image.Width=image.Height=size;CornerRadius=new(size/2);BorderBrush=Ui.BorderBrush;BorderThickness=new(1);
         var grid=new Grid();grid.Children.Add(image);grid.Children.Add(pending);Child=grid;
         timer.Tick+=(_,_)=>{if(desired is not null&&!Current(desired))Update(null);};timer.Start();
     }

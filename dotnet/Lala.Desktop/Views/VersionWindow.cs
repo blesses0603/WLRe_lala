@@ -21,7 +21,12 @@ public sealed class VersionWindow : DesktopWindow
     private readonly TextBlock databaseDataVersion = Ui.Text("—", 26, Ui.Accent, true);
     private readonly TextBlock observedTime = Ui.Text("尚未取得觀測時間", 12, Ui.Muted);
     private readonly TextBlock inventory = Ui.Text("本機資源：尚未檢查；不會自動讀取舊帳號設定。");
-    private readonly ProgressBar progress = new() { IsIndeterminate = false, Height = 6 };
+    private readonly ProgressBar progress = new()
+    {
+        Name = "VersionProgress", IsIndeterminate = false, Minimum = 0, Maximum = 100,
+        Height = 22, Foreground = Brush.Parse("#277e94"), Background = Brush.Parse("#324c60"), CornerRadius = new CornerRadius(6)
+    };
+    private readonly TextBlock progressLabel = Ui.Text("階段進度 0%", 11, Ui.Ink, true);
     private readonly Button retry, next, prepare;
     private readonly Func<string, PreloginResourcePreparation> createPreparation;
     private readonly Func<string> resourceDirectory;
@@ -30,6 +35,9 @@ public sealed class VersionWindow : DesktopWindow
     private PreloginResourcePreparation? prelogin;
     private Task resourceRetirement = Task.CompletedTask;
     internal bool ResourcesMatch(OfficialVersionSnapshot? version) => prelogin?.Matches(version) == true;
+    internal PreloginResourcePreparation? PreparedResources => prelogin?.HasCurrentResources == true ? prelogin : null;
+    internal PortraitRenderRequest? GetRolePortrait(Lala.Core.Sessions.AccountRoleSelectionRequest request, byte index)
+        => prelogin?.TryGetRolePortrait(request, index, out var portrait) == true ? portrait : null;
     private readonly TextBlock selection = Ui.Text("等待官方版本，自動驗證、下載將隨後開始。", 12, Ui.Muted);
     private CancellationTokenSource stop = new();
     private Task? operation;
@@ -67,8 +75,13 @@ public sealed class VersionWindow : DesktopWindow
         var databaseValues = new Grid { ColumnDefinitions = new("*,*"), ColumnSpacing = 10 };
         Ui.At(databaseValues, VersionTile("資料庫版本", databaseVersion), 0);
         Ui.At(databaseValues, VersionTile("資料", databaseDataVersion), 1);
-        var resourceActivity = Ui.Column(Ui.Text("自動取得官方資源，驗證後寫入 LALA資料庫。", 12, Ui.Muted),
-            progress, selection, resourceActions);
+        var progressDisplay = new Grid();
+        progressLabel.Name = "VersionProgressLabel";
+        progressLabel.HorizontalAlignment = HorizontalAlignment.Center;
+        progressLabel.IsHitTestVisible = false;
+        progressDisplay.Children.Add(progress); progressDisplay.Children.Add(progressLabel);
+        ToolTip.SetTip(progressDisplay, "依實際處理階段前進；階段耗時不同，並非下載容量或剩餘時間比例。");
+        var resourceActivity = Ui.Column(progressDisplay, selection, resourceActions);
         resourceActivity.Spacing = 10;
         resourceActivity.Name = "DatabaseActivity";
         var local = new Grid { RowDefinitions = new("Auto,Auto,Auto,*,Auto"), RowSpacing = 10 };
@@ -91,8 +104,8 @@ public sealed class VersionWindow : DesktopWindow
         Ui.At(metadata, versionValues, 0);
         Ui.At(metadata, packages, 0, 1);
         Ui.At(metadata, observedTime, 0, 2);
-        Ui.At(panels, Section("01", "官方線上版本", null, metadata), 0);
-        Ui.At(panels, Section("02", "LALA資料庫", null, local), 1);
+        Ui.At(panels, Section("官方線上版本", null, metadata), 0);
+        Ui.At(panels, Section("LALA資料庫", null, local), 1);
 
         var update = Ui.Column(Ui.Text("LaLa 程式更新 · GitHub Release", 13, Ui.Muted),
             Ui.Text("C# Desktop 發行更新尚未接入；不下載或執行 Python 安裝程式。", 12, Ui.Muted));
@@ -105,11 +118,9 @@ public sealed class VersionWindow : DesktopWindow
         Ui.At(actions, ActionButton("結束程式", exit), 0);
         Ui.At(actions, retry, 2);
         Ui.At(actions, next, 3);
-        var footer = Ui.Column(Ui.Text("連線提醒：官方 TCP 未使用 TLS，XOR 不提供安全加密；登入時會逐次確認帳密傳送。", 12, Ui.Muted), actions);
-        footer.Spacing = 12;
         var body = new Grid { RowDefinitions = new("*,Auto"), RowSpacing = 12 };
         Ui.At(body, content, 0);
-        Ui.At(body, Surface(footer), 0, 1);
+        Ui.At(body, actions, 0, 1);
         SetBody(body);
         Opened += (_, _) => { if (catalog?.IsFresh != true) _ = RefreshAsync(); };
         Closing += (_, args) =>
@@ -152,10 +163,9 @@ public sealed class VersionWindow : DesktopWindow
         Padding = new Thickness(18, 16), Child = content
     };
 
-    private static Border Section(string step, string title, string? subtitle, Control content)
+    private static Border Section(string title, string? subtitle, Control content)
     {
-        var header = Ui.Row(Ui.Text(step, 13, Ui.Accent, true), Ui.Text(title, 17, bold: true));
-        header.Spacing = 10;
+        var header = Ui.Text(title, 17, bold: true);
         var column = Ui.Column(header);
         if (!string.IsNullOrEmpty(subtitle)) column.Children.Add(Ui.Text(subtitle, 12, Ui.Muted));
         column.Spacing = 12;
@@ -254,16 +264,17 @@ public sealed class VersionWindow : DesktopWindow
         prelogin = createPreparation(selectedRoot);
         heading.Text = "LALA資料庫正在自動驗證、下載";
         var currentPreparation = prelogin;
+        var stageProgress = new ResourceStageProgress();
         void RenderProgress()
         {
             if (closed || !ReferenceEquals(prelogin, currentPreparation)) return;
             var observedProgress = currentPreparation.Progress;
             selection.Text = observedProgress.Phase;
             bool measured = observedProgress.Total is > 0 && observedProgress.Completed is not null;
-            progress.IsIndeterminate = !observedProgress.IsFinished && !measured;
-            progress.Value = measured ? 100.0 * observedProgress.Completed!.Value / observedProgress.Total!.Value : 0;
-            if (measured) selection.Text += $"：{observedProgress.Completed}／{observedProgress.Total} 檔（本階段 {progress.Value:0}%）";
-            else if (!observedProgress.IsFinished) selection.Text += "（進行中）";
+            stageProgress.Observe(observedProgress);
+            progress.Value = stageProgress.Value;
+            progressLabel.Text = $"階段進度 {progress.Value:0}%";
+            if (measured) selection.Text += $" · {observedProgress.Completed}／{observedProgress.Total} 檔";
         }
         var progressTimer = new Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
         progressTimer.Tick += (_, _) => RenderProgress();
@@ -274,15 +285,21 @@ public sealed class VersionWindow : DesktopWindow
         if (result.Status != PreloginResourceStatus.Ready)
         {
             string reason = currentPreparation.Progress.Phase;
-            await RetireResourcesAsync(); heading.Text = "LALA資料庫尚未就緒"; selection.Text = reason; return;
+            await RetireResourcesAsync(); heading.Text = "LALA資料庫尚未就緒"; selection.Text = reason;
+            progressLabel.Text = $"未完成 · 階段進度 {progress.Value:0}%"; return;
         }
         heading.Text = "必要資源已驗證；正在重新核對登入清單";
-        progress.IsIndeterminate = true;
+        stageProgress.Observe(new ResourcePreparationProgress("重新核對登入清單"));
+        progress.Value = stageProgress.Value;
+        progressLabel.Text = $"階段進度 {progress.Value:0}%";
+        selection.Text = "重新核對登入清單";
         var observed = await source.LoadAsync(token); token.ThrowIfCancellationRequested();
         catalog = observed; RenderVersion(observed);
         if (!observed.IsFresh || !observed.Lines.Any(x => x.Profile is not null) || !ResourcesMatch(observed.Version))
-        { await RetireResourcesAsync(); heading.Text = "清單與資源版本不同，禁止登入"; return; }
+        { await RetireResourcesAsync(); heading.Text = "清單與資源版本不同，禁止登入"; progressLabel.Text = "版本核對未通過"; return; }
         selectResources?.Invoke(selectedRoot);
+        stageProgress.Complete(); progress.Value = stageProgress.Value;
+        progressLabel.Text = "驗證完成 100%";
         heading.Text = "LALA資料庫已就緒，可以登入";
         inventory.Text = "資料庫已完成驗證與回讀";
         inventory.IsVisible = true;
@@ -299,10 +316,10 @@ public sealed class VersionWindow : DesktopWindow
     private async Task RunCoreAsync(Func<CancellationToken, Task> action)
     {
         await Task.Yield();
-        retry.IsEnabled = next.IsEnabled = prepare.IsEnabled = false; progress.Value = 0; progress.IsIndeterminate = true;
+        retry.IsEnabled = next.IsEnabled = prepare.IsEnabled = false; progress.Value = 0; progressLabel.Text = "階段進度 0%";
         try { await action(stop.Token); }
-        catch (OperationCanceledException) { await RetireResourcesAsync(); catalog = null; selectedRoot = null; heading.Text = "檢查已取消"; selection.Text = "自動處理已停止。"; }
-        catch (Exception) { await RetireResourcesAsync(); catalog = null; selectedRoot = null; heading.Text = "檢查未完成"; selection.Text = "自動處理未完成，請重新驗證、下載。"; }
+        catch (OperationCanceledException) { await RetireResourcesAsync(); catalog = null; selectedRoot = null; heading.Text = "檢查已取消"; selection.Text = "自動處理已停止。"; progressLabel.Text = $"已停止 · 階段進度 {progress.Value:0}%"; }
+        catch (Exception) { await RetireResourcesAsync(); catalog = null; selectedRoot = null; heading.Text = "檢查未完成"; selection.Text = "自動處理未完成，請重新驗證、下載。"; progressLabel.Text = $"未完成 · 階段進度 {progress.Value:0}%"; }
         finally
         {
             operation = null; progress.IsIndeterminate = false;
@@ -322,6 +339,7 @@ public sealed class VersionWindow : DesktopWindow
         if (operation is { } pending) await pending;
         await RetireResourcesAsync();
         catalog = null; selectedRoot = null; next.IsEnabled = prepare.IsEnabled = false;
+        progressLabel.Text = "已停止";
         selection.Text = "資源準備已撤銷；已完成或結果不明的磁碟寫入不會回復。";
     }
 }

@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using Lala.Core.State;
 using Lala.Core.Catalogs;
 using Lala.Core.Resources;
+using Lala.Core.Gameplay;
 
 namespace Lala.Desktop;
 
@@ -25,6 +26,102 @@ public sealed class DesktopSession : IDisposable
     private Func<EmojiGalleryRequest?>? emojiReader;
     private Func<ushort,SmallMapRenderRequest?>? smallMapReader;
     private Func<ushort,SceneNpcRosterRequest?>? npcReader;
+    private bool connected;
+    private Func<string, string, uint?, Task>? chatSender;
+    private Func<GameAction, Task>? gameSender;
+    private Func<string, bool, GameAutomationSettings?, Task>? automationSender;
+    private ImmutableDictionary<string, GameAutomationStatus> automations = ImmutableDictionary<string, GameAutomationStatus>.Empty;
+    private GameNavigationStatus navigationStatus = new(false, "尚未啟動導航");
+    internal GameNavigationStatus NavigationStatus { get { lock (gate) return navigationStatus; } }
+    private Func<GameNavigationTarget, CancellationToken, Task<GameNavigationRoute>>? navigationPreview;
+    private Func<GameNavigationTarget, CancellationToken, Task>? navigationStart;
+    private Func<Task>? navigationCancel;
+    internal void AttachNavigation(long expectedGeneration, Func<GameNavigationTarget, CancellationToken, Task<GameNavigationRoute>> preview,
+        Func<GameNavigationTarget, CancellationToken, Task> start, Func<Task> cancel)
+    { lock (gate) { if (disposed || generation != expectedGeneration) return; navigationPreview = preview; navigationStart = start; navigationCancel = cancel; } }
+    internal Task<GameNavigationRoute> PreviewNavigationAsync(GameNavigationTarget target, CancellationToken token = default)
+    {
+        Func<GameNavigationTarget, CancellationToken, Task<GameNavigationRoute>> sender;
+        lock (gate) { if (disposed || !gameReady || navigationPreview is null) throw new InvalidOperationException("請先完成登入與資源準備。"); sender = navigationPreview; }
+        return sender(target, token);
+    }
+    internal Task NavigateAsync(GameNavigationTarget target, CancellationToken token = default)
+    {
+        Func<GameNavigationTarget, CancellationToken, Task> sender;
+        lock (gate) { if (disposed || !gameReady || navigationStart is null) throw new InvalidOperationException("請先完成登入與資源準備。"); sender = navigationStart; }
+        return sender(target, token);
+    }
+    internal Task StopNavigationAsync()
+    { Func<Task>? stop; lock (gate) stop = navigationCancel; return stop?.Invoke() ?? Task.CompletedTask; }
+    internal ImmutableDictionary<string, GameAutomationStatus> Automations { get { lock (gate) return automations; } }
+    internal void AttachAutomationSender(long expectedGeneration, Func<string, bool, GameAutomationSettings?, Task> sender)
+    { lock (gate) { if (disposed || generation != expectedGeneration) return; automationSender = sender; } }
+    internal Task SetAutomationAsync(string kind, bool enabled, GameAutomationSettings? settings = null)
+    {
+        Func<string, bool, GameAutomationSettings?, Task> sender;
+        lock (gate)
+        {
+            if (disposed || automationSender is null || enabled && (!connected || !gameReady)) throw new InvalidOperationException("請先完成登入與資源準備。");
+            sender = automationSender;
+        }
+        return sender(kind, enabled, settings);
+    }
+    private bool gameReady;
+    private OfflineRuntimeCandidate? catalogs;
+    internal OfflineRuntimeCandidate? Catalogs { get { lock (gate) return catalogs; } }
+    internal void SetCatalogs(long expectedGeneration, OfflineRuntimeCandidate? value)
+    { lock (gate) { if (disposed || generation != expectedGeneration || ReferenceEquals(catalogs, value)) return; catalogs = value; } Changed?.Invoke(); }
+    private GameActionStatus? actionStatus;
+    private ImmutableArray<string> actionLog = [];
+    private ImmutableArray<GameServerEvent> serverEvents = [];
+    internal ImmutableArray<GameServerEvent> ServerEvents { get { lock (gate) return serverEvents; } }
+    internal void SetServerEvents(long expectedGeneration, ImmutableArray<GameServerEvent> value)
+    { lock (gate) { if (disposed || generation != expectedGeneration || serverEvents == value) return; serverEvents = value; } Changed?.Invoke(); }
+    public GameActionStatus? ActionStatus { get { lock (gate) return actionStatus; } }
+    public ImmutableArray<string> ActionLog { get { lock (gate) return actionLog; } }
+    internal void AttachGameSender(long expectedGeneration, Func<GameAction, Task> sender)
+    { lock (gate) { if (disposed || generation != expectedGeneration) return; gameSender = sender; } }
+    internal void SetGameplayState(long expectedGeneration, bool ready, GameActionStatus? status, ImmutableArray<string> log, ImmutableDictionary<string, GameAutomationStatus> automatic, GameNavigationStatus navigation)
+    {
+        lock (gate)
+        {
+            if (disposed || generation != expectedGeneration || gameReady == ready && actionStatus == status && actionLog == log && ReferenceEquals(automations, automatic) && navigationStatus == navigation) return;
+            gameReady = ready; actionStatus = status; actionLog = log; automations = automatic; navigationStatus = navigation;
+        }
+        Changed?.Invoke();
+    }
+    internal Task ExecuteGameActionAsync(GameAction action)
+    {
+        Func<GameAction, Task> sender;
+        lock (gate)
+        {
+            if (disposed || !connected || !gameReady || gameSender is null) throw new InvalidOperationException("請先完成登入與資源準備。");
+            sender = gameSender;
+        }
+        return sender(action);
+    }
+    public bool IsConnected { get { lock (gate) return connected && !disposed; } }
+    public bool CanSendChat { get { lock (gate) return connected && !disposed && chatSender is not null; } }
+    internal void AttachChatSender(long expectedGeneration, Func<string, string, uint?, Task>? sender)
+    {
+        lock (gate) { if (disposed || generation != expectedGeneration) return; chatSender = sender; }
+        Changed?.Invoke();
+    }
+    internal void SetConnected(long expectedGeneration, bool value)
+    {
+        lock (gate) { if (disposed || generation != expectedGeneration || connected == value) return; connected = value; }
+        Changed?.Invoke();
+    }
+    internal Task SendChatAsync(string channel, string text, uint? target)
+    {
+        Func<string, string, uint?, Task> sender;
+        lock (gate)
+        {
+            if (disposed || !connected || chatSender is null) throw new InvalidOperationException("請先完成登入。");
+            sender = chatSender;
+        }
+        return sender(channel, text, target);
+    }
 
     public DesktopSession(DesktopPreferencesStore? preferences = null) =>
         Preferences = preferences ?? new DesktopPreferencesStore();
@@ -34,8 +131,8 @@ public sealed class DesktopSession : IDisposable
     public ServiceStateSnapshot Snapshot { get { lock (gate) return snapshot; } }
     public long Generation { get { lock (gate) return generation; } }
     public string IdentityKey { get { lock (gate) return identityKey; } }
-    public bool CanSendGameCommands => false;
-    public const string ConnectionUnavailable = "一般遊戲操作尚未接入；資源保持 Held。";
+    public bool CanSendGameCommands { get { lock (gate) return !disposed && connected && gameReady && gameSender is not null; } }
+    public const string ConnectionUnavailable = "請先完成登入與資源準備，並等待所需遊戲資料同步。";
     private string connectionText = "尚未連線";
     public string ConnectionText { get { lock (gate) return connectionText; } }
     internal void SetConnectionText(string value)
@@ -123,7 +220,11 @@ public sealed class DesktopSession : IDisposable
             ObjectDisposedException.ThrowIf(disposed, this);
             generation = checked(generation + 1);
             publication = -1;
-            connectionText = "尚未連線";
+            connectionText = "尚未連線"; connected = false; chatSender = null;
+            gameReady = false; gameSender = null; actionStatus = null; actionLog = []; catalogs = null;
+            serverEvents = [];
+            automationSender = null; automations = ImmutableDictionary<string, GameAutomationStatus>.Empty;
+            navigationPreview = null; navigationStart = null; navigationCancel = null; navigationStatus = new(false, "尚未啟動導航");
             snapshot = new();
             labels = new(); itemImageReader = null; portraitReader = null; emojiReader = null; smallMapReader = null; npcReader = null;
             identityKey = presentationIdentity;
@@ -169,6 +270,11 @@ public sealed class DesktopSession : IDisposable
         lock (gate)
         {
             disposed = true;
+            connected = false; chatSender = null;
+            gameReady = false; gameSender = null; actionStatus = null; actionLog = []; catalogs = null;
+            serverEvents = [];
+            automationSender = null; automations = ImmutableDictionary<string, GameAutomationStatus>.Empty;
+            navigationPreview = null; navigationStart = null; navigationCancel = null; navigationStatus = new(false, "尚未啟動導航");
             generation = checked(generation + 1);
             snapshot = new();
             labels = new(); itemImageReader = null; portraitReader = null; emojiReader = null; smallMapReader = null; npcReader = null;

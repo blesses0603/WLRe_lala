@@ -76,6 +76,10 @@ internal sealed class ResourceRuntimeActivation(ResourceRuntimeOwner owner, Reso
         =>IsActive&&publication.SmallMaps is {} maps&&publication.Candidate.Stages.TryGetValue(scene,out var stage)&&maps.Contains(stage.ModelId)
             ?new(maps,stage.ModelId,()=>IsActive&&accountCurrent(),SmallMapProjection.Create(stage)):null;
     internal bool HasPortraits => IsActive && publication.Portraits is not null;
+    internal VerifiedNavigationSource? CreateNavigationSource(Func<bool> accountCurrent) => owner.CreateNavigationSource(this, publication, accountCurrent);
+    internal VerifiedSocialSource? CreateSocialSource(Func<bool> accountCurrent) => owner.CreateSocialSource(this, publication, accountCurrent);
+    internal bool TrySelectRolePortrait(Lala.Core.Protocol.RoleSnapshot role, out PortraitSelection? selection, out PortraitCachedImage? image)
+        => owner.TrySelectRolePortrait(this, publication, role, out selection, out image);
     internal bool TryReadPortrait(PortraitMaterialKey key, out PortraitCachedImage? image)
         => owner.TryReadPortrait(this, publication, key, out image);
     internal bool TrySelectPortrait(Lala.Core.Protocol.WorldPlayer? player,

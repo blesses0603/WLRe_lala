@@ -60,9 +60,13 @@ internal sealed class HeldAccountConnection : IAsyncDisposable
     internal Task<HandshakeView> Login => transport.Login;
     internal Task Retiring => receive.Retiring;
     internal Task PublicationChanged => receive.PublicationChanged;
+    internal Task<ServiceStateSnapshot> ApplyCommandAsync(Func<ServiceStateSnapshot, ServiceStateSnapshot> transition, CancellationToken token)
+        => receive.ApplyCommandAsync(transition, token);
+    internal Task SendGameAsync(Func<Packet> prepare, CancellationToken token) => transport.SendGameAsync(prepare, token);
     internal IReadOnlyList<Transport.TcpTransportView> Connections => transport.Connections;
     internal bool ResourceHeld => true;
     internal bool CanSendCommands => false;
+    internal Task SendChatAsync(Packet packet, Func<bool> current, CancellationToken token) => transport.SendChatAsync(packet, current, token);
     internal Task<ReceiveResult> RunAsync(CancellationToken cancellationToken = default)
     {
         lock (outcomeGate) return running ??= receive.RunAsync(cancellationToken);

@@ -19,6 +19,8 @@ public sealed class SkillsWindow : DesktopWindow
     private long generation;
     private bool closed;
     private bool refreshing;
+    private readonly ComboBox target = Ui.Combo([], -1, "SkillsTarget");
+    private readonly Button cast;
 
     public SkillsWindow(DesktopSession session) : base("角色／夥伴特技", 1040, 700)
     {
@@ -34,8 +36,10 @@ public sealed class SkillsWindow : DesktopWindow
         Ui.At(body, table, 0, 3);
         detail.Name = "SkillsDetails";
         Ui.At(body, Ui.Card("特技資訊", detail), 0, 4);
-        Ui.At(body, Ui.Column(Ui.Unavailable("施放選取特技（戰鬥內）", "SkillsCast"),
-            Ui.Text("效果與消耗來自目前已驗證目錄；恢復量、裝備附帶特技與施放條件仍待核對，不會發送戰鬥指令。", 12, Ui.Muted)), 0, 5);
+        cast = Ui.Button("施放選取特技（戰鬥內）", () => _ = CastAsync(), "SkillsCast");
+        target.MinWidth = 210;
+        Ui.At(body, Ui.Column(Ui.Row(Ui.Text("戰場目標"), target, cast),
+            Ui.Text("送出前會核對施放者、回合、已學會技能、SP 與目標；每單位每回合只下令一次。", 12, Ui.Muted)), 0, 5);
         SetBody(body);
         search.TextChanged += (_, _) => { if (!refreshing && !closed) Refresh(); };
         table.SelectionChanged += UpdateDetails;
@@ -66,6 +70,10 @@ public sealed class SkillsWindow : DesktopWindow
                 table.SetRows([]);
             }
             var snapshot = view.Snapshot;
+            var previousTarget = target.SelectedItem as string;
+            target.ItemsSource = snapshot.Local.Battle.Units.Where(u => !u.Exited).Select(u => $"{u.Slot}｜{u.Layout.Name} HP {u.Hp}").ToArray();
+            if (previousTarget is not null) target.SelectedItem = previousTarget;
+            cast.IsEnabled = session.CanSendGameCommands && snapshot.Local.Battle.Active == true && session.ActionStatus?.Pending != true;
             var query = (search.Text ?? "").Trim();
             rows = SkillPresentation.All(snapshot, view.Labels).Where(row => query.Length == 0
                 || row.Actor.Contains(query, StringComparison.OrdinalIgnoreCase)
@@ -85,6 +93,24 @@ public sealed class SkillsWindow : DesktopWindow
         var row = rows.FirstOrDefault(row => row.Key == table.SelectedKey);
         detail.Text = row is null ? "請選取特技查看資料。"
             : $"{row.Actor}｜{row.Name}（{row.Id}）｜等級 {row.Level}\n資料來源：{row.Source}。\n{row.MetadataText}；實際施放條件尚待核對。";
+    }
+    private async Task CastAsync()
+    {
+        try
+        {
+            var skill = rows.FirstOrDefault(row => row.Key == table.SelectedKey) ?? throw new InvalidOperationException("請先選取特技。");
+            var state = session.Snapshot; var player = state.Player ?? throw new InvalidOperationException("請先登入。");
+            var units = state.Local.Battle.Units.Where(u => !u.Exited && u.Hp > 0 && (skill.Player ? u.Layout.Pid == player.RoleId
+                : u.Layout.MasterId == player.RoleId && u.Layout.NpcIndex == skill.CompanionIndex && u.Layout.Pid == skill.NpcId)).ToArray();
+            if (units.Length != 1 || state.Local.Battle.Round is not {} round) throw new InvalidOperationException("所選技能的施放者不在目前可下令的戰場。");
+            if (target.SelectedItem is not string selected) throw new InvalidOperationException("請先選擇戰場目標。");
+            var unit = units[0];
+            await session.ExecuteGameActionAsync(new("battle", "skill", unit.Layout.Pid, round, checked((int)skill.Id),
+                unit.Layout.Col, unit.Layout.Row, player.Scene, Key: selected.Split('｜')[0]));
+            if (!closed) detail.Text = "特技已送出，結果以伺服器回報為準。";
+        }
+        catch (Exception error) when (error is InvalidOperationException or Lala.Core.Protocol.ProtocolException)
+        { if (!closed) detail.Text = error.Message; }
     }
 }
 

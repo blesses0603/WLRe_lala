@@ -3,6 +3,8 @@ using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Input;
+using Lala.Core.Social;
 
 namespace Lala.Desktop;
 
@@ -23,12 +25,24 @@ public sealed class DashboardWindow : DesktopWindow
     private readonly TextBlock efficiency = Ui.Text("等待角色經驗資料；首場作基準", color: Ui.Muted);
     private readonly TextBlock eventLog = Ui.Text("尚未連線，沒有遊戲事件紀錄。", color: Ui.Muted);
     private readonly TabControl activityTabs;
-    private readonly TextBox chatInput = new() { Name = "ChatInput", MaxLength = 512, PlaceholderText = "登入後即可聊天" };
+    private readonly TextBox chatInput = new() { Name = "ChatInput", MaxLength = 127, PlaceholderText = "登入後即可聊天" };
     private readonly TextBox whisperTarget = new() { Name = "ChatTarget", Width = 120, MaxLength = 128, PlaceholderText = "名稱/ID", IsVisible = false };
     private long generation;
     private bool closed, closingStarted, closingReady;
     private readonly PortraitView playerPortrait=new(){Name="PlayerPortrait"};
     private readonly PortraitView companionPortrait=new(){Name="CompanionPortrait"};
+    private readonly ComboBox chatFilter = Ui.Combo(["全部", "區域", "世界", "隊伍", "組織", "密語", "跨服", "系統"], name: "ChatFilter");
+    private readonly ComboBox chatChannel = Ui.Combo(["區域", "世界", "隊伍", "組織", "密語"], name: "ChatChannel");
+    private readonly TextBlock chatMessages = Ui.Text("尚無聊天訊息", 13, Ui.Ink);
+    private readonly TextBlock chatStatus = Ui.Text("登入後即可聊天", 12, Ui.Muted);
+    private readonly ScrollViewer chatScroll = new();
+    private Button chatSend = null!;
+    private bool chatSending;
+    private ChatReceiveSnapshot? displayedChat;
+    private readonly List<Button> gameButtons = [];
+    private readonly List<(Button Button, string Kind, string Label)> automaticButtons = [];
+    private readonly TextBlock battleStatus = Ui.Text("未啟用", color: Ui.Muted);
+    private readonly TextBlock roamingStatus = Ui.Text("未啟用", color: Ui.Muted);
 
     public DashboardWindow(DesktopSession session, DesktopWindows windows)
         : base("飄流Re:LaLa  =By赤寧= · C# 桌面開發版", 1280, 800)
@@ -49,7 +63,7 @@ public sealed class DashboardWindow : DesktopWindow
         Ui.At(header, position, 0);
         Ui.At(header, Ui.Button("中斷連線", async () => await windows.Login.StopAsync(), "DashboardDisconnect"), 1);
         Ui.At(header, Ui.Button("登入／選角", () => windows.OpenLogin(), "OpenLogin"), 2);
-        Ui.At(header, Ui.Text("桌面開發版｜登入接收與唯讀資料", 13, Ui.Muted), 0, 1);
+        Ui.At(header, Ui.Text("LALA 桌面客戶端", 13, Ui.Muted), 0, 1);
         connection.HorizontalAlignment = HorizontalAlignment.Right;
         Ui.At(header, connection, 1, 1, 2);
         Ui.At(header, Ui.Button("官方版本與資源檢查", () => windows.OpenVersion(), "OpenVersion"), 0, 2, 3);
@@ -124,11 +138,11 @@ public sealed class DashboardWindow : DesktopWindow
         var portraits = new Grid { RowDefinitions = new RowDefinitions("*,*") };
         Ui.At(portraits, Portrait(role,playerPortrait), 0); Ui.At(portraits, Portrait(companion,companionPortrait), 0, 1);
         Ui.At(grid, Card("角色與夥伴", portraits, roleTools), 0, 0, 3);
-        var activityTools = Ui.Row(Ui.Unavailable("展開帳篷"), Ui.Unavailable("進入"), Ui.Unavailable("暫停自動接續"));
+        var activityTools = Ui.Row(GameButton("展開帳篷", () => new("tent", "open")), GameButton("進入", () => new("tent", "enter")), GameButton("收起帳篷", () => new("tent", "close")));
         Ui.At(grid, Card("目前活動", activity, activityTools), 3, 0, 3);
         var settings = Ui.IconButton("AI 設定", "buttons/Btn_Setting.png", () => windows.OpenSettings()); settings.Name = "OpenSettings";
-        Ui.At(grid, Card("自動戰鬥", Ui.Text("未啟用\n等待登入與回合資料", color: Ui.Muted), Ui.Row(settings, Play("啟動自動戰鬥"))), 0, 1, 2);
-        Ui.At(grid, Card("自動徘徊", Ui.Text("未啟用\n等待角色位置與導航資料", color: Ui.Muted), Play("啟動自動徘徊")), 2, 1, 2);
+        Ui.At(grid, Card("自動戰鬥", battleStatus, Ui.Row(settings, Play("啟動自動戰鬥"))), 0, 1, 2);
+        Ui.At(grid, Card("自動徘徊", roamingStatus, Play("啟動自動徘徊")), 2, 1, 2);
         Ui.At(grid, Card("遠征", expedition, Ui.Row(Ui.IconButton("遠征設定", "buttons/Btn_Setting.png", () => windows.OpenExpedition()), Play("啟動自動派遣"))), 4, 1, 2);
         Ui.At(grid, Card("補給紀錄", supply, Ui.IconButton("補給設定", "buttons/Btn_CategoryAISetting003.png", () => windows.OpenSettings(2))), 0, 2, 2);
         Ui.At(grid, Card("煉金", Ui.Text("等待煉金資料同步", color: Ui.Muted), Ui.IconButton("煉金", "function-icons/MainIcon_007.png", () => windows.OpenPythonFeature("alchemy"))), 2, 2, 2);
@@ -144,7 +158,26 @@ public sealed class DashboardWindow : DesktopWindow
         Ui.At(row, portrait, 0);
         text.FontSize = 13; Ui.At(row, text, 1); return row;
     }
-    private static Button Play(string label) => Ui.IconButton(label, "automation-controls/Auto_Play.png", null, 26, false);
+    private Button Play(string label)
+    {
+        string kind = label switch { "啟動自動戰鬥" => "battle", "啟動自動派遣" => "expedition", _ => "roaming" };
+        var button = Ui.IconButton(label, "automation-controls/Auto_Play.png", () => _ = ToggleAutomaticAsync(kind), 26, false);
+        automaticButtons.Add((button, kind, label)); return button;
+    }
+    private async Task ToggleAutomaticAsync(string kind)
+    {
+        try { await session.SetAutomationAsync(kind, session.Automations.GetValueOrDefault(kind)?.Enabled != true, GameplayPreferences.Read(session)); }
+        catch (Exception error) when (error is IOException or Lala.Core.Protocol.ProtocolException or InvalidOperationException) { eventLog.Text = error.Message; }
+    }
+    private Button GameButton(string label, Func<Lala.Core.Gameplay.GameAction> create)
+    {
+        var button = Ui.Button(label, async () =>
+        {
+            try { await session.ExecuteGameActionAsync(create()); }
+            catch (Exception error) when (error is Lala.Core.Protocol.ProtocolException or InvalidOperationException) { eventLog.Text = error.Message; }
+        });
+        button.IsEnabled = false; gameButtons.Add(button); return button;
+    }
     private static Border Card(string title, Control content, Control tools)
     {
         var grid = new Grid { RowDefinitions = new RowDefinitions("Auto,*"), RowSpacing = 4 };
@@ -167,24 +200,85 @@ public sealed class DashboardWindow : DesktopWindow
     private Control Chat()
     {
         var layout = new Grid { RowDefinitions = new RowDefinitions("Auto,*,Auto"), RowSpacing = 4 };
-        var filter = Ui.Combo(["全部", "區域", "世界", "隊伍", "組織", "密語", "跨服", "系統"]); filter.Width = 95;
+        chatFilter.Width = 95;
+        chatFilter.SelectionChanged += (_, _) => RefreshChat(force: true);
         var header = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,Auto,*,Auto"), ColumnSpacing = 7 };
-        Ui.At(header, Ui.Text("顯示"), 0); Ui.At(header, filter, 1);
-        Ui.At(header, Ui.Text("等待連線後接收訊息", 12, Ui.Muted), 2);
-        Ui.At(header, Ui.Button("最新", () => { }), 3); Ui.At(layout, header, 0);
-        Ui.At(layout, new Border { Background = Brush.Parse("#a5142638"), Child = Ui.Text("", 13, Ui.Muted) }, 0, 1);
+        Ui.At(header, Ui.Text("顯示"), 0); Ui.At(header, chatFilter, 1);
+        Ui.At(header, chatStatus, 2);
+        Ui.At(header, Ui.Button("最新", () => chatScroll.ScrollToEnd(), "ChatLatest"), 3); Ui.At(layout, header, 0);
+        chatScroll.Content = chatMessages; chatScroll.Padding = new Thickness(8);
+        Ui.At(layout, new Border { Background = Brush.Parse("#a5142638"), Child = chatScroll }, 0, 1);
         var compose = new Grid { ColumnDefinitions = new ColumnDefinitions("88,Auto,*,Auto,Auto"), ColumnSpacing = 5 };
-        var channels = Ui.Combo(["區域", "世界", "隊伍", "組織", "密語"]);
-        channels.SelectionChanged += (_, _) => whisperTarget.IsVisible = channels.SelectedIndex == 4;
-        Ui.At(compose, channels, 0); Ui.At(compose, whisperTarget, 1); Ui.At(compose, chatInput, 2);
-        Ui.At(compose, Ui.Button("表情", () => windows.OpenPythonFeature("emoji"), "OpenEmoji"), 3); Ui.At(compose, Ui.Unavailable("送出", "ChatSend"), 4);
+        chatChannel.SelectionChanged += (_, _) => whisperTarget.IsVisible = chatChannel.SelectedIndex == 4;
+        whisperTarget.PlaceholderText = "對方角色 ID";
+        chatSend = Ui.Button("送出", () => _ = SendChatAsync(), "ChatSend"); chatSend.IsEnabled = false;
+        chatInput.TextChanged += (_, _) => UpdateChatAdmission();
+        chatInput.KeyDown += (_, e) => { if (e.Key == Key.Enter && e.KeyModifiers == KeyModifiers.None) { e.Handled = true; _ = SendChatAsync(); } };
+        Ui.At(compose, chatChannel, 0); Ui.At(compose, whisperTarget, 1); Ui.At(compose, chatInput, 2);
+        Ui.At(compose, Ui.Button("表情", () => windows.OpenPythonFeature("emoji"), "OpenEmoji"), 3); Ui.At(compose, chatSend, 4);
         Ui.At(layout, compose, 0, 2); return Ui.Card("聊天", layout);
+    }
+    private void UpdateChatAdmission()
+    {
+        if (chatSend is null) return;
+        chatSend.IsEnabled = session.CanSendChat && !chatSending && !string.IsNullOrWhiteSpace(chatInput.Text);
+        ToolTip.SetTip(chatSend, session.CanSendChat ? "送出聊天訊息" : "請先完成登入。");
+    }
+    private async Task SendChatAsync()
+    {
+        if (chatSending || !session.CanSendChat || string.IsNullOrWhiteSpace(chatInput.Text)) return;
+        var text = chatInput.Text; var expectedGeneration = session.Generation;
+        uint? target = null;
+        if (chatChannel.SelectedIndex == 4)
+        {
+            if (!uint.TryParse(whisperTarget.Text, out var value) || value == 0) { chatStatus.Text = "密語請填入對方角色 ID。"; return; }
+            target = value;
+        }
+        chatSending = true; UpdateChatAdmission();
+        try
+        {
+            await session.SendChatAsync(chatChannel.SelectedItem as string ?? "區域", text, target);
+            if (closed || session.Generation != expectedGeneration) return;
+            if (chatInput.Text == text) chatInput.Text = "";
+            chatStatus.Text = "已送出，等待伺服器回覆。";
+        }
+        catch (Lala.Core.Protocol.ProtocolException error) { if (!closed && session.Generation == expectedGeneration) chatStatus.Text = error.Message; }
+        catch (Exception) { if (!closed && session.Generation == expectedGeneration) chatStatus.Text = "傳送未完成，請確認連線；不會自動重送。"; }
+        finally { chatSending = false; if (!closed) UpdateChatAdmission(); }
+    }
+    private void RefreshChat(bool force = false)
+    {
+        var chat = session.Snapshot.Chat;
+        if (!force && ReferenceEquals(chat, displayedChat)) { UpdateChatAdmission(); return; }
+        displayedChat = chat;
+        string selected = chatFilter.SelectedItem as string ?? "全部";
+        var messages = chat.Messages.Select(row => row.Receipt.Event switch
+        {
+            ChatMessageEvent message => (message.Channel, Text: $"[{message.Channel}] {row.Name}：{message.Text}"),
+            ChatAnnouncementEvent announcement => (Channel: "系統", Text: $"[系統] {announcement.Text}"),
+            _ => (Channel: "", Text: "")
+        }).Where(row => row.Text.Length > 0 && (selected == "全部" || row.Channel == selected)).Select(row => row.Text);
+        chatMessages.Text = string.Join("\n", messages);
+        if (chatMessages.Text.Length == 0) chatMessages.Text = "尚無聊天訊息";
+        if (chat.LatestFeedback?.Event is ChatResultEvent result) chatStatus.Text = result.Text;
+        else if (chat.LatestFeedback?.Event is ChatNoticeEvent notice) chatStatus.Text = notice.Text;
+        else if (!chatSending) chatStatus.Text = session.IsConnected ? "已連線" : "尚未連線";
+        UpdateChatAdmission();
     }
 
     private void SessionChanged() => Ui.OnUi(() => { if (!closed) Refresh(); });
     private void Refresh()
     {
         connection.Text = session.ConnectionText;
+        foreach (var button in gameButtons) button.IsEnabled = session.CanSendGameCommands && session.ActionStatus?.Pending != true;
+        foreach (var (button, kind, label) in automaticButtons)
+        {
+            bool enabled = session.Automations.GetValueOrDefault(kind)?.Enabled == true;
+            button.IsEnabled = session.CanSendGameCommands || enabled;
+            ToolTip.SetTip(button, enabled ? "停止自動接續" : label);
+        }
+        battleStatus.Text = session.Automations.GetValueOrDefault("battle")?.Message ?? "未啟用；登入後可按播放啟動";
+        roamingStatus.Text = session.Automations.GetValueOrDefault("roaming")?.Message ?? session.NavigationStatus.Message;
         var view = session.ReadView();
         if (generation != view.Generation)
         {
@@ -192,22 +286,23 @@ public sealed class DashboardWindow : DesktopWindow
         }
         var snapshot = view.Snapshot;
         var player = snapshot.Player;
+        string syncLabel = session.IsConnected ? "即時同步" : "最後同步";
         playerPortrait.Update(session.ReadPortrait(snapshot,false));
         companionPortrait.Update(session.ReadPortrait(snapshot,true),player is not null && snapshot.Companions.ActiveNpcId is null or 0);
         var current = snapshot.Local.World.Location;
         position.Text = player is null ? "尚未收到角色位置" :
             current.ConfirmedIsCurrent && current.Confirmed is { } confirmed && confirmed.Scene == player.Scene
-            ? $"{view.Labels.Scene(player.Scene)}｜({confirmed.X}, {confirmed.Y})（最後同步）"
+            ? $"{view.Labels.Scene(player.Scene)}｜({confirmed.X}, {confirmed.Y})（{syncLabel}）"
             : $"{view.Labels.Scene(player.Scene)}｜座標待同步";
         var stats = snapshot.PlayerKnowledge.Stats;
         string Stat(string key) => stats.TryGetValue(key, out var value) ? value.ToString(System.Globalization.CultureInfo.InvariantCulture) : "待同步";
-        role.Text = player is null ? "等待登入與角色資料同步" : $"{player.Name}｜等級 {Stat("level")}（最後同步）\nHP {Stat("hp")}/{Stat("max_hp")}　SP {Stat("sp")}/{Stat("max_sp")}";
+        role.Text = player is null ? "等待登入與角色資料同步" : $"{player.Name}｜等級 {Stat("level")}（{syncLabel}）\nHP {Stat("hp")}/{Stat("max_hp")}　SP {Stat("sp")}/{Stat("max_sp")}";
         var active = snapshot.Companions.ActiveNpcId;
         var profile = snapshot.Companions.Companions.Values.FirstOrDefault(p => p.Data.NpcId == active);
         companion.Text = !snapshot.Companions.Ready ? "等待夥伴資料同步" : profile is null ? "夥伴：未出戰" :
-            $"{(profile.Data.NpcId <= ushort.MaxValue ? view.Labels.Npc((ushort)profile.Data.NpcId) : "夥伴") }（最後同步）｜Lv.{(profile.StatOverrides.TryGetValue("level", out var level) ? level : profile.Data.Level)}";
-        activity.Text = snapshot.Local.Battle.Active == true ? $"最後同步：戰鬥中｜第 {snapshot.Local.Battle.Round?.ToString() ?? "待同步"} 回合\n目前尚未連線" :
-            player is null ? "等待登入與角色資料同步" : "目前尚未連線｜以下為最後同步資料\n" + snapshot.Tent.Status;
+            $"{(profile.Data.NpcId <= ushort.MaxValue ? view.Labels.Npc((ushort)profile.Data.NpcId) : "夥伴") }（{syncLabel}）｜Lv.{(profile.StatOverrides.TryGetValue("level", out var level) ? level : profile.Data.Level)}";
+        activity.Text = snapshot.Local.Battle.Active == true ? $"戰鬥中｜第 {snapshot.Local.Battle.Round?.ToString() ?? "待同步"} 回合\n{(session.IsConnected ? "已連線" : "已中斷，顯示最後同步資料")}" :
+            player is null ? "等待登入與角色資料同步" : (session.IsConnected ? "已連線\n" : "目前未連線，顯示最後同步資料\n") + snapshot.Tent.Status;
         var exp = snapshot.Expedition;
         expedition.Text = !exp.Ready || !exp.OutpostReady ? "自動派遣未啟用\n遠征資料待同步" :
             $"最後同步：遠征 {exp.Teams.Values.Count(t => t.Quest != 0)} 隊\n{exp.Status}";
@@ -215,8 +310,13 @@ public sealed class DashboardWindow : DesktopWindow
         supply.Text = $"HP 儲存槽 {Balance("hp")}｜SP 儲存槽 {Balance("sp")}";
         var ownTeam = snapshot.Party.OwnTeam(player?.RoleId);
         party.Text = ownTeam is null ? snapshot.Party.Status : $"隊長：{snapshot.Party.PlayerName(ownTeam.LeaderId, player?.RoleId, player?.Name)}｜{ownTeam.Members.Length}/4 人（最後同步）";
-        efficiency.Text = "等待經驗統計接入；不推算未收到的數值";
-        eventLog.Text = snapshot.PacketCount > 0 ? $"介面已接收 {snapshot.PacketCount} 筆離線觀測。\n尚未接通正式遊戲連線。" : "尚未連線，沒有遊戲事件紀錄。";
+        var ownEfficiency = snapshot.Efficiency.Rows.GetValueOrDefault(Lala.Core.Battle.EfficiencySubject.Player);
+        var rate = ownEfficiency is null ? null : Lala.Core.Battle.EfficiencyRules.Rates(ownEfficiency).All.ExperiencePerMinute;
+        efficiency.Text = rate is {} perMinute ? $"經驗 {perMinute:N1}／分｜累計 {ownEfficiency!.Earned}\n有效樣本 {ownEfficiency.Count} 場" : "等待足夠的戰鬥經驗樣本";
+        eventLog.Text = snapshot.PacketCount > 0 ? $"已接收 {snapshot.PacketCount} 筆{(session.IsConnected ? "伺服器封包" : "資料觀測")}。\n{session.ConnectionText}" : session.IsConnected ? "已連線，等待伺服器資料。" : "尚未連線，沒有遊戲事件紀錄。";
+        if (!session.ActionLog.IsEmpty) eventLog.Text += "\n\n" + string.Join("\n", session.ActionLog);
+        if (!session.ServerEvents.IsEmpty) eventLog.Text += "\n\n最近伺服器事件\n" + string.Join("\n", session.ServerEvents.TakeLast(200).Select(e => $"#{e.Sequence} [{e.Main}-{e.Sub}] {e.Description}"));
+        RefreshChat();
         foreach (var text in new[] { position, role, companion, activity, supply, expedition, party, efficiency })
             ToolTip.SetTip(text, text.Text);
     }

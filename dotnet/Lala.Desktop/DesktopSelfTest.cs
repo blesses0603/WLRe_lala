@@ -16,6 +16,21 @@ internal static class DesktopSelfTest
         var suite = new Checks();
         try
         {
+            var stages = new ResourceStageProgress();
+            suite.True(stages.Value == 0, "preparation stage bar begins at zero");
+            stages.Observe(new("取得並驗證必要資源（含快取）", 1, 4));
+            double before = stages.Value;
+            stages.Observe(new("取得並驗證必要資源（含快取）", 3, 4));
+            suite.True(stages.Value > before && stages.Value < 100, "observed file counts advance the active stage without completing the whole pipeline");
+            stages.Observe(new("寫入小地圖快取")); before = stages.Value;
+            stages.Observe(new("查詢官方版本與下載清單"));
+            suite.True(stages.Value == before, "repeated early observations never move the stage bar backwards");
+            stages.Observe(new("資源取得或驗證失敗", IsFinished: true));
+            suite.True(stages.Value == before && stages.Value < 100, "failed completion never fills the stage bar");
+            stages.Observe(new("必要資源驗證完成", IsFinished: true));
+            stages.Observe(new("重新核對登入清單"));
+            suite.True(stages.Value < 100, "resource completion still reserves progress for final catalog admission");
+            stages.Complete(); suite.True(stages.Value == 100, "successful host admission completes the stage bar");
             var resourceRoot = DesktopResourceDirectory.FromLocalApplicationData(directory);
             suite.True(resourceRoot == Path.Combine(directory, "LaLa", "Resources"), "resources use a fixed per-user application-data subdirectory");
             suite.True(!Directory.Exists(resourceRoot), "resource path resolution does not create files");

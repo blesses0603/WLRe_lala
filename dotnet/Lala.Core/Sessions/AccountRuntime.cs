@@ -48,7 +48,7 @@ public sealed record AccountRuntimePublicationSnapshot(AccountConnectionStatus C
 /// Construction is inert; RunAsync may send credentials to the explicit TCP profile, acquire
 /// official HTTPS resources and bootstrap the fixed local inventory. No command API exists.
 /// </summary>
-public sealed class AccountRuntime : IAsyncDisposable
+public sealed partial class AccountRuntime : IAsyncDisposable
 {
     private readonly object gate = new();
     private readonly AccountSession session;
@@ -102,6 +102,19 @@ public sealed class AccountRuntime : IAsyncDisposable
         => new(session, generation, selectedIdentity, profile, input, absoluteDataRoot, options, validity,
             roleSelector, TimeProvider.System, null, sendConfirmation);
 
+    /// <summary>Use the startup preparation's current verified resources without acquiring,
+    /// decoding or writing them again. The caller retains ownership of preparedResources;
+    /// stopping it immediately revokes this account's resource binding.</summary>
+    public static AccountRuntime CreateUsingPreparedResources(AccountSession session, long generation, Guid selectedIdentity,
+        AccountConnectionProfile profile, IAccountLoginInput input, PreloginResourcePreparation preparedResources,
+        AccountConnectionOptions? options = null, TimeSpan? validity = null, IAccountRoleSelector? roleSelector = null,
+        IAccountLoginSendConfirmation? sendConfirmation = null)
+    {
+        ArgumentNullException.ThrowIfNull(preparedResources);
+        return new(session, generation, selectedIdentity, profile, input, preparedResources.Disclosure.AbsoluteDataRoot,
+            options, validity, roleSelector, TimeProvider.System, AccountResourceRuntime.FromPrepared(session, preparedResources), sendConfirmation);
+    }
+
     internal static AccountRuntime CreatePreparedForOfflineTests(AccountSession session, long generation,
         Guid selectedIdentity, AccountConnectionProfile profile, IAccountLoginInput input, string absoluteDataRoot,
         AccountResourceRuntime resources, AccountConnectionOptions? options = null, TimeSpan? validity = null,
@@ -126,6 +139,10 @@ public sealed class AccountRuntime : IAsyncDisposable
     /// <summary>Stable assignment identity until visible lifecycle, resource selection,
     /// history, or aggregate completion changes. Retained values are historical only.</summary>
     public AccountLoginProgress? LoginProgress => connection.LoginProgress;
+    public ResourcePreparationProgress ResourceProgress => resources.Progress;
+    public bool CanSendChat => connection.CanSendChat;
+    public Task SendChatAsync(string channel, string text, uint? target = null, CancellationToken token = default)
+        => connection.SendChatAsync(channel, text, target, token);
     public AccountRuntimeStatus Snapshot
     {
         get { lock (gate) return RefreshStatusLocked(); }
@@ -408,7 +425,9 @@ public sealed class AccountRuntime : IAsyncDisposable
     {
         lock (gate)
             return CurrentCatalogsLocked(out _) && projected is not null
-                ? projected with { ObservedAt = now, ResourceHeld = true }
+                ? projected with { ObservedAt = now, ResourceHeld = true,
+                    ArkRuntime = socialSource?.IsCurrent == true && socialCatalog is {} social
+                        ? new Lala.Core.Social.Ark.ArkRuntimeObservation(true, new(true, social.Identity), socialTexts) : Lala.Core.Social.Ark.ArkRuntimeObservation.Absent }
                 : new(now) { ReconcileNpcSkills = true, TrackUnsupportedCraftingSchedules = true };
     }
     /// <summary>Start the single owned lifetime. For CreatePrepared, the host must first
@@ -536,6 +555,10 @@ public sealed class AccountRuntime : IAsyncDisposable
                 try { await changed.ConfigureAwait(false); }
                 catch (OperationCanceledException) when (waiterStop.IsCancellationRequested) { }
             Stop();
+            await DrainAutomationsAsync().ConfigureAwait(false);
+            await StopNavigationAsync().ConfigureAwait(false);
+            await DrainGameActionsAsync().ConfigureAwait(false);
+            await DrainNavigationPreviewsAsync().ConfigureAwait(false);
             var pendingCancellation = preparationStop?.CancelAsync() ?? Task.CompletedTask;
             if (preparation is not null)
                 try { await FinishPreparationAsync(preparation, generation, attemptNumber, account!, attempt!.Value).ConfigureAwait(false); }

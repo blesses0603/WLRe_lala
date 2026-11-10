@@ -51,6 +51,9 @@ public sealed class AccountLoginPreparation : IAsyncDisposable
     internal AccountConnectionRuntime Connection => runtime;
     public AccountLoginDisclosure Disclosure { get; }
     public AccountLoginProgress? LoginProgress => runtime.LoginProgress;
+    public bool CanSendChat => runtime.CanSendChat;
+    public Task SendChatAsync(string channel, string text, uint? target = null, CancellationToken token = default)
+        => runtime.SendChatAsync(channel, text, target, token);
     public AccountConnectionStatus Snapshot => runtime.Snapshot;
     public AccountReceivePublication? Publication => runtime.Publication;
 

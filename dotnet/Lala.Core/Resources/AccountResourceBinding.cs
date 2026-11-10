@@ -23,6 +23,8 @@ internal sealed class AccountResourceBinding
     internal bool CanSendPackets => false;
     private bool HasSameAccountSnapshot => ReferenceEquals(_session.Snapshot, _snapshot);
     internal bool IsCurrent => HasSameAccountSnapshot && _activation.IsActive && HasSameAccountSnapshot;
+    internal VerifiedNavigationSource? CreateNavigationSource() => IsCurrent ? _activation.CreateNavigationSource(() => IsCurrent) : null;
+    internal VerifiedSocialSource? CreateSocialSource() => IsCurrent ? _activation.CreateSocialSource(() => IsCurrent) : null;
 
     /// <summary>No I/O or account mutation. A failed selection never clears another account's
     /// resource activation. The caller must bind again after a lifecycle transition.</summary>
@@ -35,7 +37,14 @@ internal sealed class AccountResourceBinding
         var snapshot = session.Snapshot;
         if (snapshot.Generation != expectedGeneration || snapshot.Phase == SessionPhase.Disconnected ||
             !owner.TryActivate(expectedPublication, out var activation)) return false;
-        var candidate = new AccountResourceBinding(session, snapshot, activation!);
+        return TryBind(session, snapshot, activation!, out binding);
+    }
+    internal static bool TryBind(AccountSession session, SessionSnapshot snapshot,
+        ResourceRuntimeActivation activation, out AccountResourceBinding? binding)
+    {
+        binding = null;
+        if (snapshot.Phase == SessionPhase.Disconnected || !ReferenceEquals(session.Snapshot, snapshot)) return false;
+        var candidate = new AccountResourceBinding(session, snapshot, activation);
         if (!candidate.IsCurrent) return false;
         binding = candidate;
         return true;

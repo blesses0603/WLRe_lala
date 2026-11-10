@@ -18,6 +18,10 @@ internal interface IReceiveTransportRetirement
 {
     void Retire();
 }
+internal interface IReceiveWorldStatus
+{
+    bool WorldAcknowledged { get; }
+}
 
 internal enum ReceiveStage { Created, Running, Ending, Ended }
 internal enum ReceiveEnd
@@ -32,6 +36,8 @@ internal sealed record ReceivePublication(Guid Attempt, long Revision, ReceiveSt
     ServiceStateSnapshot Snapshot, ReceiveEnd? End)
 {
     public bool ResourceHeld => true;
+    internal System.Collections.Immutable.ImmutableArray<Lala.Core.Gameplay.GameServerEvent> Events { get; init; } = [];
+    internal long ServerSequence { get; init; }
 }
 
 internal sealed record ReceiveResult(ReceivePublication Publication, ReceiveEnd End, bool ResourcesReleased);
@@ -55,7 +61,8 @@ internal sealed class ReceiveCleanupException() : Exception("Receive transport c
 /// </summary>
 internal sealed class ReceiveAttempt : IAsyncDisposable
 {
-    private sealed record Chunk(byte[] Bytes, int Count, bool Eof = false);
+    private sealed record Chunk(byte[] Bytes, int Count, bool Eof = false,
+        Func<ServiceStateSnapshot, ServiceStateSnapshot>? Transition = null, TaskCompletionSource<ServiceStateSnapshot>? Completion = null);
     private readonly object gate = new();
     private readonly IReceiveTransport transport;
     private readonly int rxXor;
@@ -95,7 +102,7 @@ internal sealed class ReceiveAttempt : IAsyncDisposable
         this.observe = observe; this.observer = observer; this.readSize = readSize;
         this.beforeCommit = beforeCommit;
         chunks = Channel.CreateBounded<Chunk>(new BoundedChannelOptions(bufferedChunks)
-            { FullMode = BoundedChannelFullMode.Wait, SingleReader = true, SingleWriter = true });
+            { FullMode = BoundedChannelFullMode.Wait, SingleReader = true, SingleWriter = false });
         latest = new(Guid.NewGuid(), 0, ReceiveStage.Created, initial ?? new(), null);
     }
 
@@ -103,6 +110,14 @@ internal sealed class ReceiveAttempt : IAsyncDisposable
     // Subscribe before pulling Latest. One rotating signal observes commits and lifecycle
     // assignments without retaining a packet queue or running callbacks under the gate.
     internal Task PublicationChanged { get { lock (gate) return publicationChanged.Task; } }
+    internal async Task<ServiceStateSnapshot> ApplyCommandAsync(Func<ServiceStateSnapshot, ServiceStateSnapshot> transition, CancellationToken token)
+    {
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(token, stop.Token);
+        lock (gate) if (retired || latest.Stage != ReceiveStage.Running) throw new InvalidOperationException("Connection is no longer current.");
+        var completion = new TaskCompletionSource<ServiceStateSnapshot>(TaskCreationOptions.RunContinuationsAsynchronously);
+        await chunks.Writer.WriteAsync(new([], 0, Transition: transition, Completion: completion), linked.Token).ConfigureAwait(false);
+        return await completion.Task.WaitAsync(linked.Token).ConfigureAwait(false);
+    }
     private static TaskCompletionSource NewPublicationSignal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
     private void SetPublicationLocked(ReceivePublication next)
     {
@@ -248,6 +263,22 @@ internal sealed class ReceiveAttempt : IAsyncDisposable
                 while (chunks.Reader.TryRead(out var chunk))
                 {
                     lock (gate) if (retired) return;
+                    if (chunk.Transition is { } transition)
+                    {
+                        try
+                        {
+                            var next = state.ApplyCommand(transition);
+                            lock (gate)
+                            {
+                                if (retired) { chunk.Completion!.TrySetCanceled(stop.Token); return; }
+                                SetPublicationLocked(latest with { Revision = checked(latest.Revision + 1), Snapshot = next });
+                                publications.Writer.TryWrite(latest);
+                            }
+                            chunk.Completion!.TrySetResult(next);
+                        }
+                        catch (Exception error) { chunk.Completion!.TrySetException(error); }
+                        continue;
+                    }
                     if (chunk.Eof)
                     {
                         try { decoder.Finish(); }
@@ -274,7 +305,11 @@ internal sealed class ReceiveAttempt : IAsyncDisposable
         }
         catch (OperationCanceledException) when (stop.IsCancellationRequested) { }
         catch (Exception) { Retire(ReceiveEnd.ReductionFailed); }
-        finally { publications.Writer.TryComplete(); done.TrySetResult(); }
+        finally
+        {
+            while (chunks.Reader.TryRead(out var remaining)) remaining.Completion?.TrySetCanceled();
+            publications.Writer.TryComplete(); done.TrySetResult();
+        }
     }
 
     private bool Apply(ReceiveStateCoordinator state, Packet packet)
@@ -321,9 +356,16 @@ internal sealed class ReceiveAttempt : IAsyncDisposable
         ServiceStateSnapshot basis, ServiceObservationInputs inputs)
     {
         ServiceStateSnapshot next;
-        try { next = state.Apply(decoded, new(basis, inputs)); }
+        try
+        {
+            next = state.Apply(decoded, new(basis, inputs));
+            if (transport is IReceiveWorldStatus { WorldAcknowledged: true } && next.Player is not null && next.Local.Session.InitialDataComplete)
+                next = state.ConfirmWorldAcknowledged();
+        }
         catch (Exception) { RetireLocked(ReceiveEnd.ReductionFailed); return false; }
-        SetPublicationLocked(latest with { Revision = checked(latest.Revision + 1), Snapshot = next });
+        var events = latest.Events.Add(Lala.Core.Gameplay.GameServerEvent.From(checked(latest.ServerSequence + 1), decoded));
+        if (events.Length > 500) events = events.RemoveRange(0, events.Length - 500);
+        SetPublicationLocked(latest with { Revision = checked(latest.Revision + 1), Snapshot = next, ServerSequence = checked(latest.ServerSequence + 1), Events = events });
         publications.Writer.TryWrite(latest);
         return true;
     }

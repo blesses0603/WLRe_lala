@@ -18,6 +18,26 @@ public sealed class PortraitMappingTests
     private static PortraitMapping Mapping()=>PortraitMapping.ParseLayoutForOfflineTests(Raw());
     private static WorldPlayer Player(byte sex=2,byte head=0,uint p1=123456789,uint p5=987654321,uint role=1)
         =>new(role,sex,1,0,0,0,head,0,p1,p5,0,false,[],"owned",0);
+    private static RoleSnapshot Role(WorldPlayer player) => new(1, "owned-role", 18, 3, 140, 100, 80, 50, 0, 0,
+        player.Sex, player.Head, player.Palette1, player.Palette5, 0, 0, 1, 0, false, new(0, 0, 0, 0, 0, 0, 0, 0, 0));
+    [Theory, MemberData(nameof(PlayerCases))]
+    public void Role_list_portrait_uses_same_character_and_dyes_without_a_world_player(JsonElement row)
+    {
+        var player = Player(row.GetProperty("sex").GetByte(), row.GetProperty("head").GetByte());
+        var map = Mapping();
+        var expected = map.Select(player, State(), false);
+        var actual = map.SelectRole(Role(player));
+        Assert.Equal(expected?.Key, actual?.Key);
+        if (expected is not null) Assert.Equal(expected.Palettes.OrderBy(p => p.Key), actual!.Palettes.OrderBy(p => p.Key));
+    }
+    [Fact]
+    public void Unrecognized_role_appearance_or_invalid_dyes_never_choose_a_default_portrait()
+    {
+        var map = Mapping();
+        Assert.Null(map.SelectRole(Role(Player(sex: 255, head: 255))));
+        Assert.Null(map.SelectRole(Role(Player(p1: 1000000000))));
+        Assert.Null(map.SelectRole(Role(Player(p5: uint.MaxValue))));
+    }
     private static CompanionProfileSnapshot Profile(uint id=7000,ushort modeling=0,long? replacement=null)
         =>new(new(1,id,0,1,1,1,1,1,1,1,1,0,0,0,0,"owned",[],[],0,0,0,0,modeling,0,0),
             ImmutableDictionary<uint,CompanionLearnedSkill>.Empty,

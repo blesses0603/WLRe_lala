@@ -16,6 +16,13 @@ public sealed class MapView : UserControl,IAsyncDisposable
     private bool subscribed;
     private readonly SmallMapImageView picture=new();
     private readonly SceneNpcRosterView npcRoster=new();
+    private readonly List<Button> gameButtons = [];
+    private readonly ListBox portalList = new() { FontSize = 11 };
+    private sealed record PortalChoice(ushort Index, ushort Destination, string Label)
+    { public override string ToString() => Label; }
+    private Button syncNavigation = null!, cancelNavigation = null!;
+    private CancellationTokenSource? syncing;
+    private Task? syncOperation;
 
     public MapView(DesktopSession session, Action openNavigation)
     {
@@ -30,15 +37,19 @@ public sealed class MapView : UserControl,IAsyncDisposable
 
         var content = new Grid { ColumnDefinitions = new ColumnDefinitions("125,*") };
         var sidebar = new Grid { RowDefinitions = new RowDefinitions("*,Auto,Auto"), Margin = new Thickness(0, 0, 6, 0) };
-        var portals = Ui.Text("等待傳點資料。", 11, Ui.Muted);
+        var portals = portalList;
         portals.Margin = new Thickness(4);
         var monsters = Ui.Text("等待怪物資料。", 11, Ui.Muted);
         monsters.Margin = new Thickness(4);
         var npc = new Grid { RowDefinitions = new RowDefinitions("*,Auto,Auto") };
         Ui.At(npc,npcRoster,0);
         var npcButtons = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*") };
-        var interact = Ui.Unavailable("互動", "MapNpcInteract");
-        var next = Ui.Unavailable("接續", "MapNpcContinue");
+        var interact = GameButton("互動", "MapNpcInteract", () =>
+        {
+            var npc = npcRoster.Selected ?? throw new InvalidOperationException("請先選擇 NPC。");
+            return new("npc", "start", npc.NpcId, npc.NpcIndex, X: checked((int)npc.X), Y: checked((int)npc.Y), Scene: session.Snapshot.Player?.Scene ?? 0);
+        });
+        var next = GameButton("接續", "MapNpcContinue", () => session.Snapshot.Local.Session.NpcDialogue.Active ? new("npc", "next") : new("event", "continue"));
         foreach (var button in new[] { interact, next })
         {
             button.Padding = new Thickness(3, 2);
@@ -68,7 +79,11 @@ public sealed class MapView : UserControl,IAsyncDisposable
         audit.Padding = new Thickness(3, 2);
         audit.HorizontalAlignment = HorizontalAlignment.Stretch;
         Ui.At(sidebar, audit, 0, 1);
-        var change = Ui.Unavailable("直接嘗試換圖", "MapPortalGo");
+        var change = GameButton("通過選取出口", "MapPortalGo", () =>
+        {
+            var row = portalList.SelectedItem as PortalChoice ?? throw new InvalidOperationException("請選擇已有同版目的地的出口。");
+            return new("portal", Target: row.Destination, Index: row.Index, Scene: session.Snapshot.Player?.Scene ?? 0);
+        });
         change.FontSize = 11;
         change.Padding = new Thickness(3, 2);
         change.HorizontalAlignment = HorizontalAlignment.Stretch;
@@ -92,8 +107,8 @@ public sealed class MapView : UserControl,IAsyncDisposable
 
         var actions = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,*"), Margin = new Thickness(0, 4, 0, 0) };
         var preview = Ui.Button("導航預覽", openNavigation, "MapOpenNavigation");
-        var sync = Ui.Unavailable("同步導航", "MapSyncNavigation");
-        var cancel = Ui.Unavailable("取消同步", "MapCancelSync", "目前沒有執行中的導航同步。");
+        var sync = syncNavigation = Ui.Button("同步導航", () => _ = (syncOperation = SynchronizeAsync()), "MapSyncNavigation");
+        var cancel = cancelNavigation = Ui.Button("停止導航", async () => { syncing?.Cancel(); await session.StopNavigationAsync(); }, "MapCancelSync");
         var buttons = new[] { preview, sync, cancel };
         for (int i = 0; i < buttons.Length; i++)
         {
@@ -134,12 +149,30 @@ public sealed class MapView : UserControl,IAsyncDisposable
     }
 
     private void Changed() => Ui.OnUi(() => { if (subscribed) Refresh(); });
+    private Button GameButton(string label, string name, Func<Lala.Core.Gameplay.GameAction> create)
+    {
+        var button = Ui.Button(label, async () =>
+        {
+            try { await session.ExecuteGameActionAsync(create()); navigationStatus.Text = session.ActionStatus?.Message ?? "操作已送出。"; }
+            catch (Exception error) when (error is Lala.Core.Protocol.ProtocolException or InvalidOperationException) { navigationStatus.Text = error.Message; }
+        }, name);
+        button.IsEnabled = false; gameButtons.Add(button); return button;
+    }
 
     private void Refresh()
     {
         var view = session.ReadView();
+        syncNavigation.IsEnabled = session.CanSendGameCommands && syncing is null;
+        cancelNavigation.IsEnabled = syncing is not null || session.NavigationStatus.Running || session.Automations.GetValueOrDefault("roaming")?.Enabled == true;
+        foreach (var button in gameButtons) button.IsEnabled = session.CanSendGameCommands && session.ActionStatus?.Pending != true;
         var world = view.Snapshot.Local.World;
         var player = world.Player;
+        var selectedPortal = (portalList.SelectedItem as PortalChoice)?.Index;
+        var portalSource = session.Catalogs?.PortalObservations.Reconciled;
+        var portalRows = portalSource?.Destinations.Where(pair => pair.Key.Scene == player?.Scene && pair.Value.DestinationVerified && pair.Value.Destination is > 0 && !portalSource.Issues.ContainsKey(pair.Key))
+            .OrderBy(pair => pair.Key.Index).Select(pair => new PortalChoice(pair.Key.Index, pair.Value.Destination!.Value, $"{pair.Key.Index} → {view.Labels.Scene(pair.Value.Destination!.Value)}")).ToArray() ?? [];
+        portalList.ItemsSource = portalRows;
+        portalList.SelectedItem = portalRows.FirstOrDefault(row => row.Index == selectedPortal);
         title.Text = player is null ? "小地圖｜等待角色地圖" : "小地圖｜" + view.Labels.Scene(player.Scene);
         ToolTip.SetTip(title, title.Text);
         npcRoster.Update(player is null?null:session.ReadNpcRoster(view.Snapshot,player.Scene));
@@ -151,7 +184,24 @@ public sealed class MapView : UserControl,IAsyncDisposable
         picture.SetMarker(marker);
         position.Text = player is not null && world.Location.ConfirmedIsCurrent && confirmed?.Scene == player.Scene
             ? $"已確認座標\n{confirmed.X}, {confirmed.Y}" : "等待角色位置同步…";
-        navigationStatus.Text = player is null ? "導航：等待目前地圖。" : "導航：等待同版地圖與導航資料。";
+        if (syncing is null) navigationStatus.Text = player is null ? "導航：等待目前地圖。" : session.NavigationStatus.Message;
     }
-    public async ValueTask DisposeAsync(){Unsubscribe();npcRoster.Dispose();await picture.DisposeAsync();}
+    private async Task SynchronizeAsync()
+    {
+        if (syncing is not null) return;
+        using var cancellation = new CancellationTokenSource(); syncing = cancellation;
+        try
+        {
+            var s = session.Snapshot; var fix = s.Local.World.Location.Confirmed;
+            if (s.Player is not {} player || fix is null) throw new InvalidOperationException("尚未確認本機位置。");
+            navigationStatus.Text = "同步同版導航圖資…";
+            await session.PreviewNavigationAsync(new(player.Scene, fix.X, fix.Y, true), cancellation.Token);
+            if (subscribed) navigationStatus.Text = "導航圖資同步完成，可開啟導航選擇目的地。";
+        }
+        catch (OperationCanceledException) { if (subscribed) navigationStatus.Text = "已取消同步。"; }
+        catch (Exception error) when (error is IOException or ArgumentException or InvalidOperationException or Lala.Core.Protocol.ProtocolException)
+        { if (subscribed) navigationStatus.Text = error.Message; }
+        finally { if (ReferenceEquals(syncing, cancellation)) syncing = null; }
+    }
+    public async ValueTask DisposeAsync(){Unsubscribe();syncing?.Cancel();if(syncOperation is {} pending)await pending;npcRoster.Dispose();await picture.DisposeAsync();}
 }

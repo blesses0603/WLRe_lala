@@ -31,6 +31,7 @@ public sealed class ExpeditionWindow : DesktopWindow
     private readonly TextBlock teams = Ui.Text("等待遠征隊伍資料同步。", 12);
     private readonly TextBlock note = Ui.Text("設定只儲存至此桌面預覽，不會啟動派遣或領獎。", 12, Ui.Muted);
     private readonly Button save;
+    private readonly Button start, stop;
     private ushort? restoreItem;
     private ushort? savedRestoreChoice;
     private bool closed;
@@ -60,10 +61,10 @@ public sealed class ExpeditionWindow : DesktopWindow
         Ui.At(actions, Ui.Text("恢復物品"), 0);
         restore.Margin = new Thickness(6, 0);
         Ui.At(actions, restore, 1);
-        var start = Ui.Unavailable("啟動自動派遣", "ExpeditionStart", "尚未接通遊戲連線與正式遠征資料，無法派遣。");
+        start = Ui.Button("啟動自動派遣", () => _ = SetAutomaticAsync(true), "ExpeditionStart");
         start.Content = Ui.Row(Ui.Icon("automation-controls/Auto_Play.png", 18), Ui.Text("啟動自動派遣", 13));
         Ui.At(actions, start, 2);
-        var stop = Ui.Unavailable("停止", "ExpeditionStop", "目前沒有由此桌面啟動的遠征工作。");
+        stop = Ui.Button("停止", () => _ = SetAutomaticAsync(false), "ExpeditionStop");
         stop.Content = Ui.Row(Ui.Icon("automation-controls/Auto_Pause.png", 18), Ui.Text("停止", 13));
         stop.Margin = new Thickness(4, 0);
         Ui.At(actions, stop, 3);
@@ -142,6 +143,27 @@ public sealed class ExpeditionWindow : DesktopWindow
     }
 
     private void Changed() => Ui.OnUi(() => { if (!closed) Refresh(); });
+    private async Task SetAutomaticAsync(bool enabled)
+    {
+        try
+        {
+            session.RequireCurrentDraft(draftGeneration);
+            var settings = GameplayPreferences.Read(session);
+            if (enabled)
+            {
+                if (hours.Value is not {} minHours || faith.Value is not {} minFaith || success.Value is not {} minSuccess ||
+                    decimal.Truncate(minFaith) != minFaith || decimal.Truncate(minSuccess) != minSuccess) throw new InvalidOperationException("請完整填寫有效的遠征條件。");
+                var draft = new ExpeditionPreferences(minHours, checked((int)minFaith), checked((int)minSuccess), autoClaim.IsChecked == true, restoreItem);
+                draft.Validate(); session.SaveExpedition(draftGeneration, draftIdentity, draft);
+                settings = settings with { ExpeditionMinHours = draft.MinHours, ExpeditionMinFaith = draft.MinFaith,
+                    ExpeditionMinSuccess = draft.MinSuccess, ExpeditionAutoClaim = draft.AutoClaim, RestoreItem = draft.RestoreItemId };
+            }
+            await session.SetAutomationAsync("expedition", enabled, settings);
+            if (!closed) note.Text = enabled ? "自動派遣已啟動；符合條件後才會送出，結果由伺服器確認。" : "已停止後續派遣。";
+        }
+        catch (Exception error) when (error is IOException or InvalidOperationException or ArgumentException or Lala.Core.Protocol.ProtocolException)
+        { if (!closed) note.Text = error.Message; }
+    }
 
     private void Refresh()
     {
@@ -153,11 +175,14 @@ public sealed class ExpeditionWindow : DesktopWindow
             save.IsEnabled = false;
             note.Text = "帳號或連線已變更；此草稿不會套用，請重新開啟遠征視窗。";
         }
-        bool editable = currentDraft && !expedition.Enabled && expedition.Pending is null;
+        bool automatic = session.Automations.GetValueOrDefault("expedition")?.Enabled == true;
+        start.IsEnabled = currentDraft && session.CanSendGameCommands && !automatic;
+        stop.IsEnabled = automatic;
+        bool editable = currentDraft && !automatic && expedition.Pending is null;
         hours.IsEnabled = faith.IsEnabled = success.IsEnabled = autoClaim.IsEnabled = restore.IsEnabled = editable;
         status.Text = !expedition.Ready || !expedition.OutpostReady
-            ? "尚未連線｜等待遠征與駐紮所資料同步。"
-            : "尚未連線｜已收到遠征與駐紮所觀測資料，派遣仍待接入。";
+            ? "等待遠征與駐紮所資料同步。"
+            : session.Automations.GetValueOrDefault("expedition")?.Message ?? (session.IsConnected ? "已連線｜遠征與駐紮所資料已同步。" : "尚未連線，顯示最後同步資料。");
         if (expedition.Uncertain) status.Text += " 上次操作結果未確認。";
         var ids = expedition.Quests.Values.Where(id => id != 0).Distinct().Order().ToArray();
         tasks.SetRows(ids.Select(id => (id.ToString(CultureInfo.InvariantCulture),

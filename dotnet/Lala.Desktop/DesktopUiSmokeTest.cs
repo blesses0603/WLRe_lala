@@ -177,7 +177,9 @@ internal static class DesktopUiSmokeTest
                 var window = manager.OpenPythonFeature(key);
                 Check(ReferenceEquals(window, manager.OpenPythonFeature(key)), "one non-modal instance per Python feature: " + key);
                 await Settle(window);
-                Check(Descendants<TextBlock>(window).Any(t => t.Text?.Contains("尚未接通", StringComparison.Ordinal) == true), "incomplete operations disclosed: " + key);
+                if (key == "emoji") Check(!session.CanSendChat, "emoji window cannot enable offline chat");
+                else Check(Descendants<TextBlock>(window).Any(t => t.Name == "FeatureActionStatus" && t.Text?.Contains("請先完成登入", StringComparison.Ordinal) == true),
+                    "offline operation guard remains visible: " + key);
                 await Capture(window, $"{number++:00}-python-{key}");
                 window.Hide();
             }
@@ -213,8 +215,9 @@ internal static class DesktopUiSmokeTest
             Check(!Find<Button>(login, "LoginSubmit").IsEnabled, "unknown or missing official catalog blocks login");
             Check(Find<ComboBox>(login, "LoginServer").ItemCount == 0 &&
                 Find<ComboBox>(login, "LoginLine").ItemCount == 0, "offline startup never invents server endpoints");
-            Check(Find<ComboBox>(login, "LoginRoles").SelectedIndex == -1, "roles are never preselected");
-            Disabled(login, "LoginLoadProfile", "LoginSaveProfile", "LoginSaveIdentity");
+            Check(Find<ListBox>(login, "LoginRoles").SelectedIndex == -1, "roles are never preselected");
+            Check(Find<Button>(login, "LoginLoadProfile").IsEnabled && Find<Button>(login, "LoginSaveProfile").IsEnabled &&
+                Find<Button>(login, "LoginSaveIdentity").IsEnabled, "login account preference actions are available");
             var account = Find<TextBox>(login, "LoginAccount");
             var password = Find<TextBox>(login, "LoginPassword");
             account.Text = "介面測試帳號";
@@ -222,8 +225,7 @@ internal static class DesktopUiSmokeTest
             password.Text = "介面測試-非真密碼";
             Check(password.PasswordChar != '\0', "login password is masked");
             await Capture(login, "03-login");
-            Click(login, "LoginPreview");
-            Check(previews == 1 && string.IsNullOrEmpty(password.Text), "preview handoff clears the password without logging in");
+            Check(!login.GetVisualDescendants().Any(c => c.Name is "LoginPreview" or "LoginInspector"), "login footer preview and inspector actions are removed");
             password.Text = "介面測試-非真密碼";
             account.Text = "介面測試另一帳號";
             await Settle(login);
@@ -425,7 +427,7 @@ internal static class DesktopUiSmokeTest
             x.Text = "150.5";
             Find<TextBox>(navigation, "NavigationEndX").Text = "350";
             Click(navigation, "NavigationPreview");
-            Check(Find<TextBlock>(navigation, "NavigationStatus").Text!.Contains("無法產生路線", StringComparison.Ordinal) &&
+            Check(Find<TextBlock>(navigation, "NavigationStatus").Text!.Contains("請先完成登入", StringComparison.Ordinal) &&
                 string.IsNullOrEmpty(output.Text), "valid input cannot fabricate a route without official navigation data");
             await Capture(navigation, "09-navigation");
             x.Text = "170.5";

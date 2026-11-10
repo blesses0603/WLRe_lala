@@ -60,9 +60,7 @@ internal sealed class PortraitMapping
         if (player is null || player.RoleId==0) return null;
         if (!companion)
         {
-            if (!Characters.TryGetValue((player.Sex,player.Head),out int id) || player.Palette1>999999999 || player.Palette5>999999999) return null;
-            return new(new("player",id.ToString("D4",CultureInfo.InvariantCulture)),
-                ImmutableDictionary<int,int>.Empty.Add(1,(int)player.Palette1).Add(5,(int)player.Palette5));
+            return SelectPlayer(player.Sex, player.Head, player.Palette1, player.Palette5);
         }
         if (companions.ActiveNpcId is not { } active || active==0) return null;
         CompanionProfileSnapshot? selected=null;
@@ -75,5 +73,12 @@ internal sealed class PortraitMapping
         long modeling=selected.StatOverrides.GetValueOrDefault("modeling",selected.Data.Modeling);
         if (modeling is <0 or >65535) return null;
         return npcs.GetValueOrDefault(modeling==0 ? selected.Data.NpcId : (uint)modeling);
+    }
+    internal PortraitSelection? SelectRole(RoleSnapshot role) => SelectPlayer(role.Sex, role.Head, role.Palette1, role.Palette5);
+    private static PortraitSelection? SelectPlayer(byte sex, byte head, uint palette1, uint palette5)
+    {
+        if (!Characters.TryGetValue((sex, head), out int id) || palette1 > 999999999 || palette5 > 999999999) return null;
+        return new(new("player", id.ToString("D4", CultureInfo.InvariantCulture)),
+            ImmutableDictionary<int, int>.Empty.Add(1, (int)palette1).Add(5, (int)palette5));
     }
 }

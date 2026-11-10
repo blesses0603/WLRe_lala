@@ -45,7 +45,7 @@ internal static class PortraitBatchLayout
                 files[ShaderFile].Objects.TryGetValue(ShaderId,out var shader)&&shader.ClassId==48,"Portrait Shader pointer mismatch");
             Require(Target(materialFile,material.Texture,files)==TextureFile&&textureFile.Objects.TryGetValue(material.Texture.PathId,out var tex)&&tex.ClassId==28,
                 "Portrait base texture pointer mismatch");
-            var texture=UnityImageObjects.Texture(textureFile.Objects[material.Texture.PathId].Bytes,token);
+            var texture=UnityImageObjects.DescribeTexture(textureFile.Objects[material.Texture.PathId].Bytes,token);
             Require(TextureName.IsMatch(texture.Name),"Unreviewed portrait texture name");
             string directory=texture.Name.StartsWith("Avatar2DNPC_",StringComparison.Ordinal)?"Avatar2DNPC":"Avatar2D";
             string texturePath=$"Assets/ResourcesBuild/Texture/{directory}/{texture.Name}.png";
@@ -96,6 +96,7 @@ internal static class PortraitBatch
     {
         ArgumentNullException.ThrowIfNull(sources);ArgumentNullException.ThrowIfNull(consume);token.ThrowIfCancellationRequested();
         var files=new Dictionary<UnityFileIdentity,BoundedSerializedFile>();var budget=new UnityExtractionBudget();
+        var archives=new Dictionary<UnityFileIdentity,UnityImageArchive>();
         foreach(var expected in PortraitBatchLayout.ExpectedFiles)
         {
             token.ThrowIfCancellationRequested();var source=sources.Sources[expected.BundleName];
@@ -103,10 +104,14 @@ internal static class PortraitBatch
             for(int offset=0;offset<bytes.Length;)
             {token.ThrowIfCancellationRequested();int read=stream.Read(bytes,offset,Math.Min(65536,bytes.Length-offset));Require(read>0,"Truncated portrait source");offset+=read;}
             Require(stream.ReadByte()==-1,"Portrait source size changed");
-            var entries=BoundedUnityBundle.Read(bytes,budget,token);
-            Require(entries.Count==1&&entries[0].Name==expected.EntryName,"Unexpected portrait serialized file set");
-            files.Add(expected,BoundedSerializedFile.Read(expected,entries[0].Bytes,budget,token,allowImages:true,
-                allowMaterials:expected==PortraitBatchLayout.MaterialFile,allowShaders:expected==PortraitBatchLayout.ShaderFile));
+            var archive=UnityImageArchive.Read(expected.BundleName,bytes,budget,token);
+            Require(archive.SerializedOwners.Count==1&&archive.SerializedOwners[0]==expected,"Unexpected portrait serialized file set");
+            archives.Add(expected,archive);
+            var serialized=archive.CopySerialized(expected,token);
+            files.Add(expected,expected==PortraitBatchLayout.ShaderFile
+                ?BoundedSerializedFile.ReadPortraitShaders(expected,serialized,budget,token,archive)
+                :BoundedSerializedFile.Read(expected,serialized,budget,token,allowImages:true,
+                    allowMaterials:expected==PortraitBatchLayout.MaterialFile,imageArchive:archive));
         }
         var shaderFile=files[PortraitBatchLayout.ShaderFile];
         Require(shaderFile.Objects.TryGetValue(PortraitBatchLayout.ShaderId,out var shader)&&shader.ClassId==48&&shader.ShaderLayout is not null,"Missing reviewed portrait Shader");
@@ -118,7 +123,7 @@ internal static class PortraitBatch
             token.ThrowIfCancellationRequested();
             byte[] Decode(UnityFileIdentity file,long id,string asset)
             {
-                var texture=UnityImageObjects.Texture(files[file].Objects[id].Bytes,token);
+                var texture=UnityImageObjects.Texture(files[file].Objects[id].Bytes,token,archives[file],file);
                 Require(texture.Layout.Width==256&&texture.Layout.Height==256,"Unreviewed portrait texture dimensions");
                 return BoundedTexturePixels.Decode(new(sources.Plan.Fingerprint,sources.Sources[file.BundleName].Sha256,file.EntryName,asset,id),texture,token).CopyPixels();
             }

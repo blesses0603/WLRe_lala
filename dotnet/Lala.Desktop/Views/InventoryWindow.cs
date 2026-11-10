@@ -31,6 +31,11 @@ public sealed class InventoryWindow : DesktopWindow
         ArgumentNullException.ThrowIfNull(session);
         this.session = session;
         bag.ImageReader = garage.ImageReader = materials.ImageReader = session.ReadItemImage;
+        bag.ActionRequested = (item, operation, count) => session.ExecuteGameActionAsync(operation is "hp" or "sp"
+            ? new("field_item", operation, item.ItemId, item.Index, Count: 0)
+            : new("storage", "deposit", item.ItemId, item.Index, count, Key: operation));
+        garage.ActionRequested = (item, operation, count) => session.ExecuteGameActionAsync(new("storage", "withdraw", item.ItemId, item.Index, count, Key: "garage"));
+        materials.ActionRequested = (item, operation, count) => session.ExecuteGameActionAsync(new("storage", "withdraw", item.ItemId, item.Index, count, Key: "materials"));
         generation = session.ReadView().Generation;
 
         var body = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,Auto,*"), RowSpacing = 6 };
@@ -95,6 +100,7 @@ public sealed class InventoryWindow : DesktopWindow
             }
             if (resetPages) { bag.FirstPage(); garage.FirstPage(); materials.FirstPage(); }
             var snapshot = view.Snapshot;
+            bag.CanAct = garage.CanAct = materials.CanAct = session.CanSendGameCommands && session.ActionStatus?.Pending != true;
             var labels = view.Labels;
             var query = (search.Text ?? "").Trim();
             var inventory = snapshot.Bag;
@@ -134,6 +140,11 @@ internal sealed record InventoryDisplayItem(ushort Index, ushort ItemId, BigInte
 /// </summary>
 internal sealed class InventoryGrid : UserControl
 {
+    internal Func<InventoryDisplayItem, string, int, Task>? ActionRequested { get; set; }
+    internal bool CanAct { get; set; }
+    private readonly List<Button> actionButtons = [];
+    private readonly TextBox amount = new() { Text = "1", Width = 70, MaxLength = 5 };
+    private bool submitting;
     internal Func<ushort, byte[]?>? ImageReader { get; set; }
     private readonly List<Bitmap> bitmaps = [];
     private readonly ItemBitmapCache imageCache = new();
@@ -224,11 +235,12 @@ internal sealed class InventoryGrid : UserControl
         Ui.At(details, Ui.Column(title, metadata, note), 0);
         StackPanel actions;
         if (storage)
-            actions = Ui.Column(Ui.Unavailable("取出到背包", name + "Withdraw"));
+            actions = Ui.Column(Ui.Row(Ui.Text("數量"), amount), ActionButton("取出到背包", name + "Withdraw", "withdraw"));
         else
             actions = Ui.Column(
-                Ui.Row(Ui.Unavailable("補 HP", name + "HealHp"), Ui.Unavailable("補 SP", name + "HealSp")),
-                Ui.Row(Ui.Unavailable("存入儲藏室", name + "DepositGarage"), Ui.Unavailable("存入雜物櫃", name + "DepositMaterials")));
+                Ui.Row(Ui.Text("存入數量"), amount),
+                Ui.Row(ActionButton("補 HP", name + "HealHp", "hp"), ActionButton("補 SP", name + "HealSp", "sp")),
+                Ui.Row(ActionButton("存入儲藏室", name + "DepositGarage", "garage"), ActionButton("存入雜物櫃", name + "DepositMaterials", "materials")));
         Ui.At(details, actions, 1);
         Ui.At(body, new Border { Padding = new Thickness(4, 5), Child = details }, 0, 3);
         Content = body;
@@ -239,6 +251,20 @@ internal sealed class InventoryGrid : UserControl
     public int PageIndex => page;
     public ushort? SelectedIndex => selectedIndex;
     public string DetailsText => $"{title.Text}\n{metadata.Text}\n{note.Text}";
+    private Button ActionButton(string label, string name, string operation)
+    {
+        var button = Ui.Button(label, async () =>
+        {
+            if (submitting || !CanAct || ActionRequested is null) return;
+            var item = items.FirstOrDefault(i => i.Index == selectedIndex && i.ItemId == selectedItemId);
+            if (item is null) return;
+            if (!int.TryParse(amount.Text, out var count) || count is < 1 or > 65535) { note.Text = "數量請輸入 1～65535。"; return; }
+            try { submitting = true; foreach (var action in actionButtons) action.IsEnabled = false; await ActionRequested(item, operation, count); note.Text = "已收到伺服器狀態更新。"; }
+            catch (Exception error) when (error is Lala.Core.Protocol.ProtocolException or InvalidOperationException) { note.Text = error.Message; }
+            finally { submitting = false; Paint(); }
+        }, name);
+        button.IsEnabled = false; actionButtons.Add(button); return button;
+    }
 
     public void Reset()
     {
@@ -351,6 +377,7 @@ internal sealed class InventoryGrid : UserControl
         previous.IsEnabled = page > 0;
         next.IsEnabled = page + 1 < PageCount;
         var current = items.FirstOrDefault(item => item.Index == selectedIndex && item.ItemId == selectedItemId);
+        foreach (var button in actionButtons) button.IsEnabled = CanAct && !submitting && current is { Reliable: true };
         title.Text = current?.Name ?? "物品資訊";
         if (current is null)
         {
@@ -361,7 +388,7 @@ internal sealed class InventoryGrid : UserControl
         {
             var available = current.Reliable ? BigInteger.Max(0, current.Count - current.Reserved).ToString(CultureInfo.InvariantCulture) : "待確認";
             metadata.Text = $"ID {current.ItemId}　格位 {current.Index}　持有 {current.Count}　待扣 {current.Reserved}　可用 {available}";
-            note.Text = current.Note + " 操作尚未接通。";
+            if (!submitting) note.Text = CanAct ? "操作會消耗或移動所選物品，結果以伺服器確認為準。" : current.Note + " 請先登入並等待資源與物品同步。";
         }
     }
 }

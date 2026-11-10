@@ -84,6 +84,7 @@ public enum AccountReceivePhase { Created, Running, Ending, Ended }
 /// stale and never authorize effects. State is not sanitized for logging; ToString is redacted.</summary>
 public sealed record AccountReceivePublication(Guid Attempt, long Revision, AccountReceivePhase Phase, ServiceStateSnapshot State)
 {
+    public ImmutableArray<Lala.Core.Gameplay.GameServerEvent> Events { get; init; } = [];
     public bool ResourceHeld => true;
     public override string ToString() => nameof(AccountReceivePublication);
 }

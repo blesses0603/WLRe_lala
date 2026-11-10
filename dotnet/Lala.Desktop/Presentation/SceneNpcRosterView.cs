@@ -17,6 +17,7 @@ internal sealed class SceneNpcRosterView:Grid,IDisposable
     internal int RowsUpdateCount {get;private set;}
     internal int VisibleCount=>list.ItemCount;
     internal string StatusText=>status.Text??"";
+    internal SceneNpcEntry? Selected => current is not null && Valid(current) ? list.SelectedItem as SceneNpcEntry : null;
     internal SceneNpcRosterView()
     {
         RowDefinitions=new("*,Auto");Ui.At(this,list,0);Ui.At(this,status,0);Ui.At(this,detail,0,1);
@@ -25,7 +26,7 @@ internal sealed class SceneNpcRosterView:Grid,IDisposable
         list.SelectionChanged+=(_,_)=>{if(current is null||!Valid(current)){Update((Input?)null);return;}detail.Text=list.SelectedItem is SceneNpcEntry row?Describe(row):"資料表參考；互動尚未啟用。";};
         timer.Tick+=(_,_)=>{if(current is not null&&!Valid(current))Update((Input?)null);};timer.Start();
     }
-    private static string Describe(SceneNpcEntry row)=>$"{row.Name}\nNPC #{row.NpcId}｜索引 {row.NpcIndex}\n參考座標 ({row.X}, {row.Y})\n事件 {row.EventCount}；非即時位置，不能互動。";
+    private static string Describe(SceneNpcEntry row)=>$"{row.Name}\nNPC #{row.NpcId}｜索引 {row.NpcIndex}\n參考座標 ({row.X}, {row.Y})\n事件 {row.EventCount}；互動前仍由核心核對場景與位置。";
     private static bool Valid(Input input){try{return input.Current();}catch{return false;}}
     internal void Update(SceneNpcRosterRequest? request)=>Update(request is null?(Input?)null:new Input(request.Identity,()=>request.IsCurrent,()=>request.TryReadRows(out var rows)?rows:null));
     internal void Update(Input? input)

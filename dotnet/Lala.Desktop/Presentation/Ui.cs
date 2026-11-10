@@ -2,6 +2,8 @@ using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Controls.Presenters;
+using Avalonia.Controls.Templates;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
@@ -153,10 +155,27 @@ internal sealed class ArtButton : Button
 {
     protected override Type StyleKeyOverride => typeof(Button);
     private readonly Bitmap artwork;
+    static ArtButton() => AffectsRender<ArtButton>(IsEffectivelyEnabledProperty, IsPointerOverProperty, IsPressedProperty, IsKeyboardFocusWithinProperty);
     public ArtButton(string text)
     {
-        Content = text; MinHeight = 30; Padding = new Thickness(13, 4); Background = Brushes.Transparent;
+        Content = text; MinHeight = 32; Padding = new Thickness(14, 5); Background = Brushes.Transparent;
         BorderThickness = new Thickness(0); HorizontalContentAlignment = HorizontalAlignment.Center;
+        UseLayoutRounding = true;
+        RenderOptions.SetBitmapInterpolationMode(this, BitmapInterpolationMode.HighQuality);
+        // Keep Button's input/keyboard behavior while drawing only the game skin.
+        // The Fluent presenter otherwise adds another background in hover/disabled states.
+        Template = new FuncControlTemplate<ArtButton>((button, _) =>
+        {
+            var label = new ContentPresenter
+            {
+                HorizontalContentAlignment = HorizontalAlignment.Center,
+                VerticalContentAlignment = VerticalAlignment.Center
+            };
+            label.Bind(ContentPresenter.ContentProperty, button.GetObservable(ContentProperty));
+            label.Bind(ContentPresenter.ContentTemplateProperty, button.GetObservable(ContentTemplateProperty));
+            label.Bind(ContentPresenter.PaddingProperty, button.GetObservable(PaddingProperty));
+            return label;
+        });
         string path = text.StartsWith("登入", StringComparison.Ordinal) || text.StartsWith("套用", StringComparison.Ordinal) || text.StartsWith("啟動", StringComparison.Ordinal)
             ? "Btn_014.png" : text.StartsWith("取消", StringComparison.Ordinal) || text.StartsWith("停止", StringComparison.Ordinal) || text.StartsWith("中斷", StringComparison.Ordinal)
             ? "Btn_016.png" : "Btn_004.png";
@@ -166,14 +185,18 @@ internal sealed class ArtButton : Button
     {
         var source = artwork.Size;
         double scale = Bounds.Height / source.Height;
-        double left = Math.Min(Bounds.Width / 2, 34 * scale), right = Math.Min(Bounds.Width / 2, 37 * scale);
-        using (context.PushOpacity(IsEnabled ? 1 : .48))
+        double dpi = TopLevel.GetTopLevel(this)?.RenderScaling ?? 1;
+        double left = Math.Min(Bounds.Width / 2, Math.Round(34 * scale * dpi) / dpi);
+        double right = Math.Min(Bounds.Width - left, Math.Round(37 * scale * dpi) / dpi);
+        using (context.PushOpacity(!IsEffectivelyEnabled ? .5 : IsPressed ? .82 : IsPointerOver ? 1 : .94))
         {
             context.DrawImage(artwork, new Rect(0, 0, 34, source.Height), new Rect(0, 0, left, Bounds.Height));
             if (Bounds.Width > left + right)
                 context.DrawImage(artwork, new Rect(34, 0, source.Width - 71, source.Height), new Rect(left, 0, Bounds.Width - left - right, Bounds.Height));
             context.DrawImage(artwork, new Rect(source.Width - 37, 0, 37, source.Height), new Rect(Bounds.Width - right, 0, right, Bounds.Height));
         }
+        if (IsKeyboardFocusWithin && IsEffectivelyEnabled)
+            context.DrawRectangle(null, new Pen(Ui.Accent, 1), new Rect(Bounds.Size).Deflate(2), 10, 10);
         base.Render(context);
     }
 }
@@ -206,7 +229,19 @@ public abstract class DesktopWindow : Window
         Title = title; Width = designWidth = width; Height = designHeight = height; CanResize = false;
         WindowDecorations = WindowDecorations.None;
         ClosingBehavior = WindowClosingBehavior.OwnerWindowOnly;
-        Background = Ui.Background; WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        // The area outside the rounded content must remain transparent to the
+        // desktop; an opaque Window background would still expose square corners.
+        TransparencyLevelHint = [WindowTransparencyLevel.Transparent];
+        Background = Brushes.Transparent; WindowStartupLocation = WindowStartupLocation.CenterOwner;
+#if DEBUG
+        KeyDown += (_, e) =>
+        {
+            if (e.Key == Avalonia.Input.Key.M && e.KeyModifiers == (Avalonia.Input.KeyModifiers.Control | Avalonia.Input.KeyModifiers.Shift))
+            {
+                DebugMemoryWindow.Toggle(this); e.Handled = true;
+            }
+        };
+#endif
         using var icon = DesktopAssets.Open("app.ico"); Icon = new WindowIcon(icon);
         Opened += (_, _) =>
         {
@@ -228,6 +263,12 @@ public abstract class DesktopWindow : Window
     {
         var layers = new Grid();
         if(!fluid){layers.Width=designWidth;layers.Height=designHeight;}
+        // Clip every layer, including the artwork and dimming overlay, to the
+        // same outline as the accent border. Recompute for fluid window layouts.
+        layers.SizeChanged += (_, _) => layers.Clip = new RectangleGeometry
+        {
+            Rect = new Rect(layers.Bounds.Size), RadiusX = 20, RadiusY = 20
+        };
         layers.Children.Add(new LegacyBackdrop { IsHitTestVisible = false });
         layers.Children.Add(new Border { Background = Brush.Parse(dashboard ? "#75071526" : "#99071526"), IsHitTestVisible = false });
         var layout = new Grid { RowDefinitions = new RowDefinitions("44,*") };
@@ -238,16 +279,37 @@ public abstract class DesktopWindow : Window
         caption.Background = Brushes.Transparent;
         caption.PointerPressed += (_, e) => { if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) BeginMoveDrag(e); };
         Ui.At(chrome, caption, 0);
-        var minimize = new Button { Content = "−", Width = 24, Height = 24, Padding = new Thickness(0), CornerRadius = new CornerRadius(12),
-            Background = Brush.Parse("#165a65"), Foreground = Brushes.White, BorderBrush = Brush.Parse("#b4e1eb"), BorderThickness = new Thickness(1) };
-        AutomationProperties.SetName(minimize, "最小化"); ToolTip.SetTip(minimize, "最小化");
-        minimize.Click += (_, _) => WindowState = WindowState.Minimized; Ui.At(chrome, minimize, 1);
-        var close = Ui.IconButton("關閉", "buttons/Btn_Close04.png", Close, 24); close.Width = close.Height = 28;
+        var minimize = CaptionButton(false, () => WindowState = WindowState.Minimized);
+        Ui.At(chrome, minimize, 1);
+        var close = CaptionButton(true, Close);
         Ui.At(chrome, close, 2); Ui.At(layout, chrome, 0);
         content.Margin = new Thickness(dashboard ? 10 : 12);
         Ui.At(layout, content, 0, 1); layers.Children.Add(layout);
         layers.Children.Add(new Border { BorderBrush = Ui.Accent, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(20), IsHitTestVisible = false });
         Content = fluid ? layers : new Viewbox { Child = layers, Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly };
+    }
+
+    private static Button CaptionButton(bool close, Action action)
+    {
+        var glyph = new Canvas { Width = 10, Height = 10, IsHitTestVisible = false };
+        void Stroke(Point start, Point end) => glyph.Children.Add(new Avalonia.Controls.Shapes.Line
+        {
+            StartPoint = start, EndPoint = end, Stroke = Ui.Ink, StrokeThickness = 1.5
+        });
+        if (close) { Stroke(new(1, 1), new(9, 9)); Stroke(new(9, 1), new(1, 9)); }
+        else Stroke(new(1, 5), new(9, 5));
+        var button = new Button
+        {
+            Name = close ? "WindowClose" : "WindowMinimize", Content = glyph,
+            Width = 28, Height = 28, Padding = new Thickness(0), CornerRadius = new CornerRadius(14),
+            Background = Brush.Parse("#165a65"), BorderBrush = Brush.Parse("#b4e1eb"), BorderThickness = new Thickness(1),
+            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
+            HorizontalContentAlignment = HorizontalAlignment.Center, VerticalContentAlignment = VerticalAlignment.Center
+        };
+        string label = close ? "關閉" : "最小化";
+        AutomationProperties.SetName(button, label); ToolTip.SetTip(button, label);
+        button.Click += (_, _) => action();
+        return button;
     }
 }
 

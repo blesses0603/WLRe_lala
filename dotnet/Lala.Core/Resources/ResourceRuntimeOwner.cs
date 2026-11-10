@@ -11,6 +11,7 @@ internal sealed class ResourceRuntimePublication
     internal long Generation { get; }
     internal ManifestIdentity Identity { get; }
     internal OfflineRuntimeCandidate Candidate { get; }
+    internal IReadOnlyList<YooAssetManifest> Manifests { get; }
     internal ItemImageReadback? ItemImages { get; }
     internal PortraitPngReadback? Portraits { get; }
     internal EmojiPngReadback? Emojis { get; }
@@ -24,7 +25,7 @@ internal sealed class ResourceRuntimePublication
     internal bool CanSendPackets => false;
     internal ResourceRuntimePublication(ResourceRuntimeOwner owner, long generation, OfflinePreparedRuntimeCandidate prepared,
         OfflineRuntimeCandidate? readbackCandidate = null, ItemImageReadback? itemImages = null, PortraitPngReadback? portraits = null, EmojiPngReadback? emojis = null, SmallMapPngSnapshot? smallMaps = null)
-        => (_owner, Generation, Identity, Candidate, ItemImages, Portraits, Emojis, SmallMaps) = (owner, generation, prepared.Identity, readbackCandidate ?? prepared.Candidate, itemImages, portraits, emojis, smallMaps);
+        => (_owner, Generation, Identity, Candidate, ItemImages, Portraits, Emojis, SmallMaps, Manifests) = (owner, generation, prepared.Identity, readbackCandidate ?? prepared.Candidate, itemImages, portraits, emojis, smallMaps, prepared.RecheckContext.Manifests);
 }
 
 /// <summary>Uninstalled resource-only owner. Construction does no network or database I/O.
@@ -39,6 +40,7 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
     private readonly IResourceSource _source;
     private readonly bool _production;
     private readonly string _inventory;
+    private readonly string _dataRoot;
     private readonly string _itemImages;
     private readonly string _portraits;
     private readonly string _emojis;
@@ -67,6 +69,7 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
         if (!Path.IsPathFullyQualified(dataRoot)) throw new ArgumentException("An absolute data root is required", nameof(dataRoot));
         // Python game_version_gate.py selects data_root()/official_sync/derived_catalogs/resource_inventory.sqlite3.
         string root = Path.GetFullPath(dataRoot);
+        _dataRoot = root;
         _cache = new RuntimeBundleCacheReader(root);
         _cacheWriter = new RuntimeBundleCacheWriter(root);
         _inventory = Path.Combine(root, "official_sync", "derived_catalogs", "resource_inventory.sqlite3");
@@ -151,6 +154,28 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
         }
     }
     internal ResourceRuntimePublication? Current { get { lock (_gate) return _current; } }
+    internal VerifiedSocialSource? CreateSocialSource(ResourceRuntimeActivation activation, ResourceRuntimePublication publication, Func<bool> accountCurrent)
+    {
+        lock (_gate) return IsCurrentActivation(activation, publication) ? new(_dataRoot, publication.Identity,
+            publication.Manifests.Single(m => m.Header.PackageName == "DataPackage"), () => IsCurrentActivation(activation, publication) && accountCurrent()) : null;
+    }
+    internal VerifiedNavigationSource? CreateNavigationSource(ResourceRuntimeActivation activation, ResourceRuntimePublication publication, Func<bool> accountCurrent)
+    {
+        lock (_gate) return IsCurrentActivation(activation, publication)
+            ? new(_dataRoot, publication.Identity, publication.Manifests.Single(m => m.Header.PackageName == "MainPackage"),
+                () => IsCurrentActivation(activation, publication) && accountCurrent()) : null;
+    }
+    internal bool TrySelectRolePortrait(ResourceRuntimeActivation activation, ResourceRuntimePublication publication,
+        Lala.Core.Protocol.RoleSnapshot role, out PortraitSelection? selection, out PortraitCachedImage? image)
+    {
+        lock (_gate)
+        {
+            selection = null; image = null;
+            if (!IsCurrentActivation(activation, publication) || publication.Portraits is not { Mapping: {} mapping } portraits) return false;
+            selection = mapping.SelectRole(role);
+            return selection is not null && portraits.Images.TryGetValue(selection.Key, out image);
+        }
+    }
 
     internal void Invalidate()
     {

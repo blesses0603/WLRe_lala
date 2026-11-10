@@ -30,7 +30,7 @@ internal sealed class HeldLoginCleanupException() : IOException("Held login conn
 /// not credential encryption. Legacy callers own packet inputs; owned providers clear their transient credentials.
 /// No profile discovery, saved credentials, automatic retries, or production-host defaults.
 /// </summary>
-internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportRetirement
+internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportRetirement, IReceiveWorldStatus
 {
     private readonly object gate = new();
     private readonly IPEndPoint verificationEndpoint, formalEndpoint;
@@ -44,6 +44,7 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
     private IHandshakeLoginProvider? loginProvider;
     private readonly AccountLoginAdmission? loginAdmission;
     private readonly List<BoundedTcpTransport> transports = [];
+    private readonly List<Task> chatWrites = [];
     private readonly CancellationTokenSource stop = new(), deadline = new();
     private readonly TaskCompletionSource<HandshakeView> login = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private BoundedTcpTransport? formal;
@@ -81,6 +82,7 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
 
     internal HandshakeView Handshake => handshake.Snapshot;
     internal Task<HandshakeView> Login => login.Task;
+    public bool WorldAcknowledged { get { lock (gate) return !retired && loginCompleted; } }
     internal IReadOnlyList<TcpTransportView> Connections
     {
         get { lock (gate) return transports.Select(t => t.Snapshot).ToArray(); }
@@ -106,6 +108,61 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
             if (handlerOperation is { IsCompleted: false }) throw new InvalidOperationException("One handler is already pending.");
             return new(handlerOperation = Task.Run(() => HandleCoreAsync(observation, cancellationToken)));
         }
+    }
+
+    internal Task SendChatAsync(Packet packet, Func<bool> current, CancellationToken token)
+    {
+        lock (gate)
+        {
+            if (retired) throw new HeldLoginException();
+            chatWrites.RemoveAll(task => task.IsCompleted);
+            if (chatWrites.Count >= 8) throw new InvalidOperationException("聊天傳送佇列已滿，請稍候。");
+            var operation = Task.Run(() => SendChatCoreAsync(packet, current, token));
+            chatWrites.Add(operation); return operation;
+        }
+    }
+    private async Task SendChatCoreAsync(Packet packet, Func<bool> current, CancellationToken token)
+    {
+        if (packet.Main != 2 || packet.Sub is not (1 or 2 or 3 or 5 or 6) || packet.Payload.Length > 512)
+            throw new ProtocolException("Invalid outgoing chat packet.");
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(token, stop.Token);
+        await protocolGate.WaitAsync(linked.Token).ConfigureAwait(false);
+        try
+        {
+            lock (gate)
+                if (retired || inputEnded || !loginCompleted || formal is null) throw new HeldLoginException();
+            if (!current()) throw new InvalidOperationException("Account connection changed before chat transmission.");
+            await WriteExactAsync(formal!, WireCodec.Encode(packet, txKey), linked.Token).ConfigureAwait(false);
+        }
+        catch (HeldLoginException) { Retire(); throw; }
+        finally { protocolGate.Release(); }
+    }
+    internal Task SendGameAsync(Func<Packet> prepare, CancellationToken token)
+    {
+        lock (gate)
+        {
+            if (retired) throw new HeldLoginException();
+            chatWrites.RemoveAll(task => task.IsCompleted);
+            if (chatWrites.Count >= 8) throw new InvalidOperationException("操作傳送佇列已滿。");
+            var operation = Task.Run(() => SendGameCoreAsync(prepare, token));
+            chatWrites.Add(operation); return operation;
+        }
+    }
+    private async Task SendGameCoreAsync(Func<Packet> prepare, CancellationToken token)
+    {
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(token, stop.Token);
+        await protocolGate.WaitAsync(linked.Token).ConfigureAwait(false);
+        try
+        {
+            lock (gate) if (retired || inputEnded || !loginCompleted || formal is null) throw new HeldLoginException();
+            var packet = prepare(); // Recheck account/resources/intent immediately before the owned write.
+            if (packet.Main is not (6 or 8 or 10 or 13 or 19 or 20 or 23 or 31 or 33 or 39 or 50 or 62 or 64 or 65 or 85 or 122 or 124 or 186 or 191) || packet.Payload.Length > 4096)
+                throw new ProtocolException("Unsupported outgoing game command.");
+            linked.Token.ThrowIfCancellationRequested();
+            await WriteExactAsync(formal!, WireCodec.Encode(packet, txKey), linked.Token).ConfigureAwait(false);
+        }
+        catch (HeldLoginException) { Retire(); throw; }
+        finally { protocolGate.Release(); }
     }
 
     private async Task<int> ReadCoreAsync(Memory<byte> destination, CancellationToken token)
@@ -410,7 +467,7 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
         lock (gate)
         {
             owned = transports.ToArray();
-            operations = new Task?[] { readOperation, handlerOperation, selectionOperation }.OfType<Task>().ToArray();
+            operations = new Task?[] { readOperation, handlerOperation, selectionOperation }.OfType<Task>().Concat(chatWrites).ToArray();
         }
         foreach (var transport in owned)
             try { await transport.DisposeAsync().ConfigureAwait(false); } catch (Exception) { failed = true; }

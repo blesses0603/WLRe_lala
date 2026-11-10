@@ -20,6 +20,21 @@ internal sealed class ReceiveStateCoordinator(ServiceStateSnapshot initial)
     private BattleReceiveContext battleContext = new();
 
     internal ServiceStateSnapshot Snapshot() { AssertWriter(); return state; }
+    internal ServiceStateSnapshot ConfirmWorldAcknowledged()
+    {
+        AssertWriter();
+        if (state.Phase == "world_ready") return state;
+        return state = Lala.Core.Gameplay.CommandState.With(state, local: new(
+            state.Local.Session with { Phase = "world_ready" }, state.Local.World with { Phase = "world_ready" }, state.Local.Battle));
+    }
+    internal ServiceStateSnapshot ApplyCommand(Func<ServiceStateSnapshot, ServiceStateSnapshot> transition)
+    {
+        AssertWriter();
+        var next = transition(state);
+        if (next.PacketCount != state.PacketCount || next.Player != state.Player || next.Phase != state.Phase)
+            throw new InvalidOperationException("Local commands cannot replace server identity, phase or packet count.");
+        return state = next;
+    }
 
     internal ServiceStateSnapshot Apply(ServerEvent observation, ServiceObservationContext context)
     {
@@ -31,7 +46,7 @@ internal sealed class ReceiveStateCoordinator(ServiceStateSnapshot initial)
             reduced.Local.Battle, reduced.Instances, observation, reduced.Player?.RoleId);
         var next = ReferenceEquals(battle, reduced.Local.Battle) && ReferenceEquals(instances, reduced.Instances)
             ? reduced : WithReceiveState(reduced, battle, instances);
-        state = next;
+        state = next = Lala.Core.Gameplay.ManualGameCommands.ReconcileArkFight(next, context.Inputs.ObservedAt);
         battleContext = nextContext;
         return next;
     }
