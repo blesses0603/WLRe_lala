@@ -16,6 +16,16 @@ internal static class DesktopSelfTest
         var suite = new Checks();
         try
         {
+            var resourceRoot = DesktopResourceDirectory.FromLocalApplicationData(directory);
+            suite.True(resourceRoot == Path.Combine(directory, "LaLa", "Resources"), "resources use a fixed per-user application-data subdirectory");
+            suite.True(!Directory.Exists(resourceRoot), "resource path resolution does not create files");
+            foreach (var invalid in new[] { "", " ", "relative" })
+            {
+                bool rejected = false;
+                try { DesktopResourceDirectory.FromLocalApplicationData(invalid); }
+                catch (IOException) { rejected = true; }
+                suite.True(rejected, "missing or relative app-data location never falls back to cwd");
+            }
             TestSession(suite, directory);
             TestImageReader(suite);
             TestDraft(suite);

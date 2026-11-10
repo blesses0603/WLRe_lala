@@ -85,15 +85,16 @@ internal static class DesktopUiSmokeTest
             })) };
             bool fail = false;
             var source = new VersionCatalog(_ => fail ? Task.FromException<DesktopServerCatalogSnapshot>(new IOException("secret error details")) : Task.FromResult(current));
-            var window = Show(new VersionWindow(() => entered++, () => { }, () => { }, source, Lala.Core.Resources.ResourceInventoryInspector.InspectAsync, root => plannedRoot = root));
+            var root = Path.Combine(Path.GetTempPath(), "lala-version-fixture-" + Guid.NewGuid().ToString("N"));
+            var window = Show(new VersionWindow(() => entered++, () => { }, () => { }, source, Lala.Core.Resources.ResourceInventoryInspector.InspectAsync, path => plannedRoot = path, () => root));
             await window.Pending; await Settle(window);
             Check(Find<TextBlock>(window, "VersionMetadata").Text!.Contains("MainPackage：1275_") && Find<TextBlock>(window, "VersionMetadata").Text!.Contains("資料版本：1.2.3"), "version display uses observed metadata fields");
             Check(!Find<Button>(window, "VersionContinue").IsEnabled, "metadata alone cannot bypass prelogin resources");
             Check(entered == 0 && !session.CanSendGameCommands, "metadata never enters login or enables commands");
-            var root = Path.Combine(Path.GetTempPath(), "lala-version-fixture-" + Guid.NewGuid().ToString("N"));
+            Check(Find<Button>(window, "VersionInspect").Content?.ToString() == "重新檢查本機資源", "resource action inspects the automatic location without a folder picker");
+            Check(Find<Button>(window, "VersionPrepare").IsEnabled && !Directory.Exists(root), "startup selects the managed directory without creating it or admitting login");
             try
             {
-                await window.InspectAsync(root);
                 Check(Find<TextBlock>(window, "VersionInventory").Text!.Contains("找不到"), "real Core inspector reports missing local database");
                 Check(!Directory.Exists(root), "read-only inspection never creates missing data directories");
                 Click(window, "VersionPrepare");
@@ -107,6 +108,8 @@ internal static class DesktopUiSmokeTest
                 Click(consent, "PreloginCancel"); await window.Pending;
                 Check(plannedRoot is null && !Directory.Exists(root) && !Find<Button>(window, "VersionContinue").IsEnabled, "declined prelogin preparation cannot admit login or create files");
                 Click(window, "VersionClearPreparation");
+                await window.StopAsync(); await window.RefreshAsync();
+                Check(Find<Button>(window, "VersionPrepare").IsEnabled && plannedRoot is null && !Directory.Exists(root), "refresh after stop restores automatic location without bypassing consent or resource verification");
                 var directory = Path.Combine(root, "official_sync", "derived_catalogs"); Directory.CreateDirectory(directory);
                 var db = Path.Combine(directory, "resource_inventory.sqlite3"); await File.WriteAllTextAsync(db, "synthetic invalid database");
                 await window.InspectAsync(root);
@@ -120,6 +123,13 @@ internal static class DesktopUiSmokeTest
                 await window.RefreshAsync(); Check(!Find<Button>(window, "VersionContinue").IsEnabled, "stale version observation blocks entry");
             }
             finally { await window.StopAsync(); window.Close(); if (Directory.Exists(root)) Directory.Delete(root, true); }
+            var unavailable = Show(new VersionWindow(() => entered++, () => { }, () => { }, source,
+                Lala.Core.Resources.ResourceInventoryInspector.InspectAsync, _ => { }, () => throw new IOException("private system path")));
+            await unavailable.Pending;
+            Check(!Find<Button>(unavailable, "VersionPrepare").IsEnabled && !Find<Button>(unavailable, "VersionContinue").IsEnabled,
+                "unavailable system directory blocks preparation and login without fallback");
+            Check(!Find<TextBlock>(unavailable, "VersionStatus").Text!.Contains("private"), "directory resolution failure is sanitized");
+            await unavailable.StopAsync(); unavailable.Close();
             var began = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             var released = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             var waiting = Show(new VersionWindow(() => entered++, () => { }, () => { }, new VersionCatalog(async token =>
