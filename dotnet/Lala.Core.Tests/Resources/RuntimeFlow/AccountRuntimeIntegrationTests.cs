@@ -507,6 +507,10 @@ public sealed partial class ResourceRuntimeBootstrapTests
             await AccountWaitFor(() => runtime.Snapshot.HasCurrentResources);
             var bound = runtime.Publication!; Assert.NotNull(bound.Catalogs);
             ushort rosterScene=bound.Receive.State.Player!.Scene;
+            bool portalAvailable=runtime.TryGetScenePortalObservations(rosterScene,out var portalRequest);
+            Assert.Equal(bound.Catalogs.Stages.ContainsKey(rosterScene),portalAvailable);
+            if(portalRequest is not null){Assert.True(portalRequest.TryReadRows(out var portalRows));Assert.All(portalRows,row=>Assert.False(row.CanTravel));}
+            Assert.False(runtime.TryGetScenePortalObservations((ushort)(rosterScene+1),out _));
             bool rosterAvailable=runtime.TryGetSceneNpcRoster(rosterScene,out var npcRoster);
             Assert.Equal(bound.Catalogs.Stages.ContainsKey(rosterScene),rosterAvailable);
             if(npcRoster is not null){Assert.True(npcRoster.TryReadRows(out var rows));Assert.All(rows,row=>Assert.False(row.CanInteract));Assert.False(npcRoster.CanSendPackets);}
@@ -551,6 +555,8 @@ public sealed partial class ResourceRuntimeBootstrapTests
             Assert.Equal(nameof(AccountRuntimePublication), observed.ToString()); AccountHeld(runtime, session);
             resources.Invalidate();
             Assert.False(runtime.Snapshot.HasCurrentResources); Assert.Null(runtime.Publication!.Catalogs);
+            if(portalRequest is not null)Assert.False(portalRequest.TryReadRows(out _));
+            Assert.False(runtime.TryGetScenePortalObservations(rosterScene,out _));
             if(npcRoster is not null)Assert.False(npcRoster.TryReadRows(out _));
             Assert.False(runtime.TryGetSceneNpcRoster(rosterScene,out _));
             revision = runtime.Publication.Receive.Revision; sendRevoked.SetResult();

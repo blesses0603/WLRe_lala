@@ -11,6 +11,27 @@ namespace Lala.Core.Resources;
 /// </summary>
 internal sealed class ResourceRuntimeActivation(ResourceRuntimeOwner owner, ResourceRuntimePublication publication)
 {
+    private readonly object portalGate = new();
+    private ushort? portalScene;
+    private ImmutableArray<ScenePortalObservation> portalRows = [];
+    internal ScenePortalObservationRequest? CreatePortalObservations(ushort scene, Func<bool> accountCurrent)
+    {
+        if (!IsActive || !publication.Candidate.Stages.ContainsKey(scene)) return null;
+        ImmutableArray<ScenePortalObservation> rows;
+        lock (portalGate)
+        {
+            if (portalScene != scene)
+            {
+                try { portalRows = ScenePortalObservationRequest.Build(scene, publication.Candidate.PortalObservations.Reconciled); }
+                catch (ResourceValidationException) { portalRows = default; }
+                portalScene = scene;
+            }
+            rows = portalRows;
+        }
+        return !rows.IsDefault && IsActive
+            ? new(scene, publication.Identity.Key + ":" + Generation + ":" + scene, rows,
+                publication.Candidate.PortalObservations.UnavailableOptionalSources, () => IsActive && accountCurrent()) : null;
+    }
     private readonly object npcGate=new();
     private ushort? npcScene;private ImmutableArray<SceneNpcEntry> npcRows=[];
     internal SceneNpcRosterRequest? CreateNpcRoster(ushort scene,Func<bool> accountCurrent)

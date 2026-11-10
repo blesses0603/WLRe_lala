@@ -60,6 +60,8 @@ internal sealed class AccountResourceBinding
         if(!IsCurrent)return null;var result=_activation.CreateEmojiGallery(()=>IsCurrent);
         return IsCurrent?result:null;
     }
+    internal ScenePortalObservationRequest? ReadPortalObservations(ushort scene, Func<bool> selectionCurrent)
+    { if (!IsCurrent) return null; var result = _activation.CreatePortalObservations(scene, () => IsCurrent && selectionCurrent()); return IsCurrent ? result : null; }
     internal SceneNpcRosterRequest? ReadNpcRoster(ushort scene,Func<bool> selectionCurrent)
     {if(!IsCurrent)return null;var result=_activation.CreateNpcRoster(scene,()=>IsCurrent&&selectionCurrent());return IsCurrent?result:null;}
     internal SmallMapRenderRequest? ReadSmallMap(ushort scene,Func<bool> selectionCurrent)

@@ -126,14 +126,28 @@ public sealed class VersionWindow : DesktopWindow
         await RetireResourcesAsync();
         prelogin = PreloginResourcePreparation.Create(selectedRoot);
         var disclosure = prelogin.Disclosure;
-        var dialog = new Window { Title = "確認登入前資源準備", Icon = Icon, Width = 760, Height = 380, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+        var dialog = new Window { Title = "確認登入前資源準備", Icon = Icon, Width = 720, Height = 620, MinWidth = 520, MinHeight = 420, WindowStartupLocation = WindowStartupLocation.CenterOwner };
         resourceConfirmation = dialog;
-        dialog.Content = new ScrollViewer { Content = Ui.Column(Ui.Text("不需要帳密；現在下載並驗證必要資源", 20, bold: true),
-            Ui.Text("官方 HTTPS：" + disclosure.ResourceUrlPrefix), Ui.Text("SQLite：" + disclosure.InventoryPath), Ui.Text("物品圖快取：" + disclosure.ItemImageCachePath), Ui.Text("頭像快取：" + disclosure.PortraitCachePath), Ui.Text("表情快取（驗證通過後寫入）：" + disclosure.EmojiCachePath), Ui.Text("小地圖快取（驗證通過後寫入）：" + disclosure.SmallMapCachePath), Ui.Text("小地圖串流階段最多 4 檔／64 MiB；其餘下載額度不變。"),
-            Ui.Text("Bundle 快取：" + disclosure.BundleCacheDirectory),
-            Ui.Text("將建立目錄、寫入驗證過的 Bundle、暫存檔及 SQLite／journal，再獨立回讀及重查版本與 Manifest。停止不會撤銷已完成或結果不明的寫入，不自動重試。"),
-            Ui.Text("準備必要資料表、受支援物品圖及已審查版本的頭像與表情快取；圖資未通過來源、格式或像素驗證時保持不可用。頭像僅在來源與角色映射驗證後顯示；表情僅在整批來源、像素及回讀驗證後顯示；小地圖僅在來源、像素、SQLite 回讀及目前地圖綁定有效時顯示，僅標示當前已確認位置，不提供導航操作；不授權登入或遊戲指令。"),
-            Ui.Row(Ui.Button("取消", () => dialog.Close(false), "PreloginCancel"), Ui.Button("確認下載與寫入", () => dialog.Close(true), "PreloginConfirm"))) };
+        var details = new Expander { Header = "進階細節：驗證方式", IsExpanded = false,
+            Name = "PreloginResourceDetails", HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
+            Content = Ui.Column(
+                Ui.Text("小地圖串流階段最多 4 檔／64 MiB；其餘下載額度不變。"),
+                Ui.Text("來源、版本、Manifest、格式與像素依各資源驗證，SQLite 獨立回讀；頭像另需角色映射，小地圖另需目前場景綁定。驗證未通過的圖資保持不可用。")) };
+        var summary = Ui.Column(
+            Ui.Text("準備遊戲資源", 22, bold: true),
+            Ui.Text("此步驟不需要帳密，也不會登入遊戲。", 14, Ui.Muted),
+            Ui.Text("下載內容", 16, bold: true),
+            Ui.Text("必要資料表，以及受支援、通過驗證的物品圖、頭像、表情與小地圖。"),
+            Ui.Text("官方來源", 16, bold: true),
+            Ui.Text(disclosure.ResourceUrlPrefix),
+            Ui.Text("資源由程式自動管理；將建立必要目錄，下載並寫入 Bundle、暫存檔與 SQLite 資料庫（含 journal）。停止不會回復已完成或結果不明的寫入，也不會自動重試。", 13),
+            Ui.Text("資源準備不代表全圖資或正式登入驗收完成；一般遊戲操作仍停用。", 13, Ui.Muted),
+            details);
+        var layout = new Grid { RowDefinitions = new RowDefinitions("*,Auto"), Margin = new Avalonia.Thickness(20) };
+        Ui.At(layout, new ScrollViewer { Content = summary }, 0, 0);
+        Ui.At(layout, Ui.Row(Ui.Button("取消", () => dialog.Close(false), "PreloginCancel"),
+            Ui.Button("確認下載與寫入", () => dialog.Close(true), "PreloginConfirm")), 0, 1);
+        dialog.Content = layout;
         bool approved;
         using (token.Register(() => Avalonia.Threading.Dispatcher.UIThread.Post(() => dialog.Close(false))))
         {
