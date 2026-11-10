@@ -11,6 +11,18 @@ namespace Lala.Core.Resources;
 /// </summary>
 internal sealed class ResourceRuntimeActivation(ResourceRuntimeOwner owner, ResourceRuntimePublication publication)
 {
+    internal SceneShopPreviewRequest? CreateShopPreview(ushort scene, ushort interactionIndex, Func<bool> accountCurrent)
+    {
+        if (!IsActive || !publication.Candidate.Stages.ContainsKey(scene) || !publication.Candidate.EveIndexes.IncludesInteractions) return null;
+        var sceneRows = publication.Candidate.EveIndexes.Scenes.FirstOrDefault(s => s.SceneId == scene);
+        if (sceneRows is null) return null;
+        var matching = sceneRows.Interactions.Where(r => r.Index == interactionIndex).Take(2).ToArray();
+        if (matching.Length != 1) return null;
+        var interaction = matching[0];
+        var products = SceneShopPreviewRequest.Build(interaction, publication.Candidate.Items);
+        return products is { } rows && IsActive
+            ? new(scene, interactionIndex, interaction.FormKind, rows, () => IsActive && accountCurrent()) : null;
+    }
     private readonly object portalGate = new();
     private ushort? portalScene;
     private ImmutableArray<ScenePortalObservation> portalRows = [];

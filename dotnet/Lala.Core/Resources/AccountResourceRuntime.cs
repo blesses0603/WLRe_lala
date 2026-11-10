@@ -178,6 +178,8 @@ public sealed class AccountResourceRuntime : IAsyncDisposable
     {
         lock(_gate){png=null;return !_disposed&&_binding is not null&&_binding.TryReadEmoji(token,out png);}
     }
+    internal SceneShopPreviewRequest? ReadShopPreview(ushort scene, ushort interactionIndex, Func<bool> selectionCurrent)
+    { lock (_gate) return !_disposed ? _binding?.ReadShopPreview(scene, interactionIndex, selectionCurrent) : null; }
     internal ScenePortalObservationRequest? ReadPortalObservations(ushort scene, Func<bool> selectionCurrent)
     { lock (_gate) return !_disposed ? _binding?.ReadPortalObservations(scene, selectionCurrent) : null; }
     internal SceneNpcRosterRequest? ReadNpcRoster(ushort scene,Func<bool> selectionCurrent)

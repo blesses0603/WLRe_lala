@@ -507,6 +507,16 @@ public sealed partial class ResourceRuntimeBootstrapTests
             await AccountWaitFor(() => runtime.Snapshot.HasCurrentResources);
             var bound = runtime.Publication!; Assert.NotNull(bound.Catalogs);
             ushort rosterScene=bound.Receive.State.Player!.Scene;
+            var shopIndex=bound.Catalogs.EveIndexes.Scenes.FirstOrDefault(s=>s.SceneId==rosterScene)?.Interactions.FirstOrDefault(i=>i.FormKind is 2 or 3)?.Index;
+            SceneShopPreviewRequest? shopRequest=null;
+            if(shopIndex is {} shopId)
+            {
+                var shopSource=bound.Catalogs.EveIndexes.Scenes.Single(s=>s.SceneId==rosterScene).Interactions.Single(i=>i.Index==shopId);
+                bool expectedShop=bound.Catalogs.Stages.ContainsKey(rosterScene)&&SceneShopPreviewRequest.Build(shopSource,bound.Catalogs.Items) is not null;
+                Assert.Equal(expectedShop,runtime.TryGetSceneShopPreview(rosterScene,shopId,out shopRequest));
+                if(shopRequest is not null){Assert.True(shopRequest.TryReadProducts(out var products));Assert.All(products,p=>Assert.False(p.BuyEnabled));}
+            }
+            Assert.False(runtime.TryGetSceneShopPreview((ushort)(rosterScene+1),0,out _));
             bool portalAvailable=runtime.TryGetScenePortalObservations(rosterScene,out var portalRequest);
             Assert.Equal(bound.Catalogs.Stages.ContainsKey(rosterScene),portalAvailable);
             if(portalRequest is not null){Assert.True(portalRequest.TryReadRows(out var portalRows));Assert.All(portalRows,row=>Assert.False(row.CanTravel));}
@@ -555,6 +565,8 @@ public sealed partial class ResourceRuntimeBootstrapTests
             Assert.Equal(nameof(AccountRuntimePublication), observed.ToString()); AccountHeld(runtime, session);
             resources.Invalidate();
             Assert.False(runtime.Snapshot.HasCurrentResources); Assert.Null(runtime.Publication!.Catalogs);
+            if(shopRequest is not null)Assert.False(shopRequest.TryReadProducts(out _));
+            Assert.False(runtime.TryGetSceneShopPreview(rosterScene,0,out _));
             if(portalRequest is not null)Assert.False(portalRequest.TryReadRows(out _));
             Assert.False(runtime.TryGetScenePortalObservations(rosterScene,out _));
             if(npcRoster is not null)Assert.False(npcRoster.TryReadRows(out _));
