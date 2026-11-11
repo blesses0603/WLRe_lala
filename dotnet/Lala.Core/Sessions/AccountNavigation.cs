@@ -18,6 +18,7 @@ public sealed partial class AccountRuntime
     private GameNavigationStatus navigationStatus = new(false, "尚未啟動導航");
     private BigInteger? estimatedBaseFix;
     private uint? estimatedRole;
+    private FourPointRoamingCircuit? roamingCircuit;
     public GameNavigationStatus NavigationStatus
     {
         get
@@ -82,6 +83,27 @@ public sealed partial class AccountRuntime
             else throw new NavigationException("角色起點尚未確認。");
         }
         var entry = await source.LoadAsync(stage.ModelId, mode, synchronize, linked.Token).ConfigureAwait(false);
+        if(state.Local.World.Navigation is {Stale:true,InvalidationScope:"house"})
+        {
+            var sceneCatalog=new WorldSceneCatalog(catalogs.Stages.Keys.ToImmutableHashSet());
+            if(WorldObstacleScope.HouseScene(scene,sceneCatalog)==false)
+            {
+                var expected=state.Local.World.Navigation.Revision;uint expectedRole=state.Player!.RoleId;
+                var attempt=connection.Publication?.Attempt??throw new NavigationException("連線已中斷。");
+                state=await connection.ApplyCommandAsync(attempt,current=>
+                {
+                    lock(gate)
+                    {
+                        if(!source.IsCurrent||!CurrentCatalogsLocked(out var active)||!ReferenceEquals(active,catalogs)
+                            ||current.Player?.RoleId!=expectedRole||current.Player.Scene!=scene||current.Local.World.Navigation.Revision!=expected
+                            ||current.Local.World.Navigation.InvalidationScope!="house")throw new NavigationException("圖資重建期間場景已改變。");
+                    }
+                    var nav=current.Local.World.Navigation with{Stale=false,Reasons=[],InvalidationScope=null,Revision=expected+1,
+                        RuntimeGeometryVerified=true,GeometryResourceKey=source.Identity,GeometryModel=stage.ModelId};
+                    return CommandState.With(current,local:new(current.Local.Session,current.Local.World with{Navigation=nav},current.Local.Battle));
+                },linked.Token).ConfigureAwait(false);
+            }
+        }
         var identity = new OfflineNavigationIdentity(source.Identity, source.DataVersion);
         var stages = new OfflineNavigationStages(identity, catalogs.Stages.Values, linked.Token);
         var preview = new OfflineLogicalNavigationPreview(identity, stages, [entry], linked.Token);
@@ -130,28 +152,75 @@ public sealed partial class AccountRuntime
         try { await StopNavigationCoreAsync().ConfigureAwait(false); }
         finally { navigationGate.Release(); }
     }
-    private async Task RoamOnceAsync(CancellationToken token)
+    private async Task RoamOnceAsync(GameAutomationSettings settings,CancellationToken token)
     {
         var p = PublicationSnapshot.Publication;
         if (p?.Receive.State.Player is not {} player || p.Catalogs is not {} catalogs || !catalogs.Stages.TryGetValue(player.Scene, out var stage)) return;
         if (p.Receive.State.Local.Battle.Active == true || p.Receive.State.Local.Session.EventFlow.Blocked) return;
+        if(MovementPauseReason(p.Receive.State) is {} pause){NavigationMessage(NavigationStatus with{Running=false,Message=pause});return;}
         VerifiedNavigationSource source;
         lock (gate) source = resources.CreateNavigationSource() ?? throw new NavigationException("導航資源不可用。");
         await navigationSourceGate.WaitAsync(token).ConfigureAwait(false);
         OfflineNavigationCacheEntry entry;
         try { entry = await source.LoadAsync(stage.ModelId, "land", true, token).ConfigureAwait(false); }
         finally { navigationSourceGate.Release(); }
-        var choices = entry.Mesh.Walkable.OrderBy(_ => Random.Shared.Next()).Take(12).ToArray();
-        int offset = stage.MapHeight == ushort.MaxValue ? 6992 : stage.MapHeight;
-        foreach (int face in choices)
+        var fix=p.Receive.State.Local.World.Location.Confirmed??throw new NavigationException("尚無伺服器確認的徘徊中心。");
+        var circuit=roamingCircuit;
+        if(circuit is not null&&(circuit.Role!=player.RoleId||circuit.Scene!=player.Scene))throw new NavigationException("角色或地圖已改變，請重新啟動徘徊。");
+        LogicalNavigationCoordinate origin=new(fix.X,fix.Y);
+        lock(gate)
         {
-            var center = entry.Mesh.Centers[face];
-            double x = Math.Round((center.X + entry.Origin.X) / 10), y = Math.Round(offset - (center.Z + entry.Origin.Z) / 10);
-            if (x is < 0 or > 65535 || y is < 0 or > 65535) continue;
-            try { await NavigateCoreAsync(player.Scene, (ushort)x, (ushort)y, false, token).ConfigureAwait(false); return; }
-            catch (NavigationException) when (!token.IsCancellationRequested) { }
+            if(estimatedRole==player.RoleId&&estimatedBaseFix==fix.PacketNumber&&navigationStatus.EstimatedX is {} ex&&navigationStatus.EstimatedY is {} ey)origin=new(ex,ey);
+            else if(!p.Receive.State.Local.World.Location.ConfirmedIsCurrent)throw new NavigationException("徘徊起點尚未確認。");
+            if(circuit is not null&&circuit.BaseFix!=fix.PacketNumber)
+            {
+                if(navigationStatus.EstimatedX!=fix.X||navigationStatus.EstimatedY!=fix.Y)circuit=null;
+                else circuit.BaseFix=fix.PacketNumber;
+            }
         }
-        throw new NavigationException("目前沒有可執行的徘徊路線。");
+        circuit??=new(player.RoleId,player.Scene,origin,fix.PacketNumber,roamingCircuit?.Next??0);
+        var identity=new OfflineNavigationIdentity(source.Identity,source.DataVersion);
+        var preview=new OfflineLogicalNavigationPreview(identity,new(identity,catalogs.Stages.Values,token),[entry],token);
+        // A verified ordinary-map refresh also resolves an early house-scoped invalidation.
+        var goal=circuit.Goals[circuit.Next];
+        var route=await PreviewNavigationAsync(player.Scene,(ushort)goal.X,(ushort)goal.Y,false,token:token).ConfigureAwait(false);
+        var live=connection.Publication?.State??throw new NavigationException("連線已中斷。");
+        circuit.Preflight(preview,live.Local.World.Navigation,token);circuit.Validate(route.Route);
+        roamingCircuit=circuit;
+        var steps=route.ExecutionSteps(token);var initial=route.Points[0];
+        lock(gate){estimatedRole=route.Role;estimatedBaseFix=route.BaseFix;navigationStatus=new(true,$"四點徘徊：前往第 {circuit.Next+1} 點",player.Scene,initial.X,initial.Y,0,steps.Length);}
+        try
+        {
+            foreach(var step in steps)
+            {
+                await Task.Delay(200,token).ConfigureAwait(false);
+                var observed=connection.Publication;
+                if(observed is null||!route.IsCurrent||observed.State.Local.Battle.Active==true||observed.State.Local.Session.EventFlow.Blocked
+                    ||CoordinationReason("roaming",observed.State,catalogs) is not null
+                    ||MovementPauseReason(observed.State) is not null
+                    ||FieldRecoveryPlanning.Next(observed.State,catalogs,settings) is not null)return;
+                await actionLane.WaitAsync(token).ConfigureAwait(false);
+                try
+                {
+                    await connection.SendGameAsync(observed.Attempt,()=>
+                    {
+                        var current=connection.Publication?.State;
+                        if(current is not null&&MovementPauseReason(current) is {} hold)throw new AutomaticPauseException(hold);
+                        if(!CanSendGameActions||!route.IsCurrent||current is null||current.Local.Battle.Active==true||current.Local.Session.EventFlow.Blocked||current.Activities.Count>0||CoordinationReason("roaming",current,catalogs) is not null)
+                            throw new NavigationException("場景或角色狀態已改變，暫停徘徊。");
+                        var team=current.Party.OwnTeam(route.Role);
+                        if(team is not null&&team.LeaderId!=route.Role)throw new NavigationException("隊員跟隨隊長，不能自行徘徊。");
+                        return CandidateCommands.Walk((int)step.X,(int)step.Y);
+                    },token).ConfigureAwait(false);
+                    await connection.ApplyCommandAsync(observed.Attempt,current=>CommandState.With(current,local:new(current.Local.Session,
+                        WorldEventReducer.Apply(current.Local.World,new MovementRequestEvent((ushort)step.X,(ushort)step.Y)),current.Local.Battle)),token).ConfigureAwait(false);
+                    lock(gate)navigationStatus=navigationStatus with{EstimatedX=step.X,EstimatedY=step.Y,Completed=navigationStatus.Completed+1};
+                }
+                finally{actionLane.Release();}
+            }
+            circuit.Advance();
+        }
+        finally{lock(gate)navigationStatus=navigationStatus with{Running=false};}
     }
     private async Task StopNavigationCoreAsync()
     {
@@ -171,8 +240,8 @@ public sealed partial class AccountRuntime
                 token.ThrowIfCancellationRequested();
                 var s = connection.Publication?.State ?? throw new NavigationException("連線已中斷。");
                 if (s.Player?.Scene != scene) throw new NavigationException("地圖已改變，舊導航已停止。");
-                if (s.Local.Battle.Active == true || s.Local.Session.EventFlow.Blocked)
-                { NavigationMessage(NavigationStatus with { Running = true, Message = "戰鬥或事件中，暫停導航" }); await Task.Delay(250, token).ConfigureAwait(false); continue; }
+                if (MovementPauseReason(s) is {} pause)
+                { NavigationMessage(NavigationStatus with { Running = true, Message = pause }); await Task.Delay(250, token).ConfigureAwait(false); continue; }
                 NavigationMessage(NavigationStatus with { Running = true, Message = synchronize ? "同步並規劃同版導航資料" : "規劃導航路線", Scene = scene });
                 var route = await PreviewNavigationAsync(scene, x, y, synchronize, token: token).ConfigureAwait(false);
                 var steps = route.ExecutionSteps(token); bool replan = false;
@@ -186,10 +255,11 @@ public sealed partial class AccountRuntime
                     try
                     {
                         var p = connection.Publication ?? throw new NavigationException("連線已中斷。");
-                        if (p.State.Local.Battle.Active == true || p.State.Local.Session.EventFlow.Blocked) { replan = true; break; }
+                        if (MovementPauseReason(p.State) is not null) { replan = true; break; }
                         await connection.SendGameAsync(p.Attempt, () =>
                         {
                             var current = connection.Publication?.State;
+                            if(current is not null&&MovementPauseReason(current) is{} pause)throw new AutomaticPauseException(pause);
                             if (!CanSendGameActions || !route.IsCurrent || current?.Local.Battle.Active == true || current?.Local.Session.EventFlow.Blocked != false || current.Activities.Count > 0)
                                 throw new NavigationException("移動前角色或場景狀態已改變。");
                             var team = current.Party.OwnTeam(route.Role);
@@ -203,6 +273,7 @@ public sealed partial class AccountRuntime
                         }, token).ConfigureAwait(false);
                         lock (gate) navigationStatus = navigationStatus with { EstimatedX = step.X, EstimatedY = step.Y, Completed = navigationStatus.Completed + 1 };
                     }
+                    catch(AutomaticPauseException){replan=true;break;}
                     finally { actionLane.Release(); }
                 }
                 if (replan) continue;

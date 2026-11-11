@@ -73,7 +73,11 @@ internal static partial class ManualGameCommands
             return bag == beforeBag - amount && store == beforeStore + amount;
         });
     }
-    private static CombatResourceCatalog ResourceCatalog(OfflineRuntimeCandidate c) => new()
+    // One immutable projection per verified candidate. Automatic polling must not
+    // rebuild every item/skill row; weak keys let retired resources be collected.
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<OfflineRuntimeCandidate, CombatResourceCatalog> resourceCatalogs = new();
+    internal static CombatResourceCatalog ResourceCatalog(OfflineRuntimeCandidate c) => resourceCatalogs.GetValue(c, CreateResourceCatalog);
+    private static CombatResourceCatalog CreateResourceCatalog(OfflineRuntimeCandidate c) => new()
     {
         Npcs = c.ReviewedNpcs ?? ImmutableDictionary<uint, CombatResourceNpc>.Empty,
         SkillKeys = Lala.Core.Sessions.AccountRuntime.ProjectSkillKeys(c.OptionalSkills)?.SkillKeys ?? ImmutableDictionary<ushort, uint>.Empty,
@@ -86,6 +90,7 @@ internal static partial class ManualGameCommands
     };
     private static GameActionPlan FieldItem(GameAction a, ServiceStateSnapshot s, OfflineRuntimeCandidate c)
     {
+        Require(a.Operation is "hp" or "sp", "補給資源種類無效。");
         Require(a.Index is >= 1 and <= 255 && s.Bag.Ready && s.Bag.Reliable && s.Bag.Items.TryGetValue((byte)a.Index, out var item) && item.ItemId == a.Target && item.Count > 0,
             "請選擇目前背包中的補給物品。");
         var catalog = ResourceCatalog(c);
@@ -97,22 +102,32 @@ internal static partial class ManualGameCommands
         Require(target is not null, "補給目標不是目前角色或出戰夥伴。");
         var candidate = CombatResourceActionCandidates.Food(context, actor, a.Operation == "sp" ? "sp" : "hp", (ushort)a.Target, target, true, (byte)a.Index);
         Require(candidate.Success, candidate.Error?.Message ?? "無法核對物品效果。");
-        var intent = candidate.Intent!; int before = s.Bag.Items[(byte)a.Index].Count;
+        var intent = candidate.Intent!; var source = s.Bag.Items[(byte)a.Index]; int before = source.Count;
         var recipient = field.Units.First(entry => entry.NpcIndex == a.Count); string resource = a.Operation == "sp" ? "sp" : "hp";
+        Require(a.RecipientId is null || a.RecipientId == recipient.Pid, "補給對象已改變。");
         long original = recipient.Stats.GetValueOrDefault(resource);
-        return Simple(CandidateCommands.UseFieldItem(intent.ItemId!.Value, intent.BagIndex!.Value, a.Count), "inventory", "使用補給物品",
-            next => (next.Bag.Items.GetValueOrDefault((byte)a.Index)?.Count == before - 1 || before == 1 && !next.Bag.Items.ContainsKey((byte)a.Index)) &&
-                CombatResourceKnowledge.FieldContext(next.PlayerKnowledge, next.Companions, next.Player, catalog).Units.Any(unit => unit.NpcIndex == a.Count && unit.Pid == recipient.Pid && unit.Stats.GetValueOrDefault(resource) > original));
+        return Simple(CandidateCommands.UseFieldItem(intent.ItemId!.Value, intent.BagIndex!.Value, a.Count), "field_supply", "使用補給物品",
+            next => next.Bag.Ready && next.Bag.Reliable && (next.Bag.Items.GetValueOrDefault((byte)a.Index) is { } remaining
+                ? remaining.ItemId == source.ItemId && remaining.OriginalRecord.Serial == source.OriginalRecord.Serial && remaining.OriginalRecord.SerialVersion == source.OriginalRecord.SerialVersion && remaining.Count == before - 1
+                : before == 1) && FieldRecipientRestored(next, catalog, s.Player!.RoleId, recipient.Pid, a.Count, resource, original)) with
+        {
+            ObserveReceipt = receipt =>
+            {
+                if (receipt.Type == "item_use_result" && receipt.Code is 3 or 4)
+                    throw new ProtocolException("伺服器拒絕補給，已停止接續。");
+            }
+        };
     }
     private static GameActionPlan Battle(GameAction a, ServiceStateSnapshot s, OfflineRuntimeCandidate c)
     {
         var b = s.Local.Battle;
         Require(b.Active == true && b.Round > 0 && a.Index == b.Round, "戰場或回合已改變。");
+        Require(a.BattleCount is null || a.BattleCount == b.BattleCount, "戰鬥場次已改變，舊指令不會送出。");
         var unit = b.Units.FirstOrDefault(u => u.Layout.Col == a.X && u.Layout.Row == a.Y);
         Require(unit is not null && (unit.Layout.Pid == s.Player!.RoleId || unit.Layout.MasterId == s.Player!.RoleId) && unit.Layout.Pid == a.Target && unit.Hp > 0 && !unit.Exited, "戰鬥單位已改變或不屬於本機。");
         Require(b.CommandAt(unit!.Slot) is null, "本單位本回合已下令。");
         var resources = new CombatResourceActionContext { LocalRoleId = s.Player!.RoleId, Player = s.PlayerKnowledge, Companions = s.Companions,
-            Inventory = s.Bag, Units = b.Actors, Catalog = ResourceCatalog(c), WarStyle = b.WarStyle };
+            Inventory = s.Bag, Units = b.Actors, Catalog = ResourceCatalog(c), WarStyle = (byte?)(s.Local.Session.PostBattle.Style??b.WarStyle) };
         var context = new BattleCommandContext { Active = true, Round = b.Round!.Value, Resources = resources,
             NormalCatalog = c.OptionalNormalAttackCatalog?.NormalAttacks ?? new([], []) };
         BattleCommandIntent intent;
@@ -133,14 +148,15 @@ internal static partial class ManualGameCommands
             var choice = BattleCommandPlanner.Action(context, unit.Actor, a.Operation, a.Key);
             Require(choice.Success, choice.Error?.Message ?? "無法選擇戰鬥行動。"); intent = choice.Intent!;
         }
-        if (intent.BagIndex is {} used) Require(!b.Commands.Any(cmd => cmd.Event.BagIndex == used), "此格位本回合已有待確認的物品消耗。");
+        if (intent.BagIndex is {} used) Require(BagReceiveReducer.Available(s.Bag,(ushort)used)>b.Commands.Count(command=>command.Event.BagIndex==used),"本回合物品可用數量不足。");
         var packet = intent.ItemId is {} item ? CandidateCommands.UseBattleItem(intent.Col, intent.Row, intent.TargetCol, intent.TargetRow, item, intent.BagIndex!.Value)
             : CandidateCommands.CastSkill(intent.Col, intent.Row, intent.TargetCol, intent.TargetRow, (int)intent.SkillId!.Value);
         var sent = new BattleCommandSentEvent((byte)a.X, (byte)a.Y, (byte)intent.TargetCol, (byte)intent.TargetRow, (ushort?)intent.SkillId, intent.ItemId, intent.BagIndex);
         return new(packet, "battle", "戰鬥下令", next => next, next => false)
         {
             AwaitAcknowledgement = false,
-            AfterWrite = next => next.Local.Battle.BattleCount == b.BattleCount && next.Local.Battle.Round == b.Round
+            BattleItem=intent.BagIndex is {} slot?s.Bag.Items.GetValueOrDefault((byte)slot):null,
+            AfterWrite = next => next.Player?.RoleId==s.Player?.RoleId && next.Local.Battle.BattleCount == b.BattleCount && next.Local.Battle.Round == b.Round
                 ? CommandState.With(next, local: new(next.Local.Session, next.Local.World, BattleEventReducer.Apply(next.Local.Battle, sent))) : next
         };
     }

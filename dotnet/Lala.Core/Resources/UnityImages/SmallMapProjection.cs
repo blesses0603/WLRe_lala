@@ -8,6 +8,14 @@ public readonly record struct SmallMapPixel(double X,double Y);
 // official scene tables. No historical navigation origin or ratio substitution.
 internal sealed class SmallMapProjection(double rate,int height,int offsetX,int offsetY)
 {
+    internal bool TryUnproject(SmallMapPixel pixel,out ushort x,out ushort y)
+    {
+        x=y=0;
+        if(!double.IsFinite(pixel.X)||!double.IsFinite(pixel.Y)||pixel.X is <0 or >1024||pixel.Y is <0 or >1024)return false;
+        double px=Math.Round((pixel.X-offsetX)*100/rate),py=Math.Round(height-(1024-pixel.Y-offsetY)*100/rate);
+        if(!double.IsFinite(px)||!double.IsFinite(py)||px is <0 or >65535||py is <0 or >65535)return false;
+        x=(ushort)px;y=(ushort)py;return true;
+    }
     internal static SmallMapProjection? Create(StageDataRow stage)
     {
         if(stage.ModelId==0||stage.MapWidth==0||stage.MapHeight==0||stage.SmallOffsetX>1024||stage.SmallOffsetY>1024)return null;

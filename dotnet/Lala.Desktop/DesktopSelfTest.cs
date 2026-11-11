@@ -4,10 +4,12 @@ using System.Text.Json.Nodes;
 using Lala.Core.State;
 using Lala.Core.Catalogs;
 
+using System.Collections.Immutable;
+
 namespace Lala.Desktop;
 
 /// <summary>Deterministic presentation-boundary tests. No UI platform, network, or real user data.</summary>
-internal static class DesktopSelfTest
+internal static partial class DesktopSelfTest
 {
     public static void Run()
     {
@@ -31,6 +33,12 @@ internal static class DesktopSelfTest
             stages.Observe(new("重新核對登入清單"));
             suite.True(stages.Value < 100, "resource completion still reserves progress for final catalog admission");
             stages.Complete(); suite.True(stages.Value == 100, "successful host admission completes the stage bar");
+            var cacheStages = new ResourceStageProgress();
+            cacheStages.Observe(new("驗證既有小地圖快取", 0, 2)); double cacheBefore = cacheStages.Value;
+            cacheStages.Observe(new("驗證既有小地圖快取", 1, 2));
+            suite.True(cacheStages.Value > cacheBefore && cacheStages.Value < 100, "warm small-map validation counts advance the actual resource stage");
+            cacheBefore = cacheStages.Value; cacheStages.Observe(new("建立小地圖快取", 2, 2));
+            suite.True(cacheStages.Value > cacheBefore && cacheStages.Value < 100, "cold small-map rebuilding advances without claiming login admission");
             var resourceRoot = DesktopResourceDirectory.FromLocalApplicationData(directory);
             suite.True(resourceRoot == Path.Combine(directory, "LaLa", "Resources"), "resources use a fixed per-user application-data subdirectory");
             suite.True(!Directory.Exists(resourceRoot), "resource path resolution does not create files");
@@ -42,6 +50,7 @@ internal static class DesktopSelfTest
                 suite.True(rejected, "missing or relative app-data location never falls back to cwd");
             }
             TestSession(suite, directory);
+            TestCharacterLog(suite);
             TestImageReader(suite);
             TestDraft(suite);
             suite.True(SettingsActions.TargetOptions(-3, 2, "lowSpAction").Labels.SequenceEqual(new[] { "最低SP", "座標順序", "最高SP" }), "SP item priorities");
@@ -51,11 +60,37 @@ internal static class DesktopSelfTest
             suite.True(SettingsActions.TargetOptions(10001, 1, "lowSpAction").Labels[2] == "最高HP", "enemy HP priority retained");
             suite.True(SettingsActions.TargetOptions(1001, 1, "lowSpAction").Labels[0].Contains("友方最低SP"), "unknown skill effect is not inferred");
             TestPreferences(suite, directory);
+            TestFeaturePreferences(suite, directory);
             TestIndependentResourceRules(suite, directory);
             TestSkillEffects(suite);
             Console.WriteLine($"Desktop presentation self-test: {suite.Count} checks passed. Offline only; no UI/native or server acceptance.");
         }
         finally { Directory.Delete(directory, true); }
+    }
+
+    private static void TestCharacterLog(Checks check)
+    {
+        using var session=new DesktopSession();long generation=session.Generation;
+        System.Collections.Immutable.ImmutableArray<Lala.Core.Gameplay.GameServerEvent> events=[
+            new(1,26,4,"gold_snapshot","角色金幣",OwnerRoleId:17),
+            new(2,22,2,"scene_npc_move","場景 NPC"),
+            new(3,12,1,"position_snapshot","其他角色",Role:18,OwnerRoleId:18),
+            new(4,90,1,"unimplemented","未確認歸屬")];
+        session.SetServerEvents(generation,events,17);
+        check.True(session.ServerEvents.Length==1&&session.ServerEvents[0].Sequence==1,"character log excludes NPCs, unknown ownership and other roles");
+        session.SetServerEvents(generation,events,18);
+        check.True(session.ServerEvents.Length==1&&session.ServerEvents[0].Sequence==3,"switching character replaces previous character history");
+        session.SetServerEvents(generation,events,null);
+        check.True(session.ServerEvents.IsEmpty,"no selected character means no character history");
+        session.SetServerEvents(generation,events,17);session.Reset();
+        session.SetServerEvents(generation,events,17);
+        check.True(session.ServerEvents.IsEmpty,"account reset clears history and rejects delayed old publications");
+        var controls=Enumerable.Range(1,80).Select(i=>new Lala.Core.Gameplay.GameServerEvent(i,20,10,"event_continue_permission","許可",OwnerRoleId:17))
+            .Append(new(81,20,8,"event_end","結束",OwnerRoleId:17))
+            .Append(new(82,20,74,"event_rejected","伺服器拒絕事件",OwnerRoleId:17)).ToImmutableArray();
+        var summaries=CharacterEventSummary.Lines(controls);
+        check.True(summaries.Length==2&&summaries[0].Contains("80 次接續通知")&&summaries[0].Contains("已結束"),"ordinary control receipts form one display summary");
+        check.True(summaries[1].Contains("[接收 20-74]")&&summaries[1].Contains("拒絕"),"server rejection stays separately visible after summarized traffic");
     }
 
     private static void TestSkillEffects(Checks check)

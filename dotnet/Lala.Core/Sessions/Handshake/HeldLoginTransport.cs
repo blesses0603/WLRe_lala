@@ -51,6 +51,9 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
     private Task<int>? readOperation;
     private Task? handlerOperation, disposal;
     private bool initialized, retired, inputEnded, loginCompleted, providerCleanupFailed;
+    private uint? localRole;
+    private ushort? acknowledgedScene;
+    private bool outpostReceived, expeditionReceived, expeditionTimeRequested;
     private readonly HashSet<HeldConnectionFailure> failures = [];
 
     private void Record(HeldConnectionFailure failure) { lock (gate) failures.Add(failure); }
@@ -156,7 +159,7 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
         {
             lock (gate) if (retired || inputEnded || !loginCompleted || formal is null) throw new HeldLoginException();
             var packet = prepare(); // Recheck account/resources/intent immediately before the owned write.
-            if (packet.Main is not (6 or 8 or 10 or 13 or 19 or 20 or 23 or 31 or 33 or 39 or 50 or 62 or 64 or 65 or 85 or 122 or 124 or 186 or 191) || packet.Payload.Length > 4096)
+            if (packet.Main is not (6 or 8 or 10 or 13 or 19 or 20 or 23 or 27 or 31 or 33 or 39 or 50 or 62 or 64 or 65 or 85 or 122 or 124 or 186 or 191) || packet.Payload.Length > 4096)
                 throw new ProtocolException("Unsupported outgoing game command.");
             linked.Token.ThrowIfCancellationRequested();
             await WriteExactAsync(formal!, WireCodec.Encode(packet, txKey), linked.Token).ConfigureAwait(false);
@@ -269,8 +272,15 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
             await protocolGate.WaitAsync(linked.Token).ConfigureAwait(false);
             try
             {
+                if(observation is ServerExpeditionEvent expedition)
+                {
+                    outpostReceived |= expedition.Event is OutpostSnapshotEvent;
+                    expeditionReceived |= expedition.Event is ExpeditionSnapshotEvent;
+                }
                 if (handshake.Snapshot.Phase == HandshakePhase.ScriptedComplete)
                 {
+                    if(observation is ServerLayoutEvent{Event:WorldPlayerEvent replacement})
+                    {localRole=replacement.Player.RoleId;acknowledgedScene=replacement.Player.Scene;}
                     if (observation is LoginResultEvent or ServerLayoutEvent { Event: RoleListAvailableEvent })
                     {
                         Record(HeldConnectionFailure.LoginProtocolFailed);
@@ -283,8 +293,18 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
                         try { await WriteExactAsync(transport, bytes, linked.Token).ConfigureAwait(false); }
                         finally { System.Security.Cryptography.CryptographicOperations.ZeroMemory(bytes); }
                     }
+                    if(observation is PositionSnapshotEvent position && position.RoleId==localRole)
+                    {
+                        if(acknowledgedScene!=position.Scene)
+                            await WriteProtocolAsync(transport,new(12,1),linked.Token).ConfigureAwait(false);
+                        await WriteProtocolAsync(transport,new(3,2),linked.Token).ConfigureAwait(false);
+                        acknowledgedScene=position.Scene;
+                    }
+                    await RequestExpeditionTimeAsync(transport,linked.Token).ConfigureAwait(false);
                     return;
                 }
+                if(observation is ServerLayoutEvent { Event:WorldPlayerEvent world })
+                {localRole=world.Player.RoleId;acknowledgedScene=world.Player.Scene;}
                 await FlushAsync(transport, handshake.Observe(handshake.Snapshot.Attempt,
                     HandshakeLeg.Formal, observation), linked.Token).ConfigureAwait(false);
                 if (handshake.Snapshot.Phase == HandshakePhase.Selection && selectionOperation is null)
@@ -313,11 +333,25 @@ internal sealed class HeldLoginTransport : IReceiveTransport, IReceiveTransportR
                         loginCompleted = true;
                         login.TrySetResult(handshake.Snapshot);
                     }
+                    await RequestExpeditionTimeAsync(transport,linked.Token).ConfigureAwait(false);
                 }
             }
             finally { protocolGate.Release(); }
         }
         catch (Exception) { Record(HeldConnectionFailure.EventHandlerFailed); RecordDeadline(); EndHandshake(token.IsCancellationRequested || stop.IsCancellationRequested); throw new HeldLoginException(); }
+    }
+
+    private async Task WriteProtocolAsync(BoundedTcpTransport transport,Packet packet,CancellationToken token)
+    {
+        var bytes=WireCodec.Encode(packet,txKey);
+        try{await WriteExactAsync(transport,bytes,token).ConfigureAwait(false);}
+        finally{System.Security.Cryptography.CryptographicOperations.ZeroMemory(bytes);}
+    }
+    private async Task RequestExpeditionTimeAsync(BoundedTcpTransport transport,CancellationToken token)
+    {
+        if(!outpostReceived||!expeditionReceived||expeditionTimeRequested)return;
+        await WriteProtocolAsync(transport,new(31,28),token).ConfigureAwait(false);
+        expeditionTimeRequested=true;
     }
 
     private async Task SelectInteractiveAsync(AccountRoleSelectionRequest request, CancellationToken token)

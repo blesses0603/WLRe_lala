@@ -7,6 +7,11 @@ namespace Lala.Core.Resources;
 /// <summary>Declared EventData.NewNpc reference, not a live entity or interaction permit.</summary>
 public sealed record SceneNpcEntry(ushort NpcIndex,uint NpcId,string Name,uint X,uint Y,ImmutableArray<byte> EventIds)
 {
+    public ushort? LiveX {get;init;}
+    public ushort? LiveY {get;init;}
+    public ushort? TargetX {get;init;}
+    public ushort? TargetY {get;init;}
+    public bool? LiveVisible {get;init;}
     public int EventCount=>EventIds.Length;
     public string Source=>"EventData.NewNpc";
     public bool CanInteract=>false;

@@ -48,6 +48,7 @@ public sealed class DashboardWindow : DesktopWindow
         : base("飄流Re:LaLa  =By赤寧= · C# 桌面開發版", 1280, 800)
     {
         this.session = session; this.windows = windows; generation = session.Generation;
+        eventLog.Name = "CharacterEventLog";
         position.TextWrapping = TextWrapping.NoWrap;
         position.TextTrimming = TextTrimming.CharacterEllipsis;
         foreach (var text in new[] { role, companion, supply, party, efficiency })
@@ -138,7 +139,8 @@ public sealed class DashboardWindow : DesktopWindow
         var portraits = new Grid { RowDefinitions = new RowDefinitions("*,*") };
         Ui.At(portraits, Portrait(role,playerPortrait), 0); Ui.At(portraits, Portrait(companion,companionPortrait), 0, 1);
         Ui.At(grid, Card("角色與夥伴", portraits, roleTools), 0, 0, 3);
-        var activityTools = Ui.Row(GameButton("展開帳篷", () => new("tent", "open")), GameButton("進入", () => new("tent", "enter")), GameButton("收起帳篷", () => new("tent", "close")));
+        var leaveTent = GameButton("離開帳篷", () => new("tent", "leave")); leaveTent.Name = "DashboardTentLeave";
+        var activityTools = Ui.Row(GameButton("展開帳篷", () => new("tent", "open")), GameButton("進入", () => new("tent", "enter")), GameButton("收起帳篷", () => new("tent", "close")), leaveTent);
         Ui.At(grid, Card("目前活動", activity, activityTools), 3, 0, 3);
         var settings = Ui.IconButton("AI 設定", "buttons/Btn_Setting.png", () => windows.OpenSettings()); settings.Name = "OpenSettings";
         Ui.At(grid, Card("自動戰鬥", battleStatus, Ui.Row(settings, Play("啟動自動戰鬥"))), 0, 1, 2);
@@ -167,7 +169,7 @@ public sealed class DashboardWindow : DesktopWindow
     private async Task ToggleAutomaticAsync(string kind)
     {
         try { await session.SetAutomationAsync(kind, session.Automations.GetValueOrDefault(kind)?.Enabled != true, GameplayPreferences.Read(session)); }
-        catch (Exception error) when (error is IOException or Lala.Core.Protocol.ProtocolException or InvalidOperationException) { eventLog.Text = error.Message; }
+        catch (Exception error) when (SettingsFiles.IsExpected(error) || error is Lala.Core.Protocol.ProtocolException) { eventLog.Text = error.Message; }
     }
     private Button GameButton(string label, Func<Lala.Core.Gameplay.GameAction> create)
     {
@@ -313,9 +315,15 @@ public sealed class DashboardWindow : DesktopWindow
         var ownEfficiency = snapshot.Efficiency.Rows.GetValueOrDefault(Lala.Core.Battle.EfficiencySubject.Player);
         var rate = ownEfficiency is null ? null : Lala.Core.Battle.EfficiencyRules.Rates(ownEfficiency).All.ExperiencePerMinute;
         efficiency.Text = rate is {} perMinute ? $"經驗 {perMinute:N1}／分｜累計 {ownEfficiency!.Earned}\n有效樣本 {ownEfficiency.Count} 場" : "等待足夠的戰鬥經驗樣本";
-        eventLog.Text = snapshot.PacketCount > 0 ? $"已接收 {snapshot.PacketCount} 筆{(session.IsConnected ? "伺服器封包" : "資料觀測")}。\n{session.ConnectionText}" : session.IsConnected ? "已連線，等待伺服器資料。" : "尚未連線，沒有遊戲事件紀錄。";
-        if (!session.ActionLog.IsEmpty) eventLog.Text += "\n\n" + string.Join("\n", session.ActionLog);
-        if (!session.ServerEvents.IsEmpty) eventLog.Text += "\n\n最近伺服器事件\n" + string.Join("\n", session.ServerEvents.TakeLast(200).Select(e => $"#{e.Sequence} [{e.Main}-{e.Sub}] {e.Description}"));
+        eventLog.Text = snapshot.Player is { } currentPlayer
+            ? $"目前角色：{currentPlayer.Name}\n{session.ConnectionText}"
+            : "尚未選擇角色，沒有角色事件紀錄。";
+        if (!session.ActionLog.IsEmpty) eventLog.Text += "\n\n本機操作紀錄\n" + string.Join("\n", session.ActionLog);
+        if (!session.ServerEvents.IsEmpty)
+        {
+            var summaries=CharacterEventSummary.Lines(session.ServerEvents);
+            eventLog.Text += $"\n\n角色接收紀錄（最近 {summaries.Length} 筆）\n" + string.Join("\n",summaries);
+        }
         RefreshChat();
         foreach (var text in new[] { position, role, companion, activity, supply, expedition, party, efficiency })
             ToolTip.SetTip(text, text.Text);

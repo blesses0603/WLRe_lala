@@ -21,6 +21,8 @@ public sealed record SessionEventFlowSnapshot
     public bool AwaitingResponse { get; init; }
     public string? LastSource { get; init; }
     public BigInteger RequestsSent { get; init; }
+    internal BigInteger? PermissionPacket { get; init; }
+    internal bool PermissionTracked { get; init; }
 }
 
 /// <summary>Observed dialogue state only. Continue/choice states never authorize a command.</summary>
@@ -51,6 +53,7 @@ public sealed record SessionNpcDialogueSnapshot
 /// </summary>
 public sealed record SessionEventSnapshot
 {
+    internal Lala.Core.Gameplay.PostBattleState PostBattle {get;init;}=new();
     public string Phase { get; init; } = "disconnected";
     public ImmutableArray<RoleSnapshot> Roles { get; init; } = [];
     public SessionGoldSnapshot Gold { get; init; } = new();
@@ -97,7 +100,7 @@ public static class SessionEventReducer
             EventActiveEvent active => ApplyActive(state, active.Sub, null),
             EventContinuePermissionEvent permission => state with
             {
-                EventFlow = state.EventFlow with { Blocked = true, AwaitingResponse = false, LastSource = $"S20-{permission.Sub}" },
+                EventFlow = state.EventFlow with { Blocked = true, AwaitingResponse = false, LastSource = $"S20-{permission.Sub}", PermissionPacket=state.PacketCount,PermissionTracked=true },
                 NpcDialogue = state.NpcDialogue.Active && state.NpcDialogue.Phase is "requesting" or "awaiting_reply" or "awaiting_choice"
                     ? state.NpcDialogue with { Phase = "continue" } : state.NpcDialogue
             },
@@ -160,7 +163,7 @@ public static class SessionEventReducer
         return state with
         {
             NpcDialogue = dialogue,
-            EventFlow = state.EventFlow with { Blocked = true, AwaitingResponse = false, LastSource = $"S20-{sub}（事件處理尚未完成）" }
+            EventFlow = state.EventFlow with { Blocked = true, AwaitingResponse = false, LastSource = $"S20-{sub}（事件處理尚未完成）",PermissionPacket=null,PermissionTracked=true }
         };
     }
 

@@ -4,6 +4,15 @@ using Xunit;
 namespace Lala.Core.Tests.Resources;
 public sealed class SmallMapProjectionTests
 {
+    [Fact]
+    public void Double_click_pixel_round_trip_uses_current_projection_and_rejects_blank_coordinates()
+    {
+        var projection=SmallMapProjection.Create(Stage(1000,2000,12,8))!;
+        Assert.True(projection.TryProject(500,1000,out var pixel));
+        Assert.True(projection.TryUnproject(pixel,out var x,out var y));Assert.Equal(500,x);Assert.Equal(1000,y);
+        Assert.False(projection.TryUnproject(new(-1,0),out _,out _));Assert.False(projection.TryUnproject(new(double.NaN,100),out _,out _));
+        Assert.False(projection.TryUnproject(new(0,0),out _,out _));
+    }
     private static StageDataRow Stage(ushort width,ushort height,ushort x=0,ushort y=0)=>new(1,0,10001,0,0,0,0,0,0,0,0,99,77,width,height,x,y);
     // Expected pixels obtained from the repository's real Python Projection
     // with SmallMaps.projection's current-scene height and zero origin.

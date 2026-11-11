@@ -43,6 +43,22 @@ public sealed class DesktopPreferencesStore
     {
         value.Validate(); Write(identity, "expedition", JsonSerializer.Serialize(value, JsonOptions));
     }
+    private T ReadFeature<T>(string identity, string kind, Func<T> create)
+    {
+        var text = Read(identity, kind);
+        if (text is null) return create();
+        using var document = JsonDocument.Parse(text, new JsonDocumentOptions { MaxDepth = 20 });
+        BattleSettingsDraft.CheckDuplicates(document.RootElement);
+        return JsonSerializer.Deserialize<T>(text, JsonOptions) ?? throw new InvalidDataException("設定必須為物件。");
+    }
+    public AssistantPreferences ReadAssistant(string identity)
+    { var value = ReadFeature(identity, "assistant", () => new AssistantPreferences()); value.Validate(); return value; }
+    public void WriteAssistant(string identity, AssistantPreferences value)
+    { value.Validate(); Write(identity, "assistant", JsonSerializer.Serialize(value, JsonOptions)); }
+    public CraftPlanPreferences ReadCraftPlan(string identity)
+    { var value = ReadFeature(identity, "craft-plan", () => new CraftPlanPreferences()); value.Validate(); return value; }
+    public void WriteCraftPlan(string identity, CraftPlanPreferences value)
+    { value.Validate(); Write(identity, "craft-plan", JsonSerializer.Serialize(value, JsonOptions)); }
 
     private string? Read(string identity, string kind)
     {

@@ -479,6 +479,7 @@ public sealed partial class AccountRuntime : IAsyncDisposable
         using var waiterStop = new CancellationTokenSource();
         using var observerStop = new CancellationTokenSource();
         var observing = ObserveChangesAsync(observerStop.Token);
+        var synchronizingEvents = SynchronizeServerEventsAsync(stop.Token);
         Task<ReconnectView>? changed = null;
         ReconnectView? waitingView = null;
         try
@@ -555,6 +556,7 @@ public sealed partial class AccountRuntime : IAsyncDisposable
                 try { await changed.ConfigureAwait(false); }
                 catch (OperationCanceledException) when (waiterStop.IsCancellationRequested) { }
             Stop();
+            await synchronizingEvents.ConfigureAwait(false);
             await DrainAutomationsAsync().ConfigureAwait(false);
             await StopNavigationAsync().ConfigureAwait(false);
             await DrainGameActionsAsync().ConfigureAwait(false);

@@ -1,5 +1,70 @@
 # Desktop login integration — overall PR 8.0.45
 
+## 2026-11-11 接收與自動化整體核對
+
+接續整合已加入同回合多單位規劃、戰後 2.5／5 秒單次接續、依保存設定執行的修理／整理／補給協調、斜坡分步移動，以及小地圖左鍵雙擊尋路。詳細行為及驗收邊界見 [封包與自動化核對](DESKTOP_PACKET_AUTOMATION_AUDIT.md) 最上方章節。
+
+後續修正主畫面事件洗版：一般伺服器事件同步已從戰鬥 AI 移至帳號生命週期工作；一段接續更新同一筆摘要，一般操作的三階段也合併成一筆。接收端證據仍完整處理，手動 NPC、真正拒絕與未確認錯誤不隱藏、不自動重送。詳見下方核對文件的事件同步修正。
+
+目前版本以 [封包與自動化核對](DESKTOP_PACKET_AUTOMATION_AUDIT.md) 為準：補上換圖確認、接收端操作回覆追蹤、整批下令邊界、場次／回合／格位寫入防重送、固定四點徘徊與一般場景 NPC 動態狀態。先前依重複內容與 32 次接續判定迴圈的保護已移除；真正的伺服器新許可可以繼續，已使用的許可仍不得重用。
+
+## 2026-11-10 角色事件紀錄與場景 NPC 封包核對
+
+使用者錄影顯示大量 S22-2。對照官方 1.3.23 Lua 後確認：S22-2 是場景 NPC 移動（U16 索引、U16 X、U16 Y、U8 速度）；S22-3／10 是 NPC 隱藏、S22-11 是顯示（U16 索引、U16 時間；65535 表示永久）。它們不是玩家位置，也不授予 C20-6 接續許可。相同代碼可包含不同 NPC 的正常場景變化，不能單靠代碼重複斷定自動化循環；修正先前尚未核對內容時的推論。
+
+- 新增上述唯讀型別解碼，驗證完整欄位長度；不推算速度單位、時間換算、動態導航幾何或完整 NPC 動畫。
+- 收包端維持原本的狀態處理及 500 筆操作回覆緩衝，另保留最近 200 筆明確屬於目前角色的顯示紀錄。場景流量不會擠掉角色歷史，亦不會因 UI 篩選而停收或改變遊戲狀態。
+- 角色紀錄保留自身位置、屬性、背包、金幣、直接操作回覆、事件接續及自身參與的戰鬥；排除場景 NPC、附近角色及歸屬未知的封包。帳號／角色切換會清除舊角色紀錄。操作紀錄仍屬同一帳號執行通道；沒有新增全場景顯示開關或磁碟封包側錄。
+- 主畫面移除全部封包的累計總數及全域序號，只顯示目前角色與角色事件。
+
+證據：官方 [Lua 清單](https://wlreftpsrc.chinesegamer.net/WLN/TW/1.3.23/LuaScripts/LuaScriptPathList.txt) 與 `Lua/Logic/Protocols/Protocols_022.lua`、`Lua/Logic/Stage.lua`。下載的加密檔逐一核對清單 MD5，使用既有已獨立釘選的官方 APK metadata SHA256 解碼；該 metadata 為 `5a71da3a4b37486b056b9873655e42d7d7a583eae6ebfe2efdd18ebe66a23260`。解碼後 Protocols_022 SHA256 為 `6a29ba64b10da01bf3cc79ce9d9bb93afc20e0a68f588bfec744d21a0cd7e9a5`，Stage 為 `784b5098241463159112b29fa81ca23dfa9a2cc24dd3fe20ec29f1a05df52605`。官方原始 Lua 及金鑰未加入儲存庫。
+
+## 2026-11-10 自動事件接續保護
+
+- 新增帳號所屬的事件循環保護，在實際傳送通道核對並消耗接續許可；相同許可不重複使用，新許可會使排隊的舊意圖失效。
+- 內部操作回覆只為 S20 與 NPC 顯示／隱藏指令加入內容 SHA256；不保留原始 payload，也不將聊天或登入內容加入指紋。
+- ~~依重複內容或 32 次無角色進展停止接續~~：已於 2026-11-11 移除。相同代碼與內容可以是合法事件步驟；現在以接收端真實許可、整批完成及單次消耗核對，不能自行設立官方沒有的步數限制。
+- 不再因代碼／內容重複而停止 AI；保留真實事件阻擋狀態，不偽造結束或新增 S22 回覆。同一正式連線不重用已消耗許可；新的正式連線使用獨立序號。
+- 接續操作改為要求實際收到事件回覆，單憑本機旗標變化不報成功；角色重新定位及進入戰鬥時撤銷舊許可。手動 NPC 選項及其單次接續維持原本流程。
+
+以上驗證包含離線解析、收包緩衝及本機模擬伺服器；不代表正式服完整自動化驗收。徘徊已於 2026-11-11 加入途中遇戰及補給中斷；完整戰後維護／排程協調仍需另行核對，不能宣稱所有封包代碼已分析完成。
+
+## 2026-11-10 接續檢查點：野外自動補給
+
+本批接通原先只保存草稿的野外 HP／SP 補給與藥水儲存槽。設定入口為主畫面補給設定／AI 設定的「補給設定」頁；總開關預設關閉，保存不啟動，須自行啟動戰鬥 AI 或徘徊才會按門檻執行。套用會更新這兩項已啟動功能，不會把已停止功能重新啟動。
+
+- 角色及目前出戰夥伴各自使用 HP／SP 門檻，嚴格低於百分比才回復；沒有確認 HP、最大值或存活狀態的對象不推算，也不進行復活。
+- 每種資源保留 10 格指定物品優先序，接上背包補品選擇、搜尋及清除；僅列出同版官方資料已核對的回復效果，排除鎖定、限時、保留及帶負面 HP／SP 效果的物品。匯入的指定 ID 仍需通過核心效果驗證。
+- 接通「儲存槽優先／指定補品之後／停用」及其他背包補品選項。儲存槽依已同步餘額、實際缺少量及單次 65,535 上限規劃 C23-147，不會自行補滿未知數值。
+- 每次補給均經帳號操作佇列，寫入前核對角色、同版資源、背包、補給餘額、夥伴及事件狀態。物品扣除須維持同格物品 ID、序號與序號版本，並確認原對象 HP／SP 回升。
+- 儲存槽要求同資源及同對象的 S23-208 使用回覆，加上同對象回復。若伺服器餘額已扣除不再重扣；僅收到使用回覆時，在核對回復後依該回覆扣帳一次。餘額變動無法關聯、對象更換、拒絕或逾時都不視為成功，也不自動重送。
+- 每輪新徘徊前先檢查補給，不足時不啟動下一輪；路途中遇戰後的接續與補給協調仍需加強。已送出補給即使按下暫停仍等待確認，沒有因取消而重複消耗。資源投影依同一候選資料快取，退休後可回收，避免自動輪詢反覆重建整份物品／特技索引。
+
+本批沒有登入正式服或消耗實際道具。來源為既有 Python `recovery.py`／`field_supply.py` 及已核對的 C# 補給候選器。核心回歸與本機 loopback 驗證了優先順序、門檻、出戰夥伴身分、格位替換、錯誤回覆及暫停後確認；桌面補品選擇也使用實際原生視窗驗證。
+
+驗證紀錄：Debug 建置 0 警告／0 錯誤；補給與相關物品／自動化回歸 2,862 項通過；桌面離線檢查 9＋100 項、原生 UI 310 項通過，輸出 36 張畫面並檢查新增補品選擇視窗；Android 生命週期相容性 79 項通過。操作回覆的起點也移到實際取得傳送通道時，排除排隊期間已抵達的舊回覆。
+
+剩餘待辦：維護／修理／清理、C# 發行更新、副本及製作排程回覆關聯加強、方舟完整自動流程，以及海上／飛行／斜坡導航與正式服操作驗收；先前一次連線結束原因仍待追查。下方舊檢查點的野外補給待辦已由本節接續。
+
+## 2026-11-10 接續檢查點：製作、助手與互動
+
+本節接續下方暫停檢查點；這一批新增功能已接到桌面與共用核心，仍不能視為全部 Python 功能完成或正式服驗收通過。下方較早的唯讀／Held 說明保留歷史脈絡，以本節及實際操作守衛為準。
+
+- 自訂製作清單：搜尋官方配方、編輯批數、排序及分帳號保存；開始後透過既有製作操作等待入列回覆及材料扣除，再前進清單。同次連線可暫停及繼續，重新登入只載入草稿，不推算已完成進度；重新執行整份清單須明確按下獨立按鈕。
+- 每日助手：整合魔方／每日獎勵、組織簽到／有預算捐獻，以及方舟派遣／問答／戰鬥選項。保存不啟動，全部自動選項預設關閉；開始僅啟動勾選的功能，方舟戰鬥還要求實際戰鬥 AI 已啟用。
+- 必要隊員：可輸入角色 ID 或唯一且已同步的附近角色名稱，匯入目前隊伍、驗證重複／自家角色後套用。AI 設定與隊員條件可更新正在運作的戰鬥 AI；核心序列化設定切換，停止中的 AI 不會被較晚的更新重新啟動。
+- 經驗效率：角色／已確認夥伴、全部／最近 10／30 場、分／時／日單位、升級估時與重設已接線；重設只清除本次連線的效率樣本，不修改角色經驗或發送遊戲操作，資料不足時不顯示推算數值。
+- NPC 更多互動：獨立對話視窗顯示伺服器對話、經官方事件資料核對的一般選項、繼續及分開的選單關閉。選項綁定精確場景、互動與提示序號；新提示會撤銷舊選項，選擇後僅消耗一次接續授權。修正繼續封包的來源相符 payload。商店交易及未識別的特殊選單不因此啟用。
+- 帳篷離開：主畫面新增入口，僅使用座標與來源關聯均已核對的唯一官方出口；標記式出口另要求已知戶外返回場景及已驗證文字。缺少或衝突資料會阻擋，必須收到伺服器戶外位置才算離開。
+- 設定改以帳號與伺服器群組的穩定不透明雜湊識別保存，重新登入可保留各自草稿，換帳會關閉舊功能視窗及撤銷舊回呼。原有隨機識別設定不刪除，也不猜測遷移歸屬。
+- 登入頁顯示清單逾時不再直接使完整登入表單失效；實際 TCP 連線及每次帳密送出前仍重新取得官方資料，核對端點、分流、支援版本及已準備資源，沒有跳過驗證或重新下載資源。
+
+仍待完成：野外自動補給與儲存槽、維護／修理／清理、C# 發行更新；副本及製作排程的回覆關聯仍需加強，方舟完整自動流程與正式服操作仍待驗收，先前一次連線結束原因仍待追查。導航的海上、飛行及斜坡執行也尚未完成。
+
+本批驗證：桌面 Debug 建置 0 警告／0 錯誤；核心相關回歸 2,186 項通過；桌面離線檢查 9＋99 項、原生 UI 檢查 303 項通過，輸出並檢查 35 張畫面中的新增功能畫面；Android 生命週期相容性 79 項通過。Windows loopback 的斷線測試現在接受正常 EOF 或 TCP reset，仍要求連線確實結束。
+
+本批以合成資料、原生視窗及本機 loopback 驗證，沒有使用正式帳號消耗道具、金幣、星力或屬性點；尚未提交或發布。
+
 ## 2026-11-10 暫停檢查點：桌面遊戲功能接線
 
 本批仍在開發，不能解讀為 Python 功能已全部移植或全部通過正式服驗收。
@@ -24,7 +89,7 @@ The Avalonia login and role controls use shared Core preparation. The Python-com
 server/line dropdowns now load official HTTPS metadata through `OfficialServerDiscovery`.
 Protocol bytes and the verification endpoint come from the reviewed Python release profile,
 never editable text fields or downloaded rows. Unknown executable versions/groups, failed or
-stale catalogs and no selection block admission. See [the full parity inventory](DESKTOP_PYTHON_PARITY.md)
+stale target revalidation and no selection block transport admission. An expired displayed list may request a new revalidation. See [the full parity inventory](DESKTOP_PYTHON_PARITY.md)
 for provenance, limitations and the remaining UI work. Account preferences can be remembered;
 on Windows an opted-in password is protected with current-user DPAPI. Portable settings never include passwords.
 
@@ -76,14 +141,14 @@ imports cannot supply passwords, resource paths, endpoints or connection permiss
    Login does not download, decode, revalidate or write those resources again. Disconnect revokes
    only the account binding; the startup preparation retains ownership for later logins. Stopping
    or replacing that preparation revokes every borrowed binding, without an automatic retry.
-   Official target metadata is still checked before credential sends. Every general game command remains unavailable.
+   Official target metadata is still checked before credential sends. General game commands follow the current checkpoint's per-feature admission and acknowledgement rules.
 6. Disconnect, close, or application quit cancels and awaits Core cleanup and pending callbacks.
    The presentation snapshot is reset; another attempt needs fresh input and a new Login click.
 
 No plaintext password is written to settings, exports, logs or process arguments. Core clears owned byte
 buffers; clearing Avalonia text cannot promise immediate erasure of immutable .NET strings.
 Exceptions are rendered as fixed generic status text rather than copying arbitrary exception
-messages. Account presentation uses a fresh opaque identity, not a stored account name.
+messages. Account runtime uses a fresh opaque identity; desktop preference scopes use an opaque hash of the account and server group, without storing the account name in those feature files.
 
 ## Boundary and review
 

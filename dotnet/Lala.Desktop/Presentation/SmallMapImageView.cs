@@ -2,6 +2,7 @@ using System.Buffers.Binary;
 using System.Security.Cryptography;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
@@ -10,6 +11,21 @@ namespace Lala.Desktop;
 
 internal sealed class SmallMapImageView:Grid,IAsyncDisposable
 {
+    internal event Action<SmallMapPixel>? DestinationDoubleClicked;
+    internal bool TrySelectPixel(Point point,out SmallMapPixel pixel)
+    {
+        pixel=default;
+        if(closed||bitmap is null||desired is null||DisplayedIdentity!=desired.Identity||!Current(desired))return false;
+        double size=Math.Min(Bounds.Width,Bounds.Height),left=(Bounds.Width-size)/2,top=(Bounds.Height-size)/2;
+        if(size<=0||!double.IsFinite(point.X)||!double.IsFinite(point.Y)||point.X<left||point.Y<top||point.X>left+size||point.Y>top+size)return false;
+        pixel=new((point.X-left)*1024/size,(point.Y-top)*1024/size);return true;
+    }
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
+    {
+        base.OnPointerPressed(e);
+        if(e.ClickCount==2&&e.GetCurrentPoint(this).Properties.IsLeftButtonPressed&&TrySelectPixel(e.GetPosition(this),out var pixel))
+        {e.Handled=true;DestinationDoubleClicked?.Invoke(pixel);}
+    }
     internal sealed record Input(string Identity,string Hash,Func<bool> Current,Func<byte[]?> Read);
     private sealed class Marker:Control
     {

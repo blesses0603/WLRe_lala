@@ -38,7 +38,7 @@ internal sealed class AndroidMainView : UserControl
                     new Border { Padding = new Thickness(16), Background = Brush.Parse("#16314D"),
                         CornerRadius = new CornerRadius(8), Child = _state },
                     _permission,
-                    new TextBlock { Text = "共用登入與連線核心仍在建立，目前無法登入遊戲。連線入口將在核心接入後提供。", TextWrapping = TextWrapping.Wrap },
+                    new TextBlock { Text = "官方登入入口位於首頁。這裡檢視背景連線生命週期；返回畫面不會重複登入。", TextWrapping = TextWrapping.Wrap },
                     new WrapPanel { Orientation = Orientation.Horizontal, Children = { notifications, refresh, _stop } },
                     new TextBlock { Text = "之後由你手動開始連線。切換畫面只重新取得服務狀態；停止會取消重試並釋放連線。程式遭系統結束後不會自動登入。", TextWrapping = TextWrapping.Wrap }
                 }

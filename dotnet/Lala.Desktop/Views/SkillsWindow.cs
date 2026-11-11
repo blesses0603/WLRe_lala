@@ -106,7 +106,7 @@ public sealed class SkillsWindow : DesktopWindow
             if (target.SelectedItem is not string selected) throw new InvalidOperationException("請先選擇戰場目標。");
             var unit = units[0];
             await session.ExecuteGameActionAsync(new("battle", "skill", unit.Layout.Pid, round, checked((int)skill.Id),
-                unit.Layout.Col, unit.Layout.Row, player.Scene, Key: selected.Split('｜')[0]));
+                unit.Layout.Col, unit.Layout.Row, player.Scene, Key: selected.Split('｜')[0], BattleCount:state.Local.Battle.BattleCount));
             if (!closed) detail.Text = "特技已送出，結果以伺服器回報為準。";
         }
         catch (Exception error) when (error is InvalidOperationException or Lala.Core.Protocol.ProtocolException)

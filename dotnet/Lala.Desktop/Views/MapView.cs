@@ -23,6 +23,7 @@ public sealed class MapView : UserControl,IAsyncDisposable
     private Button syncNavigation = null!, cancelNavigation = null!;
     private CancellationTokenSource? syncing;
     private Task? syncOperation;
+    private NpcInteractionWindow? interactionWindow;
 
     public MapView(DesktopSession session, Action openNavigation)
     {
@@ -59,7 +60,13 @@ public sealed class MapView : UserControl,IAsyncDisposable
         Ui.At(npcButtons, interact, 0);
         Ui.At(npcButtons, next, 1);
         Ui.At(npc, npcButtons, 0, 1);
-        var more = Ui.Unavailable("更多操作", "MapNpcMore");
+        var more = Ui.Button("更多操作", () =>
+        {
+            if (interactionWindow is not null) { interactionWindow.Show(); interactionWindow.Activate(); return; }
+            interactionWindow = new(session);
+            interactionWindow.Closed += (_, _) => interactionWindow = null;
+            if (TopLevel.GetTopLevel(this) is Window owner) interactionWindow.Show(owner); else interactionWindow.Show();
+        }, "MapNpcMore");
         more.FontSize = 11;
         more.Padding = new Thickness(3, 2);
         more.HorizontalAlignment = HorizontalAlignment.Stretch;
@@ -96,12 +103,13 @@ public sealed class MapView : UserControl,IAsyncDisposable
         position.TextAlignment = TextAlignment.Center;
         var missing = new Grid{RowDefinitions=new RowDefinitions("*,Auto,Auto")};
         picture.Name="SmallMapImage";Ui.At(missing,picture,0);Ui.At(missing,mapMessage,0,1);Ui.At(missing,position,0,2);
+        picture.DestinationDoubleClicked+=pixel=>_=(syncOperation=MoveToPixelAsync(pixel));
         var map = new Border
         {
             Name = "MapSurface", Background = Brush.Parse("#18232c"), Padding = new Thickness(8),
             BorderBrush = Ui.BorderBrush, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(4), Child = missing
         };
-        ToolTip.SetTip(map, "取得同版小地圖與座標轉換資料後，才可在圖上顯示位置與選取目的地。");
+        ToolTip.SetTip(map, "雙擊地圖位置，自動尋路前往；可按停止導航取消。");
         Ui.At(content, map, 1);
         Ui.At(body, content, 0, 1);
 
@@ -175,7 +183,7 @@ public sealed class MapView : UserControl,IAsyncDisposable
         portalList.SelectedItem = portalRows.FirstOrDefault(row => row.Index == selectedPortal);
         title.Text = player is null ? "小地圖｜等待角色地圖" : "小地圖｜" + view.Labels.Scene(player.Scene);
         ToolTip.SetTip(title, title.Text);
-        npcRoster.Update(player is null?null:session.ReadNpcRoster(view.Snapshot,player.Scene));
+        npcRoster.Update(player is null?null:session.ReadNpcRoster(view.Snapshot,player.Scene),world.NpcRuntime);
         var mapRequest=player is null?null:session.ReadSmallMap(view.Snapshot,player.Scene);picture.Update(mapRequest);
         mapMessage.Text = mapRequest is not null ? "地圖預覽" : player is null ? "尚未同步小地圖" : "此地圖的同版圖片\n尚未同步";
         var confirmed = world.Location.Confirmed;
@@ -203,5 +211,25 @@ public sealed class MapView : UserControl,IAsyncDisposable
         { if (subscribed) navigationStatus.Text = error.Message; }
         finally { if (ReferenceEquals(syncing, cancellation)) syncing = null; }
     }
-    public async ValueTask DisposeAsync(){Unsubscribe();syncing?.Cancel();if(syncOperation is {} pending)await pending;npcRoster.Dispose();await picture.DisposeAsync();}
+    private async Task MoveToPixelAsync(Lala.Core.Resources.SmallMapPixel pixel)
+    {
+        syncing?.Cancel();
+        using var cancellation=new CancellationTokenSource();syncing=cancellation;
+        string? failure=null;
+        try
+        {
+            if(!session.CanSendGameCommands)throw new InvalidOperationException("請先完成登入與資源準備。");
+            var s=session.Snapshot;var player=s.Player??throw new InvalidOperationException("尚未確認角色。");
+            var request=session.ReadSmallMap(s,player.Scene);
+            if(request is null||request.Identity!=picture.DisplayedIdentity||!request.TrySelectPosition(pixel,out var x,out var y))
+                throw new InvalidOperationException("小地圖或座標資料已變更，請稍候再選取。");
+            navigationStatus.Text=$"正在尋路至 {x}, {y}…";Refresh();
+            await session.NavigateAsync(new(player.Scene,x,y,true),cancellation.Token);
+        }
+        catch(OperationCanceledException){}
+        catch(Exception error) when(error is IOException or ArgumentException or InvalidOperationException or Lala.Core.Protocol.ProtocolException)
+        {failure=error.Message;}
+        finally{if(ReferenceEquals(syncing,cancellation)){syncing=null;if(subscribed){Refresh();if(failure is not null)navigationStatus.Text=failure;}}}
+    }
+    public async ValueTask DisposeAsync(){Unsubscribe();interactionWindow?.Close();syncing?.Cancel();if(syncOperation is {} pending)await pending;npcRoster.Dispose();await picture.DisposeAsync();}
 }

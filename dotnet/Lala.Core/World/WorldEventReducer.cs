@@ -10,12 +10,14 @@ namespace Lala.Core.World;
 public static class WorldEventReducer
 {
     public static WorldEventSnapshot Apply(WorldEventSnapshot state, ServerEvent observation,
-        WorldSceneCatalog? currentCatalog = null)
+        WorldSceneCatalog? currentCatalog = null, double? observedAt = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(observation);
         return observation switch
         {
+            SceneNpcMoveEvent or SceneNpcVisibilityEvent or SceneNpcStatusEvent or SceneNpcTeleportEvent or SceneNpcShowEvent
+                => state.Player is null?state:state with{NpcRuntime=state.NpcRuntime.Apply(observation,observedAt)},
             ServerLayoutEvent { Event: WorldPlayerEvent world } => ApplyWorldPlayer(state, world.Player),
             PositionSnapshotEvent position => ApplyPosition(state, position),
             MovementRequestEvent request => WaitForPosition(state with
@@ -28,10 +30,10 @@ public static class WorldEventReducer
             }),
             NavigationGeometryChangeEvent change when WorldObstacleScope.AffectsNavigation(
                 change.AffectsGeometry, change.GeometryScope, state.Player?.Scene, currentCatalog) =>
-                InvalidateGeometry(state, change.Reason),
+                InvalidateGeometry(state, change.Reason, change.GeometryScope),
             ServerInventoryEvent { Event: CraftFurnitureEvent furniture } when WorldObstacleScope.AffectsNavigation(
                 furniture.AffectsGeometry, furniture.GeometryScope, state.Player?.Scene, currentCatalog) =>
-                InvalidateGeometry(state, furniture.Reason),
+                InvalidateGeometry(state, furniture.Reason, furniture.GeometryScope),
             WalkEvent walk => ApplyWalk(state, walk),
             ServerSocialEvent { Event: NearbyLeaveEvent leave } when leave.RoleId != state.Player?.RoleId =>
                 state with { Positions = state.Positions.Remove(leave.RoleId) },
@@ -87,7 +89,7 @@ public static class WorldEventReducer
 
     private static WorldEventSnapshot ApplyWorldPlayer(WorldEventSnapshot state, WorldPlayer player)
     {
-        var result = state with { Player = player, Positions = WorldPositionCache.Empty, Phase = "world_received" };
+        var result = state with { Player = player, Positions = WorldPositionCache.Empty, Phase = "world_received", NpcRuntime=new() };
         result = RememberPosition(result, player.RoleId, player.X, player.Y);
         result = ConfirmLocation(result, player.Scene, player.X, player.Y, "S3-1");
         return result with { Navigation = new() { Scene = player.Scene, Revision = state.Navigation.Revision + 1 } };
@@ -101,7 +103,8 @@ public static class WorldEventReducer
         var result = state with
         {
             Player = player with { Scene = observation.Scene, X = observation.X, Y = observation.Y },
-            Positions = sameScene ? state.Positions : WorldPositionCache.Empty
+            Positions = sameScene ? state.Positions : WorldPositionCache.Empty,
+            NpcRuntime = sameScene ? state.NpcRuntime : new()
         };
         result = RememberPosition(result, observation.RoleId, observation.X, observation.Y);
         result = ConfirmLocation(result, observation.Scene, observation.X, observation.Y, observation.Source);
@@ -112,6 +115,7 @@ public static class WorldEventReducer
                 Scene = observation.Scene, Revision = state.Navigation.Revision + 1,
                 Stale = sameScene && state.Navigation.Stale,
                 Reasons = sameScene && !state.Navigation.Reasons.IsDefault ? state.Navigation.Reasons : [],
+                InvalidationScope = sameScene ? state.Navigation.InvalidationScope : null,
                 HouseContext = WorldHouseContextRules.UpdateContext(state.Navigation.HouseContext,
                     observation.Scene, observation.HouseFloor)
             }
@@ -132,7 +136,7 @@ public static class WorldEventReducer
         });
     }
 
-    private static WorldEventSnapshot InvalidateGeometry(WorldEventSnapshot state, string reason)
+    private static WorldEventSnapshot InvalidateGeometry(WorldEventSnapshot state, string reason, string scope)
     {
         var reasons = state.Navigation.Reasons.IsDefault ? ImmutableArray<string>.Empty : state.Navigation.Reasons;
         reasons = reasons.Add(reason);
@@ -141,7 +145,8 @@ public static class WorldEventReducer
         {
             Navigation = state.Navigation with
             {
-                Stale = true, Revision = state.Navigation.Revision + 1, Reasons = reasons
+                Stale = true, Revision = state.Navigation.Revision + 1, Reasons = reasons,
+                InvalidationScope = !state.Navigation.Stale ? scope : state.Navigation.InvalidationScope==scope ? scope : "mixed"
             }
         };
     }

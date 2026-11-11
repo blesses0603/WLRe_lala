@@ -28,7 +28,7 @@ public sealed class SettingsWindow : DesktopWindow
     private readonly Dictionary<string, TextBlock> balances = new(StringComparer.Ordinal);
     private readonly Dictionary<string, TextBlock> percentages = new(StringComparer.Ordinal);
     private readonly Dictionary<string, NumericUpDown> numbers = new(StringComparer.Ordinal);
-    private readonly List<(JsonArray Values, int Index, Button Button)> slots = [];
+    private readonly List<(JsonArray Values, int Index, Button Button, string? Resource)> slots = [];
     private BattleSettingsDraft draft;
     private bool closed;
     private bool busy;
@@ -61,7 +61,7 @@ public sealed class SettingsWindow : DesktopWindow
         var buttons = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,Auto,*,Auto,Auto"), ColumnSpacing = 6 };
         load = Ui.Button("載入 JSON", () => _ = LoadAsync(), "SettingsLoad");
         export = Ui.Button("匯出目前設定", () => _ = ExportAsync(), "SettingsExport");
-        apply = Ui.Button("套用全部設定", () => { if (ApplyDraft()) Close(); }, "SettingsApply");
+        apply = Ui.Button("套用全部設定", async () => { if (await ApplyDraftAsync()) Close(); }, "SettingsApply");
         Ui.At(buttons, load, 0); Ui.At(buttons, export, 1);
         Ui.At(buttons, Ui.Button("取消", Close, "SettingsCancel"), 3); Ui.At(buttons, apply, 4);
         Ui.At(body, buttons, 0, 3);
@@ -168,6 +168,21 @@ public sealed class SettingsWindow : DesktopWindow
                 : "帳號或連線已變更，草稿未套用；請重新開啟設定。", true);
             return false;
         }
+    }
+    public async Task<bool> ApplyDraftAsync()
+    {
+        if (busy) return false;
+        if (!ApplyDraft()) return false;
+        busy = true; apply.IsEnabled = false;
+        try
+        {
+            await session.ReapplyActiveSettingsAsync(generation, identity, "battle", "roaming");
+            SetNote("設定已儲存；執行中的 AI／徘徊及補給設定已更新，未啟動的功能維持關閉。");
+            return true;
+        }
+        catch (Exception error) when (SettingsFiles.IsExpected(error) || error is Lala.Core.Protocol.ProtocolException)
+        { SetNote("設定已儲存，但執行中的 AI 未能更新，請確認連線後重新套用。", true); return false; }
+        finally { busy = false; if (!closed) apply.IsEnabled = IsCurrent; }
     }
 
     public void ClearRecoverySlot(string resource, int index)
@@ -357,8 +372,8 @@ public sealed class SettingsWindow : DesktopWindow
         };
         column.Children.Add(first);
         column.Children.Add(Flag(config, "enabled", "自動使用指定 " + caption + " 補品（由左至右、上至下）", "SettingsRecovery_" + resource));
-        column.Children.Add(SlotGrid((JsonArray)config["items"]!, 3, caption + " 補品", "SettingsSupply_" + resource));
-        column.Children.Add(Ui.Text("點格檢視；右鍵可清除。物品效果尚待核對。", 12, Ui.Muted));
+        column.Children.Add(SlotGrid((JsonArray)config["items"]!, 3, caption + " 補品", "SettingsSupply_" + resource, resource));
+        column.Children.Add(Ui.Text("點格選擇已核對效果的背包補品；右鍵清除。低於門檻時回復，儲存設定不會啟動 AI。", 12, Ui.Muted));
         column.Children.Add(after);
         column.Children.Add(Flag(config, "other_items", "指定補品用完後，使用背包內其他 " + caption + " 補品", "SettingsOtherSupply_" + resource));
         foreach (var who in new[] { "player", "partner" })
@@ -404,7 +419,7 @@ public sealed class SettingsWindow : DesktopWindow
         return new ScrollViewer { Content = content, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
     }
 
-    private Grid SlotGrid(JsonArray values, int columns, string title, string name)
+    private Grid SlotGrid(JsonArray values, int columns, string title, string name, string? resource = null)
     {
         var grid = new Grid
         {
@@ -415,30 +430,52 @@ public sealed class SettingsWindow : DesktopWindow
         for (var i = 0; i < values.Count; i++)
         {
             var index = i;
-            var button = Ui.Button("＋", () => _ = OpenSlotAsync(values, index, title), name + "_" + index);
+            var button = Ui.Button("＋", () => _ = OpenSlotAsync(values, index, title, resource), name + "_" + index);
             button.HorizontalAlignment = HorizontalAlignment.Stretch;
             var clear = new MenuItem { Header = "清除此格" };
             clear.Click += (_, _) => { if (IsCurrent) ClearSlot(values, index); };
             button.ContextMenu = new ContextMenu { ItemsSource = new[] { clear } };
-            slots.Add((values, index, button));
+            slots.Add((values, index, button, resource));
             Ui.At(grid, button, index % columns, index / columns);
         }
         return grid;
     }
 
-    private async Task OpenSlotAsync(JsonArray values, int index, string title)
+    private async Task OpenSlotAsync(JsonArray values, int index, string title, string? resource)
     {
         if (!IsCurrent || actionOpen) return;
         actionOpen = true;
         try
         {
             var id = BattleSettingsDraft.Int(values[index]);
+            if (resource is not null)
+            {
+                var choices = session.Catalogs is { } catalogs ? Lala.Core.Gameplay.FieldRecoveryPlanning.AvailableItems(session.Snapshot, catalogs, resource) : [];
+                var supply = new SettingsSupplySlotWindow(title, choices, session.ReadView().Labels);
+                ushort? selected = await supply.ShowDialog<ushort?>(this);
+                if (selected is { } item && IsCurrent)
+                {
+                    if (item == 0) ClearSlot(values, index);
+                    else { SetRecoverySlot(resource, index, item); }
+                }
+                return;
+            }
             var picker = new SettingsItemSlotWindow(title, id == 0 ? "此格尚未指定物品。" : session.ReadView().Labels.Item((ushort)id) + $"（{id}，待核對）");
             bool clear = await picker.ShowDialog<bool>(this);
             if (clear && IsCurrent) ClearSlot(values, index);
         }
         catch (Exception error) when (SettingsFiles.IsExpected(error)) { if (!closed) SetNote("選擇視窗無法開啟，草稿未變更。", true); }
         finally { actionOpen = false; }
+    }
+
+    public void SetRecoverySlot(string resource, int index, ushort itemId)
+    {
+        EnsureCurrent();
+        if (resource is not ("hp" or "sp") || index is < 0 or >= 10) throw new ArgumentOutOfRangeException(nameof(resource));
+        if (session.Catalogs is not { } catalogs || !Lala.Core.Gameplay.FieldRecoveryPlanning.AvailableItems(session.Snapshot, catalogs, resource).Any(i => i.ItemId == itemId))
+            throw new InvalidOperationException("物品已離開背包或回復效果尚未核對。");
+        draft.Value["recovery"]![resource]!["items"]![index] = itemId;
+        UpdateObservedLabels();
     }
 
     private void ClearSlot(JsonArray values, int index)
@@ -521,10 +558,15 @@ public sealed class SettingsWindow : DesktopWindow
         if (closed) return;
         var view = session.ReadView();
         var state = view.Snapshot;
-        foreach (var (values, index, button) in slots)
+        foreach (var (values, index, button, resource) in slots)
         {
             int id = BattleSettingsDraft.Int(values[index]);
             var text = id == 0 ? $"{index + 1}　＋" : $"{index + 1} {view.Labels.Item((ushort)id)}（待核對）";
+            if (id != 0 && resource is not null && session.Catalogs is { } catalogs)
+            {
+                var item = Lala.Core.Gameplay.FieldRecoveryPlanning.AvailableItems(state, catalogs, resource).FirstOrDefault(i => i.ItemId == id);
+                if (item is not null) text = $"{index + 1} {view.Labels.Item((ushort)id)} · {resource.ToUpperInvariant()} +{(resource == "hp" ? item.Hp : item.Sp)} · ×{item.Count}";
+            }
             button.Content = Ellipsis(text); ToolTip.SetTip(button, text);
         }
         foreach (var resource in new[] { "hp", "sp" })
@@ -638,7 +680,7 @@ public sealed class SettingsWindow : DesktopWindow
 
 internal static class SettingsFiles
 {
-    public static bool IsExpected(Exception error) => error is IOException or UnauthorizedAccessException
+    public static bool IsExpected(Exception error) => error is IOException or InvalidDataException or UnauthorizedAccessException
         or JsonException or ArgumentException or InvalidOperationException or NotSupportedException;
 
     public static async Task<string> ReadBoundedAsync(Stream stream, CancellationToken cancellation)

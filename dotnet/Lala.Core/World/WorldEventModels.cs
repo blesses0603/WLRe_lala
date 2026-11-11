@@ -82,6 +82,9 @@ public sealed record WorldNavigationSnapshot
     public BigInteger Revision { get; init; }
     public bool Stale { get; init; }
     public bool RuntimeGeometryVerified { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore] public string? InvalidationScope { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore] public string? GeometryResourceKey { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore] public ushort? GeometryModel { get; init; }
     public ImmutableArray<string> Reasons { get; init; } = [];
     public WorldHouseContext? HouseContext { get; init; }
 }
@@ -96,6 +99,7 @@ public sealed record WorldEventSnapshot
     public WorldPlayer? Player { get; init; }
     public WorldPositionCache Positions { get; init; } = WorldPositionCache.Empty;
     public WorldNavigationSnapshot Navigation { get; init; } = new();
+    [System.Text.Json.Serialization.JsonIgnore] public WorldNpcRuntime NpcRuntime { get; init; } = new();
     public WorldLocationSnapshot Location { get; init; } = new();
     public WorldLocalMovement? LocalMovement { get; init; }
     public WorldMovementCheck? MovementCheck { get; init; }

@@ -11,7 +11,7 @@ namespace Lala.Desktop;
 /// observations: neither a world_ready string nor a resource gate grants transport authority.
 /// A future host supplies a generation and monotonically increasing publication number.
 /// </summary>
-public sealed class DesktopSession : IDisposable
+public sealed partial class DesktopSession : IDisposable
 {
     private readonly object gate = new();
     private ServiceStateSnapshot snapshot = new();
@@ -30,6 +30,16 @@ public sealed class DesktopSession : IDisposable
     private Func<string, string, uint?, Task>? chatSender;
     private Func<GameAction, Task>? gameSender;
     private Func<string, bool, GameAutomationSettings?, Task>? automationSender;
+    private Func<string, GameAutomationSettings, Task<bool>>? automationUpdater;
+    private Func<Task>? efficiencyResetter;
+    internal void AttachEfficiencyResetter(long expectedGeneration, Func<Task> reset)
+    { lock (gate) { if (disposed || generation != expectedGeneration) return; efficiencyResetter = reset; } }
+    internal bool CanResetEfficiency { get { lock (gate) return !disposed && connected && efficiencyResetter is not null; } }
+    internal Task ResetEfficiencyAsync(long expectedGeneration)
+    {
+        Func<Task> reset; lock (gate) { RequireCurrentDraft(expectedGeneration); reset = !disposed && connected && efficiencyResetter is { } current ? current : throw new InvalidOperationException("請先完成登入。"); }
+        return reset();
+    }
     private ImmutableDictionary<string, GameAutomationStatus> automations = ImmutableDictionary<string, GameAutomationStatus>.Empty;
     private GameNavigationStatus navigationStatus = new(false, "尚未啟動導航");
     internal GameNavigationStatus NavigationStatus { get { lock (gate) return navigationStatus; } }
@@ -54,8 +64,9 @@ public sealed class DesktopSession : IDisposable
     internal Task StopNavigationAsync()
     { Func<Task>? stop; lock (gate) stop = navigationCancel; return stop?.Invoke() ?? Task.CompletedTask; }
     internal ImmutableDictionary<string, GameAutomationStatus> Automations { get { lock (gate) return automations; } }
-    internal void AttachAutomationSender(long expectedGeneration, Func<string, bool, GameAutomationSettings?, Task> sender)
-    { lock (gate) { if (disposed || generation != expectedGeneration) return; automationSender = sender; } }
+    internal void AttachAutomationSender(long expectedGeneration, Func<string, bool, GameAutomationSettings?, Task> sender,
+        Func<string, GameAutomationSettings, Task<bool>>? updater = null)
+    { lock (gate) { if (disposed || generation != expectedGeneration) return; automationSender = sender; automationUpdater = updater; } }
     internal Task SetAutomationAsync(string kind, bool enabled, GameAutomationSettings? settings = null)
     {
         Func<string, bool, GameAutomationSettings?, Task> sender;
@@ -75,8 +86,20 @@ public sealed class DesktopSession : IDisposable
     private ImmutableArray<string> actionLog = [];
     private ImmutableArray<GameServerEvent> serverEvents = [];
     internal ImmutableArray<GameServerEvent> ServerEvents { get { lock (gate) return serverEvents; } }
-    internal void SetServerEvents(long expectedGeneration, ImmutableArray<GameServerEvent> value)
-    { lock (gate) { if (disposed || generation != expectedGeneration || serverEvents == value) return; serverEvents = value; } Changed?.Invoke(); }
+    internal void SetServerEvents(long expectedGeneration, ImmutableArray<GameServerEvent> value, uint? currentRole)
+    {
+        lock (gate)
+        {
+            if (disposed || generation != expectedGeneration) return;
+            if (serverEvents == value && (value.IsEmpty || value[0].OwnerRoleId == currentRole)) return;
+            // Defense at the presentation boundary too: unknown or other-role receipts never appear.
+            var own = currentRole is null ? [] : value.All(e => e.OwnerRoleId == currentRole)
+                ? value : value.Where(e => e.OwnerRoleId == currentRole).ToImmutableArray();
+            if (serverEvents.SequenceEqual(own)) return;
+            serverEvents = own;
+        }
+        Changed?.Invoke();
+    }
     public GameActionStatus? ActionStatus { get { lock (gate) return actionStatus; } }
     public ImmutableArray<string> ActionLog { get { lock (gate) return actionLog; } }
     internal void AttachGameSender(long expectedGeneration, Func<GameAction, Task> sender)
@@ -223,7 +246,7 @@ public sealed class DesktopSession : IDisposable
             connectionText = "尚未連線"; connected = false; chatSender = null;
             gameReady = false; gameSender = null; actionStatus = null; actionLog = []; catalogs = null;
             serverEvents = [];
-            automationSender = null; automations = ImmutableDictionary<string, GameAutomationStatus>.Empty;
+            automationSender = null; automationUpdater = null; efficiencyResetter = null; automations = ImmutableDictionary<string, GameAutomationStatus>.Empty;
             navigationPreview = null; navigationStart = null; navigationCancel = null; navigationStatus = new(false, "尚未啟動導航");
             snapshot = new();
             labels = new(); itemImageReader = null; portraitReader = null; emojiReader = null; smallMapReader = null; npcReader = null;
@@ -273,7 +296,7 @@ public sealed class DesktopSession : IDisposable
             connected = false; chatSender = null;
             gameReady = false; gameSender = null; actionStatus = null; actionLog = []; catalogs = null;
             serverEvents = [];
-            automationSender = null; automations = ImmutableDictionary<string, GameAutomationStatus>.Empty;
+            automationSender = null; automationUpdater = null; efficiencyResetter = null; automations = ImmutableDictionary<string, GameAutomationStatus>.Empty;
             navigationPreview = null; navigationStart = null; navigationCancel = null; navigationStatus = new(false, "尚未啟動導航");
             generation = checked(generation + 1);
             snapshot = new();

@@ -27,8 +27,18 @@ public sealed record GameAutomationSettings
     public int StarBudget { get; init; } = 120;
     public bool StopOnPlayerDeath { get; init; }
     public bool StopOnPartnerDeath { get; init; }
+    public bool FieldHeal { get; init; }
+    public bool RepairEnabled {get;init;}
+    public int RepairBelow {get;init;}=50;
+    public ImmutableArray<ushort> RepairItems {get;init;}=[0,0];
+    public bool CleanupEnabled {get;init;}
+    public ImmutableArray<ushort> CleanupItems {get;init;}=[..Enumerable.Repeat((ushort)0,15)];
+    public FieldRecoverySettings HpRecovery { get; init; } = new() { PlayerPercent = 60, PartnerPercent = 60 };
+    public FieldRecoverySettings SpRecovery { get; init; } = new() { PlayerPercent = 30, PartnerPercent = 30 };
     public ImmutableArray<AlchemyIngredient> AlchemyMaterials { get; init; } = [];
     public string AlchemyMode { get; init; } = "none";
     public int AlchemyRuns { get; init; } = 1;
+    public ImmutableArray<GameCraftPlanEntry> CraftPlan { get; init; } = [];
+    public bool RestartCraftPlan { get; init; }
 }
 public sealed record GameAutomationStatus(string Kind, bool Enabled, string Message);

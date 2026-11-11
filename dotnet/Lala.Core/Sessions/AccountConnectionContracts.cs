@@ -85,6 +85,7 @@ public enum AccountReceivePhase { Created, Running, Ending, Ended }
 public sealed record AccountReceivePublication(Guid Attempt, long Revision, AccountReceivePhase Phase, ServiceStateSnapshot State)
 {
     public ImmutableArray<Lala.Core.Gameplay.GameServerEvent> Events { get; init; } = [];
+    public ImmutableArray<Lala.Core.Gameplay.GameServerEvent> CharacterEvents { get; init; } = [];
     public bool ResourceHeld => true;
     public override string ToString() => nameof(AccountReceivePublication);
 }

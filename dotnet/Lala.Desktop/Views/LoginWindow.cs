@@ -127,7 +127,7 @@ public sealed partial class LoginWindow : DesktopWindow, IAccountLoginInput, IAc
 
     private void UpdateAdmission()
     {
-        submit.IsEnabled = operation is null && !profileOperation && !closed && !string.IsNullOrWhiteSpace(account.Text) && !string.IsNullOrEmpty(password.Text) && catalog?.IsFresh == true && (resourcesReady is null || resourcesReady(catalog.Version)) &&
+        submit.IsEnabled = operation is null && !profileOperation && !closed && !string.IsNullOrWhiteSpace(account.Text) && !string.IsNullOrEmpty(password.Text) && catalog is not null && (resourcesReady is null || resourcesReady(catalog.Version)) &&
             lines.SelectedIndex >= 0 && lines.SelectedIndex < groupLines.Length && groupLines[lines.SelectedIndex].Profile is not null;
     }
     private void SelectServer()
@@ -201,7 +201,7 @@ public sealed partial class LoginWindow : DesktopWindow, IAccountLoginInput, IAc
         try
         {
             if (stopping) return;
-            if (catalog?.IsFresh != true || (resourcesReady is not null && !resourcesReady(catalog.Version)) || lines.SelectedIndex < 0 || lines.SelectedIndex >= groupLines.Length ||
+            if (catalog is null || (resourcesReady is not null && !resourcesReady(catalog.Version)) || lines.SelectedIndex < 0 || lines.SelectedIndex >= groupLines.Length ||
                 groupLines[lines.SelectedIndex].Profile is not { } profile)
                 throw new InvalidOperationException("No current supported official line selected.");
             attemptCatalog = catalog; attemptLineId = groupLines[lines.SelectedIndex].Id;
@@ -212,7 +212,7 @@ public sealed partial class LoginWindow : DesktopWindow, IAccountLoginInput, IAc
             cancellation = new(); core = new();
             var identity = Guid.NewGuid();
             var snapshot = core.Begin(identity.ToString("N"), profile.FormalEndpoint.ToString());
-            session.Reset(identity.ToString("N")); presentationGeneration = session.Generation;
+            session.Reset(AccountPreferenceIdentity.For(account.Text!, groupLines[lines.SelectedIndex].Group)); presentationGeneration = session.Generation;
             if (resourceRoot() is { } root)
             {
                 if (preparedResources is not null)
@@ -228,7 +228,9 @@ public sealed partial class LoginWindow : DesktopWindow, IAccountLoginInput, IAc
                 var sender = runtime; var sendToken = cancellation.Token;
                 session.AttachChatSender(presentationGeneration, (channel, text, target) => sender.SendChatAsync(channel, text, target, sendToken));
                 session.AttachGameSender(presentationGeneration, action => sender.ExecuteActionAsync(action, sendToken));
-                session.AttachAutomationSender(presentationGeneration, (kind, enabled, settings) => sender.SetAutomationAsync(kind, enabled, settings));
+                session.AttachAutomationSender(presentationGeneration, (kind, enabled, settings) => sender.SetAutomationAsync(kind, enabled, settings),
+                    (kind, settings) => sender.UpdateAutomationSettingsAsync(kind, settings));
+                session.AttachEfficiencyResetter(presentationGeneration, () => sender.ResetEfficiencyAsync());
                 session.AttachNavigation(presentationGeneration,
                     (target, token) => sender.PreviewNavigationAsync(target.Scene, target.X, target.Y, target.Synchronize, target.Mode, target.Smooth, token),
                     (target, token) => target.Mode == "land" ? sender.NavigateAsync(target.Scene, target.X, target.Y, target.Synchronize, token)
@@ -355,7 +357,7 @@ public sealed partial class LoginWindow : DesktopWindow, IAccountLoginInput, IAc
         session.SetConnectionText(connected ? "已連線｜" + resourceText : stageText);
         if (!openedMain) status.Text = stageText;
         if (publication is null) return;
-        session.SetServerEvents(presentationGeneration, publication.Events);
+        session.SetServerEvents(presentationGeneration, publication.CharacterEvents, publication.State.Player?.RoleId);
         if (!ReferenceEquals(publication, lastPublication) || !ReferenceEquals(catalogs, lastCatalogs))
         {
             lastPublication = publication; lastCatalogs = catalogs;

@@ -125,7 +125,10 @@ internal static partial class ManualGameCommands
             var issues = new List<Lala.Core.Expedition.ExpeditionAssessmentIssue>();
             var needed = Lala.Core.Expedition.ExpeditionTaskInspection.RewardSlots(c.Expedition.Tasks[team.Quest], c.Items, issues);
             Require(needed is not null && Context(s).Bag.Problem(needed.Value).Length == 0, "遠征獎勵種類未知，或背包空位不足。");
-            return Simple(new(31, 16, [(byte)a.Index]), "expedition", "領取遠征結果", next => next.Expedition.Teams.GetValueOrDefault((byte)a.Index)?.Quest == 0);
+            var claim=new ExpeditionClaimReceipt(a.Index,s.Bag);
+            return new(new(31,16,[(byte)a.Index]),"expedition","領取遠征結果",next=>next,
+                next=>claim.Acknowledged(next.Expedition.Teams.GetValueOrDefault((byte)a.Index)?.Quest==0,next.Bag))
+                {ObserveReceipt=claim.Observe};
         }
         Require(a.Operation == "dispatch" && a.Target <= 65535 && c.Expedition.Tasks.ContainsKey((ushort)a.Target) && e.Quests.ContainsValue((ushort)a.Target), "請選擇目前已同步的遠征任務。");
         var slots = (a.Values ?? ImmutableDictionary<string, int>.Empty).OrderBy(p => p.Key).Select(p => p.Value).ToArray();
@@ -179,13 +182,40 @@ internal static partial class ManualGameCommands
         }
         else if (a.Operation == "next")
         {
-            Require(dialogue.Active && dialogue.Scene == s.Player!.Scene && dialogue.Phase == "continue" && !session.EventFlow.AwaitingResponse, "目前沒有可接續的 NPC 對話。");
-            packet = new(20, 6); dialogue = dialogue with { Phase = "awaiting_reply" };
+            Require(dialogue.Active && dialogue.Scene == s.Player!.Scene && dialogue.Phase is "talk" or "continue" && !session.EventFlow.AwaitingResponse && s.Local.Battle.Active != true, "目前沒有可接續的 NPC 對話。");
+            packet = new(20, 6, [0]); dialogue = dialogue with { Phase = "awaiting_reply" };
+        }
+        else if (a.Operation is "choose" or "close_choice" or "close_shop")
+        {
+            Require(dialogue.Active && dialogue.Scene == s.Player!.Scene && dialogue.Phase == "choice_unavailable" && dialogue.EffectType == 6 &&
+                dialogue.OptionIndex is not null && !session.EventFlow.AwaitingResponse && s.Local.Battle.Active != true, "目前沒有可操作的 NPC 選項。");
+            Require(a.Scene == dialogue.Scene && a.Count == dialogue.OptionIndex, "對話場景或選單已變更。");
+            Require(dialogue.EffectPacket is not null && a.Key == dialogue.EffectPacket.Value.ToString(System.Globalization.CultureInfo.InvariantCulture), "NPC 對話已更新，請重新選擇。");
+            var rows = c.EveIndexes.Scenes.Where(scene => scene.SceneId == a.Scene).SelectMany(scene => scene.Interactions).Where(row => row.Index == dialogue.OptionIndex).ToArray();
+            Require(rows.Length == 1, "NPC 選單來源尚未唯一核對。");
+            if (a.Operation == "choose")
+            {
+                var menu = GameNpcChoices.Read(c.EveIndexes, c.Talks, a.Scene, dialogue.OptionIndex!.Value);
+                Require(menu is not null && a.Index >= 0 && a.Index < menu.Options.Length && menu.Options[a.Index].TextId == a.Target, "NPC 選項身分或官方文字已變更。");
+                packet = new(20, 9, [checked((byte)(30 + a.Index))]);
+                dialogue = dialogue with { Phase = "awaiting_choice", SelectedChoice = (byte)a.Index, ChoiceContinuationPending = true };
+            }
+            else if (a.Operation == "close_shop")
+            {
+                Require(rows[0].FormKind is 2 or 3 && SceneShopPreviewRequest.Build(rows[0], c.Items) is not null, "目前事件不是已核對的道具／武器商店。");
+                packet = new(20, 9); dialogue = dialogue with { Phase = "closing_shop", ChoiceContinuationPending = false };
+            }
+            else
+            {
+                Require(rows[0].FormKind == 1, "商店或未知類型不可使用一般選項關閉封包。");
+                packet = new(20, 9, [40]); dialogue = dialogue with { Phase = "closing", ChoiceContinuationPending = false };
+            }
         }
         else throw new ProtocolException("未知 NPC 操作或選項尚未核對。");
         var nextSession = session with { NpcDialogue = dialogue, EventFlow = session.EventFlow with { Blocked = true, AwaitingResponse = true, LastSource = "NPC 手動操作" } };
         return new(packet, "npc", "NPC 互動", next => CommandState.With(next, local: new(nextSession, next.Local.World, next.Local.Battle)),
-            next => !next.Local.Session.EventFlow.AwaitingResponse || !next.Local.Session.NpcDialogue.Active);
+            next => !next.Local.Session.EventFlow.AwaitingResponse || !next.Local.Session.NpcDialogue.Active)
+        { ContinueNpcChoice = a.Operation == "choose" };
     }
     private static GameActionPlan Daily(GameAction a, ServiceStateSnapshot s, OfflineRuntimeCandidate c, double now, string resourceKey)
     {

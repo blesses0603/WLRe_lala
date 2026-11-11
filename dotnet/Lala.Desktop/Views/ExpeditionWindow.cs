@@ -161,7 +161,7 @@ public sealed class ExpeditionWindow : DesktopWindow
             await session.SetAutomationAsync("expedition", enabled, settings);
             if (!closed) note.Text = enabled ? "自動派遣已啟動；符合條件後才會送出，結果由伺服器確認。" : "已停止後續派遣。";
         }
-        catch (Exception error) when (error is IOException or InvalidOperationException or ArgumentException or Lala.Core.Protocol.ProtocolException)
+        catch (Exception error) when (SettingsFiles.IsExpected(error) || error is Lala.Core.Protocol.ProtocolException)
         { if (!closed) note.Text = error.Message; }
     }
 

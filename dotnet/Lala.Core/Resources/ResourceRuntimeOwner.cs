@@ -338,6 +338,10 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
             if ((_bootstrapHooks?.ItemImagesForOfflineTest?.Invoke(prepared) ?? prepared.ItemImages) is { } batch)
             {
                 if (bootstrap)
+                    itemImages = await VerifiedCacheReuse.TryReadAsync(_itemImages, async () => new ItemImageReadback(batch,
+                        await SpritePngStore.ReadAsync(ImageConnection(SqliteOpenMode.ReadOnly), batch.Pixels,
+                            () => EnsureCurrent(generation, mine), mine.Token).ConfigureAwait(false)), mine.Token).ConfigureAwait(false);
+                if (bootstrap && itemImages is null)
                 {
                     // Reobserve remote identity before storage; reobserve again before publication.
                     // Remote changes cannot be made atomic with local SQLite. A later failure may
@@ -364,7 +368,7 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
                 }
                 EnsureCurrent(generation, mine);
                 // Read-only refresh never creates a missing image cache.
-                if (bootstrap || File.Exists(_itemImages))
+                if (itemImages is null && (bootstrap || File.Exists(_itemImages)))
                 {
                     var pngs = await SpritePngStore.ReadAsync(ImageConnection(SqliteOpenMode.ReadOnly), batch.Pixels,
                         () => EnsureCurrent(generation, mine), mine.Token).ConfigureAwait(false);
@@ -375,6 +379,10 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
             if ((_bootstrapHooks?.PortraitsForOfflineTest?.Invoke(prepared) ?? prepared.Portraits) is { } portraitBatch)
             {
                 if (bootstrap)
+                    portraits = await VerifiedCacheReuse.TryReadAsync(_portraits, () => PortraitPngStore.ReadAsync(
+                        PortraitConnection(SqliteOpenMode.ReadOnly), portraitBatch.Plan, portraitBatch.Rebuild,
+                        () => EnsureCurrent(generation, mine), mine.Token), mine.Token).ConfigureAwait(false);
+                if (bootstrap && portraits is null)
                 {
                     await _preparation.ConfirmUnchangedAsync(_source, prepared, mine.Token).ConfigureAwait(false);
                     EnsureCurrent(generation, mine);
@@ -397,18 +405,22 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
                     }
                 }
                 EnsureCurrent(generation, mine);
-                if (bootstrap || File.Exists(_portraits))
+                if (portraits is null && (bootstrap || File.Exists(_portraits)))
                 {
                     portraits = await PortraitPngStore.ReadAsync(PortraitConnection(SqliteOpenMode.ReadOnly), portraitBatch.Plan,
                         portraitBatch.Rebuild, () => EnsureCurrent(generation, mine), mine.Token).ConfigureAwait(false);
-                    portraits = portraits with { Mapping = portraitBatch.Mapping };
                 }
+                if (portraits is not null) portraits = portraits with { Mapping = portraitBatch.Mapping };
             }
             // Production uses verified closure reconstruction; offline hooks cannot replace it.
             progress?.Set("表情快取與回讀驗證");
             if ((prepared.Emojis ?? _bootstrapHooks?.EmojisForOfflineTest?.Invoke(prepared)) is { } emojiBatch)
             {
                 if (bootstrap)
+                    emojis = await VerifiedCacheReuse.TryReadAsync(_emojis, () => EmojiPngStore.ReadAsync(
+                        EmojiConnection(SqliteOpenMode.ReadOnly), emojiBatch.SourceFingerprint, emojiBatch.Rebuild,
+                        () => EnsureCurrent(generation, mine), mine.Token), mine.Token).ConfigureAwait(false);
+                if (bootstrap && emojis is null)
                 {
                     await _preparation.ConfirmUnchangedAsync(_source, prepared, mine.Token).ConfigureAwait(false);
                     EnsureCurrent(generation, mine);
@@ -431,7 +443,7 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
                     }
                 }
                 EnsureCurrent(generation, mine);
-                if (bootstrap || File.Exists(_emojis))
+                if (emojis is null && (bootstrap || File.Exists(_emojis)))
                 {
                     emojis = await EmojiPngStore.ReadAsync(EmojiConnection(SqliteOpenMode.ReadOnly), emojiBatch.SourceFingerprint,
                         emojiBatch.Rebuild, () => EnsureCurrent(generation, mine), mine.Token).ConfigureAwait(false);
@@ -442,13 +454,22 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
             if(smallMapSources is not null)
             {
                 var mapBatch=smallMapSources.Batch;
+                SmallMapPngSnapshot? writtenMaps=null;
                 if(bootstrap)
+                {
+                    progress?.Set("驗證既有小地圖快取",0,mapBatch.Paths.Count);
+                    smallMaps=await VerifiedCacheReuse.TryReadAsync(_smallMaps,()=>SmallMapPngStore.ReadWithProgressAsync(
+                        SmallMapConnection(SqliteOpenMode.ReadOnly),mapBatch,()=>EnsureCurrent(generation,mine),mine.Token,
+                        (done,total)=>progress?.Set("驗證既有小地圖快取",done,total)),mine.Token).ConfigureAwait(false);
+                }
+                if(bootstrap&&smallMaps is null)
                 {
                     smallMapStorage=AccountResourceStorageOutcome.Unknown;
                     try
                     {
-                        progress?.Set("寫入小地圖快取");
-                        await SmallMapPngStore.WriteAsync(SmallMapConnection(SqliteOpenMode.ReadWriteCreate),mapBatch,()=>EnsureCurrent(generation,mine),mine.Token).ConfigureAwait(false);
+                        progress?.Set("建立小地圖快取",0,mapBatch.Paths.Count);
+                        writtenMaps=await SmallMapPngStore.WriteForReadbackAsync(SmallMapConnection(SqliteOpenMode.ReadWriteCreate),mapBatch,()=>EnsureCurrent(generation,mine),mine.Token,
+                            (done,total)=>progress?.Set("建立小地圖快取",done,total)).ConfigureAwait(false);
                         smallMapStorage=AccountResourceStorageOutcome.Committed;
                     }
                     catch(Exception error)
@@ -458,8 +479,15 @@ internal sealed class ResourceRuntimeOwner : IAsyncDisposable
                     }
                 }
                 EnsureCurrent(generation,mine);
-                progress?.Set("獨立回讀並驗證小地圖");
-                if(bootstrap||File.Exists(_smallMaps))smallMaps=await SmallMapPngStore.ReadForPublicationAsync(SmallMapConnection(SqliteOpenMode.ReadOnly),mapBatch,()=>EnsureCurrent(generation,mine),mine.Token).ConfigureAwait(false);
+                if(writtenMaps is not null)
+                {
+                    progress?.Set("獨立回讀並驗證小地圖",0,mapBatch.Paths.Count);
+                    smallMaps=await SmallMapPngStore.ReadCapturedAsync(SmallMapConnection(SqliteOpenMode.ReadOnly),writtenMaps,()=>EnsureCurrent(generation,mine),mine.Token,
+                        (done,total)=>progress?.Set("獨立回讀並驗證小地圖",done,total)).ConfigureAwait(false);
+                }
+                else if(smallMaps is null&&File.Exists(_smallMaps))
+                    smallMaps=await SmallMapPngStore.ReadWithProgressAsync(SmallMapConnection(SqliteOpenMode.ReadOnly),mapBatch,()=>EnsureCurrent(generation,mine),mine.Token,
+                        (done,total)=>progress?.Set("獨立回讀並驗證小地圖",done,total)).ConfigureAwait(false);
             }
             progress?.Set("最終來源與版本重查");
             await _preparation.ConfirmUnchangedAsync(_source, prepared, mine.Token).ConfigureAwait(false);

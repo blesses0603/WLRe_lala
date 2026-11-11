@@ -432,6 +432,27 @@ internal sealed class BundleSourcePreparation
     private static async Task<byte[]> ReadBoundedAsync(Stream stream, long maximum, long? exact, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
+        if (exact is { } expected && expected > 0 && expected <= maximum && expected <= int.MaxValue)
+        {
+            // Bundle sizes come from the checked manifest. Avoid growing a second
+            // MemoryStream buffer and copying it again for every network/cache read.
+            byte[] bytes = new byte[(int)expected]; int offset = 0;
+            while (offset < bytes.Length)
+            {
+                token.ThrowIfCancellationRequested();
+                int requested = Math.Min(64 * 1024, bytes.Length - offset);
+                int count = await stream.ReadAsync(bytes.AsMemory(offset, requested), token).ConfigureAwait(false);
+                token.ThrowIfCancellationRequested();
+                if (count < 0 || count > requested) throw new BundleSourceException(BundleSourceFailure.ResponseLength, "Invalid stream read length");
+                if (count == 0) throw new BundleSourceException(BundleSourceFailure.ResponseLength, "Resource ended before its exact length");
+                offset += count;
+            }
+            token.ThrowIfCancellationRequested();
+            if (await stream.ReadAsync(new byte[1], token).ConfigureAwait(false) != 0)
+                throw new BundleSourceException(BundleSourceFailure.ResponseLength, "Resource exceeds its exact length");
+            token.ThrowIfCancellationRequested();
+            return bytes;
+        }
         using var output = new MemoryStream();
         byte[] chunk = new byte[64 * 1024];
         long length = 0;

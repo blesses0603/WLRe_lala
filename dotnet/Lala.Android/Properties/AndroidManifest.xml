@@ -5,7 +5,7 @@
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-  <application android:allowBackup="false" android:supportsRtl="true" android:label="LaLa 核心驗證">
+  <application android:allowBackup="false" android:supportsRtl="true" android:label="LaLa 手機預覽">
     <service android:name="io.lala.migration.ConnectionService"
         android:exported="false" android:stopWithTask="false"
         android:foregroundServiceType="specialUse">

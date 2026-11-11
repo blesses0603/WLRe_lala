@@ -97,6 +97,8 @@ public sealed partial class ResourceRuntimeBootstrapTests
         var pending = plan.Begin(state); Assert.True(pending.Local.Session.EventFlow.AwaitingResponse);
         Assert.False(plan.Acknowledged(pending)); Assert.Equal(state.PacketCount, pending.PacketCount);
         var ack = CommandState.With(pending, local: new(SessionEventReducer.Apply(pending.Local.Session, new EventEndEvent()), pending.Local.World, pending.Local.Battle));
+        Assert.False(plan.Acknowledged(ack));
+        plan.ObserveReceipt!(new(1,20,8,"event_end",""));
         Assert.True(plan.Acknowledged(ack));
     }
 

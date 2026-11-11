@@ -15,7 +15,7 @@ public sealed partial class PythonFeatureWindow : DesktopWindow
             ["instance"] = ("副本／協力房間管理", 1040, 600), ["benefits"] = ("福利", 860, 620),
             ["other"] = ("其他功能", 1080, 740), ["alchemy"] = ("煉金", 1040, 650),
             ["crafting"] = ("製作", 1080, 650), ["efficiency"] = ("經驗效率", 960, 610),
-            ["attributes"] = ("角色能力 · 配點", 570, 505), ["crafting-plan"] = ("自訂家具製作清單 · 不限項數", 900, 580),
+            ["attributes"] = ("角色能力 · 配點", 570, 505), ["crafting-plan"] = ("自訂製作清單 · 最多 512 項", 900, 580),
             ["crafting-queue"] = ("製作排程", 820, 420), ["emoji"] = ("遊戲表情", 284, 104)
         };
     private readonly DesktopSession session;
@@ -45,7 +45,16 @@ public sealed partial class PythonFeatureWindow : DesktopWindow
     {
         if(emoji is null)return;closed=true;session.Changed-=Changed;await emoji.DisposeAsync();emojiClosed=true;
     }
-    private void Changed() => Ui.OnUi(() => { if (!closed) { if (generation != session.Generation) { generation = session.Generation; if(key!="emoji")Build(); } Refresh(); } });
+    private void Changed() => Ui.OnUi(() =>
+    {
+        if (closed) return;
+        if (generation != session.Generation)
+        {
+            if (key != "emoji") { Close(); return; }
+            generation = session.Generation;
+        }
+        Refresh();
+    });
     private void Build()
     {
         tables.Clear(); cubeStatus = guildStatus = arkStatus = null;
@@ -103,12 +112,7 @@ public sealed partial class PythonFeatureWindow : DesktopWindow
     private Control Party()
     {
         var guard = new StackPanel { Spacing = 8 };
-        guard.Children.Add(Check("名單未到齊時，遇戰自動逃跑"));
-        var entries = Enumerable.Range(1, 4).Select(i => Edit("名稱／ID")).ToArray();
-        for (int i = 0; i < entries.Length; i++) guard.Children.Add(Ui.Row(Ui.Text((i + 1).ToString()), entries[i], Ui.Text("未指定")));
-        guard.Children.Add(Actions("帶入目前隊伍", "儲存並套用"));
-        guard.Children.Add(Ui.Button("清空", () => { foreach (var entry in entries) entry.Text = ""; }));
-        guard.Children.Add(Ui.Text("草稿尚未套用；必要隊員規則尚未接入桌面執行。", 12, Ui.Muted));
+        guard.Children.Add(PartyGuardControls());
         return Columns("*,300", Page("隊伍管理", Ui.Text("隊伍狀態由伺服器同步"),
             Ui.Row(Ui.Text("目標"), partyTarget = Edit("角色 ID"), GameButton("開啟組隊", () => new("party", "flag"))),
             Actions("邀請組隊", "申請入隊", "離隊／解散"),
@@ -137,26 +141,14 @@ public sealed partial class PythonFeatureWindow : DesktopWindow
             Actions("領取選取任務", "開啟相關功能", "領取活躍寶箱"), Ui.Text("選取任務可查看執行方式；進度由伺服器確認。"));
     }
     private Control Assistant()
-    {
-        var toggles = new WrapPanel();
-        foreach (var label in new[] { "魔方開啟", "任務／寶箱領獎", "組織簽到", "組織捐獻", "方舟派遣", "方舟戰鬥", "方舟問答" }) toggles.Children.Add(Check(label));
-        return Page("每日助手", toggles, Columns("*,*", Ui.Column(Field("金幣上限（本輪）", Edit()), Field("每日捐獻總次數 1–5", Edit())),
-            Ui.Column(Field("星力上限（本次登入）", Edit()), Field("派遣小時 1–6", Edit()))),
-            Field("捐獻方案", Ui.Combo(["初級捐獻", "中級捐獻", "高級捐獻"])), Actions("套用助手設定", "暫停全部接續"),
-            Table("AssistantTasks", ["今日任務", "伺服器進度", "執行分類", "說明"], 160), Ui.Text("勾選只修改草稿；尚未接入設定套用或自動接續。", color: Ui.Muted));
-    }
+        => AssistantControls();
     private Control Ark() => ArkControls();
     private Control Guild() => GuildControls();
     private Control Alchemy() => AlchemyControls();
     private Control Crafting() => CraftControls();
     private Control Queue() => CraftQueueControls();
-    private Control Plan() => Page("自訂製作清單", Ui.Text("加入配方、調整批數與順序，再開始執行；開始後會消耗材料。"),
-        Table("CraftPlan", ["順序", "家具／製作物", "批數", "總產量"], 270), Actions("加入目前配方", "上移", "下移", "移除", "清空", "儲存", "載入"),
-        Ui.Row(Ui.Text("選取項目總批數"), Edit(text: "1"), Ui.Unavailable("更新批數")), Actions("開始／繼續清單", "暫停清單"),
-        Ui.Text("製作方案編輯與匯入／匯出尚未接線；不會送出或消耗材料。", color: Ui.Muted));
-    private Control Efficiency() => Page("經驗效率", Ui.Row(Ui.Text("統計對象"), Ui.Combo([], -1), Ui.Text("效率單位"), Ui.Combo(["天", "時", "分"], 2), Ui.Unavailable("重設統計")),
-        Ui.Card("", Ui.Column(Ui.Text("等待登入角色與經驗資料"), Ui.Text("首場作基準，從第二個有效樣本計算效率"), new ProgressBar { Maximum = 100, Value = 0 })),
-        Table("Efficiency", ["統計範圍", "經驗／分", "升級倒數", "一轉190倒數"], 160), Ui.Text("只統計本機角色與已確認的所屬夥伴／坐騎；效率投影尚未接入。", color: Ui.Muted));
+    private Control Plan() => CraftPlanControls();
+    private Control Efficiency() => EfficiencyControls();
     private Control Attributes()
         => AttributeControls();
     private void Refresh()
@@ -167,7 +159,10 @@ public sealed partial class PythonFeatureWindow : DesktopWindow
         RefreshServiceTables();
         RefreshAlchemyControls();
         RefreshCraftControls();
+        RefreshCraftPlanControls();
         RefreshSocialControls();
+        RefreshAssistantControls();
+        RefreshEfficiencyControls();
         if (tables.TryGetValue("Companions", out var companions)) companions.SetRows(s.Companions.CompanionOrder
             .Where(s.Companions.Companions.ContainsKey).Select(i => { var c = s.Companions.Companions[i].Data; return (i.ToString(), new[] { i.ToString(), c.Name ?? $"夥伴 {c.NpcId}", c.Level.ToString(), c.Hp?.ToString() ?? "待同步", c.Sp?.ToString() ?? "待同步", s.Companions.ActiveNpcId == c.NpcId ? "出戰" : "休息" }); }));
         if (tables.TryGetValue("PartyMembers", out var members))

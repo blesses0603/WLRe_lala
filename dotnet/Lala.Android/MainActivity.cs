@@ -5,7 +5,7 @@ using Lala.Android.Platform;
 
 namespace Lala.Android;
 
-[Activity(Label = "LaLa 核心驗證", Theme = "@style/LaLaTheme", MainLauncher = true, Exported = true,
+[Activity(Label = "LaLa 手機預覽", Theme = "@style/LaLaTheme", MainLauncher = true, Exported = true,
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode)]
 public sealed class MainActivity : AvaloniaMainActivity
 {
@@ -19,6 +19,7 @@ public sealed class MainActivity : AvaloniaMainActivity
     {
         base.OnResume();
         ConnectionServiceClient.Instance.SetResumed(this, true);
+        (Avalonia.Application.Current as AndroidApp)?.ResumeInspection();
     }
 
     protected override void OnPause()

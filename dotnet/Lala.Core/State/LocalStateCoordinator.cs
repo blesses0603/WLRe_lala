@@ -63,7 +63,7 @@ public sealed class LocalStateCoordinator
         return Apply(ServerProtocol.Decode(packet, state.Player?.RoleId));
     }
 
-    public LocalStateSnapshot Apply(ServerEvent observation)
+    public LocalStateSnapshot Apply(ServerEvent observation, double? observedAt = null)
     {
         AssertWriter();
         ArgumentNullException.ThrowIfNull(observation);
@@ -74,15 +74,20 @@ public sealed class LocalStateCoordinator
         {
             case ServerLayoutEvent { Event: WorldPlayerEvent }:
             case PositionSnapshotEvent or MovementRequestEvent or NavigationGeometryChangeEvent or WalkEvent:
+            case SceneNpcMoveEvent or SceneNpcVisibilityEvent or SceneNpcStatusEvent or SceneNpcTeleportEvent or SceneNpcShowEvent:
             case ServerSocialEvent { Event: NearbyLeaveEvent }:
             case ServerInventoryEvent { Event: CraftFurnitureEvent }:
-                ReplaceWorld(WorldEventReducer.Apply(state.World, observation, currentCatalog));
+                ReplaceWorld(WorldEventReducer.Apply(state.World, observation, currentCatalog, observedAt));
+                if(observation is ServerLayoutEvent{Event:WorldPlayerEvent}||observation is PositionSnapshotEvent fix&&fix.RoleId==state.Player?.RoleId)
+                    state=new(state.Session with{EventFlow=state.Session.EventFlow with{PermissionPacket=null,PermissionTracked=true}},state.World,state.Battle);
                 break;
             case ServerLayoutEvent { Event: BattleStartEvent or BattleUnitsEvent }:
             case BattleAttributeSetEvent or RoundStartEvent or BattleUnitExitEvent or FightExitEvent
                 or AttackResultEvent or WarStyleEvent or WinnerEvent:
                 state = new(state.Session, state.World,
                     BattleEventReducer.Apply(state.Battle, observation, state.Player?.RoleId));
+                if(observation is ServerLayoutEvent{Event:BattleStartEvent})
+                    state=new(state.Session with{EventFlow=state.Session.EventFlow with{PermissionPacket=null,PermissionTracked=true}},state.World,state.Battle);
                 break;
             case ServerLayoutEvent { Event: RoleListAvailableEvent }:
             case LoginResultEvent or MovementStopEvent or NpcEffectEvent or EventActiveEvent

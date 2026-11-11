@@ -63,6 +63,8 @@ internal sealed class HeldAccountConnection : IAsyncDisposable
     internal Task<ServiceStateSnapshot> ApplyCommandAsync(Func<ServiceStateSnapshot, ServiceStateSnapshot> transition, CancellationToken token)
         => receive.ApplyCommandAsync(transition, token);
     internal Task SendGameAsync(Func<Packet> prepare, CancellationToken token) => transport.SendGameAsync(prepare, token);
+    internal IDisposable WatchReceipts(Lala.Core.Gameplay.GameReceiptWatch watch)=>receive.WatchReceipts(watch);
+    internal bool BatchDrained=>receive.BatchDrained;
     internal IReadOnlyList<Transport.TcpTransportView> Connections => transport.Connections;
     internal bool ResourceHeld => true;
     internal bool CanSendCommands => false;

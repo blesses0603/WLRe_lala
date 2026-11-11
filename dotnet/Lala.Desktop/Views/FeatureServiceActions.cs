@@ -44,7 +44,8 @@ public sealed partial class PythonFeatureWindow
                 var settings = GameplayPreferences.Read(session) with
                 {
                     DailyCube = dailyToggles.GetValueOrDefault("cube")?.IsChecked == true,
-                    DailyRewards = dailyToggles.GetValueOrDefault("daily")?.IsChecked == true || dailyToggles.GetValueOrDefault("weekly")?.IsChecked == true
+                    DailyRewards = dailyToggles.GetValueOrDefault("daily")?.IsChecked == true || dailyToggles.GetValueOrDefault("weekly")?.IsChecked == true,
+                    GuildSign = false, GuildDonate = false
                 };
                 await session.SetAutomationAsync("daily", settings.DailyCube || settings.DailyRewards, settings);
             }

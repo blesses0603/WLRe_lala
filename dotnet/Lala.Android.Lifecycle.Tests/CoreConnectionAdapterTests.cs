@@ -123,7 +123,9 @@ public sealed class CoreConnectionAdapterTests
             await EnterWorld(client);
             await client.Send(new Packet(26, 4, [42, 0, 0, 0]), new Packet(1, 23));
             await client.Expect(63, 5); ready.SetResult();
-            await Assert.ThrowsAsync<IOException>(() => client.Next());
+            // Closing an owned socket can surface as EOF or a TCP reset on Windows.
+            var ended = await Record.ExceptionAsync(() => client.Next());
+            Assert.True(ended is IOException or SocketException, $"Expected connection closure, received {ended?.GetType().Name ?? "a packet"}.");
         });
         var credentials = new AccountLoginCredentials("synthetic", "fake_password");
         int resolves = 0, acquisitions = 0;

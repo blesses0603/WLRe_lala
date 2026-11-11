@@ -12,15 +12,29 @@ internal static class GameplayPreferences
         var value = session.Preferences.ReadBattle(session.IdentityKey).Value;
         var expedition = session.Preferences.ReadExpedition(session.IdentityKey);
         var party = value["party_guard"]!;
+        var assistant = session.Preferences.ReadAssistant(session.IdentityKey);
         return new()
         {
             Player = Profile(BattleSettingsDraft.Profile(value, "player")), Partner = Profile(BattleSettingsDraft.Profile(value, "partner")),
+            FieldHeal = BattleSettingsDraft.Bool(value["field_heal"]), HpRecovery = Recovery(value["recovery"]!["hp"]!), SpRecovery = Recovery(value["recovery"]!["sp"]!),
+            RepairEnabled=BattleSettingsDraft.Bool(value["maintenance"]!["repair_enabled"]),RepairBelow=BattleSettingsDraft.Int(value["maintenance"]!["repair_below"]),
+            RepairItems=[..((JsonArray)value["maintenance"]!["repair_items"]!).Select(v=>checked((ushort)BattleSettingsDraft.Int(v)))],
+            CleanupEnabled=BattleSettingsDraft.Bool(value["maintenance"]!["cleanup_enabled"]),CleanupItems=[..((JsonArray)value["maintenance"]!["cleanup_items"]!).Select(v=>checked((ushort)BattleSettingsDraft.Int(v)))],
             RequiredParty = BattleSettingsDraft.Bool(party["enabled"]) ? [..((JsonArray)party["members"]!).Select(row => checked((uint)BattleSettingsDraft.Number(row!["role_id"])))] : [],
             ExpeditionMinHours = expedition.MinHours, ExpeditionMinFaith = expedition.MinFaith, ExpeditionMinSuccess = expedition.MinSuccess,
-            ExpeditionAutoClaim = expedition.AutoClaim, RestoreItem = expedition.RestoreItemId
-            , StopOnPlayerDeath = BattleSettingsDraft.Bool(value["bPlayerDieCloseAI"]), StopOnPartnerDeath = BattleSettingsDraft.Bool(value["bNPCDieCloseAI"])
+            ExpeditionAutoClaim = expedition.AutoClaim, RestoreItem = expedition.RestoreItemId,
+            DailyCube = assistant.Cube, DailyRewards = assistant.Rewards, GuildSign = assistant.GuildSign, GuildDonate = assistant.GuildDonate,
+            DonationSellId = assistant.DonationPlan, DonationTarget = assistant.DonationTarget, GoldBudget = assistant.GoldBudget,
+            ArkDispatch = assistant.ArkDispatch, ArkQuestions = assistant.ArkQuestions, ArkFights = assistant.ArkFights, ArkHours = assistant.ArkHours, StarBudget = assistant.StarBudget,
+            StopOnPlayerDeath = BattleSettingsDraft.Bool(value["bPlayerDieCloseAI"]), StopOnPartnerDeath = BattleSettingsDraft.Bool(value["bNPCDieCloseAI"])
         };
     }
+    private static FieldRecoverySettings Recovery(JsonNode config) => new()
+    {
+        Enabled = BattleSettingsDraft.Bool(config["enabled"]), OtherItems = BattleSettingsDraft.Bool(config["other_items"]),
+        Storage = config["storage"]!.GetValue<string>(), PlayerPercent = BattleSettingsDraft.Int(config["player_percent"]), PartnerPercent = BattleSettingsDraft.Int(config["partner_percent"]),
+        Items = [..((JsonArray)config["items"]!).Select(v => checked((ushort)BattleSettingsDraft.Int(v)))]
+    };
     private static AutoBattleProfile Profile(JsonObject p) => new()
     {
         DeadEnabled = BattleSettingsDraft.Bool(p["bDeadAction"]), Dead = Action(p["deadAction"]!),

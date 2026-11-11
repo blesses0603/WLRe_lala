@@ -97,29 +97,52 @@ public static class WireCodec
 public sealed class FrameDecoder
 {
     private readonly byte key;
-    private readonly List<byte> buffer = [];
-    public int BufferedBytes => buffer.Count;
+    private byte[] buffer = new byte[4];
+    private int buffered, frameLength = 4;
+    public int BufferedBytes => buffered;
     public FrameDecoder(int xorKey = 0xAD) { WireCodec.ValidateKey(xorKey); key = (byte)xorKey; }
     public IReadOnlyList<Packet> Feed(ReadOnlySpan<byte> input)
     {
-        foreach (byte b in input) buffer.Add((byte)(b ^ key));
         List<Packet> packets = [];
-        int consumed = 0;
-        while (buffer.Count - consumed >= 4)
+        while (!input.IsEmpty)
         {
-            if (buffer[consumed] != 0xC4 || buffer[consumed + 1] != 0xC6)
-                throw new ProtocolException("bad frame magic; incomplete capture or different wire codec");
-            int size = buffer[consumed + 2] | (buffer[consumed + 3] << 8);
-            if (size < 2) throw new ProtocolException("frame shorter than main/sub header");
-            if (buffer.Count - consumed < size + 4) break;
-            packets.Add(Packet.FromBody(buffer.GetRange(consumed + 4, size).ToArray()));
-            consumed += size + 4;
+            var packet = ReadFrame(input, out int consumed);
+            input = input[consumed..];
+            if (packet is not null) packets.Add(packet);
         }
-        if (consumed > 0) buffer.RemoveRange(0, consumed);
         return packets;
+    }
+    /// <summary>Consume at most one frame. Lets a receiver commit preceding valid frames
+    /// before a later invalid frame, without a lock/allocation for every single byte.</summary>
+    internal Packet? ReadFrame(ReadOnlySpan<byte> input, out int consumed)
+    {
+        consumed = 0;
+        while (!input.IsEmpty)
+        {
+            int take = Math.Min(input.Length, frameLength - buffered);
+            for (int i = 0; i < take; i++) buffer[buffered + i] = (byte)(input[i] ^ key);
+            buffered += take; consumed += take; input = input[take..];
+            if (buffered < frameLength) return null;
+            if (frameLength == 4)
+            {
+                if (buffer[0] != 0xC4 || buffer[1] != 0xC6)
+                    throw new ProtocolException("bad frame magic; incomplete capture or different wire codec");
+                int size = buffer[2] | (buffer[3] << 8);
+                if (size < 2) throw new ProtocolException("frame shorter than main/sub header");
+                frameLength = size + 4;
+                if (buffer.Length < frameLength) Array.Resize(ref buffer, frameLength);
+            }
+            else
+            {
+                var packet = Packet.FromBody(buffer.AsSpan(4, frameLength - 4));
+                buffered = 0; frameLength = 4;
+                return packet;
+            }
+        }
+        return null;
     }
     public void Finish()
     {
-        if (buffer.Count > 0) throw new ProtocolException($"incomplete final frame: {buffer.Count} bytes");
+        if (buffered > 0) throw new ProtocolException($"incomplete final frame: {buffered} bytes");
     }
 }

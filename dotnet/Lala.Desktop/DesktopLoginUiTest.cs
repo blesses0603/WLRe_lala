@@ -205,7 +205,8 @@ internal static class DesktopLoginUiTest
             Check(!login.GetVisualDescendants().OfType<TextBlock>().Any(t => t.Text?.Contains("private failure") == true), "source failure details are sanitized");
             fail = false; snapshot = snapshot with { ObservedAt = System.Diagnostics.Stopwatch.GetTimestamp() - 301L * System.Diagnostics.Stopwatch.Frequency };
             login.StartDiscovery(); servers.SelectedIndex = 0;
-            Check(!Find<Button>(login, "LoginSubmit").IsEnabled, "stale catalog cannot enable login");
+            Find<TextBox>(login, "LoginAccount").Text = "synthetic"; Find<TextBox>(login, "LoginPassword").Text = "fake";
+            Check(Find<Button>(login, "LoginSubmit").IsEnabled, "aged UI catalog can request login; fresh target revalidation still gates TCP");
             Check(!login.GetVisualDescendants().Any(c => c.Name is "LoginVerification" or "LoginFormal" or "LoginTxXor" or "LoginRxXor"), "technical connection input removed");
         }
         finally { await login.ShutdownAsync(); login.Close(); }

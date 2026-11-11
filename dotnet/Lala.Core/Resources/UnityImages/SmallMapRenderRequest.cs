@@ -7,12 +7,15 @@ internal sealed class SmallMapPngSnapshot
 {
     private readonly FrozenDictionary<int,byte[]> images;
     private readonly FrozenDictionary<int,string> hashes;
+    private readonly int[] sourceOrder;
     internal SmallMapPngReadback Readback {get;}
     internal SmallMapPngSnapshot(SmallMapPngReadback readback,Dictionary<int,byte[]> owned)
-    {Readback=readback;images=owned.ToFrozenDictionary();hashes=owned.ToFrozenDictionary(p=>p.Key,p=>SpritePng.Hash(p.Value));}
+    {Readback=readback;sourceOrder=owned.Keys.ToArray();images=owned.ToFrozenDictionary();hashes=owned.ToFrozenDictionary(p=>p.Key,p=>SpritePng.Hash(p.Value));}
     internal string Hash(int model)=>hashes[model];
     internal bool Contains(int model)=>images.ContainsKey(model);
     internal byte[]? Copy(int model)=>images.TryGetValue(model,out var png)?png.ToArray():null;
+    internal IEnumerable<int> Models=>sourceOrder;
+    internal bool Matches(int model,ReadOnlySpan<byte> png)=>images.TryGetValue(model,out var expected)&&png.SequenceEqual(expected);
 }
 /// <summary>Current map artwork only. Reviewed position projection only; no navigation or packet authority.</summary>
 public sealed class SmallMapRenderRequest
@@ -29,4 +32,6 @@ public sealed class SmallMapRenderRequest
     {pixel=default;if(!IsCurrent||projection is null||!projection.TryProject(x,y,out var result)||!IsCurrent)return false;pixel=result;return true;}
     public bool TryReadPng(out byte[]? png)
     {png=null;if(!IsCurrent)return false;var copy=snapshot.Copy(Model);if(copy is null||!IsCurrent)return false;png=copy;return true;}
+    public bool TrySelectPosition(SmallMapPixel pixel,out ushort x,out ushort y)
+    {x=y=0;if(!IsCurrent||projection is null||!projection.TryUnproject(pixel,out var px,out var py)||!IsCurrent)return false;x=px;y=py;return true;}
 }

@@ -81,11 +81,42 @@ public sealed class SmallMapReceiptTests:IDisposable
         var read=await SmallMapPngStore.ReadAsync(Connection(),batch,()=>checks++);Assert.Equal(6,cache.Opens);
         Assert.Equal(written,read);Assert.Equal(2,read.Count);Assert.Equal(2,checks);Assert.False(read.HasVerifiedProvenance);
     }
+    [Fact]
+    public async Task Captured_roundtrip_reopens_SQLite_without_repeating_bundle_or_pixel_decode()
+    {
+        var f=Fixture(5);var cache=new Cache(f.Bytes);await using var batch=new SmallMapReceiptBatch(f.Manifest,"1.3.23",cache,[f.Receipt]);
+        var progress=new List<(int,int)>();int checks=0;
+        var captured=await SmallMapPngStore.WriteForReadbackAsync(Connection(),batch,()=>checks++,report:(done,total)=>progress.Add((done,total)));
+        Assert.Equal(3,cache.Opens);Assert.Equal(new[]{(1,2),(2,2)},progress);
+        progress.Clear();var read=await SmallMapPngStore.ReadCapturedAsync(Connection(),captured,()=>checks++,report:(done,total)=>progress.Add((done,total)));
+        Assert.Same(captured,read);Assert.Equal(3,cache.Opens);Assert.Equal(2,checks);Assert.Equal(new[]{(1,2),(2,2)},progress);
+        Assert.Equal(PngPixelHash((await batch.RebuildAsync(10001)).CopyPng()),PngPixelHash(read.Copy(10001)!));
+    }
+    [Fact]
+    public async Task Captured_readback_keeps_manifest_root_order_when_model_numbers_interleave()
+    {
+        var f=Fixture(5);var index=BundleSourceFixtures.Index("main-valid");
+        index["header"]!["package_version"]=EmojiSourcePlan.MainVersion;
+        var bundles=new JsonArray();var assets=new JsonArray();
+        foreach(var (name,model) in new[]{("z.bundle",10001),("a.bundle",10002)})
+        {
+            var b=index["bundles"]![0]!.DeepClone();b["name"]=name;b["dependency_ids"]=new JsonArray();b["file_size"]=(long)f.Bytes.Length;
+            b["file_hash"]=f.Receipt.Spec.Md5;b["file_crc"]=f.Receipt.Spec.Crc32Le;
+            var a=index["assets"]![0]!.DeepClone();a["bundle_id"]=bundles.Count;a["path"]=SmallMapSourcePlan.Prefix+"SmallMap2D_"+model+".png";
+            bundles.Add(b);assets.Add(a);
+        }
+        index["bundles"]=bundles;index["assets"]=assets;var manifest=YooAssetManifest.Parse(BundleSourceFixtures.Encode(index));
+        var receipts=manifest.Bundles.Select(b=>new BundleStreamReceipt(new("1.3.23",manifest,b),f.Receipt.Sha256)).ToArray();
+        var cache=new Cache(f.Bytes);await using var batch=new SmallMapReceiptBatch(manifest,"1.3.23",cache,receipts);
+        var captured=await SmallMapPngStore.WriteForReadbackAsync(Connection(),batch,()=>{});
+        Assert.Equal(new[]{10002,10001},captured.Models);
+        Assert.Same(captured,await SmallMapPngStore.ReadCapturedAsync(Connection(),captured,()=>{}));
+    }
     [Theory][InlineData("png")][InlineData("source")][InlineData("path")][InlineData("pixel")][InlineData("missing")][InlineData("extra")][InlineData("type")][InlineData("oversize")]
     public async Task SQLite_changed_rows_cannot_authorize_pixels(string change)
     {
         var f=Fixture(1);await using var batch=new SmallMapReceiptBatch(f.Manifest,"1.3.23",new Cache(f.Bytes),[f.Receipt]);
-        await SmallMapPngStore.WriteAsync(Connection(),batch,()=>{});
+        var captured=await SmallMapPngStore.WriteForReadbackAsync(Connection(),batch,()=>{});
         Execute(change switch
         {
             "png"=>"UPDATE smallmap_frames_v1 SET png=zeroblob(length(png))",
@@ -98,6 +129,7 @@ public sealed class SmallMapReceiptTests:IDisposable
             _=>"UPDATE smallmap_frames_v1 SET png=zeroblob(4194305)"
         });
         await Assert.ThrowsAsync<UnityTextAssetException>(()=>SmallMapPngStore.ReadAsync(Connection(),batch,()=>{}));
+        await Assert.ThrowsAsync<UnityTextAssetException>(()=>SmallMapPngStore.ReadCapturedAsync(Connection(),captured,()=>{}));
     }
     [Theory][InlineData(false)][InlineData(true)]
     public async Task SQLite_failed_final_revalidation_rolls_back_prior_batch(bool cancel)
@@ -128,6 +160,9 @@ public sealed class SmallMapReceiptTests:IDisposable
         var f=Fixture();await using var batch=new SmallMapReceiptBatch(f.Manifest,"1.3.23",new Cache(f.Bytes),[f.Receipt]);
         await SmallMapPngStore.WriteAsync(Connection(),batch,()=>{});
         await Assert.ThrowsAsync<InvalidOperationException>(()=>SmallMapPngStore.ReadForPublicationAsync(Connection(),batch,()=>throw new InvalidOperationException("revoked")));
+        var captured=await SmallMapPngStore.WriteForReadbackAsync(Connection(),batch,()=>{});
+        await Assert.ThrowsAsync<InvalidOperationException>(()=>SmallMapPngStore.ReadCapturedAsync(Connection(),captured,()=>throw new InvalidOperationException("revoked")));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(()=>SmallMapPngStore.ReadCapturedAsync(Connection(),captured,()=>{},new(true)));
     }
 
 }

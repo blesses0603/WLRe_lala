@@ -17,7 +17,8 @@ internal sealed class ResourceStageProgress
     internal double Value { get; private set; }
     internal void Observe(ResourcePreparationProgress progress)
     {
-        int stage = Array.IndexOf(Stages, progress.Phase);
+        string phase = progress.Phase is "驗證既有小地圖快取" or "建立小地圖快取" ? "寫入小地圖快取" : progress.Phase;
+        int stage = Array.IndexOf(Stages, phase);
         if (stage < 0) return;
         double fraction = progress.Total is > 0 && progress.Completed is {} completed
             ? Math.Clamp((double)completed / progress.Total.Value, 0, 1) : 0;

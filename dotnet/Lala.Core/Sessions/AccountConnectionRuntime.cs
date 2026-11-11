@@ -133,6 +133,8 @@ public sealed class AccountConnectionRuntime : IAsyncDisposable
         => connection.ApplyCommandAsync(attempt, transition, token);
     internal Task SendGameAsync(Guid attempt, Func<Lala.Core.Protocol.Packet> prepare, CancellationToken token)
         => connection.SendGameAsync(attempt, prepare, token);
+    internal IDisposable WatchReceipts(Guid attempt,Lala.Core.Gameplay.GameReceiptWatch watch)=>connection.WatchReceipts(attempt,watch);
+    internal bool IsBatchDrained(Guid attempt)=>connection.IsBatchDrained(attempt);
     internal (AccountConnectionStatus Connection, AccountReceivePublication? Publication) ReadPublication()
     {
         lock (gate)
@@ -150,7 +152,7 @@ public sealed class AccountConnectionRuntime : IAsyncDisposable
                 {
                     ReceiveStage.Created => AccountReceivePhase.Created, ReceiveStage.Running => AccountReceivePhase.Running,
                     ReceiveStage.Ending => AccountReceivePhase.Ending, _ => AccountReceivePhase.Ended
-                }, value.Snapshot) { Events = value.Events };
+                }, value.Snapshot) { Events = value.Events, CharacterEvents = value.CharacterEvents };
             }
             return (observedStatus!, observedPublication);
         }

@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Lala.Core.Tests.Sessions.Loopback;
 
-public sealed class HeldAccountConnectionTests
+public sealed partial class HeldAccountConnectionTests
 {
     private static readonly TimeSpan Guard = TimeSpan.FromSeconds(30);
     private static Packet Roles => new(63, 1, new PacketWriter().U8(1).U8(0).U8(1).U8(1)

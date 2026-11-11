@@ -9,10 +9,46 @@ namespace Lala.Core.Tests.Resources;
 
 public sealed class ResourceRuntimeOwnerTests
 {
+    [Theory]
+    [InlineData("item")][InlineData("portrait")][InlineData("emoji")]
+    public async Task Bootstrap_reuses_fully_verified_image_cache_without_rewrite_or_new_bundle_download(string family)
+    {
+        using var fixture=new Fixture();var source=new Source();
+        var hooks=new ResourceRuntimeBootstrapTestHooks
+        {
+            ItemImagesForOfflineTest=family=="item"?p=>ImageBatchFixtures.Batch(p.Identity.Key):null,
+            PortraitsForOfflineTest=family=="portrait"?_=>PortraitRuntimeFixtures.Batch():null,
+            EmojisForOfflineTest=family=="emoji"?_=>EmojiRuntimeFixtures.Batch():null
+        };
+        await using var owner=ResourceRuntimeOwner.CreateForOfflineTests(fixture.Root,source,bootstrapHooks:hooks);
+        var first=await owner.BootstrapAndRefreshAsync();Assert.Null(first.Failure);
+        string filename=family switch{"item"=>"core_item_images_v1.sqlite3","portrait"=>"core_portraits_v1.sqlite3",_=>"core_emojis_v1.sqlite3"};
+        string path=Path.Combine(fixture.Root,"official_sync","derived_catalogs",filename);
+        byte[] before=File.ReadAllBytes(path);var stamp=new DateTime(2001,2,3,4,5,6,DateTimeKind.Utc);File.SetLastWriteTimeUtc(path,stamp);
+        int requests=source.BundleRequests;int observations=source.Observations;
+        var reused=await owner.BootstrapAndRefreshAsync();Assert.Null(reused.Failure);Assert.NotNull(reused.Publication);
+        Assert.Equal(AccountResourceStorageOutcome.NotAttempted,family switch{"item"=>reused.ItemImageStorageOutcome,"portrait"=>reused.PortraitStorageOutcome,_=>reused.EmojiStorageOutcome});
+        Assert.Equal(before,File.ReadAllBytes(path));Assert.Equal(stamp,File.GetLastWriteTimeUtc(path));
+        Assert.Equal(requests,source.BundleRequests);Assert.True(source.Observations>observations); // Fresh origin/manifest checks remain.
+        Assert.False(owner.TryActivate(reused.Publication,out _));
+        using(var db=new SqliteConnection(new SqliteConnectionStringBuilder{DataSource=path,Mode=SqliteOpenMode.ReadWrite,Pooling=false}.ToString()))
+        {
+            db.Open();using var command=db.CreateCommand();command.CommandText=family switch
+            {
+                "item"=>"UPDATE sprite_png_v1 SET png=zeroblob(length(png))",
+                "portrait"=>"UPDATE portrait_png_v1 SET base_png=zeroblob(length(base_png))",
+                _=>"UPDATE emoji_frames_v1 SET png=zeroblob(length(png))"
+            };command.ExecuteNonQuery();
+        }
+        var repaired=await owner.BootstrapAndRefreshAsync();Assert.Null(repaired.Failure);Assert.NotNull(repaired.Publication);
+        Assert.Equal(AccountResourceStorageOutcome.Committed,family switch{"item"=>repaired.ItemImageStorageOutcome,"portrait"=>repaired.PortraitStorageOutcome,_=>repaired.EmojiStorageOutcome});
+        Assert.Equal(requests,source.BundleRequests); // Rebuild from verified source cache; no redundant download.
+    }
     private static readonly TimeSpan TestTimeout = TimeSpan.FromSeconds(15);
 
     private class Source : IResourceSource, IDisposable
     {
+        internal int BundleRequests;
         internal byte[] Bundle = RuntimeFlowFixtures.Read("all-ten.bundle");
         internal byte[] Main = BundleSourceFixtures.Bytes("main-valid");
         internal byte[] Data;
@@ -34,6 +70,7 @@ public sealed class ResourceRuntimeOwnerTests
         public ValueTask<ResourceResponse> OpenAsync(string url, CancellationToken token)
         {
             token.ThrowIfCancellationRequested();
+            if(url.EndsWith(".bundle",StringComparison.Ordinal))Interlocked.Increment(ref BundleRequests);
             byte[] bytes = url[(url.LastIndexOf('/') + 1)..] switch
             {
                 "DataPackage.bytes" => Data, "MainPackage.bytes" => Main,

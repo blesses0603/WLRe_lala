@@ -9,9 +9,9 @@ namespace Lala.Android.Platform;
 /// <summary>One process-wide coordinator holds cleanup across Service instances.</summary>
 internal static class ConnectionRuntime
 {
-    // Replace only this factory when the real Core login/transport adapter exists.
-    internal static readonly IConnectionAdapterFactory Factory = new UnavailableConnectionAdapterFactory();
-    internal static readonly ConnectionCoordinator Coordinator = new(Factory);
+    // One process-wide official adapter; no credentials are carried by service Intents.
+    internal static readonly IConnectionAdapterFactory Factory = OfficialAndroidClient.Instance;
+    internal static readonly ConnectionCoordinator Coordinator = new(Factory, new ConnectionPolicy { MaximumRetries = 0, ConnectTimeout = TimeSpan.FromMinutes(3) });
     internal static readonly string ProcessToken = Guid.NewGuid().ToString("N");
     private static readonly ServiceOwnerLease Ownership = new();
     internal static long Acquire() => Ownership.Acquire();

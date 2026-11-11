@@ -19,12 +19,12 @@ namespace Lala.Desktop;
 /// Explicit native UI acceptance using synthetic "介面測試" data. The caller supplies a
 /// temporary preference store. Screenshots render actual Avalonia windows after layout.
 /// </summary>
-internal static class DesktopUiSmokeTest
+internal static partial class DesktopUiSmokeTest
 {
     public static Task RunAsync(DesktopSession session, DashboardWindow dashboard, string? screenshotDirectory) =>
         new Run(session, dashboard, screenshotDirectory).ExecuteAsync();
 
-    private sealed class Run(DesktopSession session, DashboardWindow dashboard, string? screenshotDirectory)
+    private sealed partial class Run(DesktopSession session, DashboardWindow dashboard, string? screenshotDirectory)
     {
         private readonly List<Window> opened = [];
         private int checks;
@@ -48,6 +48,7 @@ internal static class DesktopUiSmokeTest
                 await VersionEntryAsync();
                 Publish(fixture.State, fixture.Labels);
                 await Settle(dashboard);
+                await CharacterLogAsync();
                 await Capture(dashboard, "02-dashboard-observed");
                 await BattleAndMapAsync();
                 await InventoryAndSkillsAsync();
@@ -183,6 +184,7 @@ internal static class DesktopUiSmokeTest
                 await Capture(window, $"{number++:00}-python-{key}");
                 window.Hide();
             }
+            await FeatureSettingsAsync(manager);
             var old = manager.OpenPythonFeature("party");
             session.Reset();
             var replaced = manager.OpenPythonFeature("party");
@@ -555,6 +557,19 @@ internal static class DesktopUiSmokeTest
             Find<Slider>(settings, "SettingsThreshold_hp_player").Value = 67;
             Check(BattleSettingsDraft.Int(settings.DraftSnapshot.Value["recovery"]!["hp"]!["player_percent"]) == 67,
                 "HP recovery slider writes only the detached draft");
+            Click(settings, "SettingsSupply_hp_0"); await Settle(settings);
+            var emptySupply = settings.OwnedWindows.OfType<SettingsSupplySlotWindow>().Single(); await Settle(emptySupply);
+            Check(Find<ListBox>(emptySupply, "SupplyItemChoices").ItemCount == 0 && !Find<Button>(emptySupply, "SupplyItemChoose").IsEnabled,
+                "missing verified catalog cannot produce selectable recovery items");
+            Click(emptySupply, "SupplyItemCancel"); await Settle(settings);
+            Reject<InvalidOperationException>(() => settings.SetRecoverySlot("hp", 0, 20), "an unavailable or unverified recovery item cannot be saved by bypassing the picker");
+            var picker = new SettingsSupplySlotWindow("HP 補品", [new(20, 3, 50, 0), new(21, 5, 25, 10)], fixture.Labels);
+            var picked = picker.ShowDialog<ushort?>(settings); await Settle(picker);
+            Find<TextBox>(picker, "SupplyItemSearch").Text = "20"; await Settle(picker);
+            Check(Find<ListBox>(picker, "SupplyItemChoices").ItemCount == 1, "recovery picker filters verified choices by item ID");
+            Find<ListBox>(picker, "SupplyItemChoices").SelectedIndex = 0; await Settle(picker);
+            await Capture(picker, "36-recovery-item-picker"); Click(picker, "SupplyItemChoose");
+            Check(await picked == 20, "recovery picker returns only the explicitly selected item");
             await Capture(settings, "14-settings-recovery");
             settings.SelectTab(3);
             await Capture(settings, "15-settings-maintenance");

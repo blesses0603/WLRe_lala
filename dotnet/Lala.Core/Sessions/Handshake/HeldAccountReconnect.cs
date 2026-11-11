@@ -137,6 +137,16 @@ internal sealed class HeldAccountReconnect : IAsyncDisposable
             return current.ApplyCommandAsync(transition, token);
         }
     }
+    internal IDisposable WatchReceipts(Guid attempt,Lala.Core.Gameplay.GameReceiptWatch watch)
+    {
+        lock(gate)
+        {
+            if(retired||current is null||current.Attempt!=attempt)throw new InvalidOperationException("Connection is no longer current.");
+            return current.WatchReceipts(watch);
+        }
+    }
+    internal bool IsBatchDrained(Guid attempt)
+    {lock(gate)return !retired&&current?.Attempt==attempt&&current.BatchDrained;}
     internal Task SendGameAsync(Guid attempt, Func<Packet> prepare, CancellationToken token)
     {
         lock (gate)

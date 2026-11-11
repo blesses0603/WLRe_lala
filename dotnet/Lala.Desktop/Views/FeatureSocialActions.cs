@@ -55,7 +55,7 @@ public sealed partial class PythonFeatureWindow
                 ArkDispatch = arkDispatchAuto?.IsChecked == true, ArkQuestions = arkQuestionsAuto?.IsChecked == true, ArkHours = (int)(arkHours?.Value ?? 1), StarBudget = (int)(starBudget?.Value ?? 0)
             });
         }
-        catch (Exception error) when (error is InvalidOperationException or IOException or Lala.Core.Protocol.ProtocolException) { actionNote.Text = error.Message; }
+        catch (Exception error) when (SettingsFiles.IsExpected(error) || error is Lala.Core.Protocol.ProtocolException) { actionNote.Text = error.Message; }
     }
     private void RefreshSocialControls()
     {

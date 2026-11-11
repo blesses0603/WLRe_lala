@@ -28,12 +28,13 @@ internal sealed class ConnectionServiceClient
     private ConnectionService? _service;
     private Binding? _binding;
     private bool _resumed;
+    private bool _notificationsAllowed;
     private HostIssue _issue;
     private ConnectionSnapshot _last = new(0, 0, ConnectionPhase.Stopped, 0, ConnectionEndReason.None);
     private event Action<ConnectionHostSnapshot>? Changed;
 
     internal ConnectionHostSnapshot Snapshot => new(_service?.Coordinator.Snapshot ?? _last,
-        _service?.IsCurrentInstance == true, ConnectionNotification.IsAllowed(Context),
+        _service?.IsCurrentInstance == true, _notificationsAllowed,
         ConnectionRuntime.Factory.IsAvailable, _issue != HostIssue.None ? _issue : _service?.Issue ?? HostIssue.None);
 
     internal IDisposable Subscribe(Action<ConnectionHostSnapshot> observer)
@@ -243,6 +244,9 @@ internal sealed class ConnectionServiceClient
 
     private void Publish()
     {
+        // Refresh at host/permission events, not for every UI poll or keystroke.
+        // StartFromUser and the Service independently recheck the current policy.
+        _notificationsAllowed = ConnectionNotification.IsAllowed(Context);
         var snapshot = Snapshot;
         _last = snapshot.Connection;
         if (Changed is null) return;

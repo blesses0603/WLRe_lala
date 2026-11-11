@@ -17,5 +17,6 @@
     <Compile Include="../Lala.Android/Platform/NetworkAvailability.cs" Link="Platform/NetworkAvailability.cs" />
     <Compile Include="../Lala.Android/Platform/ConnectionStatusText.cs" Link="Platform/ConnectionStatusText.cs" />
     <Compile Include="../Lala.Android/Platform/ServiceCommandState.cs" Link="Platform/ServiceCommandState.cs" />
+    <Compile Include="../Lala.Desktop/Presentation/DesktopServerCatalog.cs;../Lala.Desktop/Presentation/DesktopLoginTarget.cs" Link="Official/%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

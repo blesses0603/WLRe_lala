@@ -19,17 +19,19 @@ internal static partial class ManualGameCommands
         Require(s.Phase == "world_ready" && s.Player?.RoleId > 0 && s.Local.Session.InitialDataComplete, "請等待角色與世界資料同步完成。");
         if (a.Scene != 0) Require(s.Player!.Scene == a.Scene, "場景已改變，請重新選取。");
         if (a.Kind == "battle") return Battle(a, s, catalog);
-        if (a.Kind == "event") return ContinueEvent(s);
+        if (a.Kind == "event") return ContinueEvent(a,s,now);
         if (a.Kind == "npc" && a.Operation != "start") return Npc(a, s, catalog, now);
         Require(s.Local.Battle.Active != true && !s.Local.Session.EventFlow.Blocked, "請等待戰鬥或遊戲事件結束。");
+        Require(!s.Local.Session.PostBattle.Pending,"請等待戰後事件接續完成。");
         Require(s.Activities.Count == 0, "請先結束目前活動。");
         return a.Kind switch
         {
+            "maintenance"=>Maintenance(a,s,catalog),
             "party" => Party(a, s, now), "companion" => Companion(a, s),
-            "attributes" => Attributes(a, s, now), "tent" => Tent(a, s, now),
+            "attributes" => Attributes(a, s, now), "tent" => Tent(a, s, catalog, now),
             "alchemy" => Alchemy(a, s, catalog),
             "portal" => Portal(a, s, catalog),
-            "cube" => Cube(s, now), "storage" => Storage(a, s), "field_item" => FieldItem(a, s, catalog),
+            "cube" => Cube(s, now), "storage" => Storage(a, s), "field_item" => FieldItem(a, s, catalog), "field_storage" => FieldStorage(a, s, catalog),
             "instance" => Instance(a, s, catalog, now), "guild" => a.Operation == "donate" ? Donate(a, s, social, now) : Guild(a, s, catalog, now),
             "ark" => ArkAction(a, s, catalog, social, now, resourceKey),
             "expedition" => a.Operation == "restore" ? ExpeditionFaith(a, s, catalog) : Expedition(a, s, catalog, now), "craft" => CraftFull(a, s, catalog, now),
@@ -132,7 +134,7 @@ internal static partial class ManualGameCommands
             next => CommandState.With(next, points: new() { Pending = true, Expected = expected.ToImmutable(), SentAt = now, Status = "配點已送出，等待能力同步" }),
             next => !next.AttributeAllocation.Pending && next.AttributeAllocation.Status == "配點成功，能力值已同步");
     }
-    private static GameActionPlan Tent(GameAction a, ServiceStateSnapshot s, double now)
+    private static GameActionPlan Tent(GameAction a, ServiceStateSnapshot s, OfflineRuntimeCandidate catalog, double now)
     {
         var t = s.Tent;
         Require(t.Pending is null && !t.Uncertain, "帳篷操作尚未確認。");
@@ -140,11 +142,21 @@ internal static partial class ManualGameCommands
         if (a.Operation == "open") { Require(t.DeployedScene is null && !t.Inside, "已有帳篷，或目前位於小屋內。"); packet = new(65, 6); }
         else if (a.Operation == "close") { Require(t.DeployedScene is not null && !t.Inside, "尚未確認可收起的帳篷。"); packet = new(65, 2); }
         else if (a.Operation == "enter") { Require(t.Visible && t.Scene == s.Player!.Scene, "本場景未確認自家帳篷。"); packet = new(65, 1, new PacketWriter().U32(s.Player!.RoleId).Build()); }
+        else if (a.Operation == "leave")
+        {
+            Require(t.Inside && t.InteriorScene == s.Player!.Scene, "目前尚未確認位於自家帳篷內。");
+            ushort exit = TentExitResolver.Resolve(catalog.Doors, catalog.PortalObservations.Reconciled, catalog.Texts, t.ReturnScene);
+            packet = new(20, 8, new PacketWriter().U16(exit).Build());
+        }
         else throw new ProtocolException("未知帳篷操作。");
         var pending = new TentActionObservation(a.Operation) { Due = now + 15, SourceScene = s.Player!.Scene };
         return new(packet, "tent", "帳篷操作", next => CommandState.With(next, tent: next.Tent with
         { Pending = pending, EntryContext = a.Operation == "enter" ? pending : null }),
-            next => next.Tent.Pending is null);
+            next => a.Operation == "leave"
+                ? next.Player?.RoleId == s.Player!.RoleId && next.Player.Scene != s.Player.Scene && !next.Tent.Inside && !TentExitResolver.IsTemplate(next.Player.Scene) &&
+                    catalog.Stages.ContainsKey(next.Player.Scene) && next.Local.World.Location.ConfirmedIsCurrent && next.Local.World.Location.Confirmed?.Scene == next.Player.Scene
+                : next.Tent.Pending is null,
+            a.Operation == "leave" ? next => CommandState.With(next, tent: next.Tent with { Pending = null, Uncertain = false, InteriorScene = null, Status = "已離開自家帳篷（伺服器位置確認）" }) : null);
     }
     private static AutomationContext Context(ServiceStateSnapshot s) => new()
     {

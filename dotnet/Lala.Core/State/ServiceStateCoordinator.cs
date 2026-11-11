@@ -306,7 +306,10 @@ public sealed class ServiceStateCoordinator
         var stagedBase = new LocalStateSnapshot(state.Local.Session with { Attributes = attributes },
             state.Local.World, knowledge.Battle);
         var stagedLocal = new LocalStateCoordinator(stagedBase, inputs.WorldCatalog);
-        var local = stagedLocal.Apply(observation);
+        var local = stagedLocal.Apply(observation,inputs.ObservedAt);
+        int? coopCount=instances.Coop.MapValue.TryGetValue("fight_count",out var observedCount)&&observedCount.Kind==StateValueKind.Scalar
+            && int.TryParse(observedCount.ScalarValue?.ToString(),out var parsedCount)?parsedCount:null;
+        local=Lala.Core.Gameplay.PostBattleLifecycle.Observe(state.Local,local,observation,inputs.ObservedAt,coopCount);
         companions = CompanionReceiveReducer.ObserveLocalAttribute(companions, observation);
         // Tent observes the new role/scene, including world-player resets and position changes.
         // The same per-observation world catalog is consumed; no previous catalog is retained.

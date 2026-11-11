@@ -37,6 +37,7 @@ internal sealed record ReceivePublication(Guid Attempt, long Revision, ReceiveSt
 {
     public bool ResourceHeld => true;
     internal System.Collections.Immutable.ImmutableArray<Lala.Core.Gameplay.GameServerEvent> Events { get; init; } = [];
+    internal System.Collections.Immutable.ImmutableArray<Lala.Core.Gameplay.GameServerEvent> CharacterEvents { get; init; } = [];
     internal long ServerSequence { get; init; }
 }
 
@@ -84,6 +85,8 @@ internal sealed class ReceiveAttempt : IAsyncDisposable
     private Task? cancellation;
     private bool runRequested;
     private bool retired;
+    private bool receivingBatch;
+    private readonly HashSet<Lala.Core.Gameplay.GameReceiptWatch> receiptWatches=[];
     private ReceiveEnd? end;
 
     public ReceiveAttempt(IReceiveTransport transport, int rxXor, Func<double> clock,
@@ -107,6 +110,20 @@ internal sealed class ReceiveAttempt : IAsyncDisposable
     }
 
     public ReceivePublication Latest { get { lock (gate) return latest; } }
+    internal bool BatchDrained {get{lock(gate)return !receivingBatch;}}
+    internal IDisposable WatchReceipts(Lala.Core.Gameplay.GameReceiptWatch watch)
+    {
+        lock(gate)
+        {
+            if(retired||latest.Stage!=ReceiveStage.Running)throw new InvalidOperationException("Connection is no longer current.");
+            if(receiptWatches.Count>=8||!receiptWatches.Add(watch))throw new InvalidOperationException("Receipt observation limit exceeded.");
+            return new ReceiptLease(this,watch);
+        }
+    }
+    private sealed class ReceiptLease(ReceiveAttempt owner,Lala.Core.Gameplay.GameReceiptWatch watch):IDisposable
+    {
+        public void Dispose(){lock(owner.gate)owner.receiptWatches.Remove(watch);}
+    }
     // Subscribe before pulling Latest. One rotating signal observes commits and lifecycle
     // assignments without retaining a packet queue or running callbacks under the gate.
     internal Task PublicationChanged { get { lock (gate) return publicationChanged.Task; } }
@@ -166,6 +183,7 @@ internal sealed class ReceiveAttempt : IAsyncDisposable
     {
         if (latest.Stage == ReceiveStage.Ended) return;
         retired = true;
+        receiptWatches.Clear();
         (transport as IReceiveTransportRetirement)?.Retire();
         end ??= reason;
         PublishEndingLocked();
@@ -227,6 +245,7 @@ internal sealed class ReceiveAttempt : IAsyncDisposable
         {
             retired = true;
             end = released ? end ?? ReceiveEnd.Completed : ReceiveEnd.CleanupFailed;
+            receiptWatches.Clear();
             SetPublicationLocked(latest with { Stage = ReceiveStage.Ended, End = end });
             return new(latest, end.Value, released);
         }
@@ -290,16 +309,19 @@ internal sealed class ReceiveAttempt : IAsyncDisposable
                         }
                         return;
                     }
-                    // Feed through individual frame completions. Feed can throw for a later
-                    // malformed frame in the same input; byte stepping preserves prior commits.
-                    for (var i = 0; i < chunk.Count; i++)
+                    // Admission hint only; it does not invent another server revision or
+                    // signal a packet before its commit. Consumers recheck at actual write.
+                    lock(gate)receivingBatch=true;
+                    // Commit in frame order, preserving good frames before malformed tails.
+                    for (var offset = 0; offset < chunk.Count;)
                     {
                         lock (gate) if (retired) return;
-                        IReadOnlyList<Packet> packets;
-                        try { packets = decoder.Feed(chunk.Bytes.AsSpan(i, 1)); }
+                        Packet? packet;
+                        try { packet = decoder.ReadFrame(chunk.Bytes.AsSpan(offset, chunk.Count - offset), out int consumed); offset += consumed; }
                         catch (ProtocolException) { Retire(ReceiveEnd.InvalidFrame); return; }
-                        foreach (var packet in packets) if (!Apply(state, packet)) return;
+                        if (packet is not null && !Apply(state, packet)) return;
                     }
+                    lock(gate)receivingBatch=false;
                 }
             }
         }
@@ -307,6 +329,7 @@ internal sealed class ReceiveAttempt : IAsyncDisposable
         catch (Exception) { Retire(ReceiveEnd.ReductionFailed); }
         finally
         {
+            lock(gate)receivingBatch=false;
             while (chunks.Reader.TryRead(out var remaining)) remaining.Completion?.TrySetCanceled();
             publications.Writer.TryComplete(); done.TrySetResult();
         }
@@ -338,7 +361,7 @@ internal sealed class ReceiveAttempt : IAsyncDisposable
                 RetireLocked(ReceiveEnd.MissingArkRuntime);
                 return false;
             }
-            if (beforeCommit is null) return CommitLocked(state, decoded, basis, inputs);
+            if (beforeCommit is null) return CommitLocked(state, decoded, basis, inputs, packet);
             // Admission is serialized with retirement, but user code must never hold gate.
             // This dedicated writer waits for the admitted hook, preserving event order and
             // ensuring completion/disposal includes even a noncooperative asynchronous hook.
@@ -348,12 +371,12 @@ internal sealed class ReceiveAttempt : IAsyncDisposable
         lock (gate)
         {
             if (retired) return false; // A late hook may finish, but can never commit.
-            return CommitLocked(state, decoded, basis, inputs);
+            return CommitLocked(state, decoded, basis, inputs, packet);
         }
     }
 
     private bool CommitLocked(ReceiveStateCoordinator state, ServerEvent decoded,
-        ServiceStateSnapshot basis, ServiceObservationInputs inputs)
+        ServiceStateSnapshot basis, ServiceObservationInputs inputs, Packet packet)
     {
         ServiceStateSnapshot next;
         try
@@ -363,9 +386,13 @@ internal sealed class ReceiveAttempt : IAsyncDisposable
                 next = state.ConfirmWorldAcknowledged();
         }
         catch (Exception) { RetireLocked(ReceiveEnd.ReductionFailed); return false; }
-        var events = latest.Events.Add(Lala.Core.Gameplay.GameServerEvent.From(checked(latest.ServerSequence + 1), decoded));
+        var receipt = Lala.Core.Gameplay.CharacterEventLog.Scope(
+            Lala.Core.Gameplay.GameServerEvent.From(checked(latest.ServerSequence + 1), decoded, packet), decoded, basis, next);
+        foreach(var watch in receiptWatches)watch.Observe(receipt);
+        var events = latest.Events.Add(receipt);
         if (events.Length > 500) events = events.RemoveRange(0, events.Length - 500);
-        SetPublicationLocked(latest with { Revision = checked(latest.Revision + 1), Snapshot = next, ServerSequence = checked(latest.ServerSequence + 1), Events = events });
+        var characterEvents = Lala.Core.Gameplay.CharacterEventLog.Append(latest.CharacterEvents, receipt, next.Player?.RoleId);
+        SetPublicationLocked(latest with { Revision = checked(latest.Revision + 1), Snapshot = next, ServerSequence = checked(latest.ServerSequence + 1), Events = events, CharacterEvents = characterEvents });
         publications.Writer.TryWrite(latest);
         return true;
     }

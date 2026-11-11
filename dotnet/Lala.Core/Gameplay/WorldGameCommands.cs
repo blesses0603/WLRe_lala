@@ -7,15 +7,26 @@ namespace Lala.Core.Gameplay;
 
 internal static partial class ManualGameCommands
 {
-    private static GameActionPlan ContinueEvent(ServiceStateSnapshot s)
+    private static GameActionPlan ContinueEvent(GameAction action,ServiceStateSnapshot s,double now)
     {
         var session = s.Local.Session;
-        Require(s.Local.Battle.Active != true && session.EventFlow.Blocked && !session.EventFlow.AwaitingResponse &&
-            !session.NpcDialogue.Active && session.EventFlow.LastSource is "S20-7" or "S20-10" or "S20-11" or "S20-13" or "S20-14" or "S20-15" or "S20-16" or "S20-17", "尚未收到可接續事件的伺服器通知。");
-        return new(new(20, 6), "npc", "接續遊戲事件", next => CommandState.With(next,
-            local: new(next.Local.Session with { EventFlow = next.Local.Session.EventFlow with
-                { AwaitingResponse = true, RequestsSent = next.Local.Session.EventFlow.RequestsSent + 1, LastSource = "C20-6" } }, next.Local.World, next.Local.Battle)),
-            next => !next.Local.Session.EventFlow.AwaitingResponse);
+        bool post=action.Operation=="post_battle";
+        if(post)Require(session.PostBattle is{Phase:"exit_delay"} p&&p.Role==s.Player?.RoleId&&p.Scene==s.Player?.Scene&&p.Battle==action.BattleCount
+            &&p.ExitPacket.ToString(System.Globalization.CultureInfo.InvariantCulture)==action.Key&&now>=p.Due,"戰後接續尚未到時或已使用。");
+        else Require(!session.PostBattle.Pending||session.PostBattle.Phase=="synchronizing","請等待戰後退場流程。");
+        Require(s.Local.Battle.Active != true && (post||session.EventFlow.Blocked) && !session.EventFlow.AwaitingResponse &&
+            !session.NpcDialogue.Active && (post||session.EventFlow.LastSource is "S20-7" or "S20-10" or "S20-11" or "S20-13" or "S20-14" or "S20-15" or "S20-16" or "S20-17"), "尚未收到可接續事件的伺服器通知。");
+        bool replied=false;
+        return new(new(20, 6, [0]), "event", "接續遊戲事件", next => CommandState.With(next,
+            local: new(next.Local.Session with { PostBattle=post?next.Local.Session.PostBattle with{Phase="awaiting_response"}:next.Local.Session.PostBattle,
+                EventFlow = next.Local.Session.EventFlow with
+                { Blocked=true,AwaitingResponse = true, RequestsSent = next.Local.Session.EventFlow.RequestsSent + 1, LastSource = "C20-6" } }, next.Local.World, next.Local.Battle)),
+            next => replied&&!next.Local.Session.EventFlow.AwaitingResponse)
+        { ObserveReceipt=receipt=>
+            {
+                if(receipt.Type=="event_rejected")throw new ProtocolException("伺服器拒絕事件接續。");
+                if(receipt.Type is "event_end" or "event_continue_permission" or "event_active")replied=true;
+            } };
     }
 
     private static GameActionPlan Portal(GameAction a, ServiceStateSnapshot s, OfflineRuntimeCandidate c)

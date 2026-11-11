@@ -109,6 +109,32 @@ public sealed record EventEndEvent() : ServerEvent(20, 8)
 {
     public override string Type => "event_end";
 }
+// Verified against the official 1.3.23 Protocols_022.lua / Stage.lua handlers.
+// Scene observations only: these are neither player movement nor event continuation grants.
+public sealed record SceneNpcMoveEvent(ushort Index, ushort X, ushort Y, byte Speed) : ServerEvent(22, 2)
+{
+    public override string Type => "scene_npc_move";
+}
+public sealed record SceneNpcVisibilityEvent(byte Sub, ushort Index, ushort Duration) : ServerEvent(22, Sub)
+{
+    public override string Type => "scene_npc_visibility";
+    public bool Visible => Sub == 11;
+    public bool Permanent => Duration == ushort.MaxValue;
+}
+public sealed record SceneNpcStatus(ushort Index, byte AnimationStep, byte WarStyle, ushort X, ushort Y,
+    byte Visibility, uint Duration, byte Pose);
+public sealed record SceneNpcStatusEvent(ImmutableArray<SceneNpcStatus> Npcs) : ServerEvent(22,4)
+{
+    public override string Type => "scene_npc_status";
+}
+public sealed record SceneNpcTeleportEvent(ushort Index, ushort X, ushort Y) : ServerEvent(22,5)
+{
+    public override string Type => "scene_npc_teleport";
+}
+public sealed record SceneNpcShowEvent(ushort Index, byte Visibility) : ServerEvent(22,6)
+{
+    public override string Type => "scene_npc_show";
+}
 public sealed record EventContinuePermissionEvent(byte Sub, int ExtensionBytes) : ServerEvent(20, Sub)
 {
     public override string Type => "event_continue_permission";

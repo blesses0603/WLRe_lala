@@ -46,6 +46,15 @@ public static class ServerProtocol
         ServerEvent result;
         switch (packet.Main, packet.Sub)
         {
+            case (22, 2): result = new SceneNpcMoveEvent(r.U16(), r.U16(), r.U16(), r.U8()); break;
+            case (22, 3 or 10 or 11): result = new SceneNpcVisibilityEvent(packet.Sub, r.U16(), r.U16()); break;
+            case (22,4):
+                if(r.Remaining%14!=0)throw new ProtocolException("invalid scene NPC status length");
+                var npcs=ImmutableArray.CreateBuilder<SceneNpcStatus>(r.Remaining/14);
+                while(r.Remaining>0)npcs.Add(new(r.U16(),r.U8(),r.U8(),r.U16(),r.U16(),r.U8(),r.U32(),r.U8()));
+                result=new SceneNpcStatusEvent(npcs.MoveToImmutable());break;
+            case (22,5): result=new SceneNpcTeleportEvent(r.U16(),r.U16(),r.U16());break;
+            case (22,6): result=new SceneNpcShowEvent(r.U16(),r.U8());break;
             case (26, 1): case (26, 2):
                 var amount = r.U32(); var flag = r.U8();
                 if (flag > 1) throw new ProtocolException("S26 金幣通知旗標無效");
