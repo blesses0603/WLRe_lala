@@ -1,0 +1,2361 @@
+[
+  {
+    "id": "desktop:wlre/services/world/coordinates.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/coordinates.py",
+    "source_sha256": "41cce73e697f0546fe1cf61e1548897d93821ea0f22327b740d7325ae2f93fa3",
+    "source_lines": 65,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "Coordinates",
+          "line": 12
+        }
+      ],
+      "imports": [
+        "wlre.services.world.dynamic_bundle_runtime",
+        "wlre.services.world.house_navigation",
+        "wlre.services.world.map_names",
+        "wlre.services.world.navigation"
+      ],
+      "existing_test_candidates": [
+        "tests/test_minimap_actions_and_expedition_resume.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/world/daily_task_1275.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/daily_task_1275.py",
+    "source_sha256": "f8572d277466aaf47df2f9107e7e725726502f3ebec2af2c79c9b726b912a371",
+    "source_lines": 71,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Catalogs/DailyTaskDataParser.cs",
+      "dotnet/Lala.Core/Catalogs/DailyTaskCatalogBinder.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "Reader",
+          "line": 7
+        },
+        {
+          "name": "parse_daily_tasks",
+          "line": 37
+        }
+      ],
+      "imports": [
+        "struct",
+        "wlre.services.parser_diagnostics"
+      ],
+      "existing_test_candidates": [
+        "tests/test_daily_task_1275.py",
+        "tests/test_daily_task_runtime.py",
+        "tests/test_parser_diagnostics.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "migrated_scope": [
+      "Immutable task/reward layout parsing and name/item/group/condition binding; planning-definition projection remains a non-authorizing preview. 1362 Python-derived vectors and boundary/immutability tests."
+    ],
+    "outstanding_scope": [
+      "No verified catalog loading, extraction/activation, diagnostic decorators or live-session integration."
+    ]
+  },
+  {
+    "id": "desktop:wlre/services/world/daily_task_catalog.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/daily_task_catalog.py",
+    "source_sha256": "8e42ee6551929f030199fd389a99f6ff8834636830cd4c2423578cf8d9ccbd50",
+    "source_lines": 70,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Catalogs/DailyTaskDataParser.cs",
+      "dotnet/Lala.Core/Catalogs/DailyTaskCatalogBinder.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "parse_rewards",
+          "line": 9
+        },
+        {
+          "name": "goal",
+          "line": 25
+        },
+        {
+          "name": "bind_catalog",
+          "line": 36
+        },
+        {
+          "name": "load_verified_catalog",
+          "line": 62
+        }
+      ],
+      "imports": [
+        "wlre.services.parser_diagnostics",
+        "wlre.services.world.daily_task_1275",
+        "wlre.services.world.resource_database"
+      ],
+      "existing_test_candidates": [
+        "tests/test_daily_task_runtime.py",
+        "tests/test_dynamic_bundle_runtime.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "migrated_scope": [
+      "Immutable task/reward layout parsing and name/item/group/condition binding; planning-definition projection remains a non-authorizing preview. 1362 Python-derived vectors and boundary/immutability tests."
+    ],
+    "outstanding_scope": [
+      "No verified catalog loading, extraction/activation, diagnostic decorators or live-session integration."
+    ]
+  },
+  {
+    "id": "desktop:wlre/services/world/display_position.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/display_position.py",
+    "source_sha256": "200b61ffb7f969d6ef4fd67069c2b0dbac52776ae0625bde4957f45654e1c97c",
+    "source_lines": 24,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "current_position",
+          "line": 5
+        }
+      ],
+      "imports": [
+        "math"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/world/doors_1275.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/doors_1275.py",
+    "source_sha256": "012862d1ec7cd7e7361aceaba2f3375ded192189a980956863e6e58035b93ba6",
+    "source_lines": 224,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/World/Eve/EveDoorParser.cs",
+      "dotnet/Lala.Core/World/Eve/EveDoorProjection.cs",
+      "dotnet/Lala.Core/World/Eve/EveDoorCp950.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "DoorSourceError",
+          "line": 14
+        },
+        {
+          "name": "_Reader",
+          "line": 18
+        },
+        {
+          "name": "_event_name",
+          "line": 43
+        },
+        {
+          "name": "_common",
+          "line": 57
+        },
+        {
+          "name": "_npc",
+          "line": 69
+        },
+        {
+          "name": "_event_parameters",
+          "line": 81
+        },
+        {
+          "name": "_touch_events",
+          "line": 89
+        },
+        {
+          "name": "parse_doors_1275",
+          "line": 122
+        },
+        {
+          "name": "parse_verified_doors",
+          "line": 130
+        },
+        {
+          "name": "_read_conveys",
+          "line": 195
+        }
+      ],
+      "imports": [
+        "hashlib",
+        "struct",
+        "wlre.services.parser_diagnostics"
+      ],
+      "existing_test_candidates": [
+        "tests/test_boundary_portals.py",
+        "tests/test_bundle_runtime_1275.py",
+        "tests/test_doors_1275.py",
+        "tests/test_event_convey_portals.py",
+        "tests/test_parser_diagnostics.py",
+        "tests/test_portal_event_evidence.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "migrated_scope": [
+      "Source door parser/helper logic is ported through a bounded immutable API separate from the stricter full Eve parser. Public ParsePinned1275 checks the original fixed SHA-256 before layout checks and requires 1262 scenes; there is no custom-pin overload. Internal ParseLayout is used only by tests/structural composition and makes no official-source claim.",
+      "Ordered geometry, original pre-prefix name bytes, strict CP950 names, duplicate byte event references, PlayerTouch records, unsigned condition values, signed effects, conditional convey transfers and missing convey IDs are retained. Destination zero is preserved; DestinationDecoded means only that references resolved, not a valid route. Source overlap/skipped-NPC behavior and group/convey-only directory checks are kept instead of silently importing stricter full-Eve checks.",
+      "Bounds retain 32-MiB input, 4096 scenes and per-scene NPC/door/Mine/Goods/Event limits, with source uint16 group/convey counts. An added 1,000,000 retained-unit limit bounds overlapping windows, parameters and repeated references. One of 928 actual decorated-Python oracle cases explicitly records a source-valid safety rejection; it is not exact parity. Cancellation, detached snapshots and immutable shared event values prevent partial/mutable results.",
+      "936 door tests passed within the 1,102 focused suite. The 928-vector gzip corpus checks full ordered output, errors/checkpoints, every helper and pinned rejection. A lazy 39,564-byte code-owned CP950 table avoids machine codepage providers; its digest and all 65,792 single-/double-byte outcomes match Python. Three generators reproduced identical artifacts and independent source/security review approved. AssetsReady, CanSendPackets, AuthorizesTravel and AuthorizesRuntime remain false."
+    ],
+    "outstanding_scope": [
+      "The source public parse_verified_doors surface is only an internal bounded layout path; arbitrary dynamic Python values/expected counts are not a public C# contract. The retained-unit budget has an explicit safety divergence, and typed EveDoorSourceException replaces DoorSourceError. Official pinned success is unverified because no actual official Eve asset was supplied.",
+      "The candidate and owned-source flow now include bounded event-only observations. Optional StageMap/EveLinks/route parsers and broader binding/conflict/coverage calculations exist separately, but optional-source acquisition/verification, runtime installation, event execution/live travel, authenticated source admission, UI/Android/session activation and live-server acceptance remain absent."
+    ]
+  },
+  {
+    "id": "desktop:wlre/services/world/dynamic_bundle_runtime.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/dynamic_bundle_runtime.py",
+    "source_sha256": "152bb58fb652deb32dd3193a4eb44e1a194305c50341b624e052dd5c3cb4a7a1",
+    "source_lines": 383,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Resources/OfficialCatalogObservation.cs",
+      "dotnet/Lala.Core/Resources/ManifestIdentity.cs",
+      "dotnet/Lala.Core/Resources/BundleSources/YooAssetManifest.cs",
+      "dotnet/Lala.Core/Resources/BundleSources/BundleSourcePlan.cs",
+      "dotnet/Lala.Core/Resources/BundleSources/BundleSourcePreparation.cs",
+      "dotnet/Lala.Core/Catalogs/OfflineRuntimeCandidate.cs",
+      "dotnet/Lala.Core/Catalogs/RuntimeCandidateBindings.cs",
+      "dotnet/Lala.Core/Resources/BundleSources/OfflineBundleRuntimePreparation.cs",
+      "dotnet/Lala.Core/Catalogs/OfflineRuntimePortalObservations.cs",
+      "dotnet/Lala.Core/Resources/Http/HttpOfficialResourceSource.cs",
+      "dotnet/Lala.Core/Resources/ResourceRuntimeOwner.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "DynamicRuntimeUnavailable",
+          "line": 22
+        },
+        {
+          "name": "DynamicRuntime",
+          "line": 27
+        },
+        {
+          "name": "load_dynamic_runtime_metadata",
+          "line": 36
+        },
+        {
+          "name": "load_parsed_dynamic_runtime",
+          "line": 66
+        },
+        {
+          "name": "current_runtime",
+          "line": 101
+        },
+        {
+          "name": "dynamic_attempted",
+          "line": 105
+        },
+        {
+          "name": "current_catalog_token",
+          "line": 110
+        },
+        {
+          "name": "invalidate_runtime",
+          "line": 117
+        },
+        {
+          "name": "parse_runtime_recipes",
+          "line": 132
+        },
+        {
+          "name": "_prepare_runtime_sources",
+          "line": 160
+        },
+        {
+          "name": "_confirm_runtime_sources",
+          "line": 275
+        },
+        {
+          "name": "sync_dynamic_runtime_sources",
+          "line": 287
+        },
+        {
+          "name": "prepare_dynamic_runtime",
+          "line": 310
+        },
+        {
+          "name": "activate_for_official",
+          "line": 340
+        },
+        {
+          "name": "main",
+          "line": 361
+        }
+      ],
+      "imports": [
+        "__future__",
+        "argparse",
+        "collections",
+        "dataclasses",
+        "json",
+        "pathlib",
+        "re",
+        "struct",
+        "threading",
+        "wlre.services.items.crafting",
+        "wlre.services.official_bundle_download",
+        "wlre.services.official_incremental_sync",
+        "wlre.services.official_manifest_sync",
+        "wlre.services.official_resource_sync",
+        "wlre.services.parser_diagnostics",
+        "wlre.services.world.ark_catalog",
+        "wlre.services.world.bundle_runtime_1275",
+        "wlre.services.world.catalog_adapters",
+        "wlre.services.world.catalog_identity",
+        "wlre.services.world.catalog_runtime",
+        "wlre.services.world.daily_task_catalog",
+        "wlre.services.world.emoji_database",
+        "wlre.services.world.guild_catalog",
+        "wlre.services.world.instance_runtime",
+        "wlre.services.world.item_image_database",
+        "wlre.services.world.npc_battle_catalog",
+        "wlre.services.world.npc_item_data",
+        "wlre.services.world.official_catalog_store",
+        "wlre.services.world.official_combat_sources",
+        "wlre.services.world.portal_policy",
+        "wlre.services.world.portrait_assets",
+        "wlre.services.world.smallmap_database",
+        "wlre.services.world.smith_candidate",
+        "wlre.storage.paths"
+      ],
+      "existing_test_candidates": [
+        "tests/test_background_version_observer.py",
+        "tests/test_crafting_cupboard_execution.py",
+        "tests/test_daily_assistant_guard_safety.py",
+        "tests/test_daily_task_runtime.py",
+        "tests/test_dynamic_bundle_runtime.py",
+        "tests/test_dynamic_minimap_reload.py",
+        "tests/test_dynamic_tent_exit.py",
+        "tests/test_emoji_ui_database.py",
+        "tests/test_expedition_service_modules.py",
+        "tests/test_expedition_sqlite_fallback.py",
+        "tests/test_game_version_gate.py",
+        "tests/test_guild_actions.py",
+        "tests/test_icon_decode_cache.py",
+        "tests/test_isolated_desktop_check.py",
+        "tests/test_item_image_ui_database.py",
+        "tests/test_launcher_catalog.py",
+        "tests/test_minimap_actions_and_expedition_resume.py",
+        "tests/test_npc_compact_list.py",
+        "tests/test_official_emoji_database.py",
+        "tests/test_official_image_database.py",
+        "tests/test_official_item_images.py",
+        "tests/test_official_navigation_no_seed.py",
+        "tests/test_official_npc_bootstrap.py",
+        "tests/test_official_obstacle_scope.py",
+        "tests/test_official_runtime_bridge.py",
+        "tests/test_official_stack_rules.py",
+        "tests/test_parser_diagnostics.py",
+        "tests/test_release.py",
+        "tests/test_resource_compatibility.py",
+        "tests/test_resource_migration.py",
+        "tests/test_resource_safety_hold.py",
+        "tests/test_runtime_consumer_refresh.py",
+        "tests/test_star_ark.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "migrated_scope": [
+      "Display-only dynamic metadata validation and internal before/after source identity checks.",
+      "Internal _prepare_runtime_sources/_confirm_runtime_sources subset now connects both actual manifest parsers, ten-path DataPackage planning, bounded owned bundle bytes and final version/full-manifest stability checks. Replacement/invalidation rejects stale attempts; matching identity uses the canonical ManifestIdentity structure without changing its API. Runtime quotas remain 24 downloads/32 MiB, plus a conservative 32-MiB total retained-byte bound including cache hits.",
+      "Combined source-preparation evidence: 37 retained actual-Python manifest/plan cases plus 44 contracts, totaling 81 new focused tests. The 350-test Resources pass includes existing tests; these are not 350 new cases. Six CRLF-only source hashes, complete manifest fields, exact plan order and synthetic byte checksums are retained. Invalid cases use typed failures rather than claiming exact Python exception text; no newer full Core receipt is implied.",
+      "parse_runtime_recipes is composed internally from immutable parser-owned ItemData and Smith 33/35-byte rows. Every product/material must exist in those ItemData rows, zero material counts reject, exact OpenUsed bytes are retained and all recipe identities remain in source order. Duplicate products, including conditional recipes, are omitted only from the product lookup, never discarded from the full catalog or guessed. Source runtime-recipes-v1 diagnostics preserve outer counts/errors and nested offset behavior.",
+      "The separate OfflineRuntimeCandidateDecoder composes the dynamic required-table structural branch with shop joins, nonempty checks and strict names. This is not a dynamic load/activation entrypoint, fresh-source context or complete optional-catalog runtime.",
+      "The 3338585 slice passed 1,102 focused Release tests (166 candidate and 936 door), then 11,247 impacted Catalogs + World.Eve tests, with no skips, using the process-only 3-GiB heap cap. Candidate evidence retains 157 exact-Python runtime-AST/binding vectors and four source pins; door evidence is separate. Independent source/security review approved, all three generators reproduced byte-identical artifacts and 53 related Python tests passed. These focused/impacted receipts are not full runtime, platform or official-source acceptance.",
+      "Internal OfflineBundleRuntimePreparation now connects the actual source preparer through IResourceSource, owned VerifiedBundleSource handles, native UnityTextAssetExtractor and all ten structural table decoders, without replacement decoder callbacks. Each asset uses only its exact manifest root plus listed complete dependency set, not recursive traversal or the union of all selected roots. Every table is extracted before raw decoding; original cache/source mutation cannot change owned bytes.",
+      "After decoding, versions are freshly observed, both complete manifest hash/byte responses are reread and compared, then versions are observed again. Same-owner/attempt checks and a final generation-lock return prevent invalidated/superseded late results. Returned data is only a historical source observation, not continuing server stability or official provenance.",
+      "A separate 32-MiB aggregate extracted-table ownership cap supplements 16-MiB per-table and 32-MiB acquired-source limits. This may reject source-valid large tables and is an explicit safety restriction. Missing/duplicate paths, late table errors, cancellation and stale attempts return no partial candidate. External PPtrs reject because this orchestrator does not infer an allowlist from dependency names.",
+      "100 focused Release passes comprise 19 new owned-flow contracts plus 81 existing BundleSource cases, with no skips, using the process-only 3-GiB cap. Ten genuine original UnityPy 1.25.4 writer/LZ4HC bundles plus evidence (11 files) regenerated identically; original ten payload hashes are pinned to the retained candidate fixture. Independent source/security review approved. This is orchestration evidence, not real-game/CDN/runtime admission or a new aggregate count.",
+      "The 3445831 candidate now attaches immutable PortalObservations derived only from its owned Eve/ScenesData rows. It invokes bounded event-only Bind with absent StageMap/EveLinks immediately after doors and before nonempty required-table checks, then coverage after remaining required-table checks. The default expansion budget is fixed at the candidate API and charged before shared transfer arrays. Optional extra input keys cannot inject portal evidence; StageMapData_C, EveDoorLinks and DoorLinkData_C remain explicitly unavailable and coverage AllSourcesAvailable is false.",
+      "Candidate portal integration passed 36 focused tests (14 actual-Python vectors, three new contracts and 19 existing owned-flow contracts) plus 5,657 impacted tests. Independent review approved deterministic fixtures, source order, exact event-only observations, ownership, immutable prior results after late failures/cancellation/supersession and a separately labeled source-valid amplification rejection. These receipts do not establish admission, optional-resource acquisition or a new aggregate count.",
+      "IResourceSource replaces the scripted-only seam name without granting trust; its optional SelectedHost is bound to the selected preparation host. HttpOfficialResourceSource can supply the existing owned extraction/ten-table flow but is unregistered and exercised only with fake handlers. SourceStability now says observed versions and manifest bytes reobserved after decoding; the candidate/preparation object itself continues to expose unavailable/false official provenance, database/static admission, runtime installation, assets-ready and send authority. The later separate owner does not rewrite those historical object flags.",
+      "cafdfb8 composes existing preparation/extraction/ten-table decoding with a separate uninstalled ResourceRuntimeOwner. ManifestIdentity.FromParsed uses the actual two parser-produced manifests after CRC/identity checks; the prepared candidate retains an owned recheck context. The owner uses the production default HTTPS source, actual read-only inventory transaction and internally derived table hashes, then rechecks versions and both full manifests after database cleanup. Exact dynamic identity is required; no shipped-1275 or executable equality gate is invented.",
+      "Only the owner can admit its exact current publication reference/generation while production-created and not disposed. Offline-test publications remain non-authorizing. Existing static/candidate readiness flags stay false. Retirement/cancellation and disposal join admitted work, with an explicit fail-fast self-join contract and documented external-context-loss limit. This creates resource-only publication, not production runtime-global installation, bootstrap, login or packet authority.",
+      "cafdfb8 resource-owner evidence is focused only: 24 tests passed in three runs and independent final source/lifecycle review approved. Owned bundle fixtures and temporary real SQLite cover non-authorizing success, absent/tampered inventory, final manifest replacement, stale generations, refresh-flood rejection, callback cancellation and self-reentrant/external disposal joins. No successful live TLS-origin acquisition, aggregate Core pass, production registration or Android SQLite packaging/native-load result is established."
+    ],
+    "outstanding_scope": [
+      "The separate resource-only owner is implemented and focused-reviewed but uninstalled/unpublished. No successful live TLS-origin acquisition, hostile-filesystem/symlink protection, source publisher signatures, full aggregate regression, persisted receipts, cache publication, optional catalogs or production runtime globals/activation is established. SourceStability remains historical reobservation; the detached candidate/preparation OfficialProvenance, DatabaseAdmission, RuntimeInstallation and Static1275Admission flags remain unavailable. Static 1275 runtime hash/audited-count/recipe-count gates, AccountSession/login/commands, Android native SQLite/AOT/device and full actual-game acceptance remain outside this slice.",
+      "Event-only reconciliation and missing-optional coverage are attached to the ten-table candidate and the owned-source flow. Standalone optional-portal parsers/bindings/conflicts/coverage now exist, but real optional-source acquisition/verification/binding and optional catalog activation remain unavailable through this flow. Source-compatible claims can coexist with conflict issues and never grant travel authority. Caller maps/package labels/content hashes do not override existing pins or grant admission."
+    ]
+  },
+  {
+    "id": "desktop:wlre/services/world/emoji_database.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/emoji_database.py",
+    "source_sha256": "38a91483b3519fc2b146805d41d4c3d0d9f3d4c8b771f6466c3fe4e46c1b8a14",
+    "source_lines": 157,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "parse_entries",
+          "line": 17
+        },
+        {
+          "name": "png_bytes",
+          "line": 35
+        },
+        {
+          "name": "build_catalog",
+          "line": 54
+        },
+        {
+          "name": "import_catalog",
+          "line": 75
+        },
+        {
+          "name": "load_verified_catalog",
+          "line": 90
+        },
+        {
+          "name": "current_catalog",
+          "line": 137
+        },
+        {
+          "name": "source_token",
+          "line": 143
+        },
+        {
+          "name": "current_entries",
+          "line": 149
+        },
+        {
+          "name": "current_png",
+          "line": 155
+        }
+      ],
+      "imports": [
+        "PIL",
+        "UnityPy",
+        "base64",
+        "copy",
+        "hashlib",
+        "io",
+        "pathlib",
+        "struct",
+        "wlre.services.official_bundle_download",
+        "wlre.services.official_incremental_sync",
+        "wlre.services.parser_diagnostics",
+        "wlre.services.world.catalog_adapters",
+        "wlre.services.world.dynamic_bundle_runtime",
+        "wlre.services.world.official_catalog_pipeline",
+        "wlre.services.world.unity_textasset",
+        "wlre.storage.normalized_resources"
+      ],
+      "existing_test_candidates": [
+        "tests/emoji_fixtures.py",
+        "tests/test_official_emoji_database.py",
+        "tests/test_runtime_source_sync.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/world/eve_v115.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/eve_v115.py",
+    "source_sha256": "42f4281499ea6804d589b9836d2c777aabd4450e328ae03e60cef1901edeb5bf",
+    "source_lines": 261,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/World/Eve/EveV115Parser.cs",
+      "dotnet/Lala.Core/World/Eve/EveV115Indexes.cs",
+      "dotnet/Lala.Core/Diagnostics/Parsing/ParserDiagnostics.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "EveDecodeError",
+          "line": 23
+        },
+        {
+          "name": "Reader",
+          "line": 27
+        },
+        {
+          "name": "_common",
+          "line": 52
+        },
+        {
+          "name": "_npc",
+          "line": 61
+        },
+        {
+          "name": "_interact",
+          "line": 76
+        },
+        {
+          "name": "_skip_event",
+          "line": 96
+        },
+        {
+          "name": "_skip_group",
+          "line": 103
+        },
+        {
+          "name": "_skip_battle",
+          "line": 108
+        },
+        {
+          "name": "_scene",
+          "line": 117
+        },
+        {
+          "name": "_derive_eve_indexes",
+          "line": 198
+        },
+        {
+          "name": "derive_eve_index",
+          "line": 249
+        },
+        {
+          "name": "derive_eve_indexes",
+          "line": 255
+        }
+      ],
+      "imports": [
+        "__future__",
+        "json",
+        "struct",
+        "wlre.services.parser_diagnostics"
+      ],
+      "existing_test_candidates": [
+        "tests/test_auto_catalog.py",
+        "tests/test_background_version_observer.py",
+        "tests/test_bundle_runtime_1275.py",
+        "tests/test_eve_v115.py",
+        "tests/test_parser_diagnostics.py",
+        "tests/test_resource_database.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "migrated_scope": [
+      "Strict bounded cancellable Eve v115 eleven-section validation and immutable NPC/interaction index derivation, including exact JSON APIs; 2,143 exact Python cases and three separately documented duplicate-scene fail-closed cases.",
+      "All typed Parse and serialized Derive entrypoints automatically emit privacy-safe in-memory diagnostics with matching source parser names, counts, variants, raw digests and scene/header checkpoints; 2,146 retained-Python diagnostic observations. No-session success stays quiet, failure keeps the public exception, and cancellation is not a layout failure."
+    ],
+    "outstanding_scope": [
+      "Runtime catalog wiring, actual resource activation, diagnostic persistence and device/server acceptance remain. Duplicate scene IDs intentionally reject the retained Python overwrite/count inconsistency; error type labels name the public C# exception rather than claiming byte-identical Python type names."
+    ]
+  },
+  {
+    "id": "desktop:wlre/services/world/event_portals.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/event_portals.py",
+    "source_sha256": "0bed2a5f1d2eb7b2127358b5664e5f265bc80b55efd08044194332137ed2865f",
+    "source_lines": 76,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/World/Portals/OfflineEventPortalProjector.cs",
+      "dotnet/Lala.Core/World/Portals/OfflineEventPortalProjection.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "reconcile_event_portals",
+          "line": 10
+        }
+      ],
+      "imports": [
+        "collections",
+        "wlre.services.world.boundary_portals",
+        "wlre.services.world.portal_evidence_1275"
+      ],
+      "existing_test_candidates": [
+        "tests/test_event_convey_portals.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "migrated_scope": [
+      "Pure reconcile_event_portals is implemented for typed immutable EveDoorProjection/StageDataRow inputs and a carried-forward OfflineEventPortalProjection. Missing conveys or zero/unknown stage destinations revoke prior position/destination claims; all conditional targets are retained in sorted order and conditions are never executed. Multiple targets remain undecided rather than guessed.",
+      "Preserves source geometry, duplicate/zero index behavior and prior point/metadata behavior, including retaining a prior point outside newly calculated bounds. An incompatible prior destination removes its claims and creates a conflicting_event_destination issue; immutable issue state must be retained on later passes to prevent resurrecting the claim. The source in-place door/dictionary mutation is replaced with detached immutable positions/destinations/issues, not persistent storage.",
+      "Source cross-check field names such as DestinationVerified are geometric/referential observations, not official provenance or permission. The desktop ten-table candidate now invokes event-only reconciliation through the bounded boundary Bind path; the owned-source flow returns those observations. This is not an Android runtime call site. Cancellation returns no new state and never mutates prior snapshots.",
+      "105 actual retained-Python synthetic cases plus three contracts pass as 108 focused tests; 5,521 impacted Eve/World/RuntimeCandidate tests also passed. Source fingerprints for event, boundary, portal-evidence and door helpers and deterministic compressed/decoded fixture hashes are retained; independent review approved. Tests compare all source-present fields and row/array counts, while typed optional fields remain explicit. No full dynamic-Python object or official-resource/runtime acceptance is claimed."
+    ],
+    "outstanding_scope": [
+      "The typed immutable API is not arbitrary Python dictionaries, mutation aliases or an open-ended metadata contract. Callers must carry the returned Issues state forward; discarding it is not source-equivalent repeated reconciliation. No optional portal-catalog promotion, active-runtime integration/admission, route execution, server-confirmed transfers, UI/Android call site, network, installation or travel/packet authority.",
+      "Standalone StageMap/EveDoorLinks parsing, physical binding, broader route conflicts and coverage now exist with their own bounded evidence. Their source acquisition/verification, actual-resource success, optional-table activation and live travel remain unimplemented; event-only candidate observations do not promote missing optional assets."
+    ]
+  },
+  {
+    "id": "desktop:wlre/services/world/feature_resource_index.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/feature_resource_index.py",
+    "source_sha256": "a83f8bd276d2779bfc59d8a096f083f8e0250971dbc3a3e2c8e0a10db7ecb444",
+    "source_lines": 150,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_read_index",
+          "line": 36
+        },
+        {
+          "name": "_current_index",
+          "line": 50
+        },
+        {
+          "name": "describe_feature",
+          "line": 72
+        },
+        {
+          "name": "feature_note",
+          "line": 148
+        }
+      ],
+      "imports": [
+        "__future__",
+        "functools",
+        "json",
+        "pathlib",
+        "wlre.services.resource_compatibility",
+        "wlre.services.world.dynamic_bundle_runtime",
+        "wlre.services.world.launcher_catalog",
+        "wlre.storage.paths"
+      ],
+      "existing_test_candidates": [
+        "tests/test_feature_resource_index.py",
+        "tests/test_runtime_consumer_refresh.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/world/formal_candidate_bridge.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/formal_candidate_bridge.py",
+    "source_sha256": "226337f21708c2c5403b1e2f357ecb1148e568e3eac4b89759df202948d3ccf5",
+    "source_lines": 13,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "FormalBridgeError",
+          "line": 3
+        },
+        {
+          "name": "inspect_launcher_candidate",
+          "line": 6
+        },
+        {
+          "name": "inspect_formal_bridge",
+          "line": 9
+        },
+        {
+          "name": "promote_reviewed_archives",
+          "line": 12
+        }
+      ],
+      "imports": [],
+      "existing_test_candidates": [
+        "tests/test_formal_candidate_bridge.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/world/game_data_1275.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/game_data_1275.py",
+    "source_sha256": "1ffe434dd42f786f26831a10f089996d71823373c73e5b50e39c956eb35d214e",
+    "source_lines": 136,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_valid_manifest",
+          "line": 23
+        },
+        {
+          "name": "read_manifest",
+          "line": 72
+        },
+        {
+          "name": "verify_archive",
+          "line": 83
+        },
+        {
+          "name": "read_table",
+          "line": 108
+        },
+        {
+          "name": "main",
+          "line": 122
+        }
+      ],
+      "imports": [
+        "__future__",
+        "argparse",
+        "hashlib",
+        "json",
+        "pathlib",
+        "re",
+        "zipfile"
+      ],
+      "existing_test_candidates": [
+        "tests/test_game_data_1275.py",
+        "tests/test_resource_rebuilder.py",
+        "tests/test_verified_expedition_1275.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/world/guild_catalog.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/guild_catalog.py",
+    "source_sha256": "0c5a254d69ea42095a9ce395a1eeeb0d45f8d5c5d9613f0802253972d8e1a597",
+    "source_lines": 78,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "parse_sell",
+          "line": 9
+        },
+        {
+          "name": "parse_formulas",
+          "line": 24
+        },
+        {
+          "name": "parse_organization",
+          "line": 36
+        },
+        {
+          "name": "quote",
+          "line": 49
+        },
+        {
+          "name": "load_verified_catalog",
+          "line": 71
+        }
+      ],
+      "imports": [
+        "wlre.services.parser_diagnostics",
+        "wlre.services.world.daily_task_1275",
+        "wlre.services.world.resource_database"
+      ],
+      "existing_test_candidates": [
+        "tests/test_dynamic_bundle_runtime.py",
+        "tests/test_guild_actions.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/world/house_navigation.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/house_navigation.py",
+    "source_sha256": "4cf718b6663299b031f847cb0abaafaeeccb7f97cca345f6862ce0045425f66c",
+    "source_lines": 77,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Protocol/ServerProtocol.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "decode_floor_extension",
+          "line": 7
+        },
+        {
+          "name": "update_context",
+          "line": 26
+        },
+        {
+          "name": "resolve_house_stage",
+          "line": 35
+        },
+        {
+          "name": "instance_aliases",
+          "line": 49
+        },
+        {
+          "name": "require_general_navigation",
+          "line": 72
+        }
+      ],
+      "imports": [
+        "hashlib",
+        "json",
+        "wlre.services.world.navigation"
+      ],
+      "existing_test_candidates": [
+        "tests/test_house_navigation_context.py",
+        "tests/test_house_navigation_scope.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "migrated_scope": [
+      "Pure decode_floor_extension with exact source lengths and accepted ranges."
+    ],
+    "outstanding_scope": [
+      "House models/navigation/runtime authority and other module operations remain."
+    ]
+  },
+  {
+    "id": "desktop:wlre/services/world/instance_runtime.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/instance_runtime.py",
+    "source_sha256": "fda023b43c105e42dc85d0e6d788736c83e0a63f5aa7b7f4c91a22225dec289c",
+    "source_lines": 93,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "build_catalog",
+          "line": 8
+        },
+        {
+          "name": "load_verified_catalog",
+          "line": 72
+        }
+      ],
+      "imports": [
+        "hashlib",
+        "pathlib",
+        "wlre.services.expedition.data",
+        "wlre.services.instance_catalog",
+        "wlre.services.official_bundle_download",
+        "wlre.services.official_incremental_sync",
+        "wlre.services.world.catalog_adapters",
+        "wlre.services.world.itemdata_v1",
+        "wlre.services.world.official_catalog_pipeline",
+        "wlre.services.world.unity_textasset",
+        "wlre.storage.normalized_resources"
+      ],
+      "existing_test_candidates": [
+        "tests/test_dynamic_bundle_runtime.py",
+        "tests/test_instance_catalog_1262.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/world/item_image_database.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/item_image_database.py",
+    "source_sha256": "bd0295fd02a21e158d809236e5016915b42891535fa0a067cefe5cc8f04030a5",
+    "source_lines": 241,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "image_paths",
+          "line": 23
+        },
+        {
+          "name": "_schema",
+          "line": 36
+        },
+        {
+          "name": "_decode_png",
+          "line": 51
+        },
+        {
+          "name": "ImageCatalog",
+          "line": 66
+        },
+        {
+          "name": "import_images",
+          "line": 88
+        },
+        {
+          "name": "load_verified_images",
+          "line": 153
+        },
+        {
+          "name": "ItemImageCatalog",
+          "line": 214
+        },
+        {
+          "name": "current_catalog",
+          "line": 233
+        },
+        {
+          "name": "source_token",
+          "line": 239
+        }
+      ],
+      "imports": [
+        "PIL",
+        "UnityPy",
+        "contextlib",
+        "dataclasses",
+        "hashlib",
+        "io",
+        "json",
+        "pathlib",
+        "re",
+        "sqlite3",
+        "wlre.services.official_bundle_download",
+        "wlre.services.official_incremental_sync",
+        "wlre.services.world.dynamic_bundle_runtime",
+        "wlre.services.world.unity_textasset"
+      ],
+      "existing_test_candidates": [
+        "tests/test_icon_decode_cache.py",
+        "tests/test_item_image_ui_database.py",
+        "tests/test_official_item_images.py",
+        "tests/test_release.py",
+        "tests/test_runtime_source_sync.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/world/item_stack_rules.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/item_stack_rules.py",
+    "source_sha256": "2ff5e55ae6ec4a1362ea9e2884f132f4af61cabae782a2024f4037f7429cd77c",
+    "source_lines": 52,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Catalogs/ItemStackRules.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "can_overlap",
+          "line": 10
+        },
+        {
+          "name": "CurrentStackRules",
+          "line": 33
+        }
+      ],
+      "imports": [
+        "collections.abc",
+        "wlre.services.world.dynamic_bundle_runtime"
+      ],
+      "existing_test_candidates": [
+        "tests/test_expedition.py",
+        "tests/test_official_stack_rules.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "migrated_scope": [
+      "All pure reviewed can_overlap branches and typed input validation."
+    ],
+    "outstanding_scope": [
+      "CurrentStackRules facade and catalog activation not migrated."
+    ]
+  },
+  {
+    "id": "desktop:wlre/services/world/itemdata_v1.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/itemdata_v1.py",
+    "source_sha256": "8ee7e6964e53c3f188ddf9ab761d14e58a238fb01397e4b82369779ca1b549d2",
+    "source_lines": 143,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Catalogs/ItemDataParser.cs",
+      "dotnet/Lala.Core/Catalogs/CatalogReader.cs",
+      "dotnet/Lala.Core/Catalogs/OrderedCatalog.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "ItemDataDecodeError",
+          "line": 17
+        },
+        {
+          "name": "Reader",
+          "line": 21
+        },
+        {
+          "name": "parse_itemdata",
+          "line": 55
+        }
+      ],
+      "imports": [
+        "__future__",
+        "hashlib",
+        "wlre.services.parser_diagnostics",
+        "wlre.services.world.item_stack_rules"
+      ],
+      "existing_test_candidates": [
+        "tests/test_auto_catalog.py",
+        "tests/test_bundle_runtime_1275.py",
+        "tests/test_catalog_source_extractor.py",
+        "tests/test_dynamic_bundle_runtime.py",
+        "tests/test_itemdata_v1.py",
+        "tests/test_official_normal_attacks.py",
+        "tests/test_parser_diagnostics.py",
+        "tests/test_resource_database.py",
+        "tests/test_runtime_gate_and_recipe_status.py",
+        "tests/test_smith_candidate.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "migrated_scope": [
+      "Binary ItemData reader, legacy base fields, reviewed digest-pinned 1296 fields and validation.",
+      "Internal source-adapter-only ordered/diagnosed parsing reuses the existing layout, preserves the independent fixed 1296 hash and does not inherit the outer contract package version. Source input/count/checkpoint/read/error observations and ordered rows are covered within the 601 adapter vectors; 2,274 focused tests include existing catalog regressions. Existing public signatures, frozen-map results, gate order and diagnostic behavior remain unchanged.",
+      "A separate internal ParseForRuntimeCandidate path now retains insertion order and existing ItemData diagnostics while forwarding the actual package version through the unchanged public version policy/fixed 1296 pin. Unlike the source-adapter path, it does not omit that version. Positive synthetic candidates use the real legacy policy; synthetic 1296 bytes reject. No public parser behavior or reviewed-source pin is relaxed."
+    ],
+    "outstanding_scope": [
+      "Runtime loader/activation and actual official-resource successful parse acceptance remain unverified. Public/global ItemData diagnostic instrumentation, including nested observations in normal-attack/combat builders, remains absent; the internal adapter/candidate paths do not close those gaps. Existing public/shared-reader truncation behavior is preserved. Caller-supplied adapter hashes cannot unlock reviewed ItemData fields or bypass its fixed pin."
+    ]
+  },
+  {
+    "id": "desktop:wlre/services/world/launcher_catalog.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/launcher_catalog.py",
+    "source_sha256": "8db2ac2b8d546b778dafae97dc879a65036296565c81186cda4765bd35dc047b",
+    "source_lines": 286,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "status_path",
+          "line": 30
+        },
+        {
+          "name": "read_launcher_status",
+          "line": 35
+        },
+        {
+          "name": "_store_status",
+          "line": 77
+        },
+        {
+          "name": "prepare_on_launch",
+          "line": 99
+        },
+        {
+          "name": "main",
+          "line": 258
+        }
+      ],
+      "imports": [
+        "__future__",
+        "datetime",
+        "json",
+        "os",
+        "pathlib",
+        "sys",
+        "tempfile",
+        "wlre.launcher_progress",
+        "wlre.services.official_server_list",
+        "wlre.services.parser_diagnostics",
+        "wlre.services.world.auto_catalog",
+        "wlre.services.world.bundle_runtime_1275",
+        "wlre.services.world.dynamic_bundle_runtime",
+        "wlre.services.world.resource_gap_diagnostics",
+        "wlre.services.world.runtime_manifest_identity",
+        "wlre.storage.paths"
+      ],
+      "existing_test_candidates": [
+        "tests/test_auto_catalog_ui.py",
+        "tests/test_bundle_runtime_1275.py",
+        "tests/test_feature_resource_index.py",
+        "tests/test_isolated_desktop_check.py",
+        "tests/test_launcher_catalog.py",
+        "tests/test_resource_gap_diagnostics.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/world/map_names.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/map_names.py",
+    "source_sha256": "043f2a4e96b91cec83432fec30d54f94cfe63a86e024cb44439c0178023cb466",
+    "source_lines": 65,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_current_data",
+          "line": 8
+        },
+        {
+          "name": "data",
+          "line": 39
+        },
+        {
+          "name": "parse_map_id",
+          "line": 43
+        },
+        {
+          "name": "map_label",
+          "line": 51
+        },
+        {
+          "name": "model_label",
+          "line": 56
+        },
+        {
+          "name": "map_choices",
+          "line": 63
+        }
+      ],
+      "imports": [
+        "copy",
+        "re",
+        "wlre.services.world.runtime_1275",
+        "wlre.services.world.scene_names_1275"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/world/movement.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/movement.py",
+    "source_sha256": "4895b6496f277e6620bd37abccf30be6d397a49b2d08652b28bf3da015e476d4",
+    "source_lines": 210,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "Movement",
+          "line": 10
+        }
+      ],
+      "imports": [
+        "math",
+        "wlre.core.state_ownership",
+        "wlre.network.protocol",
+        "wlre.network.wire",
+        "wlre.services.battle.party",
+        "wlre.services.world.dynamic_bundle_runtime",
+        "wlre.services.world.house_navigation",
+        "wlre.services.world.official_movement"
+      ],
+      "existing_test_candidates": [
+        "tests/test_automatic_flows.py",
+        "tests/test_bounded_official_locomotion.py",
+        "tests/test_house_navigation_scope.py",
+        "tests/test_minimap_actions_and_expedition_resume.py",
+        "tests/test_movement_authority.py",
+        "tests/test_navigation_motion_safety.py",
+        "tests/test_navigation_preview_job.py",
+        "tests/test_nonplanar_navigation_safety.py",
+        "tests/test_npc_approach.py",
+        "tests/test_official_navigation_no_seed.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/world/movement_display.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/movement_display.py",
+    "source_sha256": "c5fbc0f0de0697b83e83fc2d2d55f878272be15da4644aaeb5c112b763df7f20",
+    "source_lines": 25,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "point_text",
+          "line": 5
+        },
+        {
+          "name": "movement_summary",
+          "line": 11
+        }
+      ],
+      "imports": [
+        "wlre.services.world.map_names"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/world/navigation.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/navigation.py",
+    "source_sha256": "57a73e36d235a0407e72de2d4a7b97f816faf64093bbe1b450389a5e8b272417",
+    "source_lines": 154,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/World/NavigationMesh.cs",
+      "dotnet/Lala.Core/World/NavigationGeometry.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "NavigationError",
+          "line": 16
+        },
+        {
+          "name": "finite",
+          "line": 20
+        },
+        {
+          "name": "Repository",
+          "line": 25
+        },
+        {
+          "name": "Mesh",
+          "line": 62
+        }
+      ],
+      "imports": [
+        "heapq",
+        "io",
+        "json",
+        "math",
+        "pathlib",
+        "wlre.services.world.map_names",
+        "zipfile"
+      ],
+      "existing_test_candidates": [
+        "tests/test_automatic_flows.py",
+        "tests/test_bounded_official_locomotion.py",
+        "tests/test_home_map_follow.py",
+        "tests/test_house_navigation_context.py",
+        "tests/test_house_navigation_scope.py",
+        "tests/test_minimap_actions_and_expedition_resume.py",
+        "tests/test_navigation_autosync.py",
+        "tests/test_navigation_funnel.py",
+        "tests/test_navigation_motion_matrix.py",
+        "tests/test_navigation_motion_safety.py",
+        "tests/test_navigation_preview_job.py",
+        "tests/test_navigation_review_registry.py",
+        "tests/test_navigation_shadow.py",
+        "tests/test_navigation_surface_3d.py",
+        "tests/test_nonplanar_navigation_safety.py",
+        "tests/test_npc_approach.py",
+        "tests/test_official_movement_adapter.py",
+        "tests/test_official_navigation_coverage.py",
+        "tests/test_official_navigation_database.py",
+        "tests/test_seedless_desktop_startup.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "migrated_scope": [
+      "Mesh construction, shared-edge geometry, location/height ambiguity, A* route preview."
+    ],
+    "outstanding_scope": [
+      "Archive/database/download loading and runtime movement not included."
+    ]
+  },
+  {
+    "id": "desktop:wlre/services/world/navigation_autosync.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/navigation_autosync.py",
+    "source_sha256": "92bbe0441500f4cda186a347663475a69e835dbcb3914716c811353c8e46fa46",
+    "source_lines": 105,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "NavigationAutoSync",
+          "line": 11
+        }
+      ],
+      "imports": [
+        "copy",
+        "threading",
+        "wlre.services.world.dynamic_bundle_runtime",
+        "wlre.services.world.house_navigation",
+        "wlre.services.world.navigation_database",
+        "wlre.services.world.navigation_preview",
+        "wlre.services.world.navigation_sync"
+      ],
+      "existing_test_candidates": [
+        "tests/test_navigation_autosync.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/world/navigation_database.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/navigation_database.py",
+    "source_sha256": "be862b96472bd0e5b291b3bcd1078d1828a6244e4d44a4cd0339b182b9ffbdcc",
+    "source_lines": 84,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_json",
+          "line": 13
+        },
+        {
+          "name": "_schema",
+          "line": 17
+        },
+        {
+          "name": "_identity",
+          "line": 31
+        },
+        {
+          "name": "import_cache",
+          "line": 36
+        },
+        {
+          "name": "record_failure",
+          "line": 54
+        },
+        {
+          "name": "load_cache",
+          "line": 62
+        },
+        {
+          "name": "database_path",
+          "line": 81
+        }
+      ],
+      "imports": [
+        "contextlib",
+        "hashlib",
+        "json",
+        "pathlib",
+        "re",
+        "sqlite3",
+        "wlre.services.world.astar_cache",
+        "wlre.services.world.navigation_reviewed_models",
+        "wlre.storage.paths"
+      ],
+      "existing_test_candidates": [
+        "tests/test_navigation_review_registry.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/world/navigation_funnel.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/navigation_funnel.py",
+    "source_sha256": "aad9643416880b0251613da86fbdac0c280a4012df261b7ee6cd90ab9d0f4870",
+    "source_lines": 79,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/World/NavigationFunnel.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "area",
+          "line": 12
+        },
+        {
+          "name": "covered",
+          "line": 16
+        },
+        {
+          "name": "smooth_corridor",
+          "line": 39
+        }
+      ],
+      "imports": [
+        "math",
+        "wlre.services.world.navigation"
+      ],
+      "existing_test_candidates": [
+        "tests/test_navigation_funnel.py",
+        "tests/test_navigation_motion_matrix.py",
+        "tests/test_navigation_motion_safety.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "migrated_scope": [
+      "Planar funnel and containment with cancellation and signed Int3 bounds."
+    ],
+    "outstanding_scope": [
+      "Movement authority and collision/actor clearance acceptance remain separate."
+    ]
+  },
+  {
+    "id": "desktop:wlre/services/world/navigation_motion_safety.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/navigation_motion_safety.py",
+    "source_sha256": "16e0a386bcdc78bd9d31992b99a61967b68abfed7320994f03cee03024793456",
+    "source_lines": 91,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/World/NavigationMotionSafety.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_point",
+          "line": 14
+        },
+        {
+          "name": "check_preview",
+          "line": 18
+        },
+        {
+          "name": "exact_waypoint_step",
+          "line": 62
+        }
+      ],
+      "imports": [
+        "math",
+        "wlre.services.world.navigation_funnel"
+      ],
+      "existing_test_candidates": [
+        "tests/test_navigation_motion_safety.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "migrated_scope": [
+      "Preview rejection guards and exact-waypoint stepping, no movement authority."
+    ],
+    "outstanding_scope": [
+      "Runtime identity, packet-coordinate adapter, collision/device validation and Movement integration remain."
+    ]
+  },
+  {
+    "id": "desktop:wlre/services/world/navigation_preview.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/navigation_preview.py",
+    "source_sha256": "bc92f14ee1f4d1efe29cce68eff6261373c80b394707122bb1af97ccd6fe27f6",
+    "source_lines": 131,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/World/NavigationMesh.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "NoPreviewRoute",
+          "line": 11
+        },
+        {
+          "name": "PreviewMesh",
+          "line": 19
+        },
+        {
+          "name": "PreviewRepository",
+          "line": 85
+        }
+      ],
+      "imports": [
+        "heapq",
+        "math",
+        "wlre.services.world.house_navigation",
+        "wlre.services.world.navigation",
+        "wlre.services.world.navigation_database",
+        "wlre.services.world.navigation_funnel",
+        "wlre.services.world.navigation_sync"
+      ],
+      "existing_test_candidates": [
+        "tests/test_bounded_official_locomotion.py",
+        "tests/test_house_navigation_scope.py",
+        "tests/test_navigation_autosync.py",
+        "tests/test_navigation_preview_job.py",
+        "tests/test_navigation_shadow.py",
+        "tests/test_nonplanar_navigation_safety.py",
+        "tests/test_official_movement_adapter.py",
+        "tests/test_official_navigation_database.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "migrated_scope": [
+      "Directed/tag-filtered PreviewMesh, serialized cost/penalty routing and optional smoothing."
+    ],
+    "outstanding_scope": [
+      "Runtime loader/database/facade integration not included."
+    ]
+  },
+  {
+    "id": "desktop:wlre/services/world/navigation_preview_job.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/navigation_preview_job.py",
+    "source_sha256": "f935a673b753e685b2a6fd3b28759c2041f00f634cd29fd885939091b55409b1",
+    "source_lines": 56,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "signature",
+          "line": 10
+        },
+        {
+          "name": "PreviewJob",
+          "line": 16
+        }
+      ],
+      "imports": [
+        "copy",
+        "json",
+        "math",
+        "threading",
+        "wlre.services.world.dynamic_bundle_runtime",
+        "wlre.services.world.navigation_preview"
+      ],
+      "existing_test_candidates": [
+        "tests/test_navigation_preview_job.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/world/navigation_reviewed_models.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/navigation_reviewed_models.py",
+    "source_sha256": "aa68db10fb5af295f7b963dbbc9ba7fde25d05c556d6f01335746bcc9a00e63e",
+    "source_lines": 568,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [],
+      "imports": [],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/world/navigation_shadow.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/navigation_shadow.py",
+    "source_sha256": "d9c86d9883d85274d0a856dac3d432fe43f0ae350763c7623e3d6df4d0f6596f",
+    "source_lines": 130,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "ComparisonUnavailable",
+          "line": 13
+        },
+        {
+          "name": "legacy_metadata",
+          "line": 19
+        },
+        {
+          "name": "_xy",
+          "line": 44
+        },
+        {
+          "name": "_summary",
+          "line": 52
+        },
+        {
+          "name": "compare",
+          "line": 63
+        }
+      ],
+      "imports": [
+        "copy",
+        "math",
+        "wlre.services.world.coordinates",
+        "wlre.services.world.dynamic_bundle_runtime",
+        "wlre.services.world.house_navigation",
+        "wlre.services.world.navigation",
+        "wlre.services.world.navigation_preview",
+        "wlre.services.world.navigation_preview_job"
+      ],
+      "existing_test_candidates": [
+        "tests/test_navigation_shadow.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/world/navigation_surface_3d.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/navigation_surface_3d.py",
+    "source_sha256": "11af1d2cdd489c7a2ffeee02a295f21e6373d2d492480ec9255a6636076af3c4",
+    "source_lines": 53,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_dot",
+          "line": 5
+        },
+        {
+          "name": "_sub",
+          "line": 6
+        },
+        {
+          "name": "segment_on_surface",
+          "line": 9
+        }
+      ],
+      "imports": [
+        "math"
+      ],
+      "existing_test_candidates": [
+        "tests/test_navigation_surface_3d.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/world/navigation_sync.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/navigation_sync.py",
+    "source_sha256": "d7263dbb0a52d613c5120a9ef190d4a816153274ba7958410c9c9359014986bd",
+    "source_lines": 111,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "sync_model",
+          "line": 19
+        },
+        {
+          "name": "_sync_model",
+          "line": 31
+        },
+        {
+          "name": "extract_cache",
+          "line": 93
+        }
+      ],
+      "imports": [
+        "UnityPy",
+        "hashlib",
+        "pathlib",
+        "threading",
+        "wlre.services.official_bundle_download",
+        "wlre.services.official_manifest_sync",
+        "wlre.services.official_resource_sync",
+        "wlre.services.world.house_navigation",
+        "wlre.services.world.navigation_database",
+        "wlre.storage.paths"
+      ],
+      "existing_test_candidates": [
+        "tests/test_house_navigation_scope.py",
+        "tests/test_navigation_autosync.py",
+        "tests/test_official_navigation_coverage.py",
+        "tests/test_official_navigation_database.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/world/normal_attack_catalog.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/normal_attack_catalog.py",
+    "source_sha256": "05e4cf4ff9f86470c04552cb4dc3d4a8acdbfdda2eb9e4c98ab59a6b66d2e13a",
+    "source_lines": 57,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Catalogs/NormalAttackCatalogParser.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "parse_npcs",
+          "line": 15
+        },
+        {
+          "name": "build_catalog",
+          "line": 34
+        },
+        {
+          "name": "_source",
+          "line": 46
+        },
+        {
+          "name": "CurrentNormalData",
+          "line": 52
+        }
+      ],
+      "imports": [
+        "collections.abc",
+        "hashlib",
+        "struct",
+        "wlre.services.parser_diagnostics",
+        "wlre.services.world.dynamic_bundle_runtime",
+        "wlre.services.world.itemdata_v1"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "migrated_scope": [
+      "Offline parse_npcs/build_catalog subset with fixed public reviewed NPC and ItemData SHA-256 pins and source-order ItemData-before-NPC validation. Strict UTF-16LE text, bounded 203-byte NPC fields, zero/duplicate/count/trailing-byte rejection and immutable normal-attack, item-kind, catchability and catch-net snapshots. Catch nets use special 140 and the first signed Int32 attribute minus 100 without overflow.",
+      "Source NPC diagnosed/read-checkpoint observations with input digests, counts, safe failure annotations and nested-call behavior. 810 actual-Python vectors and 825 focused Release tests; 24 retained Python tests passed with one existing asset-dependent skip. Synthetic layout pins are patched only inside restored Python test contexts; C# public entrypoints reject every synthetic input.",
+      "Truncation evidence distinguishes exactly 247 inherited pre-NPC ItemData failures mapped narrowly from ItemData record truncated to the existing Catalog record truncated label, and 235 NPC truncations compared with exact source wording. Other rejection messages remain exact; established C# exception type labels replace Python ValueError/ItemDataDecodeError labels."
+    ],
+    "outstanding_scope": [
+      "_source/CurrentNormalData, resource retrieval, verified runtime/catalog activation, command/capture authority, UI/session integration and actual official-resource successful parsing remain unimplemented or unverified. Public hashes/layout gates cannot be supplied or bypassed by callers; internal layout helpers are test-only.",
+      "Nested ItemData diagnostics in this normal-attack builder remain absent; the newer internal source-adapter-only ItemData path does not instrument this call. build_catalog has no source decorator and existing public parser/reader behavior remains unchanged. No full-module, complete diagnostics, device or live acceptance claim; the pure combat catalog assembler reuses this parser without runtime activation or source-asset acceptance."
+    ]
+  },
+  {
+    "id": "desktop:wlre/services/world/npc_1275_eve.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/npc_1275_eve.py",
+    "source_sha256": "909e349b46cdec19919123285448ec9b9e3dd45c799c6d86c2f895a3db38ed46",
+    "source_lines": 93,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "verify_file",
+          "line": 19
+        },
+        {
+          "name": "read_verified_zip",
+          "line": 78
+        },
+        {
+          "name": "scene_npcs",
+          "line": 87
+        },
+        {
+          "name": "scene_choices",
+          "line": 92
+        }
+      ],
+      "imports": [
+        "gzip",
+        "hashlib",
+        "io",
+        "json",
+        "zipfile"
+      ],
+      "existing_test_candidates": [
+        "tests/test_npc_1275_eve.py",
+        "tests/test_resource_rebuilder.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/world/npc_approach.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/npc_approach.py",
+    "source_sha256": "3ecb0cf3f4aec54714be2ef8d10c8cd0acdc6d453f7442b1dcdfb1418f453a67",
+    "source_lines": 66,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "approach",
+          "line": 15
+        }
+      ],
+      "imports": [
+        "math",
+        "wlre.network.wire",
+        "wlre.services.world.catalog_source_policy",
+        "wlre.services.world.display_position",
+        "wlre.services.world.dynamic_bundle_runtime",
+        "wlre.services.world.navigation"
+      ],
+      "existing_test_candidates": [
+        "tests/test_automatic_flows.py",
+        "tests/test_npc_approach.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/world/npc_asset_install.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/npc_asset_install.py",
+    "source_sha256": "14ee79689e99f746f12262561ecc1371b0d71b5c7ac9bf8c40c20f8450e1882c",
+    "source_lines": 87,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "read_verified",
+          "line": 22
+        },
+        {
+          "name": "install",
+          "line": 50
+        },
+        {
+          "name": "main",
+          "line": 74
+        }
+      ],
+      "imports": [
+        "argparse",
+        "gzip",
+        "hashlib",
+        "io",
+        "json",
+        "os",
+        "pathlib",
+        "tempfile",
+        "wlre.paths",
+        "zipfile"
+      ],
+      "existing_test_candidates": [
+        "tests/test_npc_asset_install_v059.py",
+        "tests/test_npc_resource_integrity_v0510.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/world/npc_battle_catalog.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/npc_battle_catalog.py",
+    "source_sha256": "4985580662d8f19ff604ae49f83ffdd611e4a3bea22099f9551d752d8e51c954",
+    "source_lines": 65,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Catalogs/NpcBattleTalkCatalogParser.cs",
+      "dotnet/Lala.Core/Catalogs/TextDataParser.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "parse_known_battle_talk",
+          "line": 17
+        },
+        {
+          "name": "build_catalog",
+          "line": 35
+        },
+        {
+          "name": "load_verified_catalog",
+          "line": 44
+        }
+      ],
+      "imports": [
+        "hashlib",
+        "pathlib",
+        "struct",
+        "wlre.services.expedition.data",
+        "wlre.services.official_bundle_download",
+        "wlre.services.official_incremental_sync",
+        "wlre.services.parser_diagnostics",
+        "wlre.services.world.catalog_adapters",
+        "wlre.services.world.official_catalog_pipeline",
+        "wlre.services.world.unity_textasset",
+        "wlre.storage.normalized_resources"
+      ],
+      "existing_test_candidates": [
+        "tests/test_npc_battle_catalog.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "migrated_scope": [
+      "Only pure parse_known_battle_talk/build_catalog are ported. Public parsing checks the fixed reviewed SHA-256 before structural checks, with no public pin override. The bounded 1–20,000 count uses exact 10-byte <HIBHB rows, nonzero group/text IDs and at most 255 rows per group. Immutable rows/groups preserve explicit group insertion order, row order and valid duplicate quote rows.",
+      "Builder order is quote parsing, TextData parsing, then missing-reference validation; empty referenced strings remain valid. Output contains only quote groups, not attached text or certified TextData provenance. Source npc-battle-talk-known-v1 diagnostics retain raw input digests, result counts and source-fingerprint failure locations; the builder has no aggregate source decorator.",
+      "Combined TextData/NPC quote evidence: 295 actual decorated-Python vectors, 309 focused Release passes and 31 retained original Python passes; independent review regenerated all six compressed fixture resources in memory. Synthetic layout helpers are internal-only; public entrypoints reject all synthetic quote inputs. Exact source messages are retained while ProtocolError/ValueError and diagnostic labels map to CatalogDecodeException; typed spans, immutable ownership and cancellation are explicit differences."
+    ],
+    "outstanding_scope": [
+      "load_verified_catalog, official fetch/manifest verification, bundle extraction, normalized SQLite/cache installation, global catalog activation, localization/UI/Android/session integration and commands remain unimplemented. Fixed public gates have no synthetic bypass or caller-selected source profile.",
+      "Actual pinned official-source successful parsing and same-revision TextData acceptance remain unverified. A synthetic reference join or diagnostic observation does not authorize production use; surrounding Python runtime tests do not establish that runtime/storage behavior is ported. No new combined full-suite or full-module acceptance claim."
+    ]
+  },
+  {
+    "id": "desktop:wlre/services/world/npc_catalog.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/npc_catalog.py",
+    "source_sha256": "ecf7123dd50f76e908fb2bcf710c78d471075c6b7da3357dd74363b428df20f7",
+    "source_lines": 143,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_valid_index",
+          "line": 23
+        },
+        {
+          "name": "NPCIndex",
+          "line": 35
+        },
+        {
+          "name": "display_name",
+          "line": 81
+        },
+        {
+          "name": "scene_npcs",
+          "line": 88
+        },
+        {
+          "name": "npc_detail",
+          "line": 137
+        }
+      ],
+      "imports": [
+        "copy",
+        "gzip",
+        "json",
+        "pathlib",
+        "wlre.paths",
+        "wlre.services.items.catalog",
+        "wlre.services.world.runtime_1275"
+      ],
+      "existing_test_candidates": [
+        "tests/test_dynamic_bundle_runtime.py",
+        "tests/test_feature_resource_safety.py",
+        "tests/test_npc_catalog_v057.py",
+        "tests/test_npc_dialogue_v058.py",
+        "tests/test_official_npc_bootstrap.py",
+        "tests/test_runtime_1275_baseline.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/services/world/npc_interact.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/services/world/npc_interact.py",
+    "source_sha256": "4f7eb8018cb8d82adbf0d0266eb2979b5372fb86d654d77c16618a9f747922a0",
+    "source_lines": 109,
+    "target_project": "Lala.Core",
+    "target_subsystem": "Services.world",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "NPCInteractIndex",
+          "line": 19
+        }
+      ],
+      "imports": [
+        "copy",
+        "gzip",
+        "io",
+        "json",
+        "pathlib",
+        "wlre.services.world.runtime_1275"
+      ],
+      "existing_test_candidates": [
+        "tests/test_dynamic_bundle_runtime.py",
+        "tests/test_npc_choice_v0511.py",
+        "tests/test_npc_interact_real_v0511.py",
+        "tests/test_npc_shop_v0513.py",
+        "tests/test_official_npc_bootstrap.py",
+        "tests/test_runtime_1275_baseline.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "service",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  }
+]

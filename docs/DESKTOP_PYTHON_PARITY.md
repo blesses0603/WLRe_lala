@@ -1,0 +1,254 @@
+# PR #79 ver 8.0.58：Python 桌面介面對照盤點
+
+> **目前版本請先看 [2026-11-12 C#／Python 逐項對照](DESKTOP_PYTHON_COMPARISON_2026-11-12.md) 與其中的逐檔索引。** 本頁為各批介面／資源移植歷史；早期「未接」不能直接套用到目前程式，也不能從後續測試通過推論全功能行為相同。
+
+範圍是全部桌面畫面及其子視窗，保留使用者較新的「背包／特技各自獨立視窗」要求。參照 PR 原 head `59416bde817f39035176ae9c1e2eeb5b23896d58` 中 Python 7.3.1 原始碼；本批未改 Python，也未聲稱已全部移植完成。
+
+## 已確認的登入差異與修正
+
+Python `login_controller.py` 使用伺服器／分流選單，不讓使用者填 IP、XOR、平台或語言。`services/official_server_list.py` 從官方 HTTPS 清單取得分流，群組 `id // 100` 對應地球／水星，分流標示 `id % 100` 線。切換端點清除帳密，選群組後使用第一條可用分流。新版先前的技術參數表單不符合此流程，現已移除。
+
+Desktop 使用既有 `OfficialServerDiscovery`：官方 HTTPS allowlist、限制大小、禁止 redirect、版本前後一致與完整清單解析通過後才顯示。沒有內建或猜測的正式分流地址、離線清單替代或下載內容提供的協定參數。正式端由使用者選擇的該份清單取得；驗證端與協定來自 `wlre/configuration.py` 的發行程式碼：`34.81.10.22:16988`、TX/RX 173、platform 3、language 0。此歷史觀測設定只接受已知 exe `1.3.0` 和群組 1／2；其餘阻擋，不能把清單的 TLS 觀測當成遊戲端已驗證。清單載入失敗、取消、超過五分鐘或無選擇時不能登入，refresh 先撤銷舊選擇。
+
+仍與 Python 不同：尚未移植可信 SQLite 清單快取、完整資源 gate，以及安全帳號記憶；8.0.43 已補入啟動版本／唯讀資源檢查視窗。載入／儲存帳號與記住密碼維持停用，不讀取舊帳密。角色必須手動選擇，不沿用 Python 首筆預選。每次驗證／正式帳密傳送仍各自確認；官方 TCP 沒有 TLS，XOR 可逆，不提供安全加密。關閉與停止等待釋放；一般遊戲命令保持停用。
+
+## 全畫面清單與實作差距
+
+尺寸是 Python 原碼的設計尺寸，並非每個平台實測的最終像素。**已建版面不等於操作或資源已完成**。
+
+| Python 畫面／流程 | 原始碼（wlre/ 下）與尺寸 | Avalonia 現況／剩餘工作 |
+|---|---|---|
+| 啟動資源準備、線上版本、背景更新 | ui/version_gate_controller.py、background_version_controller.py；1000×710，內容可增高 | 8.0.43 已接獨立啟動視窗、實際官方 metadata 與選定目錄的 Core SQLite 唯讀檢查；8.0.44 已接登入後必要資源下載／驗證／唯讀目錄綁定；8.0.45 補入登入前必要資料準備及精確同版 gate；全圖資、背景 observer、GitHub 更新、計時及 Python 自動增高仍缺 |
+| 登入、帳號清單、分流、選角 | ui/login_controller.py、account_controller.py；900×620 | 已還原下拉流程與自動來源，接共用 Core；帳號設定與可信快取未移植，風險說明可捲動 |
+| 主畫面／十張總覽卡片 | ui/dashboard_builder.py、dashboard_layout.py、overview_ui.py、layout.py；1280×800 左870右380 | 既有 Dashboard；補齊所有主要功能入口，仍有卡片完整欄位／資源差距 |
+| 聊天／頻道／表情 | ui/chat_ui.py、chat_emoji.py、emoji_picker.py；表情依圖數自動計算 | 既有聊天唯讀、文字草稿；新增無資料表情提示；真實表情網格、文字插入與聊天發送未接 |
+| 戰場／選目標 | ui/battle_view.py；嵌入主畫面 | 既有 16 格位置、HP、選取；圖像／效果與所有送出停用 |
+| 主地圖／導航預覽 | ui/home_map.py、minimap.py、official_navigation_preview.py；380×320／640×520 | 既有地圖／導航表單；官方圖資、事件／NPC清單與完整導航預覽未完成 |
+| 背包／超空間袋／儲藏轉移 | ui/resource_view.py、bag_grid.py、storage_transfer_form.py、room_storage_status.py；1040×700 | 保留獨立背包、6×4格、搜尋／分頁；圖示目錄與可送出的物品操作未完成 |
+| 角色與夥伴特技 | ui/resource_view.py | 依使用者新要求獨立視窗，保留列表／詳情；正式技能成本／效果及施放未完成 |
+| 配點 | ui/attribute_points_ui.py；570×505 | 已新增五屬性列、加減／預覽入口；基礎屬性投影、本機加點預覽與確認未接 |
+| 組隊／必要隊員 | ui/services_ui.py、party_guard_ui.py；950×620 | 已新增成員／申請表與右側四人草稿；核心隊伍／請求唯讀；候選玩家、規則儲存與全部操作未接 |
+| 夥伴出戰 | ui/companion_ui.py；1040×650 | 已新增六欄列表與出戰／休息入口；核心夥伴唯讀；選取詳細能力與操作未接 |
+| 遠征 | ui/expedition_ui.py、expedition/panel.py、controls.py、task_list.py、task_detail.py、team_view.py、planner.py、settings.py；1080×650 | 保留既有三欄、草稿與換帳隔離；資料目錄、實際派遣／領獎未接 |
+| 副本／協力主頁 | ui/instance_ui.py、instance_catalog_ui.py、instance_room_list.py；features/dungeon/panel.py、cooperative/panel.py；1040×600 | 已新增兩頁、目錄／房間欄、獎勵入口；完整目錄／房間投影及動作未接 |
+| 建立／加入副本房間 | ui/instance_room_dialogs.py；建立470×315／協力470×355 | 子對話框尚缺；公開／私人密碼、次數與可加入限制不得用假的可操作表單取代 |
+| 福利：魔方／每日／每週／每日助手 | ui/benefits_ui.py、daily_tasks_ui.py、daily_assistant_ui.py；860×620 | 已新增四頁、選項／額度、任務表；魔方收到狀態可顯示；任務／獎勵完整投影與助手套用未接 |
+| 其他：方舟／組織 | ui/other_features_ui.py、star_ark_ui.py、guild_actions_ui.py；1080×740 | 已新增兩頁、事件／題目／捐獻額度表單；核心狀態文字可顯示；事件列表／題目／費用及套用未接 |
+| 煉金 | ui/services_ui.py；1040×650 | 已新增五材料列、次數及狀態側欄；清空本機選取可用；材料資格與技能／消耗投影未接 |
+| 製作主頁 | ui/crafting_ui.py、crafting_browser.py、crafting/catalog_grid.py、recipe_detail.py、item_icons.py、icon_cache.py；功能入口1080×650，獨立 browser1160×700 | 已新增設備／配方／詳情三欄及子視窗入口；正式圖示格、收藏／搜尋、材料與可製作判斷尚缺（目前以空表標示，非宣稱同版） |
+| 自訂製作清單 | ui/crafting_plan_ui.py；900×580 | 已新增列表與操作位置；本機增刪／排序／匯入匯出及排程接線未完成 |
+| 製作排程 | ui/crafting/queue_view.py；820×420 | 已新增進度及核心佇列唯讀；時間投影、重排與開始／停止未接 |
+| 經驗效率 | ui/efficiency_ui.py；960×610 | 已新增對象／單位、進度與統計表；經驗與升級時間投影、重設未接 |
+| 自動戰鬥／補給／維修／停止條件 | ui/auto_battle_ui.py、auto_battle/model.py、rule_card.py；1080×720 | 保留既有五頁、本機設定匯入匯出；細部規則卡／真實資源與 automation 接線未完成 |
+| 行動／條件編輯、補品／維修物品挑選 | ui/auto_battle/action_editor.py；960×640；recovery_ui.py 720×540、maintenance_ui.py 680×520 | 現有簡化行內編輯不等同這些子視窗；專用挑選／驗證流程仍缺 |
+| NPC 資訊、商店價格、互動選項、對話紀錄 | features/npc/panel.py；560×320、680×475、520×360、560×360 | 四個子視窗尚未移植；不得從空清單或未知資料開啟遊戲交易 |
+| 傳點位置預覽、逐圖／全場景核對 | features/portals/panel.py；730×460、1000×600、980×620 | 三個預覽／核對子視窗尚缺，導航主視窗不能代替 |
+| 啟動器下載／安裝進度 | launcher_progress.py | Python launcher 專屬；Avalonia packaging 已有獨立流程，未重製相同啟動器介面 |
+| 系統檔案挑選、確認／錯誤提示 | 各頁 filedialog／messagebox；theme.py、theme_surfaces.py、theme_styles.py、window_layout.py、rounded_notebook.py | 現有 Avalonia 原生 picker／風險 modal；字型度量、鍵盤焦點、DPI、主題邊界仍需 Windows／macOS 實機核對 |
+
+其他 UI 支援模組（session_bridge、session_event_coordinator、event_queue、connection_status、display_time、portrait_rows、button_art、function_icons、automation_control_icons、instance_menu_icons、halo_button、feature_navigation）不是額外畫面；其行為分別歸入上表的生命週期、時間顯示與素材／入口項。原封包檢查器為 C# 額外入口，不算 Python 等價畫面。
+
+## 驗證與後續順序
+
+- 本批實測：Release build 0 警告／錯誤；Desktop 離線 63；原生 Avalonia UI 206（28 張截圖）；新增 catalog UI 9；loopback 登入 11（最後 Stop 清理修正再跑 UI 150，未重產截圖，另加 catalog 9／loopback 11）；Core discovery 136；Python 發行／倉庫檢查 15，全部通過。全部測試只使用合成資料，不連正式服／官方 HTTP，不輸入真帳密。
+- UI 測試涵蓋每個新增視窗單實例、換帳重建、所有缺漏操作停用提示；新增登入測試涵蓋群組／分流、切換清密碼、未知設定、過期／失敗清單及取消等待。
+- Python 參照曾以隔離儲存、停用帳密載入、禁止 socket 連線實際建窗；Linux Tk 字型渲染不完整且截圖關閉有 Tcl cleanup 錯誤，因此只能支持建窗與尺寸檢查，**不能作為完整視覺一致驗收**。Avalonia 截圖亦不證明與 Python 每一格相同。
+- 接續優先：完整資源 gate（版本與唯讀檢查入口已補）→ 既有頁完整資料投影與本機編輯 → 製作圖示網格／配點／效率 → 房間／NPC／地圖／設定子視窗 → 各平台視覺、焦點、縮放與可及性。不得只補停用按鈕後宣稱全介面完成。
+- 真實登入與遊戲送出不屬於本輪驗證；一般遊戲動作仍停用，正式服驗收須另由使用者知悉風險後手動操作。
+
+## 同批圖示修正
+
+標題列移除功能圖 `MainIcon_041.png`，直接解碼既有 `app.ico`；原生 WindowIcon
+及 Windows ApplicationIcon 使用同一來源。實際 win-x64 publish 的 PE 原生圖示
+7 個圖框逐一與 ICO 位元組比對通過，CI 已加入相同檢查。沒有重新編碼或另製圖案。
+C# 尚無安裝器／捷徑／Linux desktop entry／macOS bundle 產生器，未驗收這些產物。
+Python Nuitka／macOS 既有打包命令已引用 app.ico，本批未重打包 Python。
+
+## 8.0.43 資源入口接線與驗證
+
+`VersionWindow` 是正式啟動入口，1000×710；結果、官方版本、本機資料庫、資源啟用限制及
+程式更新區塊依 Python 版本畫面順序安排，底部按鈕固定、內容可捲動。版本與 Package
+只顯示本次查詢值，不把發行設定或本機檢查結果當成已安裝官方版本。
+
+使用者選目錄後以背景工作呼叫 `ResourceInventoryInspector.InspectAsync`，固定讀取
+`official_sync/derived_catalogs/resource_inventory.sqlite3`；沒有目錄掃描、下載、建立／
+修復資料庫或帳密讀取。缺檔、損壞、無法讀取和自洽分開顯示。取消、關閉與重試
+串行管理；停止等待來源／檢查返回，取消後無晚到准入。
+
+進入登入僅代表已取得新鮮且支援的 metadata。登入頁會重新取得清單並要求使用者
+選擇伺服器／分流，不重用過期端點；仍不是 Python 的完整資源就緒 gate。未連正式服。
+完整下載／資源啟用、背景版本 observer、程式更新、自動增高與各平台原生 picker
+仍待接入／驗收，不能從此入口推定整套 UI 已對齊。
+
+本批驗證包括缺檔不建目錄、損壞合成 SQLite 不覆寫、版本欄位顯示、失敗撤銷、過期阻擋、
+停止等待與窗口路由；合成自洽結果亦不單獨啟用登入。Core discovery 136、資源 bootstrap／
+inspection 201、Desktop 離線 63 通過。原生 UI 224（29 張截圖）、catalog UI 9、loopback 11 與 Python 倉庫／發行 15 通過。CI 以 PR 本批驗證紀錄為準。
+
+## 8.0.44 登入後資源準備
+
+已從選定資料目錄接入真實 `AccountRuntime.CreatePrepared`；資源範圍與兩次帳密傳送
+分別確認。Core 完成官方取得、SQLite 回讀／來源重查後才綁定當前帳號目錄，Desktop
+同步物品／場景名稱及綁定／失敗狀態，撤銷時清除。完整流程與證據見
+[Desktop 資源接線](DESKTOP_RESOURCE_INTEGRATION.md)。這不是全部圖資啟用或 Python
+登入前完整 gate；前節 8.0.43 的未接線描述是歷史狀態，以上述本批範圍為準。
+
+## 8.0.45 登入前必要資源
+
+官方 metadata 不再足以開啟登入；先明示確認下載／寫入，由 Core 準備必要表、SQLite 回讀和來源重查，再以新清單精確比對 exe／data／Package。停止撤銷並等待資源釋放，登入後仍獨立重查。圖資未啟用：Core 缺 Sprite／Texture2D 圖像解碼及 Python 圖片資料庫的來源／像素／快取驗證橋接，詳見 [實際流程與相依差距](DESKTOP_RESOURCE_INTEGRATION.md)。
+
+## 8.0.46 圖像候選解碼
+
+Core 已有受限四格式 Texture2D 像素／矩形 Sprite 裁切與像素快取比對，但沒有 production 圖片抽取或 UI 啟用。class 28／213 精確解析、PNG／SQLite、同版來源重查及映射仍缺；所有圖資狀態維持未就緒。
+
+## 8.0.47 精確 SerializedFile 圖像解析
+
+已補上固定型別樹的 Texture2D／Sprite 解析與同檔指標核對，從驗證 Bundle 到像素候選可做離線整合測試。未接 production 圖資 publication；PNG／SQLite、實際官方格式覆蓋、四類圖片映射與 UI 啟用仍缺。維持未就緒狀態。
+
+## 8.0.48 離線 PNG／SQLite 快取
+
+已加入固定 RGBA8 PNG 編碼與獨立 SQLite cache，輸入必須為同版本／來源集合的精確候選清單。每次讀取重新對照完整 context、texture payload／像素雜湊及由獨立候選重建的 PNG 位元組；不以資料庫自存 hash 證明正確。限制單圖 512×512、8,192 張及合計 96 MiB；來源重查與取消在提交前執行，交易失敗保留既有資料。回傳僅是離線 PNG，不是 production publication。
+
+PNG 使用固定 stored DEFLATE 區塊，避免執行不可信快取的通用解壓；不是 Python PNG 編碼或 SQLite schema 相容層。Pillow／zlib 獨立解碼證據涵蓋最小尺寸、跨區塊與最大尺寸；自有 Bundle→候選→SQLite→重新開啟回讀有整合測試。官方來源取得與重查 owner、item／portrait／emoji／smallmap 映射、可撤銷 publication、UI 與實際官方格式覆蓋仍待接入，HasVisualAssets=false。
+
+8.0.47 CI 維持未驗證；8.0.48 需在推送後核對精確 head，不沿用歷史綠燈。
+
+## 8.0.49 物品圖 MainPackage 來源與映射基礎
+
+核對 Python item_image_database.py／dynamic_bundle_runtime.py 後，新增 MainPackage 精確物品圖清單及模型映射：s1000 預設圖不可缺、模型不得重複、未知物品或缺圖回退 1000；ItemData 必須提供 ReviewedDetails，舊版未知圖示欄位不猜測。映射包含圖示、寬高及 open_used，與 manifest SHA256 一起形成輸入指紋。
+
+Bundle 計畫沿用 YooAsset 完整依賴集合語意，不遞迴擴張；上限 4 個 Bundle／32 MiB。取得沿用既有受限來源、版本／manifest、checksum 及 attempt 機制，並共享必要資料的總下載／保留額度；比 Python 分開圖資額度更保守，沒有增加總配額。以檔名為鍵的既有已持有來源遇到不同 package／spec 一律拒絕，不能跨 package 誤用同名檔。
+
+本批為內部計畫／取得與唯讀映射層，尚未由 production owner 自動呼叫；未宣稱實際官方圖片成功解碼。後續仍需將每圖來源閉包、完整批次來源與映射指紋接入 PNG／SQLite，再接 owner 的版本撤銷及 UI。四類圖資、正式格式覆蓋、可撤銷 publication 與 UI 未完成，HasVisualAssets=false。
+
+## 8.0.50 物品圖 production 準備、撤銷與桌面顯示
+
+已將物品圖條件式接入 production 資源準備：ItemData 必須有經審閱的圖示欄位，MainPackage 必須含精確圖示清單；未知欄位、未支援格式或來源取得失敗時不產生圖片候選。下載仍共用原有總額度，圖片閉包維持 4 Bundle／32 MiB，不增加帳密或遊戲傳送權限。
+
+每個 Bundle 在整批只解析一次；每張圖仍僅能在 manifest 指定的 root＋完整依賴集合解析同檔 Sprite／Texture 指標。整批指紋包含版本 identity、manifest、映射／尺寸／open_used、全部 Bundle specs／SHA256 與每圖依賴；不同依賴的圖片可共同寫入快取，沒有降低逐圖來源驗證。整批像素／PNG 預算維持 96 MiB。
+
+owner 將完整批次寫入固定 core_item_images_v1.sqlite3，關閉後重新開啟只讀比對全部 PNG，再重查遠端版本／manifest，清理完成後才建立圖片 publication。寫入前重查來源、commit 前檢查當前 attempt；遠端版本與本機交易無法原子化，寫入後來源變更仍會拒絕發布。必要資料庫與圖片庫不是跨庫交易，圖片寫入另回報 NotAttempted／NotCommitted／Committed／Unknown，停止不回復既有寫入、不自動重試不明結果。只讀 refresh 不建立缺少的圖片快取；圖片庫損壞或寫入失敗目前會阻擋本次 owner 發布，保留結果供確認。
+
+圖片讀取沿用 ResourceRuntimeActivation 及帳號快照，逐次核對 owner／publication／generation；回傳僅為呼叫者擁有的歷史 PNG 副本，不能作為後續操作權限。停止、版本／帳號切換與釋放撤銷讀取。桌面背包及儲藏格每次刷新重新取得圖片，欄位未改變時也會處理圖片更新／撤銷；關閉與撤銷清除 Bitmap 並釋放。原生解碼前檢查 PNG header／尺寸上限；缺圖維持名稱與未通過驗證狀態。資源確認視窗新增圖片庫路徑及寫入結果。
+
+測試只使用自有合成 Bundle／PNG、SQLite 與 loopback。owner 正向持久化測試使用明示 offline image hook，撤銷測試沿用 white-box publication seam；這些都不能證明官方來源正向驗收，production 建構不接受 hook／來源注入。原生 UI 測試發現「庫存不變便跳過重繪」會漏掉圖片撤銷，已修正並新增顯示／失敗／清除檢查。
+
+**仍未完成**：實際官方圖片格式正向驗收、更多 Texture／Sprite 格式、頭像、表情、小地圖及 Python 全介面一致。HasItemImages 反映當前物品圖狀態；HasVisualAssets 仍為 false，不冒稱全圖資完成。既有帳密逐次確認、無 TLS／XOR 可逆提示、停止等待清理及一般遊戲操作 Held 均保留。
+
+## 8.0.51 低資源優先目標
+
+低 SP 補品與友方技能按 SP 排序，低 HP 按 HP；門檻仍是絕對值且嚴格小於。
+保存的 target 1／2／3 不變，友方含義為最低資源／座標／最高資源。
+敵方技能仍走原 HP／屬性目標邏輯；基本普攻的 2 原本是最低 HP，介面明示。
+防禦／逃跑無目標；原有設定值保留但選單停用。次階技能按最終 TargetKind 分類。
+友方技能不等於補 SP；本機只有原始 SkillData 欄位與消耗，沒有可靠恢復量分類。
+本批沒有以不明 FightWay 或 Variable 欄位新增自動恢復技能。
+
+依使用者附圖，HP < A → B 技能與 SP < C → D 技能分列保存；角色／夥伴各自獨立。
+保留嚴格小於和兩條件同時成立時先 HP 的既有順序。舊 JSON 不需遷移。
+測試資料皆為合成，沒有正式服驗收或真實遊戲發送。
+
+最終原生驗證：Avalonia Release 零警告／錯誤；UI 240 項、31 張截圖，SP < 門檻行動視窗已目視檢查。
+Desktop 離線 76 項（presentation 67＋inspector 9）；公開 consumer、Tk 原生編輯器及模型 6 項、倉庫／發行 15 項通過。
+
+## 8.0.52 技能恢復種類
+
+已取得指紋一致的 Lua 依據，確認 FightWay 6／7／14；見 [研究與限制](SKILL_RECOVERY_EVIDENCE.md)。
+技能視窗與動態行動清單顯示已知恢復種類，恢復量仍未知；消耗 SP 與恢復效果分開顯示。
+C# 原本只有技能 ID 的名稱查找也接入目前已驗證可選技能目錄；無目錄仍顯示待同步／未驗證。
+不新增自動選技能、不變更次階規則、不啟用施放；正式官方資源正向驗收仍未完成。
+
+## 8.0.53 壓縮圖像接線與背包解碼重用
+
+新增 TextureFormat 10（DXT1／BC1）與 12（DXT5／BC3）的受限 base-level 解碼，接在既有精確 SerializedFile 圖片路徑，因此符合既有 Sprite 條件的壓縮圖片可進入原本 production 物品圖批次、PNG／SQLite 與撤銷 publication。尺寸、逐圖指標／來源依賴、manifest、版本與容量限制不變；不接納 Crunch、mip、外部 streamed texture、SpriteAtlas 或材質。
+
+依據為 Unity TextureFormat 文件、Microsoft BC1／BC3 區塊規格及固定 UnityPy 1.25.4 的 Pillow bcn 解碼。Python 已審查頭像來源的 portrait_assets.py 明列格式 4／10／12，證明這是後續頭像的實際相依，但不代表本批已載入官方頭像。96 組自有向量覆蓋 RGB565 插值、透明色、兩種 alpha 端點模式、所有 selector、邊界 padding、跨 block 裁切與垂直方向；自有 SerializedFile／Bundle 經真實 UnityPy writer 和 SpriteHelper 對照後，再測 PNG／SQLite 關閉重開回讀。完整壓縮來源仍納入 SHA256，快取不能只以輸出像素證明來源一致。
+
+桌面背包／兩種儲藏格原本每次 Paint 都重建每張 Bitmap。現在每次仍從目前 runtime 取得每格 PNG，檢查 header、尺寸與完整 bytes；僅重用完全相同內容的 native Bitmap，同幀重複圖也共用。每個 grid 最多保留目前 24 格所用的圖片，換頁、內容變更或撤銷會在舊控制項移除後釋放不再使用的 Bitmap，換帳與關閉清空。沒有全域跨帳號快取，沒有跳過來源檢查，也不新增背景工作或影響 UI 排序／選取。
+
+測量方式是原生解碼呼叫計數，而非推測耗時／FPS：24 個相同 PNG 的可見格只需 1 次 native decode；接著 10 次相同刷新新增 0 次（舊 Paint 路徑需 240 次）。回歸同時要求每格每次仍取得來源，以及損壞／撤銷時清圖。仍會重建格位控制項與複製／雜湊 PNG；不是全面繪製或載入效能完成的宣告。
+
+參照：
+- https://docs.unity3d.com/2021.3/Documentation/ScriptReference/TextureFormat.DXT1.html
+- https://learn.microsoft.com/en-us/windows/win32/direct3d10/d3d10-graphics-programming-guide-resources-block-compression
+
+尚缺：實際官方圖片正向驗收、頭像材質／遮罩、SpriteAtlas 表情、小地圖與全 Python 介面對齊。本批只做合成／loopback，不連正式服，不改 HasVisualAssets=false；恢復量仍未知。
+
+## 8.0.54 頭像前置層與格位重建
+
+新增 Core 離線頭像配色投影，尚未接 production；背包相同內容不再重建整頁控制項，但仍逐格重查圖片來源。來源、測試與三類圖資剩餘相依見 [本批說明](DOTNET_PORTRAIT_RENDERING.md)。v8.0.53 macOS Python 已完成，該提交兩組 CI 全部成功。
+
+## 8.0.55 頭像來源投影與表格列重用
+
+固定三檔頭像來源計畫／取得入口已加入，但仍缺材質解析，未自動下載或啟用頭像。共用表格只重建變動列、保留選取並處理離屏字型；詳見 [來源與驗證限制](DOTNET_PORTRAIT_SOURCES.md)。
+
+## 8.0.56 受限 Material 解碼
+
+加入獨立 opt-in 的 Material class 21 解析與頭像候選投影，尚缺 Shader、外部指標及顯示接線；詳見 [材質解碼與證據限制](DOTNET_PORTRAIT_MATERIALS.md)。本批不宣稱新的繪製效能改善。
+
+## 8.0.57 Shader 與選定指標
+
+加入固定 schema Shader 解析、頭像 blob／預設值驗證及精確選定檔案 PPtr resolver，仍待完整來源批次與顯示組合。詳見 [證據與未完成範圍](DOTNET_PORTRAIT_SHADER_POINTERS.md)。
+
+## 8.0.58 獨立 Texture 與頭像批次
+
+完整 Texture 像素與色域檢查已加入，頭像批次先驗證來源／Shader／精確指標再逐張處理；尚未接儲存與顯示。詳見 [批次驗證與限制](DOTNET_PORTRAIT_BATCH.md)。v8.0.57 macOS Python 因 hosted runner 未取得而取消，未算通過。
+
+## 8.0.59 頭像 PNG／SQLite 整批回讀
+
+新增壓縮 PNG 及交易式整批寫入／獨立重建回讀；保留容量與來源重查。尚未接 production 或顯示，詳見 [快取驗證與限制](DOTNET_PORTRAIT_CACHE.md)。
+
+## 8.0.60 頭像 production 準備與撤銷
+
+固定已審查來源接入背景準備、快取回讀與可撤銷 publication；下載確認顯示頭像資料庫路徑。角色映射、配色顯示、表情及小地圖仍待完成，詳見 [本批範圍與限制](DOTNET_PORTRAIT_PUBLICATION.md)。
+
+## 8.0.61 頭像角色與配色映射
+
+新增玩家／出戰夥伴選圖及配色映射，production 核對固定 NPC 資料版本／SHA，選圖仍受資源撤銷和圖片集合限制。桌面頭像顯示尚未接入，詳見 [映射證據與限制](DOTNET_PORTRAIT_MAPPING.md)。
+
+## 8.0.62 桌面頭像背景顯示
+
+玩家／夥伴 40 像素列已接 Core 受控請求與背景渲染，每列最多一個工作及一張 Bitmap，撤銷清圖、關閉等待。正式來源正向驗收及表情／小地圖仍未完成，詳見 [顯示接線與限制](DOTNET_PORTRAIT_DISPLAY.md)。
+
+## 8.0.63 表情圖集前置層
+
+受限 SpriteAtlas 結構讀取已補上；既有物品 Sprite 仍拒絕圖集。尚未接表情像素／聊天顯示及小地圖，不宣稱新增可用桌面流程。Python 首幀、列序號及小地圖模型映射與剩餘相依見 [圖集說明](DOTNET_EMOJI_ATLAS.md)。
+
+## 8.0.64 圖集首幀前置層
+
+補入精確圖集／Sprite／貼圖指標與矩形 packing／alpha 像素對照；尚無正式表情來源、publication 或新增桌面顯示。小地圖仍未接線，詳見 [首幀像素與缺口](DOTNET_EMOJI_PIXELS.md)。
+
+## 8.0.65 表情映射與來源準備入口
+
+新增與 Python 一致的資料列 token／hidden／首幀映射及內部受限來源準備；尚未接 production 自動啟用、表情資料庫／撤銷／顯示，小地圖仍待接線。正式來源成功路徑未驗收，見 [來源界線](DOTNET_EMOJI_SOURCES.md)。
+
+## ver 8.0.66：受限串流圖資與裁切前置層
+
+新增精確 archive 綁定、有限解壓／slice 及 Python 矩形圖集裁切對照。沒有新增桌面按鈕或啟用表情；圖片批次、資料庫、撤銷發布及小地圖仍待接線。詳見 [串流與裁切證據](DOTNET_EMOJI_STREAMS.md)。
+
+## ver 8.0.67：表情首幀／PNG 批次候選
+
+完整首幀與 token 映射、PNG 額度與批次指紋已加入核心候選層，尚未接入 SQLite、publication 或桌面表情視窗。正式來源閉包／容器組合仍待驗證；[候選及驗證界線](DOTNET_EMOJI_BATCH.md)。
+
+## ver 8.0.68：表情快取與撤銷讀圖接線
+
+SQLite 首幀與 token 索引採完整 transaction 與新連線獨立回讀；每次重新建立來源候選並核對所有映射／像素。owner 發布、activation、帳號 binding 及 AccountRuntime 的唯讀 PNG API 已接線，撤銷後不再交付。桌面登入與版本確認只顯示待驗證的固定快取路徑及獨立寫入結果。
+
+目前僅離線來源工廠；production 尚未組合完整官方閉包，不會寫入表情快取或啟用圖片。表情網格、聊天文字插入／發送、小地圖及正式正向驗收仍未完成，未將 SQLite 測試當成正式來源驗收。詳見 [快取規則](DOTNET_EMOJI_CACHE.md)。
+
+## ver 8.0.69：表情網格與本機草稿
+
+表情入口接上可撤銷 Core gallery request；只列 ShowInList，沿用原始 token 和共享首幀。單頁格數／視窗偏好比例對照 Python emoji_picker，圖示在 24–40 間縮放；空間不足時顯示提示，不重疊或以捲軸代替。選取只替換本機草稿選取區，遵守 512 字上限與帳號世代，聊天送出仍停用。
+
+背景解碼有逐圖／整批上限及完整 PNG SHA、header／native 尺寸核對；同一批次重用按鈕與 Bitmap、共享首幀只解碼一次。來源失效清圖，舊結果不能復活，關閉等待工作釋放。正式工廠尚未啟用，所以正式資料仍是空狀態，不以合成表情補入。詳見 [顯示與正式來源阻礙](DOTNET_EMOJI_DISPLAY.md)。
+
+
+## ver 8.0.70：表情必要物件及小數裁切
+
+確認 Python 對官方小數 textureRect 的 Pillow 端點取整語意；C# 以 double／ties-to-even 對齊，保留原始及取整後範圍檢查。表情專用解析只輸出精確本檔必要圖集物件，所有 metadata/schema/container 仍完整驗證，必要 Sprite physics 上限 64 不變。官方私有快取 62 首幀完整像素與 SQLite 獨立回讀成功；production 工廠尚未註冊、小地圖尚未接線。這不是完整桌面正式驗收。
+
+
+## ver 8.0.71：正式表情工廠及小地圖來源預檢
+
+正式表情 prepared batch 已接上既有 owner／SQLite／撤銷 gallery，資源確認描述條件式表情寫入。官方私有快取 62 首幀工廠及資料庫驗證成功；完整正式帳號 owner 與畫面仍待驗收。小地圖只有來源模型／閉包預檢：562 張所需單檔 43,187,027 bytes 超過既有 Core 32 MiB，未下載、解碼或啟用。見 [本批流程與限制](DOTNET_EMOJI_PRODUCTION.md)。
+
+補查正式表情聯集 33,772,710 bytes 超過 32 MiB 保留上限，factory／owner 雖已接線，完整 production 仍被容量阻擋，下一步需分階段來源持有與再驗證。

@@ -1,0 +1,61 @@
+{
+  "call_count": 234,
+  "case_count": 134,
+  "excluded": [
+    "official provenance or game payload validation",
+    ".NET execution",
+    "network",
+    "user databases",
+    "runtime activation"
+  ],
+  "executed_source": {
+    "ast_sha256": "45b9b2e8b9de5689efdc558723f4cd686643347121326282c5d7a931f24c18e4",
+    "execution": "Full unchanged function imported normally, using real stdlib sqlite3 and actual parser imports.",
+    "first_line": 13,
+    "last_line": 202,
+    "name": "record_inventory",
+    "path": "wlre/services/world/resource_database.py"
+  },
+  "fixture": {
+    "compressed_bytes": 31957,
+    "compressed_sha256": "bffcb0f1233cdd36d24ffa5d93aeccd689be5adc4fcf28a50936025b71493894",
+    "decoded_bytes": 1085252,
+    "decoded_sha256": "4d48ff1287a498f71442303fa9d88e45dd2ec59192b306dd2d12d612e8dd4319",
+    "name": "inventory.json.gz"
+  },
+  "generator_sha256": "48ff6c3d310f52101cdf71dcace4944f276def7019809ddc5cca6a02f076e138",
+  "input_fixture_sha256": {
+    "dotnet/Lala.Core.Tests/Catalogs/RuntimeCandidate/Fixtures/runtime-candidate.json.gz": "d9e7d7c81118b6643ed8dfc49335188fc92b140d5dc70152d60b7afd9ad02348",
+    "dotnet/Lala.Core.Tests/Resources/DatabaseMatch/Fixtures/database-match.json.gz": "2bbc575b94d9f87208a53cc0222b75e3f5004ccae4bf52ad95c00a04f5ac9e96"
+  },
+  "oracle": "Full unchanged record_inventory, real SQLite temporary files, real parsers and OfficialCatalogIdentity; no parser/SQL/source substitution.",
+  "schema_version": 1,
+  "source_error_calls": 25,
+  "source_line_endings": "CRLF normalized to LF only; bare CR is preserved",
+  "source_sha256": {
+    "dotnet/Lala.Core.Tests/Catalogs/RequiredTables/generate_required_table_vectors.py": "06a451c6bca7d2d98b9aeb20ca55eb40830809907d5d11ad88bb481c2e12ba36",
+    "dotnet/Lala.Core.Tests/Catalogs/RuntimeCandidate/generate_runtime_candidate_vectors.py": "044d19d3206861eaff0d5552273daa099e4f386ffedc563c5bb55e595ecabc2f",
+    "dotnet/Lala.Core.Tests/Catalogs/generate_catalog_vectors.py": "db09c2394303db341b521f341c70e550167d107180d8f563c1a198a4ed95c9d3",
+    "dotnet/Lala.Core.Tests/World/Eve/generate_eve_vectors.py": "e4cee171101dfdd49355010d0227a57db151ee8861cc87875e73b31f29561753",
+    "wlre/network/wire.py": "5c435c362e14365d0bc62903eae17a4d0194b22a8f4966a476c14749da0a7392",
+    "wlre/services/expedition/data.py": "3d3c789c3b8496da415e0e88055211f68edc35e4f33c52acc6b7c3e92f31b80f",
+    "wlre/services/instance_catalog.py": "c51e76030b6f628e75ec559ee61f207f808e8f392dbed8d732d38282bfa9032e",
+    "wlre/services/parser_diagnostics.py": "bb9a850e5cbff7504462cc3f24f7a8d192dd0ca96207ea65e18c62c24ea9cbdc",
+    "wlre/services/world/catalog_identity.py": "a620f441f2f7c497316db47f7f77560f04f2e5d5773f8d292285c6988a9724f3",
+    "wlre/services/world/eve_v115.py": "42f4281499ea6804d589b9836d2c777aabd4450e328ae03e60cef1901edeb5bf",
+    "wlre/services/world/itemdata_v1.py": "8ee7e6964e53c3f188ddf9ab761d14e58a238fb01397e4b82369779ca1b549d2",
+    "wlre/services/world/npc_talk.py": "09451b3d57fa9b7cba82121d98fde64d716fb5c914f3763509b96c3864eebc61",
+    "wlre/services/world/preview_1275.py": "d2d12df007bd9ecabe0bd66324f1791868be7158d7043b671e0731a757883214",
+    "wlre/services/world/resource_database.py": "45c2203971c7224dd08932d1c8c2cb901c1332841ca036eee40bed4a843732be",
+    "wlre/services/world/smith_candidate.py": "90c0df102273c8d3d315da85a98d0608ab078acf451b6909f45f09e94fd93b6c"
+  },
+  "strict_divergence_cases": [
+    "tampered-raw-matching-recorded-sha",
+    "tampered-prior-raw-matching-recorded-sha",
+    "unexpected-trigger-mutates-state",
+    "unexpected-versions-schema",
+    "unexpected-index-schema",
+    "raw-payload-over-maximum"
+  ],
+  "successful_source_calls": 209
+}

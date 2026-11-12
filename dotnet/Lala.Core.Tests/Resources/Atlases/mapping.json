@@ -1,0 +1,2127 @@
+{
+  "bundle": "VW5pdHlGUwAAAAAINS54LngAMjAyMS4zLjQ1ZjIAAAAAAAAAC3AAAABAAAAAQAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAK8AAACvAAAAAAAAEAAAAAAAAAAAAAAAAAAArwAAAABENBQi1vd25lZAAAAAAAAAAAAAAAABYAAAAAAAAAAAAACfEAAAAAAAAK8AAAAAAAAAowAAAAAAAAAAAyMDIxLjMuNDVmMgATAAAAAQIAAACOAAAAAP//AAAAAAAAAAAAAAAAAAAAADoAAADyAAAAAQAAAAAAAAA3AACA/////wAAAAAAAAAAAAAAAAAAAAABAAEASAMAgKsBAID/////AQAAAAAAAAAAAAAAAAAAAAEAAgExAACAMQAAgP////8CAAAAAEAAAAAAAAAAAAAAAQADAN4AAIAbAwCABAAAAAMAAAAAAAAAAAAAAAAAAAABAAMAUQAAgGoAAIABAAAABAAAAAAAAAAAAAAAAAAAAAEAAQDVAwCADAAAAP////8FAAAAAAAAAAAAAAAAAAAAAQACATEAAIAxAACA/////wYAAAAAQAAAAAAAAAAAAAABAAMA3gAAgBsDAIAEAAAABwAAAAAAAAAAAAAAAAAAAAEAAwB5AgCAagAAgAwAAAAIAAAAAAAAAAAAAAAAAAAAAQAEAN4AAIAbAAAABAAAAAkAAAAAAAAAAAAAAAAAAAABAAQALgMAgCQAAAAIAAAACgAAAAAAAAAAAAAAAAAAAAEAAQDxAACALQAAAP////8LAAAAAAAAAAAAAAAAAAAAAQACATEAAIAxAACA/////wwAAAAAAAAAAAAAAAAAAAABAAMA3gAAgBsDAIAEAAAADQAAAAAAAAAAAAAAAAAAAAEAAwAfAgCAagAAgP////8OAAAAAAAAAAAAAAAAAAAAAQAEAEgDAICbAACA/////w8AAAAAAAAAAAAAAAAAAAABAAUBMQAAgDEAAID/////EAAAAABAAAAAAAAAAAAAAAEABgDeAACAGwMAgAQAAAARAAAAAAAAAAAAAAAAAAAAAQAGAFEAAIBqAACAAQAAABIAAAAAAAAAAAAAAAAAAAABAAQAOQAAAAoDAIAUAAAAEwAAAAAAAAAAAAAAAAAAAAEABQDeAACAQwAAAAQAAAAUAAAAAAAAAAAAAAAAAAAAAQAFAN4AAIBQAAAABAAAABUAAAAAAAAAAAAAAAAAAAABAAUAeQIAgFwAAAAMAAAAFgAAAAAAAAAAAAAAAAAAAAEABgDeAACAGwAAAAQAAAAXAAAAAAAAAAAAAAAAAAAAAQAGAC4DAIAkAAAACAAAABgAAAAAAAAAAAAAAAAAAAABAAEAOQAAAGIAAAAUAAAAGQAAAAAAAAAAAAAAAAAAAAEAAgDeAACAQwAAAAQAAAAaAAAAAAAAAAAAAAAAAAAAAQACAN4AAIBQAAAABAAAABsAAAAAAAAAAAAAAAAAAAABAAIAeQIAgFwAAAAMAAAAHAAAAAAAAAAAAAAAAAAAAAEAAwDeAACAGwAAAAQAAAAdAAAAAAAAAAAAAAAAAAAAAQADAC4DAIAkAAAACAAAAB4AAAAAAAAAAAAAAAAAAAABAAEApgMAgG4AAAAEAAAAHwAAAAAAAAAAAAAAAAAAAAEAAQBIAwCAhQAAAP////8gAAAAAAAAAAAAAAAAAAAAAQACATEAAIAxAACA/////yEAAAAAQAAAAAAAAAAAAAABAAMA3gAAgBsDAIAEAAAAIgAAAAAAAAAAAAAAAAAAAAEAAwBRAACAagAAgAEAAAAjAAAAAAAAAAAAAAAAAAAAAQABANUDAICXAAAA/////yQAAAAAAAAAAAAAAAAAAAABAAIBMQAAgDEAAID/////JQAAAABAAAAAAAAAAAAAAAEAAwDeAACAGwMAgAQAAAAmAAAAAAAAAAAAAAAAAAAAAQADAEgDAIBqAACA/////ycAAAAAAAAAAAAAAAAAAAABAAQBMQAAgDEAAID/////KAAAAABAAAAAAAAAAAAAAAEABQDeAACAGwMAgAQAAAApAAAAAAAAAAAAAAAAAAAAAQAFAFEAAIBqAACAAQAAACoAAAAAAAAAAAAAAAAAAAABAAEATAAAgKYAAAABAAAAKwAAAABAAAAAAAAAAAAAAAEAAQDeAACAwwAAAAQAAAAsAAAAAAAAAAAAAAAAAAAAAQABAN4AAIDYAAAABAAAAC0AAAAAAAAAAAAAAAAAAAABAAEA8QAAgOQAAAD/////LgAAAAAAAAAAAAAAAAAAAAEAAgExAACAMQAAgP////8vAAAAAAAAAAAAAAAAAAAAAQADAN4AAIAbAwCABAAAADAAAAAAAAAAAAAAAAAAAAABAAMAHwIAgGoAAID/////MQAAAAAAAAAAAAAAAAAAAAEABABIAwCAmwAAgP////8yAAAAAAAAAAAAAAAAAAAAAQAFATEAAIAxAACA/////zMAAAAAQAAAAAAAAAAAAAABAAYA3gAAgBsDAIAEAAAANAAAAAAAAAAAAAAAAAAAAAEABgBRAACAagAAgAEAAAA1AAAAAAAAAAAAAAAAAAAAAQAEAEgDAIAKAwCA/////zYAAAAAAAAAAAAAAAAAAAABAAUBMQAAgDEAAID/////NwAAAABAAAAAAAAAAAAAAAEABgDeAACAGwMAgAQAAAA4AAAAAAAAAAAAAAAAAAAAAQAGAFEAAIBqAACAAQAAADkAAAAAAAAAAAAAAAAAAABBc3NldEJ1bmRsZQBtX1ByZWxvYWRUYWJsZQBtX0ZpbGVJRABtX1BhdGhJRABtX0NvbnRhaW5lcgBBc3NldEluZm8AcHJlbG9hZEluZGV4AHByZWxvYWRTaXplAGFzc2V0AG1fTWFpbkFzc2V0AG1fUnVudGltZUNvbXBhdGliaWxpdHkAbV9Bc3NldEJ1bmRsZU5hbWUAbV9EZXBlbmRlbmNpZXMAbV9Jc1N0cmVhbWVkU2NlbmVBc3NldEJ1bmRsZQBtX0V4cGxpY2l0RGF0YUxheW91dABtX1BhdGhGbGFncwBtX1NjZW5lSGFzaGVzAAAAAAAxAAAAAP//AAAAAAAAAAAAAAAAAAAAAAkAAAAAAAAAAQAAAE8DAIA3AACA/////wAAAAAAAAAAAAAAAAAAAAABAAEASAMAgKsBAID/////AQAAAAAAAAAAAAAAAAAAAAEAAgExAACAMQAAgP////8CAAAAAEAAAAAAAAAAAAAAAQADAN4AAIAbAwCABAAAAAMAAAAAAAAAAAAAAAAAAAABAAMAUQAAgGoAAIABAAAABAAAAAAAAAAAAAAAAAAAAAEAAQBIAwCA6gEAgP////8FAAAAAAAAAAAAAAAAAAAAAQACATEAAIAxAACA/////wYAAAAAQAAAAAAAAAAAAAABAAMA3gAAgBsDAIAEAAAABwAAAAAAAAAAAAAAAAAAAAEAAwBRAACAagAAgAEAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAABAAAAAAAAAAAAAAAAAAAAkAAAAAAAAAACAAAAAAAAAJAAAAAAAAAAMAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABQAAAG93bmVkAAAAAAAAAAEAAAAsAAAAQXNzZXRzL1Jlc291cmNlc0J1aWxkL0RhdGEvRW1vamlEYXRhX0MuYnl0ZXMAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUAAABvd25lZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACwAAAEVtb2ppRGF0YV9DABwAAAADAAAAEQkHZAAAAAADAALIAAAAARH/B/////8A",
+  "oracle": "Actual Python emoji_database.parse_entries; owned digest seam only, C# production must reject all fixtures",
+  "production_pin": "b21c48d487d83463332157e1d56af0a258f26cecf2e906ca518526badcd5a75b",
+  "cases": [
+    {
+      "name": "row-not-id",
+      "raw": "AwAAABEJB2QAAAAAAwACyAAAAAER/wf/////AA==",
+      "expected": {
+        "1": {
+          "id": 17,
+          "mark_id": 9,
+          "sprite": "Emoji_007",
+          "text_id": 100,
+          "show_in_list": true,
+          "available": true
+        },
+        "2": {
+          "id": 3,
+          "mark_id": 0,
+          "sprite": "Emoji_002",
+          "text_id": 200,
+          "show_in_list": false,
+          "available": true
+        },
+        "3": {
+          "id": 17,
+          "mark_id": 255,
+          "sprite": "Emoji_007",
+          "text_id": 4294967295,
+          "show_in_list": true,
+          "available": true
+        }
+      }
+    },
+    {
+      "name": "single",
+      "raw": "AQAAAP///wEAAAAB",
+      "expected": {
+        "1": {
+          "id": 255,
+          "mark_id": 255,
+          "sprite": "Emoji_255",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        }
+      }
+    },
+    {
+      "name": "max-count",
+      "raw": "/wAAAAEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAAEAAQEAAAABAQABAQAAAAABAAEBAAAAAQEAAQEAAAAAAQABAQAAAAEBAAEBAAAAAA==",
+      "expected": {
+        "1": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "2": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "3": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "4": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "5": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "6": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "7": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "8": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "9": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "10": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "11": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "12": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "13": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "14": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "15": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "16": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "17": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "18": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "19": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "20": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "21": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "22": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "23": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "24": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "25": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "26": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "27": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "28": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "29": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "30": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "31": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "32": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "33": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "34": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "35": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "36": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "37": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "38": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "39": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "40": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "41": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "42": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "43": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "44": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "45": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "46": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "47": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "48": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "49": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "50": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "51": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "52": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "53": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "54": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "55": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "56": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "57": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "58": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "59": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "60": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "61": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "62": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "63": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "64": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "65": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "66": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "67": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "68": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "69": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "70": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "71": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "72": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "73": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "74": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "75": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "76": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "77": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "78": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "79": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "80": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "81": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "82": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "83": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "84": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "85": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "86": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "87": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "88": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "89": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "90": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "91": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "92": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "93": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "94": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "95": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "96": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "97": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "98": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "99": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "100": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "101": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "102": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "103": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "104": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "105": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "106": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "107": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "108": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "109": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "110": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "111": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "112": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "113": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "114": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "115": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "116": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "117": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "118": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "119": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "120": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "121": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "122": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "123": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "124": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "125": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "126": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "127": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "128": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "129": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "130": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "131": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "132": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "133": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "134": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "135": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "136": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "137": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "138": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "139": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "140": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "141": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "142": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "143": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "144": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "145": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "146": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "147": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "148": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "149": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "150": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "151": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "152": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "153": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "154": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "155": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "156": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "157": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "158": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "159": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "160": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "161": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "162": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "163": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "164": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "165": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "166": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "167": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "168": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "169": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "170": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "171": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "172": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "173": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "174": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "175": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "176": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "177": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "178": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "179": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "180": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "181": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "182": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "183": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "184": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "185": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "186": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "187": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "188": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "189": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "190": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "191": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "192": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "193": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "194": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "195": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "196": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "197": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "198": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "199": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "200": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "201": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "202": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "203": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "204": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "205": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "206": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "207": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "208": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "209": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "210": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "211": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "212": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "213": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "214": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "215": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "216": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "217": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "218": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "219": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "220": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "221": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "222": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "223": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "224": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "225": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "226": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "227": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "228": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "229": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "230": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "231": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "232": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "233": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "234": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "235": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "236": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "237": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "238": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "239": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "240": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "241": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "242": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "243": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "244": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "245": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "246": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "247": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "248": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "249": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "250": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "251": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "252": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "253": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        },
+        "254": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": false,
+          "available": true
+        },
+        "255": {
+          "id": 1,
+          "mark_id": 0,
+          "sprite": "Emoji_001",
+          "text_id": 1,
+          "show_in_list": true,
+          "available": true
+        }
+      }
+    },
+    {
+      "name": "empty",
+      "raw": "AAAAAA==",
+      "expected": null
+    },
+    {
+      "name": "too-many",
+      "raw": "AAEAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAAAQABAQAAAAABAAEBAAAAAAEAAQEAAAAA",
+      "expected": null
+    },
+    {
+      "name": "zero-id",
+      "raw": "AQAAAAAAAQEAAAAA",
+      "expected": null
+    },
+    {
+      "name": "zero-icon",
+      "raw": "AQAAAAEAAAEAAAAA",
+      "expected": null
+    },
+    {
+      "name": "zero-text",
+      "raw": "AQAAAAEAAQAAAAAA",
+      "expected": null
+    },
+    {
+      "name": "bad-hidden",
+      "raw": "AQAAAAEAAQEAAAAC",
+      "expected": null
+    }
+  ]
+}

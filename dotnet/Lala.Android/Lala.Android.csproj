@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net10.0-android36.0</TargetFramework>
+    <SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
+    <ApplicationId>io.lala.migration</ApplicationId><ApplicationTitle>LaLa 手機預覽</ApplicationTitle>
+    <ApplicationVersion>2</ApplicationVersion><ApplicationDisplayVersion>0.2.0</ApplicationDisplayVersion>
+    <AndroidManifest>Properties/AndroidManifest.xml</AndroidManifest>
+    <EmbedAssembliesIntoApk Condition="'$(Configuration)' == 'Debug'">true</EmbedAssembliesIntoApk>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Android" Version="12.1.5" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.5" />
+    <ProjectReference Include="../Lala.Core/Lala.Core.csproj" />
+    <Compile Include="../Lala.Desktop/Shared/*.cs" Link="Shared/%(Filename)%(Extension)" />
+    <Compile Include="../Lala.Desktop/Presentation/DesktopServerCatalog.cs;../Lala.Desktop/Presentation/DesktopLoginTarget.cs" Link="Shared/%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Preview/Assets/*.png">
+      <LogicalName>AndroidPreviewAssets.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="../../wlre/resources/assets/exp_background.png;../../wlre/resources/assets/function-icons/*.png;../../wlre/resources/assets/elements/*.png">
+      <LogicalName>AndroidPreviewAssets.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+</Project>

@@ -3,7 +3,7 @@ import copy
 import tkinter as tk
 from tkinter import ttk, messagebox
 from wlre.ui.theme import group as LabelFrame
-from wlre.ui.auto_battle.model import TARGETS, NOTICES, COMPARES, confirmed_action_label
+from wlre.ui.auto_battle.model import TARGETS, NOTICES, COMPARES, confirmed_action_label, target_options
 
 class RuleCard:
     """One visible rule section; all values remain in the unsaved form."""
@@ -28,6 +28,8 @@ class RuleCard:
                 ttk.Button(top,text='−',width=3,command=lambda:self.step(-1)).pack(side='left',padx=(8,2))
                 ttk.Entry(top,textvariable=var,width=9,justify='center').pack(side='left')
                 ttk.Button(top,text='＋',width=3,command=lambda:self.step(1)).pack(side='left',padx=2)
+        if self.key in ('lowHpAction','lowSpAction'):
+            ttk.Label(box,text=('HP' if self.key=='lowHpAction' else 'SP')+' < 門檻 → 使用此列技能／指令；兩列獨立保存。').pack(anchor='w')
         for i in range(self.count):
             line=ttk.Frame(box);line.pack(fill='x',pady=(4,0))
             label=f'第{i+1}順位' if self.key=='orderAction' else f'順序{i+1}' if self.key=='repeatAction' else f'第{i+1}回合' if self.key=='roundAction' else '使用指令'
@@ -42,9 +44,9 @@ class RuleCard:
             detail=line if compact else ttk.Frame(box)
             if not compact:detail.pack(fill='x',padx=(72,0),pady=(0,4))
             ttk.Label(detail,text='優先目標').pack(side='left',padx=(0,8))
-            ttk.Combobox(detail,textvariable=target,values=tuple(TARGETS.values()),state='readonly',width=11).pack(side='left')
+            targetcombo=ttk.Combobox(detail,textvariable=target,values=tuple(TARGETS.values()),state='readonly',width=25);targetcombo.pack(side='left')
             nextbutton=ttk.Checkbutton(detail,text='次階特技' if compact else '允許下一階特技',variable=nextskill);nextbutton.pack(side='left',padx=12)
-            self.controls.append({'mark':mark,'name':name,'target':target,'next':nextskill,'nextbutton':nextbutton})
+            self.controls.append({'mark':mark,'name':name,'target':target,'targetcombo':targetcombo,'next':nextskill,'nextbutton':nextbutton})
         if self.key=='orderAction':ttk.Label(box,text='第一順位不可用才試第二順位；不是同回合連續施放兩次。').pack(anchor='w')
         if self.key=='repeatAction':ttk.Label(box,text='每回合輪用一格，只計入非空指令。').pack(anchor='w')
     def step(self,delta):
@@ -57,7 +59,10 @@ class RuleCard:
         for row,controls in zip(rows,self.controls):
             controls['mark'].set('＋' if row['id']==0 else '✓')
             controls['name'].set('點選空格以設定指令' if row['id']==0 else confirmed_action_label(row,self.editor.app.snapshot,self.who))
-            controls['target'].set(TARGETS[row['target']]);controls['next'].set(row.get('bUseNextSkill',False))
+            mapping,enabled=target_options(row,self.key)
+            controls['targetcombo'].configure(values=tuple(mapping.values()),state='readonly' if enabled else 'disabled')
+            controls['targetcombo'].current(row['target']-1)
+            controls['next'].set(row.get('bUseNextSkill',False))
             controls['nextbutton'].configure(state='disabled' if row['kind']==2 else 'normal')
         if self.count==1:
             for key,(var,mapping) in self.conditions.items():var.set(mapping[value[key]] if mapping else str(value[key]))
@@ -65,7 +70,7 @@ class RuleCard:
         original=self.editor.draft.value['profiles'][self.who][self.key]
         rows=copy.deepcopy(original if self.count>1 else [original])
         for row,c in zip(rows,self.controls):
-            row['target']=next(k for k,v in TARGETS.items() if v==c['target'].get())
+            if str(c['targetcombo'].cget('state'))!='disabled':row['target']=c['targetcombo'].current()+1
             if 'bUseNextSkill' in row or c['next'].get():row['bUseNextSkill']=bool(c['next'].get()) if row['kind']==1 else False
         if self.count==1:
             for key,(var,mapping) in self.conditions.items():rows[0][key]=next(k for k,v in mapping.items() if v==var.get()) if mapping else float(var.get())

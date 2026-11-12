@@ -1,0 +1,1918 @@
+[
+  {
+    "id": "desktop:WLRE_Client.py",
+    "source_repository": "desktop",
+    "source_path": "WLRE_Client.py",
+    "source_sha256": "5b2ee40548a5009096178781250877a726bee070f481bd1542aeff78a632234a",
+    "source_lines": 149,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.Entrypoint",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "self_test",
+          "line": 8
+        },
+        {
+          "name": "self_test_unityfs",
+          "line": 20
+        },
+        {
+          "name": "smoke_test_gui",
+          "line": 73
+        },
+        {
+          "name": "main",
+          "line": 105
+        }
+      ],
+      "imports": [
+        "Crypto.Cipher",
+        "PIL",
+        "UnityPy",
+        "UnityPy.classes",
+        "UnityPy.classes.ClassIDTypeToClassMap",
+        "UnityPy.enums",
+        "brotli",
+        "ctypes",
+        "lz4.block",
+        "os",
+        "pathlib",
+        "struct",
+        "sys",
+        "tkinter",
+        "traceback",
+        "wlre.paths",
+        "wlre.resource_manifest",
+        "wlre.services.world.catalog_adapters",
+        "wlre.services.world.catalog_source_extractor",
+        "wlre.services.world.eve_v115",
+        "wlre.services.world.itemdata_v1",
+        "wlre.services.world.unity_textasset",
+        "wlre.storage.paths",
+        "wlre.ui",
+        "wlre.ui.gui",
+        "wlre.ui.window_layout"
+      ],
+      "existing_test_candidates": [
+        "tests/test_build.py",
+        "tests/test_entrypoint_error_logging.py",
+        "tests/test_isolated_desktop_check.py",
+        "tests/test_launcher_catalog.py",
+        "tests/test_macos_build.py",
+        "tests/test_seed_only_runtime.py",
+        "tests/test_unitypy_packaging.py",
+        "tests/test_window_mapping.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/__init__.py",
+    "source_repository": "desktop",
+    "source_path": "tools/__init__.py",
+    "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "source_lines": 0,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [],
+      "imports": [],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/audit_all_resource_database.py",
+    "source_repository": "desktop",
+    "source_path": "tools/audit_all_resource_database.py",
+    "source_sha256": "442c2c9023c1841c5901477482f15e0c7d7266b17137be4c71137821f4146542",
+    "source_lines": 102,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_recommendation",
+          "line": 27
+        },
+        {
+          "name": "audit",
+          "line": 35
+        },
+        {
+          "name": "main",
+          "line": 90
+        }
+      ],
+      "imports": [
+        "argparse",
+        "collections",
+        "contextlib",
+        "hashlib",
+        "json",
+        "pathlib",
+        "sqlite3",
+        "wlre.paths",
+        "wlre.storage.full_resource_seed",
+        "wlre.storage.paths"
+      ],
+      "existing_test_candidates": [
+        "tests/test_audit_all_resource_database.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/audit_ark_candidates.py",
+    "source_repository": "desktop",
+    "source_path": "tools/audit_ark_candidates.py",
+    "source_sha256": "1fc4d39ba0ec490ded6aaf73eeb243747cceccc76cf6295bba6c9a2452e60028",
+    "source_lines": 69,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "audit",
+          "line": 18
+        },
+        {
+          "name": "main",
+          "line": 59
+        }
+      ],
+      "imports": [
+        "argparse",
+        "hashlib",
+        "json",
+        "pathlib",
+        "re",
+        "wlre.services",
+        "wlre.services.ark_candidates",
+        "wlre.services.expedition.data",
+        "wlre.storage.ark_questions"
+      ],
+      "existing_test_candidates": [
+        "tests/test_ark_candidates.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/audit_legacy_1262_database.py",
+    "source_repository": "desktop",
+    "source_path": "tools/audit_legacy_1262_database.py",
+    "source_sha256": "e015ebbdc822130c61b565e04a1fd4936f7a23437ad2d99b84fdb474582f467f",
+    "source_lines": 90,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "audit",
+          "line": 25
+        },
+        {
+          "name": "main",
+          "line": 78
+        }
+      ],
+      "imports": [
+        "argparse",
+        "hashlib",
+        "json",
+        "pathlib",
+        "sqlite3",
+        "wlre.paths",
+        "wlre.storage.full_resource_seed",
+        "wlre.storage.paths"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/audit_minimap_1275.py",
+    "source_repository": "desktop",
+    "source_path": "tools/audit_minimap_1275.py",
+    "source_sha256": "58cba3621e739db3e00d810aab7f03e2e1056e3a84c0ed3d71cdb00ec840dda0",
+    "source_lines": 140,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_read_csv",
+          "line": 29
+        },
+        {
+          "name": "audit",
+          "line": 36
+        },
+        {
+          "name": "main",
+          "line": 129
+        }
+      ],
+      "imports": [
+        "PIL",
+        "__future__",
+        "argparse",
+        "csv",
+        "io",
+        "json",
+        "pathlib",
+        "re",
+        "wlre.paths",
+        "wlre.services.world.bundle_runtime_1275",
+        "wlre.storage.full_resource_seed",
+        "zipfile"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/audit_official_maps.py",
+    "source_repository": "desktop",
+    "source_path": "tools/audit_official_maps.py",
+    "source_sha256": "6cef0c8610af694ba4c5ee4dd7385f6ba74372b72ba5ec19e17f8dab720442cb",
+    "source_lines": 153,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "map_assets",
+          "line": 17
+        },
+        {
+          "name": "audit",
+          "line": 29
+        },
+        {
+          "name": "main",
+          "line": 82
+        }
+      ],
+      "imports": [
+        "PIL",
+        "UnityPy",
+        "argparse",
+        "hashlib",
+        "io",
+        "json",
+        "pathlib",
+        "re",
+        "tools.resources.lala_manifest_full_index",
+        "wlre.paths",
+        "wlre.services.official_incremental_sync",
+        "wlre.services.official_manifest_sync",
+        "wlre.services.official_resource_sync",
+        "wlre.services.resource_compatibility",
+        "wlre.services.world.bundle_runtime_1275",
+        "wlre.services.world.unity_textasset",
+        "wlre.storage.full_resource_seed",
+        "zipfile"
+      ],
+      "existing_test_candidates": [
+        "tests/test_official_map_audit.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/audit_official_navigation_coverage.py",
+    "source_repository": "desktop",
+    "source_path": "tools/audit_official_navigation_coverage.py",
+    "source_sha256": "08bc99d67376206d1e6a7eaada412f386c42da7af640c53312ea6934ee2a8392",
+    "source_lines": 64,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "inventory",
+          "line": 11
+        },
+        {
+          "name": "audit",
+          "line": 40
+        },
+        {
+          "name": "main",
+          "line": 52
+        }
+      ],
+      "imports": [
+        "argparse",
+        "collections",
+        "hashlib",
+        "json",
+        "wlre.services.official_manifest_sync",
+        "wlre.services.world.dynamic_bundle_runtime",
+        "wlre.services.world.house_navigation",
+        "wlre.services.world.navigation_database",
+        "wlre.services.world.navigation_sync",
+        "wlre.storage.paths"
+      ],
+      "existing_test_candidates": [
+        "tests/test_official_navigation_coverage.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/audit_repository.py",
+    "source_repository": "desktop",
+    "source_path": "tools/audit_repository.py",
+    "source_sha256": "286224fd0999f29eaa52c8f271f50231139fbf3d859ae257e997e6be70755f96",
+    "source_lines": 113,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "markdown_files",
+          "line": 20
+        },
+        {
+          "name": "invalid_links",
+          "line": 30
+        },
+        {
+          "name": "duplicate_tracked_blobs",
+          "line": 54
+        },
+        {
+          "name": "application_version",
+          "line": 80
+        },
+        {
+          "name": "audit",
+          "line": 88
+        },
+        {
+          "name": "main",
+          "line": 102
+        }
+      ],
+      "imports": [
+        "argparse",
+        "collections",
+        "json",
+        "pathlib",
+        "re",
+        "shutil",
+        "subprocess"
+      ],
+      "existing_test_candidates": [
+        "tests/test_audit_repository.py",
+        "tests/test_repository_hygiene.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/build/__init__.py",
+    "source_repository": "desktop",
+    "source_path": "tools/build/__init__.py",
+    "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "source_lines": 0,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [],
+      "imports": [],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/build/build_macos.py",
+    "source_repository": "desktop",
+    "source_path": "tools/build/build_macos.py",
+    "source_sha256": "d0a78e343c461097a1a3db1f9dae55062f5174db9111445b1dcc2d4e83806c17",
+    "source_lines": 128,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "native_arch",
+          "line": 15
+        },
+        {
+          "name": "output_dir",
+          "line": 23
+        },
+        {
+          "name": "make_command",
+          "line": 27
+        },
+        {
+          "name": "bundle_executable",
+          "line": 51
+        },
+        {
+          "name": "verify_binary_arch",
+          "line": 63
+        },
+        {
+          "name": "main",
+          "line": 74
+        }
+      ],
+      "imports": [
+        "argparse",
+        "json",
+        "os",
+        "pathlib",
+        "platform",
+        "plistlib",
+        "subprocess",
+        "sys",
+        "tools.build.build_nuitka",
+        "wlre"
+      ],
+      "existing_test_candidates": [
+        "tests/test_phase09_native_packaging.py",
+        "tests/test_repository_hygiene.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/build/build_nuitka.py",
+    "source_repository": "desktop",
+    "source_path": "tools/build/build_nuitka.py",
+    "source_sha256": "e98bd7fdb33b772625e569e39376a79cbb20fd4abd9a7c3b404ff54030d1ac37",
+    "source_lines": 210,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "data_files",
+          "line": 19
+        },
+        {
+          "name": "compiler_jobs",
+          "line": 23
+        },
+        {
+          "name": "make_command",
+          "line": 33
+        },
+        {
+          "name": "build_environment",
+          "line": 56
+        },
+        {
+          "name": "run_logged",
+          "line": 65
+        },
+        {
+          "name": "select_compiler",
+          "line": 83
+        },
+        {
+          "name": "prepare_environment",
+          "line": 107
+        },
+        {
+          "name": "prepare_dependencies",
+          "line": 134
+        },
+        {
+          "name": "main",
+          "line": 157
+        }
+      ],
+      "imports": [
+        "argparse",
+        "hashlib",
+        "json",
+        "os",
+        "pathlib",
+        "shutil",
+        "struct",
+        "subprocess",
+        "sys",
+        "tools.build.python_build_support",
+        "venv",
+        "wlre",
+        "wlre.resource_manifest"
+      ],
+      "existing_test_candidates": [
+        "tests/test_phase09_native_packaging.py",
+        "tests/test_repository_hygiene.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/build/python_build_support.py",
+    "source_repository": "desktop",
+    "source_path": "tools/build/python_build_support.py",
+    "source_sha256": "5ce2638bb22f4e17645d50b8cbeb94126dd1b6922e9ec9f7db1503263b873e2f",
+    "source_lines": 54,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "development_files",
+          "line": 10
+        },
+        {
+          "name": "stage_library",
+          "line": 31
+        },
+        {
+          "name": "main",
+          "line": 40
+        }
+      ],
+      "imports": [
+        "json",
+        "pathlib",
+        "shutil",
+        "struct",
+        "sys",
+        "sysconfig",
+        "tkinter"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/build/release_macos.py",
+    "source_repository": "desktop",
+    "source_path": "tools/build/release_macos.py",
+    "source_sha256": "3b6293eb4fe0f9107a963ebc0560bd53c4e2e20bb2d5a334fed48a9f1211582d",
+    "source_lines": 60,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "package_release",
+          "line": 13
+        },
+        {
+          "name": "main",
+          "line": 44
+        }
+      ],
+      "imports": [
+        "argparse",
+        "hashlib",
+        "subprocess",
+        "sys",
+        "tools.build.build_macos",
+        "tools.build.build_nuitka",
+        "tools.build.release_nuitka",
+        "zipfile"
+      ],
+      "existing_test_candidates": [
+        "tests/test_phase09_native_packaging.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/build/release_nuitka.py",
+    "source_repository": "desktop",
+    "source_path": "tools/build/release_nuitka.py",
+    "source_sha256": "041f9a96ee7c85548e7f073f0ecd36b6aa74e9a585d555ca8bee4e01e81877e6",
+    "source_lines": 66,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "validate_tag",
+          "line": 10
+        },
+        {
+          "name": "package_release",
+          "line": 16
+        },
+        {
+          "name": "main",
+          "line": 50
+        }
+      ],
+      "imports": [
+        "argparse",
+        "hashlib",
+        "tools.build.build_nuitka",
+        "wlre",
+        "zipfile"
+      ],
+      "existing_test_candidates": [
+        "tests/test_phase09_native_packaging.py",
+        "tests/test_release_nuitka.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/build/unitypy_nuitka_plugin.py",
+    "source_repository": "desktop",
+    "source_path": "tools/build/unitypy_nuitka_plugin.py",
+    "source_sha256": "4c792f1ae6a741313001529abd2eb2feb92fc3ce346812960317d8ad91e14e36",
+    "source_lines": 17,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "UnityPyGeneratedBytecodePlugin",
+          "line": 10
+        }
+      ],
+      "imports": [
+        "nuitka.plugins.PluginBase"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/check_daily_runtime.py",
+    "source_repository": "desktop",
+    "source_path": "tools/check_daily_runtime.py",
+    "source_sha256": "7dc7eca4595852fb6d88aed516be9e518203f83dd2a27bd087dbbf57061f1975",
+    "source_lines": 60,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "main",
+          "line": 8
+        }
+      ],
+      "imports": [
+        "argparse",
+        "functools",
+        "json",
+        "pathlib",
+        "wlre.services.official_manifest_sync",
+        "wlre.services.official_resource_sync",
+        "wlre.services.world.catalog_identity",
+        "wlre.services.world.daily_task_catalog",
+        "wlre.services.world.dynamic_bundle_runtime",
+        "wlre.services.world.guild_catalog",
+        "wlre.services.world.unity_textasset",
+        "wlre.storage.paths"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/check_isolated_application.py",
+    "source_repository": "desktop",
+    "source_path": "tools/check_isolated_application.py",
+    "source_sha256": "25a40cd2e6b36b019bd1fb6d326e5c98327d3a9f450da533a773cb9e2cec4536",
+    "source_lines": 202,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_desktop_startup_ready",
+          "line": 12
+        },
+        {
+          "name": "check",
+          "line": 43
+        },
+        {
+          "name": "main",
+          "line": 183
+        }
+      ],
+      "imports": [
+        "WLRE_Client",
+        "android_app.navigation_preview_ui",
+        "argparse",
+        "json",
+        "kivy.clock",
+        "main",
+        "os",
+        "pathlib",
+        "shutil",
+        "socket",
+        "subprocess",
+        "sys",
+        "time",
+        "tkinter",
+        "types",
+        "unittest.mock",
+        "urllib.parse",
+        "urllib.request",
+        "wlre.services.world.dynamic_bundle_runtime",
+        "wlre.ui",
+        "wlre.ui.official_navigation_preview",
+        "wlre.ui.version_gate_controller",
+        "wlre.ui.window_layout"
+      ],
+      "existing_test_candidates": [
+        "tests/test_isolated_desktop_check.py",
+        "tests/test_retired_seed_cold_application.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/check_official_lua.py",
+    "source_repository": "desktop",
+    "source_path": "tools/check_official_lua.py",
+    "source_sha256": "b0b2da822ea1e40adaeade7c988a2002cfa3e903fb0a29ccbb7c19373b084ee1",
+    "source_lines": 39,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "main",
+          "line": 13
+        }
+      ],
+      "imports": [
+        "argparse",
+        "json",
+        "sys",
+        "wlre.services",
+        "wlre.services.official_lua_index"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/check_official_manifests.py",
+    "source_repository": "desktop",
+    "source_path": "tools/check_official_manifests.py",
+    "source_sha256": "a2cf4a10cb90ae10a29c9586ad9a71991e8d3a1ff4539e628a4c8a19afe43995",
+    "source_lines": 57,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "inspect_current_manifests",
+          "line": 17
+        },
+        {
+          "name": "main",
+          "line": 41
+        }
+      ],
+      "imports": [
+        "argparse",
+        "json",
+        "sys",
+        "wlre.services.official_manifest_sync",
+        "wlre.services.official_resource_sync"
+      ],
+      "existing_test_candidates": [
+        "tests/test_official_manifest_integration.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/check_official_sync.py",
+    "source_repository": "desktop",
+    "source_path": "tools/check_official_sync.py",
+    "source_sha256": "ddb5a43b2eefa98eb07fb60cbba37415939f454b6c77b3f0178d4d3ed778feb6",
+    "source_lines": 33,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "main",
+          "line": 13
+        }
+      ],
+      "imports": [
+        "argparse",
+        "json",
+        "sys",
+        "wlre.services.official_resource_sync"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/check_official_version.py",
+    "source_repository": "desktop",
+    "source_path": "tools/check_official_version.py",
+    "source_sha256": "6a4651bbcbf903ede1a368ee2cbb2ddc5f13e1c14ef9be3af01a95c0fefbfcf7",
+    "source_lines": 27,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "main",
+          "line": 8
+        }
+      ],
+      "imports": [
+        "argparse",
+        "json",
+        "wlre.services.game_version_gate"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/check_resource_database.py",
+    "source_repository": "desktop",
+    "source_path": "tools/check_resource_database.py",
+    "source_sha256": "ccece89f63ff810ec7520fe279fd6f802eaa048dabcc1f1989fdbb1f6c48a61a",
+    "source_lines": 26,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "main",
+          "line": 11
+        }
+      ],
+      "imports": [
+        "argparse",
+        "json",
+        "pathlib",
+        "sqlite3",
+        "wlre.storage.normalized_resources",
+        "wlre.storage.paths"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/classify_existing_resources.py",
+    "source_repository": "desktop",
+    "source_path": "tools/classify_existing_resources.py",
+    "source_sha256": "18b93a22b0b5af6e3b921db8f0701fa20896421e9c9e13b58385a3d40b5cba5d",
+    "source_lines": 72,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "main",
+          "line": 25
+        }
+      ],
+      "imports": [
+        "__future__",
+        "argparse",
+        "hashlib",
+        "json",
+        "pathlib",
+        "sys",
+        "tools.resources.lala_manifest_full_index",
+        "wlre.services.world.resource_classification"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/compare_navigation_shadow.py",
+    "source_repository": "desktop",
+    "source_path": "tools/compare_navigation_shadow.py",
+    "source_sha256": "f521248a83aecdf5277f43c2bb3f7ea76c1b64041af810a1e5b98e13ba34113b",
+    "source_lines": 26,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "main",
+          "line": 8
+        }
+      ],
+      "imports": [
+        "argparse",
+        "json",
+        "wlre.services.world.dynamic_bundle_runtime",
+        "wlre.services.world.navigation_shadow"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/diagnose_lala_resources.py",
+    "source_repository": "desktop",
+    "source_path": "tools/diagnose_lala_resources.py",
+    "source_sha256": "d032ade17433a21eed19883e3ab04a8d3e2d03731ee0241c83bb5ef8266412e9",
+    "source_lines": 41,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "main",
+          "line": 15
+        }
+      ],
+      "imports": [
+        "__future__",
+        "argparse",
+        "json",
+        "wlre.services.world.resource_gap_diagnostics"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/diagnose_parsers.py",
+    "source_repository": "desktop",
+    "source_path": "tools/diagnose_parsers.py",
+    "source_sha256": "771d00f8a713114be9264dde9369ed43c38e53a8db8f94ab0c421706ac2a6878",
+    "source_lines": 65,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "main",
+          "line": 10
+        }
+      ],
+      "imports": [
+        "argparse",
+        "json",
+        "pathlib",
+        "wlre.services.parser_diagnostics",
+        "wlre.services.world.dynamic_bundle_runtime",
+        "wlre.storage.paths"
+      ],
+      "existing_test_candidates": [
+        "tests/test_parser_diagnostics.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/isolated_navigation_trial.py",
+    "source_repository": "desktop",
+    "source_path": "tools/isolated_navigation_trial.py",
+    "source_sha256": "0c0afe8c896947ba0b7ccfb35ea5dc26bc84b9a12fbfaac6eb842f9b8021d4f5",
+    "source_lines": 243,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "digest",
+          "line": 16
+        },
+        {
+          "name": "restore",
+          "line": 20
+        },
+        {
+          "name": "prepare",
+          "line": 34
+        },
+        {
+          "name": "worker",
+          "line": 70
+        },
+        {
+          "name": "main",
+          "line": 220
+        }
+      ],
+      "imports": [
+        "argparse",
+        "collections",
+        "dataclasses",
+        "hashlib",
+        "json",
+        "os",
+        "pathlib",
+        "shutil",
+        "socket",
+        "sqlite3",
+        "subprocess",
+        "sys",
+        "tools.audit_official_navigation_coverage",
+        "types",
+        "unittest.mock",
+        "urllib.parse",
+        "urllib.request",
+        "wlre.core.state",
+        "wlre.network.wire",
+        "wlre.services.official_manifest_sync",
+        "wlre.services.world.catalog_identity",
+        "wlre.services.world.movement",
+        "wlre.services.world.navigation_database",
+        "wlre.services.world.navigation_preview",
+        "wlre.services.world.navigation_sync",
+        "wlre.storage.bundled_database",
+        "wlre.storage.full_resource_seed"
+      ],
+      "existing_test_candidates": [
+        "tests/test_isolated_navigation_trial.py",
+        "tests/test_retired_seed_cold_application.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/navigation_same_geometry_control.py",
+    "source_repository": "desktop",
+    "source_path": "tools/navigation_same_geometry_control.py",
+    "source_sha256": "88c59e80c39f55ec8b18ff65632c864e259602ef7abcf462f6cba5298e1c538d",
+    "source_lines": 67,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "independent_cost",
+          "line": 7
+        },
+        {
+          "name": "compare_algorithms",
+          "line": 26
+        }
+      ],
+      "imports": [
+        "collections",
+        "wlre.services.world.navigation",
+        "wlre.services.world.navigation_preview"
+      ],
+      "existing_test_candidates": [
+        "tests/test_navigation_same_geometry_control.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/official_lua_decode.py",
+    "source_repository": "desktop",
+    "source_path": "tools/official_lua_decode.py",
+    "source_sha256": "092c5a84e2af47e4d0ac009d9007e76c0e49e4e2ba3e055cd2920ff967beb110",
+    "source_lines": 43,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "decode_reviewed",
+          "line": 13
+        },
+        {
+          "name": "main",
+          "line": 24
+        }
+      ],
+      "imports": [
+        "argparse",
+        "pathlib",
+        "wlre.services.world.official_lua_codec"
+      ],
+      "existing_test_candidates": [
+        "tests/test_official_lua_decode.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/plan_official_catalog.py",
+    "source_repository": "desktop",
+    "source_path": "tools/plan_official_catalog.py",
+    "source_sha256": "523caad61417f0770762d896be76332a57c6eea3e15652dcfbf70fc2f32f5609",
+    "source_lines": 123,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "load_bindings",
+          "line": 33
+        },
+        {
+          "name": "main",
+          "line": 68
+        }
+      ],
+      "imports": [
+        "UnityPy",
+        "__future__",
+        "argparse",
+        "json",
+        "pathlib",
+        "sys",
+        "tools.plan_official_incremental",
+        "wlre.services.official_incremental_sync",
+        "wlre.services.official_manifest_sync",
+        "wlre.services.official_resource_sync",
+        "wlre.services.world.auto_catalog",
+        "wlre.services.world.catalog_adapters",
+        "wlre.services.world.catalog_source_extractor",
+        "wlre.services.world.official_catalog_pipeline"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/plan_official_incremental.py",
+    "source_repository": "desktop",
+    "source_path": "tools/plan_official_incremental.py",
+    "source_sha256": "2e5e0beae9b25314c5312275532e99afcccc78ed8e3d2b8344924a633baf572f",
+    "source_lines": 178,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_require_private_path",
+          "line": 33
+        },
+        {
+          "name": "load_private_requirements",
+          "line": 41
+        },
+        {
+          "name": "plan_required_updates",
+          "line": 71
+        },
+        {
+          "name": "execute_plans",
+          "line": 93
+        },
+        {
+          "name": "private_report",
+          "line": 109
+        },
+        {
+          "name": "main",
+          "line": 148
+        }
+      ],
+      "imports": [
+        "argparse",
+        "json",
+        "os",
+        "pathlib",
+        "sys",
+        "tempfile",
+        "wlre.services.official_incremental_sync",
+        "wlre.services.official_manifest_sync",
+        "wlre.services.official_resource_sync"
+      ],
+      "existing_test_candidates": [
+        "tests/test_official_incremental_cli.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/preview_official_navigation.py",
+    "source_repository": "desktop",
+    "source_path": "tools/preview_official_navigation.py",
+    "source_sha256": "99582d235130f332123e78a8cd97f867df27dab30070e7b68a66bbd42392e114",
+    "source_lines": 33,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "main",
+          "line": 8
+        }
+      ],
+      "imports": [
+        "argparse",
+        "json",
+        "wlre.services.world.dynamic_bundle_runtime",
+        "wlre.services.world.navigation_preview"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/resources/__init__.py",
+    "source_repository": "desktop",
+    "source_path": "tools/resources/__init__.py",
+    "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "source_lines": 0,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [],
+      "imports": [],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/resources/collect_emoji_resources.py",
+    "source_repository": "desktop",
+    "source_path": "tools/resources/collect_emoji_resources.py",
+    "source_sha256": "70a625f62d265251fd24d70fac6c29b7584656f199a12f638775e8957271a8cd",
+    "source_lines": 62,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "manifest_bundles",
+          "line": 8
+        },
+        {
+          "name": "version",
+          "line": 29
+        },
+        {
+          "name": "collect",
+          "line": 33
+        },
+        {
+          "name": "main",
+          "line": 49
+        }
+      ],
+      "imports": [
+        "datetime",
+        "json",
+        "pathlib",
+        "re",
+        "struct",
+        "tkinter",
+        "zipfile"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/resources/collect_instance_bundles.py",
+    "source_repository": "desktop",
+    "source_path": "tools/resources/collect_instance_bundles.py",
+    "source_sha256": "c7ada7b1892b459a50c353f53bbebb6da58fbf5d78c92d22f33248fcc3261be1",
+    "source_lines": 81,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "collect",
+          "line": 25
+        },
+        {
+          "name": "main",
+          "line": 66
+        }
+      ],
+      "imports": [
+        "argparse",
+        "hashlib",
+        "json",
+        "pathlib",
+        "sys",
+        "zipfile"
+      ],
+      "existing_test_candidates": [
+        "tests/test_instance_bundle_collector.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/resources/import_npc_talks.py",
+    "source_repository": "desktop",
+    "source_path": "tools/resources/import_npc_talks.py",
+    "source_sha256": "bec05ec1f41a5a23d9e63cbe75f569fccbfd97493770c9917aae15c509961a6d",
+    "source_lines": 41,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "convert",
+          "line": 18
+        },
+        {
+          "name": "main",
+          "line": 31
+        }
+      ],
+      "imports": [
+        "argparse",
+        "gzip",
+        "json",
+        "pathlib",
+        "wlre.services.world.npc_talk"
+      ],
+      "existing_test_candidates": [
+        "tests/test_npc_talk_v058.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/resources/install_npc_text_1262.py",
+    "source_repository": "desktop",
+    "source_path": "tools/resources/install_npc_text_1262.py",
+    "source_sha256": "edbef502ad41e68f90e7b891c05a8b29f7690c476a5bf08404664207e0ff9fb1",
+    "source_lines": 5,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [],
+      "imports": [
+        "wlre.services.world.npc_asset_install"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/resources/lala_manifest_compare.py",
+    "source_repository": "desktop",
+    "source_path": "tools/resources/lala_manifest_compare.py",
+    "source_sha256": "4d3c88038abd87e8529b648c2824476392f503df3688788d18edf225d7255b5f",
+    "source_lines": 305,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "Member",
+          "line": 32
+        },
+        {
+          "name": "_stream_digest",
+          "line": 40
+        },
+        {
+          "name": "_zip_members",
+          "line": 62
+        },
+        {
+          "name": "_Libarchive",
+          "line": 85
+        },
+        {
+          "name": "_rar_members",
+          "line": 112
+        },
+        {
+          "name": "inspect_archive",
+          "line": 162
+        },
+        {
+          "name": "compare",
+          "line": 208
+        },
+        {
+          "name": "markdown_report",
+          "line": 233
+        },
+        {
+          "name": "main",
+          "line": 269
+        }
+      ],
+      "imports": [
+        "__future__",
+        "argparse",
+        "ctypes",
+        "ctypes.util",
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "json",
+        "os",
+        "pathlib",
+        "re",
+        "sys",
+        "zipfile",
+        "zlib"
+      ],
+      "existing_test_candidates": [
+        "tests/test_yooasset_manifest_compare.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:tools/resources/lala_manifest_full_index.py",
+    "source_repository": "desktop",
+    "source_path": "tools/resources/lala_manifest_full_index.py",
+    "source_sha256": "ddef30ec99d82768ec5f7027675064c24501a23fe89aee91eb741b20cc77f2b7",
+    "source_lines": 401,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "Build.Verification",
+    "scope": "developer_tooling",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Core/Resources/BundleSources/YooAssetManifest.cs",
+      "dotnet/Lala.Core/Resources/BundleSources/BundleSourcePlan.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "ParseError",
+          "line": 39
+        },
+        {
+          "name": "validate_private_output",
+          "line": 43
+        },
+        {
+          "name": "Reader",
+          "line": 55
+        },
+        {
+          "name": "parse_manifest",
+          "line": 102
+        },
+        {
+          "name": "manifest_bytes_from_archive",
+          "line": 179
+        },
+        {
+          "name": "load_index",
+          "line": 235
+        },
+        {
+          "name": "bundle_fingerprint",
+          "line": 259
+        },
+        {
+          "name": "asset_fingerprint",
+          "line": 268
+        },
+        {
+          "name": "diff_records",
+          "line": 274
+        },
+        {
+          "name": "dependency_impact",
+          "line": 297
+        },
+        {
+          "name": "report_text",
+          "line": 322
+        },
+        {
+          "name": "main",
+          "line": 362
+        }
+      ],
+      "imports": [
+        "__future__",
+        "argparse",
+        "collections",
+        "ctypes",
+        "datetime",
+        "hashlib",
+        "json",
+        "lala_manifest_compare",
+        "pathlib",
+        "struct",
+        "sys",
+        "wlre.services.parser_diagnostics",
+        "zipfile"
+      ],
+      "existing_test_candidates": [
+        "tests/test_official_catalog_identity.py",
+        "tests/test_official_incremental_sync.py",
+        "tests/test_official_manifest_integration.py",
+        "tests/test_parser_diagnostics.py",
+        "tests/test_yooasset_manifest_full_index.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "tooling",
+    "verification": {
+      "csharp_build": "passed_for_listed_subset",
+      "differential_tests": "passed_for_listed_subset",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    },
+    "migrated_scope": [
+      "Only the bounded binary parse_manifest subset and bundle-fingerprint comparison used by required-source planning are ported. Actual YooAsset 2.2.5 headers/assets/bundles retain all parsed fields, strict UTF-8/boolean validation, exact duplicate path/name checks, resolved IDs, negative-size/trailing-byte rejection and owned immutable results. Manifests are bounded to 8 MiB and 1,000,000 items, with remaining-byte/minimum-row checks before allocating lists.",
+      "Combined source-preparation evidence: 37 retained actual-Python manifest/plan cases plus 44 contracts, totaling 81 new focused tests. The 350-test Resources pass includes existing tests; these are not 350 new cases. Six CRLF-only source hashes, complete manifest fields, exact plan order and synthetic byte checksums are retained. Invalid cases use typed failures rather than claiming exact Python exception text; no newer full Core receipt is implied."
+    ],
+    "outstanding_scope": [
+      "Archive extraction/loading, private-output validation, generic asset diff/dependency-impact reports, text/CLI/report output and full developer-tool replacement remain unported. This internal Core parser does not establish official provenance, native Unity bundle extraction, actual resource compatibility or runtime admission. The inventory target project remains its original tooling mapping; only the listed parser logic is shared Core."
+    ]
+  }
+]

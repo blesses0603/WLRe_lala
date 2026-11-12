@@ -1,0 +1,1886 @@
+[
+  {
+    "id": "desktop:wlre/ui/party_guard_ui.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/party_guard_ui.py",
+    "source_sha256": "248441bc2cbec3f81c4b30279bcf6db56b8af95925583860122587aea9d41a78",
+    "source_lines": 128,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.party_guard_ui",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "PartyGuardPanel",
+          "line": 8
+        }
+      ],
+      "imports": [
+        "tkinter",
+        "wlre.services.battle",
+        "wlre.ui.theme"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/portrait_rows.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/portrait_rows.py",
+    "source_sha256": "18881c61cf7d59b9164bd81ec4864821060e217d032654dadfb82f55c3eb0e43",
+    "source_lines": 120,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.portrait_rows",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "placeholder",
+          "line": 15
+        },
+        {
+          "name": "row_identity",
+          "line": 21
+        },
+        {
+          "name": "PortraitRows",
+          "line": 38
+        }
+      ],
+      "imports": [
+        "PIL",
+        "collections.abc",
+        "tkinter"
+      ],
+      "existing_test_candidates": [
+        "tests/test_portrait_rows.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/recovery_ui.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/recovery_ui.py",
+    "source_sha256": "d40eaa05b4ca23a700985af7f5e4c5af81c496b10a206731fd2ced827ee4324e",
+    "source_lines": 135,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.recovery_ui",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "SupplyPicker",
+          "line": 10
+        },
+        {
+          "name": "RecoveryPage",
+          "line": 54
+        }
+      ],
+      "imports": [
+        "math",
+        "tkinter",
+        "wlre.services.items.combat_resources",
+        "wlre.ui.crafting_browser",
+        "wlre.ui.layout",
+        "wlre.ui.window_layout"
+      ],
+      "existing_test_candidates": [
+        "tests/test_dashboard_layout.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/resource_view.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/resource_view.py",
+    "source_sha256": "c902d28ef1f7609042c3045fb84715c05f761e130eb1217aedd628f61e6c85c2",
+    "source_lines": 200,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.resource_view",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "ResourceView",
+          "line": 14
+        }
+      ],
+      "imports": [
+        "tkinter",
+        "wlre.services.battle.battle_commands",
+        "wlre.services.items.combat_resources",
+        "wlre.services.items.live_combat_catalog",
+        "wlre.ui.bag_grid",
+        "wlre.ui.crafting_browser",
+        "wlre.ui.layout",
+        "wlre.ui.room_storage_status",
+        "wlre.ui.rounded_notebook",
+        "wlre.ui.storage_transfer_form",
+        "wlre.ui.window_layout"
+      ],
+      "existing_test_candidates": [
+        "tests/test_dashboard_layout.py",
+        "tests/test_room_storage_transfer.py",
+        "tests/test_storage_transfer_form.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/room_storage_status.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/room_storage_status.py",
+    "source_sha256": "9706da2e1b9c16697acd9c3df601307c10733f1c4d9f909b374216564b5f1056",
+    "source_lines": 44,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.room_storage_status",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "unlock_message",
+          "line": 9
+        },
+        {
+          "name": "storage_sync_message",
+          "line": 19
+        },
+        {
+          "name": "confirmed_view",
+          "line": 40
+        }
+      ],
+      "imports": [],
+      "existing_test_candidates": [
+        "tests/test_room_storage_ui.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/rounded_notebook.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/rounded_notebook.py",
+    "source_sha256": "1f16dad953071438156b3b8b8b0049fe3116498a04b190d9df4729628e8b4cd0",
+    "source_lines": 112,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.rounded_notebook",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "RoundedNotebook",
+          "line": 6
+        }
+      ],
+      "imports": [
+        "tkinter",
+        "wlre.ui.function_icons"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/services_ui.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/services_ui.py",
+    "source_sha256": "f61ba870088f673934a2902b914e17abde2ca100926442f1a523ae073af3f1f4",
+    "source_lines": 173,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.services_ui",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "PartyPanel",
+          "line": 12
+        },
+        {
+          "name": "AlchemyPanel",
+          "line": 101
+        }
+      ],
+      "imports": [
+        "json",
+        "time",
+        "tkinter",
+        "types",
+        "wlre.services.battle.party",
+        "wlre.services.items.alchemy",
+        "wlre.services.items.combat_resources",
+        "wlre.ui.crafting_browser",
+        "wlre.ui.layout"
+      ],
+      "existing_test_candidates": [
+        "tests/test_direct_ui_actions.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/session_bridge.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/session_bridge.py",
+    "source_sha256": "af89452d7512d26831bcfb996b3a9c3870e5a59b4d4e1dc650e4626979984212",
+    "source_lines": 10,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.session_bridge",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "SessionBridge",
+          "line": 5
+        }
+      ],
+      "imports": [
+        "copy"
+      ],
+      "existing_test_candidates": [
+        "tests/test_automation_integration.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/session_event_coordinator.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/session_event_coordinator.py",
+    "source_sha256": "bca8a6982a336e96d516ab04c35021453c09a6261857af31293ec2ab0d544177",
+    "source_lines": 112,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.session_event_coordinator",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "SessionEventCoordinator",
+          "line": 14
+        }
+      ],
+      "imports": [
+        "queue",
+        "time",
+        "wlre.core.event_log"
+      ],
+      "existing_test_candidates": [
+        "tests/test_background_version_ui.py",
+        "tests/test_feature_session_event_coordinator.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/star_ark_ui.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/star_ark_ui.py",
+    "source_sha256": "1714432d61372ca53f24723cf9240026ef83e9babcea62c8c8de8aedf8e427cd",
+    "source_lines": 134,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.star_ark_ui",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "StarArkPanel",
+          "line": 7
+        }
+      ],
+      "imports": [
+        "tkinter",
+        "wlre.ui.layout"
+      ],
+      "existing_test_candidates": [
+        "tests/test_star_ark.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/storage_transfer_form.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/storage_transfer_form.py",
+    "source_sha256": "e62eb3524e9c2d1fc4d9cf09761df53c6540d46e0720226ef33d59b7858ca0d3",
+    "source_lines": 124,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.storage_transfer_form",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "transfer_command",
+          "line": 11
+        },
+        {
+          "name": "StorageTransferForm",
+          "line": 28
+        }
+      ],
+      "imports": [
+        "tkinter",
+        "types",
+        "wlre.services.items.catalog",
+        "wlre.services.items.reservations",
+        "wlre.services.items.room_storage_transfer"
+      ],
+      "existing_test_candidates": [
+        "tests/test_room_storage_transfer.py",
+        "tests/test_storage_transfer_form.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/theme.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/theme.py",
+    "source_sha256": "63e5744039edcba14f1c2c70ec8440b509da94ec3340bca8963ca309243018d8",
+    "source_lines": 426,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.theme",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "GlassGroup",
+          "line": 27
+        },
+        {
+          "name": "group",
+          "line": 46
+        },
+        {
+          "name": "install",
+          "line": 52
+        },
+        {
+          "name": "GlassTheme",
+          "line": 63
+        }
+      ],
+      "imports": [
+        "PIL",
+        "copy",
+        "ctypes",
+        "os",
+        "tkinter",
+        "wlre.paths",
+        "wlre.ui.button_art",
+        "wlre.ui.theme_styles",
+        "wlre.ui.theme_surfaces"
+      ],
+      "existing_test_candidates": [
+        "tests/test_star_ark.py",
+        "tests/test_storage_transfer_form.py",
+        "tests/test_theme_layer_invalidation.py",
+        "tests/test_theme_surfaces.py",
+        "tests/test_window_minimize.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/theme_styles.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/theme_styles.py",
+    "source_sha256": "255ebe3b2ca8fe29e06cd97eab8bfed89764357f82e399da46c25437e0a7d3fb",
+    "source_lines": 85,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.theme_styles",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "apply_styles",
+          "line": 9
+        }
+      ],
+      "imports": [
+        "tkinter"
+      ],
+      "existing_test_candidates": [
+        "tests/test_star_ark.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/theme_surfaces.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/theme_surfaces.py",
+    "source_sha256": "2b88922b619a6ecbf1e9f9d2edd200ea47df1a362c13d96ef84d4ef310bdc285",
+    "source_lines": 90,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.theme_surfaces",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "artwork_canvas",
+          "line": 11
+        },
+        {
+          "name": "window_background",
+          "line": 15
+        },
+        {
+          "name": "visible_bounds",
+          "line": 43
+        },
+        {
+          "name": "widget_crop",
+          "line": 53
+        },
+        {
+          "name": "draw_section",
+          "line": 62
+        },
+        {
+          "name": "section_layers",
+          "line": 74
+        }
+      ],
+      "imports": [
+        "PIL"
+      ],
+      "existing_test_candidates": [
+        "tests/test_theme_layer_invalidation.py",
+        "tests/test_theme_surfaces.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/version_gate_controller.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/version_gate_controller.py",
+    "source_sha256": "0a7bfaf156e274e9c4ae170258e4c100023bf729a7aa26ce4af82ee5c7fd1cec",
+    "source_lines": 874,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.version_gate_controller",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_is_verified_login_result",
+          "line": 24
+        },
+        {
+          "name": "_launcher_status_text",
+          "line": 49
+        },
+        {
+          "name": "VersionGateController",
+          "line": 91
+        }
+      ],
+      "imports": [
+        "os",
+        "pathlib",
+        "queue",
+        "subprocess",
+        "sys",
+        "threading",
+        "time",
+        "tkinter",
+        "wlre",
+        "wlre.launcher_progress",
+        "wlre.progress_widgets",
+        "wlre.services.background_version_observer",
+        "wlre.services.game_version_gate",
+        "wlre.services.lala_updater",
+        "wlre.services.official_version",
+        "wlre.services.resource_compatibility",
+        "wlre.services.world.launcher_catalog",
+        "wlre.services.world.resource_rebuilder",
+        "wlre.ui.background_version_controller",
+        "wlre.ui.window_layout"
+      ],
+      "existing_test_candidates": [
+        "tests/gui_support.py",
+        "tests/test_auto_catalog_ui.py",
+        "tests/test_background_version_ui.py",
+        "tests/test_full_startup_retry.py",
+        "tests/test_gui_support.py",
+        "tests/test_integrated_startup.py",
+        "tests/test_login_and_tab_alignment.py",
+        "tests/test_login_endpoint_binding.py",
+        "tests/test_prelogin_version_window.py",
+        "tests/test_runtime_gate_and_recipe_status.py",
+        "tests/test_window_mapping.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "desktop:wlre/ui/window_layout.py",
+    "source_repository": "desktop",
+    "source_path": "wlre/ui/window_layout.py",
+    "source_sha256": "43e319ae31dc9e42cde8d84890f713bb756479800d2f08b732b46d92823d39a2",
+    "source_lines": 67,
+    "target_project": "Lala.Desktop",
+    "target_subsystem": "UI.window_layout",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "wait_for_widget_mapping",
+          "line": 8
+        },
+        {
+          "name": "dialog_geometry",
+          "line": 32
+        },
+        {
+          "name": "center_on_main",
+          "line": 42
+        },
+        {
+          "name": "configure_dialog",
+          "line": 63
+        }
+      ],
+      "imports": [
+        "_tkinter",
+        "time"
+      ],
+      "existing_test_candidates": [
+        "tests/test_feature_windows_v052.py",
+        "tests/test_prelogin_version_window.py",
+        "tests/test_seedless_desktop_startup.py",
+        "tests/test_theme_surfaces.py",
+        "tests/test_window_mapping.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "ui",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:android_app/__init__.py",
+    "source_repository": "android",
+    "source_path": "android_app/__init__.py",
+    "source_sha256": "f7eb9ad4f7db358ed392e3830640e5bebcbe80f84a954c075587089b38a39a1a",
+    "source_lines": 1,
+    "target_project": "Lala.Android",
+    "target_subsystem": "UI",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [],
+      "imports": [],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "android",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:android_app/app.py",
+    "source_repository": "android",
+    "source_path": "android_app/app.py",
+    "source_sha256": "de221643fb9e9caac2cebc5734b59566ccc4490f6b655ccb0b3500f939545efb",
+    "source_lines": 784,
+    "target_project": "Lala.Android",
+    "target_subsystem": "UI.Lifecycle",
+    "scope": "runtime",
+    "status": "partially_migrated",
+    "target_files": [
+      "dotnet/Lala.Android/MainActivity.cs",
+      "dotnet/Lala.Android/AndroidApp.cs",
+      "dotnet/Lala.Android/AndroidMainView.cs",
+      "dotnet/Lala.Android/Platform/ConnectionServiceClient.cs"
+    ],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "text_label",
+          "line": 34
+        },
+        {
+          "name": "LaLaApp",
+          "line": 39
+        }
+      ],
+      "imports": [
+        "android.permissions",
+        "android_app.automation_ui",
+        "android_app.credentials",
+        "android_app.dashboard",
+        "android_app.integrity",
+        "android_app.login_gate",
+        "android_app.resource_sync",
+        "android_app.runtime",
+        "android_app.sessions",
+        "android_app.theme",
+        "android_app.ui_shell",
+        "android_app.vault",
+        "android_app.verification_ui",
+        "android_app.version",
+        "android_app.widgets",
+        "jnius",
+        "kivy.app",
+        "kivy.clock",
+        "kivy.core.text",
+        "kivy.core.window",
+        "kivy.metrics",
+        "kivy.uix.boxlayout",
+        "kivy.uix.button",
+        "kivy.uix.checkbox",
+        "kivy.uix.gridlayout",
+        "kivy.uix.image",
+        "kivy.uix.label",
+        "kivy.uix.scrollview",
+        "kivy.uix.spinner",
+        "kivy.uix.textinput",
+        "kivy.utils",
+        "os",
+        "pathlib",
+        "queue",
+        "time",
+        "wlre.storage.server_lines"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_features.py",
+        "tests/test_android_login_gate.py",
+        "tests/test_android_phase08_security.py",
+        "tests/test_android_ui.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "android",
+    "verification": {
+      "csharp_build": "passed_android_debug_apk_for_listed_subset",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run",
+      "lifecycle_contract_tests": "59 tests passed; controlled synthetic adapters/network/host guards, not Python parity or device/server acceptance",
+      "evidence_document": "dotnet/Lala.Android/README.md"
+    },
+    "migrated_scope": [
+      "Activity 僅綁定／訂閱服務，前背景只取消離線解析；通知授權後不自動登入。"
+    ],
+    "outstanding_scope": [
+      "完整登入／資料驗證頁、其他遊戲頁面、舊 UI 等價、憑證與實機生命週期仍待移植及驗收。"
+    ]
+  },
+  {
+    "id": "android:android_app/assets.py",
+    "source_repository": "android",
+    "source_path": "android_app/assets.py",
+    "source_sha256": "dd83c251709121bd2959e7c7897312c4f2cc44b657b802e230204ab97727e8f8",
+    "source_lines": 154,
+    "target_project": "Lala.Android",
+    "target_subsystem": "UI",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_trim_texture_cache",
+          "line": 14
+        },
+        {
+          "name": "_item_entry",
+          "line": 23
+        },
+        {
+          "name": "prefetch_item_icons",
+          "line": 30
+        },
+        {
+          "name": "texture",
+          "line": 60
+        },
+        {
+          "name": "item_image",
+          "line": 71
+        },
+        {
+          "name": "emoji_entries",
+          "line": 78
+        },
+        {
+          "name": "emoji_texture",
+          "line": 85
+        },
+        {
+          "name": "prefetch_emoji_textures",
+          "line": 92
+        },
+        {
+          "name": "function_icon",
+          "line": 145
+        }
+      ],
+      "imports": [
+        "collections",
+        "io",
+        "json",
+        "kivy.core.image",
+        "kivy.metrics",
+        "kivy.uix.image",
+        "wlre.paths",
+        "wlre.storage.bundled_database",
+        "zipfile"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_bag_load_performance.py",
+        "tests/test_android_social_performance.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "android",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:android_app/automation_ui.py",
+    "source_repository": "android",
+    "source_path": "android_app/automation_ui.py",
+    "source_sha256": "947959b4deea080f1325584f90bd8ba2a4ed842b54a574ca46dfa7790449cacd",
+    "source_lines": 76,
+    "target_project": "Lala.Android",
+    "target_subsystem": "UI",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "attach",
+          "line": 12
+        },
+        {
+          "name": "refresh",
+          "line": 32
+        },
+        {
+          "name": "toggle",
+          "line": 61
+        },
+        {
+          "name": "edit_settings",
+          "line": 70
+        }
+      ],
+      "imports": [
+        "android_app.settings_ui",
+        "android_app.theme",
+        "android_app.widgets",
+        "kivy.metrics",
+        "kivy.uix.boxlayout",
+        "kivy.uix.button",
+        "kivy.uix.label",
+        "wlre.services.battle.auto_battle",
+        "wlre.services.world.roaming"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_features.py",
+        "tests/test_android_ui.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "android",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:android_app/bag_model.py",
+    "source_repository": "android",
+    "source_path": "android_app/bag_model.py",
+    "source_sha256": "8b262d4374eae014e5d21c26280b3494cf7f68d0c383746376d299f3f5bc5e07",
+    "source_lines": 49,
+    "target_project": "Lala.Android",
+    "target_subsystem": "UI",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "visible_items",
+          "line": 15
+        },
+        {
+          "name": "item_details",
+          "line": 28
+        }
+      ],
+      "imports": [
+        "wlre.services.items.combat_resources"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_desktop_parity.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "android",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:android_app/credentials.py",
+    "source_repository": "android",
+    "source_path": "android_app/credentials.py",
+    "source_sha256": "ca0ce4796120a0e6ede7ab50f5ee82acbef6b19e005041216841255f55bdbacc",
+    "source_lines": 54,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Platform.Security",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_identity",
+          "line": 10
+        },
+        {
+          "name": "public_accounts",
+          "line": 21
+        },
+        {
+          "name": "saved_password",
+          "line": 29
+        },
+        {
+          "name": "store_account",
+          "line": 40
+        },
+        {
+          "name": "delete_account",
+          "line": 50
+        }
+      ],
+      "imports": [],
+      "existing_test_candidates": [
+        "tests/test_android_phase08_security.py",
+        "tests/test_android_ui.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "android",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:android_app/dashboard.py",
+    "source_repository": "android",
+    "source_path": "android_app/dashboard.py",
+    "source_sha256": "9a9c138e31f532f680145fc8a864d7748c9e459a03b4c4910d8b26be8563672d",
+    "source_lines": 253,
+    "target_project": "Lala.Android",
+    "target_subsystem": "UI",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "Dashboard",
+          "line": 54
+        }
+      ],
+      "imports": [
+        "android_app.refresh_policy",
+        "android_app.theme",
+        "android_app.ui_shell",
+        "android_app.widgets",
+        "importlib",
+        "kivy.clock",
+        "kivy.metrics",
+        "kivy.uix.boxlayout",
+        "kivy.uix.popup",
+        "kivy.uix.scrollview",
+        "kivy.uix.spinner",
+        "time"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_features.py",
+        "tests/test_android_production_density.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "android",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:android_app/expedition_display.py",
+    "source_repository": "android",
+    "source_path": "android_app/expedition_display.py",
+    "source_sha256": "b05e81484354448f1a9ce6dd886d02e962d837ab35fab204cf063215ad0b8ecc",
+    "source_lines": 38,
+    "target_project": "Lala.Android",
+    "target_subsystem": "UI",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "task_name",
+          "line": 10
+        },
+        {
+          "name": "time_text",
+          "line": 14
+        },
+        {
+          "name": "reward_text",
+          "line": 19
+        },
+        {
+          "name": "rewards_text",
+          "line": 30
+        }
+      ],
+      "imports": [
+        "wlre.services.items.combat_resources"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "android",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:android_app/features.py",
+    "source_repository": "android",
+    "source_path": "android_app/features.py",
+    "source_sha256": "83804caedacd20e0122b433728e9861607533b749fd80624c038c8c37e9502ba",
+    "source_lines": 43,
+    "target_project": "Lala.Android",
+    "target_subsystem": "UI",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "checked_command",
+          "line": 23
+        },
+        {
+          "name": "project",
+          "line": 31
+        },
+        {
+          "name": "detail",
+          "line": 35
+        }
+      ],
+      "imports": [
+        "copy",
+        "json",
+        "wlre.services.social.chat_names"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_instance_catalog.py",
+        "tests/test_android_instance_runtime.py",
+        "tests/test_android_non_npc_parity_v0512.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "android",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:android_app/integrity.py",
+    "source_repository": "android",
+    "source_path": "android_app/integrity.py",
+    "source_sha256": "6cdbe102127afecc3b9de1410b89676c8a392473b25d3170e306c54bed1bdb1a",
+    "source_lines": 28,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Platform.Security",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "IntegrityRejected",
+          "line": 6
+        },
+        {
+          "name": "verify",
+          "line": 10
+        },
+        {
+          "name": "require_integrity",
+          "line": 25
+        }
+      ],
+      "imports": [
+        "jnius"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_phase07_integrity.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "android",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:android_app/login_gate.py",
+    "source_repository": "android",
+    "source_path": "android_app/login_gate.py",
+    "source_sha256": "48683459d2287114fc01ee7d41eadfa056b1a7285fed9c09a762fcd9200f5a2c",
+    "source_lines": 21,
+    "target_project": "Lala.Android",
+    "target_subsystem": "UI",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "verified_for_login",
+          "line": 9
+        }
+      ],
+      "imports": [],
+      "existing_test_candidates": [
+        "tests/test_android_login_gate.py",
+        "tests/test_android_verification_fidelity.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "android",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:android_app/overlay_state.py",
+    "source_repository": "android",
+    "source_path": "android_app/overlay_state.py",
+    "source_sha256": "d12223b038e16a2f59c606111264b74fb9a6ce1a8078645f34a950e7b8b2e8c5",
+    "source_lines": 110,
+    "target_project": "Lala.Android",
+    "target_subsystem": "Platform.Overlay",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_text",
+          "line": 11
+        },
+        {
+          "name": "_connection",
+          "line": 15
+        },
+        {
+          "name": "_battle",
+          "line": 26
+        },
+        {
+          "name": "_efficiency",
+          "line": 43
+        },
+        {
+          "name": "_overview",
+          "line": 65
+        },
+        {
+          "name": "snapshot",
+          "line": 84
+        }
+      ],
+      "imports": [
+        "__future__",
+        "android_app.overview_model",
+        "wlre.core.efficiency"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_overlay.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "android",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:android_app/overview_model.py",
+    "source_repository": "android",
+    "source_path": "android_app/overview_model.py",
+    "source_sha256": "ee63425388c59e86af2d67202a14c5367ff333903a35cd98c9b8f91d927738be",
+    "source_lines": 74,
+    "target_project": "Lala.Android",
+    "target_subsystem": "UI",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "overview_model",
+          "line": 10
+        },
+        {
+          "name": "overview_lines",
+          "line": 61
+        }
+      ],
+      "imports": [
+        "wlre.services.battle.auto_battle",
+        "wlre.services.items.combat_resources",
+        "wlre.services.world.roaming"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_overlay.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "android",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:android_app/pages/__init__.py",
+    "source_repository": "android",
+    "source_path": "android_app/pages/__init__.py",
+    "source_sha256": "e337b7694f917c78b000cf9c768092d4ad52020eba4d397574f0595bf7ec37cd",
+    "source_lines": 1,
+    "target_project": "Lala.Android",
+    "target_subsystem": "UI",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [],
+      "imports": [],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "android",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:android_app/pages/attributes.py",
+    "source_repository": "android",
+    "source_path": "android_app/pages/attributes.py",
+    "source_sha256": "c68013682f5ae27182d2a739f72334b250f8d40713dc8c060f187700f5a5ce41",
+    "source_lines": 175,
+    "target_project": "Lala.Android",
+    "target_subsystem": "UI",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "attribute_lines",
+          "line": 15
+        },
+        {
+          "name": "Attributes",
+          "line": 32
+        }
+      ],
+      "imports": [
+        "android_app.pages.general",
+        "android_app.pages.ui_components",
+        "android_app.theme",
+        "android_app.widgets",
+        "kivy.metrics",
+        "kivy.uix.boxlayout",
+        "kivy.uix.label",
+        "kivy.uix.textinput",
+        "wlre.services.battle.attribute_points"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_functional_layout_fidelity.py",
+        "tests/test_android_instance_catalog.py",
+        "tests/test_android_reference_workspaces.py",
+        "tests/test_android_ui_stage2.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "android",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:android_app/pages/benefits.py",
+    "source_repository": "android",
+    "source_path": "android_app/pages/benefits.py",
+    "source_sha256": "f1d5f5d98d5f9c31fdce9b0fa1588daa0e5cb572f7371c355200d469f2b1f1a8",
+    "source_lines": 59,
+    "target_project": "Lala.Android",
+    "target_subsystem": "UI",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "Benefits",
+          "line": 7
+        }
+      ],
+      "imports": [
+        "android_app.pages.general",
+        "android_app.pages.ui_components",
+        "android_app.widgets",
+        "time"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_latest_parity.py",
+        "tests/test_android_ui_stage3.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "android",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:android_app/pages/combined.py",
+    "source_repository": "android",
+    "source_path": "android_app/pages/combined.py",
+    "source_sha256": "5c6cf4d59a000a61af0108e2812253f2f8a5733e80df2754469ad3cc380ae633",
+    "source_lines": 406,
+    "target_project": "Lala.Android",
+    "target_subsystem": "UI",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "_SectionDashboard",
+          "line": 41
+        },
+        {
+          "name": "PairedFeatures",
+          "line": 55
+        },
+        {
+          "name": "ChatAndParty",
+          "line": 169
+        },
+        {
+          "name": "ExpeditionAndInstances",
+          "line": 268
+        },
+        {
+          "name": "AlchemyAndCrafting",
+          "line": 273
+        },
+        {
+          "name": "_ReferenceWorkspace",
+          "line": 326
+        },
+        {
+          "name": "CompanionsAndAttributes",
+          "line": 371
+        },
+        {
+          "name": "SettingsAndTools",
+          "line": 386
+        }
+      ],
+      "imports": [
+        "android_app.pages.general",
+        "android_app.pages.social_visual",
+        "android_app.pages.ui_components",
+        "android_app.theme",
+        "android_app.widgets",
+        "importlib",
+        "kivy.metrics",
+        "kivy.uix.boxlayout"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_chat_party_reference_ui.py",
+        "tests/test_android_paired_feature_workspaces.py",
+        "tests/test_android_production_screenshot_rework.py",
+        "tests/test_android_reference_workspaces.py",
+        "tests/test_android_social_performance.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "android",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:android_app/pages/companions.py",
+    "source_repository": "android",
+    "source_path": "android_app/pages/companions.py",
+    "source_sha256": "58a156a8ff6f6a38c127e2df9cb8adfb6d0a3a37d339f9a5ce12661ea638907b",
+    "source_lines": 109,
+    "target_project": "Lala.Android",
+    "target_subsystem": "UI",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "companion_rows",
+          "line": 9
+        },
+        {
+          "name": "Companions",
+          "line": 31
+        }
+      ],
+      "imports": [
+        "android_app.pages.general",
+        "android_app.pages.ui_components",
+        "android_app.widgets",
+        "kivy.metrics",
+        "wlre.services.battle.companions",
+        "wlre.services.items.combat_resources"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_functional_layout_fidelity.py",
+        "tests/test_android_reference_workspaces.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "android",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:android_app/pages/expedition.py",
+    "source_repository": "android",
+    "source_path": "android_app/pages/expedition.py",
+    "source_sha256": "d677cc3a84a62cb5617b6490dab2dc2dac5ead474286804225fb98c7aac913c1",
+    "source_lines": 197,
+    "target_project": "Lala.Android",
+    "target_subsystem": "UI",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "available_quests",
+          "line": 14
+        },
+        {
+          "name": "Expedition",
+          "line": 29
+        }
+      ],
+      "imports": [
+        "android_app.expedition_display",
+        "android_app.pages.general",
+        "android_app.pages.ui_components",
+        "android_app.widgets",
+        "copy",
+        "time",
+        "wlre.services.expedition",
+        "wlre.services.expedition_data",
+        "wlre.services.items.combat_resources"
+      ],
+      "existing_test_candidates": [
+        "tests/test_expedition.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "android",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:android_app/pages/general.py",
+    "source_repository": "android",
+    "source_path": "android_app/pages/general.py",
+    "source_sha256": "5f887b732b340b653f839eaf644ae754e4185cbac3dad0a741d7eac85a501bdd",
+    "source_lines": 160,
+    "target_project": "Lala.Android",
+    "target_subsystem": "UI",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "Page",
+          "line": 10
+        },
+        {
+          "name": "Overview",
+          "line": 31
+        },
+        {
+          "name": "Events",
+          "line": 107
+        },
+        {
+          "name": "Efficiency",
+          "line": 120
+        }
+      ],
+      "imports": [
+        "android_app.automation_ui",
+        "android_app.overview_model",
+        "android_app.pages.ui_components",
+        "android_app.theme",
+        "android_app.ui_shell",
+        "android_app.widgets",
+        "kivy.metrics",
+        "kivy.uix.boxlayout",
+        "time",
+        "wlre.core.efficiency",
+        "wlre.services.world.tent"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_all_pages_visual_fidelity.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "android",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:android_app/pages/instances.py",
+    "source_repository": "android",
+    "source_path": "android_app/pages/instances.py",
+    "source_sha256": "20db948db86a1e4c941240cfd8de16f6ccda4d59cf0884c8d7585ae7c19d46bd",
+    "source_lines": 305,
+    "target_project": "Lala.Android",
+    "target_subsystem": "UI",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "catalog_rows",
+          "line": 7
+        },
+        {
+          "name": "describe_entry",
+          "line": 12
+        },
+        {
+          "name": "InstanceCatalog",
+          "line": 39
+        }
+      ],
+      "imports": [
+        "android_app.pages.general",
+        "android_app.pages.ui_components",
+        "android_app.widgets",
+        "time",
+        "wlre.services.instance_browser"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_instance_catalog.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "android",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:android_app/pages/map.py",
+    "source_repository": "android",
+    "source_path": "android_app/pages/map.py",
+    "source_sha256": "97609b74283c23f71191e620b7d3c59e54cae14b2a17b20f1aa77abad8aa9f15",
+    "source_lines": 242,
+    "target_project": "Lala.Android",
+    "target_subsystem": "UI",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "map_label",
+          "line": 13
+        },
+        {
+          "name": "MapCanvas",
+          "line": 20
+        },
+        {
+          "name": "MapPage",
+          "line": 109
+        }
+      ],
+      "imports": [
+        "android_app.assets",
+        "android_app.pages.general",
+        "android_app.pages.ui_components",
+        "android_app.widgets",
+        "kivy.graphics",
+        "kivy.metrics",
+        "kivy.uix.widget",
+        "wlre.services.world.catalog_source_policy",
+        "wlre.services.world.display_position",
+        "wlre.services.world.dynamic_bundle_runtime",
+        "wlre.services.world.map_names",
+        "wlre.services.world.portal_policy",
+        "wlre.services.world.portals",
+        "wlre.services.world.scene_names_1275",
+        "wlre.services.world.smallmaps"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_map_inventory_reference_ui.py",
+        "tests/test_android_ui_stage2.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "android",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:android_app/pages/npc.py",
+    "source_repository": "android",
+    "source_path": "android_app/pages/npc.py",
+    "source_sha256": "ed11e6f615b342a8ba3b99eee79d20f616b1d56ed7cefaefe4af8f2ab93855d6",
+    "source_lines": 114,
+    "target_project": "Lala.Android",
+    "target_subsystem": "UI",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "NPC",
+          "line": 11
+        }
+      ],
+      "imports": [
+        "android_app.pages.general",
+        "android_app.pages.ui_components",
+        "android_app.widgets",
+        "wlre.services.world.dynamic_bundle_runtime",
+        "wlre.services.world.npc_catalog",
+        "wlre.services.world.npc_interact",
+        "wlre.services.world.npc_shop",
+        "wlre.services.world.npc_talk"
+      ],
+      "existing_test_candidates": [],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "android",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  },
+  {
+    "id": "android:android_app/pages/production.py",
+    "source_repository": "android",
+    "source_path": "android_app/pages/production.py",
+    "source_sha256": "3f04770e0a4e89faa0ebb4ecc2e3e0619b3cce6aa6f374aa71e7652dd2708060",
+    "source_lines": 811,
+    "target_project": "Lala.Android",
+    "target_subsystem": "UI",
+    "scope": "runtime",
+    "status": "not_migrated",
+    "target_files": [],
+    "evidence": {
+      "source_definitions": [
+        {
+          "name": "Alchemy",
+          "line": 30
+        },
+        {
+          "name": "Crafting",
+          "line": 295
+        },
+        {
+          "name": "PlanEditor",
+          "line": 703
+        }
+      ],
+      "imports": [
+        "android_app.assets",
+        "android_app.pages.general",
+        "android_app.pages.production_visual",
+        "android_app.pages.ui_components",
+        "android_app.theme",
+        "android_app.widgets",
+        "copy",
+        "json",
+        "kivy.clock",
+        "kivy.core.clipboard",
+        "kivy.metrics",
+        "kivy.uix.anchorlayout",
+        "kivy.uix.boxlayout",
+        "kivy.uix.gridlayout",
+        "kivy.uix.label",
+        "kivy.uix.spinner",
+        "kivy.uix.textinput",
+        "types",
+        "wlre.core.efficiency",
+        "wlre.services.items.alchemy",
+        "wlre.services.items.combat_resources",
+        "wlre.services.items.crafting",
+        "wlre.services.items.crafting_browser_model",
+        "wlre.services.items.crafting_plan"
+      ],
+      "existing_test_candidates": [
+        "tests/test_android_alchemy_crafting_page_redesign.py",
+        "tests/test_android_production_density.py",
+        "tests/test_android_production_screenshot_rework.py",
+        "tests/test_android_production_visual_grade_design.py",
+        "tests/test_android_ui_stage3.py"
+      ],
+      "test_candidates_are_not_verified_coverage": true
+    },
+    "acceptance_profile": "android",
+    "verification": {
+      "csharp_build": "not_run",
+      "differential_tests": "not_run",
+      "device_acceptance": "not_run",
+      "live_server_acceptance": "not_run"
+    }
+  }
+]

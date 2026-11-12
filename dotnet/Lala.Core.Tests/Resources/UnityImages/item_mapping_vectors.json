@@ -1,0 +1,72 @@
+{
+  "cases": [
+    {
+      "names": [
+        "s1000.png",
+        "s0020.png"
+      ],
+      "valid": true
+    },
+    {
+      "names": [
+        "s1000.png",
+        "s01000.png"
+      ],
+      "valid": false
+    },
+    {
+      "names": [
+        "s0000.png"
+      ],
+      "valid": false
+    },
+    {
+      "names": [
+        "s65536.png"
+      ],
+      "valid": false
+    },
+    {
+      "names": [
+        "s100.png"
+      ],
+      "valid": false
+    },
+    {
+      "names": [
+        "s100000.png"
+      ],
+      "valid": false
+    },
+    {
+      "names": [
+        "s１２３４.png"
+      ],
+      "valid": false
+    },
+    {
+      "names": [
+        "s1001.PNG"
+      ],
+      "valid": false
+    },
+    {
+      "names": [
+        "../s1001.png"
+      ],
+      "valid": false
+    },
+    {
+      "names": [
+        "s+100.png"
+      ],
+      "valid": false
+    }
+  ],
+  "icons": {
+    "1": 20,
+    "2": 1000,
+    "3": 1000,
+    "65535": 1000
+  }
+}

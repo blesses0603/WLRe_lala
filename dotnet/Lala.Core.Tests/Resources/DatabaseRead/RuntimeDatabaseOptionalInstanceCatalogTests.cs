@@ -1,0 +1,343 @@
+using System.Data;
+using Lala.Core.Catalogs;
+using Lala.Core.Resources;
+using Xunit;
+
+namespace Lala.Core.Tests.Resources;
+
+public sealed class RuntimeDatabaseOptionalInstanceCatalogTests
+{
+    private const string DungeonTable = "DungeonData_C.bytes";
+    private const string CooperativeTable = "CooperateEventData_C.bytes";
+    private const string SkillTable = "SkillData_C.bytes";
+    private const string DailyTaskTable = "DailyTaskData_C.bytes";
+    private const string DailyRewardTable = "DailyTaskRewardData_C.bytes";
+    private static readonly byte[] DungeonBytes = [1, 0, 0, 0, 7, 9];
+    private static readonly byte[] CooperativeBytes = [1, 0, 0, 0, 8, 10, 11];
+    private static readonly byte[] SkillBytes = [1, 0, 0, 0, 2];
+    private static readonly byte[] DailyTaskBytes = [1, 2, 3];
+    private static readonly byte[] DailyRewardBytes = [4, 5, 6, 7];
+    private static string DungeonSha => DatabaseReadTestDatabase.Sha(DungeonBytes);
+    private static string CooperativeSha => DatabaseReadTestDatabase.Sha(CooperativeBytes);
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task Instance_capture_requires_its_own_opt_in_and_does_not_change_required_skill_or_daily_matching(bool includeSkill, bool includeDaily)
+    {
+        using var db = new DatabaseReadTestDatabase(); AddInstance(db); AddSkill(db); AddDaily(db);
+        var connection = new ScriptedReadConnection(db.Connection());
+        var result = await RuntimeDatabaseSnapshotReader.ReadAsync(connection, includeSkillData: includeSkill, includeDailyCatalog: includeDaily);
+
+        AssertRequiredMatch(result);
+        Assert.Null(result.Snapshot.Table(41, DungeonTable)); Assert.Null(result.Snapshot.Table(41, CooperativeTable));
+        Assert.False(RuntimeDatabaseStructuralMatcher.MatchInstanceCatalog(result.Snapshot, DungeonSha, CooperativeSha));
+        Assert.Equal(includeSkill, result.Snapshot.Table(41, SkillTable) is not null);
+        Assert.False(RuntimeDatabaseStructuralMatcher.MatchReviewedSkillData(result.Snapshot));
+        Assert.Equal(includeDaily, MatchesDaily(result));
+        var expected = BundleSourcePlan.RequiredTables.Select(name => name + ".bytes");
+        if (includeSkill) expected = expected.Append(SkillTable);
+        if (includeDaily) expected = expected.Append(DailyTaskTable).Append(DailyRewardTable);
+        Assert.Equal(expected, TableQueries(connection));
+        var extraDigests = DatabaseReadTestDatabase.Digests();
+        extraDigests.Add("DungeonData_C", DungeonSha); extraDigests.Add("CooperateEventData_C", CooperativeSha);
+        Assert.False(RuntimeDatabaseStructuralMatcher.Match(result.Snapshot, DatabaseReadTestDatabase.Identity(), extraDigests).MatchesSuppliedRuntime);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task Explicit_read_owns_exact_instance_slots_in_one_read_only_transaction(bool includeSkill, bool includeDaily)
+    {
+        using var db = new DatabaseReadTestDatabase(); AddInstance(db); AddSkill(db); AddDaily(db);
+        db.Execute("INSERT INTO resources VALUES(41,'Other.bytes','unused',x'00')");
+        byte[] before = File.ReadAllBytes(db.FileName);
+        var connection = new ScriptedReadConnection(db.Connection());
+        var result = await RuntimeDatabaseSnapshotReader.ReadAsync(connection, includeSkillData: includeSkill,
+            includeDailyCatalog: includeDaily, includeInstanceCatalog: true);
+
+        AssertRequiredMatch(result); AssertInstanceMatch(result);
+        Assert.Equal(before, File.ReadAllBytes(db.FileName));
+        var expected = BundleSourcePlan.RequiredTables.Select(name => name + ".bytes");
+        if (includeSkill) expected = expected.Append(SkillTable);
+        if (includeDaily) expected = expected.Append(DailyTaskTable).Append(DailyRewardTable);
+        Assert.Equal(expected.Append(DungeonTable).Append(CooperativeTable), TableQueries(connection));
+        Assert.Equal("BEGIN", connection.Commands[0]); Assert.Equal("ROLLBACK", connection.Commands[^1]);
+        Assert.Single(connection.Commands, sql => sql == "BEGIN");
+        Assert.All(connection.CreatedCommands, command => Assert.True(command.WasDisposed));
+        Assert.All(connection.Readers, reader => Assert.True(reader.WasDisposed)); Assert.True(connection.WasDisposed);
+        foreach (var command in connection.CreatedCommands.Where(command => command.CommandText == RuntimeDatabaseSnapshotReader.TableSql))
+        {
+            Assert.Equal(DbType.Int64, command.Parameters["@version"].DbType); Assert.Equal(41L, command.Parameters["@version"].Value);
+            Assert.Equal(DbType.String, command.Parameters["@name"].DbType); Assert.Equal(5, command.CommandTimeout);
+        }
+        Assert.Equal(DungeonBytes, result.Snapshot.Table(41, DungeonTable)!.Bytes.ToArray());
+        Assert.Equal(CooperativeBytes, result.Snapshot.Table(41, CooperativeTable)!.Bytes.ToArray());
+        Assert.Null(result.Snapshot.Table(41, "Other.bytes"));
+        Assert.Equal(includeSkill, result.Snapshot.Table(41, SkillTable) is not null);
+        Assert.Equal(includeDaily, MatchesDaily(result));
+        // Instance claims do not weaken the separately compiled skill fingerprint.
+        Assert.False(RuntimeDatabaseStructuralMatcher.MatchReviewedSkillData(result.Snapshot));
+        db.Execute("UPDATE resources SET data=x'00',sha256='changed' WHERE name IN (@p0,@p1)", DungeonTable, CooperativeTable);
+        AssertInstanceMatch(result); AssertRequiredMatch(result);
+    }
+
+    public static IEnumerable<object[]> MalformedRows() =>
+        from name in new[] { DungeonTable, CooperativeTable }
+        from anomaly in new[] { "missing", "empty", "text", "non-text-digest", "long-digest", "oversized", "wrong-version", "wrong-case", "duplicate", "null" }
+        select new object[] { name, anomaly };
+
+    [Theory]
+    [MemberData(nameof(MalformedRows))]
+    public async Task Missing_or_malformed_instance_row_only_disables_instance_matching(string name, string anomaly)
+    {
+        using var db = new DatabaseReadTestDatabase(); AddInstance(db); AddSkill(db); AddDaily(db);
+        switch (anomaly)
+        {
+            case "missing": db.Execute("DELETE FROM resources WHERE name=@p0", name); break;
+            case "empty": db.Execute("UPDATE resources SET data=x'' WHERE name=@p0", name); break;
+            case "text": db.Execute("UPDATE resources SET data='not-a-blob' WHERE name=@p0", name); break;
+            case "non-text-digest": db.Execute("UPDATE resources SET sha256=x'00' WHERE name=@p0", name); break;
+            case "long-digest": db.Execute("UPDATE resources SET sha256=@p0 WHERE name=@p1", new string('a', 257), name); break;
+            case "oversized": db.Execute("UPDATE resources SET data=zeroblob(@p0) WHERE name=@p1", OwnedRuntimeDatabaseSnapshot.MaximumTableBytes + 1, name); break;
+            case "wrong-version": db.Execute("UPDATE resources SET version_id=42 WHERE name=@p0", name); break;
+            case "wrong-case": db.Execute("UPDATE resources SET name=@p0 WHERE name=@p1", name.ToLowerInvariant(), name); break;
+            case "duplicate":
+            case "null":
+                db.Execute("ALTER TABLE resources RENAME TO old_resources; CREATE TABLE resources(version_id INTEGER, name TEXT, sha256 TEXT, data BLOB); INSERT INTO resources SELECT * FROM old_resources; DROP TABLE old_resources");
+                if (anomaly == "duplicate") db.Execute("INSERT INTO resources SELECT * FROM resources WHERE name=@p0", name);
+                else db.Execute("UPDATE resources SET data=NULL WHERE name=@p0", name);
+                break;
+        }
+        var connection = new ScriptedReadConnection(db.Connection());
+        var result = await RuntimeDatabaseSnapshotReader.ReadAsync(connection, includeSkillData: true, includeDailyCatalog: true, includeInstanceCatalog: true);
+
+        AssertRequiredMatch(result); Assert.Null(result.Snapshot.Table(41, name));
+        Assert.NotNull(result.Snapshot.Table(41, name == DungeonTable ? CooperativeTable : DungeonTable));
+        Assert.Equal(SkillBytes, result.Snapshot.Table(41, SkillTable)!.Bytes.ToArray());
+        Assert.True(MatchesDaily(result));
+        Assert.False(RuntimeDatabaseStructuralMatcher.MatchInstanceCatalog(result.Snapshot, DungeonSha, CooperativeSha));
+        Assert.Equal(15, TableQueries(connection).Count());
+        if (anomaly == "oversized")
+        {
+            int index = name == DungeonTable ? 13 : 14;
+            Assert.Equal(0, connection.Readers.Where(reader => reader.Sql == RuntimeDatabaseSnapshotReader.TableSql).ElementAt(index).BlobReads);
+        }
+    }
+
+    public static IEnumerable<object[]> SharedBudgetCases() =>
+        from includeSkill in new[] { false, true }
+        from includeDaily in new[] { false, true }
+        from remaining in new[] { 0, 5, 6, 12, 13 }
+        select new object[] { includeSkill, includeDaily, remaining };
+
+    [Theory]
+    [MemberData(nameof(SharedBudgetCases))]
+    public async Task Required_skill_daily_and_instance_rows_share_one_budget_before_blob_materialization(
+        bool includeSkill, bool includeDaily, int remaining)
+    {
+        using var db = new DatabaseReadTestDatabase(); AddInstance(db); AddSkill(db); AddDaily(db);
+        long requiredBytes = RequiredRows().Values.Sum(row => (long)row!.Data!.Value.Length);
+        long priorOptionalBytes = (includeSkill ? SkillBytes.Length : 0) +
+            (includeDaily ? DailyTaskBytes.Length + DailyRewardBytes.Length : 0);
+        bool dungeonFits = remaining >= DungeonBytes.Length;
+        bool cooperativeFits = remaining - (dungeonFits ? DungeonBytes.Length : 0) >= CooperativeBytes.Length;
+        var connection = new ScriptedReadConnection(db.Connection());
+        var result = await RuntimeDatabaseSnapshotReader.ReadAsync(connection, maximumAggregateBytes: requiredBytes + priorOptionalBytes + remaining,
+            includeSkillData: includeSkill, includeDailyCatalog: includeDaily, includeInstanceCatalog: true);
+
+        AssertRequiredMatch(result);
+        Assert.Equal(includeSkill, result.Snapshot.Table(41, SkillTable) is not null);
+        Assert.Equal(includeDaily, MatchesDaily(result));
+        Assert.Equal(dungeonFits, result.Snapshot.Table(41, DungeonTable) is not null);
+        Assert.Equal(cooperativeFits, result.Snapshot.Table(41, CooperativeTable) is not null);
+        Assert.Equal(dungeonFits && cooperativeFits, RuntimeDatabaseStructuralMatcher.MatchInstanceCatalog(result.Snapshot, DungeonSha, CooperativeSha));
+        var instanceReaders = connection.Readers.Where(reader => reader.Sql == RuntimeDatabaseSnapshotReader.TableSql).TakeLast(2).ToArray();
+        Assert.Equal(dungeonFits ? 1 : 0, instanceReaders[0].BlobReads); Assert.Equal(cooperativeFits ? 1 : 0, instanceReaders[1].BlobReads);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Required_row_failure_remains_fatal_before_instance_read(bool malformed)
+    {
+        using var db = new DatabaseReadTestDatabase(); AddInstance(db);
+        db.Execute(malformed ? "UPDATE resources SET data=x'' WHERE name='Eve.bytes'" : "DELETE FROM resources WHERE name='Eve.bytes'");
+        var connection = new ScriptedReadConnection(db.Connection());
+        await Assert.ThrowsAsync<InvalidDataException>(() => RuntimeDatabaseSnapshotReader.ReadAsync(connection, includeInstanceCatalog: true));
+        Assert.DoesNotContain(DungeonTable, TableQueries(connection)); Assert.DoesNotContain(CooperativeTable, TableQueries(connection));
+        Assert.True(connection.WasDisposed); Assert.Equal("ROLLBACK", connection.Commands[^1]);
+    }
+
+    [Fact]
+    public async Task Both_instance_rows_observe_the_required_rows_wal_snapshot()
+    {
+        using var db = new DatabaseReadTestDatabase(); db.Execute("PRAGMA journal_mode=WAL"); AddInstance(db);
+        var connection = new ScriptedReadConnection(db.Connection()); bool changed = false;
+        connection.BeforeExecute = (command, _) =>
+        {
+            if (!IsTable(command, CooperativeTable)) return;
+            changed = true;
+            db.Execute("UPDATE resources SET data=x'00',sha256=@p0 WHERE name IN (@p1,@p2)", DatabaseReadTestDatabase.Sha([0]), DungeonTable, CooperativeTable);
+        };
+        var first = await RuntimeDatabaseSnapshotReader.ReadAsync(connection, includeInstanceCatalog: true);
+        Assert.True(changed); AssertRequiredMatch(first); AssertInstanceMatch(first);
+        var later = await RuntimeDatabaseSnapshotReader.ReadAsync(db.Connection(), includeInstanceCatalog: true);
+        AssertRequiredMatch(later);
+        Assert.False(RuntimeDatabaseStructuralMatcher.MatchInstanceCatalog(later.Snapshot, DungeonSha, CooperativeSha));
+        Assert.Equal(new byte[] { 0 }, later.Snapshot.Table(41, DungeonTable)!.Bytes.ToArray());
+        Assert.Equal(new byte[] { 0 }, later.Snapshot.Table(41, CooperativeTable)!.Bytes.ToArray());
+    }
+
+    public static IEnumerable<object[]> ProviderFailures() =>
+        from name in new[] { DungeonTable, CooperativeTable }
+        from stage in new[] { "execute", "value", "reader-dispose", "command-dispose" }
+        select new object[] { name, stage };
+
+    [Theory]
+    [MemberData(nameof(ProviderFailures))]
+    public async Task Instance_provider_and_cleanup_failures_cannot_publish_any_observation(string name, string stage)
+    {
+        using var db = new DatabaseReadTestDatabase(); AddInstance(db);
+        var failure = new InvalidDataException("provider failure, not optional validation");
+        var connection = new ScriptedReadConnection(db.Connection()); bool target = false;
+        connection.BeforeExecute = (command, _) =>
+        {
+            target = IsTable(command, name);
+            connection.ReaderDisposeError = target && stage == "reader-dispose" ? failure : null;
+            connection.CommandDisposeError = target && stage == "command-dispose" ? failure : null;
+            if (target && stage == "execute") throw failure;
+        };
+        connection.TransformValue = (_, _, value) => target && stage == "value" ? throw failure : value;
+        RuntimeDatabaseReadObservation? result = null;
+        Assert.Same(failure, await Assert.ThrowsAsync<InvalidDataException>(async () =>
+            result = await RuntimeDatabaseSnapshotReader.ReadAsync(connection, includeInstanceCatalog: true)));
+        Assert.Null(result); Assert.True(connection.WasDisposed); Assert.Equal("ROLLBACK", connection.Commands[^1]);
+    }
+
+    public static IEnumerable<object[]> MalformedProjections() =>
+        from name in new[] { DungeonTable, CooperativeTable }
+        from anomaly in new[] { "projection", "extra-result", "wrong-clr-type", "truncated", "null", "long-length" }
+        select new object[] { name, anomaly };
+
+    [Theory]
+    [MemberData(nameof(MalformedProjections))]
+    public async Task Malformed_instance_projection_is_absent_without_invalidating_the_other_instance_row(string name, string anomaly)
+    {
+        using var db = new DatabaseReadTestDatabase(); AddInstance(db);
+        var connection = new ScriptedReadConnection(db.Connection()); bool target = false;
+        connection.BeforeExecute = (command, _) =>
+        {
+            target = IsTable(command, name);
+            connection.ExtraResultSql = target && anomaly == "extra-result" ? RuntimeDatabaseSnapshotReader.TableSql : null;
+        };
+        connection.TransformFieldCount = (_, count) => target && anomaly == "projection" ? count + 1 : count;
+        connection.TransformValue = (_, ordinal, value) =>
+        {
+            if (!target) return value;
+            if (anomaly == "long-length" && ordinal == 4) return long.MaxValue;
+            if (ordinal != 5) return value;
+            return anomaly switch
+            {
+                "wrong-clr-type" => new ReadOnlyMemory<byte>((byte[])value),
+                "truncated" => ((byte[])value)[..^1], "null" => DBNull.Value, _ => value
+            };
+        };
+        var result = await RuntimeDatabaseSnapshotReader.ReadAsync(connection, includeInstanceCatalog: true);
+        AssertRequiredMatch(result); Assert.Null(result.Snapshot.Table(41, name));
+        Assert.NotNull(result.Snapshot.Table(41, name == DungeonTable ? CooperativeTable : DungeonTable));
+        Assert.False(RuntimeDatabaseStructuralMatcher.MatchInstanceCatalog(result.Snapshot, DungeonSha, CooperativeSha));
+        Assert.True(connection.WasDisposed); Assert.Equal("ROLLBACK", connection.Commands[^1]);
+    }
+
+    [Theory]
+    [InlineData(DungeonTable, false)]
+    [InlineData(DungeonTable, true)]
+    [InlineData(CooperativeTable, false)]
+    [InlineData(CooperativeTable, true)]
+    public async Task Cancellation_during_either_instance_read_cannot_publish_a_partial_snapshot(string name, bool materializing)
+    {
+        using var db = new DatabaseReadTestDatabase(); AddInstance(db);
+        using var cts = new CancellationTokenSource();
+        var connection = new ScriptedReadConnection(db.Connection()); bool target = false;
+        connection.BeforeExecute = (command, _) => { target = IsTable(command, name); if (target && !materializing) cts.Cancel(); };
+        connection.BeforeBlobRead = _ => { if (target && materializing) cts.Cancel(); };
+        RuntimeDatabaseReadObservation? result = null;
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+            result = await RuntimeDatabaseSnapshotReader.ReadAsync(connection, cts.Token, includeInstanceCatalog: true));
+        Assert.Null(result); Assert.True(connection.WasDisposed); Assert.Equal("ROLLBACK", connection.Commands[^1]);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Cleanup_after_valid_instance_reads_is_fatal(bool rollback)
+    {
+        using var db = new DatabaseReadTestDatabase(); AddInstance(db);
+        var failure = new IOException("cleanup failed"); var connection = new ScriptedReadConnection(db.Connection());
+        if (rollback) connection.BeforeExecute = (command, _) => { if (command.CommandText == "ROLLBACK") throw failure; };
+        else connection.DisposeError = failure;
+        RuntimeDatabaseReadObservation? result = null;
+        var error = await Assert.ThrowsAsync<AggregateException>(async () =>
+            result = await RuntimeDatabaseSnapshotReader.ReadAsync(connection, includeInstanceCatalog: true));
+        Assert.Same(failure, Assert.Single(error.InnerExceptions));
+        Assert.Null(result); Assert.True(connection.WasDisposed); Assert.Equal(12, TableQueries(connection).Count());
+    }
+
+    [Fact]
+    public async Task Instance_primary_failure_survives_all_cleanup_failures()
+    {
+        using var db = new DatabaseReadTestDatabase(); AddInstance(db);
+        var failure = new InvalidDataException("instance provider failed"); var cleanup = new IOException("cleanup failed");
+        var connection = new ScriptedReadConnection(db.Connection()) { DisposeError = cleanup };
+        bool target = false;
+        connection.BeforeExecute = (command, _) =>
+        {
+            target = IsTable(command, CooperativeTable);
+            if (target) { connection.ReaderDisposeError = cleanup; connection.CommandDisposeError = cleanup; }
+            if (command.CommandText == "ROLLBACK") throw cleanup;
+        };
+        connection.TransformValue = (_, _, value) => target ? throw failure : value;
+        Assert.Same(failure, await Assert.ThrowsAsync<InvalidDataException>(() => RuntimeDatabaseSnapshotReader.ReadAsync(connection, includeInstanceCatalog: true)));
+        var secondary = Assert.IsAssignableFrom<IEnumerable<Exception>>(failure.Data[RuntimeDatabaseSnapshotReader.CleanupFailuresKey]);
+        Assert.Equal(4, secondary.Count()); Assert.All(secondary, item => Assert.Same(cleanup, item));
+        Assert.True(connection.WasDisposed);
+    }
+
+    private static bool IsTable(TrackedReadCommand command, string name) =>
+        command.CommandText == RuntimeDatabaseSnapshotReader.TableSql && (string)command.Parameters["@name"].Value! == name;
+    private static void AddInstance(DatabaseReadTestDatabase db)
+    {
+        db.Execute("INSERT INTO resources VALUES(41,@p0,@p1,@p2)", DungeonTable, DungeonSha, DungeonBytes);
+        db.Execute("INSERT INTO resources VALUES(41,@p0,@p1,@p2)", CooperativeTable, CooperativeSha, CooperativeBytes);
+    }
+    private static void AddSkill(DatabaseReadTestDatabase db) =>
+        db.Execute("INSERT INTO resources VALUES(41,@p0,@p1,@p2)", SkillTable, SkillDataParser.ReviewedSha256, SkillBytes);
+    private static void AddDaily(DatabaseReadTestDatabase db)
+    {
+        db.Execute("INSERT INTO resources VALUES(41,@p0,@p1,@p2)", DailyTaskTable, DatabaseReadTestDatabase.Sha(DailyTaskBytes), DailyTaskBytes);
+        db.Execute("INSERT INTO resources VALUES(41,@p0,@p1,@p2)", DailyRewardTable, DatabaseReadTestDatabase.Sha(DailyRewardBytes), DailyRewardBytes);
+    }
+    private static bool MatchesDaily(RuntimeDatabaseReadObservation result) =>
+        RuntimeDatabaseStructuralMatcher.MatchDailyCatalog(result.Snapshot, DatabaseReadTestDatabase.Sha(DailyTaskBytes), DatabaseReadTestDatabase.Sha(DailyRewardBytes));
+    private static IEnumerable<string> TableQueries(ScriptedReadConnection connection) => connection.CreatedCommands
+        .Where(command => command.CommandText == RuntimeDatabaseSnapshotReader.TableSql).Select(command => (string)command.Parameters["@name"].Value!);
+    private static void AssertInstanceMatch(RuntimeDatabaseReadObservation result) =>
+        Assert.True(RuntimeDatabaseStructuralMatcher.MatchInstanceCatalog(result.Snapshot, DungeonSha, CooperativeSha));
+    private static void AssertRequiredMatch(RuntimeDatabaseReadObservation result)
+    {
+        var match = RuntimeDatabaseStructuralMatcher.Match(result.Snapshot, DatabaseReadTestDatabase.Identity(), DatabaseReadTestDatabase.Digests());
+        Assert.True(result.CompletedSingleReadTransaction); Assert.True(match.MatchesSuppliedRuntime);
+        Assert.Equal(BundleSourcePlan.RequiredTables, match.ExaminedSources);
+        Assert.False(result.HasVerifiedProvenance); Assert.False(result.RuntimeAdmitted); Assert.False(result.AssetsReady); Assert.False(result.CanSendPackets);
+        Assert.False(match.HasVerifiedProvenance); Assert.False(match.RuntimeAdmitted); Assert.False(match.ProvesDatabaseTransaction);
+    }
+    private static Dictionary<string, RuntimeDatabaseTableInput?> RequiredRows() => DatabaseMatchPythonVectors.Case("all-ten-match").GetProperty("rows").EnumerateArray()
+        .ToDictionary(row => row.GetProperty("name").GetString()!, row => (RuntimeDatabaseTableInput?)new RuntimeDatabaseTableInput(
+            row.GetProperty("active_id").GetInt64(), row.GetProperty("name").GetString(), row.GetProperty("sha256").GetString(),
+            Convert.FromBase64String(row.GetProperty("data").GetProperty("value").GetString()!)), StringComparer.Ordinal);
+}

@@ -1,0 +1,113 @@
+{
+  "observed_at_utc": "2026-11-09T17:57:47.763557+00:00",
+  "source_host": "wlreftpsrc.chinesegamer.net",
+  "data_version": "1.3.23",
+  "method": "Existing Python HTTPS source restrictions, Manifest version/CRC/full index and Bundle size/MD5/CRC; no credentials or game TCP",
+  "sources": [
+    {
+      "package": "DataPackage",
+      "version": "1296_2026_11_04_13_34_19_13",
+      "manifest_sha256": "1dc1c74a9c9824085c91fe5504d1190b40e4b619751625a44e95c7d9a1adc358",
+      "asset_path": "Assets/ResourcesBuild/Data/EmojiData_C.bytes",
+      "bundles": [
+        {
+          "name": "datapackage_data_e.bundle",
+          "bytes": 1822959,
+          "manifest_md5": "3b82d89f74169e18940cbe0e2ad266a1",
+          "manifest_crc32_le": "1516459b",
+          "sha256": "bb7b35de119d5e5b2a053918d1dc006a378ddd6a981d7d4079710333d14f40ee"
+        }
+      ]
+    },
+    {
+      "package": "MainPackage",
+      "version": "1296_2026_11_04_13_36_07_72",
+      "manifest_sha256": "faaab749110cf9e68be784e613e94579d51e92015ad8ef21e68de4aebbb5ba98",
+      "asset_path": "Assets/ResourcesBuild/Sprite/Atlas/SpriteAtlas_Emoji/SpriteAtlas_Emoji.spriteatlasv2",
+      "bundles": [
+        {
+          "name": "mainpackage_share_assets_resourcesbuild_sprite_sprite_bricktreasure.bundle",
+          "bytes": 241598,
+          "manifest_md5": "e40f606e63db4677fed268dfacd0fea3",
+          "manifest_crc32_le": "5f1ec384",
+          "sha256": "726b3ecd4acd9c5c0917804db206a0e8822443b077abf4984d2cb9c49bbaa4f0"
+        },
+        {
+          "name": "mainpackage_share_assets_resourcesbuild_sprite_sprite_emoji_sc.bundle",
+          "bytes": 787748,
+          "manifest_md5": "b72b6e53b0cf5efc575d2b922f8eb066",
+          "manifest_crc32_le": "1120a60b",
+          "sha256": "8d3ffdcc3fd230d85be2b8cd78a701d5363adaaf00879f5ab1df179e1cb78690"
+        },
+        {
+          "name": "mainpackage_share_assets_resourcesbuild_sprite_sprite_gamewhackmole.bundle",
+          "bytes": 686253,
+          "manifest_md5": "a47988cf47cd722779425c149311d734",
+          "manifest_crc32_le": "2ef0e111",
+          "sha256": "9a3189bf8767f83d650a386890f8b9e4ea3c1c0413a7518438ccc499bd22a606"
+        },
+        {
+          "name": "mainpackage_share_assets_resourcesbuild_sprite_sprite_monopoly.bundle",
+          "bytes": 616676,
+          "manifest_md5": "9171f23b312e910a46c5f834fee06d0d",
+          "manifest_crc32_le": "82f16cc6",
+          "sha256": "d22ccba81c7bac4c43a3e5d56172de028dbc9838276c1e569477be97bd382234"
+        },
+        {
+          "name": "mainpackage_share_assets_resourcesbuild_sprite_sprite_resonance.bundle",
+          "bytes": 493351,
+          "manifest_md5": "90dd06511d1ddd61a2145bb75ff0480b",
+          "manifest_crc32_le": "a281db2b",
+          "sha256": "8f4bcc9f8ea3ffec54e269944be5879393a749ffeddbdcc19db6954a15087711"
+        },
+        {
+          "name": "mainpackage_atlas.bundle",
+          "bytes": 23715415,
+          "manifest_md5": "0fc7822913664f43d07afef95300cf1d",
+          "manifest_crc32_le": "1e33e207",
+          "sha256": "069b5ccf41c5a19bdc8f2a20d5f0339b0fb6fbb3dd572c239c2ccfdf50578996"
+        }
+      ]
+    }
+  ],
+  "emoji_data": {
+    "bytes": 500,
+    "rows": 62,
+    "frames": 62,
+    "sha256": "b21c48d487d83463332157e1d56af0a258f26cecf2e906ca518526badcd5a75b"
+  },
+  "atlas": {
+    "packed_sprites": 246,
+    "render_entries": 246,
+    "settings_raw": [
+      67
+    ],
+    "owner": "CAB-cea8ff565680c1d33e8f134c42bb48fe",
+    "stream_path": "archive:/CAB-cea8ff565680c1d33e8f134c42bb48fe/CAB-cea8ff565680c1d33e8f134c42bb48fe.resS",
+    "streams": [
+      {
+        "offset": 54400192,
+        "bytes": 1048576,
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "offset": 10739280,
+        "bytes": 1048576,
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "offset": 4147136,
+        "bytes": 262144,
+        "width": 512,
+        "height": 512
+      }
+    ],
+    "texture_format": 12,
+    "color_space": 1,
+    "mips": 1,
+    "physics_max_points_per_shape": 38
+  },
+  "limits": "Python source and metadata inspection only. No C# full source-to-pixels/publication/UI acceptance. Core currently rejects settingsRaw 67, physics shape, trimmed logical dimensions and .resS. No raw game payload is included."
+}

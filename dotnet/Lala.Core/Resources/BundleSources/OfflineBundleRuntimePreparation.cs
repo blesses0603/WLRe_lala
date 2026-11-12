@@ -1,0 +1,260 @@
+using System.Collections.Immutable;
+using Lala.Core.Catalogs;
+
+namespace Lala.Core.Resources;
+
+/// <summary>Historical structural result from untrusted source observations. No official origin,
+/// database admission or runtime installation is established by checksums or reobservation.</summary>
+internal sealed class OfflinePreparedRuntimeCandidate
+{
+    internal OfflineRuntimeCandidate Candidate { get; }
+    internal ManifestIdentity Identity { get; }
+    internal ItemImageBatch? ItemImages { get; }
+    internal PortraitRuntimeBatch? Portraits { get; }
+    internal EmojiRuntimeBatch? Emojis { get; }
+    internal ResourceInventoryInput InventoryInput { get; }
+    internal RequiredBundleSources RecheckContext { get; }
+    internal string ManifestContentIdentity { get; }
+    internal long Attempt { get; }
+    internal int DownloadCount { get; }
+    internal long DownloadBytes { get; }
+    internal ImmutableArray<string> ExtractedTables { get; }
+    // Immutable references to private verified snapshots, never cache paths or source buffers.
+    // Failed optional decodes do not retain extra bundles solely for cache population.
+    internal ImmutableArray<VerifiedBundleSource> VerifiedSources { get; }
+    internal string SourceStability => "observed versions and manifest bytes reobserved after decoding";
+    internal string OfficialProvenance => "unavailable";
+    internal string DatabaseAdmission => "unavailable";
+    internal string RuntimeInstallation => "unavailable";
+    internal string Static1275Admission => "unavailable";
+    internal OfflinePreparedRuntimeCandidate(OfflineRuntimeCandidate candidate, RequiredBundleSources sources,
+        ResourceInventoryInput inventory, ManifestIdentity identity, BundleDownloadTotals? downloads = null,
+        IEnumerable<VerifiedBundleSource>? verifiedSources = null, ItemImageBatch? itemImages = null, PortraitRuntimeBatch? portraits = null, EmojiRuntimeBatch? emojis = null)
+    {
+        RecheckContext = sources; ItemImages = itemImages; Portraits = portraits; Emojis = emojis;
+        Identity = identity; InventoryInput = inventory;
+        Candidate = candidate; ManifestContentIdentity = sources.ManifestContentIdentity; Attempt = sources.Attempt;
+        DownloadCount = downloads?.Count ?? sources.DownloadCount; DownloadBytes = downloads?.Bytes ?? sources.DownloadBytes;
+        ExtractedTables = inventory.Tables.Select(table => table.Name[..^6]).ToImmutableArray();
+        VerifiedSources = (verifiedSources ?? sources.Sources).ToImmutableArray();
+    }
+}
+
+/// <summary>Uninstalled composition of source preparation, native bounded extraction and all ten
+/// required table decoders. No injected parser/decompressor, filesystem, HTTP implementation or
+/// callback can replace those checks. The internal source seam cannot grant authority.</summary>
+internal sealed class OfflineBundleRuntimePreparation
+{
+    // Conservative aggregate ownership bound in addition to the existing 16 MiB per-table limit.
+    // This may reject source-valid unusually large catalogs; it does not relax any parser limit.
+    internal const long MaximumExtractedTableBytes = 32L * 1024 * 1024;
+    private readonly BundleSourcePreparation _preparation = new();
+    internal void Invalidate() => _preparation.Invalidate();
+    internal Task ConfirmUnchangedAsync(IResourceSource source, OfflinePreparedRuntimeCandidate prepared, CancellationToken token)
+        => _preparation.ConfirmUnchangedAsync(source, prepared.RecheckContext, token);
+
+    internal async Task<OfflinePreparedRuntimeCandidate> PrepareAsync(IResourceSource source,
+        IBundleSourceCacheReader? cache = null, BundleSourceBudget? budget = null,
+        string host = OfficialResourceOrigin.DefaultHost, YooAssetManifest? previous = null,
+        CancellationToken cancellationToken = default, ResourceProgressState? progress = null)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var prepared = await _preparation.PrepareAsync(source, cache, budget, host, previous, cancellationToken, progress).ConfigureAwait(false);
+        _preparation.EnsureCurrent(prepared, cancellationToken);
+        var handles = prepared.Sources.ToDictionary(handle => handle.Spec.Name, StringComparer.Ordinal);
+        var tables = new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal);
+        progress?.Set("解碼並驗證必要資料表");
+        long extractedBytes = 0;
+        foreach (string name in OfflineRuntimeCandidateDecoder.Sources)
+        {
+            _preparation.EnsureCurrent(prepared, cancellationToken);
+            string path = "Assets/ResourcesBuild/Data/" + name + ".bytes";
+            // Use only this exact asset's real manifest-selected root + complete dependency set.
+            // Passing the union of all ten roots would invent relationships and change duplicates.
+            var selected = prepared.Plan.AssetSourceNames[path].Select(bundle => handles[bundle]).ToArray();
+            byte[] raw = UnityTextAssetExtractor.Extract(path, selected, cancellationToken: cancellationToken);
+            _preparation.EnsureCurrent(prepared, cancellationToken);
+            extractedBytes = checked(extractedBytes + raw.Length);
+            if (extractedBytes > MaximumExtractedTableBytes)
+                throw new BundleSourceException(BundleSourceFailure.Budget, "Extracted required tables exceed owned-byte bound");
+            tables.Add(name, raw);
+        }
+        _preparation.EnsureCurrent(prepared, cancellationToken);
+        string packageVersion = prepared.Snapshot.Packages["DataPackage"];
+        var candidate = OfflineRuntimeCandidateDecoder.Decode(tables, packageVersion, cancellationToken);
+        progress?.Set("取得並驗證可選資料與圖資");
+        var downloads = new BundleDownloadTotals(prepared.DownloadCount, prepared.DownloadBytes);
+        // Optional acquisition/decoding failures leave required preparation intact. It uses
+        // the same manifest/attempt and remaining quota; unknown digests never become rows.
+        if (prepared.Manifests[0].AssetBundles.ContainsKey(BundleSourcePlan.SkillAssetPath))
+        {
+            try
+            {
+                var skillSources = await _preparation.PrepareSkillAsync(source, prepared, cache, budget, downloads, cancellationToken).ConfigureAwait(false);
+                byte[] skillRaw = UnityTextAssetExtractor.Extract(BundleSourcePlan.SkillAssetPath, skillSources,
+                    cancellationToken: cancellationToken);
+                if (skillRaw.Length > SkillDataParser.MaxBytes || extractedBytes + skillRaw.Length > MaximumExtractedTableBytes)
+                    throw new CatalogDecodeException("Optional skill payload exceeds retained table budget");
+                candidate = candidate.WithOptionalSkills(skillRaw, cancellationToken);
+                tables.Add("SkillData_C", skillRaw);
+                extractedBytes += skillRaw.Length;
+                foreach (var handle in skillSources) handles.TryAdd(handle.Spec.Name, handle);
+            }
+            catch (Exception error) when (IsOptionalFailure(error))
+            {
+                // No optional row is persisted or exposed. Cancellation, stale attempt and
+                // final source drift are still checked outside this optional failure boundary.
+            }
+            _preparation.EnsureCurrent(prepared, cancellationToken);
+        }
+        if (prepared.Manifests[0].AssetBundles.ContainsKey(BundleSourcePlan.DungeonAssetPath) &&
+            prepared.Manifests[0].AssetBundles.ContainsKey(BundleSourcePlan.CooperativeAssetPath))
+        {
+            try
+            {
+                var instanceSources = await _preparation.PrepareInstancesAsync(source, prepared, cache, budget, downloads, cancellationToken).ConfigureAwait(false);
+                byte[] dungeonRaw = UnityTextAssetExtractor.Extract(BundleSourcePlan.DungeonAssetPath,
+                    instanceSources[BundleSourcePlan.DungeonAssetPath], cancellationToken: cancellationToken);
+                byte[] cooperativeRaw = UnityTextAssetExtractor.Extract(BundleSourcePlan.CooperativeAssetPath,
+                    instanceSources[BundleSourcePlan.CooperativeAssetPath], cancellationToken: cancellationToken);
+                if (extractedBytes + dungeonRaw.Length + cooperativeRaw.Length > MaximumExtractedTableBytes)
+                    throw new CatalogDecodeException("Optional instance payloads exceed retained table budget");
+                candidate = candidate.WithOptionalInstances(dungeonRaw, cooperativeRaw, cancellationToken);
+                tables.Add("DungeonData_C", dungeonRaw);
+                tables.Add("CooperateEventData_C", cooperativeRaw);
+                extractedBytes += dungeonRaw.Length + cooperativeRaw.Length;
+                foreach (var handle in instanceSources.Values.SelectMany(group => group))
+                    handles.TryAdd(handle.Spec.Name, handle);
+            }
+            catch (Exception error) when (IsOptionalFailure(error)) { }
+            _preparation.EnsureCurrent(prepared, cancellationToken);
+        }
+        if (prepared.Manifests[0].AssetBundles.ContainsKey(BundleSourcePlan.DailyTaskAssetPath) &&
+            prepared.Manifests[0].AssetBundles.ContainsKey(BundleSourcePlan.DailyRewardAssetPath))
+        {
+            try
+            {
+                var dailySources = await _preparation.PrepareDailyAsync(source, prepared, cache, budget, downloads, cancellationToken).ConfigureAwait(false);
+                byte[] taskRaw = UnityTextAssetExtractor.Extract(BundleSourcePlan.DailyTaskAssetPath,
+                    dailySources[BundleSourcePlan.DailyTaskAssetPath], cancellationToken: cancellationToken);
+                byte[] rewardRaw = UnityTextAssetExtractor.Extract(BundleSourcePlan.DailyRewardAssetPath,
+                    dailySources[BundleSourcePlan.DailyRewardAssetPath], cancellationToken: cancellationToken);
+                if (taskRaw.Length > DailyTaskDataParser.MaxTaskBytes || rewardRaw.Length > DailyTaskDataParser.MaxRewardBytes ||
+                    extractedBytes + taskRaw.Length + rewardRaw.Length > MaximumExtractedTableBytes)
+                    throw new CatalogDecodeException("Optional daily payloads exceed retained table budget");
+                candidate = candidate.WithOptionalDailyCatalog(taskRaw, rewardRaw, cancellationToken);
+                // The two tables are a single feature: no partial pair or cross-reference
+                // failure enters inventory input or an exposed catalog.
+                tables.Add("DailyTaskData_C", taskRaw);
+                tables.Add("DailyTaskRewardData_C", rewardRaw);
+                extractedBytes += taskRaw.Length + rewardRaw.Length;
+                foreach (var handle in dailySources.Values.SelectMany(group => group))
+                    handles.TryAdd(handle.Spec.Name, handle);
+            }
+            catch (Exception error) when (IsOptionalFailure(error)) { }
+            _preparation.EnsureCurrent(prepared, cancellationToken);
+        }
+        var identity = ManifestIdentity.FromParsed(prepared.Snapshot, prepared.Manifests, cancellationToken);
+        var imageManifest = prepared.Manifests.Single(m => m.Header.PackageName == "MainPackage");
+        // Login role portraits take priority within the existing shared source/download bounds.
+        PortraitRuntimeBatch? portraits = null;
+        // Only the reviewed fixed projection can fetch portrait sources; unknown versions
+        // leave this optional family absent without widening source or decode acceptance.
+        if (prepared.Snapshot.DataVersion == PortraitSourcePlan.DataVersion &&
+            imageManifest.Header.PackageVersion == PortraitSourcePlan.MainVersion &&
+            packageVersion == PortraitMapping.DataPackageVersion &&
+            candidate.SourceSha256["NpcData_C"] == NormalAttackCatalogParser.ReviewedNpcSha256)
+        {
+            try
+            {
+                var selected = await _preparation.PreparePortraitSourcesAsync(source, prepared, cache, budget, downloads, cancellationToken).ConfigureAwait(false);
+                portraits = PortraitRuntimeBatch.Create(selected, tables["NpcData_C"], packageVersion, cancellationToken);
+                foreach (var handle in selected.Sources.Values) handles.TryAdd(handle.Spec.Name, handle);
+            }
+            catch (Exception error) when (IsOptionalFailure(error) || error is SpritePixelException) { }
+            _preparation.EnsureCurrent(prepared, cancellationToken);
+        }
+        ItemImageBatch? itemImages = null;
+        // Unsupported optional images do not disable required tables. Never download when
+        // item icon fields have not been independently reviewed by the existing item parser.
+        if (candidate.Items.Count > 0 && candidate.Items.Values.All(row => row.ReviewedDetails is not null) &&
+            imageManifest.Assets.Any(a => a.Path.StartsWith(ItemImageMapping.Prefix, StringComparison.Ordinal)))
+        {
+            try
+            {
+                _ = ItemImageMapping.Create(imageManifest, candidate.Items, cancellationToken);
+                var selected = await _preparation.PrepareItemImagesAsync(source, prepared, cache, budget, downloads, cancellationToken).ConfigureAwait(false);
+                itemImages = ItemImageBatch.Create(imageManifest, prepared.Snapshot.DataVersion, identity.Key,
+                    candidate.Items, selected, cancellationToken);
+                foreach (var handle in selected.Values.SelectMany(group => group)) handles.TryAdd(handle.Spec.Name, handle);
+            }
+            catch (Exception error) when (IsOptionalFailure(error) || error is SpritePixelException) { }
+            _preparation.EnsureCurrent(prepared, cancellationToken);
+        }
+        EmojiRuntimeBatch? emojis=null;
+        if(prepared.Snapshot.DataVersion==EmojiSourcePlan.DataVersion && packageVersion==EmojiSourcePlan.DataPackageVersion &&
+            imageManifest.Header.PackageVersion==EmojiSourcePlan.MainVersion &&
+            imageManifest.AssetBundles.ContainsKey(EmojiSourcePlan.AtlasPath) && prepared.Manifests[0].AssetBundles.ContainsKey(EmojiSourcePlan.DataPath))
+        {
+            try
+            {
+                var selected=await _preparation.PrepareEmojiSourcesAsync(source,prepared,cache,budget,downloads,cancellationToken).ConfigureAwait(false);
+                emojis=EmojiRuntimeBatch.Create(selected,cancellationToken);
+                foreach(var handle in selected.Data.Concat(selected.Images))handles.TryAdd(handle.Spec.Name,handle);
+            }
+            catch(Exception error) when(IsOptionalFailure(error) && error is not BundleSourceException
+                {Failure:BundleSourceFailure.VersionsChanged or BundleSourceFailure.ManifestChanged or BundleSourceFailure.StaleAttempt}) { }
+            _preparation.EnsureCurrent(prepared,cancellationToken);
+        }
+        // Persist precisely the native-extracted arrays, not reserialized decoded rows or
+        // caller-provided hashes. Capture detaches every payload under the original limits.
+        var inventory = ResourceInventoryInput.Capture(identity.Key, tables.Keys
+            .Select(name => new ResourceInventoryMember("tables/" + name + ".bytes", tables[name])).ToArray(),
+            identity, cancellationToken);
+        foreach (var table in inventory.Tables)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            string expected = table.Name switch
+            {
+                "SkillData_C.bytes" => SkillDataParser.ReviewedSha256,
+                "DailyTaskData_C.bytes" or "DailyTaskRewardData_C.bytes" or "DungeonData_C.bytes" or "CooperateEventData_C.bytes" => ResourceValidation.Digest(tables[table.Name[..^6]].Span, cancellationToken),
+                _ => candidate.SourceSha256[table.Name[..^6]]
+            };
+            if (expected != table.Sha256)
+                throw new ResourceValidationException("Decoded runtime differs from the owned extracted inventory");
+        }
+        // No readiness, provenance, active state, persisted receipt or partial result is published.
+        _preparation.EnsureCurrent(prepared, cancellationToken);
+        await _preparation.ConfirmUnchangedAsync(source, prepared, cancellationToken).ConfigureAwait(false);
+        return _preparation.ReturnCurrent(prepared, new OfflinePreparedRuntimeCandidate(candidate, prepared, inventory, identity,
+            downloads, handles.Values, itemImages, portraits, emojis), cancellationToken);
+    }
+    internal async Task<SmallMapAcquisitionResult?> PrepareSmallMapsAsync(IResourceSource source,OfflinePreparedRuntimeCandidate prepared,
+        IBundleSourceCacheReader cache,RuntimeBundleCacheWriter writer,bool allowDownloads,CancellationToken token)
+    {
+        var context=prepared.RecheckContext;_preparation.EnsureCurrent(context,token);
+        var manifest=context.Manifests.Single(m=>m.Header.PackageName=="MainPackage");
+        if(context.Snapshot.DataVersion!=EmojiSourcePlan.DataVersion||manifest.Header.PackageVersion!=EmojiSourcePlan.MainVersion||
+            !manifest.Assets.Any(a=>a.Path.StartsWith(SmallMapSourcePlan.Prefix,StringComparison.Ordinal)))return null;
+        await _preparation.ConfirmUnchangedAsync(source,context,token).ConfigureAwait(false);
+        SmallMapAcquisitionResult? result=null;
+        try
+        {
+            result=await new SmallMapSourceAcquisition().AcquireAsync(manifest,context.Snapshot.DataVersion,source,cache,writer,allowDownloads,
+                ()=>_preparation.EnsureCurrent(context,token),context.Host,token).ConfigureAwait(false);
+            await _preparation.ConfirmUnchangedAsync(source,context,token).ConfigureAwait(false);
+            return _preparation.ReturnCurrent(context,result,token);
+        }
+        catch(Exception error)
+        {
+            if(result is not null)await result.Batch.DisposeAsync().ConfigureAwait(false);
+            if(!IsOptionalFailure(error)||error is BundleSourceException{Failure:BundleSourceFailure.VersionsChanged or BundleSourceFailure.ManifestChanged or BundleSourceFailure.StaleAttempt})throw;
+            return null;
+        }
+    }
+    private static bool IsOptionalFailure(Exception error) => !error.Data.Contains(ResourceCleanup.FailureMarker) &&
+        error is not ResourceTransportException { Failure: ResourceTransportFailure.Cleanup } &&
+        error is (BundleSourceException or UnityTextAssetException or CatalogDecodeException or IOException or
+            UnauthorizedAccessException or HttpRequestException);
+
+}

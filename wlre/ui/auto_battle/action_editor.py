@@ -7,11 +7,11 @@ from wlre.ui.window_layout import configure_dialog
 from wlre.ui.layout import heading
 from wlre.ui.auto_battle.model import (NAMES, TARGETS, NOTICES, COMPARES,
                                       confirmed_skill_entries, confirmed_action_label,
-                                      action_entries)
+                                      action_entries, target_options)
 
 class ActionEditor:
-    def __init__(self,parent,row,snapshot,who,commit):
-        self.original=copy.deepcopy(row);self.commit=commit;self.snapshot_source=snapshot if callable(snapshot) else lambda:snapshot;self.snapshot=self.snapshot_source();self.who=who
+    def __init__(self,parent,row,snapshot,who,commit,rule_key=None):
+        self.rule_key=rule_key;self.original=copy.deepcopy(row);self.commit=commit;self.snapshot_source=snapshot if callable(snapshot) else lambda:snapshot;self.snapshot=self.snapshot_source();self.who=who
         self.window=tk.Toplevel(parent);self.window.title('編輯行動與條件');configure_dialog(self.window,960,640);self.window.resizable(False,False)
         self.window.transient(parent);self.window.grab_set()
         box=ttk.Frame(self.window,padding=12);box.pack(fill='both',expand=True)
@@ -35,7 +35,8 @@ class ActionEditor:
         ttk.Label(options,textvariable=self.selection,wraplength=260).pack(anchor='w')
         fields=ttk.Frame(options);fields.pack(fill='x',pady=6)
         self.target=tk.StringVar(value=TARGETS[row['target']]);self.next=tk.BooleanVar(value=row.get('bUseNextSkill',False));self.extra={}
-        self.combo(fields,0,'目標排序',self.target,TARGETS.values())
+        self.target_map=TARGETS;self.target_policy=row['target']
+        self.target_combo=self.combo(fields,0,'目標排序',self.target,TARGETS.values())
         ttk.Checkbutton(fields,text='允許次階特技（僅技能）',variable=self.next).grid(row=1,column=0,columnspan=2,sticky='w',pady=4)
         r=2
         for key,label,mapping in (('notice','觀察對象',NOTICES),('compareKind','敵HP比較',COMPARES)):
@@ -43,8 +44,8 @@ class ActionEditor:
                 var=tk.StringVar(value=mapping[row[key]]);self.extra[key]=(var,mapping);self.combo(fields,r,label,var,mapping.values());r+=1
         if 'value' in row:
             var=tk.StringVar(value=str(row['value']));self.extra['value']=(var,None)
-            ttk.Label(fields,text='HP／SP門檻').grid(row=r,column=0,sticky='w');ttk.Entry(fields,textvariable=var,width=16).grid(row=r,column=1,sticky='w');r+=1
-        ttk.Label(options,text='只列已學及裝備附帶特技。\nSP不足仍保留；0為略過。',wraplength=260).pack(anchor='w',pady=6)
+            ttk.Label(fields,text='HP <' if rule_key=='lowHpAction' else 'SP <' if rule_key=='lowSpAction' else 'HP門檻').grid(row=r,column=0,sticky='w');ttk.Entry(fields,textvariable=var,width=16).grid(row=r,column=1,sticky='w');r+=1
+        ttk.Label(options,text='只列已學及裝備附帶特技。\nSP不足仍保留；0為略過。\n友方目標不等於恢復SP；請核對效果。',wraplength=260).pack(anchor='w',pady=6)
         self._query_job=None;self._poll_job=None
         kind.bind('<<ComboboxSelected>>',self.change_kind);self.query.trace_add('write',self.search_changed)
         self.window.bind('<Destroy>',self.cleanup,add='+')
@@ -52,7 +53,9 @@ class ActionEditor:
     @staticmethod
     def combo(parent,row,label,var,values):
         ttk.Label(parent,text=label).grid(row=row,column=0,sticky='w',padx=(0,12),pady=4)
-        ttk.Combobox(parent,textvariable=var,values=tuple(values),state='readonly',width=15).grid(row=row,column=1,sticky='w')
+        widget=ttk.Combobox(parent,textvariable=var,values=tuple(values),state='readonly',width=25)
+        widget.grid(row=row,column=1,sticky='w')
+        return widget
     def change_kind(self,*a):
         self.chosen=0;self.next.set(False);self.selection.set('略過此格');self.populate()
     def search_changed(self,*args):
@@ -61,6 +64,7 @@ class ActionEditor:
     def populate(self):
         if getattr(self,'_query_job',None):self.window.after_cancel(self._query_job)
         self._query_job=None
+        self.refresh_target()
         self.snapshot=self.snapshot_source()
         item=self.kind.get()=='包包道具';query=self.query.get().casefold()
         self._catalogue=action_entries(self.snapshot,self.who,item)
@@ -84,14 +88,21 @@ class ActionEditor:
         for job in (self._query_job,self._poll_job):
             if job:self.window.after_cancel(job)
         self._query_job=self._poll_job=None
+    def refresh_target(self):
+        if str(self.target_combo.cget('state'))!='disabled' and self.target_combo.current()>=0:
+            self.target_policy=self.target_combo.current()+1
+        selected=self.target_policy
+        self.target_map,enabled=target_options({'id':self.chosen,'kind':2 if self.kind.get()=='包包道具' else 1},self.rule_key)
+        self.target_combo.configure(values=tuple(self.target_map.values()),state='readonly' if enabled else 'disabled')
+        self.target_combo.current(selected-1)
     def pick(self,*a):
         selected=self.list.curselection()
-        if selected:self.chosen,label=self.entries[selected[0]];self.selection.set(label)
+        if selected:self.chosen,label=self.entries[selected[0]];self.selection.set(label);self.refresh_target()
     def save(self):
         try:
             if self.kind.get()!='包包道具' and self.chosen not in NAMES and self.chosen not in dict(confirmed_skill_entries(self.snapshot_source(),self.who)):
                 raise ValueError('此單位尚未確認學會此特技，請從清單重新選擇。')
-            row=copy.deepcopy(self.original);row.update(id=self.chosen,kind=2 if self.kind.get()=='包包道具' else 1,target=next(k for k,v in TARGETS.items() if v==self.target.get()))
+            row=copy.deepcopy(self.original);row.update(id=self.chosen,kind=2 if self.kind.get()=='包包道具' else 1,target=self.target_policy if str(self.target_combo.cget('state'))=='disabled' else self.target_combo.current()+1)
             row['bUseNextSkill']=self.next.get()
             for key,(var,mapping) in self.extra.items():row[key]=next(k for k,v in mapping.items() if v==var.get()) if mapping else float(var.get())
             self.commit(row);self.window.destroy()

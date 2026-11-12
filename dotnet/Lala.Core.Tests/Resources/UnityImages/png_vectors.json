@@ -1,0 +1,30 @@
+{
+  "pillow": "13.0.0",
+  "zlib": "1.3.2",
+  "vectors": [
+    {
+      "width": 1,
+      "height": 1,
+      "bytes": 73,
+      "sha256": "1246f63b2e4a907ca3a5db1378927f013498fba63995c7ca76299c2ad9a84ca6"
+    },
+    {
+      "width": 2,
+      "height": 3,
+      "bytes": 95,
+      "sha256": "b66364c343fb7d820f1a706d08d5b4a70797af3d16439cc226f8b1aeb712ea22"
+    },
+    {
+      "width": 128,
+      "height": 128,
+      "bytes": 65737,
+      "sha256": "584f5ba0a9785427b90651ad2d2201adac23d396ac86f3bb1911d27493ddda77"
+    },
+    {
+      "width": 512,
+      "height": 512,
+      "bytes": 1049236,
+      "sha256": "bf13d7b2a2a29664581f7cca5b33e6105885f60d3f82ecdca8988783b5b13cfb"
+    }
+  ]
+}

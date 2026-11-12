@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+<PropertyGroup><TargetFramework>net10.0</TargetFramework><IsPackable>false</IsPackable><IsTestProject>true</IsTestProject></PropertyGroup>
+<ItemGroup><PackageReference Include="AssetsTools.NET" Version="[3.0.5]" PrivateAssets="all" /><PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.14"/><PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1"/><PackageReference Include="xunit" Version="2.9.3"/><PackageReference Include="xunit.runner.visualstudio" Version="3.1.4"><PrivateAssets>all</PrivateAssets></PackageReference></ItemGroup>
+<ItemGroup><ProjectReference Include="../Lala.Core/Lala.Core.csproj"/></ItemGroup>
+<ItemGroup><EmbeddedResource Include="World/Eve/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.World.Eve.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Diagnostics/Parsing/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.Diagnostics.Parsing.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Inventory/Fixtures/combat-action-candidates.json.gz" LogicalName="Lala.Core.Tests.Inventory.Fixtures.combat-action-candidates.json.gz" WithCulture="false"/></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Storage/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.Storage.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Social/Ark/Candidates/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.Social.Ark.Candidates.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Battle/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.Battle.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Catalogs/NormalAttack/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.Catalogs.NormalAttack.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Catalogs/Combat/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.Catalogs.Combat.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Catalogs/TextBattleTalk/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.Catalogs.TextBattleTalk.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Catalogs/SmithStage/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.Catalogs.SmithStage.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Catalogs/SourceAdapters/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.Catalogs.SourceAdapters.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Resources/UnityTextAssets/Fixtures/*" LogicalName="Lala.Core.Tests.Resources.UnityTextAssets.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Resources/BundleSources/bundle_sources.json" LogicalName="Lala.Core.Tests.Resources.BundleSources.bundle_sources.json" WithCulture="false"/></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Catalogs/RequiredTables/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.Catalogs.RequiredTables.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Catalogs/RuntimeCandidate/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.Catalogs.RuntimeCandidate.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Resources/RuntimeFlow/Fixtures/*" LogicalName="Lala.Core.Tests.Resources.RuntimeFlow.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Resources/DatabaseMatch/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.Resources.DatabaseMatch.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Sessions/Handshake/python-vectors.json" LogicalName="Lala.Core.Tests.Sessions.Handshake.python-vectors.json" /></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Resources/DatabaseRead/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.Resources.DatabaseRead.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Resources/Inventory/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.Resources.Inventory.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Catalogs/Instance/Fixtures/*.json.gz" LogicalName="Lala.Core.Tests.Catalogs.Instance.Fixtures.%(Filename)%(Extension)" WithCulture="false"/></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Resources/UnityImages/vectors.json" LogicalName="Lala.Core.Tests.Resources.UnityImages.vectors.json" /></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Resources/UnityImages/SerializedFixtures/*" LogicalName="Lala.Core.Tests.Resources.UnityImages.SerializedFixtures.%(Filename)%(Extension)" WithCulture="false" /></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Resources/UnityImages/png_vectors.json" LogicalName="Lala.Core.Tests.Resources.UnityImages.png_vectors.json" /></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Resources/UnityImages/item_mapping_vectors.json" LogicalName="Lala.Core.Tests.Resources.UnityImages.item_mapping_vectors.json" /></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Resources/UnityImages/block_vectors.json" LogicalName="Lala.Core.Tests.Resources.UnityImages.block_vectors.json" /></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Resources/UnityImages/block_serialized.json" LogicalName="Lala.Core.Tests.Resources.UnityImages.block_serialized.json" /></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Resources/Portraits/vectors.json" LogicalName="Lala.Core.Tests.Resources.Portraits.vectors.json" /></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Resources/Portraits/materials.json" LogicalName="Lala.Core.Tests.Resources.Portraits.materials.json" /></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Resources/Portraits/shaders.json" LogicalName="Lala.Core.Tests.Resources.Portraits.shaders.json" /></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Resources/Portraits/textures.json" LogicalName="Lala.Core.Tests.Resources.Portraits.textures.json" /></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Resources/Portraits/mapping.json" LogicalName="Lala.Core.Tests.Resources.Portraits.mapping.json" /></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Resources/Atlases/atlases.json" LogicalName="Lala.Core.Tests.Resources.Atlases.atlases.json" /></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Resources/Atlases/pixels.json" LogicalName="Lala.Core.Tests.Resources.Atlases.pixels.json" /></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Resources/Atlases/mapping.json" LogicalName="Lala.Core.Tests.Resources.Atlases.mapping.json" /></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Resources/Atlases/streams.json" LogicalName="Lala.Core.Tests.Resources.Atlases.streams.json" /></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Resources/Atlases/batch.json" LogicalName="Lala.Core.Tests.Resources.Atlases.batch.json" /></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Resources/Atlases/projection.json.gz" LogicalName="Lala.Core.Tests.Resources.Atlases.projection.json.gz" /></ItemGroup>
+<ItemGroup><EmbeddedResource Include="Resources/Atlases/smallmaps.json" LogicalName="Lala.Core.Tests.Resources.Atlases.smallmaps.json" /></ItemGroup>
+</Project>

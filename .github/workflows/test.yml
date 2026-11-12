@@ -11,7 +11,7 @@ permissions:
 
 concurrency:
   group: tests-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:
@@ -59,6 +59,9 @@ jobs:
         run: |
           python -m unittest discover -s tests -v
           python WLRE_Client.py --smoke-test-gui
+      - name: Diagnose macOS SQLite busy wait (offline observations)
+        if: runner.os == 'macOS'
+        run: python tools/diagnose_sqlite_busy.py
       - name: macOS tests and native GUI smoke test
         if: runner.os == 'macOS'
         run: |

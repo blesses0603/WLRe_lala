@@ -1,0 +1,112 @@
+# Desktop 資源準備接線 — PR #79 ver 8.0.50
+
+## 2026-11-10 啟動驗證與快取效能
+
+共用 Core 的啟動流程現會先完整比對目前版本的既有物品圖、頭像、表情及小地圖資料庫；驗證成功直接沿用，不再先整批 DELETE／INSERT。來源版本、完整映射、像素及 PNG 位元組仍由當次已驗證來源核對；缺少或內容不符時才走原來的重建流程。取消、來源改變、I/O 及清理失敗不會被當成可忽略的快取不符。必要十表資料庫仍保留原有寫入、獨立回讀及來源重查流程。
+
+小地圖首次建立改為解碼及產生 PNG 一次，保留原本 publication 所需的同一批受限 PNG，再關閉寫入連線、獨立開啟唯讀連線逐筆比對 PNG、來源／路徑／像素 hash、完整批次指紋與覆蓋數。回讀不再重新解壓 Bundle／解碼全部貼圖；不以資料庫自存 hash 證明正確。多個 Bundle 的來源順序保留，防止跨 root 模型編號交錯造成指紋錯配。讀取仍每次只暫存一筆資料庫 PNG，整批 96 MiB 上限未提高。
+
+下載與快取讀取若有已核對的精確大小，直接填入該大小的有界緩衝，省去 MemoryStream 擴張及額外複製；仍核對 EOF、超長／截短、MD5、CRC32、SHA256、來源及版本。不增加下載額度：一般來源 24 檔／32 MiB、保留來源 32 MiB、小地圖獨立 4 檔／64 MiB 不變。來源快取命中時仍不下載 Bundle。
+
+小地圖快取驗證、建立及獨立回讀會回報實際張數，桌面及 Android 共用進度資料。桌面進度條已對應新增階段；顯示階段進度不表示跳過最後官方版本重查或准入。
+
+合成測試中，同一小地圖批次的 Bundle 開啟次數由寫入＋回讀的 6 次降至 3 次；這只代表該解碼回讀步驟減半，不是整體啟動速度的倍數承諾。未對正式資源宣稱實測秒數。
+
+驗證：完整資源回歸 2,640 項通過；最後的快取／小地圖／來源取得子集 143 項通過；桌面 Debug 獨立測試輸出建置 0 警告／0 錯誤，離線檢查 9＋102 項、原生 UI 310 項通過（36 張實際渲染畫面）；Android 生命週期相容性 79 項通過。目前已開啟的桌面程式仍使用原載入版本，需關閉後由啟動腳本重新建置啟動才會套用；未停止現有帳號連線，也未重新安裝 Android App。
+
+目前桌面登入已改用 `AccountRuntime.CreateUsingPreparedResources`：啟動頁完成驗證後，
+登入只在記憶體內綁定同一份資源，不再下載、解碼、驗證或寫入。中斷只撤銷帳號綁定，
+啟動資源由版本視窗持有；其停止或替換會撤銷既有綁定，不自動重新準備。
+以下為 PR #79 的歷史接線說明，登入後獨立準備及確認視窗已由上述流程取代。
+
+本批在登入前接入必要資料的真實下載、驗證及 SQLite 啟用流程；圖資尚未啟用，
+不是 Python 完整資源流程或正式服驗收。
+
+## 登入前流程
+
+1. 版本視窗取得官方 metadata。只有清單、已知協定或本機 SQLite 自洽均不能進入登入。
+2. 使用者選擇資料根目錄，先進行不建立／修復檔案的唯讀檢查。
+3. 「登入前下載、驗證與準備」顯示獨立確認框，列出官方 HTTPS、Bundle 快取、SQLite
+   路徑及目錄／暫存檔／journal 寫入範圍。拒絕時不執行 HTTP 或寫入。
+4. 新增公開 `PreloginResourcePreparation`，由私有 production `ResourceRuntimeOwner`
+   執行既有官方來源、Manifest／Bundle 驗證、必要十表解析、SQLite bootstrap、獨立回讀
+   及來源重查。建構不執行 I/O；沒有帳號、帳密或遊戲 socket，也不接收任意來源／URL。
+5. `Ready` 只表示當前必要資料目錄通過既有准入。視窗重新取得官方清單，再精確比對
+   exe／data／完整 Package 名稱及版本；不符、過期、未知協定均不放行。
+6. 正式桌面路由在登入按鈕、啟動登入及每次確認返回時再次檢查當前資源。登入後仍使用
+   `AccountRuntime.CreatePrepared` 獨立重查及綁定，登入前的歷史結果不能授權帳號資料。
+   登入後資源寫入與驗證／正式 TCP 帳密傳送各自確認。官方 TCP 沒有 TLS，XOR 可逆。
+7. 刷新、改目錄、取消、停止／關閉立即撤銷資源准入，並等待背景工作及 owner 釋放；
+   已完成或結果不明的磁碟寫入不回復、不自動重試。根目錄只留在本次程式記憶體。
+8. 同一次帳號 publication 提供接收狀態與物品／場景名稱；撤銷時清除。一般遊戲操作
+   仍 Held。`PreloginResourceResult`、候選目錄都不提供登入或封包發送權限。
+
+## Python 對照與圖資阻礙
+
+已核對 `game_version_gate.py`、`dynamic_bundle_runtime.py`、`bundle_runtime_1275.py`。
+Python 在登入前比較官方 exe／data／兩個 Package，再驗證來源與 SQLite；可選圖片各自
+有同版來源與快取驗證，不是找到舊 PNG 或資料庫就啟用。本批補上必要資料的登入前順序。
+
+尚缺以下真實圖資鏈，`HasVisualAssets` 明確保持 false：
+
+| Python 來源 | C# 尚缺的相依與驗證 |
+| --- | --- |
+| `item_image_database.py` | Unity Sprite→同 asset Texture2D 解析、有限尺寸／數量解碼、PNG 與 RGBA 雜湊、精確 inputs/catalog key、commit 前來源重查 |
+| `portrait_database.py` | 頭像映射、圖集裁切、同版來源／像素與快取驗證 |
+| `emoji_database.py` | EmojiData 與圖片來源相依、同版 catalog 及快取驗證 |
+| `smallmap_database.py` | 小地圖 Sprite／Texture2D、場景映射、同版來源與像素驗證 |
+
+目前 Core 的受限 Unity 解碼器只處理 TextAsset，未具備 Sprite／Texture2D 圖像解碼與
+上述圖片 SQLite／publication 橋接。不能將未驗證舊圖資顯示為就緒；不猜格式或降低驗證。
+背景版本 observer、Python ZIP 重建、程式更新器與全介面一致也仍未完成。
+
+路徑正規化及固定子路徑沿用 Core；這不是防禦惡意 symlink／外部替換的檔案系統 sandbox。
+
+## 驗證方式
+
+- 資源 Core 測試使用合成來源；正向 current identity 案例沿用明示 white-box `_production`
+  seam，只證明生命週期／精確比對接線，不證明官方 provenance 或真實資料成功啟用。
+- 新增建構／關閉無 I/O、離線來源不能准入、精確版本不符阻擋、停止撤銷及等待晚到來源測試。
+- 原生 UI 驗證 metadata 不能放行、準備確認取消不建目錄、登入的資源 gate、清理與既有路由。
+- 既有 public runtime loopback 驗證資源與帳密確認分離；不走 production HTTP。
+- 全部測試只用合成／loopback／臨時檔案；未連官方 HTTP、正式服或讀取真帳密。
+
+- 本機驗證：Release build 0 警告／錯誤；Core 資源 204、原生 UI 226（29 張圖）、catalog UI 10、登入 loopback 11、資源確認 loopback 6、離線 Desktop 63、公開 consumer 與 Python 倉庫／發行 15 通過。
+
+## 8.0.46 圖像像素基礎批次
+
+已完成四種未壓縮 Texture2D 格式及未打包矩形 Sprite 的純像素解碼、完整來源／像素雜湊與記憶體快取比對。尚未解析 class 28／213 或從官方 Bundle 建立圖片；context 是觀測主張，不能授予 provenance。PNG／SQLite、實際來源解析及圖資 publication 仍未完成，登入前流程與 HasVisualAssets=false 不變。詳見 [範圍、參照與相依](../dotnet/Lala.Core/Resources/UnityImages/README.md)。
+
+## 8.0.47 圖片 SerializedFile 接線
+
+內部 UnitySpriteExtractor 已可從有限且 checksum 驗證的 Bundle 集合，按固定 2021.3.45f2 release type tree 解析 class 28／213，精確核對同檔容器配對與 Sprite→Texture 指標，再建立像素候選。原 TextAsset 路徑不自動接受圖片。獨立 UnityPy writer／SpriteHelper 與 AssetsTools 驗證使用自有合成檔，不能代表官方圖資驗收；正式圖片取得／publication、PNG／SQLite 與 UI 仍未接入。詳見圖資 README。
+
+## 8.0.48 離線 PNG／SQLite 快取
+
+已加入固定 RGBA8 PNG 編碼與獨立 SQLite cache，輸入必須為同版本／來源集合的精確候選清單。每次讀取重新對照完整 context、texture payload／像素雜湊及由獨立候選重建的 PNG 位元組；不以資料庫自存 hash 證明正確。限制單圖 512×512、8,192 張及合計 96 MiB；來源重查與取消在提交前執行，交易失敗保留既有資料。回傳僅是離線 PNG，不是 production publication。
+
+PNG 使用固定 stored DEFLATE 區塊，避免執行不可信快取的通用解壓；不是 Python PNG 編碼或 SQLite schema 相容層。Pillow／zlib 獨立解碼證據涵蓋最小尺寸、跨區塊與最大尺寸；自有 Bundle→候選→SQLite→重新開啟回讀有整合測試。官方來源取得與重查 owner、item／portrait／emoji／smallmap 映射、可撤銷 publication、UI 與實際官方格式覆蓋仍待接入，HasVisualAssets=false。
+
+8.0.47 CI 維持未驗證；8.0.48 需在推送後核對精確 head，不沿用歷史綠燈。
+
+## 8.0.49 物品圖 MainPackage 來源與映射基礎
+
+核對 Python item_image_database.py／dynamic_bundle_runtime.py 後，新增 MainPackage 精確物品圖清單及模型映射：s1000 預設圖不可缺、模型不得重複、未知物品或缺圖回退 1000；ItemData 必須提供 ReviewedDetails，舊版未知圖示欄位不猜測。映射包含圖示、寬高及 open_used，與 manifest SHA256 一起形成輸入指紋。
+
+Bundle 計畫沿用 YooAsset 完整依賴集合語意，不遞迴擴張；上限 4 個 Bundle／32 MiB。取得沿用既有受限來源、版本／manifest、checksum 及 attempt 機制，並共享必要資料的總下載／保留額度；比 Python 分開圖資額度更保守，沒有增加總配額。以檔名為鍵的既有已持有來源遇到不同 package／spec 一律拒絕，不能跨 package 誤用同名檔。
+
+本批為內部計畫／取得與唯讀映射層，尚未由 production owner 自動呼叫；未宣稱實際官方圖片成功解碼。後續仍需將每圖來源閉包、完整批次來源與映射指紋接入 PNG／SQLite，再接 owner 的版本撤銷及 UI。四類圖資、正式格式覆蓋、可撤銷 publication 與 UI 未完成，HasVisualAssets=false。
+
+## 8.0.50 物品圖 production 準備、撤銷與桌面顯示
+
+已將物品圖條件式接入 production 資源準備：ItemData 必須有經審閱的圖示欄位，MainPackage 必須含精確圖示清單；未知欄位、未支援格式或來源取得失敗時不產生圖片候選。下載仍共用原有總額度，圖片閉包維持 4 Bundle／32 MiB，不增加帳密或遊戲傳送權限。
+
+每個 Bundle 在整批只解析一次；每張圖仍僅能在 manifest 指定的 root＋完整依賴集合解析同檔 Sprite／Texture 指標。整批指紋包含版本 identity、manifest、映射／尺寸／open_used、全部 Bundle specs／SHA256 與每圖依賴；不同依賴的圖片可共同寫入快取，沒有降低逐圖來源驗證。整批像素／PNG 預算維持 96 MiB。
+
+owner 將完整批次寫入固定 core_item_images_v1.sqlite3，關閉後重新開啟只讀比對全部 PNG，再重查遠端版本／manifest，清理完成後才建立圖片 publication。寫入前重查來源、commit 前檢查當前 attempt；遠端版本與本機交易無法原子化，寫入後來源變更仍會拒絕發布。必要資料庫與圖片庫不是跨庫交易，圖片寫入另回報 NotAttempted／NotCommitted／Committed／Unknown，停止不回復既有寫入、不自動重試不明結果。只讀 refresh 不建立缺少的圖片快取；圖片庫損壞或寫入失敗目前會阻擋本次 owner 發布，保留結果供確認。
+
+圖片讀取沿用 ResourceRuntimeActivation 及帳號快照，逐次核對 owner／publication／generation；回傳僅為呼叫者擁有的歷史 PNG 副本，不能作為後續操作權限。停止、版本／帳號切換與釋放撤銷讀取。桌面背包及儲藏格每次刷新重新取得圖片，欄位未改變時也會處理圖片更新／撤銷；關閉與撤銷清除 Bitmap 並釋放。原生解碼前檢查 PNG header／尺寸上限；缺圖維持名稱與未通過驗證狀態。資源確認視窗新增圖片庫路徑及寫入結果。
+
+測試只使用自有合成 Bundle／PNG、SQLite 與 loopback。owner 正向持久化測試使用明示 offline image hook，撤銷測試沿用 white-box publication seam；這些都不能證明官方來源正向驗收，production 建構不接受 hook／來源注入。原生 UI 測試發現「庫存不變便跳過重繪」會漏掉圖片撤銷，已修正並新增顯示／失敗／清除檢查。
+
+**仍未完成**：實際官方圖片格式正向驗收、更多 Texture／Sprite 格式、頭像、表情、小地圖及 Python 全介面一致。HasItemImages 反映當前物品圖狀態；HasVisualAssets 仍為 false，不冒稱全圖資完成。既有帳密逐次確認、無 TLS／XOR 可逆提示、停止等待清理及一般遊戲操作 Held 均保留。

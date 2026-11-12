@@ -208,14 +208,18 @@ def target_valid(actor,target,data):
             (actor['col'],actor['row'])==(target['col'],target['row']) if kind==3 else
             same and (actor['col'],actor['row'])!=(target['col'],target['row']) if kind==5 else False)
 
-@one_catalog
-def learned_command(state,actor,sid,target_slot=None,target_kind=1,next_skill=False):
+def resolved_skill_id(state,actor,sid,next_skill=False):
     sid=int(sid);records=learned(state,actor)
     if next_skill:
         for _ in range(2):
             data=CAT['skills'].get(str(sid),{});nxt=data.get('NextSkillId',0)
             if not nxt or records.get(str(sid),{}).get('level',0)<data.get('LvLimit',1) or str(nxt) not in records:break
             sid=nxt
+    return sid
+
+@one_catalog
+def learned_command(state,actor,sid,target_slot=None,target_kind=1,next_skill=False):
+    sid=resolved_skill_id(state,actor,sid,next_skill)
     reasons=skill_reasons(state,actor,sid)
     if reasons:raise ProtocolError('；'.join(reasons))
     data=CAT['skills'][str(sid)]

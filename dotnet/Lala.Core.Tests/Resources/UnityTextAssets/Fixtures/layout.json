@@ -1,0 +1,22 @@
+{
+  "type_enabled": 64,
+  "type_count": 65,
+  "first_class": 69,
+  "first_tree_count": 92,
+  "first_tree_strings": 96,
+  "first_node": 100,
+  "object_count": 2525,
+  "first_object": 2532,
+  "second_object": 2556,
+  "script_count": 2580,
+  "external_count": 2584,
+  "reference_count": 2588,
+  "container": 2608,
+  "preload_count": 2620,
+  "container_count": 2624,
+  "container_path_length": 2628,
+  "container_file_id": 2680,
+  "container_path_id": 2684,
+  "text": 2752,
+  "script_length": 2764
+}
