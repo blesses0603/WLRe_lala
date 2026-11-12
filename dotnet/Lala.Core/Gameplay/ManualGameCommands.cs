@@ -21,12 +21,14 @@ internal static partial class ManualGameCommands
         if (a.Kind == "battle") return Battle(a, s, catalog);
         if (a.Kind == "event") return ContinueEvent(a,s,now);
         if (a.Kind == "npc" && a.Operation != "start") return Npc(a, s, catalog, now);
+        if (a.Kind == "shop") return Shop(a, s, catalog);
         Require(s.Local.Battle.Active != true && !s.Local.Session.EventFlow.Blocked, "請等待戰鬥或遊戲事件結束。");
         Require(!s.Local.Session.PostBattle.Pending,"請等待戰後事件接續完成。");
         Require(s.Activities.Count == 0, "請先結束目前活動。");
         return a.Kind switch
         {
             "maintenance"=>Maintenance(a,s,catalog),
+            "inventory_item" => InventoryItem(a, s, catalog),
             "party" => Party(a, s, now), "companion" => Companion(a, s),
             "attributes" => Attributes(a, s, now), "tent" => Tent(a, s, catalog, now),
             "alchemy" => Alchemy(a, s, catalog),

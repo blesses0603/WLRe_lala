@@ -11,6 +11,7 @@ public sealed record GameServerEvent(long Sequence, byte Main, byte Sub, string 
     uint? OwnerRoleId = null)
 {
     public System.Collections.Immutable.ImmutableArray<ExpeditionReward> Rewards { get; init; } = [];
+    public System.Collections.Immutable.ImmutableArray<Lala.Core.Instances.InstanceAward> InstanceAwards { get; init; } = [];
     internal static GameServerEvent From(long sequence,ServerEvent e,Packet packet)
     {
         var result=From(sequence,e);
@@ -20,6 +21,8 @@ public sealed record GameServerEvent(long Sequence, byte Main, byte Sub, string 
     }
     internal static GameServerEvent From(long sequence, ServerEvent e) => e switch
     {
+        ServerInstanceEvent{Event:Lala.Core.Instances.CoopRewardReceiptEvent r}=>new(sequence,e.Main,e.Sub,e.Type,"協力獎勵明細已回覆"){InstanceAwards=r.Awards},
+        ServerLiveDataEvent{Event:ShopPurchaseResultEvent r}=>new(sequence,e.Main,e.Sub,e.Type,"購買回覆",Code:r.Result),
         ServerLiveDataEvent{Event:BagSellEvent r}=>new(sequence,e.Main,e.Sub,e.Type,"伺服器確認販售",Index:r.Index,Count:r.Count),
         ServerLiveDataEvent{Event:SaleNoticeEvent r}=>new(sequence,e.Main,e.Sub,e.Type,"販售回覆",Code:r.Result),
         ServerExpeditionEvent{Event:ExpeditionResultEvent r} => new(sequence,e.Main,e.Sub,e.Type,"遠征結果已回覆",Index:r.Index,Code:r.Result){Rewards=r.Rewards},

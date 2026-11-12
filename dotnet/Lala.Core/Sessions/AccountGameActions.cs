@@ -168,9 +168,10 @@ public sealed partial class AccountRuntime
         }
         catch (Exception error)
         {
-            if (writeAttempted && plan is not null) lock (gate) uncertainActions.Add(plan.Domain);
-            string message = writeAttempted ? (error is ProtocolException reason ? reason.Message + "　" : "") + "結果未確認，已停止重送；請重新登入同步。" : error is ProtocolException p ? p.Message : "操作未送出，請確認連線與目前資料。";
-            if (sync is null) ReportAction(new(plan?.Label ?? "操作", message, Uncertain: writeAttempted),operation,basis?.Player?.RoleId);
+            bool uncertain = writeAttempted && error is not GameActionRefusedException;
+            if (uncertain && plan is not null) lock (gate) uncertainActions.Add(plan.Domain);
+            string message = error is GameActionRefusedException refused ? refused.Message : writeAttempted ? (error is ProtocolException reason ? reason.Message + "　" : "") + "結果未確認，已停止重送；請重新登入同步。" : error is ProtocolException p ? p.Message : "操作未送出，請確認連線與目前資料。";
+            if (sync is null) ReportAction(new(plan?.Label ?? "操作", message, Uncertain: uncertain),operation,basis?.Player?.RoleId);
             else if (writeAttempted) ReportEventSync(sync, message, uncertain:true);
             if (!writeAttempted && basis is not null && plan is not null)
             {
@@ -190,6 +191,8 @@ public sealed partial class AccountRuntime
     }
     private static object ActionStamp(ServiceStateSnapshot s, string domain) => domain switch
     {
+        "shop" or "inventory_manual" => (s.Phase,s.Local.Session.InitialDataComplete,s.Bag,s.Local.Session.Gold,
+            s.Local.Session.NpcDialogue,s.Local.Session.EventFlow,s.Local.Session.PostBattle,s.Local.Battle.Active,s.Activities,s.PlayerKnowledge,s.Companions),
         "party" => s.Party, "companion" => s.Companions, "attributes" => s.PlayerKnowledge,
         "maintenance"=>(s.Bag.Revision,s.PlayerKnowledge,s.Companions),
         "event" => (s.Local.Battle.Active,s.Local.Battle.BattleCount,s.Local.Session.NpcDialogue.Active),
@@ -200,7 +203,8 @@ public sealed partial class AccountRuntime
         "rewards" => (s.TimeCube.Count, s.Bag.Revision, s.DailyTasks.Generation),
         "guild" => (s.Guild.Serial, s.GuildActions.Epoch, s.GuildActions.SignState),
         "expedition" => s.Expedition.Revision, "craft" => s.Crafting.Crafting.Revision,
-        "instance" or "instance-list" or "instance-reward" => s.Instances,
+        "instance-reward" => (s.Instances,s.Bag,s.Local.Battle.Active,s.Local.Session.EventFlow),
+        "instance" or "instance-list" => s.Instances,
         "npc" => (s.Local.Battle.Active, s.Player?.Scene, s.Local.Session.NpcDialogue.EffectPacket, s.Local.Session.NpcDialogue.OptionIndex), "ark" => (s.Ark.Generation, s.Ark.Starcoin.Revision, s.Ark.Question?.Selected),
         _ => s.PacketCount
     };

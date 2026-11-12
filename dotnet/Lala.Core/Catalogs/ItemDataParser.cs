@@ -28,6 +28,7 @@ public sealed class ReviewedItemDetails
     public ushort LimitedTime { get; internal init; }
     public ushort UseCount { get; internal init; }
     public byte Flags2 { get; internal init; }
+    public byte Gender { get; internal init; }
     public bool IsPvpTimeOver => (Flags2 & 1) != 0;
     public string UnknownTail1296Hex { get; internal init; } = "";
     public ushort StyleBankSetSortId { get; internal init; }
@@ -152,7 +153,7 @@ public static class ItemDataParser
             reader.Skip(64);
             byte openUsed = reader.UInt8(), needLevel = reader.UInt8();
             uint price = reader.UInt32(), sellPrice = reader.UInt32();
-            reader.Skip(1);
+            byte gender = reader.UInt8();
             ushort restrict = reader.UInt16();
             reader.Skip(9);
             ushort skillLink = reader.UInt16();
@@ -188,7 +189,7 @@ public static class ItemDataParser
                     FitType = fitType, Special = special, Spares = Array.AsReadOnly(spares),
                     SizeL = sizeL, SizeW = sizeW, SizeH = sizeH, ItemW = itemW, ItemH = itemH,
                     AvailableTime = availableTime, LimitedTime = limitedTime, UseCount = useCount,
-                    Flags2 = flags2, UnknownTail1296Hex = Convert.ToHexStringLower(tail),
+                    Flags2 = flags2, Gender = gender, UnknownTail1296Hex = Convert.ToHexStringLower(tail),
                     StyleBankSetSortId = System.Buffers.Binary.BinaryPrimitives.ReadUInt16LittleEndian(tail),
                     SkillLink = includeSkillLink ? skillLink : null,
                     Stackable = ItemStackRules.CanOverlap(itemId, new(fitType, kind, special,

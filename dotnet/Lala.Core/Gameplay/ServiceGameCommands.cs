@@ -25,12 +25,14 @@ internal static partial class ManualGameCommands
         {
             Require(coop && data["reward"].Kind == StateValueKind.Map && s.Instances.Main["room"] == StateValue.Null, "尚未取得可操作的協力獎勵狀態。");
             var reward = data["reward"]; long open = Number(reward, "open_reward");
-            if (a.Operation == "claim") Require(open == 1 && (Number(reward, "reward_mark") & 1) != 0 && Context(s).Bag.Problem(4).Length == 0, "沒有可領取的免費寶箱，或背包不足四格。");
+            if (a.Operation == "claim") Require(open == 1 && (Number(reward, "reward_mark") & 1) != 0 && Context(s).Bag.Problem(2).Length == 0, "沒有可領取的免費寶箱，或背包不足兩格。");
             else Require(open is 1 or 2, "目前沒有可放棄的寶箱。");
             packet = new(186, a.Operation == "claim" ? 10 : 21);
+            var receipt = new CooperativeRewardReceipt(s.Bag);
             return Simple(packet, "instance-reward", a.Operation == "claim" ? "領取免費協力寶箱" : "放棄協力寶箱",
-                next => next.Instances.Coop["reward"].Kind == StateValueKind.Map && Number(next.Instances.Coop["reward"], "open_reward") == 0 ||
-                    a.Operation == "claim" && next.Instances.Coop["received_awards"].SequenceValue.Length > 0 && !ReferenceEquals(next.Instances.Coop["received_awards"], data["received_awards"]));
+                next => a.Operation == "claim" ? receipt.Acknowledged(next.Bag) :
+                    next.Instances.Coop["reward"].Kind == StateValueKind.Map && Number(next.Instances.Coop["reward"], "open_reward") == 0)
+                with { ObserveReceipt = a.Operation == "claim" ? receipt.Observe : null };
         }
         if (a.Operation == "standby")
         {
@@ -73,7 +75,10 @@ internal static partial class ManualGameCommands
             if (coop)
             {
                 Require(a.Count >= entry.MinMembers && a.Count <= entry.MaxMembers, "協力人數超出官方限制。");
-                Require(entry.CooperativeEvent is not null && entry.CooperativeEvent.SellDataId == 0, "此協力副本有入場費，尚未取得可確認的費用明細。");
+                Require(entry.CooperativeEvent is not null, "同版協力副本資料尚未同步。");
+                Require(s.Party.OwnTeam(s.Player!.RoleId) is null && !s.Tent.Inside &&
+                    s.Instances.Main["room"] == StateValue.Null && Number(data["reward"], "open_reward") == 0,
+                    "請先離開隊伍、小屋或一般副本房間，並處理未領協力獎勵。");
                 w.U8(a.Count).U8(entry.Variant).U8(entry.CooperativeEvent!.Id).U8(isPublic ? 1 : 0).U32(password).U8(0);
             }
             else { w.U16(entry.Data.MapId).U8(isPublic ? 1 : 0).U16(password); if (isPublic) w.U8(0); }

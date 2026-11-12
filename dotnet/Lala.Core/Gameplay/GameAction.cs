@@ -9,7 +9,8 @@ public sealed record AlchemyIngredient(byte Index, ushort ItemId, byte Count, ui
 public sealed record GameAction(string Kind, string Operation = "", uint Target = 0, int Index = 0,
     int Count = 1, int X = 0, int Y = 0, ushort Scene = 0,
     ImmutableDictionary<string, int>? Values = null, string? Key = null, Lala.Core.Battle.AutoBattleProfile? BattleProfile = null,
-    ImmutableArray<AlchemyIngredient> Ingredients = default, uint? RecipientId = null, System.Numerics.BigInteger? BattleCount = null);
+    ImmutableArray<AlchemyIngredient> Ingredients = default, uint? RecipientId = null, System.Numerics.BigInteger? BattleCount = null,
+    uint? ItemSerial = null, byte? ItemSerialVersion = null, uint? ExpectedPrice = null);
 
 public sealed record GameActionStatus(string Label, string Message, bool Pending = false, bool Uncertain = false);
 
@@ -21,6 +22,7 @@ internal sealed record GameActionPlan(Packet Packet, string Domain, string Label
     internal Func<ServiceStateSnapshot, ServiceStateSnapshot>? AfterWrite { get; init; }
     internal bool AwaitAcknowledgement { get; init; } = true;
     internal Action<GameServerEvent>? ObserveReceipt { get; init; }
+    internal Func<ServiceStateSnapshot, bool>? RefusalUnchanged { get; init; }
     internal bool ContinueNpcChoice { get; init; }
     internal Lala.Core.Inventory.BagItemSnapshot? BattleItem {get;init;}
 }

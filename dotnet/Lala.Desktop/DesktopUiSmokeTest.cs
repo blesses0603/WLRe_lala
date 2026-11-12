@@ -45,6 +45,7 @@ internal static partial class DesktopUiSmokeTest
                 await DesktopEmojiUiTest.RunAsync();
                 await DesktopSmallMapUiTest.RunAsync();
                 await DesktopNpcRosterUiTest.RunAsync();
+                await DesktopShopInventoryUiTest.RunAsync();
                 await VersionEntryAsync();
                 Publish(fixture.State, fixture.Labels);
                 await Settle(dashboard);
